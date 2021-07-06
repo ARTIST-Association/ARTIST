@@ -54,16 +54,16 @@ num_rays = 1000
 def kernel(a_int, h_int, ray_int, bitmap): #Schnittpunkt Receiver
     # a_int: Aimpoints
     # h_int: Heliostat positions
-    # ray: Ray direction vector 
-    # dx, dy: = Distance of Ray Receiver Intersection to the lower left corner 
-    
+    # ray: Ray direction vector
+    # dx, dy: = Distance of Ray Receiver Intersection to the lower left corner
+
     z, x = cuda.grid(2) # alias for threadIdx.x + ( blockIdx.x * blockDim.x ),
                         #           threadIdx.y + ( blockIdx.y * blockDim.y )
 
     r_fac = -h_int[x,0]/ray_int[x,z,0] # z richtung Entfernung Receiver - Ray Origin
-    dx_int = h_int[x,1]+r_fac*ray_int[x,z,1]+planex/2+a_int[x,1] # x direction 
+    dx_int = h_int[x,1]+r_fac*ray_int[x,z,1]+planex/2+a_int[x,1] # x direction
     dy_int = h_int[x,2]+r_fac*ray_int[x,z,2]+planey/2+a_int[x,2]-receiver_pos # y direction. Receiver is on heigt of 100m
-      
+
     if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
         if (0 <= dy_int < planey):
             x_int = int(dx_int/planex*50)
@@ -81,7 +81,7 @@ total_bitmap = np.zeros([50, 50], dtype=np.float32) # Flux density map for helio
 
 sun = np.array(sun/np.linalg.norm(sun))
 
-points_on_hel = rows**2 # reflection points on hel 
+points_on_hel = rows**2 # reflection points on hel
 hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel)
 hel_coordsystem = np.array(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
@@ -112,23 +112,23 @@ for i, ha in enumerate(ha_list):
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotate = np.array([[ha[0],ha[1],ha[2]]/np.linalg.norm([ha[0],ha[1],ha[2]]),
                         [ha[1],-ha[0],0]/np.linalg.norm([ha[1],-ha[0],0]),
-                        [ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]/np.linalg.norm([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2- ha[1]**2])]) 
-    
+                        [ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]/np.linalg.norm([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2- ha[1]**2])])
+
     inv_rot = np.linalg.inv(rotate) #inverse matrix
     # rays_tmp = np.array(ha)
     # print(rays_tmp.shape)
-    
+
     # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
     rays_tmp = np.array([np.dot(inv_rot,
                                 Rz(yi[i],
-                                    Ry(xi[i], 
+                                    Ry(xi[i],
                                       np.dot(rotate,
                                               ha
                                               )
                                       )
                                     )
                                 ) for i in range(num_rays)
-                          ]).astype(np.float32) 
+                          ]).astype(np.float32)
     rays[i] = rays_tmp
 
 
@@ -139,7 +139,7 @@ planePoint = np.array(aimpoint)
 for j, point in enumerate(hel_in_field):
     bitmap = np.zeros([50, 50], dtype=np.float32) #Flux density map for single heliostat
     start = timer()
-    # Execute the kernel 
+    # Execute the kernel
     for k, ray in enumerate(rays[j]):
         intersection = LinePlaneCollision(planeNormal, planePoint, ray, point, epsilon=1e-6)
         # print(intersection)
@@ -147,14 +147,13 @@ for j, point in enumerate(hel_in_field):
         dy_int = intersection[2] +planey/2
         if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
             if (0 <= dy_int < planey):
-                
+
                 x_int = int(dx_int/planex*50)
                 y_int = int(dy_int/planey*50)
                 bitmap[x_int,y_int] += 1
-    
-    
+
+
     total_bitmap += bitmap#np.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
 plt.imshow(total_bitmap, cmap='gray')
-
