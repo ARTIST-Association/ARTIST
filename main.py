@@ -5,18 +5,16 @@ Created on Mon Oct 28 09:31:21 2019
 @author: ober_lu
 """
 
-
-from numba import cuda, int16, float32
-
-
-import math
-
-from timeit import default_timer as timer
-from scipy.spatial.transform import Rotation as R
-import torch as th
-from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_aimpoints, define_heliostat, rotate_heliostat
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+from numba import cuda, int16, float32
+from scipy.spatial.transform import Rotation as R
+from timeit import default_timer as timer
+import torch as th
+
+from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_aimpoints, define_heliostat, rotate_heliostat
+
 libdir = os.environ.get('NUMBAPRO_CUDALIB')
 # os.environ['NUMBA_ENABLE_CUDASIM'] = 1
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
