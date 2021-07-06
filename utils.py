@@ -119,6 +119,7 @@ def draw_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, s
     ax.quiver(0, 0, 0, h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
     ax.quiver(0, 0, 0, h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
     ax.quiver(0, 0, 0, h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
+    plt.show()
 
 def heliostat_coord_system (Position, Sun, Aimpoint):
 

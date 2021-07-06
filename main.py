@@ -155,3 +155,4 @@ for j, point in enumerate(hel_in_field):
     kernel_dt += timer() - start
 
 plt.imshow(total_bitmap, cmap='gray')
+plt.show()
