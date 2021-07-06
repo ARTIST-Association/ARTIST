@@ -5,7 +5,6 @@ Created on Mon Oct 28 09:31:21 2019
 @author: ober_lu
 """
 
-import numpy as np
 
 from numba import cuda, int16, float32
 
@@ -14,6 +13,7 @@ import math
 
 from timeit import default_timer as timer
 from scipy.spatial.transform import Rotation as R
+import torch as th
 from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_aimpoints, define_heliostat, rotate_heliostat
 import matplotlib.pyplot as plt
 import os
@@ -40,10 +40,10 @@ receiver_pos = 100
 h_width = 4 # in m
 h_height = 4 # in m
 rows = 64 #rows of reflection points. total number is rows**2
-position_on_field = np.array([0,0,0])
+position_on_field = th.tensor([0,0,0]).float()
 
 #sunposition
-sun = np.array([0,0,1])
+sun = th.tensor([0,0,1]).float()
 mean = [0, 0]
 cov = [[0.000001, 0], [0, 0.000001]]  # diagonal covariance, used for ray scattering
 num_rays = 1000
@@ -75,15 +75,15 @@ def kernel(a_int, h_int, ray_int, bitmap): #Schnittpunkt Receiver
 
 ###Define derived variables#####
 
-total_bitmap = np.zeros([50, 50], dtype=np.float32) # Flux density map for heliostat field
+total_bitmap = th.zeros([50, 50], dtype=th.float32) # Flux density map for heliostat field
 
 
 
-sun = np.array(sun/np.linalg.norm(sun))
+sun = th.tensor(sun/th.linalg.norm(sun))
 
 points_on_hel = rows**2 # reflection points on hel
 hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel)
-hel_coordsystem = np.array(heliostat_coord_system(position_on_field, sun, aimpoint))
+hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
 aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
@@ -91,53 +91,53 @@ aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
 
 
 
-# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
+# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, th.tensor(aimpoint).float(),aimpoints, sun)
 
-xi, yi = np.random.multivariate_normal(mean, cov, num_rays).T # scatter rays a bit
+xi, yi = th.distributions.MultivariateNormal(th.tensor(mean).float(), th.tensor(cov).float()).sample((num_rays,)).T # scatter rays a bit
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 a= aimpoints
 # print(a)
-# a = np.array([aimpoints[:,np.random.randint(0,aimpoint_mesh_dim),np.random.randint(0,aimpoint_mesh_dim)] for i in range(fac)]).astype(np.float32) # draw a random aimpoint
+# a = th.tensor([aimpoints[:,th.randint(0,aimpoint_mesh_dim),th.randint(0,aimpoint_mesh_dim)] for i in range(fac)]).to(th.float32) # draw a random aimpoint
 
 
-# rays = np.empty((fac, DIM**2//fac, 3))
+# rays = th.empty((fac, DIM**2//fac, 3))
 
 ha_list = a-hel_in_field # calculate distance heliostat to aimpoint
 
-rays = np.zeros((points_on_hel, num_rays, 3))
+rays = th.zeros((points_on_hel, num_rays, 3))
 for i, ha in enumerate(ha_list):
 
     # print(ha)
 
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
-    rotate = np.array([[ha[0],ha[1],ha[2]]/np.linalg.norm([ha[0],ha[1],ha[2]]),
-                        [ha[1],-ha[0],0]/np.linalg.norm([ha[1],-ha[0],0]),
-                        [ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]/np.linalg.norm([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2- ha[1]**2])])
+    rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]])/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]])),
+                       th.tensor([ha[1],-ha[0],0])/th.linalg.norm(th.tensor([ha[1],-ha[0],0])),
+                       th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2])/th.linalg.norm(th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]))])
 
-    inv_rot = np.linalg.inv(rotate) #inverse matrix
-    # rays_tmp = np.array(ha)
+    inv_rot = th.linalg.inv(rotate) #inverse matrix
+    # rays_tmp = th.tensor(ha)
     # print(rays_tmp.shape)
 
     # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
-    rays_tmp = np.array([np.dot(inv_rot,
-                                Rz(yi[i],
-                                    Ry(xi[i],
-                                      np.dot(rotate,
-                                              ha
-                                              )
+    rays_tmp = th.stack([th.matmul(inv_rot,
+                                   Rz(yi[i],
+                                      Ry(xi[i],
+                                         th.matmul(rotate,
+                                                   ha
+                                                   )
+                                         )
                                       )
-                                    )
-                                ) for i in range(num_rays)
-                          ]).astype(np.float32)
+                                   ) for i in range(num_rays)
+                         ]).to(th.float32)
     rays[i] = rays_tmp
 
 
-rays = np.array(rays.astype(np.float32))
+rays = th.tensor(rays.to(th.float32))
 kernel_dt = 0
-planeNormal = np.array([1, 0, 0])
-planePoint = np.array(aimpoint)
+planeNormal = th.tensor([1, 0, 0]).float()
+planePoint = th.tensor(aimpoint).float()
 for j, point in enumerate(hel_in_field):
-    bitmap = np.zeros([50, 50], dtype=np.float32) #Flux density map for single heliostat
+    bitmap = th.zeros([50, 50], dtype=th.float32) #Flux density map for single heliostat
     start = timer()
     # Execute the kernel
     for k, ray in enumerate(rays[j]):
@@ -153,7 +153,7 @@ for j, point in enumerate(hel_in_field):
                 bitmap[x_int,y_int] += 1
 
 
-    total_bitmap += bitmap#np.sum(d_bitmap, axis = 2)
+    total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
 plt.imshow(total_bitmap, cmap='gray')
