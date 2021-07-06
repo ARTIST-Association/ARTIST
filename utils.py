@@ -5,29 +5,120 @@ Created on Mon Jul  5 12:38:11 2021
 @author: parg_ma
 """
 import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation as R
 import numpy as np 
+
+
+def define_heliostat(h_height, h_width, rows, points_on_hel):
+    h = np.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+    columns = points_on_hel//rows
+    i= 0
+    for column in range(columns):
+        for row in range(rows):
+            h[i,0] = (row/(rows-1)*h_height)-(h_height/2)
+            h[i,1] = (column/(columns-1)*h_width)-(h_width/2) #heliostat y position
+            h[i,2] = 0 # helioistat z position
+            
+            # h[i] = h[i]+ position_on_field
+            i+=1
+    return h
+
+def rotate_heliostat(h,hel_coordsystem, points_on_hel):
+    h_rotated = np.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+    r = R.from_matrix(hel_coordsystem)
+    euler = r.as_euler('xyx', degrees = True)
+    for i in range(len(h[:])):
+        ele_degrees = 90-euler[2]
+    
+        ele_radians = np.radians(ele_degrees)
+        ele_axis = np.array([0, 1, 0])
+        ele_vector = ele_radians * ele_axis
+        ele = R.from_rotvec(ele_vector)
+    
+        azi_degrees = euler[1]-90
+        azi_radians = np.radians(azi_degrees)
+        azi_axis = np.array([0, 0, 1])
+        azi_vector = azi_radians * azi_axis
+        azi = R.from_rotvec(azi_vector)
+    
+        h_rotated[i] = azi.apply(ele.apply(h[i]))
+    return h_rotated
+
+
+def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
+    
+
+    aimpoints = []
+    # row = 0
+    # column = 0
+    for i in range(len(h_rotated[:])):
+        # print("Aim",aimpoint)
+        planeNormal = np.array([1, 0, 0]) # Muss noch dynamisch gestaltet werden
+        planePoint = np.array(aimpoint) #Any point on the plane
+     
+    	#Define ray
+        
+        rayDirection = np.array(aimpoint) - np.array(position_on_field)
+        # print("Ray directioN", rayDirection)
+        rayPoint = np.array(h_rotated[i]) #Any point along the ray
+        # print("ray_point", rayPoint)
+        
+        intersection = LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint)
+        # print("intersection",intersection)
+        # exit()
+        # print("cr",column,row)
+        # if i % (rows) == 0 and not i == 0:
+        #     print("Hello")
+        #     row +=1
+        #     column=0
+        
+        # aimpoints[0,column,row] = intersection[0]
+        # aimpoints[1,column,row] = intersection[1]
+        # aimpoints[2,column,row] = intersection[2]
+        aimpoints.append(intersection)
+        # exit()
+        
+        # column +=1
+    aimpoints = np.array(aimpoints)
+    
+    return aimpoints
+
+
+def flatten_aimpoints(aimpoints):
+    X = np.ndarray.flatten(aimpoints[0])
+    Y = np.ndarray.flatten(aimpoints[1])
+    Z = np.ndarray.flatten(aimpoints[2])
+    aimpoints = np.stack((X,Y,Z), axis=1)
+    return aimpoints
+    
 
 def draw_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, sun):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
 
-    # h_rotated = h_rotated
+    h_rotated = h_rotated
+    aimpoints = aimpoints - position_on_field
+    aimpoint = aimpoint - position_on_field
+
     # aimpoints = aimpoints-position_on_field
     # aimpoint = aimpoint-position_on_field
     
     ax.scatter(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2]) #Heliostat
-    # ax.scatter(aimpoint[0],aimpoint[1],aimpoint[2]) #Aimpoint
-    # ax.scatter(aimpoints[:,0],aimpoints[:,1],aimpoints[:,2])
+    ax.scatter(aimpoint[0],aimpoint[1],aimpoint[2]) #Aimpoint
+    ax.scatter(aimpoints[:,0],aimpoints[:,1],aimpoints[:,2])
     ax.scatter(sun[0]*50,sun[1]*50,sun[2]*50) #Sun
     
-    # ax.set_xlim3d(-50, 50)
-    # ax.set_ylim3d(-50, 50)
-    # ax.set_zlim3d(0, 50)
+    ax.set_xlim3d(-100, 100)
+    ax.set_ylim3d(-100, 100)
+    ax.set_zlim3d(0, 100)
     
     #Heliostat Coordsystem
-    ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
-    ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
-    ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
+    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
+    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
+    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
+    ax.quiver(0, 0, 0, h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
+    ax.quiver(0, 0, 0, h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
+    ax.quiver(0, 0, 0, h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
     
 def heliostat_coord_system (Position, Sun, Aimpoint):
 
