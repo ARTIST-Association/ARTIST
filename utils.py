@@ -6,11 +6,11 @@ Created on Mon Jul  5 12:38:11 2021
 """
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
-import numpy as np
+import torch as th
 
 
 def define_heliostat(h_height, h_width, rows, points_on_hel):
-    h = np.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+    h = th.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
     columns = points_on_hel//rows
     i= 0
     for column in range(columns):
@@ -24,24 +24,24 @@ def define_heliostat(h_height, h_width, rows, points_on_hel):
     return h
 
 def rotate_heliostat(h,hel_coordsystem, points_on_hel):
-    h_rotated = np.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+    h_rotated = th.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
     r = R.from_matrix(hel_coordsystem)
-    euler = r.as_euler('xyx', degrees = True)
+    euler = th.tensor(r.as_euler('xyx', degrees = True))
     for i in range(len(h[:])):
         ele_degrees = 90-euler[2]
 
-        ele_radians = np.radians(ele_degrees)
-        ele_axis = np.array([0, 1, 0])
+        ele_radians = th.deg2rad(ele_degrees)
+        ele_axis = th.tensor([0, 1, 0]).float()
         ele_vector = ele_radians * ele_axis
-        ele = R.from_rotvec(ele_vector)
+        ele = R.from_rotvec(ele_vector.numpy())
 
         azi_degrees = euler[1]-90
-        azi_radians = np.radians(azi_degrees)
-        azi_axis = np.array([0, 0, 1])
+        azi_radians = th.deg2rad(azi_degrees)
+        azi_axis = th.tensor([0, 0, 1]).float()
         azi_vector = azi_radians * azi_axis
-        azi = R.from_rotvec(azi_vector)
+        azi = R.from_rotvec(azi_vector.numpy())
 
-        h_rotated[i] = azi.apply(ele.apply(h[i]))
+        h_rotated[i] = th.tensor(azi.apply(ele.apply(h[i])))
     return h_rotated
 
 
@@ -53,14 +53,14 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
     # column = 0
     for i in range(len(h_rotated[:])):
         # print("Aim",aimpoint)
-        planeNormal = np.array([1, 0, 0]) # Muss noch dynamisch gestaltet werden
-        planePoint = np.array(aimpoint) #Any point on the plane
+        planeNormal = th.tensor([1, 0, 0]).float() # Muss noch dynamisch gestaltet werden
+        planePoint = th.tensor(aimpoint).float() #Any point on the plane
 
     	#Define ray
 
-        rayDirection = np.array(aimpoint) - np.array(position_on_field)
+        rayDirection = th.tensor(aimpoint).float() - th.tensor(position_on_field).float()
         # print("Ray directioN", rayDirection)
-        rayPoint = np.array(h_rotated[i]) #Any point along the ray
+        rayPoint = th.tensor(h_rotated[i]) #Any point along the ray
         # print("ray_point", rayPoint)
 
         intersection = LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint)
@@ -79,16 +79,16 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
         # exit()
 
         # column +=1
-    aimpoints = np.array(aimpoints)
+    aimpoints = th.stack(aimpoints)
 
     return aimpoints
 
 
 def flatten_aimpoints(aimpoints):
-    X = np.ndarray.flatten(aimpoints[0])
-    Y = np.ndarray.flatten(aimpoints[1])
-    Z = np.ndarray.flatten(aimpoints[2])
-    aimpoints = np.stack((X,Y,Z), axis=1)
+    X = th.flatten(aimpoints[0])
+    Y = th.flatten(aimpoints[1])
+    Z = th.flatten(aimpoints[2])
+    aimpoints = th.stack((X,Y,Z), dim=1)
     return aimpoints
 
 
@@ -124,22 +124,22 @@ def heliostat_coord_system (Position, Sun, Aimpoint):
 
     pSun = Sun
     print("Sun",pSun)
-    pPosition = np.array(Position)
+    pPosition = th.tensor(Position)
     print("Position", pPosition)
-    pAimpoint = np.array(Aimpoint)
+    pAimpoint = th.tensor(Aimpoint)
     print("Aimpoint", pAimpoint)
 
 
 #Berechnung Idealer Heliostat
 #0. Iteration
     z = pAimpoint - pPosition
-    z = z/np.linalg.norm(z)
+    z = z/th.linalg.norm(z)
     z = pSun + z
-    z = z/np.linalg.norm(z)
+    z = z/th.linalg.norm(z)
 
-    x = [z[1],-z[0], 0]
-    x = x/np.linalg.norm(x)
-    y = np.cross(z,x)
+    x = th.tensor([z[1],-z[0], 0]).float()
+    x = x/th.linalg.norm(x)
+    y = th.cross(z,x)
 
 
     return x,y,z
@@ -148,7 +148,7 @@ def heliostat_coord_system (Position, Sun, Aimpoint):
 def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=1e-6):
 
 	ndotu = planeNormal.dot(rayDirection)
-	if abs(ndotu) < epsilon:
+	if th.abs(ndotu) < epsilon:
 		raise RuntimeError("no intersection or line is within plane")
 
 	w = rayPoint - planePoint
@@ -160,10 +160,13 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 	#Define plane
 #Rotation Matricies
 def Rx(alpha, vec):
-    return np.dot(np.array([[1, 0, 0],[0, np.cos(alpha), -np.sin(alpha)],[0, np.sin(alpha), np.cos(alpha)]]),vec)
+    alpha = th.tensor(alpha)
+    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]]).float(),vec)
 
 def Ry(alpha, vec):
-    return np.dot(np.array([[np.cos(alpha), 0, np.sin(alpha)],[0, 1, 0],[-np.sin(alpha), 0, np.cos(alpha)]]),vec)
+    alpha = th.tensor(alpha)
+    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]]).float(),vec)
 
 def Rz(alpha, vec):
-    return np.dot(np.array([[np.cos(alpha), -np.sin(alpha), 0],[np.sin(alpha), np.cos(alpha), 0],[0, 0, 1]]),vec)
+    alpha = th.tensor(alpha)
+    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]]).float(),vec)
