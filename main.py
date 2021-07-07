@@ -24,13 +24,11 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 
 #####Parameters#####
-DIM = 2**8 #Threads auf Graka
-fac = 2**8 
-grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
-threads = (256, 1)
+# grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
+# threads = (256, 1)
 
 ##Aimpoints
-aimpoint = [0,0,100]
+aimpoint = [-50,0,0]
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 ##Receiver specific parameters
@@ -41,13 +39,14 @@ receiver_pos = 100
 ####Heliostat specific Parameters
 h_width = 4 # in m
 h_height = 4 # in m
-rows = 4 #rows of reflection points. total number is rows**2
-position_on_field = np.array([100,0,0])
+rows = 64 #rows of reflection points. total number is rows**2
+position_on_field = np.array([0,0,0])
 
 #sunposition
 sun = np.array([0,0,1])
 mean = [0, 0]
 cov = [[0.000001, 0], [0, 0.000001]]  # diagonal covariance, used for ray scattering
+num_rays = 1000
 
 ######CUDA Kernel#######
 
@@ -73,10 +72,10 @@ def kernel(a_int, h_int, ray_int, bitmap): #Schnittpunkt Receiver
 
 
 
+
 ###Define derived variables#####
-bitmap = np.zeros([50, 50], dtype=np.float32) #Flux density map for single heliostat
+
 total_bitmap = np.zeros([50, 50], dtype=np.float32) # Flux density map for heliostat field
-d_bitmap = cuda.to_device(bitmap)
 
 
 
@@ -94,55 +93,65 @@ aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
 
 # draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
 
-xi, yi = np.random.multivariate_normal(mean, cov, points_on_hel).T # scatter rays a bit
+xi, yi = np.random.multivariate_normal(mean, cov, num_rays).T # scatter rays a bit
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 a= aimpoints
 # print(a)
 # a = np.array([aimpoints[:,np.random.randint(0,aimpoint_mesh_dim),np.random.randint(0,aimpoint_mesh_dim)] for i in range(fac)]).astype(np.float32) # draw a random aimpoint
 
 
-rays = np.empty((fac, DIM**2//fac, 3))
+# rays = np.empty((fac, DIM**2//fac, 3))
 
-ha_tmp = a-hel_in_field # calculate distance heliostat to aimpoint
+ha_list = a-hel_in_field # calculate distance heliostat to aimpoint
 
+rays = np.zeros((points_on_hel, num_rays, 3))
+for i, ha in enumerate(ha_list):
 
-for j in range(1):
-
-    ha = ha_tmp[j,:]
+    # print(ha)
 
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotate = np.array([[ha[0],ha[1],ha[2]]/np.linalg.norm([ha[0],ha[1],ha[2]]),
                         [ha[1],-ha[0],0]/np.linalg.norm([ha[1],-ha[0],0]),
-                        [ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]/np.linalg.norm([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2])]) 
+                        [ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]/np.linalg.norm([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2- ha[1]**2])]) 
     
     inv_rot = np.linalg.inv(rotate) #inverse matrix
-    rays_tmp = ha.astype(np.float32)
+    # rays_tmp = np.array(ha)
+    # print(rays_tmp.shape)
     
-    #rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
-    # rays_tmp = np.array([np.dot(inv_rot,
-    #                             Rz(yi[i],
-    #                                Ry(xi[i], 
-    #                                   np.dot(rotate,
-    #                                          ha
-    #                                          )
-    #                                   )
-    #                                )
-    #                             ) for i in range(DIM**2//fac)
-    #                      ]).astype(np.float32) 
-    rays[j] = rays_tmp
+    # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
+    rays_tmp = np.array([np.dot(inv_rot,
+                                Rz(yi[i],
+                                    Ry(xi[i], 
+                                      np.dot(rotate,
+                                              ha
+                                              )
+                                      )
+                                    )
+                                ) for i in range(num_rays)
+                          ]).astype(np.float32) 
+    rays[i] = rays_tmp
+
 
 rays = np.array(rays.astype(np.float32))
-
 kernel_dt = 0
-for point in range(1):
-    
+planeNormal = np.array([1, 0, 0])
+planePoint = np.array(aimpoint)
+for j, point in enumerate(hel_in_field):
+    bitmap = np.zeros([50, 50], dtype=np.float32) #Flux density map for single heliostat
     start = timer()
     # Execute the kernel 
-    print(a, ha_tmp, rays)
-    kernel[grids, threads](a, ha_tmp, rays, d_bitmap)
+    for k, ray in enumerate(rays[j]):
+        intersection = LinePlaneCollision(planeNormal, planePoint, ray, point, epsilon=1e-6)
+        # print(intersection)
+        dx_int = intersection[1] +planex/2
+        dy_int = intersection[2] +planey/2
+        if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
+            if (0 <= dy_int < planey):
+                
+                x_int = int(dx_int/planex*50)
+                y_int = int(dy_int/planey*50)
+                bitmap[x_int,y_int] += 1
     
-    # Copy the result from the kernel ordering the ray tracing back to host
-    bitmap = d_bitmap.copy_to_host()
     
     total_bitmap += bitmap#np.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
