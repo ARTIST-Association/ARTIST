@@ -26,7 +26,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # threads = (256, 1)
 
 ##Aimpoints
-aimpoint = [-50,0,0]
+aimpoint = th.tensor([-50,0,0]).float()
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 ##Receiver specific parameters
@@ -42,8 +42,8 @@ position_on_field = th.tensor([0,0,0]).float()
 
 #sunposition
 sun = th.tensor([0,0,1]).float()
-mean = [0, 0]
-cov = [[0.000001, 0], [0, 0.000001]]  # diagonal covariance, used for ray scattering
+mean = th.tensor([0, 0]).float()
+cov = th.tensor([[0.000001, 0], [0, 0.000001]]).float()  # diagonal covariance, used for ray scattering
 num_rays = 1000
 
 ######CUDA Kernel#######
@@ -77,7 +77,7 @@ total_bitmap = th.zeros([50, 50], dtype=th.float32) # Flux density map for helio
 
 
 
-sun = th.tensor(sun/th.linalg.norm(sun))
+sun = sun/th.linalg.norm(sun)
 
 points_on_hel = rows**2 # reflection points on hel
 hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel)
@@ -89,9 +89,9 @@ aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
 
 
 
-# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, th.tensor(aimpoint).float(),aimpoints, sun)
+# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
 
-xi, yi = th.distributions.MultivariateNormal(th.tensor(mean).float(), th.tensor(cov).float()).sample((num_rays,)).T # scatter rays a bit
+xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T # scatter rays a bit
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 a= aimpoints
 # print(a)
@@ -130,10 +130,10 @@ for i, ha in enumerate(ha_list):
     rays[i] = rays_tmp
 
 
-rays = th.tensor(rays.to(th.float32))
+rays = rays.to(th.float32)
 kernel_dt = 0
 planeNormal = th.tensor([1, 0, 0]).float()
-planePoint = th.tensor(aimpoint).float()
+planePoint = aimpoint
 for j, point in enumerate(hel_in_field):
     bitmap = th.zeros([50, 50], dtype=th.float32) #Flux density map for single heliostat
     start = timer()
