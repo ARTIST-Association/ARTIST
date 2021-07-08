@@ -22,7 +22,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # threads = (256, 1)
 
 ##Aimpoints
-aimpoint = th.tensor([-50,0,0]).float()
+aimpoint = th.tensor([-50,0,0], dtype=th.float32)
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 ##Receiver specific parameters
@@ -34,12 +34,12 @@ receiver_pos = 100
 h_width = 4 # in m
 h_height = 4 # in m
 rows = 64 #rows of reflection points. total number is rows**2
-position_on_field = th.tensor([0,0,0]).float()
+position_on_field = th.tensor([0,0,0], dtype=th.float32)
 
 #sunposition
-sun = th.tensor([0,0,1]).float()
-mean = th.tensor([0, 0]).float()
-cov = th.tensor([[0.000001, 0], [0, 0.000001]]).float()  # diagonal covariance, used for ray scattering
+sun = th.tensor([0,0,1], dtype=th.float32)
+mean = th.tensor([0, 0], dtype=th.float32)
+cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32)  # diagonal covariance, used for ray scattering
 num_rays = 1000
 
 ######CUDA Kernel#######
@@ -128,7 +128,7 @@ for i, ha in enumerate(ha_list):
 
 rays = rays.to(th.float32)
 kernel_dt = 0
-planeNormal = th.tensor([1, 0, 0]).float()
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32)
 planePoint = aimpoint
 for j, point in enumerate(hel_in_field):
     bitmap = th.zeros([50, 50], dtype=th.float32) #Flux density map for single heliostat

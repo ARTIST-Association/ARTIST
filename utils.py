@@ -197,7 +197,7 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
         [1, 0, 0],
         [0, cl, sl],
         [0, -sl, cl],
-    ]).float()
+    ], dtype=th.float32)
 
     angles = th.empty(num_rots, 3)
     eps = 1e-7
@@ -312,13 +312,13 @@ def rotate_heliostat(h,hel_coordsystem, points_on_hel):
         ele_degrees = 90-euler[2]
 
         ele_radians = th.deg2rad(ele_degrees)
-        ele_axis = th.tensor([0, 1, 0]).float()
+        ele_axis = th.tensor([0, 1, 0], dtype=th.float32)
         ele_vector = ele_radians * ele_axis
         ele = rot_from_rotvec(ele_vector)
 
         azi_degrees = euler[1]-90
         azi_radians = th.deg2rad(azi_degrees)
-        azi_axis = th.tensor([0, 0, 1]).float()
+        azi_axis = th.tensor([0, 0, 1], dtype=th.float32)
         azi_vector = azi_radians * azi_axis
         azi = rot_from_rotvec(azi_vector)
 
@@ -334,7 +334,7 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
     # column = 0
     for i in range(len(h_rotated[:])):
         # print("Aim",aimpoint)
-        planeNormal = th.tensor([1, 0, 0]).float() # Muss noch dynamisch gestaltet werden
+        planeNormal = th.tensor([1, 0, 0], dtype=th.float32) # Muss noch dynamisch gestaltet werden
         planePoint = aimpoint #Any point on the plane
 
     	#Define ray
@@ -419,7 +419,7 @@ def heliostat_coord_system (Position, Sun, Aimpoint):
     z = pSun + z
     z = z/th.linalg.norm(z)
 
-    x = th.tensor([z[1],-z[0], 0]).float()
+    x = th.tensor([z[1],-z[0], 0], dtype=th.float32)
     x = x/th.linalg.norm(x)
     y = th.cross(z,x)
 
@@ -444,14 +444,14 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 def Rx(alpha, vec):
     if not isinstance(alpha, th.Tensor):
         alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]]).float(),vec)
+    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]], dtype=th.float32),vec)
 
 def Ry(alpha, vec):
     if not isinstance(alpha, th.Tensor):
         alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]]).float(),vec)
+    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]], dtype=th.float32),vec)
 
 def Rz(alpha, vec):
     if not isinstance(alpha, th.Tensor):
         alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]]).float(),vec)
+    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]], dtype=th.float32),vec)
