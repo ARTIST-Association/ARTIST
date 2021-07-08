@@ -20,6 +20,9 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 #####Parameters#####
 # grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
 # threads = (256, 1)
+seed = 0
+
+th.manual_seed(0)
 
 ##Aimpoints
 aimpoint = th.tensor([-50,0,0], dtype=th.float32)
