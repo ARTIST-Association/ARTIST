@@ -16,16 +16,17 @@ from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCo
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 
-
 #####Parameters#####
 # grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
 # threads = (256, 1)
 seed = 0
+use_gpu = True
 
 th.manual_seed(0)
+device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
-aimpoint = th.tensor([-50,0,0], dtype=th.float32)
+aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 ##Receiver specific parameters
@@ -37,12 +38,12 @@ receiver_pos = 100
 h_width = 4 # in m
 h_height = 4 # in m
 rows = 64 #rows of reflection points. total number is rows**2
-position_on_field = th.tensor([0,0,0], dtype=th.float32)
+position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
-sun = th.tensor([0,0,1], dtype=th.float32)
-mean = th.tensor([0, 0], dtype=th.float32)
-cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32)  # diagonal covariance, used for ray scattering
+sun = th.tensor([0,0,1], dtype=th.float32, device=device)
+mean = th.tensor([0, 0], dtype=th.float32, device=device)
+cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 num_rays = 1000
 
 ######CUDA Kernel#######
@@ -72,14 +73,14 @@ num_rays = 1000
 
 ###Define derived variables#####
 
-total_bitmap = th.zeros([50, 50], dtype=th.float32) # Flux density map for heliostat field
+total_bitmap = th.zeros([50, 50], dtype=th.float32, device=device) # Flux density map for heliostat field
 
 
 
 sun = sun/th.linalg.norm(sun)
 
 points_on_hel = rows**2 # reflection points on hel
-hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel)
+hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
@@ -90,26 +91,26 @@ aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
 
 # draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
 
-xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T # scatter rays a bit
+xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 a= aimpoints
 # print(a)
-# a = th.tensor([aimpoints[:,th.randint(0,aimpoint_mesh_dim),th.randint(0,aimpoint_mesh_dim)] for i in range(fac)]).to(th.float32) # draw a random aimpoint
+# a = th.tensor([aimpoints[:,th.randint(0,aimpoint_mesh_dim),th.randint(0,aimpoint_mesh_dim)] for i in range(fac)], device=device).to(th.float32) # draw a random aimpoint
 
 
-# rays = th.empty((fac, DIM**2//fac, 3))
+# rays = th.empty((fac, DIM**2//fac, 3), device=device)
 
 ha_list = a-hel_in_field # calculate distance heliostat to aimpoint
 
-rays = th.zeros((points_on_hel, num_rays, 3))
+rays = th.zeros((points_on_hel, num_rays, 3), device=device)
 for i, ha in enumerate(ha_list):
 
     # print(ha)
 
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
-    rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]])/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]])),
-                       th.tensor([ha[1],-ha[0],0])/th.linalg.norm(th.tensor([ha[1],-ha[0],0])),
-                       th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2])/th.linalg.norm(th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2]))])
+    rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]], device=device)/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]], device=device)),
+                       th.tensor([ha[1],-ha[0],0], device=device)/th.linalg.norm(th.tensor([ha[1],-ha[0],0], device=device)),
+                       th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device)/th.linalg.norm(th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device))])
 
     inv_rot = th.linalg.inv(rotate) #inverse matrix
     # rays_tmp = th.tensor(ha)
@@ -131,10 +132,10 @@ for i, ha in enumerate(ha_list):
 
 rays = rays.to(th.float32)
 kernel_dt = 0
-planeNormal = th.tensor([1, 0, 0], dtype=th.float32)
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
 planePoint = aimpoint
 for j, point in enumerate(hel_in_field):
-    bitmap = th.zeros([50, 50], dtype=th.float32) #Flux density map for single heliostat
+    bitmap = th.zeros([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
     start = timer()
     # Execute the kernel
     for k, ray in enumerate(rays[j]):

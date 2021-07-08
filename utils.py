@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import torch as th
 
 
-def define_heliostat(h_height, h_width, rows, points_on_hel):
-    h = th.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+def define_heliostat(h_height, h_width, rows, points_on_hel, device):
+    h = th.empty((points_on_hel,3), device=device) # darray with all heliostats (#heliostats, 3 coords)
     columns = points_on_hel//rows
     i= 0
     for column in range(columns):
@@ -43,9 +43,9 @@ def rot_from_matrix(mat):
         cmat = mat
 
     num_rots = cmat.shape[0]
-    decision = th.empty(4)
+    decision = th.empty(4, device=mat.device)
 
-    quat = th.empty(num_rots, 4)
+    quat = th.empty(num_rots, 4, device=mat.device)
 
     for ind in range(num_rots):
         decision[0] = cmat[ind, 0, 0]
@@ -96,7 +96,7 @@ def rot_from_rotvec(vec, degrees=False):
         cvec = vec
 
     num_rots = cvec.shape[0]
-    quat = th.empty(num_rots, 4)
+    quat = th.empty(num_rots, 4, device=vec.device)
 
     for ind in range(num_rots):
         angle = th.linalg.norm(cvec[ind, :])
@@ -126,7 +126,7 @@ def rot_as_matrix(rot):
         rot = rot[None, :]
 
     num_rots = rot.shape[0]
-    mat = th.empty(num_rots, 3, 3)
+    mat = th.empty(num_rots, 3, 3, device=rot.device)
 
     for ind in range(num_rots):
         x = rot[ind, 0]
@@ -163,8 +163,8 @@ def rot_as_matrix(rot):
     else:
         return mat
 
-def _elem_basis_vec(axis):
-    vec = th.zeros(3)
+def _elem_basis_vec(axis, device):
+    vec = th.zeros(3, device=device)
     if axis == b'x':
         vec[0] = 1
     elif axis == b'y':
@@ -180,15 +180,15 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
         seq = seq[::-1]
     num_rots = mat.shape[0]
 
-    n1 = _elem_basis_vec(seq[0:1])
-    n2 = _elem_basis_vec(seq[1:2])
-    n3 = _elem_basis_vec(seq[2:3])
+    n1 = _elem_basis_vec(seq[0:1], mat.device)
+    n2 = _elem_basis_vec(seq[1:2], mat.device)
+    n3 = _elem_basis_vec(seq[2:3], mat.device)
 
     sl = th.dot(th.cross(n1, n2), n3)
     cl = th.dot(n1, n3)
 
     offset = th.atan2(sl, cl)
-    c = th.empty(3, 3)
+    c = th.empty(3, 3, device=mat.device)
     c[0, :] = n2
     c[1, :] = th.cross(n1, n2)
     c[2, :] = n1
@@ -197,9 +197,9 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
         [1, 0, 0],
         [0, cl, sl],
         [0, -sl, cl],
-    ], dtype=th.float32)
+    ], dtype=th.float32, device=mat.device)
 
-    angles = th.empty(num_rots, 3)
+    angles = th.empty(num_rots, 3, device=mat.device)
     eps = 1e-7
 
     for ind in range(num_rots):
@@ -305,20 +305,20 @@ def rot_apply(rot, vecs):
     return th.squeeze(th.matmul(mat, vecs), 0)
 
 def rotate_heliostat(h,hel_coordsystem, points_on_hel):
-    h_rotated = th.empty((points_on_hel,3)) # darray with all heliostats (#heliostats, 3 coords)
+    h_rotated = th.empty((points_on_hel,3), device=h.device) # darray with all heliostats (#heliostats, 3 coords)
     r = rot_from_matrix(hel_coordsystem)
     euler = rot_as_euler(r, 'xyx', degrees = True)
     for i in range(len(h[:])):
         ele_degrees = 90-euler[2]
 
         ele_radians = th.deg2rad(ele_degrees)
-        ele_axis = th.tensor([0, 1, 0], dtype=th.float32)
+        ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
         ele_vector = ele_radians * ele_axis
         ele = rot_from_rotvec(ele_vector)
 
         azi_degrees = euler[1]-90
         azi_radians = th.deg2rad(azi_degrees)
-        azi_axis = th.tensor([0, 0, 1], dtype=th.float32)
+        azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
         azi_vector = azi_radians * azi_axis
         azi = rot_from_rotvec(azi_vector)
 
@@ -334,7 +334,7 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
     # column = 0
     for i in range(len(h_rotated[:])):
         # print("Aim",aimpoint)
-        planeNormal = th.tensor([1, 0, 0], dtype=th.float32) # Muss noch dynamisch gestaltet werden
+        planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=h_rotated.device) # Muss noch dynamisch gestaltet werden
         planePoint = aimpoint #Any point on the plane
 
     	#Define ray
@@ -419,7 +419,7 @@ def heliostat_coord_system (Position, Sun, Aimpoint):
     z = pSun + z
     z = z/th.linalg.norm(z)
 
-    x = th.tensor([z[1],-z[0], 0], dtype=th.float32)
+    x = th.tensor([z[1],-z[0], 0], dtype=th.float32, device=Position.device)
     x = x/th.linalg.norm(x)
     y = th.cross(z,x)
 
@@ -443,15 +443,15 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 #Rotation Matricies
 def Rx(alpha, vec):
     if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]], dtype=th.float32),vec)
+        alpha = th.tensor(alpha, device=vec.device)
+    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]], dtype=th.float32, device=vec.device),vec)
 
 def Ry(alpha, vec):
     if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]], dtype=th.float32),vec)
+        alpha = th.tensor(alpha, device=vec.device)
+    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]], dtype=th.float32, device=vec.device),vec)
 
 def Rz(alpha, vec):
     if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha)
-    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]], dtype=th.float32),vec)
+        alpha = th.tensor(alpha, device=vec.device)
+    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]], dtype=th.float32, device=vec.device),vec)
