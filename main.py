@@ -134,8 +134,9 @@ rays = rays.to(th.float32)
 kernel_dt = 0
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
 planePoint = aimpoint
+bitmap = th.empty([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
 for j, point in enumerate(hel_in_field):
-    bitmap = th.zeros([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
+    bitmap[:] = 0
     start = timer()
     # Execute the kernel
     for k, ray in enumerate(rays[j]):
