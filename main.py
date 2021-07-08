@@ -8,8 +8,6 @@ Created on Mon Oct 28 09:31:21 2019
 import os
 
 import matplotlib.pyplot as plt
-from numba import cuda, int16, float32
-from scipy.spatial.transform import Rotation as R
 from timeit import default_timer as timer
 import torch as th
 
