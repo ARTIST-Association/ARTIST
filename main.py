@@ -48,25 +48,25 @@ num_rays = 1000
 
 ######CUDA Kernel#######
 
-@cuda.jit((float32[:,:], float32[:,:], float32[:,:,:], float32[:,:]))
-def kernel(a_int, h_int, ray_int, bitmap): #Schnittpunkt Receiver
-    # a_int: Aimpoints
-    # h_int: Heliostat positions
-    # ray: Ray direction vector
-    # dx, dy: = Distance of Ray Receiver Intersection to the lower left corner
+# @cuda.jit((float32[:,:], float32[:,:], float32[:,:,:], float32[:,:]))
+# def kernel(a_int, h_int, ray_int, bitmap): #Schnittpunkt Receiver
+#     # a_int: Aimpoints
+#     # h_int: Heliostat positions
+#     # ray: Ray direction vector
+#     # dx, dy: = Distance of Ray Receiver Intersection to the lower left corner
 
-    z, x = cuda.grid(2) # alias for threadIdx.x + ( blockIdx.x * blockDim.x ),
-                        #           threadIdx.y + ( blockIdx.y * blockDim.y )
+#     z, x = cuda.grid(2) # alias for threadIdx.x + ( blockIdx.x * blockDim.x ),
+#                         #           threadIdx.y + ( blockIdx.y * blockDim.y )
 
-    r_fac = -h_int[x,0]/ray_int[x,z,0] # z richtung Entfernung Receiver - Ray Origin
-    dx_int = h_int[x,1]+r_fac*ray_int[x,z,1]+planex/2+a_int[x,1] # x direction
-    dy_int = h_int[x,2]+r_fac*ray_int[x,z,2]+planey/2+a_int[x,2]-receiver_pos # y direction. Receiver is on heigt of 100m
+#     r_fac = -h_int[x,0]/ray_int[x,z,0] # z richtung Entfernung Receiver - Ray Origin
+#     dx_int = h_int[x,1]+r_fac*ray_int[x,z,1]+planex/2+a_int[x,1] # x direction
+#     dy_int = h_int[x,2]+r_fac*ray_int[x,z,2]+planey/2+a_int[x,2]-receiver_pos # y direction. Receiver is on heigt of 100m
 
-    if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
-        if (0 <= dy_int < planey):
-            x_int = int(dx_int/planex*50)
-            y_int = int(dy_int/planey*50)
-            bitmap[x_int,y_int] += 1
+#     if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
+#         if (0 <= dy_int < planey):
+#             x_int = int(dx_int/planex*50)
+#             y_int = int(dy_int/planey*50)
+#             bitmap[x_int,y_int] += 1
 
 
 
