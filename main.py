@@ -15,8 +15,6 @@ import torch as th
 
 from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_aimpoints, define_heliostat, rotate_heliostat
 
-libdir = os.environ.get('NUMBAPRO_CUDALIB')
-# os.environ['NUMBA_ENABLE_CUDASIM'] = 1
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 
