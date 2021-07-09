@@ -151,12 +151,12 @@ for j, point in enumerate(hel_in_field):
         # print(intersection)
         dx_int = intersection[1] +planex/2
         dy_int = intersection[2] +planey/2
-        if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
-            if (0 <= dy_int < planey):
+        # checks the point of intersection  and chooses bin in bitmap
+        if ( 0 <= dx_int < planex and 0 <= dy_int < planey):
 
-                x_int = int(dx_int/planex*bitmap_height)
-                y_int = int(dy_int/planey*bitmap_width)
-                bitmap[x_int,y_int] += 1
+            x_int = int(dx_int/planex*bitmap_height)
+            y_int = int(dy_int/planey*bitmap_width)
+            bitmap[x_int,y_int] += 1
 
 
     total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
