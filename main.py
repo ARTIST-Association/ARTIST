@@ -111,7 +111,7 @@ for i, heliostat_point in enumerate(hel_rotated):
     ray_direction = ray_directions[i]
     
     intersection = LinePlaneCollision(planeNormal, planePoint, ray_direction, rayPoint)
-    a = th.tensor(intersection)
+    a = intersection
     ha = a-hel_in_field[i]
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]], device=device)/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]], device=device)),
