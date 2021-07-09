@@ -123,7 +123,7 @@ for i, heliostat_point in enumerate(hel_in_field):
     inv_rot = th.linalg.inv(rotate) #inverse matrix
     # rays_tmp = th.tensor(ha)
     # print(rays_tmp.shape)
-    
+
     # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
     rays_tmp = th.stack([th.matmul(inv_rot,
                            Rz(yi[i],
