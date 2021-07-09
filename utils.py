@@ -326,7 +326,7 @@ def rotate_heliostat(h,hel_coordsystem, points_on_hel):
     return h_rotated
 
 
-def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
+def calc_directions(h_rotated, position_on_field, aimpoint, rows):
 
 
     ray_directions = []
@@ -334,8 +334,6 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
     # column = 0
     for i in range(len(h_rotated[:])):
         # print("Aim",aimpoint)
-        planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=h_rotated.device) # Muss noch dynamisch gestaltet werden
-        planePoint = aimpoint #Any point on the plane
 
     	#Define ray
 

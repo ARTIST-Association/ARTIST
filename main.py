@@ -103,9 +103,11 @@ aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
         # print("Ray directioN", rayDirection)
 
 
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
+planePoint = aimpoint
 rays = th.zeros((points_on_hel, num_rays, 3), device=device)
-for i, heliostat_point in enumerate(h_rotated):
-    rayPoint = h_rotated[i] #Any point along the ray
+for i, heliostat_point in enumerate(hel_rotated):
+    rayPoint = hel_rotated[i] #Any point along the ray
     ray_direction = ray_directions[i]
     
     intersection = LinePlaneCollision(planeNormal, planePoint, ray_direction, rayPoint)
@@ -130,13 +132,11 @@ for i, heliostat_point in enumerate(h_rotated):
                               )
                            ) for i in range(num_rays)
                  ]).to(th.float32)
-        rays[i] = rays_tmp
+    rays[i] = rays_tmp
 
 
 rays = rays.to(th.float32)
 kernel_dt = 0
-planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
-planePoint = aimpoint
 bitmap = th.empty([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
 for j, point in enumerate(hel_in_field):
     bitmap[:] = 0
