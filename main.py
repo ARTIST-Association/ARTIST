@@ -158,5 +158,5 @@ for j, point in enumerate(hel_in_field):
     total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
-plt.imshow(total_bitmap.cpu().numpy(), cmap='jet')
+plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
 plt.show()
