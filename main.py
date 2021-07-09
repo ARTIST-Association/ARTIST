@@ -138,8 +138,6 @@ for i, heliostat_point in enumerate(hel_in_field):
 
 rays = rays.to(th.float32)
 kernel_dt = 0
-planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
-planePoint = aimpoint
 bitmap = th.empty([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
 for j, point in enumerate(hel_in_field):
     print(j/hel_in_field)
