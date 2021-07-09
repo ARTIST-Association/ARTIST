@@ -141,7 +141,7 @@ rays = th.matmul(inv_rot,
                               ).transpose(0, -1)
                            ).transpose(0, -1).transpose(1, -1)
 rays_dt = timer() - start
-print(f'ray init took {rays_dt} secs')
+print(f'ray calculations took {rays_dt} secs')
 
 
 # rays = rays.to(th.float32)
