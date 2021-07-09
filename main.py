@@ -85,7 +85,7 @@ hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoi
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
 
-ray_directions =  th.stack([aimpoint- position_on_field for i in range(len(hel_in_field))])
+ray_directions =  th.tile(aimpoint- position_on_field, (len(hel_in_field), 1))
 
 
 
