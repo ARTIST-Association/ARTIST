@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 import torch as th
 
-from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_directions, define_heliostat, rotate_heliostat
+from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, define_heliostat, rotate_heliostat
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -84,9 +84,8 @@ hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
-ray_directions =  calc_directions(hel_in_field, position_on_field, aimpoint, rows)
 
-
+ray_directions =  th.stack([aimpoint- position_on_field for i in range(len(hel_in_field))])
 
 
 
@@ -103,16 +102,18 @@ aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
         # print("Ray directioN", rayDirection)
 
 
-planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
-planePoint = aimpoint
 rays = th.zeros((points_on_hel, num_rays, 3), device=device)
-for i, heliostat_point in enumerate(hel_rotated):
-    rayPoint = hel_rotated[i] #Any point along the ray
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
+planePoint = aimpoint #Any point on the plane
+
+for i, heliostat_point in enumerate(hel_in_field):
+    print(i/len(hel_in_field))
+    rayPoint = heliostat_point #Any point along the ray
     ray_direction = ray_directions[i]
-    
+
     intersection = LinePlaneCollision(planeNormal, planePoint, ray_direction, rayPoint)
     a = intersection
-    ha = a-hel_in_field[i]
+    ha = a-heliostat_point
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]], device=device)/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]], device=device)),
                th.tensor([ha[1],-ha[0],0], device=device)/th.linalg.norm(th.tensor([ha[1],-ha[0],0], device=device)),
@@ -137,8 +138,11 @@ for i, heliostat_point in enumerate(hel_rotated):
 
 rays = rays.to(th.float32)
 kernel_dt = 0
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device)
+planePoint = aimpoint
 bitmap = th.empty([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
 for j, point in enumerate(hel_in_field):
+    print(j/hel_in_field)
     bitmap[:] = 0
     start = timer()
     # Execute the kernel
@@ -158,5 +162,5 @@ for j, point in enumerate(hel_in_field):
     total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
-plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
+plt.imshow(total_bitmap.cpu(), cmap='jet')
 plt.show()
