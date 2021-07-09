@@ -46,7 +46,7 @@ position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 sun = th.tensor([0,0,1], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
-num_rays = 100
+num_rays = 1000
 
 ######CUDA Kernel#######
 
