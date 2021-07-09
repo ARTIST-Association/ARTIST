@@ -25,25 +25,23 @@ def define_heliostat(h_height, h_width, rows, points_on_hel, device):
     return h
 
 def rotate_heliostat(h,hel_coordsystem, points_on_hel):
-    h_rotated = th.empty((points_on_hel,3), device=h.device) # darray with all heliostats (#heliostats, 3 coords)
     r = rot_from_matrix(hel_coordsystem)
     euler = rot_as_euler(r, 'xyx', degrees = True)
-    for i in range(len(h[:])):
-        ele_degrees = 90-euler[2]
+    ele_degrees = 90-euler[2]
 
-        ele_radians = th.deg2rad(ele_degrees)
-        ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
-        ele_vector = ele_radians * ele_axis
-        ele = rot_from_rotvec(ele_vector)
+    ele_radians = th.deg2rad(ele_degrees)
+    ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
+    ele_vector = ele_radians * ele_axis
+    ele = rot_from_rotvec(ele_vector)
 
-        azi_degrees = euler[1]-90
-        azi_radians = th.deg2rad(azi_degrees)
-        azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
-        azi_vector = azi_radians * azi_axis
-        azi = rot_from_rotvec(azi_vector)
+    azi_degrees = euler[1]-90
+    azi_radians = th.deg2rad(azi_degrees)
+    azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
+    azi_vector = azi_radians * azi_axis
+    azi = rot_from_rotvec(azi_vector)
 
-        h_rotated[i] = rot_apply(azi, rot_apply(ele, h[i]))
-    return h_rotated
+    h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1))) # darray with all heliostats (#heliostats, 3 coords)
+    return h_rotated.squeeze(-1)
 
 
 
