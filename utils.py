@@ -329,7 +329,7 @@ def rotate_heliostat(h,hel_coordsystem, points_on_hel):
 def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
 
 
-    aimpoints = []
+    ray_directions = []
     # row = 0
     # column = 0
     for i in range(len(h_rotated[:])):
@@ -339,30 +339,10 @@ def calc_aimpoints(h_rotated, position_on_field, aimpoint, rows):
 
     	#Define ray
 
-        rayDirection = aimpoint - position_on_field
-        # print("Ray directioN", rayDirection)
-        rayPoint = h_rotated[i] #Any point along the ray
-        # print("ray_point", rayPoint)
-
-        intersection = LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint)
-        # print("intersection",intersection)
-        # exit()
-        # print("cr",column,row)
-        # if i % (rows) == 0 and not i == 0:
-        #     print("Hello")
-        #     row +=1
-        #     column=0
-
-        # aimpoints[0,column,row] = intersection[0]
-        # aimpoints[1,column,row] = intersection[1]
-        # aimpoints[2,column,row] = intersection[2]
-        aimpoints.append(intersection)
-        # exit()
-
-        # column +=1
-    aimpoints = th.stack(aimpoints)
-
-    return aimpoints
+        ray_directions.append(aimpoint - position_on_field)
+    
+    ray_directions = th.stack(ray_directions)
+    return ray_directions
 
 
 def flatten_aimpoints(aimpoints):
