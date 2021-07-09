@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 import torch as th
 
-from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_aimpoints, define_heliostat, rotate_heliostat
+from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, calc_directions, define_heliostat, rotate_heliostat
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -44,7 +44,7 @@ position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 sun = th.tensor([0,0,1], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
-num_rays = 1000
+num_rays = 100
 
 ######CUDA Kernel#######
 
@@ -84,50 +84,53 @@ hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
-aimpoints =  calc_aimpoints(hel_in_field, position_on_field, aimpoint, rows)
+ray_directions =  calc_directions(hel_in_field, position_on_field, aimpoint, rows)
 
 
 
 
-# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
+
 
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
-a= aimpoints
+
 # print(a)
 # a = th.tensor([aimpoints[:,th.randint(0,aimpoint_mesh_dim),th.randint(0,aimpoint_mesh_dim)] for i in range(fac)], device=device).to(th.float32) # draw a random aimpoint
 
 
 # rays = th.empty((fac, DIM**2//fac, 3), device=device)
+# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
+        # print("Ray directioN", rayDirection)
 
-ha_list = a-hel_in_field # calculate distance heliostat to aimpoint
 
 rays = th.zeros((points_on_hel, num_rays, 3), device=device)
-for i, ha in enumerate(ha_list):
-
-    # print(ha)
-
+for i, heliostat_point in enumerate(h_rotated):
+    rayPoint = h_rotated[i] #Any point along the ray
+    ray_direction = ray_directions[i]
+    
+    intersection = LinePlaneCollision(planeNormal, planePoint, ray_direction, rayPoint)
+    a = th.tensor(intersection)
+    ha = a-hel_in_field[i]
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotate = th.stack([th.tensor([ha[0],ha[1],ha[2]], device=device)/th.linalg.norm(th.tensor([ha[0],ha[1],ha[2]], device=device)),
-                       th.tensor([ha[1],-ha[0],0], device=device)/th.linalg.norm(th.tensor([ha[1],-ha[0],0], device=device)),
-                       th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device)/th.linalg.norm(th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device))])
-
+               th.tensor([ha[1],-ha[0],0], device=device)/th.linalg.norm(th.tensor([ha[1],-ha[0],0], device=device)),
+               th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device)/th.linalg.norm(th.tensor([ha[2]*ha[0],ha[2]*ha[1],-ha[0]**2-ha[1]**2], device=device))])
     inv_rot = th.linalg.inv(rotate) #inverse matrix
     # rays_tmp = th.tensor(ha)
     # print(rays_tmp.shape)
-
+    
     # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
     rays_tmp = th.stack([th.matmul(inv_rot,
-                                   Rz(yi[i],
-                                      Ry(xi[i],
-                                         th.matmul(rotate,
-                                                   ha
-                                                   )
-                                         )
-                                      )
-                                   ) for i in range(num_rays)
-                         ]).to(th.float32)
-    rays[i] = rays_tmp
+                           Rz(yi[i],
+                              Ry(xi[i],
+                                 th.matmul(rotate,
+                                           ha
+                                           )
+                                 )
+                              )
+                           ) for i in range(num_rays)
+                 ]).to(th.float32)
+        rays[i] = rays_tmp
 
 
 rays = rays.to(th.float32)
@@ -155,5 +158,5 @@ for j, point in enumerate(hel_in_field):
     total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
-plt.imshow(total_bitmap, cmap='gray')
+plt.imshow(total_bitmap, cmap='jet')
 plt.show()
