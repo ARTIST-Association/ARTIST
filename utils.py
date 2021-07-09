@@ -11,17 +11,17 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 
 def define_heliostat(h_height, h_width, rows, points_on_hel, device):
-    h = th.empty((points_on_hel,3), device=device) # darray with all heliostats (#heliostats, 3 coords)
     columns = points_on_hel//rows
-    i= 0
-    for column in range(columns):
-        for row in range(rows):
-            h[i,0] = (row/(rows-1)*h_height)-(h_height/2)
-            h[i,1] = (column/(columns-1)*h_width)-(h_width/2) #heliostat y position
-            h[i,2] = 0 # helioistat z position
+    column = th.arange(columns)
+    row = th.arange(rows)
 
-            # h[i] = h[i]+ position_on_field
-            i+=1
+    h_x = (row/(rows-1)*h_height)-(h_height/2)
+    h_x = th.tile(h_x, (columns,))
+    h_y = (column/(columns-1)*h_width)-(h_width/2) #heliostat y position
+    h_y = th.tile(h_y.unsqueeze(-1), (1, columns)).ravel()
+    h_z = th.zeros_like(h_x)
+
+    h = th.hstack(list(map(lambda t: t.unsqueeze(-1), [h_x, h_y, h_z]))).reshape(len(h_x), -1)
     return h
 
 def rotate_heliostat(h,hel_coordsystem, points_on_hel):
