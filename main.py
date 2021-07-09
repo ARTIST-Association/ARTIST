@@ -21,6 +21,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # threads = (256, 1)
 seed = 0
 use_gpu = True
+bitmap_width = 50
+bitmap_height = 50
 
 th.manual_seed(0)
 device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
@@ -64,8 +66,8 @@ num_rays = 100
 
 #     if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
 #         if (0 <= dy_int < planey):
-#             x_int = int(dx_int/planex*50)
-#             y_int = int(dy_int/planey*50)
+#             x_int = int(dx_int/planex*bitmap_height)
+#             y_int = int(dy_int/planey*bitmap_width)
 #             bitmap[x_int,y_int] += 1
 
 
@@ -73,7 +75,7 @@ num_rays = 100
 
 ###Define derived variables#####
 
-total_bitmap = th.zeros([50, 50], dtype=th.float32, device=device) # Flux density map for heliostat field
+total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=device) # Flux density map for heliostat field
 
 
 
@@ -138,7 +140,7 @@ for i, heliostat_point in enumerate(hel_in_field):
 
 rays = rays.to(th.float32)
 kernel_dt = 0
-bitmap = th.empty([50, 50], dtype=th.float32, device=device) #Flux density map for single heliostat
+bitmap = th.empty([bitmap_height, bitmap_width], dtype=th.float32, device=device) #Flux density map for single heliostat
 for j, point in enumerate(hel_in_field):
     print(j/hel_in_field)
     bitmap[:] = 0
@@ -152,8 +154,8 @@ for j, point in enumerate(hel_in_field):
         if ( 0 <= dx_int < planex): # checks the point of intersection  and chooses bin in bitmap
             if (0 <= dy_int < planey):
 
-                x_int = int(dx_int/planex*50)
-                y_int = int(dy_int/planey*50)
+                x_int = int(dx_int/planex*bitmap_height)
+                y_int = int(dy_int/planey*bitmap_width)
                 bitmap[x_int,y_int] += 1
 
 
