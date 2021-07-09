@@ -107,7 +107,6 @@ aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
         # print("Ray directioN", rayDirection)
 
 
-rays = th.zeros((points_on_hel, num_rays, 3), device=device)
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 planePoint = aimpoint #Any point on the plane
 
