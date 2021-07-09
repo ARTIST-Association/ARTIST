@@ -109,31 +109,45 @@ def heliostat_coord_system (Position, Sun, Aimpoint):
     return x,y,z
 
 
-def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=1e-6):
+def LinePlaneCollision(planeNormal, planePoint, rayDirections, rayPoints, epsilon=1e-6):
 
-	ndotu = planeNormal.dot(rayDirection)
-	if th.abs(ndotu) < epsilon:
-		raise RuntimeError("no intersection or line is within plane")
+    ndotu = rayDirections.matmul(planeNormal)
+    if (th.abs(ndotu) < epsilon).any():
+        raise RuntimeError("no intersection or line is within plane")
 
-	w = rayPoint - planePoint
-	si = -planeNormal.dot(w) / ndotu
-	Psi = w + si * rayDirection + planePoint
-	return Psi
-
+    ws = rayPoints - planePoint
+    sis = -ws.matmul(planeNormal) / ndotu
+    Psis = ws + sis.unsqueeze(-1) * rayDirections + planePoint
+    return Psis
 
 	#Define plane
 #Rotation Matricies
-def Rx(alpha, vec):
-    if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha, device=vec.device)
-    return th.matmul(th.tensor([[1, 0, 0],[0, th.cos(alpha), -th.sin(alpha)],[0, th.sin(alpha), th.cos(alpha)]], dtype=th.float32, device=vec.device),vec)
+def Rx(alpha, mat):
+    zeros = th.zeros_like(alpha)
+    coss = th.cos(alpha)
+    sins = th.sin(alpha)
+    rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [th.ones_like(alpha), zeros, zeros])))
+    rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, coss, -sins])))
+    rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, sins, coss])))
+    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+    return th.matmul(rots,mat)
 
-def Ry(alpha, vec):
-    if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha, device=vec.device)
-    return th.matmul(th.tensor([[th.cos(alpha), 0, th.sin(alpha)],[0, 1, 0],[-th.sin(alpha), 0, th.cos(alpha)]], dtype=th.float32, device=vec.device),vec)
+def Ry(alpha, mat):
+    zeros = th.zeros_like(alpha)
+    coss = th.cos(alpha)
+    sins = th.sin(alpha)
+    rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [coss, zeros, sins])))
+    rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, th.ones_like(alpha), zeros])))
+    rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [-sins, zeros, coss])))
+    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+    return th.matmul(rots,mat.transpose(0, -1))
 
-def Rz(alpha, vec):
-    if not isinstance(alpha, th.Tensor):
-        alpha = th.tensor(alpha, device=vec.device)
-    return th.matmul(th.tensor([[th.cos(alpha), -th.sin(alpha), 0],[th.sin(alpha), th.cos(alpha), 0],[0, 0, 1]], dtype=th.float32, device=vec.device),vec)
+def Rz(alpha, mat):
+    zeros = th.zeros_like(alpha)
+    coss = th.cos(alpha)
+    sins = th.sin(alpha)
+    rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [coss, -sins, zeros])))
+    rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [sins, coss, zeros])))
+    rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, zeros, th.ones_like(alpha)])))
+    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+    return th.matmul(rots,mat)
