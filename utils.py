@@ -326,22 +326,6 @@ def rotate_heliostat(h,hel_coordsystem, points_on_hel):
     return h_rotated
 
 
-def calc_directions(h_rotated, position_on_field, aimpoint, rows):
-
-
-    ray_directions = []
-    # row = 0
-    # column = 0
-    for i in range(len(h_rotated[:])):
-        # print("Aim",aimpoint)
-
-    	#Define ray
-
-        ray_directions.append(aimpoint - position_on_field)
-    
-    ray_directions = th.stack(ray_directions)
-    return ray_directions
-
 
 def flatten_aimpoints(aimpoints):
     X = th.flatten(aimpoints[0])
