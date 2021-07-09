@@ -6,9 +6,9 @@ Created on Mon Oct 28 09:31:21 2019
 """
 
 import os
+from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
-from timeit import default_timer as timer
 import torch as th
 
 from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, define_heliostat, rotate_heliostat
