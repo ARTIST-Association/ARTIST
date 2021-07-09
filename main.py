@@ -81,6 +81,7 @@ total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=
 
 sun = sun/th.linalg.norm(sun)
 
+start = timer()
 points_on_hel = rows**2 # reflection points on hel
 hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
@@ -88,6 +89,8 @@ hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
 
 ray_directions =  th.tile(aimpoint- position_on_field, (len(hel_in_field), 1))
+init_dt = timer() - start
+print(f'initialization took {init_dt} secs')
 
 
 
@@ -108,6 +111,7 @@ rays = th.zeros((points_on_hel, num_rays, 3), device=device)
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 planePoint = aimpoint #Any point on the plane
 
+start = timer()
 for i, heliostat_point in enumerate(hel_in_field):
     print(i/len(hel_in_field))
     rayPoint = heliostat_point #Any point along the ray
@@ -136,6 +140,8 @@ for i, heliostat_point in enumerate(hel_in_field):
                            ) for i in range(num_rays)
                  ]).to(th.float32)
     rays[i] = rays_tmp
+rays_dt = timer() - start
+print(f'ray init took {rays_dt} secs')
 
 
 rays = rays.to(th.float32)
@@ -162,5 +168,6 @@ for j, point in enumerate(hel_in_field):
     total_bitmap += bitmap#th.sum(d_bitmap, axis = 2)
     kernel_dt += timer() - start
 
+print(f'kernel calculations took {kernel_dt} secs')
 plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
 plt.show()
