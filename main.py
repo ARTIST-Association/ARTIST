@@ -20,13 +20,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
 # threads = (256, 1)
 seed = 0
-use_gpu = True
+use_gpu = False
 bitmap_width = 50
 bitmap_height = 50
 
 th.manual_seed(0)
-# device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
-device = "cpu"
+device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
 aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
