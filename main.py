@@ -151,7 +151,7 @@ indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < pl
 x_int = (dx_ints[indices]/planex*bitmap_height).long()
 y_int = (dy_ints[indices]/planey*bitmap_width).long()
 total_bitmap.index_put_(
-    (y_int, x_int),
+    (x_int, y_int),
     th.ones(len(x_int), dtype=th.float32, device=device),
     accumulate=True,
 )
