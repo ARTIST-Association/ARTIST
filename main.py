@@ -25,16 +25,15 @@ bitmap_width = 50
 bitmap_height = 50
 
 th.manual_seed(0)
-device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
+# device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
+device = "cpu"
 
 ##Aimpoints
 aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
-aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 ##Receiver specific parameters
 planex = 10 # Receiver width
 planey = 10 #Receiver height
-receiver_pos = 100
 
 ####Heliostat specific Parameters
 h_width = 4 # in m
@@ -43,7 +42,7 @@ rows = 64 #rows of reflection points. total number is rows**2
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
-sun = th.tensor([0,0,1], dtype=th.float32, device=device)
+sun = th.tensor([0,1,1], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 num_rays = 1000
@@ -96,21 +95,16 @@ print(f'initialization took {init_dt} secs')
 
 
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
-aimpoint_mesh_dim = 2**5 #Number of Aimpoints on Receiver
 
 # print(as_)
-# a = th.tensor([aimpoints[:,th.randint(0,aimpoint_mesh_dim),th.randint(0,aimpoint_mesh_dim)] for i in range(fac)], device=device).to(th.float32) # draw a random aimpoint
-
-
-# rays = th.empty((fac, DIM**2//fac, 3), device=device)
 # draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
         # print("Ray directioN", rayDirection)
 
-
+start = timer()
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 planePoint = aimpoint #Any point on the plane
 
-start = timer()
+
 rayPoints = hel_in_field #Any point along the ray
 
 intersections = LinePlaneCollision(planeNormal, planePoint, ray_directions, rayPoints)
@@ -158,7 +152,7 @@ indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < pl
 x_int = (dx_ints[indices]/planex*bitmap_height).long()
 y_int = (dy_ints[indices]/planey*bitmap_width).long()
 total_bitmap.index_put_(
-    (x_int, y_int),
+    (y_int, x_int),
     th.ones(len(x_int), dtype=th.float32, device=device),
     accumulate=True,
 )
