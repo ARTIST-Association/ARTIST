@@ -142,7 +142,6 @@ for epoch in range(epochs):
         pred = to_prediction(intersections, bitmap_height)
         loss += th.nn.functional.mse_loss(pred, target)
 
-
     loss /= len(targets)
     loss.backward()
     if ray_directions.grad is None or (ray_directions.grad == 0).all():
