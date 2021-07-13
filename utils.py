@@ -149,3 +149,35 @@ def Rz(alpha, mat):
     rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, zeros, th.ones_like(alpha)])))
     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
     return th.matmul(rots,mat)
+
+def invert_bitmap(img, planex, planey, bitmap_height, bitmap_width, add_noise=True):
+    assert img.ndim == 2, 'need a 2-D picture to invert it'
+    indices = th.empty(int(img.sum().item()), 2, device=img.device)
+    index_row = 0
+    for row in range(img.shape[0]):
+        for col in range(img.shape[1]):
+            intensity = int(img[row, col])
+            curr_indices = th.tile(
+                th.tensor([row, col], dtype=th.float32, device=img.device),
+                (intensity, 1),
+            )
+            if add_noise:
+                curr_indices += th.rand_like(curr_indices)
+            indices[index_row:index_row + intensity] = curr_indices
+
+            index_row += intensity
+            # indices[row:] = th.tile(th.tensor([row, col], dtype=th.float32), (intensity, 1)))
+    indices[:, 0] = indices[:, 0] / bitmap_height * planex - planex / 2
+    indices[:, 1] = indices[:, 1] / bitmap_width * planey - planey / 2
+    return indices
+
+def sort_indices(tensor, num_rows, descending=False):
+    assert tensor.ndim == 2, 'can only sort 2-D tensors'
+    index_tensor = tensor[:, 0] * num_rows + tensor[:, 1]
+    indices = index_tensor.sort(descending=descending).indices
+    return tensor[indices]
+
+def to_prediction(intersections, bitmap_height):
+    pred = intersections[:, :, 1:3].reshape(-1, 2)
+    pred = sort_indices(pred, bitmap_height)
+    return pred
