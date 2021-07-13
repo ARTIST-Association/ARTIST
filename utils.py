@@ -166,7 +166,7 @@ def compute_receiver_intersections(
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotates_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 0],has[:, 1],has[:, 2]])))
     rotates_x = rotates_x / th.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
-    rotates_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 1],-has[:, 0],th.zeros(has.shape[:1], device=device)])))
+    rotates_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 1],-has[:, 0],th.zeros(has.shape[:1], device=as_.device)])))
     rotates_y = rotates_y / th.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
     rotates_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 2]*has[:, 0],has[:, 2]*has[:, 1],-has[:, 0]**2-has[:, 1]**2])))
     rotates_z = rotates_z / th.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
