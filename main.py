@@ -10,7 +10,7 @@ import os
 import matplotlib.pyplot as plt
 import torch as th
 
-from utils import draw_raytracer, Rx, Ry, Rz, heliostat_coord_system,LinePlaneCollision, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction
+from utils import compute_receiver_intersections, draw_raytracer, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -76,39 +76,15 @@ planePoint = aimpoint #Any point on the plane
 
 rayPoints = hel_in_field #Any point along the ray
 
-intersections = LinePlaneCollision(planeNormal, planePoint, ray_directions, rayPoints)
-as_ = intersections
-has = as_-hel_in_field
-
-# rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
-rotates_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 0],has[:, 1],has[:, 2]])))
-rotates_x /= th.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
-rotates_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 1],-has[:, 0],th.zeros(has.shape[:1], device=device)])))
-rotates_y /= th.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
-rotates_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 2]*has[:, 0],has[:, 2]*has[:, 1],-has[:, 0]**2-has[:, 1]**2])))
-rotates_z /= th.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
-rotates = th.hstack([rotates_x, rotates_y, rotates_z]).reshape(rotates_x.shape[0], rotates_x.shape[1], -1)
-inv_rot = th.linalg.inv(rotates) #inverse matrix
-# rays_tmp = th.tensor(ha, device=device)
-# print(rays_tmp.shape)
-
-# rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
-rotated_has = th.matmul(rotates, has.unsqueeze(-1))
-
-rays = th.matmul(inv_rot,
-                           Rz(yi,
-                              Ry(xi,
-                                 rotated_has
-                                 )
-                              ).transpose(0, -1)
-                           ).transpose(0, -1).transpose(1, -1)
-
-
-# rays = rays.to(th.float32)
-
-# Execute the kernel
-intersections = LinePlaneCollision(planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
-# print(intersection)
+intersections = compute_receiver_intersections(
+    planeNormal,
+    planePoint,
+    ray_directions,
+    rayPoints,
+    hel_in_field,
+    xi,
+    yi,
+)
 dx_ints = intersections[:, :, 1] +planex/2
 dy_ints = intersections[:, :, 2] +planey/2
 # checks the points of intersection  and chooses bins in bitmap
@@ -154,40 +130,15 @@ for epoch in range(epochs):
     loss = 0
 
     for target in targets:
-        intersections = LinePlaneCollision(planeNormal, planePoint, ray_directions, rayPoints)
-        as_ = intersections
-        has = as_-hel_in_field
-
-        # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
-        rotates_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 0],has[:, 1],has[:, 2]])))
-        rotates_x = rotates_x / th.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
-        rotates_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 1],-has[:, 0],th.zeros(has.shape[:1], device=device)])))
-        rotates_y = rotates_y / th.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
-        rotates_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 2]*has[:, 0],has[:, 2]*has[:, 1],-has[:, 0]**2-has[:, 1]**2])))
-        rotates_z = rotates_z / th.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
-        rotates = th.hstack([rotates_x, rotates_y, rotates_z]).reshape(rotates_x.shape[0], rotates_x.shape[1], -1)
-        inv_rot = th.linalg.inv(rotates) #inverse matrix
-        # rays_tmp = th.tensor(ha, device=device)
-        # print(rays_tmp.shape)
-
-        # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
-        rotated_has = th.matmul(rotates, has.unsqueeze(-1))
-
-        rays = th.matmul(inv_rot,
-                                   Rz(yi,
-                                      Ry(xi,
-                                         rotated_has
-                                         )
-                                      ).transpose(0, -1)
-                                   ).transpose(0, -1).transpose(1, -1)
-
-
-        # rays = rays.to(th.float32)
-
-        # Execute the kernel
-        intersections = LinePlaneCollision(planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
-        # print(intersection)
-
+        intersections = compute_receiver_intersections(
+            planeNormal,
+            planePoint,
+            ray_directions,
+            rayPoints,
+            hel_in_field,
+            xi,
+            yi,
+        )
         pred = to_prediction(intersections, bitmap_height)
         loss += th.nn.functional.mse_loss(pred, target)
 
