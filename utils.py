@@ -12,8 +12,8 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 def define_heliostat(h_height, h_width, rows, points_on_hel, device):
     columns = points_on_hel//rows
-    column = th.arange(columns)
-    row = th.arange(rows)
+    column = th.arange(columns, device=device)
+    row = th.arange(rows, device=device)
 
     h_x = (row/(rows-1)*h_height)-(h_height/2)
     h_x = th.tile(h_x, (columns,))
