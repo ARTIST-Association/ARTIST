@@ -6,7 +6,6 @@ Created on Mon Oct 28 09:31:21 2019
 """
 
 import os
-from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
 import torch as th
@@ -56,7 +55,6 @@ total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=
 
 sun = sun/th.linalg.norm(sun)
 
-start = timer()
 points_on_hel = rows**2 # reflection points on hel
 hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
@@ -64,10 +62,6 @@ hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
 
 ray_directions =  th.tile(aimpoint- position_on_field, (len(hel_in_field), 1))
-init_dt = timer() - start
-print(f'initialization took {init_dt} secs')
-
-
 
 
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
@@ -76,7 +70,6 @@ xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to
 # draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
         # print("Ray directioN", rayDirection)
 
-start = timer()
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 planePoint = aimpoint #Any point on the plane
 
@@ -109,13 +102,9 @@ rays = th.matmul(inv_rot,
                                  )
                               ).transpose(0, -1)
                            ).transpose(0, -1).transpose(1, -1)
-rays_dt = timer() - start
-print(f'ray calculations took {rays_dt} secs')
 
 
 # rays = rays.to(th.float32)
-kernel_dt = 0
-start = timer()
 
 # Execute the kernel
 intersections = LinePlaneCollision(planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
@@ -133,10 +122,6 @@ total_bitmap.index_put_(
     accumulate=True,
 )
 
-
-kernel_dt += timer() - start
-
-print(f'kernel calculations took {kernel_dt} secs')
 
 # Dataset
 target_imgs = total_bitmap.detach().clone().unsqueeze(0)
