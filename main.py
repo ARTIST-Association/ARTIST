@@ -20,7 +20,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # grids = (int(DIM**2)//256//fac, fac//1) #cuda grid from threads , optimale anordnung
 # threads = (256, 1)
 seed = 0
-use_gpu = False
+use_gpu = True
 bitmap_width = 50
 bitmap_height = 50
 
