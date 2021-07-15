@@ -57,21 +57,17 @@ def draw_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, s
     fig = plt.figure()
     ax = plt.axes(projection='3d')
 
-    h_rotated = h_rotated
-    aimpoints = aimpoints - position_on_field
-    aimpoint = aimpoint - position_on_field
-
     # aimpoints = aimpoints-position_on_field
     # aimpoint = aimpoint-position_on_field
-
+    print(aimpoints.shape)
     ax.scatter(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2]) #Heliostat
     ax.scatter(aimpoint[0],aimpoint[1],aimpoint[2]) #Aimpoint
-    ax.scatter(aimpoints[:,0],aimpoints[:,1],aimpoints[:,2])
+    ax.scatter(aimpoints[0,:,0],aimpoints[0,:,1],aimpoints[0,:,2])
     ax.scatter(sun[0]*50,sun[1]*50,sun[2]*50) #Sun
 
-    ax.set_xlim3d(-100, 100)
-    ax.set_ylim3d(-100, 100)
-    ax.set_zlim3d(0, 100)
+    ax.set_xlim3d(-50, 50)
+    ax.set_ylim3d(-50, 50)
+    ax.set_zlim3d(0, 50)
 
     #Heliostat Coordsystem
     # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
@@ -81,6 +77,25 @@ def draw_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, s
     ax.quiver(0, 0, 0, h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
     ax.quiver(0, 0, 0, h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
     plt.show()
+
+def draw_heliostat(h_rotated, ray_directions):
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+
+
+    # aimpoints = aimpoints-position_on_field
+    # aimpoint = aimpoint-position_on_field
+
+    ax.scatter(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2]) #Heliostat
+
+    ax.set_xlim3d(-50, 0)
+    ax.set_ylim3d(-10, 10)
+    ax.set_zlim3d(0, 5) 
+    ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[:,0], ray_directions[:,1], ray_directions[:,2], length=50, normalize=True, color="b")
+    # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[1][0], ray_directions[1][1], ray_directions[1][2], length=1, normalize=True, color="g")
+    # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[2][0], ray_directions[2][1], ray_directions[2][2], length=1, normalize=True, color="r")
+    plt.show()
+
 
 def heliostat_coord_system (Position, Sun, Aimpoint):
 

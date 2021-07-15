@@ -8,9 +8,11 @@ Created on Mon Oct 28 09:31:21 2019
 import os
 
 import matplotlib.pyplot as plt
+from matplotlib import animation
 import torch as th
+import time
 
-from utils import compute_receiver_intersections, draw_raytracer, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction
+from utils import compute_receiver_intersections, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction, draw_raytracer, draw_heliostat
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -20,15 +22,16 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # threads = (256, 1)
 seed = 0
 use_gpu = True
-epochs = 200
+epochs = 500
 bitmap_width = 50
 bitmap_height = 50
+
 
 th.manual_seed(0)
 device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
-aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
+aimpoint = th.tensor([-50,0,50], dtype=th.float32, device=device)
 
 ##Receiver specific parameters
 planex = 10 # Receiver width
@@ -37,14 +40,14 @@ planey = 10 #Receiver height
 ####Heliostat specific Parameters
 h_width = 4 # in m
 h_height = 4 # in m
-rows = 64 #rows of reflection points. total number is rows**2
+rows = 16 #rows of reflection points. total number is rows**2
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
-sun = th.tensor([0,1,1], dtype=th.float32, device=device)
+sun = th.tensor([0,1,0], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
-num_rays = 1000
+num_rays = 1
 
 
 ###Define derived variables#####
@@ -67,24 +70,30 @@ ray_directions =  th.tile(aimpoint- position_on_field, (len(hel_in_field), 1))
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 
 # print(as_)
-# draw_raytracer(hel_rotated, hel_coordsystem, position_on_field, aimpoint,aimpoints, sun)
-        # print("Ray directioN", rayDirection)
+
 
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
-planePoint = aimpoint #Any point on the plane
 
 
 rayPoints = hel_in_field #Any point along the ray
 
 intersections = compute_receiver_intersections(
     planeNormal,
-    planePoint,
+    aimpoint, # any point on plane
     ray_directions,
     rayPoints,
     hel_in_field,
     xi,
     yi,
 )
+
+# draw_raytracer(hel_rotated.detach().cpu().numpy(),
+#                 hel_coordsystem.detach().cpu().numpy(),
+#                 position_on_field.detach().cpu().numpy(),
+#                 aimpoint.detach().cpu().numpy(),
+#                 intersections.detach().cpu().numpy(),
+#                 sun.detach().cpu().numpy())
+
 dx_ints = intersections[:, :, 1] +planex/2
 dy_ints = intersections[:, :, 2] +planey/2
 # checks the points of intersection  and chooses bins in bitmap
@@ -99,48 +108,73 @@ total_bitmap.index_put_(
 )
 
 
+
+
 # Dataset
 target_imgs = total_bitmap.detach().clone().unsqueeze(0)
-
 targets = th.stack(list(map(
     lambda img: sort_indices(
-        invert_bitmap(img, planex, planey, bitmap_height, bitmap_width),
+        invert_bitmap(img, planex, planey, bitmap_height, bitmap_width, add_noise=True),
         bitmap_height,
     ),
     target_imgs,
 )))
 pred = to_prediction(intersections, bitmap_height)
-print('inversion error', th.nn.functional.mse_loss(pred, targets[0]))
+print(targets[0])
+# print('inversion error', th.nn.functional.mse_loss(pred, targets[0]))
 
 # Optimization setup
-ray_directions += th.randn_like(ray_directions) * 0.1
+# ray_directions += th.randn_like(ray_directions) * 0.1 # Durch den Invertierung gibt es schon einen minimalen Fehler, zeile kann übergangen werden bis der Algorithmus konvergiert
 ray_directions.requires_grad_(True)
 opt = th.optim.Adam([ray_directions], lr=3e-2)
 sched = th.optim.lr_scheduler.ReduceLROnPlateau(
     opt,
     factor=0.5,
-    min_lr=1e-7,
+    min_lr=1e-12,
+    patience=1000,
     verbose=True,
 )
 
 # Just for printing purposes
 epoch_shift_width = len(str(epochs))
+im = plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
+# xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # sollte für das Training neu gesetzt werden. kann aber bis es funktioniert auskommentiert bleiben
 for epoch in range(epochs):
     opt.zero_grad()
     loss = 0
-
+    # print(ray_directions)
     for target in targets:
-        intersections = compute_receiver_intersections(
+        intersections2 = compute_receiver_intersections(
             planeNormal,
-            planePoint,
+            aimpoint,
             ray_directions,
             rayPoints,
             hel_in_field,
             xi,
             yi,
         )
-        pred = to_prediction(intersections, bitmap_height)
-        loss += th.nn.functional.mse_loss(pred, target)
+        pred = to_prediction(intersections2, bitmap_height)
+    if epoch %  5== 0 and not epoch == 0:#
+        dx_pred = intersections2[:, :, 1] +planex/2
+        dy_pred = intersections2[:, :, 2] +planey/2
+        indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < planey))
+        x_pred = (dx_pred[indices]/planex*bitmap_height).long()
+        y_pred = (dy_pred[indices]/planey*bitmap_width).long()
+        total_bitmap.index_put_(
+        (x_pred, y_pred),
+        th.ones(len(x_pred), dtype=th.float32, device=device),
+        accumulate=True,
+        )
+        im.set_data(total_bitmap.detach().cpu().numpy())
+        im.autoscale()
+        plt.pause(0.001)  # In interactive mode, need a small delay to get the plot to appear
+        plt.draw()
+        # print(pred)
+        # exit()
+        
+            # exit()
+
+    loss += th.nn.functional.l1_loss(pred, target, 0.1)
 
     loss /= len(targets)
     loss.backward()
@@ -159,16 +193,17 @@ for epoch in range(epochs):
             f'missed: {num_missed.detach().cpu().item()}'
         )
 
+print(ray_directions)
+# draw_heliostat(hel_rotated.detach().cpu().numpy(), ray_directions.detach().cpu().numpy())
+# total_bitmap.fill_(0)
 
-total_bitmap.fill_(0)
+# x_int = x_int.long()
+# y_int = y_int.long()
+# total_bitmap.index_put_(
+#     (x_int, y_int),
+#     th.ones(len(x_int), dtype=th.float32, device=device),
+#     accumulate=True,
+# )
+# plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
+# plt.show()
 
-x_int = x_int.long()
-y_int = y_int.long()
-total_bitmap.index_put_(
-    (x_int, y_int),
-    th.ones(len(x_int), dtype=th.float32, device=device),
-    accumulate=True,
-)
-
-plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
-plt.show()
