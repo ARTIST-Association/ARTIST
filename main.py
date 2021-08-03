@@ -31,7 +31,7 @@ th.manual_seed(0)
 device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
-aimpoint = th.tensor([-50,0,50], dtype=th.float32, device=device)
+aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
 
 ##Receiver specific parameters
 planex = 10 # Receiver width
@@ -40,14 +40,14 @@ planey = 10 #Receiver height
 ####Heliostat specific Parameters
 h_width = 4 # in m
 h_height = 4 # in m
-rows = 16 #rows of reflection points. total number is rows**2
+rows = 64 #rows of reflection points. total number is rows**2
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
 sun = th.tensor([0,1,0], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
-num_rays = 1
+num_rays = 1000
 
 
 ###Define derived variables#####
@@ -154,6 +154,7 @@ for epoch in range(epochs):
             yi,
         )
         pred = to_prediction(intersections2, bitmap_height)
+        loss += th.nn.functional.l1_loss(pred, target, 0.1)
     if epoch %  5== 0 and not epoch == 0:#
         dx_pred = intersections2[:, :, 1] +planex/2
         dy_pred = intersections2[:, :, 2] +planey/2
@@ -174,7 +175,7 @@ for epoch in range(epochs):
         
             # exit()
 
-    loss += th.nn.functional.l1_loss(pred, target, 0.1)
+    
 
     loss /= len(targets)
     loss.backward()
@@ -193,7 +194,7 @@ for epoch in range(epochs):
             f'missed: {num_missed.detach().cpu().item()}'
         )
 
-print(ray_directions)
+# print(ray_directions)
 # draw_heliostat(hel_rotated.detach().cpu().numpy(), ray_directions.detach().cpu().numpy())
 # total_bitmap.fill_(0)
 
