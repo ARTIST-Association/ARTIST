@@ -32,7 +32,7 @@ device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
 aimpoint = th.tensor([-50,0,0], dtype=th.float32, device=device)
-
+planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 ##Receiver specific parameters
 planex = 10 # Receiver width
 planey = 10 #Receiver height
@@ -72,7 +72,7 @@ xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to
 # print(as_)
 
 
-planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
+
 
 
 rayPoints = hel_in_field #Any point along the ray
@@ -138,26 +138,28 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
 # Just for printing purposes
 epoch_shift_width = len(str(epochs))
 im = plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
-# xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # sollte für das Training neu gesetzt werden. kann aber bis es funktioniert auskommentiert bleiben
+
+xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) #has to be another xi and yi as in the preprocessing
 for epoch in range(epochs):
     opt.zero_grad()
     loss = 0
     # print(ray_directions)
     for target in targets:
-        intersections2 = compute_receiver_intersections(
+        intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,
             ray_directions,
-            rayPoints,
-            hel_in_field,
+            rayPoints, #Raypoints und hel_in_field scheinen aktuell das gleiche zu sein
+            hel_in_field, #Sobald wir mehrere Bilder verwenden stimmt das hier nicht mehr, dann sollte hier etwas stehen wie hel_in_field[target], da mehrere Bilder unterschiedlichen Sonnenstanden entsprechen und die Punkte sich dann auch woanders befinden.
             xi,
             yi,
         )
-        pred = to_prediction(intersections2, bitmap_height)
+        pred = to_prediction(intersections, bitmap_height)
         loss += th.nn.functional.l1_loss(pred, target, 0.1)
+        
     if epoch %  5== 0 and not epoch == 0:#
-        dx_pred = intersections2[:, :, 1] +planex/2
-        dy_pred = intersections2[:, :, 2] +planey/2
+        dx_pred = intersections[:, :, 1] +planex/2
+        dy_pred = intersections[:, :, 2] +planey/2
         indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < planey))
         x_pred = (dx_pred[indices]/planex*bitmap_height).long()
         y_pred = (dy_pred[indices]/planey*bitmap_width).long()
