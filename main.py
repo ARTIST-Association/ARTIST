@@ -121,7 +121,7 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
 def loss_func(pred, target, compute_intersections, rayPoints):
     loss = th.nn.functional.l1_loss(pred, target, 0.1)
     if use_curl:
-        loss -= th.sum(th.abs(curl(compute_intersections, rayPoints)))
+        loss += th.sum(th.abs(curl(compute_intersections, rayPoints)))
     return loss
 
 
