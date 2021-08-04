@@ -240,3 +240,12 @@ def to_prediction(intersections, bitmap_height):
     pred = intersections[:, :, 1:3].reshape(-1, 2)
     pred = sort_indices(pred, bitmap_height)
     return pred
+
+def curl(f, arg):
+    jac = th.autograd.functional.jacobian(f, arg, create_graph=True)
+
+    rot_x = jac[2][1] - jac[1][2]
+    rot_y = jac[0][2] - jac[2][0]
+    rot_z = jac[1][0] - jac[0][1]
+
+    return th.tensor([rot_x, rot_y, rot_z])

@@ -12,7 +12,7 @@ from matplotlib import animation
 import torch as th
 import time
 
-from utils import compute_receiver_intersections, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction, draw_raytracer, draw_heliostat
+from utils import compute_receiver_intersections, curl, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction, draw_raytracer, draw_heliostat
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -22,6 +22,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # threads = (256, 1)
 seed = 0
 use_gpu = True
+# Using curl takes a _lot_ of memory
+use_curl = False
 epochs = 500
 bitmap_width = 50
 bitmap_height = 50
@@ -135,6 +137,14 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
     verbose=True,
 )
 
+
+def loss_func(pred, target, compute_intersections, rayPoints):
+    loss = th.nn.functional.l1_loss(pred, target, 0.1)
+    if use_curl:
+        loss -= th.sum(curl(compute_intersections, rayPoints))
+    return loss
+
+
 # Just for printing purposes
 epoch_shift_width = len(str(epochs))
 im = plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
@@ -155,7 +165,20 @@ for epoch in range(epochs):
             yi,
         )
         pred = to_prediction(intersections, bitmap_height)
-        loss += th.nn.functional.l1_loss(pred, target, 0.1)
+        loss += loss_func(
+            pred,
+            target,
+            lambda rayPoints: compute_receiver_intersections(
+                planeNormal,
+                aimpoint,
+                ray_directions,
+                rayPoints,
+                hel_in_field,
+                xi,
+                yi,
+            ),
+            rayPoints,
+        )
         
     if epoch %  5== 0 and not epoch == 0:#
         dx_pred = intersections[:, :, 1] +planex/2
