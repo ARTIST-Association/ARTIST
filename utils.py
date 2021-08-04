@@ -230,6 +230,8 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     y_ints_low = y_inds_high - y_ints
     x_ints_high = x_ints - x_inds_low
     y_ints_high = y_ints - y_inds_low
+    del x_ints
+    del y_ints
 
     x_inds_1 = x_inds_low
     y_inds_1 = y_inds_low
@@ -242,16 +244,36 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     x_inds_3 = x_inds_low
     y_inds_3 = y_inds_high
     ints_3 = x_ints_low * y_ints_high
+    del x_inds_low
+    del y_inds_low
+    del x_ints_low
+    del y_ints_low
 
     x_inds_4 = x_inds_high
     y_inds_4 = y_inds_high
     ints_4 = x_ints_high * y_ints_high
+    del x_inds_high
+    del y_inds_high
+    del x_ints_high
+    del y_ints_high
 
     x_inds = th.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
+    del x_inds_1
+    del x_inds_2
+    del x_inds_3
+    del x_inds_4
 
     y_inds = th.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
+    del y_inds_1
+    del y_inds_2
+    del y_inds_3
+    del y_inds_4
 
     ints = th.hstack([ints_1, ints_2, ints_3, ints_4]).ravel()
+    del ints_1
+    del ints_2
+    del ints_3
+    del ints_4
     # Normalize
     ints = ints / th.max(ints)
 

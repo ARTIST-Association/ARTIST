@@ -61,6 +61,9 @@ hel_origin = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 hel_coordsystem = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 hel_rotated = rotate_heliostat(hel_origin,hel_coordsystem, points_on_hel)
 hel_in_field = hel_rotated+ position_on_field
+del hel_origin
+del hel_coordsystem
+del hel_rotated
 
 ray_directions =  th.tile(aimpoint- position_on_field, (len(hel_in_field), 1))
 
@@ -125,6 +128,7 @@ def loss_func(pred, target, compute_intersections, rayPoints):
 # Just for printing purposes
 epoch_shift_width = len(str(epochs))
 im = plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
+del total_bitmap
 
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) #has to be another xi and yi as in the preprocessing
 for epoch in range(epochs):
