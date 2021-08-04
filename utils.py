@@ -209,37 +209,61 @@ def compute_receiver_intersections(
     # print(intersections)
     return intersections
 
-def invert_bitmap(img, planex, planey, bitmap_height, bitmap_width, add_noise=True):
-    assert img.ndim == 2, 'need a 2-D picture to invert it'
-    indices = th.empty(int(img.sum().item()), 2, device=img.device)
-    index_row = 0
-    for row in range(img.shape[0]):
-        for col in range(img.shape[1]):
-            intensity = int(img[row, col])
-            curr_indices = th.tile(
-                th.tensor([row, col], dtype=th.float32, device=img.device),
-                (intensity, 1),
-            )
-            if add_noise:
-                curr_indices += th.rand_like(curr_indices)
-            indices[index_row:index_row + intensity] = curr_indices
+def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
+    dx_ints = intersections[:, :, 1] +planex/2
+    dy_ints = intersections[:, :, 2] +planey/2
+    # checks the points of intersection  and chooses bins in bitmap
+    indices = ( (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1))
+    return sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
 
-            index_row += intensity
-            # indices[row:] = th.tile(th.tensor([row, col], dtype=th.float32), (intensity, 1)))
-    indices[:, 0] = indices[:, 0] / bitmap_height * planex - planex / 2
-    indices[:, 1] = indices[:, 1] / bitmap_width * planey - planey / 2
-    return indices
+def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width):
 
-def sort_indices(tensor, num_rows, descending=False):
-    assert tensor.ndim == 2, 'can only sort 2-D tensors'
-    index_tensor = tensor[:, 0] * num_rows + tensor[:, 1]
-    indices = index_tensor.sort(descending=descending).indices
-    return tensor[indices]
+    x_ints = dx_ints[indices]/planex*bitmap_height
+    y_ints = dy_ints[indices]/planey*bitmap_width
 
-def to_prediction(intersections, bitmap_height):
-    pred = intersections[:, :, 1:3].reshape(-1, 2)
-    pred = sort_indices(pred, bitmap_height)
-    return pred
+    x_inds_low = x_ints.long()
+    y_inds_low = y_ints.long()
+    x_inds_high = x_inds_low + 1
+    y_inds_high = y_inds_low + 1
+
+    x_ints_low = x_inds_high - x_ints
+    y_ints_low = y_inds_high - y_ints
+    x_ints_high = x_ints - x_inds_low
+    y_ints_high = y_ints - y_inds_low
+
+    x_inds_1 = x_inds_low
+    y_inds_1 = y_inds_low
+    ints_1 = x_ints_low * y_ints_low
+
+    x_inds_2 = x_inds_high
+    y_inds_2 = y_inds_low
+    ints_2 = x_ints_high * y_ints_low
+
+    x_inds_3 = x_inds_low
+    y_inds_3 = y_inds_high
+    ints_3 = x_ints_low * y_ints_high
+
+    x_inds_4 = x_inds_high
+    y_inds_4 = y_inds_high
+    ints_4 = x_ints_high * y_ints_high
+
+    x_inds = th.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
+
+    y_inds = th.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
+
+    ints = th.hstack([ints_1, ints_2, ints_3, ints_4]).ravel()
+    # Normalize
+    ints = ints / th.max(ints)
+
+    indices = (0 <= x_inds) & (x_inds < bitmap_width) & (0 <= y_inds) & (y_inds < bitmap_height)
+
+    total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=dx_ints.device) # Flux density map for heliostat field
+    total_bitmap.index_put_(
+        (x_inds[indices], y_inds[indices]),
+        ints[indices],
+        accumulate=True,
+    )
+    return total_bitmap
 
 def curl(f, arg):
     jac = th.autograd.functional.jacobian(f, arg, create_graph=True)

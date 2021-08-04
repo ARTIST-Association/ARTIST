@@ -12,7 +12,7 @@ from matplotlib import animation
 import torch as th
 import time
 
-from utils import compute_receiver_intersections, curl, heliostat_coord_system, define_heliostat, invert_bitmap, rotate_heliostat, sort_indices, to_prediction, draw_raytracer, draw_heliostat
+from utils import compute_receiver_intersections, curl, draw_raytracer, draw_heliostat, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -54,10 +54,6 @@ num_rays = 1000
 
 ###Define derived variables#####
 
-total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=device) # Flux density map for heliostat field
-
-
-
 sun = sun/th.linalg.norm(sun)
 
 points_on_hel = rows**2 # reflection points on hel
@@ -96,34 +92,15 @@ intersections = compute_receiver_intersections(
 #                 intersections.detach().cpu().numpy(),
 #                 sun.detach().cpu().numpy())
 
-dx_ints = intersections[:, :, 1] +planex/2
-dy_ints = intersections[:, :, 2] +planey/2
-# checks the points of intersection  and chooses bins in bitmap
-indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < planey))
-
-x_int = (dx_ints[indices]/planex*bitmap_height).long()
-y_int = (dy_ints[indices]/planey*bitmap_width).long()
-total_bitmap.index_put_(
-    (x_int, y_int),
-    th.ones(len(x_int), dtype=th.float32, device=device),
-    accumulate=True,
-)
+total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
 
 
 
 
 # Dataset
-target_imgs = total_bitmap.detach().clone().unsqueeze(0)
-targets = th.stack(list(map(
-    lambda img: sort_indices(
-        invert_bitmap(img, planex, planey, bitmap_height, bitmap_width, add_noise=True),
-        bitmap_height,
-    ),
-    target_imgs,
-)))
-pred = to_prediction(intersections, bitmap_height)
+# When we load images, we should also normalize them here towards [0, 1]
+targets = total_bitmap.detach().clone().unsqueeze(0)
 print(targets[0])
-# print('inversion error', th.nn.functional.mse_loss(pred, targets[0]))
 
 # Optimization setup
 # ray_directions += th.randn_like(ray_directions) * 0.1 # Durch den Invertierung gibt es schon einen minimalen Fehler, zeile kann übergangen werden bis der Algorithmus konvergiert
@@ -164,7 +141,10 @@ for epoch in range(epochs):
             xi,
             yi,
         )
-        pred = to_prediction(intersections, bitmap_height)
+        dx_ints = intersections[:, :, 1] +planex/2
+        dy_ints = intersections[:, :, 2] +planey/2
+        indices = (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1)
+        pred = sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
         loss += loss_func(
             pred,
             target,
@@ -179,28 +159,15 @@ for epoch in range(epochs):
             ),
             rayPoints,
         )
-        
+
     if epoch %  5== 0 and not epoch == 0:#
-        dx_pred = intersections[:, :, 1] +planex/2
-        dy_pred = intersections[:, :, 2] +planey/2
-        indices = ( (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < planey))
-        x_pred = (dx_pred[indices]/planex*bitmap_height).long()
-        y_pred = (dy_pred[indices]/planey*bitmap_width).long()
-        total_bitmap.index_put_(
-        (x_pred, y_pred),
-        th.ones(len(x_pred), dtype=th.float32, device=device),
-        accumulate=True,
-        )
-        im.set_data(total_bitmap.detach().cpu().numpy())
+        im.set_data(pred.detach().cpu().numpy())
         im.autoscale()
         plt.pause(0.001)  # In interactive mode, need a small delay to get the plot to appear
         plt.draw()
         # print(pred)
         # exit()
-        
-            # exit()
 
-    
 
     loss /= len(targets)
     loss.backward()
@@ -211,7 +178,6 @@ for epoch in range(epochs):
     opt.step()
     sched.step(loss)
     if epoch % 10 == 0:
-        indices = (0 <= dx_ints) & (dx_ints < planex) & (0 <= dy_ints) & (dy_ints < planey)
         num_missed = indices.numel() - indices.count_nonzero()
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -221,15 +187,7 @@ for epoch in range(epochs):
 
 # print(ray_directions)
 # draw_heliostat(hel_rotated.detach().cpu().numpy(), ray_directions.detach().cpu().numpy())
-# total_bitmap.fill_(0)
 
-# x_int = x_int.long()
-# y_int = y_int.long()
-# total_bitmap.index_put_(
-#     (x_int, y_int),
-#     th.ones(len(x_int), dtype=th.float32, device=device),
-#     accumulate=True,
-# )
-# plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
-# plt.show()
-
+total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
+plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
+plt.show()
