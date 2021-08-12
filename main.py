@@ -61,6 +61,8 @@ cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)
 
 num_rays = 100
 
+if not os.path.exists("images"):
+    os.makedirs("images")
 
 
 ##Define Target Heliostat##
@@ -141,7 +143,7 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
 
 
 def loss_func(pred, target, compute_intersections, rayPoints):
-    loss = th.nn.functional.l1_loss(pred, target, 0.1)
+    loss = th.nn.functional.mse_loss(pred, target, 0.1)
     if use_curl:
         curls = th.stack([
             curl(compute_intersections, rayPoints_)
@@ -208,6 +210,7 @@ for epoch in range(epochs):
             f'loss: {loss.detach().cpu().numpy()}, '
             f'missed: {num_missed.detach().cpu().item()}'
         )
+
 
 fp_in = "images/*.png"
 fp_out = "images/results.gif"
