@@ -68,6 +68,16 @@ if not os.path.exists("images"):
 ##Define Target Heliostat##
 if load_deflec_data:
     target_normal_vectors, target_hel_origin  = load_deflec(filename, take_n_vectors, device)
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.set_xlim3d(-4, 4)
+    ax.set_ylim3d(-4, 4)
+    ax.set_zlim3d(0, 2)
+    target_hel_origin = target_hel_origin.detach().cpu().numpy()
+    target_normal_vectors =target_normal_vectors.detach().cpu().numpy()
+    ax.quiver(target_hel_origin[:,0], target_hel_origin[:,1], target_hel_origin[:,2], target_normal_vectors[:,0], target_normal_vectors[:,1], target_normal_vectors[:,2], length=0.1, normalize=False, color="b")            
+    plt.show()
+    exit()
 else:
     points_on_hel   = rows**2 # reflection points on hel
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
