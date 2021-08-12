@@ -367,5 +367,5 @@ def curl(f, arg):
     rot_x = jac[2][1] - jac[1][2]
     rot_y = jac[0][2] - jac[2][0]
     rot_z = jac[1][0] - jac[0][1]
-    print(rot_x)
+
     return th.tensor([rot_x, rot_y, rot_z])

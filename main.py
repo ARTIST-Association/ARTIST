@@ -19,6 +19,7 @@ from scipy.spatial.transform import Rotation as R
 
 from utils import compute_receiver_intersections, curl, draw_raytracer, draw_heliostat, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
 
+
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 
@@ -34,6 +35,7 @@ take_n_vectors = 5000
 epochs = 2000
 bitmap_width = 256
 bitmap_height = 256
+
 
 
 th.manual_seed(0)
@@ -61,7 +63,6 @@ num_rays = 100
 
 
 
-
 ##Define Target Heliostat##
 if load_deflec_data:
     target_normal_vectors, target_hel_origin  = load_deflec(filename, take_n_vectors, device)
@@ -80,8 +81,6 @@ target_hel_in_field = target_hel_rotated+ position_on_field
 del target_hel_origin
 del target_hel_coords
 del target_hel_rotated
-
-
 
 rotation = th.tensor([0,90,0], dtype=th.float32, device=device) # musste gerade schnell gehen, die rotation muss natürlich berechnet werden. Kannst du das nachholen? ich hatte über die th funktionen keinen Überblick.
 
@@ -124,9 +123,9 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 
 
 
-
 # Dataset
 # When we load images, we should also normalize them here towards [0, 1]
+
 
 # Optimization setup
 
@@ -142,9 +141,13 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
 
 
 def loss_func(pred, target, compute_intersections, rayPoints):
-    loss = th.nn.functional.mse_loss(pred, target, 0.1)
+    loss = th.nn.functional.l1_loss(pred, target, 0.1)
     if use_curl:
-        loss += th.sum(th.abs(curl(compute_intersections, rayPoints)))
+        curls = th.stack([
+            curl(compute_intersections, rayPoints_)
+            for rayPoints_ in rayPoints
+        ])
+        loss += th.sum(th.abs(curls))
     return loss
 
 
@@ -184,11 +187,11 @@ for epoch in range(epochs):
             ),
             rayPoints,
         )
-
     if epoch %  10== 0:#
         im.set_data(pred.detach().cpu().numpy())
         im.autoscale()
         plt.savefig(f"images\\{epoch}.png")
+
 
     loss /= len(targets)
     loss.backward()
@@ -211,6 +214,7 @@ fp_out = "images/results.gif"
 img, *imgs = [Image.open(f) for f in sorted(glob.glob(fp_in))]
 img.save(fp=fp_out, format='GIF', append_images=imgs,
          save_all=True, duration=500, loop=1)
+
 total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
 plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
 plt.show()
