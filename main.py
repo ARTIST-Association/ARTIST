@@ -34,8 +34,8 @@ use_curl = False
 #load defec settings 
 load_deflec_data = True
 filename = "Helio_AA33_Rim0_STRAL-Input.binp"
-take_n_vectors = 1000
-epochs = 20
+take_n_vectors = 2000
+epochs = 200
 bitmap_width = 256
 bitmap_height = 256
 
@@ -62,7 +62,7 @@ sun = th.tensor([-1,0,0], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000005, 0], [0, 0.000005]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 
-num_rays = 100
+num_rays = 1000
 ideal_normal_vec = th.tensor([0,0,1], device= device) #valid only for planar heliostat
 
 if not os.path.exists("images"):
@@ -77,11 +77,6 @@ if load_deflec_data:
     ###Plotting Stuff
     # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors)
     # plot_normal_vectors(target_hel_origin, target_normal_vectors)
-    
-
-
-    
-
     
 else:
     points_on_hel   = rows**2 # reflection points on hel
@@ -105,7 +100,10 @@ rotation = th.tensor([0,90,0], dtype=th.float32, device=device) # musste gerade 
 
 r = rot_from_rotvec(rotation, degrees= True)
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
-plot_normal_vectors(target_hel_in_field, target_normal_vectors)
+
+
+###Plotting Stuff
+# plot_normal_vectors(target_hel_in_field, target_normal_vectors)
 
 target_ray_directions = target_normal_vectors
 target_rayPoints = target_hel_in_field #Any point along the ray
@@ -130,10 +128,15 @@ intersections = compute_receiver_intersections(
 del target_hel_coords
 
 target_total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
+im = plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
+im.set_data(target_total_bitmap.detach().cpu().numpy())
+im.autoscale()
+plt.savefig("images\\original.jpeg")
 targets = target_total_bitmap.detach().clone().unsqueeze(0)
 
-plot_bitmap(target_total_bitmap)
-
+###Plotting Stuff
+# plot_bitmap(target_total_bitmap)
+del target_total_bitmap
 
 
 ##Define ideal heliostat.
@@ -175,8 +178,8 @@ def loss_func(pred, target, compute_intersections, rayPoints):
 
 
 # Just for printing purposes
-im = plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
-del target_total_bitmap
+
+
 epoch_shift_width = len(str(epochs))
 
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) #has to be another xi and yi as in the preprocessing
@@ -224,7 +227,7 @@ for epoch in range(epochs):
 
     opt.step()
     sched.step(loss)
-    if epoch % 10 == 0:
+    if epoch % 1 == 0:
         num_missed = indices.numel() - indices.count_nonzero()
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -236,6 +239,7 @@ for epoch in range(epochs):
 fp_in = "images/*.png"
 fp_out = "images/results.gif"
 img, *imgs = [Image.open(f) for f in sorted(glob.glob(fp_in))]
+print(img)
 img.save(fp=fp_out, format='GIF', append_images=imgs,
          save_all=True, duration=500, loop=1)
 
