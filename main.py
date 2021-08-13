@@ -17,7 +17,10 @@ import math
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 from scipy.spatial.transform import Rotation as R
 
-from utils import compute_receiver_intersections, curl, draw_raytracer, draw_heliostat, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
+
+
+from utils import compute_receiver_intersections, curl, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
+from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
@@ -31,8 +34,8 @@ use_curl = False
 #load defec settings 
 load_deflec_data = True
 filename = "Helio_AA33_Rim0_STRAL-Input.binp"
-take_n_vectors = 5000
-epochs = 2000
+take_n_vectors = 1000
+epochs = 20
 bitmap_width = 256
 bitmap_height = 256
 
@@ -42,7 +45,7 @@ th.manual_seed(0)
 device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
-aimpoint = th.tensor([-100,0,0], dtype=th.float32, device=device)
+aimpoint = th.tensor([-25,0,0], dtype=th.float32, device=device)
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
 ##Receiver specific parameters
 planex = 10 # Receiver width
@@ -55,11 +58,12 @@ rows = 32 #rows of reflection points. total number is rows**2
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
-sun = th.tensor([0,0,1], dtype=th.float32, device=device)
+sun = th.tensor([-1,0,0], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
-cov = th.tensor([[0.000001, 0], [0, 0.000001]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
+cov = th.tensor([[0.000005, 0], [0, 0.000005]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 
 num_rays = 100
+ideal_normal_vec = th.tensor([0,0,1], device= device) #valid only for planar heliostat
 
 if not os.path.exists("images"):
     os.makedirs("images")
@@ -68,16 +72,17 @@ if not os.path.exists("images"):
 ##Define Target Heliostat##
 if load_deflec_data:
     target_normal_vectors, target_hel_origin  = load_deflec(filename, take_n_vectors, device)
-    # fig = plt.figure() #For plotting the deflec normal vectors
-    # ax = plt.axes(projection='3d')
-    # ax.set_xlim3d(-4, 4)
-    # ax.set_ylim3d(-4, 4)
-    # ax.set_zlim3d(0, 2)
-    # to = target_hel_origin.detach().cpu().numpy()
-    # tv =target_normal_vectors.detach().cpu().numpy()
-    # ax.quiver(to[:,0], to[:,1], to[:,2], tv[:,0], tv[:,1], tv[:,2], length=0.1, normalize=False, color="b")            
-    # plt.show()
-    # exit()
+    ideal_normal_vecs =  th.tile(ideal_normal_vec, (len(target_hel_origin), 1)) #valid only for planar heliostat
+    
+    ###Plotting Stuff
+    # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors)
+    # plot_normal_vectors(target_hel_origin, target_normal_vectors)
+    
+
+
+    
+
+    
 else:
     points_on_hel   = rows**2 # reflection points on hel
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
@@ -90,14 +95,18 @@ target_hel_coords = th.stack(heliostat_coord_system(position_on_field, sun, aimp
 target_hel_rotated = rotate_heliostat(target_hel_origin,target_hel_coords)
 target_hel_in_field = target_hel_rotated+ position_on_field
 
-del target_hel_origin
-del target_hel_coords
+
+
+
+# del target_hel_origin
 del target_hel_rotated
 
 rotation = th.tensor([0,90,0], dtype=th.float32, device=device) # musste gerade schnell gehen, die rotation muss natürlich berechnet werden. Kannst du das nachholen? ich hatte über die th funktionen keinen Überblick.
 
 r = rot_from_rotvec(rotation, degrees= True)
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
+plot_normal_vectors(target_hel_in_field, target_normal_vectors)
+
 target_ray_directions = target_normal_vectors
 target_rayPoints = target_hel_in_field #Any point along the ray
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
@@ -111,10 +120,19 @@ intersections = compute_receiver_intersections(
     yi,
 )
 
+# draw_raytracer(target_hel_in_field.detach().cpu().numpy(),
+#                 target_hel_coords.detach().cpu().numpy(),
+#                 position_on_field.detach().cpu().numpy(),
+#                 aimpoint.detach().cpu().numpy(),
+#                 intersections.detach().cpu().numpy(),
+#                 sun.detach().cpu().numpy())
+
+del target_hel_coords
+
 target_total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
 targets = target_total_bitmap.detach().clone().unsqueeze(0)
-# plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
-# plt.show()
+
+plot_bitmap(target_total_bitmap)
 
 
 
@@ -122,16 +140,9 @@ targets = target_total_bitmap.detach().clone().unsqueeze(0)
 
 ray_direction = (aimpoint- position_on_field)
 ray_directions =  th.tile(ray_direction, (len(target_hel_in_field), 1)) #works only for planar heliostat
-ray_directions += th.randn_like(ray_directions) * 0.3 # Da wir jetzt nicht mehr mit Idealen Heliostaten Rechnen kann das eigentlich weg, es schadet aber glaube ich auch nicht
+# ray_directions += th.randn_like(ray_directions) * 0.3 # Da wir jetzt nicht mehr mit Idealen Heliostaten Rechnen kann das eigentlich weg, es schadet aber glaube ich auch nicht
 rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 
-
-# draw_raytracer(hel_rotated.detach().cpu().numpy(),
-#                 hel_coordsystem.detach().cpu().numpy(),
-#                 position_on_field.detach().cpu().numpy(),
-#                 aimpoint.detach().cpu().numpy(),
-#                 intersections.detach().cpu().numpy(),
-#                 sun.detach().cpu().numpy())
 
 
 
@@ -229,5 +240,7 @@ img.save(fp=fp_out, format='GIF', append_images=imgs,
          save_all=True, duration=500, loop=1)
 
 total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
-plt.imshow(total_bitmap.detach().cpu().numpy(), cmap='jet')
-plt.show()
+
+
+# plot_surface_diff(target_hel_origin, ideal_normal_vectors, predicted_normal_vectors) #predicted normal vectos has to be calculated from final raydirections
+# plot_surface_diff(target_hel_origin, target_normal_vectors, predicted_normal_vectors) #

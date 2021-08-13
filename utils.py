@@ -4,7 +4,7 @@ Created on Mon Jul  5 12:38:11 2021
 
 @author: parg_ma
 """
-import matplotlib.pyplot as plt
+
 import torch as th
 import struct
 import numpy as np
@@ -31,8 +31,10 @@ def load_deflec(filename, take_n_vectors,device="cpu", concentratorHeader_struct
         concentratorHeader_data = struct.Struct(concentratorHeader_struct_fmt).unpack_from(byte_data)
         print("READING bpro filename: " + filename)
     
-        #hel_pos = concentratorHeader_data[0:3]
-        #width_height = concentratorHeader_data[3:5]
+        hel_pos = concentratorHeader_data[0:3]
+        print("Hel Position", hel_pos)
+        width_height = concentratorHeader_data[3:5]
+        print("Hel Width-Height", width_height)
         #offsets = concentratorHeader_data[7:9]
         n_xy = concentratorHeader_data[5:7]
         
@@ -128,48 +130,7 @@ def flatten_aimpoints(aimpoints):
     return aimpoints
 
 
-def draw_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, sun):
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
 
-    # aimpoints = aimpoints-position_on_field
-    # aimpoint = aimpoint-position_on_field
-    print(aimpoints.shape)
-    ax.scatter(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2]) #Heliostat
-    ax.scatter(aimpoint[0],aimpoint[1],aimpoint[2]) #Aimpoint
-    ax.scatter(aimpoints[0,:,0],aimpoints[0,:,1],aimpoints[0,:,2])
-    ax.scatter(sun[0]*50,sun[1]*50,sun[2]*50) #Sun
-
-    ax.set_xlim3d(-50, 50)
-    ax.set_ylim3d(-50, 50)
-    ax.set_zlim3d(0, 50)
-
-    #Heliostat Coordsystem
-    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
-    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
-    # ax.quiver(position_on_field[0], position_on_field[1], position_on_field[2], h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
-    ax.quiver(0, 0, 0, h_matrix[0][0], h_matrix[0][1], h_matrix[0][2], length=10, normalize=True, color="b")
-    ax.quiver(0, 0, 0, h_matrix[1][0], h_matrix[1][1], h_matrix[1][2], length=10, normalize=True, color="g")
-    ax.quiver(0, 0, 0, h_matrix[2][0], h_matrix[2][1], h_matrix[2][2], length=10, normalize=True, color="r")
-    plt.show()
-
-def draw_heliostat(h_rotated, ray_directions):
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-
-
-    # aimpoints = aimpoints-position_on_field
-    # aimpoint = aimpoint-position_on_field
-
-    ax.scatter(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2]) #Heliostat
-
-    ax.set_xlim3d(-50, 0)
-    ax.set_ylim3d(-10, 10)
-    ax.set_zlim3d(0, 5) 
-    ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[:,0], ray_directions[:,1], ray_directions[:,2], length=50, normalize=True, color="b")
-    # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[1][0], ray_directions[1][1], ray_directions[1][2], length=1, normalize=True, color="g")
-    # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[2][0], ray_directions[2][1], ray_directions[2][2], length=1, normalize=True, color="r")
-    plt.show()
 
 
 def heliostat_coord_system (Position, Sun, Aimpoint):
