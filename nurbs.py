@@ -705,6 +705,48 @@ def calc_derivs_surface(
     return result
 
 
+def calc_derivs_surface_ad(
+        evaluation_point_x,
+        evaluation_point_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+):
+    res = th.empty((2, 3), device=control_points.device)
+    res[0] = th.autograd.functional.jacobian(
+        lambda evaluation_point_x: evaluate_nurbs_surface_flex(
+            evaluation_point_x,
+            evaluation_point_y,
+            degree_x,
+            degree_y,
+            control_points,
+            control_point_weights,
+            knots_x,
+            knots_y,
+        ),
+        evaluation_point_x,
+        create_graph=True,
+    )
+    res[1] = th.autograd.functional.jacobian(
+        lambda evaluation_point_y: evaluate_nurbs_surface_flex(
+            evaluation_point_x,
+            evaluation_point_y,
+            degree_x,
+            degree_y,
+            control_points,
+            control_point_weights,
+            knots_x,
+            knots_y,
+        ),
+        evaluation_point_y,
+        create_graph=True,
+    )
+    return res
+
+
 def calc_normal_surface(
         evaluation_point_x,
         evaluation_point_y,
@@ -727,6 +769,30 @@ def calc_normal_surface(
         nth_deriv=1,
     )
     cross_prod = th.cross(derivs[1, 0], derivs[0, 1])
+    return cross_prod / th.linalg.norm(cross_prod)
+
+
+def calc_normal_surface_ad(
+        evaluation_point_x,
+        evaluation_point_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+):
+    derivs = calc_derivs_surface_ad(
+        evaluation_point_x,
+        evaluation_point_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+    cross_prod = th.cross(derivs[0], derivs[1])
     return cross_prod / th.linalg.norm(cross_prod)
 
 
