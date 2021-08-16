@@ -5,6 +5,7 @@ Created on Mon Oct 28 09:31:21 2019
 @author: ober_lu
 """
 
+import itertools
 import os
 
 import matplotlib.pyplot as plt
@@ -17,11 +18,9 @@ import math
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 from scipy.spatial.transform import Rotation as R
 
-
-
+import nurbs
 from utils import compute_receiver_intersections, curl, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
-
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
@@ -35,10 +34,13 @@ use_curl = False
 load_deflec_data = True
 filename = "Helio_AA33_Rim0_STRAL-Input.binp"
 take_n_vectors = 2000
+# NURBS settings
+use_splines = True
+fix_spline_ctrl_weights = True
+spline_degree = 2
 epochs = 200
 bitmap_width = 256
 bitmap_height = 256
-
 
 
 th.manual_seed(0)
@@ -155,9 +157,27 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 
 # Optimization setup
 
-ray_directions.requires_grad_(True)
-opt = th.optim.Adam([ray_directions], lr=3e-2)
 # TODO große winkel zwischen vektoren bestrafen
+if use_splines:
+    (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
+        spline_degree, spline_degree, rows, rows, device)
+    eval_points = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
+    ctrl_points[:] = hel_in_field.reshape(ctrl_points.shape)
+
+    opt_params = [ctrl_points]
+    ctrl_points.requires_grad_(True)
+    if fix_spline_ctrl_weights:
+        ctrl_weights[:] = 1
+    else:
+        ctrl_weights.requires_grad_(True)
+        opt_params.append(ctrl_weights)
+    knots_x.requires_grad_(True)
+    knots_y.requires_grad_(True)
+    opt_params.extend([knots_x, knots_y])
+    opt = th.optim.Adam(opt_params, lr=3e-2)
+else:
+    ray_directions.requires_grad_(True)
+    opt = th.optim.Adam([ray_directions], lr=3e-2)
 sched = th.optim.lr_scheduler.ReduceLROnPlateau(
     opt,
     factor=0.5,
@@ -189,6 +209,22 @@ for epoch in range(epochs):
     loss = 0
     # print(ray_directions)
     for target in targets:
+        if use_splines:
+            ray_directions = th.empty_like(ray_directions)
+            for (i, (x, y)) in enumerate(itertools.product(
+                    eval_points,
+                    eval_points,
+            )):
+                ray_directions[i] = nurbs.calc_normal_surface(
+                    x,
+                    y,
+                    spline_degree,
+                    spline_degree,
+                    ctrl_points,
+                    ctrl_weights,
+                    knots_x,
+                    knots_y,
+                )
         intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,
@@ -222,9 +258,10 @@ for epoch in range(epochs):
 
     loss /= len(targets)
     loss.backward()
-    if ray_directions.grad is None or (ray_directions.grad == 0).all():
-        print('no more optimization possible; ending...')
-        break
+    if not use_splines:
+        if ray_directions.grad is None or (ray_directions.grad == 0).all():
+            print('no more optimization possible; ending...')
+            break
 
     opt.step()
     sched.step(loss)
