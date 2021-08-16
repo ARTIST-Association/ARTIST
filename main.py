@@ -157,6 +157,7 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 
 ray_directions.requires_grad_(True)
 opt = th.optim.Adam([ray_directions], lr=3e-2)
+# TODO große winkel zwischen vektoren bestrafen
 sched = th.optim.lr_scheduler.ReduceLROnPlateau(
     opt,
     factor=0.5,
