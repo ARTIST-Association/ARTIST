@@ -172,6 +172,12 @@ if use_splines:
     else:
         ctrl_weights.requires_grad_(True)
         opt_params.append(ctrl_weights)
+
+    knot_vals = th.linspace(0, 1, len(knots_x[spline_degree:-spline_degree]))
+    knots_x[spline_degree:-spline_degree] = knot_vals
+    knots_y[spline_degree:-spline_degree] = knot_vals.clone()
+    del knot_vals
+
     knots_x.requires_grad_(True)
     knots_y.requires_grad_(True)
     opt_params.extend([knots_x, knots_y])
