@@ -194,7 +194,7 @@ if use_splines:
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
     # opt_params.extend([knots_x, knots_y])
-    opt = th.optim.Adam(opt_params, lr=3e-2)
+    opt = th.optim.Adam(opt_params, lr=3e-6)
 else:
     ray_directions.requires_grad_(True)
     opt = th.optim.Adam([ray_directions], lr=3e-2)
