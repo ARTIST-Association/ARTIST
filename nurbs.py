@@ -852,7 +852,7 @@ def plot_surface_derivs(
     )
     res = res.reshape((len(xs), len(ys)) + res.shape[1:])
     if plot_normals:
-        normals = calc_normal_surface(
+        normals = calc_normals_surface(
             eval_points[:, 0],
             eval_points[:, 1],
             degree_x,
