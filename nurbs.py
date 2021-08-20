@@ -651,7 +651,7 @@ def setup_nurbs_surface(
     return control_points, control_point_weights, knots_x, knots_y
 
 
-def evaluate_nurbs_surface_flex(
+def check_nurbs_constraints(
         evaluation_points_x,
         evaluation_points_y,
         degree_x,
@@ -681,6 +681,28 @@ def evaluate_nurbs_surface_flex(
         'knots must be ordered monotonically increasing in value'
     assert evaluation_points_x.shape == evaluation_points_x.shape, \
         "evaluation point shapes don't match"
+
+
+def evaluate_nurbs_surface_flex(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+):
+    check_nurbs_constraints(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
 
     device = control_points.device
     num_evaluation_points = len(evaluation_points_x)
@@ -862,6 +884,17 @@ def calc_derivs_surface(
         knots_y,
         nth_deriv=1,
 ):
+    check_nurbs_constraints(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+
     device = control_points.device
     next_nth_deriv = nth_deriv + 1
     projected = project_control_points(control_points, control_point_weights)
