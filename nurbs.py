@@ -1015,6 +1015,34 @@ def calc_normals_surface_slow(
     return cross_prod / th.linalg.norm(cross_prod, dim=1).unsqueeze(-1)
 
 
+def calc_normals_and_surface_slow(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+):
+    derivs = calc_derivs_surface_slow(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        nth_deriv=1,
+    )
+    cross_prod = th.cross(derivs[1][0], derivs[0][1])
+    return (
+        derivs[0][0],
+        cross_prod / th.linalg.norm(cross_prod, dim=1).unsqueeze(-1),
+    )
+
+
 def plot_surface(
         degree_x,
         degree_y,
@@ -1397,7 +1425,7 @@ def plot_surface_normals_slow(
     ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
-    res = evaluate_nurbs_surface_flex(
+    res, normals = calc_normals_and_surface_slow(
         eval_points[:, 0],
         eval_points[:, 1],
         degree_x,
@@ -1408,16 +1436,6 @@ def plot_surface_normals_slow(
         knots_y,
     )
     res = res.reshape((len(xs), len(ys)) + res.shape[1:])
-    normals = calc_normals_surface_slow(
-        eval_points[:, 0],
-        eval_points[:, 1],
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-    )
     normals = normals.reshape((len(xs), len(ys)) + normals.shape[1:])
 
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
