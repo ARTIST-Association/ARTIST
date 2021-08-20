@@ -217,7 +217,7 @@ for epoch in range(epochs):
     # print(ray_directions)
     for target in targets:
         if use_splines:
-            ray_directions = nurbs.calc_normals_surface(
+            ray_directions = nurbs.calc_normals_surface_slow(
                 eval_points[:, 0],
                 eval_points[:, 1],
                 spline_degree,
