@@ -829,24 +829,24 @@ def plot_surface(
 
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
     ax.scatter(
-        control_points[:, :, 0].numpy(),
-        control_points[:, :, 1].numpy(),
-        control_points[:, :, 2].numpy(),
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
         color='black',
         alpha=0.3,
         label='control_points',
     )
     ax.plot_wireframe(
-        control_points[:, :, 0].numpy(),
-        control_points[:, :, 1].numpy(),
-        control_points[:, :, 2].numpy(),
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
         color='black',
         alpha=0.3,
     )
     ax.plot_surface(
-        res[:, :, 0].numpy(),
-        res[:, :, 1].numpy(),
-        res[:, :, 2].numpy(),
+        res[:, :, 0].detach().cpu().numpy(),
+        res[:, :, 1].detach().cpu().numpy(),
+        res[:, :, 2].detach().cpu().numpy(),
         cmap='plasma',
         alpha=0.8,
     )
@@ -911,45 +911,45 @@ def plot_surface_derivs(
 
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
     ax.scatter(
-        control_points[:, :, 0].numpy(),
-        control_points[:, :, 1].numpy(),
-        control_points[:, :, 2].numpy(),
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
         color='black',
         alpha=0.1,
         label='control_points',
     )
     ax.plot_wireframe(
-        control_points[:, :, 0].numpy(),
-        control_points[:, :, 1].numpy(),
-        control_points[:, :, 2].numpy(),
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
         color='black',
         alpha=0.1,
     )
     ax.plot_surface(
-        res[:, :, 0, 0, 0].numpy(),
-        res[:, :, 0, 0, 1].numpy(),
-        res[:, :, 0, 0, 2].numpy(),
+        res[:, :, 0, 0, 0].detach().cpu().numpy(),
+        res[:, :, 0, 0, 1].detach().cpu().numpy(),
+        res[:, :, 0, 0, 2].detach().cpu().numpy(),
         cmap='plasma',
         alpha=0.3,
     )
     ax.quiver(
-        res[:, :, 0, 0, 0].numpy(),
-        res[:, :, 0, 0, 1].numpy(),
-        res[:, :, 0, 0, 2].numpy(),
-        res[:, :, 1, 0, 0].numpy(),
-        res[:, :, 1, 0, 1].numpy(),
-        res[:, :, 1, 0, 2].numpy(),
+        res[:, :, 0, 0, 0].detach().cpu().numpy(),
+        res[:, :, 0, 0, 1].detach().cpu().numpy(),
+        res[:, :, 0, 0, 2].detach().cpu().numpy(),
+        res[:, :, 1, 0, 0].detach().cpu().numpy(),
+        res[:, :, 1, 0, 1].detach().cpu().numpy(),
+        res[:, :, 1, 0, 2].detach().cpu().numpy(),
         length=0.05,
         alpha=0.8,
         label='dS/dx',
     )
     ax.quiver(
-        res[:, :, 0, 0, 0].numpy(),
-        res[:, :, 0, 0, 1].numpy(),
-        res[:, :, 0, 0, 2].numpy(),
-        res[:, :, 0, 1, 0].numpy(),
-        res[:, :, 0, 1, 1].numpy(),
-        res[:, :, 0, 1, 2].numpy(),
+        res[:, :, 0, 0, 0].detach().cpu().numpy(),
+        res[:, :, 0, 0, 1].detach().cpu().numpy(),
+        res[:, :, 0, 0, 2].detach().cpu().numpy(),
+        res[:, :, 0, 1, 0].detach().cpu().numpy(),
+        res[:, :, 0, 1, 1].detach().cpu().numpy(),
+        res[:, :, 0, 1, 2].detach().cpu().numpy(),
         length=0.05,
         color='red',
         alpha=0.8,
@@ -957,12 +957,12 @@ def plot_surface_derivs(
     )
     if plot_normals:
         ax.quiver(
-            res[:, :, 0, 0, 0].numpy(),
-            res[:, :, 0, 0, 1].numpy(),
-            res[:, :, 0, 0, 2].numpy(),
-            normals[:, :, 0].numpy(),
-            normals[:, :, 1].numpy(),
-            normals[:, :, 2].numpy(),
+            res[:, :, 0, 0, 0].detach().cpu().numpy(),
+            res[:, :, 0, 0, 1].detach().cpu().numpy(),
+            res[:, :, 0, 0, 2].detach().cpu().numpy(),
+            normals[:, :, 0].detach().cpu().numpy(),
+            normals[:, :, 1].detach().cpu().numpy(),
+            normals[:, :, 2].detach().cpu().numpy(),
             length=0.05,
             color='green',
             alpha=0.8,
