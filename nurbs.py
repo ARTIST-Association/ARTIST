@@ -815,6 +815,7 @@ def plot_surface(
     )
     if show_plot:
         plt.show()
+    return fig, ax
 
 
 def plot_surface_derivs(
@@ -926,6 +927,7 @@ def plot_surface_derivs(
     ax.legend()
     if show_plot:
         plt.show()
+    return fig, ax
 
 
 # def rational_basis_surface_flex(
