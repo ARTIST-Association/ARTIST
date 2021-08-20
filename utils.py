@@ -310,7 +310,8 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     del ints_3
     del ints_4
     # Normalize
-    ints = ints / th.max(ints)
+    if len(ints) > 0:
+        ints = ints / th.max(ints)
 
     indices = (0 <= x_inds) & (x_inds < bitmap_width) & (0 <= y_inds) & (y_inds < bitmap_height)
 
