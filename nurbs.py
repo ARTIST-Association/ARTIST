@@ -930,6 +930,88 @@ def plot_surface_derivs(
     return fig, ax
 
 
+def plot_surface_normals(
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        step_granularity_x=0.02,
+        step_granularity_y=0.02,
+        show_plot=True,
+):
+    device = control_points.device
+    xs = th.arange(0, 1, step_granularity_x, device=device)
+    ys = th.arange(0, 1, step_granularity_y, device=device)
+    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
+    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+
+    eval_points = th.cartesian_prod(xs, ys)
+    res = evaluate_nurbs_surface_flex(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+    res = res.reshape((len(xs), len(ys)) + res.shape[1:])
+    normals = calc_normals_surface(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+    normals = normals.reshape((len(xs), len(ys)) + normals.shape[1:])
+
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    ax.scatter(
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
+        color='black',
+        alpha=0.1,
+        label='control_points',
+    )
+    ax.plot_wireframe(
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
+        color='black',
+        alpha=0.1,
+    )
+    ax.plot_surface(
+        res[:, :, 0].detach().cpu().numpy(),
+        res[:, :, 1].detach().cpu().numpy(),
+        res[:, :, 2].detach().cpu().numpy(),
+        cmap='plasma',
+        alpha=0.3,
+    )
+    ax.quiver(
+        res[:, :, 0].detach().cpu().numpy(),
+        res[:, :, 1].detach().cpu().numpy(),
+        res[:, :, 2].detach().cpu().numpy(),
+        normals[:, :, 0].detach().cpu().numpy(),
+        normals[:, :, 1].detach().cpu().numpy(),
+        normals[:, :, 2].detach().cpu().numpy(),
+        length=0.05,
+        color='green',
+        alpha=0.8,
+        label='normals',
+    )
+    ax.legend()
+    if show_plot:
+        plt.show()
+    return fig, ax
+
+
 # def rational_basis_surface_flex(
 #         evaluation_point_x,
 #         evaluation_point_y,
