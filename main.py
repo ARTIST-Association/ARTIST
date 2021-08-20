@@ -162,6 +162,7 @@ if use_splines:
     (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
         spline_degree, spline_degree, rows, rows, device)
     eval_points = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
+    eval_points = th.cartesian_prod(eval_points, eval_points)
     ctrl_points[:] = hel_in_field.reshape(ctrl_points.shape)
 
     opt_params = [ctrl_points]
@@ -210,21 +211,16 @@ for epoch in range(epochs):
     # print(ray_directions)
     for target in targets:
         if use_splines:
-            ray_directions = th.empty_like(ray_directions)
-            for (i, (x, y)) in enumerate(itertools.product(
-                    eval_points,
-                    eval_points,
-            )):
-                ray_directions[i] = nurbs.calc_normal_surface(
-                    x,
-                    y,
-                    spline_degree,
-                    spline_degree,
-                    ctrl_points,
-                    ctrl_weights,
-                    knots_x,
-                    knots_y,
-                )
+            ray_directions = nurbs.calc_normals_surface_slow(
+                eval_points[:, 0],
+                eval_points[:, 1],
+                spline_degree,
+                spline_degree,
+                ctrl_points,
+                ctrl_weights,
+                knots_x,
+                knots_y,
+            )
         intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,

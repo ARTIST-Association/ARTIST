@@ -19,42 +19,46 @@ def setup_nurbs(degree, num_control_points, device):
     return control_points, control_point_weights, knots
 
 
-def find_span(evaluation_point, degree, num_control_points, knots):
+def find_span(evaluation_points, degree, num_control_points, knots):
     after_num_control_points = num_control_points + 1
-    if evaluation_point == knots[after_num_control_points]:
-        return num_control_points
-    low = degree
-    high = after_num_control_points
-    mid = (low + high) // 2
-    while (
-            evaluation_point < knots[mid]
-            or evaluation_point >= knots[mid + 1]
-    ):
-        if evaluation_point < knots[mid]:
-            high = mid
-        else:
-            low = mid
-        mid = (low + high) // 2
-    return mid
+    result = th.empty(
+        len(evaluation_points),
+        dtype=th.int64,
+        device=knots.device,
+    )
+    not_upper_span_indices = \
+        evaluation_points != knots[after_num_control_points]
+    result[~not_upper_span_indices] = num_control_points
+    spans = th.searchsorted(
+        knots,
+        evaluation_points[not_upper_span_indices],
+        right=True,
+    ) - 1
+    result[not_upper_span_indices] = spans
+    return result
 
 
-def get_basis(evaluation_point, span, degree, knots):
+def get_basis(evaluation_points, span, degree, knots):
     device = knots.device
+    num_evaluation_points = len(evaluation_points)
     next_degree = degree + 1
     next_span = span + 1
-    basis_values = th.empty(next_degree, device=device)
-    basis_values[0] = 1
-    left = th.empty(next_degree, device=device)
-    right = th.empty(next_degree, device=device)
+    basis_values = th.empty(
+        (num_evaluation_points, next_degree),
+        device=device,
+    )
+    basis_values[:, 0] = 1
+    left = th.empty((num_evaluation_points, next_degree), device=device)
+    right = th.empty((num_evaluation_points, next_degree), device=device)
     for j in range(1, next_degree):
-        left[j] = evaluation_point - knots[next_span - j]
-        right[j] = knots[span + j] - evaluation_point
-        saved = 0
+        left[:, j] = evaluation_points - knots[next_span - j]
+        right[:, j] = knots[span + j] - evaluation_points
+        saved = th.zeros(num_evaluation_points, device=device)
         for r in range(j):
-            tmp = basis_values[r] / (right[r + 1] + left[j - r])
-            basis_values[r] = saved + right[r + 1] * tmp
-            saved = left[j - r] * tmp
-        basis_values[j] = saved
+            tmp = basis_values[:, r] / (right[:, r + 1] + left[:, j - r])
+            basis_values[:, r] = saved + right[:, r + 1] * tmp
+            saved = left[:, j - r] * tmp
+        basis_values[:, j] = saved
     return basis_values
 
 
@@ -85,46 +89,53 @@ def get_all_basis(evaluation_point, span, degree, knots):
 
 
 def calc_basis_derivs(
-        evaluation_point,
+        evaluation_points,
         span,
         degree,
         knots,
         nth_deriv=1,
 ):
     device = knots.device
+    num_evaluation_points = len(evaluation_points)
     next_span = span + 1
     next_degree = degree + 1
     next_nth_deriv = nth_deriv + 1
-    ndu = th.empty((next_degree,) * 2, device=device)
-    ndu[0, 0] = 1
-    left = th.empty(next_degree, device=device)
-    right = th.empty(next_degree, device=device)
+    ndu = th.empty(
+        (num_evaluation_points, next_degree, next_degree),
+        device=device,
+    )
+    ndu[:, 0, 0] = 1
+    left = th.empty((num_evaluation_points, next_degree), device=device)
+    right = th.empty((num_evaluation_points, next_degree), device=device)
     for j in range(1, next_degree):
-        left[j] = evaluation_point - knots[next_span - j]
-        right[j] = knots[span + j] - evaluation_point
+        left[:, j] = evaluation_points - knots[next_span - j]
+        right[:, j] = knots[span + j] - evaluation_points
         saved = 0
         for r in range(j):
-            ndu[j, r] = right[r + 1] + left[j - r]
-            tmp = ndu[r, j - 1] / ndu[j, r]
-            ndu[r, j] = saved + right[r + 1] * tmp
-            saved = left[j - r] * tmp
-        ndu[j, j] = saved
+            ndu[:, j, r] = right[:, r + 1] + left[:, j - r]
+            tmp = ndu[:, r, j - 1] / ndu[:, j, r]
+            ndu[:, r, j] = saved + right[:, r + 1] * tmp
+            saved = left[:, j - r] * tmp
+        ndu[:, j, j] = saved
 
-    ders = th.empty((next_nth_deriv, next_degree), device=device)
+    ders = th.empty(
+        (num_evaluation_points, next_nth_deriv, next_degree),
+        device=device,
+    )
     for j in range(next_degree):
-        ders[0, j] = ndu[j, degree]
-    a = th.empty((2, next_degree), device=device)
+        ders[:, 0, j] = ndu[:, j, degree]
+    a = th.empty((num_evaluation_points, 2, next_degree), device=device)
     for r in range(next_degree):
         s1 = 0
         s2 = 1
-        a[0, 0] = 1
+        a[:, 0, 0] = 1
         for k in range(1, next_nth_deriv):
             d = 0
             rk = r - k
             pk = degree - k
             if r >= k:
-                a[s2, 0] = a[s1, 0] / ndu[pk + 1, rk]
-                d = a[s2, 0] * ndu[rk, pk]
+                a[:, s2, 0] = a[:, s1, 0] / ndu[:, pk + 1, rk]
+                d = a[:, s2, 0] * ndu[:, rk, pk]
             if rk >= -1:
                 j1 = 1
             else:
@@ -134,12 +145,15 @@ def calc_basis_derivs(
             else:
                 j2 = degree - r
             for j in range(j1, j2 + 1):
-                a[s2, j] = (a[s1, j] - a[s1, j - 1]) / ndu[pk + 1, rk + j]
-                d += a[s2, j] * ndu[rk + j, pk]
+                a[:, s2, j] = (
+                    (a[:, s1, j] - a[:, s1, j - 1])
+                    / ndu[:, pk + 1, rk + j]
+                )
+                d += a[:, s2, j] * ndu[:, rk + j, pk]
             if r <= pk:
-                a[s2, k] = -a[s1, k - 1] / ndu[pk + 1, r]
-                d += a[s2, k] * ndu[r, pk]
-            ders[k, r] = d
+                a[:, s2, k] = -a[:, s1, k - 1] / ndu[:, pk + 1, r]
+                d += a[:, s2, k] * ndu[:, r, pk]
+            ders[:, k, r] = d
             j = s1
             s1 = s2
             s2 = j
@@ -147,7 +161,7 @@ def calc_basis_derivs(
     r = degree
     for k in range(1, next_nth_deriv):
         for j in range(next_degree):
-            ders[k, j] *= r
+            ders[:, k, j] *= r
         r *= degree - k
     return ders
 
@@ -539,8 +553,8 @@ def setup_nurbs_surface(
 
 
 def evaluate_nurbs_surface_flex(
-        evaluation_point_x,
-        evaluation_point_y,
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         control_points,
@@ -566,36 +580,42 @@ def evaluate_nurbs_surface_flex(
         f'last {degree_y + 1} knots must be one'
     assert (knots_y.sort().values == knots_y).all(), \
         'knots must be ordered monotonically increasing in value'
+    assert evaluation_points_x.shape == evaluation_points_x.shape, \
+        "evaluation point shapes don't match"
 
     device = control_points.device
+    num_evaluation_points = len(evaluation_points_x)
     num_control_points_x = control_points.shape[0]
-    span_x = find_span(
-        evaluation_point_x, degree_x, num_control_points_x, knots_x)
-    basis_values_x = get_basis(evaluation_point_x, span_x, degree_x, knots_x)
+    spans_x = find_span(
+        evaluation_points_x, degree_x, num_control_points_x, knots_x)
+    basis_values_x = get_basis(evaluation_points_x, spans_x, degree_x, knots_x)
 
     num_control_points_y = control_points.shape[1]
-    span_y = find_span(
-        evaluation_point_y, degree_y, num_control_points_y, knots_y)
-    basis_values_y = get_basis(evaluation_point_y, span_y, degree_y, knots_y)
+    spans_y = find_span(
+        evaluation_points_y, degree_y, num_control_points_y, knots_y)
+    basis_values_y = get_basis(evaluation_points_y, spans_y, degree_y, knots_y)
 
     projected = project_control_points(control_points, control_point_weights)
-    tmp = th.empty((degree_y + 1, projected.shape[-1]), device=device)
+    tmp = th.empty(
+        (num_evaluation_points, degree_y + 1, projected.shape[-1]),
+        device=device,
+    )
     for j in range(degree_y + 1):
-        tmp[j] = 0
+        tmp[:, j] = 0
         for k in range(degree_x + 1):
-            tmp[j] += (
-                basis_values_x[k]
-                * projected[span_x - degree_x + k, span_y - degree_y + j]
+            tmp[:, j] += (
+                basis_values_x[:, k].unsqueeze(-1)
+                * projected[spans_x - degree_x + k, spans_y - degree_y + j]
             )
-    Sw = th.zeros(projected.shape[-1], device=device)
+    Sw = th.zeros((num_evaluation_points, projected.shape[-1]), device=device)
     for j in range(degree_y + 1):
-        Sw += basis_values_y[j] * tmp[j]
-    return Sw[:-1] / Sw[-1]
+        Sw += basis_values_y[:, j].unsqueeze(-1) * tmp[:, j]
+    return Sw[:, :-1] / Sw[:, -1].unsqueeze(-1)
 
 
 def calc_bspline_derivs_surface(
-        evaluation_point_x,
-        evaluation_point_y,
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         control_points,
@@ -604,56 +624,66 @@ def calc_bspline_derivs_surface(
         nth_deriv=1,
 ):
     device = control_points.device
+    num_evaluation_points = len(evaluation_points_x)
     next_nth_deriv = nth_deriv + 1
     next_degree_x = degree_x + 1
     next_degree_y = degree_y + 1
     result = th.empty(
-        (next_nth_deriv, next_nth_deriv, control_points.shape[-1]),
+        (
+            num_evaluation_points,
+            next_nth_deriv,
+            next_nth_deriv,
+            control_points.shape[-1],
+        ),
         device=device,
     )
     du = min(nth_deriv, degree_x)
     for k in range(next_degree_x, next_nth_deriv):
         for j in range(next_nth_deriv - k):
-            result[k, j] = 0
+            result[:, k, j] = 0
     dv = min(nth_deriv, degree_y)
     for j in range(next_degree_y, next_nth_deriv):
         for k in range(next_nth_deriv - j):
-            result[k, j] = 0
+            result[:, k, j] = 0
 
     num_control_points_x = control_points.shape[0]
-    span_x = find_span(
-        evaluation_point_x, degree_x, num_control_points_x, knots_x)
+    spans_x = find_span(
+        evaluation_points_x, degree_x, num_control_points_x, knots_x)
     basis_derivs_x = calc_basis_derivs(
-        evaluation_point_x, span_x, degree_x, knots_x, du)
+        evaluation_points_x, spans_x, degree_x, knots_x, du)
 
     num_control_points_y = control_points.shape[1]
-    span_y = find_span(
-        evaluation_point_y, degree_y, num_control_points_y, knots_y)
+    spans_y = find_span(
+        evaluation_points_y, degree_y, num_control_points_y, knots_y)
     basis_derivs_y = calc_basis_derivs(
-        evaluation_point_y, span_y, degree_y, knots_y, dv)
+        evaluation_points_y, spans_y, degree_y, knots_y, dv)
 
-    tmp = th.empty((next_degree_y, control_points.shape[-1]), device=device)
-    spanmdegree_x = span_x - degree_x
-    spanmdegree_y = span_y - degree_y
+    tmp = th.empty(
+        (num_evaluation_points, next_degree_y, control_points.shape[-1]),
+        device=device,
+    )
+    spanmdegree_x = spans_x - degree_x
+    spanmdegree_y = spans_y - degree_y
     for k in range(du + 1):
         for s in range(next_degree_y):
-            tmp[s] = 0
+            tmp[:, s] = 0
             for r in range(next_degree_x):
-                tmp[s] += (
-                    basis_derivs_x[k, r]
+                tmp[:, s] += (
+                    basis_derivs_x[:, k, r].unsqueeze(-1)
                     * control_points[spanmdegree_x + r, spanmdegree_y + s]
                 )
         dd = min(nth_deriv - k, dv)
         for j in range(dd + 1):
-            result[k, j] = 0
+            result[:, k, j] = 0
             for s in range(next_degree_y):
-                result[k, j] += basis_derivs_y[j, s] * tmp[s]
+                result[:, k, j] += \
+                    basis_derivs_y[:, j, s].unsqueeze(-1) * tmp[:, s]
     return result
 
 
 def calc_derivs_surface(
-        evaluation_point_x,
-        evaluation_point_y,
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         control_points,
@@ -666,8 +696,8 @@ def calc_derivs_surface(
     next_nth_deriv = nth_deriv + 1
     projected = project_control_points(control_points, control_point_weights)
     Swders = calc_bspline_derivs_surface(
-        evaluation_point_x,
-        evaluation_point_y,
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         projected,
@@ -675,81 +705,39 @@ def calc_derivs_surface(
         knots_y,
         nth_deriv,
     )
-    Aders = Swders[:, :, :-1]
-    wders = Swders[:, :, -1]
+    Aders = Swders[:, :, :, :-1]
+    wders = Swders[:, :, :, -1]
     result = th.empty_like(Aders)
     for k in th.arange(next_nth_deriv, device=device):
         for m in th.arange(next_nth_deriv - k, device=device):
-            v = Aders[k, m]
+            vs = Aders[:, k, m]
             for j in th.arange(1, m + 1, device=device):
-                v -= (
+                vs -= (
                     th.binomial(m.float(), j.float())
-                    * wders[0, j]
-                    * result[k, m - j]
+                    * wders[:, 0, j].unsqueeze(-1)
+                    * result[:, k, m - j]
                 )
             for i in th.arange(1, k + 1, device=device):
-                v -= (
+                vs -= (
                     th.binomial(k.float(), i.float())
-                    * wders[i, 0]
-                    * result[k - i, m]
+                    * wders[:, i, 0].unsqueeze(-1)
+                    * result[:, k - i, m]
                 )
-                v2 = th.zeros_like(v)
+                vs2 = th.zeros_like(vs)
                 for j in th.arange(1, m + 1, device=device):
-                    v2 += (
+                    vs2 += (
                         th.binomial(m.float(), j.float())
-                        * wders[i, j]
-                        * result[k - i, m - j]
+                        * wders[:, i, j].unsqueeze(-1)
+                        * result[:, k - i, m - j]
                     )
-                v -= th.binomial(k.float(), i.float()) * v2
-            result[k, m] = v / wders[0, 0]
+                vs -= th.binomial(k.float(), i.float()) * vs2
+            result[:, k, m] = vs / wders[:, 0, 0].unsqueeze(-1)
     return result
 
 
-def calc_derivs_surface_ad(
-        evaluation_point_x,
-        evaluation_point_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
-    res = th.empty((2, 3), device=control_points.device)
-    res[0] = th.autograd.functional.jacobian(
-        lambda evaluation_point_x: evaluate_nurbs_surface_flex(
-            evaluation_point_x,
-            evaluation_point_y,
-            degree_x,
-            degree_y,
-            control_points,
-            control_point_weights,
-            knots_x,
-            knots_y,
-        ),
-        evaluation_point_x,
-        create_graph=True,
-    )
-    res[1] = th.autograd.functional.jacobian(
-        lambda evaluation_point_y: evaluate_nurbs_surface_flex(
-            evaluation_point_x,
-            evaluation_point_y,
-            degree_x,
-            degree_y,
-            control_points,
-            control_point_weights,
-            knots_x,
-            knots_y,
-        ),
-        evaluation_point_y,
-        create_graph=True,
-    )
-    return res
-
-
-def calc_normal_surface(
-        evaluation_point_x,
-        evaluation_point_y,
+def calc_normals_surface(
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         control_points,
@@ -758,8 +746,8 @@ def calc_normal_surface(
         knots_y,
 ):
     derivs = calc_derivs_surface(
-        evaluation_point_x,
-        evaluation_point_y,
+        evaluation_points_x,
+        evaluation_points_y,
         degree_x,
         degree_y,
         control_points,
@@ -768,32 +756,8 @@ def calc_normal_surface(
         knots_y,
         nth_deriv=1,
     )
-    cross_prod = th.cross(derivs[1, 0], derivs[0, 1])
-    return cross_prod / th.linalg.norm(cross_prod)
-
-
-def calc_normal_surface_ad(
-        evaluation_point_x,
-        evaluation_point_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
-    derivs = calc_derivs_surface_ad(
-        evaluation_point_x,
-        evaluation_point_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-    )
-    cross_prod = th.cross(derivs[0], derivs[1])
-    return cross_prod / th.linalg.norm(cross_prod)
+    cross_prod = th.cross(derivs[:, 1, 0], derivs[:, 0, 1])
+    return cross_prod / th.linalg.norm(cross_prod, dim=1).unsqueeze(-1)
 
 
 def plot_surface(
@@ -812,20 +776,19 @@ def plot_surface(
     ys = th.arange(0, 1, step_granularity_y, device=device)
     xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
     ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
-    res = th.empty((len(xs), len(ys), 3), device=device)
 
-    for (i, x) in enumerate(xs):
-        for (j, y) in enumerate(ys):
-            res[i, j] = evaluate_nurbs_surface_flex(
-                x,
-                y,
-                degree_x,
-                degree_y,
-                control_points,
-                control_point_weights,
-                knots_x,
-                knots_y,
-            )
+    eval_points = th.cartesian_prod(xs, ys)
+    res = evaluate_nurbs_surface_flex(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+    res = res.reshape((len(xs), len(ys)) + res.shape[1:])
 
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
     ax.scatter(
@@ -874,40 +837,32 @@ def plot_surface_derivs(
     ys = th.arange(0, 1, step_granularity_y, device=device)
     xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
     ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
-    res = th.empty(
-        (len(xs), len(ys), nth_deriv + 1, nth_deriv + 1, 3),
-        device=device,
-    )
-    if plot_normals:
-        normals = th.empty(
-            (len(xs), len(ys), 3),
-            device=device,
-        )
 
-    for (i, x) in enumerate(xs):
-        for (j, y) in enumerate(ys):
-            res[i, j] = calc_derivs_surface(
-                x,
-                y,
-                degree_x,
-                degree_y,
-                control_points,
-                control_point_weights,
-                knots_x,
-                knots_y,
-                nth_deriv,
-            )
-            if plot_normals:
-                normals[i, j] = calc_normal_surface(
-                    x,
-                    y,
-                    degree_x,
-                    degree_y,
-                    control_points,
-                    control_point_weights,
-                    knots_x,
-                    knots_y,
-                )
+    eval_points = th.cartesian_prod(xs, ys)
+    res = calc_derivs_surface(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        nth_deriv,
+    )
+    res = res.reshape((len(xs), len(ys)) + res.shape[1:])
+    if plot_normals:
+        normals = calc_normal_surface(
+            eval_points[:, 0],
+            eval_points[:, 1],
+            degree_x,
+            degree_y,
+            control_points,
+            control_point_weights,
+            knots_x,
+            knots_y,
+        )
+        normals = normals.reshape((len(xs), len(ys)) + normals.shape[1:])
 
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
     ax.scatter(
