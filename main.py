@@ -165,6 +165,19 @@ if use_splines:
     eval_points = th.cartesian_prod(eval_points, eval_points)
     ctrl_points[:] = hel_in_field.reshape(ctrl_points.shape)
 
+    surface_normal = th.cross(hel_in_field[0], hel_in_field[1])
+    surface_normal /= th.linalg.norm(surface_normal)
+    reflect_ray = -ray_directions[0]
+    from_sun = (
+        reflect_ray - (
+            2
+            * th.dot(reflect_ray, surface_normal)
+            * surface_normal
+        )
+    )
+    del surface_normal
+    del reflect_ray
+
     opt_params = [ctrl_points]
     ctrl_points.requires_grad_(True)
     if fix_spline_ctrl_weights:
@@ -217,15 +230,24 @@ for epoch in range(epochs):
     # print(ray_directions)
     for target in targets:
         if use_splines:
-            ray_directions = nurbs.calc_normals_surface_slow(
-                eval_points[:, 0],
-                eval_points[:, 1],
-                spline_degree,
-                spline_degree,
-                ctrl_points,
-                ctrl_weights,
-                knots_x,
-                knots_y,
+            surface_points, surface_normals = (
+                nurbs.calc_normals_and_surface_slow(
+                    eval_points[:, 0],
+                    eval_points[:, 1],
+                    spline_degree,
+                    spline_degree,
+                    ctrl_points,
+                    ctrl_weights,
+                    knots_x,
+                    knots_y,
+                )
+            )
+            ray_directions = (
+                from_sun - (
+                    2
+                    * (from_sun * surface_normals).sum(-1).unsqueeze(-1)
+                    * surface_normals
+                )
             )
         intersections = compute_receiver_intersections(
             planeNormal,
