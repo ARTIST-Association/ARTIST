@@ -55,7 +55,8 @@ planey = 10 #Receiver height
 ####Heliostat specific Parameters
 h_width = 4 # in m
 h_height = 4 # in m 
-rows = 32 #rows of reflection points. total number is rows**2
+rows = 32 #rows of reflection points. total number is rows*cols (see below)
+cols = rows
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 
 #sunposition
@@ -80,7 +81,7 @@ if load_deflec_data:
     # plot_normal_vectors(target_hel_origin, target_normal_vectors)
     
 else:
-    points_on_hel   = rows**2 # reflection points on hel
+    points_on_hel   = rows*cols # reflection points on hel
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
     target_hel_origin      = define_heliostat(h_height, h_width, rows, points_on_hel, device)
     target_normal_vector   = th.tensor([0,0,1], dtype=th.float32, device=device)
