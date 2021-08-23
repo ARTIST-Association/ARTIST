@@ -289,11 +289,16 @@ for epoch in range(epochs):
                     knots_y,
                 )
             )
-            ray_directions = (
-                from_sun - (
-                    2
-                    * (from_sun * surface_normals).sum(-1).unsqueeze(-1)
-                    * surface_normals
+            if load_deflec_data:
+                # We aren't interested in the sun here.
+                ray_directions = surface_normals
+            else:
+                ray_directions = (
+                    from_sun - (
+                        2
+                        * (from_sun * surface_normals).sum(-1).unsqueeze(-1)
+                        * surface_normals
+                    )
                 )
             )
         intersections = compute_receiver_intersections(
