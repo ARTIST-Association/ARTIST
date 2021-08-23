@@ -76,7 +76,7 @@ if load_deflec_data:
     (
         target_normal_vectors,
         target_hel_origin,
-        (h_width, h_height),
+        (target_h_width, target_h_height),
     ) = load_deflec(filename, take_n_vectors, device)
     ideal_normal_vecs =  th.tile(ideal_normal_vec, (len(target_hel_origin), 1)) #valid only for planar heliostat
     
@@ -85,8 +85,8 @@ if load_deflec_data:
     # plot_normal_vectors(target_hel_origin, target_normal_vectors)
     
     # TODO implement target ratio for trying to find divisor so it
-    #      matches ratio between h_width and h_height
-    edge_ratio = h_width / h_height
+    #      matches ratio between target_h_width and target_h_height
+    edge_ratio = target_h_width / target_h_height
     rows = find_larger_divisor(len(target_hel_origin))
     cols = len(target_hel_origin) // rows
     if edge_ratio < 1:
