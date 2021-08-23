@@ -171,9 +171,13 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 # TODO große winkel zwischen vektoren bestrafen
 if use_splines:
     (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
-        spline_degree, spline_degree, rows, rows, device)
-    eval_points = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
-    eval_points = th.cartesian_prod(eval_points, eval_points)
+        spline_degree, spline_degree, rows, cols, device)
+    eval_points_x = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
+    eval_points_y = th.linspace(0, 1 - nurbs.EPS, cols, device=device)
+    eval_points = th.cartesian_prod(eval_points_x, eval_points_y)
+    del eval_points_x
+    del eval_points_y
+
     # FIXME change this to use perfect heliostat as base
     #       using `position_on_field` and offsets
     ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
@@ -199,10 +203,12 @@ if use_splines:
         ctrl_weights.requires_grad_(True)
         opt_params.append(ctrl_weights)
 
-    knot_vals = th.linspace(0, 1, len(knots_x[spline_degree:-spline_degree]))
-    knots_x[spline_degree:-spline_degree] = knot_vals
-    knots_y[spline_degree:-spline_degree] = knot_vals.clone()
-    del knot_vals
+    knot_vals_x = th.linspace(0, 1, len(knots_x[spline_degree:-spline_degree]))
+    knot_vals_y = th.linspace(0, 1, len(knots_y[spline_degree:-spline_degree]))
+    knots_x[spline_degree:-spline_degree] = knot_vals_x
+    knots_y[spline_degree:-spline_degree] = knot_vals_y
+    del knot_vals_x
+    del knot_vals_y
 
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
