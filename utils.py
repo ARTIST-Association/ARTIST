@@ -331,3 +331,9 @@ def curl(f, arg):
     rot_z = jac[1][0] - jac[0][1]
 
     return th.tensor([rot_x, rot_y, rot_z])
+
+def find_larger_divisor(num):
+    divisor = int(th.sqrt(th.tensor(num)))
+    while num % divisor != 0:
+        divisor += 1
+    return divisor

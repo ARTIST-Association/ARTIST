@@ -18,7 +18,7 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 from scipy.spatial.transform import Rotation as R
 
 import nurbs
-from utils import compute_receiver_intersections, curl, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
+from utils import compute_receiver_intersections, curl, find_larger_divisor, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
@@ -84,6 +84,13 @@ if load_deflec_data:
     # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors)
     # plot_normal_vectors(target_hel_origin, target_normal_vectors)
     
+    # TODO implement target ratio for trying to find divisor so it
+    #      matches ratio between h_width and h_height
+    edge_ratio = h_width / h_height
+    rows = find_larger_divisor(len(target_hel_origin))
+    cols = len(target_hel_origin) // rows
+    if edge_ratio < 1:
+        rows, cols = cols, rows
 else:
     points_on_hel   = rows*cols # reflection points on hel
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
