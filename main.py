@@ -179,9 +179,10 @@ if use_splines:
     del eval_points_y
 
     # Use perfect, unrotated heliostat at `position_on_field` as starting point
-    origin_offsets_x = th.linspace(-h_width / 2, h_width, rows, device=device)
+    origin_offsets_x = th.linspace(
+        -h_width / 2, h_width / 2, rows, device=device)
     origin_offsets_y = th.linspace(
-        -h_height / 2, h_height, cols, device=device)
+        -h_height / 2, h_height / 2, cols, device=device)
     origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
     origin_offsets = th.hstack((
         origin_offsets,
