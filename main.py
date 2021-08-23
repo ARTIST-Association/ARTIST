@@ -162,9 +162,11 @@ if use_splines:
         spline_degree, spline_degree, rows, rows, device)
     eval_points = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
     eval_points = th.cartesian_prod(eval_points, eval_points)
-    ctrl_points[:] = hel_in_field.reshape(ctrl_points.shape)
+    # FIXME change this to use perfect heliostat as base
+    #       using `position_on_field` and offsets
+    ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
 
-    surface_normal = th.cross(hel_in_field[0], hel_in_field[1])
+    surface_normal = th.cross(target_hel_in_field[0], target_hel_in_field[1])
     surface_normal /= th.linalg.norm(surface_normal)
     reflect_ray = -ray_directions[0]
     from_sun = (
