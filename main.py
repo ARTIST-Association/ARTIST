@@ -5,7 +5,6 @@ Created on Mon Oct 28 09:31:21 2019
 @author: ober_lu
 """
 
-import itertools
 import os
 
 import matplotlib.pyplot as plt
