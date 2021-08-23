@@ -178,9 +178,22 @@ if use_splines:
     del eval_points_x
     del eval_points_y
 
-    # FIXME change this to use perfect heliostat as base
-    #       using `position_on_field` and offsets
-    ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
+    # Use perfect, unrotated heliostat at `position_on_field` as starting point
+    origin_offsets_x = th.linspace(-h_width / 2, h_width, rows, device=device)
+    origin_offsets_y = th.linspace(
+        -h_height / 2, h_height, cols, device=device)
+    origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
+    origin_offsets = th.hstack((
+        origin_offsets,
+        th.zeros((len(origin_offsets), 1), device=device),
+    ))
+    del origin_offsets_x
+    del origin_offsets_y
+    ctrl_points[:] = (
+        position_on_field
+        + origin_offsets
+    ).reshape(ctrl_points.shape)
+    del origin_offsets
 
     surface_normal = th.cross(target_hel_in_field[0], target_hel_in_field[1])
     surface_normal /= th.linalg.norm(surface_normal)
