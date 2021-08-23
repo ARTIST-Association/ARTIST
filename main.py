@@ -18,7 +18,7 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 from scipy.spatial.transform import Rotation as R
 
 import nurbs
-from utils import compute_receiver_intersections, curl, find_larger_divisor, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
+from utils import compute_receiver_intersections, curl, find_larger_divisor, find_perpendicular_pair, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
@@ -35,6 +35,7 @@ filename = "Helio_AA33_Rim0_STRAL-Input.binp"
 take_n_vectors = 2000
 # NURBS settings
 use_splines = True
+set_up_with_knowledge = True
 fix_spline_ctrl_weights = True
 spline_degree = 2
 epochs = 200
@@ -178,26 +179,40 @@ if use_splines:
     del eval_points_x
     del eval_points_y
 
-    # Use perfect, unrotated heliostat at `position_on_field` as starting point
-    origin_offsets_x = th.linspace(
-        -h_width / 2, h_width / 2, rows, device=device)
-    origin_offsets_y = th.linspace(
-        -h_height / 2, h_height / 2, cols, device=device)
-    origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
-    origin_offsets = th.hstack((
-        origin_offsets,
-        th.zeros((len(origin_offsets), 1), device=device),
-    ))
-    del origin_offsets_x
-    del origin_offsets_y
-    ctrl_points[:] = (
-        position_on_field
-        + origin_offsets
-    ).reshape(ctrl_points.shape)
-    del origin_offsets
+    if set_up_with_knowledge:
+        ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
 
-    surface_normal = ideal_normal_vec.float()
-    reflect_ray = -ray_directions[0]
+        base_vec = target_ray_directions[0]
+        (
+            surface_direction_x,
+            surface_direction_y,
+        ) = find_perpendicular_pair(base_vec, target_hel_in_field)
+        surface_normal = th.cross(surface_direction_x, surface_direction_y)
+        reflect_ray = -base_vec
+    else:
+        # Use perfect, unrotated heliostat at `position_on_field` as
+        # starting point with width and height as initially guessed.
+        origin_offsets_x = th.linspace(
+            -h_width / 2, h_width / 2, rows, device=device)
+        origin_offsets_y = th.linspace(
+            -h_height / 2, h_height / 2, cols, device=device)
+        origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
+        origin_offsets = th.hstack((
+            origin_offsets,
+            th.zeros((len(origin_offsets), 1), device=device),
+        ))
+        del origin_offsets_x
+        del origin_offsets_y
+        ctrl_points[:] = (
+            position_on_field
+            + origin_offsets
+        ).reshape(ctrl_points.shape)
+        del origin_offsets
+
+        surface_normal = ideal_normal_vec.float()
+        reflect_ray = -ray_directions[0]
+
+    surface_normal /= th.linalg.norm(surface_normal)
     from_sun = (
         reflect_ray - (
             2

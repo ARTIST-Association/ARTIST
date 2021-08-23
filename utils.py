@@ -5,6 +5,8 @@ Created on Mon Jul  5 12:38:11 2021
 @author: parg_ma
 """
 
+import math
+
 import torch as th
 import struct
 import numpy as np
@@ -337,3 +339,21 @@ def find_larger_divisor(num):
     while num % divisor != 0:
         divisor += 1
     return divisor
+
+def find_perpendicular_pair(base_vec, vecs):
+    half_pi = th.tensor(math.pi, device=vecs.device) / 2
+    for vec_x in vecs[1:]:
+        surface_direction_x = vec_x - base_vec
+        surface_direction_x /= th.linalg.norm(surface_direction_x)
+        for vec_y in vecs[2:]:
+            surface_direction_y = vec_y - base_vec
+            surface_direction_y /= th.linalg.norm(surface_direction_y)
+            if th.isclose(
+                    th.acos(th.dot(
+                        surface_direction_x,
+                        surface_direction_y,
+                    )),
+                    half_pi,
+            ):
+                return surface_direction_x, surface_direction_y
+    raise ValueError('could not calculate surface normal')
