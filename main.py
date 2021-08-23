@@ -144,7 +144,7 @@ target_total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height
 im = plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
 im.set_data(target_total_bitmap.detach().cpu().numpy())
 im.autoscale()
-plt.savefig("images\\original.jpeg")
+plt.savefig(os.path.join("images", "original.jpeg"))
 targets = target_total_bitmap.detach().clone().unsqueeze(0)
 
 ###Plotting Stuff
@@ -309,7 +309,7 @@ for epoch in range(epochs):
     if epoch %  10== 0:#
         im.set_data(pred.detach().cpu().numpy())
         im.autoscale()
-        plt.savefig(f"images\\{epoch}.png")
+        plt.savefig(os.path.join("images", f"{epoch}.png"))
 
 
     loss /= len(targets)
