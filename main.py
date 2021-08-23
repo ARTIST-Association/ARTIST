@@ -180,6 +180,8 @@ if use_splines:
     del eval_points_y
 
     if set_up_with_knowledge:
+        # FIXME need to sort loaded deflectometry surface points so normals
+        #       always point in the correct direction
         ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
 
         base_vec = target_ray_directions[0]
