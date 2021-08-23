@@ -73,7 +73,11 @@ if not os.path.exists("images"):
 
 ##Define Target Heliostat##
 if load_deflec_data:
-    target_normal_vectors, target_hel_origin  = load_deflec(filename, take_n_vectors, device)
+    (
+        target_normal_vectors,
+        target_hel_origin,
+        (h_width, h_height),
+    ) = load_deflec(filename, take_n_vectors, device)
     ideal_normal_vecs =  th.tile(ideal_normal_vec, (len(target_hel_origin), 1)) #valid only for planar heliostat
     
     ###Plotting Stuff

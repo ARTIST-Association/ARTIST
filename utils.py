@@ -61,7 +61,7 @@ def load_deflec(filename, take_n_vectors,device="cpu", concentratorHeader_struct
 
         directions = th.tensor(directions[0::int(len(directions)/take_n_vectors)], device=device)
         positions = th.tensor(positions[0::int(len(positions)/take_n_vectors)], device = device)
-        return directions, positions #,powers
+        return directions, positions, width_height #,powers
 
 def define_heliostat(h_height, h_width, rows, points_on_hel, device):
     columns = int(points_on_hel)//rows
