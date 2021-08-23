@@ -226,10 +226,10 @@ if use_splines:
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
     # opt_params.extend([knots_x, knots_y])
-    opt = th.optim.Adam(opt_params, lr=3e-6)
+    opt = th.optim.Adam(opt_params, lr=3e-6, weight_decay=0.01)
 else:
     ray_directions.requires_grad_(True)
-    opt = th.optim.Adam([ray_directions], lr=3e-2)
+    opt = th.optim.Adam([ray_directions], lr=3e-2, weight_decay=0.1)
 sched = th.optim.lr_scheduler.ReduceLROnPlateau(
     opt,
     factor=0.5,
