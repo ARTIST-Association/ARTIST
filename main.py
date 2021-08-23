@@ -196,8 +196,7 @@ if use_splines:
     ).reshape(ctrl_points.shape)
     del origin_offsets
 
-    surface_normal = th.cross(target_hel_in_field[0], target_hel_in_field[1])
-    surface_normal /= th.linalg.norm(surface_normal)
+    surface_normal = ideal_normal_vec.float()
     reflect_ray = -ray_directions[0]
     from_sun = (
         reflect_ray - (
