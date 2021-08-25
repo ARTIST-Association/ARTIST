@@ -84,7 +84,7 @@ mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000005, 0], [0, 0.000005]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 
 num_rays = 1000
-ideal_normal_vec = th.tensor([0,0,1], device= device) #valid only for planar heliostat
+ideal_normal_vec = th.tensor([0,0,1], dtype=th.float32, device=device) #valid only for planar heliostat
 
 if not os.path.exists("images"):
     os.makedirs("images")
