@@ -230,7 +230,7 @@ if use_splines:
         reflect_ray = -ray_directions[0]
 
     surface_normal /= th.linalg.norm(surface_normal)
-    from_sun = (
+    from_sun = -(
         reflect_ray - (
             2
             * th.dot(reflect_ray, surface_normal)
