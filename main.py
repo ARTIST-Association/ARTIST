@@ -128,10 +128,11 @@ target_hel_in_field = target_hel_rotated+ position_on_field
 # del target_hel_origin
 del target_hel_rotated
 
-# FIXME musste gerade schnell gehen, die rotation muss natürlich berechnet werden. Kannst du das nachholen? ich hatte über die th funktionen keinen Überblick.
-rotation = th.tensor([0,90,0], dtype=th.float32, device=device)
+rotation_axis = th.cross(sun, ideal_normal_vec)
+rotation_axis /= th.linalg.norm(rotation_axis)
+rotation = (rotation_axis * th.acos(th.dot(sun, ideal_normal_vec)))
 
-r = rot_from_rotvec(rotation, degrees= True)
+r = rot_from_rotvec(rotation, degrees=False)
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
 
 
