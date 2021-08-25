@@ -18,7 +18,19 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 from scipy.spatial.transform import Rotation as R
 
 import nurbs
-from utils import compute_receiver_intersections, curl, find_larger_divisor, find_perpendicular_pair, heliostat_coord_system, define_heliostat, rotate_heliostat, sample_bitmap, sample_bitmap_, add_distortion, load_deflec
+from utils import (
+    add_distortion,
+    compute_receiver_intersections,
+    curl,
+    define_heliostat,
+    find_larger_divisor,
+    find_perpendicular_pair,
+    heliostat_coord_system,
+    load_deflec,
+    rotate_heliostat,
+    sample_bitmap,
+    sample_bitmap_,
+)
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
