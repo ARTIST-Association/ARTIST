@@ -35,6 +35,9 @@ filename = "Helio_AA33_Rim0_STRAL-Input.binp"
 take_n_vectors = 2000
 # NURBS settings
 use_splines = True
+# If setting this to `False`, be aware that the NURBS surface will
+# always be evaluated at each surface position independently of the ray
+# origins.
 set_up_with_knowledge = True
 fix_spline_ctrl_weights = True
 spline_degree = 2
