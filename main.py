@@ -216,8 +216,10 @@ if use_splines:
             h_height,
         )
 
-    opt_params = [ctrl_points]
-    ctrl_points.requires_grad_(True)
+    ctrl_points_xy = ctrl_points[:, :-1]
+    ctrl_points_z = ctrl_points[:, -1:]
+    ctrl_points_z.requires_grad_(True)
+    opt_params = [ctrl_points_z]
     if fix_spline_ctrl_weights:
         ctrl_weights[:] = 1
     else:
@@ -265,6 +267,7 @@ for epoch in range(epochs):
     # print(ray_directions)
     for target in targets:
         if use_splines:
+            ctrl_points = th.hstack((ctrl_points_xy, ctrl_points_z))
             hel_origin, surface_normals = (
                 nurbs.calc_normals_and_surface_slow(
                     eval_points[:, 0],
