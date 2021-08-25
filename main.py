@@ -158,8 +158,6 @@ intersections = compute_receiver_intersections(
 #                 intersections.detach().cpu().numpy(),
 #                 sun.detach().cpu().numpy())
 
-del target_hel_coords
-
 target_total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
 im = plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
 im.set_data(target_total_bitmap.detach().cpu().numpy())
@@ -199,20 +197,20 @@ if use_splines:
     del eval_points_y
 
     if set_up_with_knowledge:
-        from_sun = initialize_spline_ctrl_points_perfectly(
-            ctrl_points, target_hel_in_field, target_ray_directions[0])
+        initialize_spline_ctrl_points_perfectly(
+            ctrl_points,
+            target_hel_origin,
+        )
     else:
         # Use perfect, unrotated heliostat at `position_on_field` as
         # starting point with width and height as initially guessed.
-        from_sun = initialize_spline_ctrl_points(
+        initialize_spline_ctrl_points(
             ctrl_points,
             position_on_field,
             rows,
             cols,
             h_width,
             h_height,
-            ideal_normal_vec.float(),
-            -ray_directions[0],
         )
 
     opt_params = [ctrl_points]
@@ -264,7 +262,7 @@ for epoch in range(epochs):
     # print(ray_directions)
     for target in targets:
         if use_splines:
-            rayPoints, surface_normals = (
+            hel_origin, surface_normals = (
                 nurbs.calc_normals_and_surface_slow(
                     eval_points[:, 0],
                     eval_points[:, 1],
@@ -276,18 +274,14 @@ for epoch in range(epochs):
                     knots_y,
                 )
             )
-            if load_deflec_data:
-                # We aren't interested in the sun here.
-                ray_directions = surface_normals
-            else:
-                ray_directions = (
-                    from_sun - (
-                        2
-                        * (from_sun * surface_normals).sum(-1).unsqueeze(-1)
-                        * surface_normals
-                    )
-                )
-            )
+
+            hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
+            rayPoints = hel_rotated + position_on_field
+
+            ray_directions = rot_apply(
+                r,
+                surface_normals.unsqueeze(-1),
+            ).squeeze(-1)
         intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,
