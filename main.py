@@ -26,6 +26,8 @@ from utils import (
     find_larger_divisor,
     find_perpendicular_pair,
     heliostat_coord_system,
+    initialize_spline_ctrl_points,
+    initialize_spline_ctrl_points_perfectly,
     load_deflec,
     rotate_heliostat,
     sample_bitmap,
@@ -195,50 +197,19 @@ if use_splines:
     del eval_points_y
 
     if set_up_with_knowledge:
-        # FIXME need to sort loaded deflectometry surface points so normals
-        #       always point in the correct direction
-        ctrl_points[:] = target_hel_in_field.reshape(ctrl_points.shape)
-
-        base_vec = target_ray_directions[0]
-        (
-            surface_direction_x,
-            surface_direction_y,
-        ) = find_perpendicular_pair(base_vec, target_hel_in_field)
-        surface_normal = th.cross(surface_direction_x, surface_direction_y)
-        reflect_ray = -base_vec
+        from_sun = initialize_spline_ctrl_points_perfectly(
+            ctrl_points, target_hel_in_field, target_ray_directions[0])
     else:
-        # Use perfect, unrotated heliostat at `position_on_field` as
-        # starting point with width and height as initially guessed.
-        origin_offsets_x = th.linspace(
-            -h_width / 2, h_width / 2, rows, device=device)
-        origin_offsets_y = th.linspace(
-            -h_height / 2, h_height / 2, cols, device=device)
-        origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
-        origin_offsets = th.hstack((
-            origin_offsets,
-            th.zeros((len(origin_offsets), 1), device=device),
-        ))
-        del origin_offsets_x
-        del origin_offsets_y
-        ctrl_points[:] = (
-            position_on_field
-            + origin_offsets
-        ).reshape(ctrl_points.shape)
-        del origin_offsets
-
-        surface_normal = ideal_normal_vec.float()
-        reflect_ray = -ray_directions[0]
-
-    surface_normal /= th.linalg.norm(surface_normal)
-    from_sun = -(
-        reflect_ray - (
-            2
-            * th.dot(reflect_ray, surface_normal)
-            * surface_normal
+        from_sun = initialize_spline_ctrl_points(
+            control_points,
+            rows,
+            cols,
+            h_width,
+            h_height,
+            surface_normal,
+            ideal_normal_vec.float(),
+            -ray_directions[0],
         )
-    )
-    del surface_normal
-    del reflect_ray
 
     opt_params = [ctrl_points]
     ctrl_points.requires_grad_(True)

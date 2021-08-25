@@ -357,3 +357,66 @@ def find_perpendicular_pair(base_vec, vecs):
             ):
                 return surface_direction_x, surface_direction_y
     raise ValueError('could not calculate surface normal')
+
+def initialize_spline_ctrl_points(
+        control_points,
+        rows,
+        cols,
+        h_width,
+        h_height,
+        surface_normal,
+        reflect_ray,
+):
+    # Use perfect, unrotated heliostat at `position_on_field` as
+    # starting point with width and height as initially guessed.
+    origin_offsets_x = th.linspace(
+        -h_width / 2, h_width / 2, rows, device=device)
+    origin_offsets_y = th.linspace(
+        -h_height / 2, h_height / 2, cols, device=device)
+    origin_offsets = th.cartesian_prod(origin_offsets_x, origin_offsets_y)
+    origin_offsets = th.hstack((
+        origin_offsets,
+        th.zeros((len(origin_offsets), 1), device=device),
+    ))
+    del origin_offsets_x
+    del origin_offsets_y
+    control_points[:] = (
+        position_on_field
+        + origin_offsets
+    ).reshape(control_points.shape)
+    del origin_offsets
+
+    surface_normal = ideal_normal_vec.float()
+    reflect_ray = -ray_directions[0]
+    return ray_from_sun(surface_normal, reflect_ray)
+
+def initialize_spline_ctrl_points_perfectly(control_points, points, base_vec):
+    # FIXME need to sort points so normals always point in the
+    #       correct direction
+    control_points[:] = points.reshape(control_points.shape)
+
+    (
+        surface_direction_x,
+        surface_direction_y,
+    ) = find_perpendicular_pair(base_vec, points)
+
+    surface_normal = th.cross(surface_direction_x, surface_direction_y)
+    reflect_ray = -base_vec
+    return ray_from_sun(surface_normal, reflect_ray)
+
+def ray_from_sun(surface_normal, reflect_ray):
+    """Return a ray coming from the sun toward the surface with the
+    given normal.
+
+    `reflect_ray` is a ray coming toward the surface that is reflected
+    to obtain a ray coming from the sun.
+    """
+    surface_normal /= th.linalg.norm(surface_normal)
+    from_sun = -(
+        reflect_ray - (
+            2
+            * th.dot(reflect_ray, surface_normal)
+            * surface_normal
+        )
+    )
+    return from_sun
