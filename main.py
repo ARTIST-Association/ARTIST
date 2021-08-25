@@ -130,7 +130,7 @@ del target_hel_rotated
 
 rotation_axis = th.cross(sun, ideal_normal_vec)
 rotation_axis /= th.linalg.norm(rotation_axis)
-rotation = (rotation_axis * th.acos(th.dot(sun, ideal_normal_vec)))
+rotation = rotation_axis * th.acos(th.dot(sun, ideal_normal_vec))
 
 r = rot_from_rotvec(rotation, degrees=False)
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
