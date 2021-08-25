@@ -20,6 +20,7 @@ from scipy.spatial.transform import Rotation as R
 import nurbs
 from utils import (
     add_distortion,
+    calc_normal_rotation,
     compute_receiver_intersections,
     curl,
     define_heliostat,
@@ -128,13 +129,7 @@ target_hel_in_field = target_hel_rotated+ position_on_field
 # del target_hel_origin
 del target_hel_rotated
 
-# FIXME still wrong
-rotation_axis = th.cross(sun, ideal_normal_vec)
-if (rotation_axis != 0).all():
-    rotation_axis /= th.linalg.norm(rotation_axis)
-rotation = rotation_axis * th.acos(th.dot(sun, ideal_normal_vec))
-
-r = rot_from_rotvec(rotation, degrees=False)
+r = calc_normal_rotation(position_on_field, aimpoint, ideal_normal_vec)
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
 
 
