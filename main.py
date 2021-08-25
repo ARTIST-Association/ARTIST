@@ -128,8 +128,10 @@ target_hel_in_field = target_hel_rotated+ position_on_field
 # del target_hel_origin
 del target_hel_rotated
 
+# FIXME still wrong
 rotation_axis = th.cross(sun, ideal_normal_vec)
-rotation_axis /= th.linalg.norm(rotation_axis)
+if (rotation_axis != 0).all():
+    rotation_axis /= th.linalg.norm(rotation_axis)
 rotation = rotation_axis * th.acos(th.dot(sun, ideal_normal_vec))
 
 r = rot_from_rotvec(rotation, degrees=False)
