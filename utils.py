@@ -360,6 +360,7 @@ def find_perpendicular_pair(base_vec, vecs):
 
 def initialize_spline_ctrl_points(
         control_points,
+        origin,
         rows,
         cols,
         h_width,
@@ -367,8 +368,6 @@ def initialize_spline_ctrl_points(
         surface_normal,
         reflect_ray,
 ):
-    # Use perfect, unrotated heliostat at `position_on_field` as
-    # starting point with width and height as initially guessed.
     origin_offsets_x = th.linspace(
         -h_width / 2, h_width / 2, rows, device=device)
     origin_offsets_y = th.linspace(
@@ -378,16 +377,8 @@ def initialize_spline_ctrl_points(
         origin_offsets,
         th.zeros((len(origin_offsets), 1), device=device),
     ))
-    del origin_offsets_x
-    del origin_offsets_y
-    control_points[:] = (
-        position_on_field
-        + origin_offsets
-    ).reshape(control_points.shape)
-    del origin_offsets
+    control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
-    surface_normal = ideal_normal_vec.float()
-    reflect_ray = -ray_directions[0]
     return ray_from_sun(surface_normal, reflect_ray)
 
 def initialize_spline_ctrl_points_perfectly(control_points, points, base_vec):

@@ -202,13 +202,15 @@ if use_splines:
         from_sun = initialize_spline_ctrl_points_perfectly(
             ctrl_points, target_hel_in_field, target_ray_directions[0])
     else:
+        # Use perfect, unrotated heliostat at `position_on_field` as
+        # starting point with width and height as initially guessed.
         from_sun = initialize_spline_ctrl_points(
-            control_points,
+            ctrl_points,
+            position_on_field,
             rows,
             cols,
             h_width,
             h_height,
-            surface_normal,
             ideal_normal_vec.float(),
             -ray_directions[0],
         )
