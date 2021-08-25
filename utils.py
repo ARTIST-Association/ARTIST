@@ -420,3 +420,9 @@ def ray_from_sun(surface_normal, reflect_ray):
         )
     )
     return from_sun
+
+def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
+    knot_vals_x = th.linspace(0, 1, len(knots_x[spline_degree_x:-spline_degree_x]))
+    knot_vals_y = th.linspace(0, 1, len(knots_y[spline_degree_y:-spline_degree_y]))
+    knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
+    knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y

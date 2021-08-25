@@ -28,6 +28,7 @@ from utils import (
     heliostat_coord_system,
     initialize_spline_ctrl_points,
     initialize_spline_ctrl_points_perfectly,
+    initialize_spline_knots,
     load_deflec,
     rotate_heliostat,
     sample_bitmap,
@@ -219,12 +220,7 @@ if use_splines:
         ctrl_weights.requires_grad_(True)
         opt_params.append(ctrl_weights)
 
-    knot_vals_x = th.linspace(0, 1, len(knots_x[spline_degree:-spline_degree]))
-    knot_vals_y = th.linspace(0, 1, len(knots_y[spline_degree:-spline_degree]))
-    knots_x[spline_degree:-spline_degree] = knot_vals_x
-    knots_y[spline_degree:-spline_degree] = knot_vals_y
-    del knot_vals_x
-    del knot_vals_y
+    initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
 
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
