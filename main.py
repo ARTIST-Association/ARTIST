@@ -339,6 +339,22 @@ for epoch in range(epochs):
             f'normal differences: {normal_diff.detach().cpu().item()}'
         )
 
+# Save trained model and optimizer state
+if use_splines:
+    model_name = 'nurbs'
+    save_data = {
+        'degree_x': spline_degree,
+        'degree_y': spline_degree,
+        'ctrl_points': ctrl_points,
+        'ctrl_weights': ctrl_weights,
+        'knots_x': knots_x,
+        'knots_y': knots_y,
+    }
+else:
+    model_name = 'ray_dirs'
+    save_data = {'ray_directions': ray_directions}
+th.save(save_data, f'{model_name}.pt')
+th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
 fp_in = "images/*.png"
 fp_out = "images/results.gif"
