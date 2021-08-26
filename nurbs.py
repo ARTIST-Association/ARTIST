@@ -1724,6 +1724,11 @@ class NURBSSurface:
         surf.control_points[2:-2, -3, 2] = third_circle_height
 
         surf.control_point_weights[:] = 1
+
+        surf.knots_x[degree:-degree] = th.linspace(
+            0, 1, len(surf.knots_x[degree:-degree]))
+        surf.knots_y[degree:-degree] = th.linspace(
+            0, 1, len(surf.knots_y[degree:-degree]))
         # surf.knots_x[:] = 1
         # surf.knots_y[:] = 1
         # surf.knots_x[degree + 1] = 0
