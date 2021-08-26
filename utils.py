@@ -412,3 +412,6 @@ def calc_normal_rotation(position_on_field, aimpoint, surface_normal):
     rotation = rotation_axis * rotation_angle
 
     return rot_from_rotvec(rotation, degrees=False)
+
+def calc_normal_diffs(pred, target):
+    return th.nn.functional.l1_loss(pred, target)

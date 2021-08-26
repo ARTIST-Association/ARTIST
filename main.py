@@ -20,6 +20,7 @@ from scipy.spatial.transform import Rotation as R
 import nurbs
 from utils import (
     add_distortion,
+    calc_normal_diffs,
     calc_normal_rotation,
     compute_receiver_intersections,
     curl,
@@ -322,10 +323,15 @@ for epoch in range(epochs):
     sched.step(loss)
     if epoch % 1 == 0:
         num_missed = indices.numel() - indices.count_nonzero()
+        normal_diff = calc_normal_diffs(
+            ray_directions.detach(),
+            target_ray_directions,
+        )
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
-            f'missed: {num_missed.detach().cpu().item()}'
+            f'missed: {num_missed.detach().cpu().item()}, '
+            f'normal differences: {normal_diff.detach().cpu().item()}'
         )
 
 
