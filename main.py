@@ -158,7 +158,12 @@ intersections = compute_receiver_intersections(
 #                 intersections.detach().cpu().numpy(),
 #                 sun.detach().cpu().numpy())
 
-target_total_bitmap = sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width)
+dx_ints = intersections[:, :, 1] +planex/2
+dy_ints = intersections[:, :, 2] +planey/2
+indices = (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1)
+target_total_bitmap = sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
+target_num_missed = indices.numel() - indices.count_nonzero()
+print('Missed for target:', target_num_missed.detach().cpu().item())
 im = plt.imshow(target_total_bitmap.detach().cpu().numpy(), cmap='jet')
 im.set_data(target_total_bitmap.detach().cpu().numpy())
 im.autoscale()
