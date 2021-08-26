@@ -29,6 +29,7 @@ from utils import (
     heliostat_coord_system,
     initialize_spline_ctrl_points,
     initialize_spline_ctrl_points_perfectly,
+    initialize_spline_eval_points,
     initialize_spline_knots,
     load_deflec,
     rotate_heliostat,
@@ -188,11 +189,7 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 if use_splines:
     (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
         spline_degree, spline_degree, rows, cols, device)
-    eval_points_x = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
-    eval_points_y = th.linspace(0, 1 - nurbs.EPS, cols, device=device)
-    eval_points = th.cartesian_prod(eval_points_x, eval_points_y)
-    del eval_points_x
-    del eval_points_y
+    eval_points = initialize_spline_eval_points(rows, cols, device)
 
     if set_up_with_knowledge:
         initialize_spline_ctrl_points_perfectly(

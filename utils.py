@@ -10,6 +10,8 @@ import math
 import torch as th
 import struct
 import numpy as np
+
+import nurbs
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 device = th.device('cuda' if th.cuda.is_available() else 'cpu')
@@ -357,6 +359,16 @@ def find_perpendicular_pair(base_vec, vecs):
             ):
                 return surface_direction_x, surface_direction_y
     raise ValueError('could not calculate surface normal')
+
+def initialize_spline_eval_points(
+        rows,
+        cols,
+        device,
+):
+    eval_points_x = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
+    eval_points_y = th.linspace(0, 1 - nurbs.EPS, cols, device=device)
+    eval_points = th.cartesian_prod(eval_points_x, eval_points_y)
+    return eval_points
 
 def initialize_spline_ctrl_points(
         control_points,
