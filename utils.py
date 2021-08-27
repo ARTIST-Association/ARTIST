@@ -416,3 +416,11 @@ def calc_normal_rotation(position_on_field, aimpoint, surface_normal):
 
 def calc_normal_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
+
+def reflect_rays_(rays, normals):
+    return rays - 2 * (rays * normals).sum(-1).unsqueeze(-1) * normals
+
+def reflect_rays(rays, normals):
+    rays = rays / th.linalg.norm(rays, 1)
+    normals = normals / th.linalg.norm(normals, 1)
+    return reflect_rays_(rays, normals)
