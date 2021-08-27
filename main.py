@@ -141,7 +141,8 @@ del target_hel_rotated
 
 from_sun = position_on_field - sun
 from_sun /= from_sun.norm()
-target_ray_directions = reflect_rays_(from_sun, target_normal_vectors)
+target_ray_directions = reflect_rays_(
+    from_sun.unsqueeze(0), target_normal_vectors)
 target_rayPoints = target_hel_in_field #Any point along the ray
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 
@@ -286,7 +287,8 @@ for epoch in range(epochs):
             hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
             rayPoints = hel_rotated + position_on_field
 
-            ray_directions = reflect_rays_(from_sun, surface_normals)
+            ray_directions = reflect_rays_(
+                from_sun.unsqueeze(0), surface_normals)
         intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,
