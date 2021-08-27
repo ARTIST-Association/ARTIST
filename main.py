@@ -183,6 +183,7 @@ del target_total_bitmap
 ##Define ideal heliostat.
 
 ray_direction = (aimpoint- position_on_field)
+ray_direction /= ray_direction.norm()
 ray_directions =  th.tile(ray_direction, (len(target_hel_in_field), 1)) #works only for planar heliostat
 # ray_directions += th.randn_like(ray_directions) * 0.3 # Da wir jetzt nicht mehr mit Idealen Heliostaten Rechnen kann das eigentlich weg, es schadet aber glaube ich auch nicht
 rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
