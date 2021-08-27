@@ -404,8 +404,11 @@ def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
 def calc_ray_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
 
+def batch_dot(x, y):
+    return (x * y).sum(-1).unsqueeze(-1)
+
 def reflect_rays_(rays, normals):
-    return rays - 2 * (rays * normals).sum(-1).unsqueeze(-1) * normals
+    return rays - 2 * batch_dot(rays, normals) * normals
 
 def reflect_rays(rays, normals):
     normals = normals / th.linalg.norm(normals, -1)
