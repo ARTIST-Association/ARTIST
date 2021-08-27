@@ -18,7 +18,7 @@ import math
 import nurbs
 from utils import (
     add_distortion,
-    calc_normal_diffs,
+    calc_ray_diffs,
     compute_receiver_intersections,
     curl,
     define_heliostat,
@@ -329,7 +329,7 @@ for epoch in range(epochs):
     sched.step(loss)
     if epoch % 1 == 0:
         num_missed = indices.numel() - indices.count_nonzero()
-        normal_diff = calc_normal_diffs(
+        ray_diff = calc_ray_diffs(
             ray_directions.detach(),
             target_ray_directions,
         )
@@ -337,7 +337,7 @@ for epoch in range(epochs):
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'missed: {num_missed.detach().cpu().item()}, '
-            f'normal differences: {normal_diff.detach().cpu().item()}'
+            f'ray differences: {ray_diff.detach().cpu().item()}'
         )
 
 # Save trained model and optimizer state

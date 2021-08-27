@@ -401,7 +401,7 @@ def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
     knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
     knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y
 
-def calc_normal_diffs(pred, target):
+def calc_ray_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
 
 def reflect_rays_(rays, normals):
