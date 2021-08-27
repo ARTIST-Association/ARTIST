@@ -408,5 +408,5 @@ def reflect_rays_(rays, normals):
     return rays - 2 * (rays * normals).sum(-1).unsqueeze(-1) * normals
 
 def reflect_rays(rays, normals):
-    normals = normals / th.linalg.norm(normals, 1)
+    normals = normals / th.linalg.norm(normals, -1)
     return reflect_rays_(rays, normals)

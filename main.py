@@ -129,7 +129,7 @@ target_hel_rotated = rotate_heliostat(target_hel_origin,target_hel_coords)
 target_hel_in_field = target_hel_rotated+ position_on_field
 
 target_normal_vectors = rotate_heliostat(target_normal_vectors,target_hel_coords)
-target_normal_vectors /= target_normal_vectors.norm(dim=1).unsqueeze(-1)
+target_normal_vectors /= target_normal_vectors.norm(dim=-1).unsqueeze(-1)
 
 
 
