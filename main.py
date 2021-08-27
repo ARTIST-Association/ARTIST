@@ -71,6 +71,7 @@ device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 # Receiver
 aimpoint = th.tensor([-25,0,0], dtype=th.float32, device=device)
 planeNormal = th.tensor([1, 0, 0], dtype=th.float32, device=device) # Muss noch dynamisch gestaltet werden
+# TODO add plane up vec ("rotation")
 ##Receiver specific parameters
 planex = 10 # Receiver width
 planey = 10 #Receiver height
@@ -82,6 +83,7 @@ rows = 32 #rows of reflection points. total number is rows*cols (see below)
 cols = rows
 # Heliostat origin center
 position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
+# TODO add heliostat up vec ("rotation")
 
 #sunposition
 sun = th.tensor([-1,0,0], dtype=th.float32, device=device)
@@ -134,6 +136,7 @@ target_hel_in_field = target_hel_rotated+ position_on_field
 del target_hel_rotated
 
 r = calc_normal_rotation(position_on_field, aimpoint, ideal_normal_vec)
+# TODO rename for clarity
 target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
 
 

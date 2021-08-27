@@ -91,6 +91,7 @@ def rotate_heliostat(h,hel_coordsystem):
     ele_vector = ele_radians * ele_axis
     ele = rot_from_rotvec(ele_vector)
 
+    # TODO Max: re-add ax-offsets
     azi_degrees = euler[1]-90
     azi_radians = th.deg2rad(azi_degrees)
     azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
