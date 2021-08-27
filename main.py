@@ -33,6 +33,8 @@ from utils import (
     initialize_spline_eval_points,
     initialize_spline_knots,
     load_deflec,
+    reflect_rays,
+    reflect_rays_,
     rotate_heliostat,
     sample_bitmap,
     sample_bitmap_,
@@ -129,21 +131,20 @@ target_hel_coords = th.stack(heliostat_coord_system(position_on_field, sun, aimp
 target_hel_rotated = rotate_heliostat(target_hel_origin,target_hel_coords)
 target_hel_in_field = target_hel_rotated+ position_on_field
 
+target_normal_vectors = rotate_heliostat(target_normal_vectors,target_hel_coords)
+target_normal_vectors /= target_normal_vectors.norm(dim=1).unsqueeze(-1)
 
 
 
 # del target_hel_origin
 del target_hel_rotated
 
-r = calc_normal_rotation(position_on_field, aimpoint, ideal_normal_vec)
-# TODO rename for clarity
-target_normal_vectors = rot_apply(r, target_normal_vectors.unsqueeze(-1)).squeeze()
-
-
 ###Plotting Stuff
 # plot_normal_vectors(target_hel_in_field, target_normal_vectors)
 
-target_ray_directions = target_normal_vectors
+from_sun = position_on_field - sun
+from_sun /= from_sun.norm()
+target_ray_directions = reflect_rays_(from_sun, target_normal_vectors)
 target_rayPoints = target_hel_in_field #Any point along the ray
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 
@@ -288,10 +289,7 @@ for epoch in range(epochs):
             hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
             rayPoints = hel_rotated + position_on_field
 
-            ray_directions = rot_apply(
-                r,
-                surface_normals.unsqueeze(-1),
-            ).squeeze(-1)
+            ray_directions = reflect_rays_(from_sun, surface_normals)
         intersections = compute_receiver_intersections(
             planeNormal,
             aimpoint,
