@@ -19,6 +19,8 @@ import nurbs
 from utils import (
     add_distortion,
     calc_ray_diffs,
+    calc_reflection_normals,
+    calc_reflection_normals_,
     compute_receiver_intersections,
     curl,
     define_heliostat,

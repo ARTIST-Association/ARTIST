@@ -404,6 +404,22 @@ def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
 def calc_ray_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
 
+def calc_reflection_normals_(in_reflections, out_reflections):
+    normals = ((in_reflections + out_reflections) / 2 - in_reflections)
+    # Handle pass-through "reflection"
+    normals = th.where(
+        th.isclose(normals, th.zeros_like(normals[0])),
+        out_reflections,
+        normals / normals.norm(dim=-1).unsqueeze(-1),
+    )
+    return normals
+
+def calc_reflection_normals(in_reflections, out_reflections):
+    in_reflections = in_reflections / in_reflections.norm(dim=-1).unsqueeze(-1)
+    out_reflections = \
+        out_reflections / out_reflections.norm(dim=-1).unsqueeze(-1)
+    return calc_reflection_normals_(in_reflections, out_reflections)
+
 def batch_dot(x, y):
     return (x * y).sum(-1).unsqueeze(-1)
 
