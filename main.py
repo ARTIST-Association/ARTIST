@@ -14,14 +14,11 @@ import time
 import glob
 from PIL import Image
 import math
-from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
-from scipy.spatial.transform import Rotation as R
 
 import nurbs
 from utils import (
     add_distortion,
     calc_normal_diffs,
-    calc_normal_rotation,
     compute_receiver_intersections,
     curl,
     define_heliostat,

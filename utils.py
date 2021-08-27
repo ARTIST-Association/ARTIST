@@ -401,19 +401,6 @@ def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
     knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
     knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y
 
-def calc_normal_rotation(position_on_field, aimpoint, surface_normal):
-    # return rot_from_rotvec(th.tensor([0., -90, 0], device=position_on_field.device), degrees=True)
-    aimpoint_dir = aimpoint - position_on_field
-    aimpoint_dir /= aimpoint_dir.norm()
-
-    rotation_axis = th.cross(surface_normal, aimpoint_dir)
-    if (rotation_axis != 0).all():
-        rotation_axis /= rotation_axis.norm()
-    rotation_angle = th.acos(th.dot(surface_normal, aimpoint_dir))
-    rotation = rotation_axis * rotation_angle
-
-    return rot_from_rotvec(rotation, degrees=False)
-
 def calc_normal_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
 
