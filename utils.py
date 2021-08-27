@@ -84,7 +84,7 @@ def define_heliostat(h_height, h_width, rows, points_on_hel, device):
 def rotate_heliostat(h,hel_coordsystem):
     r = rot_from_matrix(hel_coordsystem)
     euler = rot_as_euler(r, 'xyx', degrees = True)
-    ele_degrees = 90-euler[2]
+    ele_degrees = 270-euler[2]
 
     ele_radians = th.deg2rad(ele_degrees)
     ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
