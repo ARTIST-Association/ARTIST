@@ -65,7 +65,7 @@ bitmap_width = 256
 bitmap_height = 256
 
 
-th.manual_seed(0)
+th.manual_seed(seed)
 device = th.device('cuda' if use_gpu and th.cuda.is_available() else 'cpu')
 
 ##Aimpoints
