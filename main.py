@@ -126,6 +126,7 @@ else:
     target_normal_vectors_orig = th.tile(target_normal_vector, (len(target_hel_origin), 1))
 
 sun = sun_orig/th.linalg.norm(sun_orig)
+# TODO Max: fix for other aimpoints; need this to work inversely as well
 target_hel_coords = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 target_hel_rotated = rotate_heliostat(target_hel_origin,target_hel_coords)
 target_hel_in_field = target_hel_rotated+ position_on_field
