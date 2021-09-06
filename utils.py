@@ -311,21 +311,21 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     x_inds_2 = x_inds_high
     y_inds_2 = y_inds_low
     ints_2 = x_ints_high * y_ints_low
+    del y_inds_low
+    del y_ints_low
 
     x_inds_3 = x_inds_high
     y_inds_3 = y_inds_high
     ints_3 = x_ints_high * y_ints_high
-    del x_inds_low
-    del y_inds_low
-    del x_ints_low
-    del y_ints_low
+    del x_inds_high
+    del x_ints_high
 
     x_inds_4 = x_inds_low
     y_inds_4 = y_inds_high
     ints_4 = x_ints_low * y_ints_high
-    del x_inds_high
+    del x_inds_low
     del y_inds_high
-    del x_ints_high
+    del x_ints_low
     del y_ints_high
 
     # Combine all indices and intensities in the correct order.
