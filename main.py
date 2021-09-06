@@ -87,7 +87,7 @@ position_on_field = th.tensor([0,0,0], dtype=th.float32, device=device)
 # TODO add heliostat up vec ("rotation")
 
 #sunposition
-sun = th.tensor([-1,0,0], dtype=th.float32, device=device)
+sun_orig = th.tensor([-1,0,0], dtype=th.float32, device=device)
 mean = th.tensor([0, 0], dtype=th.float32, device=device)
 cov = th.tensor([[0.000005, 0], [0, 0.000005]], dtype=th.float32, device=device)  # diagonal covariance, used for ray scattering
 
@@ -101,15 +101,15 @@ if not os.path.exists("images"):
 ##Define Target Heliostat##
 if load_deflec_data:
     (
-        target_normal_vectors,
+        target_normal_vectors_orig,
         target_hel_origin,
         (target_h_width, target_h_height),
     ) = load_deflec(filename, take_n_vectors, device)
     ideal_normal_vecs =  th.tile(ideal_normal_vec, (len(target_hel_origin), 1)) #valid only for planar heliostat
     
     ###Plotting Stuff
-    # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors)
-    # plot_normal_vectors(target_hel_origin, target_normal_vectors)
+    # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors_orig)
+    # plot_normal_vectors(target_hel_origin, target_normal_vectors_orig)
     
     # TODO implement target ratio for trying to find divisor so it
     #      matches ratio between target_h_width and target_h_height
@@ -123,14 +123,14 @@ else:
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
     target_hel_origin      = define_heliostat(h_height, h_width, rows, points_on_hel, device)
     target_normal_vector   = th.tensor([0,0,1], dtype=th.float32, device=device)
-    target_normal_vectors  = th.tile(target_normal_vector, (len(target_hel_origin), 1))
+    target_normal_vectors_orig = th.tile(target_normal_vector, (len(target_hel_origin), 1))
 
-sun = sun/th.linalg.norm(sun)
+sun = sun_orig/th.linalg.norm(sun_orig)
 target_hel_coords = th.stack(heliostat_coord_system(position_on_field, sun, aimpoint))
 target_hel_rotated = rotate_heliostat(target_hel_origin,target_hel_coords)
 target_hel_in_field = target_hel_rotated+ position_on_field
 
-target_normal_vectors = rotate_heliostat(target_normal_vectors,target_hel_coords)
+target_normal_vectors = rotate_heliostat(target_normal_vectors_orig,target_hel_coords)
 target_normal_vectors /= target_normal_vectors.norm(dim=-1).unsqueeze(-1)
 
 
@@ -163,6 +163,8 @@ intersections = compute_receiver_intersections(
 #                 aimpoint.detach().cpu().numpy(),
 #                 intersections.detach().cpu().numpy(),
 #                 sun.detach().cpu().numpy())
+del sun_orig
+del target_normal_vectors_orig
 
 dx_ints = intersections[:, :, 1] +planex/2
 dy_ints = intersections[:, :, 2] +planey/2
