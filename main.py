@@ -305,8 +305,8 @@ for epoch in range(epochs):
             xi,
             yi,
         )
-        dx_ints = intersections[:, :, 1] +planex/2
-        dy_ints = intersections[:, :, 2] +planey/2
+        dx_ints = intersections[:, :, 1] + planex/2 - aimpoint[1]
+        dy_ints = intersections[:, :, 2] + planey/2 - aimpoint[2]
         indices = (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1)
         pred = sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
         loss += loss_func(
