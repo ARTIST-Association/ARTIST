@@ -146,6 +146,7 @@ from_sun /= from_sun.norm()
 from_sun = from_sun.unsqueeze(0)
 target_ray_directions = reflect_rays_(from_sun, target_normal_vectors)
 target_rayPoints = target_hel_in_field #Any point along the ray
+# TODO Max: use for reflection instead
 xi, yi = th.distributions.MultivariateNormal(mean, cov).sample((num_rays,)).T.to(device) # scatter rays a bit
 
 intersections = compute_receiver_intersections(

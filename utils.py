@@ -218,6 +218,7 @@ def compute_receiver_intersections(
     as_ = intersections
     has = as_-hel_in_field
 
+    # TODO Max: remove/use for ray reflection instead
     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
     rotates_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 0],has[:, 1],has[:, 2]])))
     rotates_x = rotates_x / th.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
