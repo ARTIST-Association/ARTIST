@@ -261,18 +261,48 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     x_ints = dx_ints[indices]/planex*bitmap_height
     y_ints = dy_ints[indices]/planey*bitmap_width
 
+    # We assume a continuously positioned value in-between four
+    # discretely positioned pixels, similar to this:
+    #
+    # 4|3
+    # -.-
+    # 1|2
+    #
+    # where the numbers are the four neighboring, discrete pixels, the
+    # "-" and "|" are the discrete pixel borders, and the "." is the
+    # continuous value anywhere in-between the four pixels we sample.
+    # That the "." may be anywhere in-between the four pixels is not
+    # shown in the ASCII diagram, but is important to keep in mind.
+
+    # The lower-valued neighboring pixels (for x this corresponds to 1
+    # and 4, for y to 1 and 2).
     x_inds_low = x_ints.long()
     y_inds_low = y_ints.long()
+    # The higher-valued neighboring pixels (for x this corresponds to 2
+    # and 3, for y to 3 and 4).
     x_inds_high = x_inds_low + 1
     y_inds_high = y_inds_low + 1
 
+    # When distributing the continuously positioned value/intensity to
+    # the discretely positioned pixels, we give the corresponding
+    # "influence" of the value to each neighbor. Here, we calculate this
+    # influence for each neighbor.
+
+    # x-value influence in 1 and 4
     x_ints_low = x_inds_high - x_ints
+    # y-value influence in 1 and 2
     y_ints_low = y_inds_high - y_ints
+    # x-value influence in 2 and 3
     x_ints_high = x_ints - x_inds_low
+    # y-value influence in 3 and 4
     y_ints_high = y_ints - y_inds_low
     del x_ints
     del y_ints
 
+    # We now calculate the distributed intensities for each neighboring
+    # pixel and assign the correctly ordered indices to the intensities
+    # so we know where to position them. The numbers correspond to the
+    # ASCII diagram above.
     x_inds_1 = x_inds_low
     y_inds_1 = y_inds_low
     ints_1 = x_ints_low * y_ints_low
@@ -297,6 +327,7 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     del x_ints_high
     del y_ints_high
 
+    # Combine all indices and intensities in the correct order.
     x_inds = th.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
     del x_inds_1
     del x_inds_2
@@ -318,9 +349,14 @@ def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bit
     if len(ints) > 0:
         ints = ints / th.max(ints)
 
+    # For distribution, we regard even those neighboring pixels that are
+    # _not_ part of the image. That is why here, we set up a mask to
+    # choose only those indices that are actually in the bitmap (i.e. we
+    # prevent out-of-bounds access).
     indices = (0 <= x_inds) & (x_inds < bitmap_width) & (0 <= y_inds) & (y_inds < bitmap_height)
 
     total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=dx_ints.device) # Flux density map for heliostat field
+    # Add up all distributed intensities in the corresponding indices.
     total_bitmap.index_put_(
         (x_inds[indices], y_inds[indices]),
         ints[indices],
