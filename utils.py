@@ -250,11 +250,18 @@ def compute_receiver_intersections(
     # print(intersections)
     return intersections
 
-def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
-    dx_ints = intersections[:, :, 1] +planex/2
-    dy_ints = intersections[:, :, 2] +planey/2
-    # checks the points of intersection  and chooses bins in bitmap
-    indices = ( (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1))
+def get_intensities_and_sampling_indices(intersections, aimpoint, planex, planey):
+    # TODO check this
+    dx_ints = intersections[:, :, 1] + planex/2 - aimpoint[1]
+    dy_ints = intersections[:, :, 2] + planey/2 - aimpoint[2]
+    # Check the points of intersection and choose bins for distribution
+    # in bitmap.
+    indices = (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1)
+    return dx_ints, dy_ints, indices
+
+def sample_bitmap(intersections, aimpoint, planex, planey, bitmap_height, bitmap_width):
+    dx_ints, dy_ints, indices = get_intensities_and_sampling_indices(
+        intersections, aimpoint, planex, planey)
     return sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
 
 def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width):
