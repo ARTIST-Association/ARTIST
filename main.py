@@ -292,6 +292,8 @@ for epoch in range(epochs):
             hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
             rayPoints = hel_rotated + position_on_field
 
+            surface_normals = rotate_heliostat(surface_normals, target_hel_coords)
+            surface_normals = surface_normals / surface_normals.norm(dim=-1).unsqueeze(-1)
             ray_directions = reflect_rays_(from_sun, surface_normals)
         intersections = compute_receiver_intersections(
             planeNormal,
