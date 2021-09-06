@@ -26,6 +26,7 @@ from utils import (
     define_heliostat,
     find_larger_divisor,
     find_perpendicular_pair,
+    get_intensities_and_sampling_indices,
     heliostat_coord_system,
     initialize_spline_ctrl_points,
     initialize_spline_ctrl_points_perfectly,
