@@ -39,6 +39,7 @@ from utils import (
     rotate_heliostat,
     sample_bitmap,
     sample_bitmap_,
+    save_target,
 )
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
@@ -162,6 +163,30 @@ intersections = compute_receiver_intersections(
 #                 aimpoint.detach().cpu().numpy(),
 #                 intersections.detach().cpu().numpy(),
 #                 sun.detach().cpu().numpy())
+save_target(
+    position_on_field,
+    ideal_normal_vec,
+    target_hel_origin,
+    target_normal_vectors_orig,
+    None,  # TODO
+
+    aimpoint,
+    planex,
+    planey,
+    planeNormal,
+    None,  # TODO
+
+    sun_orig,
+    num_rays,
+    mean,
+    cov,
+    xi,
+    yi,
+
+    target_ray_directions,
+    target_rayPoints,
+    f'target.pt',
+)
 del sun_orig
 del target_normal_vectors_orig
 
