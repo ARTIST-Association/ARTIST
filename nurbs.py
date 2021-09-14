@@ -1543,6 +1543,220 @@ def plot_surface_normals_slow(
     return fig, ax
 
 
+def get_inversion_start_value(
+        world_point,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        num_samples,
+        norm_p=2,
+):
+    device = control_points.device
+
+    start_spans_x = th.arange(degree_x, len(knots_x) - degree_x, device=device)
+    start_spans_y = th.arange(degree_y, len(knots_y) - degree_y, device=device)
+
+    evaluation_points_x = th.hstack([
+        th.linspace(
+            knots_x[span_x],
+            knots_x[span_x + 1] - EPS,
+            num_samples,
+            device=device,
+        )
+        for span_x in start_spans_x[:-1]
+    ])
+    evaluation_points_y = th.hstack([
+        th.linspace(
+            knots_y[span_y],
+            knots_y[span_y + 1] - EPS,
+            num_samples,
+            device=device,
+        )
+        for span_y in start_spans_y[:-1]
+    ])
+    evaluation_points = th.cartesian_prod(
+        evaluation_points_x, evaluation_points_y)
+    del start_spans_x
+    del start_spans_y
+    del evaluation_points_x
+    del evaluation_points_y
+
+    surface_points = evaluate_nurbs_surface_flex(
+        evaluation_points[:, 0],
+        evaluation_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+
+    distances = th.linalg.norm(
+        surface_points - world_point,
+        ord=norm_p,
+        dim=1,
+    )
+    min_distance, argmin_distance = distances.min(0)
+    return evaluation_points[argmin_distance], min_distance
+
+
+def batch_dot(x, y):
+    return (x * y).sum(-1).unsqueeze(-1)
+
+
+def invert_point(
+        world_point,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        num_samples=8,
+        norm_p=2,
+        distance_tolerance=1e-5,
+        cosine_tolerance=EPS,
+):
+    argmin_distance, min_distance = get_inversion_start_value(
+        world_point,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        num_samples,
+        norm_p=norm_p,
+    )
+    argmin_distance = argmin_distance.unsqueeze(0)
+
+    point_min = 0
+    point_max = 1 - EPS
+
+    derivs = calc_derivs_surface(
+        argmin_distance[:, 0],
+        argmin_distance[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        nth_deriv=2,
+    )
+
+    surface_point = derivs[:, 0, 0]
+
+    point_difference = surface_point - world_point
+
+    while True:
+        Su = derivs[:, 1, 0]
+        Sv = derivs[:, 0, 1]
+
+        point_coincides = min_distance <= distance_tolerance
+        has_zero_cosine = (
+            (
+                th.linalg.norm(
+                    batch_dot(Su, point_difference),
+                    ord=norm_p,
+                )
+                / (th.linalg.norm(Su, ord=norm_p,) * min_distance)
+            ) <= cosine_tolerance
+            or (
+                th.linalg.norm(
+                    batch_dot(Sv, point_difference),
+                    ord=norm_p,
+                )
+                / (th.linalg.norm(Sv, ord=norm_p,) * min_distance)
+            ) <= cosine_tolerance
+        )
+        if point_coincides and has_zero_cosine:
+            break
+
+        both_dir_dot = batch_dot(point_difference, derivs[:, 1, 1])
+
+        J = th.vstack([
+            th.hstack([
+                (
+                    th.linalg.norm(Su, ord=norm_p)**2
+                    + batch_dot(point_difference, derivs[:, 2, 0])
+                ),
+                batch_dot(Su, Sv) + both_dir_dot
+            ]),
+            th.hstack([
+                batch_dot(Su, Sv) + both_dir_dot,
+                (
+                    th.linalg.norm(Su, ord=norm_p)**2
+                    + batch_dot(point_difference, derivs[:, 0, 2])
+                ),
+            ]),
+        ])
+        kappa = -th.hstack([
+            batch_dot(point_difference, Su),
+            batch_dot(point_difference, Sv),
+        ]).squeeze(0)
+
+        delta = th.linalg.solve(J, kappa)
+
+        prev_argmin_distance = argmin_distance
+        argmin_distance = delta + prev_argmin_distance
+
+        argmin_distance = argmin_distance.clamp(point_min, point_max)
+
+        # TODO We always assume non-closed surfaces.
+        # argmin_distance_x = argmin_distance[:, 0]
+        # argmin_distance_y = argmin_distance[:, 1]
+
+        # argmin_distance_x = argmin_distance_x.clamp(point_min, point_max)
+        # argmin_distance_y = argmin_distance_y.clamp(point_min, point_max)
+
+        # argmin_distance = th.stack([
+        #     argmin_distance_x,
+        #     argmin_distance_y,
+        # ], dim=-1)
+
+        derivs = calc_derivs_surface(
+            argmin_distance[:, 0],
+            argmin_distance[:, 1],
+            degree_x,
+            degree_y,
+            control_points,
+            control_point_weights,
+            knots_x,
+            knots_y,
+            nth_deriv=2,
+        )
+
+        surface_point = derivs[:, 0, 0]
+
+        point_difference = surface_point - world_point
+        prev_min_distance = min_distance
+        min_distance = th.linalg.norm(
+            point_difference,
+            ord=norm_p,
+        )
+        if min_distance > prev_min_distance:
+            # FIXME why does this happen?
+            argmin_distance = prev_argmin_distance
+            min_distance = prev_min_distance
+            break
+
+        has_insignificant_change = th.linalg.norm(
+            (
+                (argmin_distance[:, 0] - prev_argmin_distance[:, 0]) * Su
+                + (argmin_distance[:, 1] - prev_argmin_distance[:, 1]) * Sv
+            ),
+            ord=norm_p,
+        ) <= distance_tolerance
+        if has_insignificant_change:
+            break
+    return argmin_distance, min_distance
+
+
 # def rational_basis_surface_flex(
 #         evaluation_point_x,
 #         evaluation_point_y,
