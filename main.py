@@ -375,6 +375,8 @@ else:
     save_data = {
         'heliostat_normals': normals,
     }
+save_data['xi'] = xi
+save_data['yi'] = yi
 th.save(save_data, f'{model_name}.pt')
 th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
