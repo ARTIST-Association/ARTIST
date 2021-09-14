@@ -908,6 +908,13 @@ def calc_derivs_surface(
         knots_y,
         nth_deriv=1,
 ):
+    """Return partial derivatives up to `nth_deriv` at the given
+    evaluation points for the given NURBS.
+
+    The resulting 4-D tensor `derivs` contains at `derivs[:, k, l]` the
+    derivatives with respect to `evaluation_points_x` `k` times and
+    `evaluation_points_y` `l` times.
+    """
     check_nurbs_constraints(
         evaluation_points_x,
         evaluation_points_y,
