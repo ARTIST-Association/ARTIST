@@ -374,11 +374,16 @@ for epoch in range(epochs):
             ray_directions.detach(),
             target_ray_directions,
         )
+        ray_point_diff = calc_ray_diffs(
+            rayPoints.detach(),
+            target_rayPoints,
+        )
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'missed: {num_missed.detach().cpu().item()}, '
-            f'ray differences: {ray_diff.detach().cpu().item()}'
+            f'ray differences: {ray_diff.detach().cpu().item()} '
+            f'ray point differences: {ray_point_diff.detach().cpu().item()}'
         )
 
 # Save trained model and optimizer state
