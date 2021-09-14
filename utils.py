@@ -81,7 +81,7 @@ def define_heliostat(h_height, h_width, rows, points_on_hel, device):
     h = th.hstack(list(map(lambda t: t.unsqueeze(-1), [h_x, h_y, h_z]))).reshape(len(h_x), -1)
     return h
 
-def rotate_heliostat(h,hel_coordsystem):
+def rotate_heliostat(h,hel_coordsystem, clockwise=True):
     r = rot_from_matrix(hel_coordsystem)
     euler = rot_as_euler(r, 'xyx', degrees = True)
     ele_degrees = 270-euler[2]
@@ -89,6 +89,8 @@ def rotate_heliostat(h,hel_coordsystem):
     ele_radians = th.deg2rad(ele_degrees)
     ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
     ele_vector = ele_radians * ele_axis
+    if not clockwise:
+        ele_vector = -ele_vector
     ele = rot_from_rotvec(ele_vector)
 
     # TODO Max: re-add ax-offsets
@@ -96,6 +98,8 @@ def rotate_heliostat(h,hel_coordsystem):
     azi_radians = th.deg2rad(azi_degrees)
     azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
     azi_vector = azi_radians * azi_axis
+    if not clockwise:
+        azi_vector = -azi_vector
     azi = rot_from_rotvec(azi_vector)
 
     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1))) # darray with all heliostats (#heliostats, 3 coords)
