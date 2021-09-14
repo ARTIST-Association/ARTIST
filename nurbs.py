@@ -683,6 +683,36 @@ def check_nurbs_constraints(
         "evaluation point shapes don't match"
 
 
+def evaluate_nurbs_surface_at_spans(
+        num_evaluation_points,
+        spans_x,
+        spans_y,
+        basis_values_x,
+        basis_values_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+):
+    device = control_points.device
+    projected = project_control_points(control_points, control_point_weights)
+    tmp = th.empty(
+        (num_evaluation_points, degree_y + 1, projected.shape[-1]),
+        device=device,
+    )
+    for j in range(degree_y + 1):
+        tmp[:, j] = 0
+        for k in range(degree_x + 1):
+            tmp[:, j] += (
+                basis_values_x[:, k].unsqueeze(-1)
+                * projected[spans_x - degree_x + k, spans_y - degree_y + j]
+            )
+    Sw = th.zeros((num_evaluation_points, projected.shape[-1]), device=device)
+    for j in range(degree_y + 1):
+        Sw += basis_values_y[:, j].unsqueeze(-1) * tmp[:, j]
+    return Sw[:, :-1] / Sw[:, -1].unsqueeze(-1)
+
+
 def evaluate_nurbs_surface_flex(
         evaluation_points_x,
         evaluation_points_y,
@@ -704,7 +734,6 @@ def evaluate_nurbs_surface_flex(
         knots_y,
     )
 
-    device = control_points.device
     num_evaluation_points = len(evaluation_points_x)
     num_control_points_x = control_points.shape[0]
     spans_x = find_span(
@@ -716,22 +745,17 @@ def evaluate_nurbs_surface_flex(
         evaluation_points_y, degree_y, num_control_points_y, knots_y)
     basis_values_y = get_basis(evaluation_points_y, spans_y, degree_y, knots_y)
 
-    projected = project_control_points(control_points, control_point_weights)
-    tmp = th.empty(
-        (num_evaluation_points, degree_y + 1, projected.shape[-1]),
-        device=device,
+    return evaluate_nurbs_surface_at_spans(
+        num_evaluation_points,
+        spans_x,
+        spans_y,
+        basis_values_x,
+        basis_values_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
     )
-    for j in range(degree_y + 1):
-        tmp[:, j] = 0
-        for k in range(degree_x + 1):
-            tmp[:, j] += (
-                basis_values_x[:, k].unsqueeze(-1)
-                * projected[spans_x - degree_x + k, spans_y - degree_y + j]
-            )
-    Sw = th.zeros((num_evaluation_points, projected.shape[-1]), device=device)
-    for j in range(degree_y + 1):
-        Sw += basis_values_y[:, j].unsqueeze(-1) * tmp[:, j]
-    return Sw[:, :-1] / Sw[:, -1].unsqueeze(-1)
 
 
 def calc_bspline_derivs_surface(
