@@ -410,14 +410,42 @@ def find_perpendicular_pair(base_vec, vecs):
                 return surface_direction_x, surface_direction_y
     raise ValueError('could not calculate surface normal')
 
+def _cartesian_linspace_around(
+        minval_x,
+        maxval_x,
+        num_x,
+        minval_y,
+        maxval_y,
+        num_y,
+        device,
+        dtype=th.float32,
+):
+    if not isinstance(minval_x, th.Tensor):
+        minval_x = th.tensor(minval_x, dtype=dtype, device=device)
+    if not isinstance(maxval_x, th.Tensor):
+        maxval_x = th.tensor(maxval_x, dtype=dtype, device=device)
+    if not isinstance(minval_y, th.Tensor):
+        minval_y = th.tensor(minval_y, dtype=dtype, device=device)
+    if not isinstance(maxval_y, th.Tensor):
+        maxval_y = th.tensor(maxval_y, dtype=dtype, device=device)
+    spline_max = 1 - nurbs.EPS
+
+    minval_x = minval_x.clamp(0, spline_max)
+    maxval_x = maxval_x.clamp(0, spline_max)
+    minval_y = minval_y.clamp(0, spline_max)
+    maxval_y = maxval_y.clamp(0, spline_max)
+
+    points_x = th.linspace(minval_x, maxval_x, num_x, device=device)
+    points_y = th.linspace(minval_y, maxval_y, num_y, device=device)
+    points = th.cartesian_prod(points_x, points_y)
+    return points
+
 def initialize_spline_eval_points(
         rows,
         cols,
         device,
 ):
-    eval_points_x = th.linspace(0, 1 - nurbs.EPS, rows, device=device)
-    eval_points_y = th.linspace(0, 1 - nurbs.EPS, cols, device=device)
-    eval_points = th.cartesian_prod(eval_points_x, eval_points_y)
+    return _cartesian_linspace_around(0, 1, rows, 0, 1, cols, device)
     return eval_points
 
 def initialize_spline_ctrl_points(
