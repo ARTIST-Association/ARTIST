@@ -142,14 +142,15 @@ def flatten_aimpoints(aimpoints):
 
 
 
-def heliostat_coord_system (Position, Sun, Aimpoint):
+def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
 
     pSun = Sun
-    print("Sun",pSun)
     pPosition = Position
-    print("Position", pPosition)
     pAimpoint = Aimpoint
-    print("Aimpoint", pAimpoint)
+    if verbose:
+        print("Sun", pSun)
+        print("Position", pPosition)
+        print("Aimpoint", pAimpoint)
 
 
 #Berechnung Idealer Heliostat
