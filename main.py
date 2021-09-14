@@ -368,7 +368,7 @@ if use_splines:
         'knots_y': knots_y,
     }
 else:
-    model_name = 'ray_dirs'
+    model_name = 'normals'
     normals = calc_reflection_normals(from_sun, ray_directions)
     normals = rotate_heliostat(
         target_hel_rotated, target_hel_coords, clockwise=False)
