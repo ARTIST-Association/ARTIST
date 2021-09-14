@@ -111,20 +111,15 @@ if load_deflec_data:
     ###Plotting Stuff
     # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors_orig)
     # plot_normal_vectors(target_hel_origin, target_normal_vectors_orig)
-    
-    # TODO implement target ratio for trying to find divisor so it
-    #      matches ratio between target_h_width and target_h_height
-    edge_ratio = target_h_width / target_h_height
-    rows = find_larger_divisor(len(target_hel_origin))
-    cols = len(target_hel_origin) // rows
-    if edge_ratio < 1:
-        rows, cols = cols, rows
 else:
     points_on_hel   = rows*cols # reflection points on hel
     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
     target_hel_origin      = define_heliostat(h_height, h_width, rows, points_on_hel, device)
     target_normal_vector   = th.tensor([0,0,1], dtype=th.float32, device=device)
     target_normal_vectors_orig = th.tile(target_normal_vector, (len(target_hel_origin), 1))
+
+    target_h_width = h_width
+    target_h_height = h_height
 
 sun = sun_orig/th.linalg.norm(sun_orig)
 # TODO Max: fix for other aimpoints; need this to work inversely as well
@@ -212,9 +207,13 @@ if use_splines:
     ctrl_weights[:] = 1
 
     if set_up_with_knowledge:
-        initialize_spline_ctrl_points_perfectly(
+        initialize_spline_ctrl_points(
             ctrl_points,
-            target_hel_origin,
+            position_on_field,
+            rows,
+            cols,
+            target_h_width,
+            target_h_height,
         )
     else:
         # Use perfect, unrotated heliostat at `position_on_field` as
