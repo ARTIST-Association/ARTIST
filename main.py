@@ -369,7 +369,12 @@ if use_splines:
     }
 else:
     model_name = 'ray_dirs'
-    save_data = {'ray_directions': ray_directions}
+    normals = calc_reflection_normals(from_sun, ray_directions)
+    normals = rotate_heliostat(
+        target_hel_rotated, target_hel_coords, clockwise=False)
+    save_data = {
+        'heliostat_normals': normals,
+    }
 th.save(save_data, f'{model_name}.pt')
 th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
