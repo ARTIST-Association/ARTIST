@@ -208,6 +208,9 @@ if use_splines:
         spline_degree, spline_degree, rows, cols, device)
     eval_points = initialize_spline_eval_points(rows, cols, device)
 
+    initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
+    ctrl_weights[:] = 1
+
     if set_up_with_knowledge:
         initialize_spline_ctrl_points_perfectly(
             ctrl_points,
@@ -229,13 +232,9 @@ if use_splines:
     ctrl_points_z = ctrl_points[:, -1:]
     ctrl_points_z.requires_grad_(True)
     opt_params = [ctrl_points_z]
-    if fix_spline_ctrl_weights:
-        ctrl_weights[:] = 1
-    else:
+    if not fix_spline_ctrl_weights:
         ctrl_weights.requires_grad_(True)
         opt_params.append(ctrl_weights)
-
-    initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
 
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
