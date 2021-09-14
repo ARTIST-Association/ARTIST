@@ -532,3 +532,48 @@ def reflect_rays_(rays, normals):
 def reflect_rays(rays, normals):
     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
     return reflect_rays_(rays, normals)
+
+def save_target(
+        heliostat_origin_center,
+        heliostat_face_normal,
+        heliostat_points,
+        heliostat_normals,
+        heliostat_up_dir,
+
+        receiver_origin_center,
+        receiver_width,
+        receiver_height,
+        receiver_normal,
+        receiver_up_dir,
+
+        sun,
+        num_rays,
+        mean,
+        cov,
+        xi,
+        yi,
+
+        target_ray_directions,
+        target_ray_points,
+        path,
+):
+    th.save({
+        'heliostat_origin_center': heliostat_origin_center,
+        'heliostat_face_normal': heliostat_face_normal,
+        'heliostat_points': heliostat_points,
+        'heliostat_normals': heliostat_normals,
+        'heliostat_up_dir': heliostat_up_dir,
+
+        'receiver_origin_center': receiver_origin_center,
+        'receiver_width': receiver_width,
+        'receiver_height': receiver_height,
+        'receiver_normal': receiver_normal,
+        'receiver_up_dir': receiver_up_dir,
+
+        'sun': sun,
+        'num_rays': num_rays,
+        'mean': mean,
+        'cov': cov,
+        'xi': xi,
+        'yi': yi,
+    }, path)
