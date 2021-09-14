@@ -31,6 +31,7 @@ from utils import (
     initialize_spline_ctrl_points,
     initialize_spline_ctrl_points_perfectly,
     initialize_spline_eval_points,
+    initialize_spline_eval_points_perfectly,
     initialize_spline_knots,
     load_deflec,
     reflect_rays,
@@ -201,7 +202,6 @@ rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
 if use_splines:
     (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
         spline_degree, spline_degree, rows, cols, device)
-    eval_points = initialize_spline_eval_points(rows, cols, device)
 
     initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
     ctrl_weights[:] = 1
@@ -215,6 +215,15 @@ if use_splines:
             target_h_width,
             target_h_height,
         )
+        eval_points = initialize_spline_eval_points_perfectly(
+            target_hel_origin,
+            spline_degree,
+            spline_degree,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+        )
     else:
         # Use perfect, unrotated heliostat at `position_on_field` as
         # starting point with width and height as initially guessed.
@@ -226,6 +235,7 @@ if use_splines:
             h_width,
             h_height,
         )
+        eval_points = initialize_spline_eval_points(rows, cols, device)
 
     ctrl_points_xy = ctrl_points[:, :-1]
     ctrl_points_z = ctrl_points[:, -1:]
