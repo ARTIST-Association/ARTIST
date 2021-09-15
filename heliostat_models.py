@@ -4,6 +4,17 @@ import sys
 import torch as th
 
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
+import utils
+
+
+def reflect_rays_(rays, normals):
+    return rays - 2 * utils.batch_dot(rays, normals) * normals
+
+
+def reflect_rays(rays, normals):
+    normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
+    return reflect_rays_(rays, normals)
+
 
 ##### Heliostat Models #####
 def real_heliostat(real_configs, device): # For heliostat with deflectometric data
@@ -138,6 +149,7 @@ class Heliostat(object):
             self.cfg.POSITION_ON_FIELD, dtype=th.float32, device=self.device)
 
         self.state = None
+        self.from_sun = None
         self.alignment = None
         self._discrete_points_orig = None
         self._normals_orig = None
@@ -167,6 +179,9 @@ class Heliostat(object):
             raise ValueError('Heliostat has to be loaded first')
 
         #TODO Max: fix for other aimpoints; need this to work inversely as well
+        from_sun = self.position_on_field - sun_origin #TODO Evtl auf H.Discrete Points umstellen
+        from_sun /= from_sun.norm()
+        self.from_sun = from_sun.unsqueeze(0)
 
         self.alignment = th.stack(heliostat_coord_system(
             self.position_on_field,
@@ -179,7 +194,10 @@ class Heliostat(object):
         hel_rotated_in_field    = hel_rotated+ self.position_on_field
 
         normal_vectors_rotated = rotate(self.normals, self.alignment, clockwise = True)
-        normal_vectors_rotated /= normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
+        )
 
         self._discrete_points_aligned = hel_rotated_in_field
         self._normals_aligned = normal_vectors_rotated
@@ -205,3 +223,15 @@ class Heliostat(object):
             return self._normals_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
+
+    def setup_params(self):
+        self._normals_orig.requires_grad_(True)
+
+        opt_params = [self._normals_orig]
+        return opt_params
+
+    def get_ray_directions(self):
+        if self.alignment is None:
+            raise ValueError('Heliostat has to be aligned first')
+
+        return reflect_rays_(self.from_sun, self.normals)

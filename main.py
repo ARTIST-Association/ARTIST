@@ -75,11 +75,9 @@ def main():
     #TODO Load other Constants than in Setup
     H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
     ENV = Environment(cfg.AC, device)
-    H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
     R = Renderer(H, ENV)
 
-    R.ray_directions.requires_grad_(True)
-    opt = th.optim.Adam([R.ray_directions], lr=3e-4, weight_decay=0.1)
+    opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
     sched = th.optim.lr_scheduler.ReduceLROnPlateau(
         opt,
         factor=0.5,
@@ -104,6 +102,7 @@ def main():
     for epoch in range(epochs):
         opt.zero_grad()
         loss = 0
+        H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         # print(ray_directions)
         for target in targets:
             # if use_splines:
@@ -162,6 +161,7 @@ def main():
 
         opt.step()
         sched.step(loss)
+        H.align_reverse()
         # if epoch % 1 == 0:
         #     num_missed = indices.numel() - indices.count_nonzero()
         #     ray_diff = calc_ray_diffs(

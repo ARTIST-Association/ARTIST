@@ -1,15 +1,5 @@
 import torch as th
 
-def batch_dot(x, y):
-    return (x * y).sum(-1).unsqueeze(-1)
-
-def reflect_rays_(rays, normals):
-    return rays - 2 * batch_dot(rays, normals) * normals
-
-def reflect_rays(rays, normals):
-    normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
-    return reflect_rays_(rays, normals)
-
 def Rx(alpha, mat):
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
@@ -207,10 +197,6 @@ class Renderer(object):
     def __init__(self, Heliostat, Environment):
         self.H = Heliostat
         self.ENV = Environment
-        from_sun = self.H.position_on_field - self.ENV.sun_origin #TODO Evtl auf H.Discrete Points umstellen
-        from_sun /= from_sun.norm()
-        from_sun = from_sun.unsqueeze(0)
-        self.ray_directions = reflect_rays_(from_sun, self.H.normals)#
         self.xi, self.yi = self.ENV.Sun.sample_() # Evtl. in render jedesmal aufrufen
     def render(self):
         # TODO Max: use for reflection instead
@@ -218,7 +204,7 @@ class Renderer(object):
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal, #Intersection plane
             self.ENV.receiver_center, # Point on plane
-            self.ray_directions,  # line directions
+            self.H.get_ray_directions(),  # line directions
             self.H.discrete_points, # points on line
             self.xi,
             self.yi
