@@ -2,8 +2,6 @@ import sys
 import torch as th
 import os
 
-##My Files
-sys.path.insert(0, 'configs')
 
 from defaults import get_cfg_defaults, load_config_file
 import heliostat_models
