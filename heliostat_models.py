@@ -1,6 +1,8 @@
-import torch as th
 import struct
 import sys
+
+import torch as th
+
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 ##### Heliostat Models #####
