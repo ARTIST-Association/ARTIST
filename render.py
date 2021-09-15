@@ -214,30 +214,28 @@ class Renderer(object):
         self.xi, self.yi = self.ENV.Sun.sample_() # Evtl. in render jedesmal aufrufen
     def render(self):
         # TODO Max: use for reflection instead
-        
+
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal, #Intersection plane
             self.ENV.receiver_center, # Point on plane
             self.ray_directions,  # line directions
             self.H.discrete_points, # points on line
-            self.xi, 
+            self.xi,
             self.yi
             )
-        
+
         dx_ints = intersections[:, :, 1] + self.ENV.receiver_plane_x/2 - self.ENV.receiver_center[1]
         dy_ints = intersections[:, :, 2] + self.ENV.receiver_plane_y/2 - self.ENV.receiver_center[2]
         indices = (-1 <= dx_ints) & (dx_ints < self.ENV.receiver_plane_x + 1) & (-1 <= dy_ints) & (dy_ints < self.ENV.receiver_plane_y + 1)
         total_bitmap = sample_bitmap_(
-            dx_ints, 
-            dy_ints, 
-            indices, 
-            self.ENV.receiver_plane_x, 
-            self.ENV.receiver_plane_y, 
-            self.ENV.receiver_resolution_x, 
+            dx_ints,
+            dy_ints,
+            indices,
+            self.ENV.receiver_plane_x,
+            self.ENV.receiver_plane_y,
+            self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y
             )
         # target_num_missed = indices.numel() - indices.count_nonzero()
         # print('Missed for target:', target_num_missed.detach().cpu().item())
         return total_bitmap
-    
-    

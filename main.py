@@ -21,30 +21,30 @@ if __name__=='__main__':
         load_default = True
         config_file     = "configs\\LoadDeflecData.yaml" # not used if load_default is True
         experiment_name= 'first_test_new'  # not used if load_default is True
-        
+
         cfg_default             = get_cfg_defaults()
         if load_default:
             cfg = cfg_default
         else:
             cfg = load_config_file(cfg_default, config_file, experiment_name)
-    
+
         cfg.freeze()
-        
+
     ###Setup Loggin
         logdir = os.path.join(cfg.LOGDIR, cfg.ID)
         cfg.merge_from_list(["LOGDIR", logdir])
         os.makedirs(logdir, exist_ok=True)
         with open(os.path.join(logdir, "config.yaml"), "w") as f:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
-        
+
         # writer = SummaryWriter(logdir)
         # Write out config parameters.
-        
+
     ###Set system params
         th.manual_seed(cfg.SEED)
         device = th.device('cuda' if cfg.USE_GPU and th.cuda.is_available() else 'cpu')
-        
-    
+
+
     ###Setup Envoirment
         H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
         ENV = Environment(cfg.AC, device)
@@ -54,14 +54,14 @@ if __name__=='__main__':
     ###Render Step
         target_bitmap = R.render()
         targets = target_bitmap.detach().clone().unsqueeze(0)
-        
+
     ###Plot and Save Stuff
         im = plt.imshow(target_bitmap.detach().cpu().numpy(), cmap='jet')
         im.set_data(target_bitmap.detach().cpu().numpy())
         im.autoscale()
         plt.savefig(os.path.join("images", "original.jpeg"))
         # plot_bitmap(target_bitmap)                                                 # Target Bitmap Plot
-        
+
     ###Delete Setup
         del H
         del ENV
@@ -77,7 +77,7 @@ if __name__=='__main__':
         ENV = Environment(cfg.AC, device)
         H.align(ENV.sun_origin, ENV.receiver_center)
         R = Renderer(H, ENV)
-        
+
         R.ray_directions.requires_grad_(True)
         opt = th.optim.Adam([R.ray_directions], lr=3e-4, weight_decay=0.1)
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
@@ -87,7 +87,7 @@ if __name__=='__main__':
         patience=10,
         verbose=True,
         )
-        
+
         # loss = th.nn.functional.mse_loss()
         # def loss_func(pred, target, compute_intersections, rayPoints):
         #     loss = th.nn.functional.mse_loss(pred, target, 0.1)
@@ -98,7 +98,7 @@ if __name__=='__main__':
         #     #     ])
         #     #     loss += th.sum(th.abs(curls))
         #     return loss
-        
+
         epochs = cfg.TRAIN_PARAMS.EPOCHS
         epoch_shift_width = len(str(epochs))
         for epoch in range(epochs):
@@ -120,14 +120,14 @@ if __name__=='__main__':
                 #             knots_y,
                 #         )
                 #     )
-        
+
                 #     hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
                 #     rayPoints = hel_rotated + position_on_field
-        
+
                 #     surface_normals = rotate_heliostat(surface_normals, target_hel_coords)
                 #     surface_normals = surface_normals / surface_normals.norm(dim=-1).unsqueeze(-1)
                 #     ray_directions = reflect_rays_(from_sun, surface_normals)
-                
+
                 pred_bitmap = R.render()
                 if epoch %  10== 0:#
                     im.set_data(pred_bitmap.detach().cpu().numpy())
@@ -151,15 +151,15 @@ if __name__=='__main__':
             #     im.set_data(pred.detach().cpu().numpy())
             #     im.autoscale()
             #     plt.savefig(os.path.join("images", f"{epoch}.png"))
-        
-        
+
+
             loss /= len(targets)
             loss.backward()
             # if not use_splines:
             #     if ray_directions.grad is None or (ray_directions.grad == 0).all():
             #         print('no more optimization possible; ending...')
             #         break
-        
+
             opt.step()
             sched.step(loss)
             # if epoch % 1 == 0:
@@ -174,19 +174,16 @@ if __name__=='__main__':
                     # f'missed: {num_missed.detach().cpu().item()}, '
                     # f'ray differences: {ray_diff.detach().cpu().item()}'
                 )
-        
 
 
 
 
 
-        
+
+
 
 
 
 
 
 # Diff Raytracing >
-    
-    
-

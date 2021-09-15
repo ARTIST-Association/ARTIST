@@ -16,7 +16,7 @@ import nurbs
 
 # device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
-# def load_deflec(filename, take_n_vectors,device="cpu", concentratorHeader_struct_fmt ='=5f2I2f',facetHeader_struct_fmt = '=i9fI', ray_struct_fmt = '=7f'): 
+# def load_deflec(filename, take_n_vectors,device="cpu", concentratorHeader_struct_fmt ='=5f2I2f',facetHeader_struct_fmt = '=i9fI', ray_struct_fmt = '=7f'):
 #     """
 #     binp_filename : string including file ending binp or bpro
 #     Concentrator Header is expected to be float[5], unsigned int[2], float[2]
@@ -26,7 +26,7 @@ import nurbs
 #     concentratorHeader_struct_len = struct.calcsize(concentratorHeader_struct_fmt)
 #     facetHeader_struct_len = struct.calcsize(facetHeader_struct_fmt)
 #     ray_struct_len = struct.calcsize(ray_struct_fmt)
-    
+
 #     positions= []
 #     directions = []
 #     # powers = []
@@ -34,21 +34,21 @@ import nurbs
 #         byte_data = file.read(concentratorHeader_struct_len)
 #         concentratorHeader_data = struct.Struct(concentratorHeader_struct_fmt).unpack_from(byte_data)
 #         print("READING bpro filename: " + filename)
-    
+
 #         hel_pos = concentratorHeader_data[0:3]
 #         print("Hel Position", hel_pos)
 #         width_height = concentratorHeader_data[3:5]
 #         print("Hel Width-Height", width_height)
 #         #offsets = concentratorHeader_data[7:9]
 #         n_xy = concentratorHeader_data[5:7]
-        
-        
+
+
 #         nFacets = n_xy[0] * n_xy[1]
 #         for f in range(nFacets):
 #         # for f in range(1):
 #             byte_data = file.read(facetHeader_struct_len)
 #             facetHeader_data = struct.Struct(facetHeader_struct_fmt).unpack_from(byte_data)
-            
+
 #             #facetshape = facetHeader_data[0] # 0 for square, 1 for round 2 triangle ....
 #             #facet_pos = facetHeader_data[1:4]
 #             #facet_vec_x = facetHeader_data[4:7]
@@ -56,9 +56,9 @@ import nurbs
 #             n_rays = facetHeader_data[10]
 
 #             for r in range(n_rays):
-#                 byte_data = file.read(ray_struct_len)	
+#                 byte_data = file.read(ray_struct_len)
 #                 ray_data = struct.Struct(ray_struct_fmt).unpack_from(byte_data)
-                
+
 #                 positions.append([ray_data[0],ray_data[1],ray_data[2]])
 #                 directions.append([ray_data[3],ray_data[4],ray_data[5]])
 #                 # powers.append(ray_data[6])
@@ -108,7 +108,7 @@ import nurbs
 def add_distortion(vector_field, distortion_center, points_on_hel, threshold = 1.5, positive = True):
     device
     dc_x, dc_y = distortion_center
-    
+
     x,y = th.meshgrid(th.linspace(-5+dc_x,5+dc_x,int(th.sqrt(points_on_hel))),
                       th.linspace(-5+dc_y,5+dc_y,int(th.sqrt(points_on_hel)))
                       )
@@ -117,7 +117,7 @@ def add_distortion(vector_field, distortion_center, points_on_hel, threshold = 1
     distortion = th.zeros((int(points_on_hel),3), device=device)
     distortion[:,0] = distortion_x
     distortion[:,1] = distortion_y
-    
+
     for i in range(len(distortion)):
         if th.norm(distortion[i]) > threshold:
           distortion[i] = th.tensor([0,0,0], device=device)
@@ -126,7 +126,7 @@ def add_distortion(vector_field, distortion_center, points_on_hel, threshold = 1
         new_vec_field = (vector_field - distortion)/th.norm(vector_field - distortion, dim=1)[:,None]
     else:
         new_vec_field = (vector_field + distortion)/th.norm(vector_field + distortion, dim=1)[:,None]
-        
+
     # print(new_vec_field)
     # exit()
     return new_vec_field

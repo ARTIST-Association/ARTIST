@@ -49,7 +49,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # use_gpu = True
 # # Using curl takes a _lot_ of memory
 # use_curl = False
-# #load defec settings 
+# #load defec settings
 # load_deflec_data = False
 # filename = "Helio_AA33_Rim0_STRAL-Input.binp"
 # take_n_vectors = 1000
@@ -80,7 +80,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 # ####Heliostat specific Parameters
 # h_width = 4 # in m
-# h_height = 4 # in m 
+# h_height = 4 # in m
 # rows = 32 #rows of reflection points. total number is rows*cols (see below)
 # cols = rows
 # # Heliostat origin center
@@ -107,11 +107,11 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 #         (target_h_width, target_h_height),
 #     ) = load_deflec(filename, take_n_vectors, device)
     ###ideal_normal_vecs =  th.tile(ideal_normal_vec, (len(target_hel_origin), 1)) #valid only for planar heliostat
-    
+
     ###Plotting Stuff
     # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors_orig)
     # plot_normal_vectors(target_hel_origin, target_normal_vectors_orig)
-    
+
     # TODO implement target ratio for trying to find divisor so it
     #      matches ratio between target_h_width and target_h_height
     '''
@@ -303,7 +303,7 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             planeNormal,
             aimpoint,
             ray_directions,
-            rayPoints, 
+            rayPoints,
             xi,
             yi,
         )

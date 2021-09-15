@@ -14,14 +14,14 @@ def plot_surface_diff(hel_origin, ideal_normal_vecs, target_normal_vectors):
     surf = ax.plot_trisurf(x, y, differences, cmap=cm.coolwarm,
                             linewidth=0, antialiased=False)
     exit()
-    
+
 def plot_normal_vectors(points_on_hel, normal_vectors):
     '''
 
     Parameters
     ----------
     points_on_hel : (N,3) Tensor
-        all points on heliostat. 
+        all points on heliostat.
     normal_vectors : (N,3) Tensor
         direction vector of the corresponding points
 
@@ -37,11 +37,11 @@ def plot_normal_vectors(points_on_hel, normal_vectors):
     ax.set_zlim3d(0, 2)
     to = points_on_hel.detach().cpu()
     tv = normal_vectors.detach().cpu()
-    ax.quiver(to[:,0], to[:,1], to[:,2], tv[:,0], tv[:,1], tv[:,2], length=0.1, normalize=False, color="b")            
+    ax.quiver(to[:,0], to[:,1], to[:,2], tv[:,0], tv[:,1], tv[:,2], length=0.1, normalize=False, color="b")
     plt.show()
     exit()
-    
-    
+
+
 def plot_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, sun):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -80,13 +80,13 @@ def plot_heliostat(h_rotated, ray_directions):
 
     ax.set_xlim3d(-50, 0)
     ax.set_ylim3d(-10, 10)
-    ax.set_zlim3d(0, 5) 
+    ax.set_zlim3d(0, 5)
     ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[:,0], ray_directions[:,1], ray_directions[:,2], length=50, normalize=True, color="b")
     # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[1][0], ray_directions[1][1], ray_directions[1][2], length=1, normalize=True, color="g")
     # ax.quiver(h_rotated[:,0],h_rotated[:,1],h_rotated[:,2], ray_directions[2][0], ray_directions[2][1], ray_directions[2][2], length=1, normalize=True, color="r")
     plt.show()
     exit()
-    
+
 def plot_bitmap(bitmap):
     plt.imshow(bitmap.detach().cpu().numpy(), cmap='jet')
     plt.show()

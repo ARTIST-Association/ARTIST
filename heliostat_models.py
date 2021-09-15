@@ -9,7 +9,7 @@ def real_heliostat(real_configs, device): # For heliostat with deflectometric da
     concentratorHeader_struct_len = struct.calcsize(cfg.CONCENTRATORHEADER_STRUCT_FMT)
     facetHeader_struct_len = struct.calcsize(cfg.FACETHEADER_STRUCT_FMT)
     ray_struct_len = struct.calcsize(cfg.RAY_STRUCT_FMT)
-    
+
     positions= []
     directions = []
     # powers = []
@@ -17,19 +17,19 @@ def real_heliostat(real_configs, device): # For heliostat with deflectometric da
         byte_data = file.read(concentratorHeader_struct_len)
         concentratorHeader_data = struct.Struct(cfg.CONCENTRATORHEADER_STRUCT_FMT).unpack_from(byte_data)
         print("READING bpro filename: " + cfg.FILENAME)
-    
+
         # hel_pos = concentratorHeader_data[0:3]
         width_height = concentratorHeader_data[3:5]
         #offsets = concentratorHeader_data[7:9]
         n_xy = concentratorHeader_data[5:7]
-        
-        
+
+
         nFacets = n_xy[0] * n_xy[1]
         for f in range(nFacets):
         # for f in range(1):
             byte_data = file.read(facetHeader_struct_len)
             facetHeader_data = struct.Struct(cfg.FACETHEADER_STRUCT_FMT).unpack_from(byte_data)
-            
+
             #facetshape = facetHeader_data[0] # 0 for square, 1 for round 2 triangle ....
             #facet_pos = facetHeader_data[1:4]
             #facet_vec_x = facetHeader_data[4:7]
@@ -37,9 +37,9 @@ def real_heliostat(real_configs, device): # For heliostat with deflectometric da
             n_rays = facetHeader_data[10]
 
             for r in range(n_rays):
-                byte_data = file.read(ray_struct_len)	
+                byte_data = file.read(ray_struct_len)
                 ray_data = struct.Struct(cfg.RAY_STRUCT_FMT).unpack_from(byte_data)
-                
+
                 positions.append([ray_data[0],ray_data[1],ray_data[2]])
                 directions.append([ray_data[3],ray_data[4],ray_data[5]])
                 # powers.append(ray_data[6])
@@ -54,7 +54,7 @@ def ideal_heliostat(ideal_configs, device): # For ideal shaped heliostat
     # points_on_hel   = rows*cols # reflection points on hel
     points_on_hel   = th.tensor(cfg.ROWS * cfg.COLS, dtype=th.float32, device=device)
     # target_hel_origin      = define_heliostat(cfg.HEIGHT, cfg.WIDTH, rows, points_on_hel, device)
-    
+
     columns = int(points_on_hel)//cfg.ROWS
     column = th.arange(columns, device=device)
     row = th.arange(cfg.ROWS, device=device)
@@ -66,9 +66,9 @@ def ideal_heliostat(ideal_configs, device): # For ideal shaped heliostat
     h_z = th.zeros_like(h_x)
 
     h = th.hstack(list(map(lambda t: t.unsqueeze(-1), [h_x, h_y, h_z]))).reshape(len(h_x), -1)
-    
-    
-    
+
+
+
     normal_vector_direction   = th.tensor([0,0,1], dtype=th.float32, device=device)
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
@@ -131,17 +131,17 @@ class Heliostat(object):
     def __init__(self, heliostat_config, device):
         self.cfg = heliostat_config
         self.device = device
-        
+
         self.position_on_field   = th.tensor(self.cfg.POSITION_ON_FIELD, device = self.device)
-        
+
         self.state = None
         self.alignment = None
         self.discrete_points = None
         self.normals = None
         self.params = None
-        
+
         self.load()
-    
+
     def load(self):
 
         cfg = self.cfg
@@ -151,28 +151,28 @@ class Heliostat(object):
             heliostat, heliostat_normals, params = real_heliostat(cfg.REAL, self.device)
         elif cfg.SHAPE == "Other":
             heliostat, heliostat_normals, params = other_objects(cfg.OTHER, self.device)
-            
+
         self.discrete_points, self.normals, self.params = heliostat, heliostat_normals, params
         self.state = "OnGround"
-    
+
     def align(self, sun_origin, receiver_center):
         if self.discrete_points == None:
             raise ValueError('Heliostat has to be loaded first')
-        
+
         #TODO Max: fix for other aimpoints; need this to work inversely as well
 
         self.alignment   = th.stack(heliostat_coord_system(self.position_on_field, sun_origin, receiver_center))
-        
+
         hel_rotated     = rotate(self.discrete_points ,self.alignment, clockwise = True)
         hel_rotated_in_field    = hel_rotated+ self.position_on_field
 
         normal_vectors_rotated = rotate(self.normals, self.alignment, clockwise = True)
         normal_vectors_rotated /= normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
-        
+
         self.discrete_points          = hel_rotated_in_field
         self.normals  = normal_vectors_rotated
         self.state = "Aligned"
-        
+
     def align_reverse(self):
         if self.alignemnt == None:
             raise ValueError('Heliostat has to be aligned first')
@@ -180,10 +180,3 @@ class Heliostat(object):
         self.discrete_points          = rotate(self.discrete_points,self.alignment, clockwise = False)
         self.normals  = rotate(self.normals, self.alignment, clockwise = False)
         self.state = "OnGround"
-        
-
-
-
-
-    
-    
