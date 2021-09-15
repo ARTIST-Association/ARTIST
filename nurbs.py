@@ -1543,8 +1543,8 @@ def plot_surface_normals_slow(
     return fig, ax
 
 
-def get_inversion_start_value(
-        world_point,
+def get_inversion_start_values(
+        world_points,
         degree_x,
         degree_y,
         control_points,
@@ -1596,20 +1596,20 @@ def get_inversion_start_value(
     )
 
     distances = th.linalg.norm(
-        surface_points - world_point,
+        surface_points.unsqueeze(0) - world_points.unsqueeze(1),
         ord=norm_p,
-        dim=1,
+        dim=-1,
     )
-    min_distance, argmin_distance = distances.min(0)
-    return evaluation_points[argmin_distance], min_distance
+    min_distances, argmin_distances = distances.min(1)
+    return evaluation_points[argmin_distances], min_distances
 
 
 def batch_dot(x, y):
     return (x * y).sum(-1).unsqueeze(-1)
 
 
-def invert_point(
-        world_point,
+def invert_points(
+        world_points,
         degree_x,
         degree_y,
         control_points,
@@ -1621,8 +1621,8 @@ def invert_point(
         distance_tolerance=1e-5,
         cosine_tolerance=EPS,
 ):
-    argmin_distance, min_distance = get_inversion_start_value(
-        world_point,
+    argmin_distances, min_distances = get_inversion_start_values(
+        world_points,
         degree_x,
         degree_y,
         control_points,
@@ -1632,14 +1632,13 @@ def invert_point(
         num_samples,
         norm_p=norm_p,
     )
-    argmin_distance = argmin_distance.unsqueeze(0)
 
     point_min = 0
     point_max = 1 - EPS
 
     derivs = calc_derivs_surface(
-        argmin_distance[:, 0],
-        argmin_distance[:, 1],
+        argmin_distances[:, 0],
+        argmin_distances[:, 1],
         degree_x,
         degree_y,
         control_points,
@@ -1649,63 +1648,69 @@ def invert_point(
         nth_deriv=2,
     )
 
-    surface_point = derivs[:, 0, 0]
+    surface_points = derivs[:, 0, 0]
 
-    point_difference = surface_point - world_point
+    point_difference = surface_points - world_points
 
     while True:
         Su = derivs[:, 1, 0]
         Sv = derivs[:, 0, 1]
 
-        point_coincides = min_distance <= distance_tolerance
-        has_zero_cosine = (
+        points_coincide = (min_distances <= distance_tolerance).all()
+        have_zero_cosine = (
             (
-                th.linalg.norm(
-                    batch_dot(Su, point_difference),
-                    ord=norm_p,
-                )
-                / (th.linalg.norm(Su, ord=norm_p,) * min_distance)
-            ) <= cosine_tolerance
+                (
+                    th.linalg.norm(
+                        batch_dot(Su, point_difference),
+                        ord=norm_p,
+                        dim=-1,
+                    )
+                    / (th.linalg.norm(Su, ord=norm_p, dim=-1) * min_distances)
+                ) <= cosine_tolerance
+            ).all()
             or (
-                th.linalg.norm(
-                    batch_dot(Sv, point_difference),
-                    ord=norm_p,
-                )
-                / (th.linalg.norm(Sv, ord=norm_p,) * min_distance)
-            ) <= cosine_tolerance
+                (
+                    th.linalg.norm(
+                        batch_dot(Sv, point_difference),
+                        ord=norm_p,
+                        dim=-1,
+                    )
+                    / (th.linalg.norm(Sv, ord=norm_p, dim=-1) * min_distances)
+                ) <= cosine_tolerance
+            ).all()
         )
-        if point_coincides and has_zero_cosine:
+        if points_coincide and have_zero_cosine:
             break
 
         both_dir_dot = batch_dot(point_difference, derivs[:, 1, 1])
 
-        J = th.vstack([
+        J = th.stack([
             th.hstack([
                 (
-                    th.linalg.norm(Su, ord=norm_p)**2
+                    th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
                     + batch_dot(point_difference, derivs[:, 2, 0])
                 ),
-                batch_dot(Su, Sv) + both_dir_dot
+                batch_dot(Su, Sv) + both_dir_dot,
             ]),
             th.hstack([
                 batch_dot(Su, Sv) + both_dir_dot,
                 (
-                    th.linalg.norm(Su, ord=norm_p)**2
+                    th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
                     + batch_dot(point_difference, derivs[:, 0, 2])
                 ),
             ]),
-        ])
+        ], dim=1)
         kappa = -th.hstack([
             batch_dot(point_difference, Su),
             batch_dot(point_difference, Sv),
-        ]).squeeze(0)
+        ])
 
         delta = th.linalg.solve(J, kappa)
 
-        prev_argmin_distance = argmin_distance
-        argmin_distance = delta + prev_argmin_distance
+        prev_argmin_distances = argmin_distances
+        argmin_distances = delta + prev_argmin_distances
 
-        argmin_distance = argmin_distance.clamp(point_min, point_max)
+        argmin_distances = argmin_distances.clamp(point_min, point_max)
 
         # TODO We always assume non-closed surfaces.
         # argmin_distance_x = argmin_distance[:, 0]
@@ -1720,8 +1725,8 @@ def invert_point(
         # ], dim=-1)
 
         derivs = calc_derivs_surface(
-            argmin_distance[:, 0],
-            argmin_distance[:, 1],
+            argmin_distances[:, 0],
+            argmin_distances[:, 1],
             degree_x,
             degree_y,
             control_points,
@@ -1733,28 +1738,36 @@ def invert_point(
 
         surface_point = derivs[:, 0, 0]
 
-        point_difference = surface_point - world_point
-        prev_min_distance = min_distance
-        min_distance = th.linalg.norm(
+        point_difference = surface_point - world_points
+        prev_min_distances = min_distances
+        min_distances = th.linalg.norm(
             point_difference,
             ord=norm_p,
+            dim=-1,
         )
-        if min_distance > prev_min_distance:
+        if (min_distances > prev_min_distances).any():
             # FIXME why does this happen?
-            argmin_distance = prev_argmin_distance
-            min_distance = prev_min_distance
+            # FIXME only do for some, keep these values at prev
+            argmin_distances = prev_argmin_distances
+            min_distances = prev_min_distances
             break
 
-        has_insignificant_change = th.linalg.norm(
-            (
-                (argmin_distance[:, 0] - prev_argmin_distance[:, 0]) * Su
-                + (argmin_distance[:, 1] - prev_argmin_distance[:, 1]) * Sv
-            ),
-            ord=norm_p,
-        ) <= distance_tolerance
-        if has_insignificant_change:
+        have_insignificant_change = (
+            th.linalg.norm(
+                (
+                    (argmin_distances[:, 0] - prev_argmin_distances[:, 0]) * Su
+                    + (
+                        argmin_distances[:, 1]
+                        - prev_argmin_distances[:, 1]
+                    ) * Sv
+                ),
+                ord=norm_p,
+                dim=-1,
+            ) <= distance_tolerance
+        ).all()
+        if have_insignificant_change:
             break
-    return argmin_distance, min_distance
+    return argmin_distances, min_distances
 
 
 # def rational_basis_surface_flex(

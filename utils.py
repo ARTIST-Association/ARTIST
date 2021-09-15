@@ -456,22 +456,15 @@ def initialize_spline_eval_points_perfectly(
         knots_x,
         knots_y,
 ):
-    eval_points = th.empty(
-        (len(points), 2),
-        dtype=points.dtype,
-        device=points.device,
+    eval_points, distances = nurbs.invert_points(
+            points,
+            degree_x,
+            degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
     )
-    for (i, point) in enumerate(points):
-        eval_point, distance = nurbs.invert_point(
-                point,
-                degree_x,
-                degree_y,
-                ctrl_points,
-                ctrl_weights,
-                knots_x,
-                knots_y,
-        )
-        eval_points[i] = eval_point
     return eval_points
 
 def initialize_spline_ctrl_points(
