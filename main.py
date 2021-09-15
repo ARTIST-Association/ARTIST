@@ -8,7 +8,7 @@ import torch as th
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
 from heliostat_models import Heliostat
-import nurbs
+from nurbs_heliostat import NURBSHeliostat
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 from render import Renderer
 import utils
@@ -72,7 +72,10 @@ def main():
     ###### Bis hierhin fertig refactored
     # < Diff Raytracing
     #TODO Load other Constants than in Setup
-    H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
+    if cfg.USE_NURBS:
+        H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+    else:
+        H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
@@ -104,28 +107,6 @@ def main():
         H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         # print(ray_directions)
         for target in targets:
-            # if use_splines:
-            #     ctrl_points = th.hstack((ctrl_points_xy, ctrl_points_z))
-            #     hel_origin, surface_normals = (
-            #         nurbs.calc_normals_and_surface_slow(
-            #             eval_points[:, 0],
-            #             eval_points[:, 1],
-            #             spline_degree,
-            #             spline_degree,
-            #             ctrl_points,
-            #             ctrl_weights,
-            #             knots_x,
-            #             knots_y,
-            #         )
-            #     )
-
-            #     hel_rotated = rotate_heliostat(hel_origin, target_hel_coords)
-            #     rayPoints = hel_rotated + position_on_field
-
-            #     surface_normals = rotate_heliostat(surface_normals, target_hel_coords)
-            #     surface_normals = surface_normals / surface_normals.norm(dim=-1).unsqueeze(-1)
-            #     ray_directions = reflect_rays_(from_sun, surface_normals)
-
             pred_bitmap = R.render()
             if epoch %  10== 0:#
                 im.set_data(pred_bitmap.detach().cpu().numpy())
