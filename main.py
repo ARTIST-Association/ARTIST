@@ -1,17 +1,17 @@
-import sys
-import torch as th
 import os
+import sys
 
-
-from defaults import get_cfg_defaults, load_config_file
-import heliostat_models
-from heliostat_models import Heliostat
-from environment import Environment
-from render import Renderer
-from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 import matplotlib.pyplot as plt
 from matplotlib import animation
+import torch as th
+
+from defaults import get_cfg_defaults, load_config_file
+from environment import Environment
+import heliostat_models
+from heliostat_models import Heliostat
 import nurbs
+from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
+from render import Renderer
 import utils
 
 
