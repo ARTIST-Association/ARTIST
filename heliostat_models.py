@@ -136,8 +136,10 @@ class Heliostat(object):
 
         self.state = None
         self.alignment = None
-        self.discrete_points = None
-        self.normals = None
+        self._discrete_points_orig = None
+        self._normals_orig = None
+        self._discrete_points_aligned = None
+        self._normals_aligned = None
         self.params = None
 
         self.load()
@@ -152,7 +154,9 @@ class Heliostat(object):
         elif cfg.SHAPE == "Other":
             heliostat, heliostat_normals, params = other_objects(cfg.OTHER, self.device)
 
-        self.discrete_points, self.normals, self.params = heliostat, heliostat_normals, params
+        self._discrete_points_orig = heliostat
+        self._normals_orig = heliostat_normals
+        self.params = params
         self.state = "OnGround"
 
     def align(self, sun_origin, receiver_center, verbose=True):
@@ -161,7 +165,12 @@ class Heliostat(object):
 
         #TODO Max: fix for other aimpoints; need this to work inversely as well
 
-        self.alignment   = th.stack(heliostat_coord_system(self.position_on_field, sun_origin, receiver_center, verbose=verbose))
+        self.alignment = th.stack(heliostat_coord_system(
+            self.position_on_field,
+            sun_origin,
+            receiver_center,
+            verbose=verbose,
+        ))
 
         hel_rotated     = rotate(self.discrete_points ,self.alignment, clockwise = True)
         hel_rotated_in_field    = hel_rotated+ self.position_on_field
@@ -169,14 +178,27 @@ class Heliostat(object):
         normal_vectors_rotated = rotate(self.normals, self.alignment, clockwise = True)
         normal_vectors_rotated /= normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
 
-        self.discrete_points          = hel_rotated_in_field
-        self.normals  = normal_vectors_rotated
+        self._discrete_points_aligned = hel_rotated_in_field
+        self._normals_aligned = normal_vectors_rotated
         self.state = "Aligned"
 
     def align_reverse(self):
-        if self.alignment is None:
-            raise ValueError('Heliostat has to be aligned first')
-
-        self.discrete_points          = rotate(self.discrete_points,self.alignment, clockwise = False)
-        self.normals  = rotate(self.normals, self.alignment, clockwise = False)
         self.state = "OnGround"
+
+    @property
+    def discrete_points(self):
+        if self.state == 'OnGround':
+            return self._discrete_points_orig
+        elif self.state == 'Aligned':
+            return self._discrete_points_aligned
+        else:
+            raise ValueError(f'unknown state {self.state}')
+
+    @property
+    def normals(self):
+        if self.state == 'OnGround':
+            return self._normals_orig
+        elif self.state == 'Aligned':
+            return self._normals_aligned
+        else:
+            raise ValueError(f'unknown state {self.state}')
