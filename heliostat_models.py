@@ -132,7 +132,8 @@ class Heliostat(object):
         self.cfg = heliostat_config
         self.device = device
 
-        self.position_on_field   = th.tensor(self.cfg.POSITION_ON_FIELD, device = self.device)
+        self.position_on_field = th.tensor(
+            self.cfg.POSITION_ON_FIELD, dtype=th.float32, device=self.device)
 
         self.state = None
         self.alignment = None
