@@ -177,6 +177,8 @@ class Heliostat(object):
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
+        if self.state == 'Aligned':
+            raise ValueError('Heliostat is already aligned')
 
         #TODO Max: fix for other aimpoints; need this to work inversely as well
         from_sun = self.position_on_field - sun_origin #TODO Evtl auf H.Discrete Points umstellen
