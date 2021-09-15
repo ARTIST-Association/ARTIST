@@ -7,7 +7,6 @@ import torch as th
 
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
-import heliostat_models
 from heliostat_models import Heliostat
 import nurbs
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
@@ -177,27 +176,10 @@ def main():
     # Diff Raytracing >
 
     # Save trained model and optimizer state
-    if cfg.USE_NURBS:
-        raise NotImplementedError('NURBS not yet again supported')
-        # model_name = 'nurbs'
-        # save_data = {
-        #     'degree_x': cfg.SPLINE_DEGREE,
-        #     'degree_y': cfg.SPLINE_DEGREE,
-        #     'control_points': ctrl_points,
-        #     'control_point_weights': ctrl_weights,
-        #     'knots_x': knots_x,
-        #     'knots_y': knots_y,
-        # }
-    else:
-        model_name = 'normals'
-        from_sun = H.position_on_field - ENV.sun_origin
-        normals = utils.calc_reflection_normals(from_sun, R.ray_directions)
-        normals = heliostat_models.rotate(normals, H.alignment, clockwise=False)
-        save_data = {
-            'heliostat_normals': normals,
-        }
+    save_data = H.to_dict()
     save_data['xi'] = R.xi
     save_data['yi'] = R.yi
+    model_name = type(H).name
     th.save(save_data, f'{model_name}.pt')
     th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 

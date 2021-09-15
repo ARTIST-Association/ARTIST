@@ -237,3 +237,9 @@ class Heliostat(object):
             raise ValueError('Heliostat has to be aligned first')
 
         return reflect_rays_(self.from_sun, self.normals)
+
+    def to_dict(self):
+        return {
+            'heliostat_points': self._discrete_points_orig,
+            'heliostat_normals': self._normals_orig,
+        }
