@@ -155,13 +155,13 @@ class Heliostat(object):
         self.discrete_points, self.normals, self.params = heliostat, heliostat_normals, params
         self.state = "OnGround"
 
-    def align(self, sun_origin, receiver_center):
+    def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points == None:
             raise ValueError('Heliostat has to be loaded first')
 
         #TODO Max: fix for other aimpoints; need this to work inversely as well
 
-        self.alignment   = th.stack(heliostat_coord_system(self.position_on_field, sun_origin, receiver_center))
+        self.alignment   = th.stack(heliostat_coord_system(self.position_on_field, sun_origin, receiver_center, verbose=verbose))
 
         hel_rotated     = rotate(self.discrete_points ,self.alignment, clockwise = True)
         hel_rotated_in_field    = hel_rotated+ self.position_on_field

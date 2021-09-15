@@ -75,7 +75,7 @@ def main():
     #TODO Load other Constants than in Setup
     H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
     ENV = Environment(cfg.AC, device)
-    H.align(ENV.sun_origin, ENV.receiver_center)
+    H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
     R = Renderer(H, ENV)
 
     R.ray_directions.requires_grad_(True)
