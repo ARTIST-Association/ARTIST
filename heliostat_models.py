@@ -174,7 +174,7 @@ class Heliostat(object):
         self.state = "Aligned"
 
     def align_reverse(self):
-        if self.alignemnt is None:
+        if self.alignment is None:
             raise ValueError('Heliostat has to be aligned first')
 
         self.discrete_points          = rotate(self.discrete_points,self.alignment, clockwise = False)
