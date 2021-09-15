@@ -15,7 +15,7 @@ from matplotlib import animation
 import nurbs
 
 
-if __name__=='__main__':
+def main():
     # < Initilization
     ### Load Defaults
     load_default = True
@@ -175,3 +175,7 @@ if __name__=='__main__':
             # f'ray differences: {ray_diff.detach().cpu().item()}'
         )
     # Diff Raytracing >
+
+
+if __name__ == '__main__':
+    main()
