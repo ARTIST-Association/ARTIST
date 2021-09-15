@@ -156,7 +156,7 @@ class Heliostat(object):
         self.state = "OnGround"
 
     def align(self, sun_origin, receiver_center, verbose=True):
-        if self.discrete_points == None:
+        if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
 
         #TODO Max: fix for other aimpoints; need this to work inversely as well
@@ -174,7 +174,7 @@ class Heliostat(object):
         self.state = "Aligned"
 
     def align_reverse(self):
-        if self.alignemnt == None:
+        if self.alignemnt is None:
             raise ValueError('Heliostat has to be aligned first')
 
         self.discrete_points          = rotate(self.discrete_points,self.alignment, clockwise = False)
