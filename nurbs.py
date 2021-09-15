@@ -1745,9 +1745,14 @@ def invert_points(
             ord=norm_p,
             dim=-1,
         )
-        if (min_distances > prev_min_distances).any():
+
+        error_indices = min_distances > prev_min_distances
+        argmin_distances = th.where(
+            error_indices.unsqueeze(-1), prev_argmin_distances, argmin_distances)
+        min_distances = th.where(
+            error_indices, prev_min_distances, min_distances)
+        if error_indices.all():
             # FIXME why does this happen?
-            # FIXME only do for some, keep these values at prev
             argmin_distances = prev_argmin_distances
             min_distances = prev_min_distances
             break
