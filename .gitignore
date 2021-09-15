@@ -1,0 +1,27 @@
+# Python
+*.pyc
+
+# Deflectometry data
+*.binp
+
+# PyTorch
+*.pt
+*.pth
+
+# NumPy
+*.npy
+*.npz
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+
+# Images
+*.jpeg
+*.jpg
+*.png
+*.gif
+
+# Misc
+*.pdf
