@@ -86,15 +86,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
         return opt_params
 
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def _combine_ctrl_points(ctrl_points_xy, ctrl_points_z):
-        return th.hstack([ctrl_points_xy, ctrl_points_z])
-
     @property
     def ctrl_points(self):
-        return self._combine_ctrl_points(
-            self.ctrl_points_xy, self.ctrl_points_z)
+        return th.hstack([self.ctrl_points_xy, self.ctrl_points_z])
 
     def _get_alignment(self):
         if self.state == 'OnGround':
