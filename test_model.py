@@ -142,6 +142,8 @@ def main():
     target_sun = target.sun / target.sun.norm()
     for test in range(args.num_tests):
         sun = th.rand_like(target.sun)
+        # Allow negative x and y values
+        sun[:-1] -= 0.5
         sun /= sun.norm()
 
         from_sun = target.heliostat_origin_center - sun
