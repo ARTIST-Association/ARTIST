@@ -395,8 +395,8 @@ if use_splines:
     save_data = {
         'degree_x': spline_degree,
         'degree_y': spline_degree,
-        'ctrl_points': ctrl_points,
-        'ctrl_weights': ctrl_weights,
+        'control_points': ctrl_points,
+        'control_point_weights': ctrl_weights,
         'knots_x': knots_x,
         'knots_y': knots_y,
     }

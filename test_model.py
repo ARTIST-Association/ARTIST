@@ -84,12 +84,12 @@ def parse_args():
 
 def load_model(path, device):
     cp = th.load(path, map_location=device)
-    use_splines = 'ctrl_points' in cp
+    use_splines = 'control_points' in cp
     if use_splines:
         degree_x = cp['degree_x']
         degree_y = cp['degree_y']
-        ctrl_points = cp['ctrl_points']
-        ctrl_weights = cp['ctrl_weights']
+        ctrl_points = cp['control_points']
+        ctrl_weights = cp['control_point_weights']
         knots_x = cp['knots_x']
         knots_y = cp['knots_y']
 

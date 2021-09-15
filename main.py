@@ -183,8 +183,8 @@ def main():
         # save_data = {
         #     'degree_x': cfg.SPLINE_DEGREE,
         #     'degree_y': cfg.SPLINE_DEGREE,
-        #     'ctrl_points': ctrl_points,
-        #     'ctrl_weights': ctrl_weights,
+        #     'control_points': ctrl_points,
+        #     'control_point_weights': ctrl_weights,
         #     'knots_x': knots_x,
         #     'knots_y': knots_y,
         # }
