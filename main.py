@@ -21,7 +21,7 @@ def main():
     # < Initilization
     ### Load Defaults
     load_default = True
-    config_file     = "configs\\LoadDeflecData.yaml" # not used if load_default is True
+    config_file = os.path.join("configs", "LoadDeflecData.yaml")  # not used if load_default is True
     experiment_name= 'first_test_new'  # not used if load_default is True
 
     cfg_default             = get_cfg_defaults()
