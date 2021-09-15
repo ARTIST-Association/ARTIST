@@ -1755,11 +1755,14 @@ def invert_points(
         have_insignificant_change = (
             th.linalg.norm(
                 (
-                    (argmin_distances[:, 0] - prev_argmin_distances[:, 0]) * Su
+                    (
+                        argmin_distances[:, 0]
+                        - prev_argmin_distances[:, 0]
+                    ).unsqueeze(-1) * Su
                     + (
                         argmin_distances[:, 1]
                         - prev_argmin_distances[:, 1]
-                    ) * Sv
+                    ).unsqueeze(-1) * Sv
                 ),
                 ord=norm_p,
                 dim=-1,
