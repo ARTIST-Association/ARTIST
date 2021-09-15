@@ -468,6 +468,7 @@ def initialize_spline_ctrl_points(
         h_width,
         h_height,
 ):
+    device = control_points.device
     origin_offsets_x = th.linspace(
         -h_width / 2, h_width / 2, rows, device=device)
     origin_offsets_y = th.linspace(
