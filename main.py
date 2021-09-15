@@ -6,6 +6,7 @@ import os
 sys.path.insert(0, 'configs')
 
 from defaults import get_cfg_defaults, load_config_file
+import heliostat_models
 from heliostat_models import Heliostat
 from environment import Environment
 from render import Renderer
@@ -13,6 +14,7 @@ from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot
 import matplotlib.pyplot as plt
 from matplotlib import animation
 import nurbs
+import utils
 
 
 def main():
@@ -175,6 +177,31 @@ def main():
             # f'ray differences: {ray_diff.detach().cpu().item()}'
         )
     # Diff Raytracing >
+
+    # Save trained model and optimizer state
+    if cfg.USE_NURBS:
+        raise NotImplementedError('NURBS not yet again supported')
+        # model_name = 'nurbs'
+        # save_data = {
+        #     'degree_x': cfg.SPLINE_DEGREE,
+        #     'degree_y': cfg.SPLINE_DEGREE,
+        #     'ctrl_points': ctrl_points,
+        #     'ctrl_weights': ctrl_weights,
+        #     'knots_x': knots_x,
+        #     'knots_y': knots_y,
+        # }
+    else:
+        model_name = 'normals'
+        from_sun = H.position_on_field - ENV.sun_origin
+        normals = utils.calc_reflection_normals(from_sun, R.ray_directions)
+        normals = heliostat_models.rotate(normals, H.alignment, clockwise=False)
+        save_data = {
+            'heliostat_normals': normals,
+        }
+    save_data['xi'] = R.xi
+    save_data['yi'] = R.yi
+    th.save(save_data, f'{model_name}.pt')
+    th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
 
 if __name__ == '__main__':
