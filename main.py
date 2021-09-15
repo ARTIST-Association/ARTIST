@@ -160,7 +160,7 @@ def main():
     save_data = H.to_dict()
     save_data['xi'] = R.xi
     save_data['yi'] = R.yi
-    model_name = type(H).name
+    model_name = type(H).__name__
     th.save(save_data, f'{model_name}.pt')
     th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
