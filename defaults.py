@@ -31,12 +31,12 @@ _C.H.IDEAL.HEIGHT                       = 4 # in m
 _C.H.IDEAL.ROWS                         = 32
 _C.H.IDEAL.COLS                         = 32
 
-_C.H.NURB                              = CN()
-_C.H.NURB.NORMAL_VECS                  = [0,0,1]
-_C.H.NURB.WIDTH                        = 4 # in m
-_C.H.NURB.HEIGHT                       = 4 # in m
-_C.H.NURB.ROWS                         = 32
-_C.H.NURB.COLS                         = 32
+_C.H.NURBS                              = CN()
+_C.H.NURBS.NORMAL_VECS                  = [0,0,1]
+_C.H.NURBS.WIDTH                        = 4 # in m
+_C.H.NURBS.HEIGHT                       = 4 # in m
+_C.H.NURBS.ROWS                         = 32
+_C.H.NURBS.COLS                         = 32
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "NoFilename"
