@@ -31,6 +31,7 @@ from utils import (
     initialize_spline_ctrl_points,
     initialize_spline_ctrl_points_perfectly,
     initialize_spline_eval_points,
+    initialize_spline_eval_points_perfectly,
     initialize_spline_knots,
     load_deflec,
     reflect_rays,
@@ -38,6 +39,7 @@ from utils import (
     rotate_heliostat,
     sample_bitmap,
     sample_bitmap_,
+    save_target,
 )
 from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
 
@@ -112,21 +114,15 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
     # plot_surface_diff(target_hel_origin, ideal_normal_vecs, target_normal_vectors_orig)
     # plot_normal_vectors(target_hel_origin, target_normal_vectors_orig)
 
-    # TODO implement target ratio for trying to find divisor so it
-    #      matches ratio between target_h_width and target_h_height
-    '''
-    ###edge_ratio = target_h_width / target_h_height
-    ###rows = find_larger_divisor(len(target_hel_origin))
-    ###cols = len(target_hel_origin) // rows
-    ###if edge_ratio < 1:
-    ###    rows, cols = cols, rows
-    '''
 # else:
 #     points_on_hel   = rows*cols # reflection points on hel
 #     points_on_hel   = th.tensor(points_on_hel, dtype=th.float32, device=device)
 #     target_hel_origin      = define_heliostat(h_height, h_width, rows, points_on_hel, device)
 #     target_normal_vector   = th.tensor([0,0,1], dtype=th.float32, device=device)
 #     target_normal_vectors_orig = th.tile(target_normal_vector, (len(target_hel_origin), 1))
+
+#     target_h_width = h_width
+#     target_h_height = h_height
 
 # sun = sun_orig/th.linalg.norm(sun_orig)
 # # TODO Max: fix for other aimpoints; need this to work inversely as well
@@ -162,6 +158,30 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 #     yi,
 # )
 
+save_target(
+    position_on_field,
+    ideal_normal_vec,
+    target_hel_origin,
+    target_normal_vectors_orig,
+    None,  # TODO
+
+    aimpoint,
+    planex,
+    planey,
+    planeNormal,
+    None,  # TODO
+
+    sun_orig,
+    num_rays,
+    mean,
+    cov,
+    xi,
+    yi,
+
+    target_ray_directions,
+    target_rayPoints,
+    f'target.pt',
+)
 
 # del sun_orig
 # del target_normal_vectors_orig
@@ -208,12 +228,27 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 if use_splines:
     (ctrl_points, ctrl_weights, knots_x, knots_y) = nurbs.setup_nurbs_surface(
         spline_degree, spline_degree, rows, cols, device)
-    eval_points = initialize_spline_eval_points(rows, cols, device)
+
+    initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
+    ctrl_weights[:] = 1
 
     if set_up_with_knowledge:
-        initialize_spline_ctrl_points_perfectly(
+        initialize_spline_ctrl_points(
             ctrl_points,
+            position_on_field,
+            rows,
+            cols,
+            target_h_width,
+            target_h_height,
+        )
+        eval_points = initialize_spline_eval_points_perfectly(
             target_hel_origin,
+            spline_degree,
+            spline_degree,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
         )
     else:
         # Use perfect, unrotated heliostat at `position_on_field` as
@@ -226,18 +261,15 @@ if use_splines:
             h_width,
             h_height,
         )
+        eval_points = initialize_spline_eval_points(rows, cols, device)
 
     ctrl_points_xy = ctrl_points[:, :-1]
     ctrl_points_z = ctrl_points[:, -1:]
     ctrl_points_z.requires_grad_(True)
     opt_params = [ctrl_points_z]
-    if fix_spline_ctrl_weights:
-        ctrl_weights[:] = 1
-    else:
+    if not fix_spline_ctrl_weights:
         ctrl_weights.requires_grad_(True)
         opt_params.append(ctrl_weights)
-
-    initialize_spline_knots(knots_x, knots_y, spline_degree, spline_degree)
 
     # knots_x.requires_grad_(True)
     # knots_y.requires_grad_(True)
@@ -345,11 +377,16 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             ray_directions.detach(),
             target_ray_directions,
         )
+        ray_point_diff = calc_ray_diffs(
+            rayPoints.detach(),
+            target_rayPoints,
+        )
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'missed: {num_missed.detach().cpu().item()}, '
-            f'ray differences: {ray_diff.detach().cpu().item()}'
+            f'ray differences: {ray_diff.detach().cpu().item()} '
+            f'ray point differences: {ray_point_diff.detach().cpu().item()}'
         )
 
 # Save trained model and optimizer state
@@ -364,8 +401,14 @@ if use_splines:
         'knots_y': knots_y,
     }
 else:
-    model_name = 'ray_dirs'
-    save_data = {'ray_directions': ray_directions}
+    model_name = 'normals'
+    normals = calc_reflection_normals(from_sun, ray_directions)
+    normals = rotate_heliostat(normals, target_hel_coords, clockwise=False)
+    save_data = {
+        'heliostat_normals': normals,
+    }
+save_data['xi'] = xi
+save_data['yi'] = yi
 th.save(save_data, f'{model_name}.pt')
 th.save({'opt': opt.state_dict()}, f'{model_name}_opt.pt')
 
