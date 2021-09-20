@@ -1748,7 +1748,10 @@ def invert_points(
 
         error_indices = min_distances > prev_min_distances
         argmin_distances = th.where(
-            error_indices.unsqueeze(-1), prev_argmin_distances, argmin_distances)
+            error_indices.unsqueeze(-1),
+            prev_argmin_distances,
+            argmin_distances,
+        )
         min_distances = th.where(
             error_indices, prev_min_distances, min_distances)
         if error_indices.all():
