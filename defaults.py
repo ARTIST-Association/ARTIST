@@ -56,6 +56,7 @@ _C.AC.RECEIVER.CENTER                   = [-25,0,0] # in m in global coordinates
 _C.AC.RECEIVER.PLANE_NORMAL             = [1,0,0] # NWU
 _C.AC.RECEIVER.PLANE_X                  = 10 # in m
 _C.AC.RECEIVER.PLANE_Y                  = 10 # in m
+# These X and Y are height and width respectively.
 _C.AC.RECEIVER.RESOLUTION_X             = 256
 _C.AC.RECEIVER.RESOLUTION_Y             = 256
 
