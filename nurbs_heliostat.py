@@ -64,8 +64,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
 
-        self.ctrl_points_xy = ctrl_points[:, :-1]
-        self.ctrl_points_z = ctrl_points[:, -1:]
+        self.ctrl_points_xy = ctrl_points[:, :, :-1]
+        self.ctrl_points_z = ctrl_points[:, :, -1:]
 
     def setup_params(self):
         self.ctrl_points_z.requires_grad_(True)
@@ -88,7 +88,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
     @property
     def ctrl_points(self):
-        return th.hstack([self.ctrl_points_xy, self.ctrl_points_z])
+        return th.cat([self.ctrl_points_xy, self.ctrl_points_z], dim=-1)
 
     def _get_alignment(self):
         if self.state == 'OnGround':
