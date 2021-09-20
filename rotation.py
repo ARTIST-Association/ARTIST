@@ -6,6 +6,7 @@ import torch as th
 # Rotation functions ported from here:
 # https://github.com/scipy/scipy/blob/50dbaf94a570fa817d0d72e0b94d9f87c4909a4e/scipy/spatial/transform/rotation.pyx
 
+
 def rot_from_matrix(mat):
     is_single = False
     if (mat.ndim not in [2, 3] or mat.shape[-2:] != (3, 3)):
@@ -58,6 +59,7 @@ def rot_from_matrix(mat):
     else:
         return quat
 
+
 def rot_from_rotvec(vec, degrees=False):
     is_single = False
     if degrees:
@@ -95,8 +97,10 @@ def rot_from_rotvec(vec, degrees=False):
     else:
         return quat
 
+
 def rot_is_single(rot):
     return rot.shape == (4,)
+
 
 def rot_as_matrix(rot):
     is_single = rot_is_single(rot)
@@ -141,6 +145,7 @@ def rot_as_matrix(rot):
     else:
         return mat
 
+
 def _elem_basis_vec(axis, device):
     vec = th.zeros(3, device=device)
     if axis == b'x':
@@ -152,6 +157,7 @@ def _elem_basis_vec(axis, device):
     else:
         raise ValueError(f'unknown axis {axis}')
     return vec
+
 
 def _compute_euler_from_matrix(mat, seq, extrinsic=False):
     if extrinsic:
@@ -250,6 +256,7 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
 
     return angles
 
+
 def rot_as_euler(rot, seq, degrees=False):
     if len(seq) != 3:
         raise ValueError(f'expected 3 axes, got {seq}')
@@ -275,6 +282,7 @@ def rot_as_euler(rot, seq, degrees=False):
         angles = th.rad2deg(angles)
 
     return angles[0] if rot_is_single(rot) else angles
+
 
 def rot_apply(rot, vecs):
     mat = rot_as_matrix(rot)

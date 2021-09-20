@@ -8,64 +8,89 @@ Created on Mon Jul  5 12:38:11 2021
 import math
 
 import torch as th
-import struct
-import numpy as np
 
 import nurbs
-# from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
+
+# from rotation import (
+#     rot_apply,
+#     rot_as_euler,
+#     rot_from_matrix,
+#     rot_from_rotvec,
+# )
 
 # device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
-# def load_deflec(filename, take_n_vectors,device="cpu", concentratorHeader_struct_fmt ='=5f2I2f',facetHeader_struct_fmt = '=i9fI', ray_struct_fmt = '=7f'):
+
+# def load_deflec(
+#         filename,
+#         take_n_vectors,
+#         device="cpu",
+#         concentratorHeader_struct_fmt='=5f2I2f',
+#         facetHeader_struct_fmt='=i9fI',
+#         ray_struct_fmt='=7f',
+# ):
 #     """
-#     binp_filename : string including file ending binp or bpro
+#     binp_filename: string including file ending binp or bpro
 #     Concentrator Header is expected to be float[5], unsigned int[2], float[2]
-#     Facet Header is expected to be  int, float[9], unsigned int
-#     Ray is Decribed by 3 positions floats, 3 directions floats, 1 power float. Therefor expected to be float[7]
+#     Facet Header is expected to be int, float[9], unsigned int
+#     Ray is described by 3 positions floats, 3 directions floats, 1 power float.
+#     Therefore expected to be float[7].
 #     """
-#     concentratorHeader_struct_len = struct.calcsize(concentratorHeader_struct_fmt)
+#     concentratorHeader_struct_len = struct.calcsize(
+#         concentratorHeader_struct_fmt)
 #     facetHeader_struct_len = struct.calcsize(facetHeader_struct_fmt)
 #     ray_struct_len = struct.calcsize(ray_struct_fmt)
 
-#     positions= []
+#     positions = []
 #     directions = []
 #     # powers = []
 #     with open(filename, "rb") as file:
 #         byte_data = file.read(concentratorHeader_struct_len)
-#         concentratorHeader_data = struct.Struct(concentratorHeader_struct_fmt).unpack_from(byte_data)
+#         concentratorHeader_data = struct.Struct(
+#             concentratorHeader_struct_fmt,
+#         ).unpack_from(byte_data)
 #         print("READING bpro filename: " + filename)
 
 #         hel_pos = concentratorHeader_data[0:3]
 #         print("Hel Position", hel_pos)
 #         width_height = concentratorHeader_data[3:5]
 #         print("Hel Width-Height", width_height)
-#         #offsets = concentratorHeader_data[7:9]
+#         # offsets = concentratorHeader_data[7:9]
 #         n_xy = concentratorHeader_data[5:7]
 
-
 #         nFacets = n_xy[0] * n_xy[1]
-#         for f in range(nFacets):
 #         # for f in range(1):
+#         for f in range(nFacets):
 #             byte_data = file.read(facetHeader_struct_len)
-#             facetHeader_data = struct.Struct(facetHeader_struct_fmt).unpack_from(byte_data)
+#             facetHeader_data = struct.Struct(
+#                 facetHeader_struct_fmt,
+#             ).unpack_from(byte_data)
 
-#             #facetshape = facetHeader_data[0] # 0 for square, 1 for round 2 triangle ....
-#             #facet_pos = facetHeader_data[1:4]
-#             #facet_vec_x = facetHeader_data[4:7]
-#             #facet_vec_y = facetHeader_data[7:10]
+#             # 0 for square, 1 for round 2 triangle, ...
+#             # facetshape = facetHeader_data[0]
+#             # facet_pos = facetHeader_data[1:4]
+#             # facet_vec_x = facetHeader_data[4:7]
+#             # facet_vec_y = facetHeader_data[7:10]
 #             n_rays = facetHeader_data[10]
 
 #             for r in range(n_rays):
 #                 byte_data = file.read(ray_struct_len)
 #                 ray_data = struct.Struct(ray_struct_fmt).unpack_from(byte_data)
 
-#                 positions.append([ray_data[0],ray_data[1],ray_data[2]])
-#                 directions.append([ray_data[3],ray_data[4],ray_data[5]])
+#                 positions.append([ray_data[0], ray_data[1], ray_data[2]])
+#                 directions.append([ray_data[3], ray_data[4], ray_data[5]])
 #                 # powers.append(ray_data[6])
 
-#         directions = th.tensor(directions[0::int(len(directions)/take_n_vectors)], device=device)
-#         positions = th.tensor(positions[0::int(len(positions)/take_n_vectors)], device = device)
-#         return directions, positions, width_height #,powers
+#         directions = th.tensor(
+#             directions[0::int(len(directions)/take_n_vectors)],
+#             device=device,
+#         )
+#         positions = th.tensor(
+#             positions[0::int(len(positions)/take_n_vectors)],
+#             device=device,
+#         )
+#         return directions, positions, width_height  # ,powers
+
 
 # def define_heliostat(h_height, h_width, rows, points_on_hel, device):
 #     columns = int(points_on_hel)//rows
@@ -78,8 +103,12 @@ import nurbs
 #     h_y = th.tile(h_y.unsqueeze(-1), (1, columns)).ravel()
 #     h_z = th.zeros_like(h_x)
 
-#     h = th.hstack(list(map(lambda t: t.unsqueeze(-1), [h_x, h_y, h_z]))).reshape(len(h_x), -1)
+#     h = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [h_x, h_y, h_z],
+#     ))).reshape(len(h_x), -1)
 #     return h
+
 
 # def rotate_heliostat(h,hel_coordsystem, clockwise=True):
 #     r = rot_from_matrix(hel_coordsystem)
@@ -102,48 +131,60 @@ import nurbs
 #         azi_vector = -azi_vector
 #     azi = rot_from_rotvec(azi_vector)
 
-#     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1))) # darray with all heliostats (#heliostats, 3 coords)
+#     # darray with all heliostats (#heliostats, 3 coords)
+#     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
 #     return h_rotated.squeeze(-1)
 
-def add_distortion(vector_field, distortion_center, points_on_hel, threshold = 1.5, positive = True):
+
+def add_distortion(
+        vector_field,
+        distortion_center,
+        points_on_hel,
+        threshold=1.5,
+        positive=True,
+):
     device
     dc_x, dc_y = distortion_center
 
-    x,y = th.meshgrid(th.linspace(-5+dc_x,5+dc_x,int(th.sqrt(points_on_hel))),
-                      th.linspace(-5+dc_y,5+dc_y,int(th.sqrt(points_on_hel)))
-                      )
-    distortion_x = (x/2).reshape(int(points_on_hel))
-    distortion_y = (y/2).reshape(int(points_on_hel))
-    distortion = th.zeros((int(points_on_hel),3), device=device)
-    distortion[:,0] = distortion_x
-    distortion[:,1] = distortion_y
+    x, y = th.meshgrid(
+        th.linspace(-5 + dc_x, 5 + dc_x, int(th.sqrt(points_on_hel))),
+        th.linspace(-5 + dc_y, 5 + dc_y, int(th.sqrt(points_on_hel))),
+    )
+    distortion_x = (x / 2).reshape(int(points_on_hel))
+    distortion_y = (y / 2).reshape(int(points_on_hel))
+    distortion = th.zeros((int(points_on_hel), 3), device=device)
+    distortion[:, 0] = distortion_x
+    distortion[:, 1] = distortion_y
 
     for i in range(len(distortion)):
         if th.norm(distortion[i]) > threshold:
-          distortion[i] = th.tensor([0,0,0], device=device)
+            distortion[i] = th.tensor([0, 0, 0], device=device)
 
     if positive:
-        new_vec_field = (vector_field - distortion)/th.norm(vector_field - distortion, dim=1)[:,None]
+        new_vec_field = (
+            (vector_field - distortion)
+            / th.norm(vector_field - distortion, dim=1)[:, None]
+        )
     else:
-        new_vec_field = (vector_field + distortion)/th.norm(vector_field + distortion, dim=1)[:,None]
+        new_vec_field = (
+            (vector_field + distortion)
+            / th.norm(vector_field + distortion, dim=1)[:, None]
+        )
 
     # print(new_vec_field)
     # exit()
     return new_vec_field
 
+
 def flatten_aimpoints(aimpoints):
     X = th.flatten(aimpoints[0])
     Y = th.flatten(aimpoints[1])
     Z = th.flatten(aimpoints[2])
-    aimpoints = th.stack((X,Y,Z), dim=1)
+    aimpoints = th.stack((X, Y, Z), dim=1)
     return aimpoints
 
 
-
-
-
 # def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
-
 #     pSun = Sun
 #     pPosition = Position
 #     pAimpoint = Aimpoint
@@ -151,7 +192,6 @@ def flatten_aimpoints(aimpoints):
 #         print("Sun", pSun)
 #         print("Position", pPosition)
 #         print("Aimpoint", pAimpoint)
-
 
 # #Berechnung Idealer Heliostat
 # #0. Iteration
@@ -164,11 +204,16 @@ def flatten_aimpoints(aimpoints):
 #     x = x/th.linalg.norm(x)
 #     y = th.cross(z,x)
 
-
 #     return x,y,z
 
 
-# def LinePlaneCollision(planeNormal, planePoint, rayDirections, rayPoints, epsilon=1e-6):
+# def LinePlaneCollision(
+#         planeNormal,
+#         planePoint,
+#         rayDirections,
+#         rayPoints,
+#         epsilon=1e-6,
+# ):
 
 #     ndotu = rayDirections.matmul(planeNormal)
 #     if (th.abs(ndotu) < epsilon).any():
@@ -179,37 +224,79 @@ def flatten_aimpoints(aimpoints):
 #     Psis = ws + sis.unsqueeze(-1) * rayDirections + planePoint
 #     return Psis
 
-	#Define plane
-#Rotation Matricies
+
+# Define plane
+# Rotation Matrices
 # def Rx(alpha, mat):
 #     zeros = th.zeros_like(alpha)
 #     coss = th.cos(alpha)
 #     sins = th.sin(alpha)
-#     rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [th.ones_like(alpha), zeros, zeros])))
-#     rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, coss, -sins])))
-#     rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, sins, coss])))
-#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+#     rots_x = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [th.ones_like(alpha), zeros, zeros],
+#     )))
+#     rots_y = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [zeros, coss, -sins],
+#     )))
+#     rots_z = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [zeros, sins, coss],
+#     )))
+#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
+#         rots_x.shape[0],
+#         rots_x.shape[1],
+#         -1,
+#     )
 #     return th.matmul(rots,mat)
+
 
 # def Ry(alpha, mat):
 #     zeros = th.zeros_like(alpha)
 #     coss = th.cos(alpha)
 #     sins = th.sin(alpha)
-#     rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [coss, zeros, sins])))
-#     rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, th.ones_like(alpha), zeros])))
-#     rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [-sins, zeros, coss])))
-#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+#     rots_x = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [coss, zeros, sins],
+#     )))
+#     rots_y = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [zeros, th.ones_like(alpha), zeros],
+#     )))
+#     rots_z = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [-sins, zeros, coss],
+#     )))
+#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
+#         rots_x.shape[0],
+#         rots_x.shape[1],
+#         -1,
+#     )
 #     return th.matmul(rots,mat.transpose(0, -1))
 
 # def Rz(alpha, mat):
 #     zeros = th.zeros_like(alpha)
 #     coss = th.cos(alpha)
 #     sins = th.sin(alpha)
-#     rots_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [coss, -sins, zeros])))
-#     rots_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [sins, coss, zeros])))
-#     rots_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [zeros, zeros, th.ones_like(alpha)])))
-#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(rots_x.shape[0], rots_x.shape[1], -1)
+#     rots_x = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [coss, -sins, zeros],
+#     )))
+#     rots_y = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [sins, coss, zeros],
+#     )))
+#     rots_z = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [zeros, zeros, th.ones_like(alpha)],
+#     )))
+#     rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
+#         rots_x.shape[0],
+#         rots_x.shape[1],
+#         -1,
+#     )
 #     return th.matmul(rots,mat)
+
 
 # def compute_receiver_intersections(
 #         planeNormal,
@@ -219,24 +306,48 @@ def flatten_aimpoints(aimpoints):
 #         xi,
 #         yi,
 # ):
-#     intersections = LinePlaneCollision(planeNormal, planePoint, ray_directions, hel_in_field)
+#     intersections = LinePlaneCollision(
+#         planeNormal, planePoint, ray_directions, hel_in_field)
 #     as_ = intersections
 #     has = as_-hel_in_field
 
 #     # TODO Max: remove/use for ray reflection instead
-#     # rotate: Calculate 3D rotationmatrix in heliostat system. 1 axis is pointin towards the receiver, the other are orthogonal
-#     rotates_x = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 0],has[:, 1],has[:, 2]])))
+#     # rotate: Calculate 3D rotationmatrix in heliostat system.
+#     # 1 axis is pointing towards the receiver, the other are orthogonal
+#     rotates_x = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [has[:, 0], has[:, 1], has[:, 2]],
+#     )))
 #     rotates_x = rotates_x / th.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
-#     rotates_y = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 1],-has[:, 0],th.zeros(has.shape[:1], device=as_.device)])))
+#     rotates_y = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [
+#             has[:, 1],
+#             -has[:, 0],
+#             th.zeros(has.shape[:1], device=as_.device),
+#         ],
+#     )))
 #     rotates_y = rotates_y / th.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
-#     rotates_z = th.hstack(list(map(lambda t: t.unsqueeze(-1), [has[:, 2]*has[:, 0],has[:, 2]*has[:, 1],-has[:, 0]**2-has[:, 1]**2])))
+#     rotates_z = th.hstack(list(map(
+#         lambda t: t.unsqueeze(-1),
+#         [
+#             has[:, 2] * has[:, 0],
+#             has[:, 2] * has[:, 1],
+#             -has[:, 0]**2 - has[:, 1]**2,
+#         ],
+#     )))
 #     rotates_z = rotates_z / th.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
-#     rotates = th.hstack([rotates_x, rotates_y, rotates_z]).reshape(rotates_x.shape[0], rotates_x.shape[1], -1)
-#     inv_rot = th.linalg.inv(rotates) #inverse matrix
+#     rotates = th.hstack([rotates_x, rotates_y, rotates_z]).reshape(
+#         rotates_x.shape[0],
+#         rotates_x.shape[1],
+#         -1,
+#     )
+#     inv_rot = th.linalg.inv(rotates)  # inverse matrix
 #     # rays_tmp = th.tensor(ha, device=device)
 #     # print(rays_tmp.shape)
 
-#     # rays_tmp: first rotate aimpoint in right coord system, aplay xi,yi distortion, rotate back
+#     # rays_tmp: first rotate aimpoint in right coord system,
+#     # apply xi, yi distortion, rotate back
 #     rotated_has = th.matmul(rotates, has.unsqueeze(-1))
 #     # rays = rotated_has.transpose(0, -1).transpose(1, -1)
 #     rays = th.matmul(inv_rot,
@@ -247,22 +358,51 @@ def flatten_aimpoints(aimpoints):
 #                                   ).transpose(0, -1)
 #                                 ).transpose(0, -1).transpose(1, -1)
 
-
 #     # rays = rays.to(th.float32)
 
 #     # Execute the kernel
-#     intersections = LinePlaneCollision(planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
+#     intersections = LinePlaneCollision(
+#         planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
 #     # print(intersections)
 #     return intersections
 
-def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
-    dx_ints = intersections[:, :, 1] +planex/2
-    dy_ints = intersections[:, :, 2] +planey/2
-    # checks the points of intersection  and chooses bins in bitmap
-    indices = ( (-1 <= dx_ints) & (dx_ints < planex + 1) & (-1 <= dy_ints) & (dy_ints < planey + 1))
-    return sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width)
 
-# def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width):
+# def sample_bitmap(
+#         intersections,
+#         planex,
+#         planey,
+#         bitmap_height,
+#         bitmap_width,
+# ):
+#     dx_ints = intersections[:, :, 1] + planex / 2
+#     dy_ints = intersections[:, :, 2] + planey / 2
+#     # checks the points of intersection  and chooses bins in bitmap
+#     indices = (
+#         (-1 <= dx_ints)
+#         & (dx_ints < planex + 1)
+#         & (-1 <= dy_ints)
+#         & (dy_ints < planey + 1)
+#     )
+#     return sample_bitmap_(
+#         dx_ints,
+#         dy_ints,
+#         indices,
+#         planex,
+#         planey,
+#         bitmap_height,
+#         bitmap_width,
+#     )
+
+
+# def sample_bitmap_(
+#         dx_ints,
+#         dy_ints,
+#         indices,
+#         planex,
+#         planey,
+#         bitmap_height,
+#         bitmap_width,
+# ):
 
 #     x_ints = dx_ints[indices]/planex*bitmap_height
 #     y_ints = dy_ints[indices]/planey*bitmap_width
@@ -334,13 +474,17 @@ def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
 #     del y_ints_high
 
 #     # Combine all indices and intensities in the correct order.
-#     x_inds = th.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
+#     x_inds = th.hstack(
+#         [x_inds_1, x_inds_2, x_inds_3, x_inds_4],
+#     ).long().ravel()
 #     del x_inds_1
 #     del x_inds_2
 #     del x_inds_3
 #     del x_inds_4
 
-#     y_inds = th.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
+#     y_inds = th.hstack(
+#         [y_inds_1, y_inds_2, y_inds_3, y_inds_4],
+#     ).long().ravel()
 #     del y_inds_1
 #     del y_inds_2
 #     del y_inds_3
@@ -359,9 +503,19 @@ def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
 #     # _not_ part of the image. That is why here, we set up a mask to
 #     # choose only those indices that are actually in the bitmap (i.e. we
 #     # prevent out-of-bounds access).
-#     indices = (0 <= x_inds) & (x_inds < bitmap_width) & (0 <= y_inds) & (y_inds < bitmap_height)
+#     indices = (
+#         (0 <= x_inds)
+#         & (x_inds < bitmap_width)
+#         & (0 <= y_inds)
+#         & (y_inds < bitmap_height)
+#     )
 
-#     total_bitmap = th.zeros([bitmap_height, bitmap_width], dtype=th.float32, device=dx_ints.device) # Flux density map for heliostat field
+#     # Flux density map for heliostat field
+#     total_bitmap = th.zeros(
+#         [bitmap_height, bitmap_width],
+#         dtype=th.float32,
+#         device=dx_ints.device,
+#     )
 #     # Add up all distributed intensities in the corresponding indices.
 #     total_bitmap.index_put_(
 #         (x_inds[indices], y_inds[indices]),
@@ -369,6 +523,7 @@ def sample_bitmap(intersections, planex, planey, bitmap_height, bitmap_width):
 #         accumulate=True,
 #     )
 #     return total_bitmap
+
 
 def curl(f, arg):
     jac = th.autograd.functional.jacobian(f, arg, create_graph=True)
@@ -379,11 +534,13 @@ def curl(f, arg):
 
     return th.tensor([rot_x, rot_y, rot_z])
 
+
 def find_larger_divisor(num):
     divisor = int(th.sqrt(th.tensor(num)))
     while num % divisor != 0:
         divisor += 1
     return divisor
+
 
 def find_perpendicular_pair(base_vec, vecs):
     half_pi = th.tensor(math.pi, device=vecs.device) / 2
@@ -402,6 +559,7 @@ def find_perpendicular_pair(base_vec, vecs):
             ):
                 return surface_direction_x, surface_direction_y
     raise ValueError('could not calculate surface normal')
+
 
 def _cartesian_linspace_around(
         minval_x,
@@ -433,12 +591,14 @@ def _cartesian_linspace_around(
     points = th.cartesian_prod(points_x, points_y)
     return points
 
+
 def initialize_spline_eval_points(
         rows,
         cols,
         device,
 ):
     return _cartesian_linspace_around(0, 1, rows, 0, 1, cols, device)
+
 
 def initialize_spline_eval_points_perfectly(
         points,
@@ -460,6 +620,7 @@ def initialize_spline_eval_points_perfectly(
     )
     return eval_points
 
+
 def initialize_spline_ctrl_points(
         control_points,
         origin,
@@ -480,19 +641,30 @@ def initialize_spline_ctrl_points(
     ))
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
+
 # def initialize_spline_ctrl_points_perfectly(control_points, points):
 #     # FIXME need to sort points so normals always point in the
 #     #       correct direction
 #     control_points[:] = points.reshape(control_points.shape)
 
-def initialize_spline_knots(knots_x, knots_y, spline_degree_x, spline_degree_y):
-    knot_vals_x = th.linspace(0, 1, len(knots_x[spline_degree_x:-spline_degree_x]))
-    knot_vals_y = th.linspace(0, 1, len(knots_y[spline_degree_y:-spline_degree_y]))
+
+def initialize_spline_knots(
+        knots_x,
+        knots_y,
+        spline_degree_x,
+        spline_degree_y,
+):
+    num_knot_vals_x = len(knots_x[spline_degree_x:-spline_degree_x])
+    knot_vals_x = th.linspace(0, 1, num_knot_vals_x)
+    num_knot_vals_y = len(knots_y[spline_degree_y:-spline_degree_y])
+    knot_vals_y = th.linspace(0, 1, num_knot_vals_y)
     knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
     knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y
 
+
 def calc_ray_diffs(pred, target):
     return th.nn.functional.l1_loss(pred, target)
+
 
 def calc_reflection_normals_(in_reflections, out_reflections):
     normals = ((in_reflections + out_reflections) / 2 - in_reflections)
@@ -504,21 +676,26 @@ def calc_reflection_normals_(in_reflections, out_reflections):
     )
     return normals
 
+
 def calc_reflection_normals(in_reflections, out_reflections):
     in_reflections = in_reflections / in_reflections.norm(dim=-1).unsqueeze(-1)
     out_reflections = \
         out_reflections / out_reflections.norm(dim=-1).unsqueeze(-1)
     return calc_reflection_normals_(in_reflections, out_reflections)
 
+
 def batch_dot(x, y):
     return (x * y).sum(-1).unsqueeze(-1)
+
 
 # def reflect_rays_(rays, normals):
 #     return rays - 2 * batch_dot(rays, normals) * normals
 
+
 # def reflect_rays(rays, normals):
 #     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
 #     return reflect_rays_(rays, normals)
+
 
 def save_target(
         heliostat_origin_center,

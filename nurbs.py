@@ -435,7 +435,11 @@ def calc_derivs(
 #             g_falling(
 #                 evaluation_point, next_control_point_index, degree, knots)
 #             * get_basis(
-#                 evaluation_point, next_control_point_index, prev_degree, knots)
+#                 evaluation_point,
+#                 next_control_point_index,
+#                 prev_degree,
+#                 knots,
+#             )
 #         )
 #     )
 
@@ -505,8 +509,10 @@ def calc_derivs(
 #         control_point_weights,
 #         knots,
 # ):
-#     # assert control_points.ndim == 1, \
-#     #     "please use another evaluation function for this NURBS' dimensionality"
+#     # assert control_points.ndim == 1, (
+#     #     "please use another evaluation function for "
+#     #     "this NURBS' dimensionality"
+#     # )
 #     # assert (control_point_weights > 0).all(), \
 #     #     'control point weights must be greater than zero'
 #     # assert (knots[:degree + 1] == 0).all(), \
@@ -1806,7 +1812,11 @@ def invert_points(
 #         for control_point_index in control_point_indices_y
 #     ], dtype=th.float32, device=device)
 
-#     projected_weights = basis_values_x * basis_values_y * control_point_weights
+#     projected_weights = (
+#         basis_values_x
+#         * basis_values_y
+#         * control_point_weights
+#     )
 #     return (
 #         projected_weights
 #         / th.sum(projected_weights)
@@ -1823,8 +1833,10 @@ def invert_points(
 #     knots_x,
 #     knots_y,
 # ):
-#     assert control_points.ndim == 2, \
-#         "please use another evaluation function for this NURBS' dimensionality"
+#     assert control_points.ndim == 2, (
+#         "please use another evaluation function for "
+#         "this NURBS' dimensionality"
+#     )
 #     assert (control_point_weights > 0).all(), \
 #         'control point weights must be greater than zero'
 #     assert (knots_x[:degree_x + 1] == 0).all(), \
@@ -1869,7 +1881,11 @@ def invert_points(
 
     # control_point_weights = th.outer(
     #     control_point_weights_x, control_point_weights_y)
-    # projected_weights = basis_values_x * basis_values_y * control_point_weights
+    # projected_weights = (
+    #     basis_values_x
+    #     * basis_values_y
+    #     * control_point_weights
+    # )
     # return (
     #     projected_weights
     #     / th.sum(projected_weights)
@@ -1878,7 +1894,7 @@ def invert_points(
 
 # def calc_normal_surface():
 #     x_derivative = th.autograd.functional.jacobian()
-#     cross_prod = 
+#     cross_prod =
 #     return cross_prod / th.linalg.norm(cross_prod)
 
 
@@ -1890,7 +1906,10 @@ def invert_points(
 # ):
 #     device = control_point_weights.device
 
-#     control_point_indices = th.arange(len(control_point_weights), device=device)
+#     control_point_indices = th.arange(
+#         len(control_point_weights),
+#         device=device,
+#     )
 #     basis_values = th.tensor([
 #         get_basis(evaluation_point, control_point_index, degree, knots)
 #         for control_point_index in control_point_indices

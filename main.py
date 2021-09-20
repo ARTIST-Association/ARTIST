@@ -1,27 +1,28 @@
 import os
-import sys
 
 import matplotlib.pyplot as plt
-from matplotlib import animation
 import torch as th
 
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
 from heliostat_models import Heliostat
 from nurbs_heliostat import NURBSHeliostat
-from plotter import plot_surface_diff, plot_normal_vectors, plot_raytracer, plot_heliostat, plot_bitmap
+# import plotter
 from render import Renderer
 import utils
 
 
 def main():
-    # < Initilization
-    ### Load Defaults
+    # < Initialization
+    # Load Defaults
+    # =============
     load_default = True
-    config_file = os.path.join("configs", "LoadDeflecData.yaml")  # not used if load_default is True
-    experiment_name= 'first_test_new'  # not used if load_default is True
+    # not used if `load_default is True`
+    config_file = os.path.join("configs", "LoadDeflecData.yaml")
+    # not used if `load_default is True`
+    experiment_name = 'first_test_new'
 
-    cfg_default             = get_cfg_defaults()
+    cfg_default = get_cfg_defaults()
     if load_default:
         cfg = cfg_default
     else:
@@ -29,7 +30,8 @@ def main():
 
     cfg.freeze()
 
-    ### Setup Loggin
+    # Set up Logging
+    # =============
     logdir = os.path.join(cfg.LOGDIR, cfg.ID)
     cfg.merge_from_list(["LOGDIR", logdir])
     os.makedirs(logdir, exist_ok=True)
@@ -39,13 +41,19 @@ def main():
     # writer = SummaryWriter(logdir)
     # Write out config parameters.
 
-    ###Set system params
+    # Set system params
+    # =================
     th.manual_seed(cfg.SEED)
-    device = th.device('cuda' if cfg.USE_GPU and th.cuda.is_available() else 'cpu')
+    device = th.device(
+        'cuda'
+        if cfg.USE_GPU and th.cuda.is_available()
+        else 'cpu'
+    )
 
-
-    ###Setup Envoirment
-    H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
+    # Set up Environment
+    # =================
+    # Create Heliostat Object and Load Model defined in config file
+    H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     target_save_data = (
         H.position_on_field,
@@ -83,32 +91,34 @@ def main():
     )
     del target_save_data
 
-    ###Render Step
+    # Render Step
+    # ===========
     target_bitmap = R.render()
     targets = target_bitmap.detach().clone().unsqueeze(0)
 
-    ###Plot and Save Stuff
+    # Plot and Save Stuff
+    # ===================
     im = plt.imshow(target_bitmap.detach().cpu().numpy(), cmap='jet')
     im.set_data(target_bitmap.detach().cpu().numpy())
     im.autoscale()
     plt.savefig(os.path.join("images", "original.jpeg"))
-    # plot_bitmap(target_bitmap)                                                 # Target Bitmap Plot
+    # plotter.plot_bitmap(target_bitmap)  # Target Bitmap Plot
 
-    ###Delete Setup
+    # Delete Setup
+    # ============
     del H
     del ENV
     del R
-    # Initilization >
+    # Initialization >
 
-
-
-    ###### Bis hierhin fertig refactored
+    # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
-    #TODO Load other Constants than in Setup
+    # TODO Load other Constants than in Setup
     if cfg.USE_NURBS:
         H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
     else:
-        H = Heliostat(cfg.H, device) #Creat Heliostat Object and Load Model defined in config file
+        # Create Heliostat Object and Load Model defined in config file
+        H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
@@ -141,7 +151,7 @@ def main():
         # print(ray_directions)
         for target in targets:
             pred_bitmap = R.render()
-            if epoch %  10== 0:#
+            if epoch % 10 == 0:
                 im.set_data(pred_bitmap.detach().cpu().numpy())
                 im.autoscale()
                 plt.savefig(os.path.join("images", f"{epoch}.png"))
@@ -164,11 +174,13 @@ def main():
         #     im.autoscale()
         #     plt.savefig(os.path.join("images", f"{epoch}.png"))
 
-
         loss /= len(targets)
         loss.backward()
         # if not use_splines:
-        #     if ray_directions.grad is None or (ray_directions.grad == 0).all():
+        #     if (
+        #             ray_directions.grad is None
+        #             or (ray_directions.grad == 0).all()
+        #     ):
         #         print('no more optimization possible; ending...')
         #         break
 
