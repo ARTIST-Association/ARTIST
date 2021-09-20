@@ -85,7 +85,7 @@ def compute_receiver_intersections(
     # print(intersections)
     return intersections
 
-def sample_bitmap_(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width):
+def sample_bitmap(dx_ints, dy_ints, indices, planex, planey, bitmap_height, bitmap_width):
 
     x_ints = dx_ints[indices]/planex*bitmap_height
     y_ints = dy_ints[indices]/planey*bitmap_width
@@ -197,7 +197,7 @@ class Renderer(object):
     def __init__(self, Heliostat, Environment):
         self.H = Heliostat
         self.ENV = Environment
-        self.xi, self.yi = self.ENV.sun.sample_() # Evtl. in render jedesmal aufrufen
+        self.xi, self.yi = self.ENV.sun.sample() # Evtl. in render jedesmal aufrufen
     def render(self):
         # TODO Max: use for reflection instead
 
@@ -213,7 +213,7 @@ class Renderer(object):
         dx_ints = intersections[:, :, 1] + self.ENV.receiver_plane_x/2 - self.ENV.receiver_center[1]
         dy_ints = intersections[:, :, 2] + self.ENV.receiver_plane_y/2 - self.ENV.receiver_center[2]
         indices = (-1 <= dx_ints) & (dx_ints < self.ENV.receiver_plane_x + 1) & (-1 <= dy_ints) & (dy_ints < self.ENV.receiver_plane_y + 1)
-        total_bitmap = sample_bitmap_(
+        total_bitmap = sample_bitmap(
             dx_ints,
             dy_ints,
             indices,
