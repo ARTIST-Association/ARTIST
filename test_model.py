@@ -4,7 +4,12 @@ import os
 import matplotlib.pyplot as plt
 import torch as th
 
-import nurbs
+import defaults
+from environment import Environment
+from heliostat_models import Heliostat
+from nurbs import NURBSSurface
+from nurbs_heliostat import NURBSHeliostat
+from render import Renderer
 import utils
 
 
@@ -38,7 +43,13 @@ class Target:
             setattr(self, key, value)
 
 
-def parse_args():
+def _parse_bool(string):
+    assert string == 'False' or string == 'True', \
+        'please only use "False" or "True" as boolean arguments.'
+    return string != 'False'
+
+
+def parse_args(cfg):
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -53,29 +64,34 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--num_tests',
+        type=int,
+        default=32,
+        help='How many different sun positions to test.',
+    )
+
+    # Values with defaults given by configuration.
+    parser.add_argument(
         '--seed',
         type=int,
-        default=0,
+        default=cfg.SEED,
         help='Seed to use for RNG initialization.',
     )
     parser.add_argument(
         '--use_gpu',
-        type=bool,
-        default=th.cuda.is_available(),
+        type=_parse_bool,
+        default=cfg.USE_GPU and th.cuda.is_available(),
         help='Whether to use the GPU.',
     )
     parser.add_argument(
         '--bitmap_dims',
         type=int,
         nargs=2,
-        default=[256, 256],
+        default=[
+            cfg.AC.RECEIVER.RESOLUTION_X,
+            cfg.AC.RECEIVER.RESOLUTION_Y,
+        ],
         help='Dimensions of the bitmap to generate.',
-    )
-    parser.add_argument(
-        '--num_tests',
-        type=int,
-        default=32,
-        help='How many different sun positions to test.',
     )
 
     args = parser.parse_args()
@@ -93,7 +109,7 @@ def load_model(path, device):
         knots_x = cp['knots_x']
         knots_y = cp['knots_y']
 
-        model = nurbs.NURBSSurface(
+        model = NURBSSurface(
             degree_x,
             degree_y,
             ctrl_points,
@@ -122,7 +138,9 @@ def load_target(path, device):
 
 
 def main():
-    args = parse_args()
+    cfg = defaults.get_cfg_defaults()
+
+    args = parse_args(cfg)
 
     th.manual_seed(args.seed)
     device = th.device(
@@ -130,134 +148,122 @@ def main():
         if args.use_gpu and th.cuda.is_available()
         else 'cpu'
     )
-    bitmap_height, bitmap_width = args.bitmap_dims
 
+    # Set up config from arguments
+    bitmap_height, bitmap_width = args.bitmap_dims
+    cfg.merge_from_list([
+        'SEED',
+        args.seed,
+        'USE_GPU',
+        args.use_gpu,
+        'AC.RECEIVER.RESOLUTION_X',
+        bitmap_height,
+        'AC.RECEIVER.RESOLUTION_Y',
+        bitmap_width,
+    ])
+
+    # Set up config from target
     target = load_target(args.target_path, device)
+    cfg.merge_from_list([
+        'H.POSITION_ON_FIELD',
+        target.heliostat_origin_center.tolist(),
+        'H.IDEAL.NORMAL_VECS',
+        target.heliostat_face_normal.tolist(),
+        # We assign this as well just in case.
+        'H.NURBS.NORMAL_VECS',
+        target.heliostat_face_normal.tolist(),
+        # TODO Missing `heliostat_up_dir`
+
+        'AC.RECEIVER.CENTER',
+        target.receiver_origin_center.tolist(),
+        'AC.RECEIVER.PLANE_X',
+        target.receiver_width,
+        'AC.RECEIVER.PLANE_Y',
+        target.receiver_height,
+        'AC.RECEIVER.PLANE_NORMAL',
+        target.receiver_normal.tolist(),
+        # TODO Missing `receiver_up_dir`
+
+        'AC.SUN.ORIGIN',
+        target.sun.tolist(),
+        'AC.SUN.GENERATE_N_RAYS',
+        target.num_rays,
+        'AC.SUN.NORMAL_DIST.MEAN',
+        target.mean.tolist(),
+        'AC.SUN.NORMAL_DIST.COV',
+        target.cov.tolist(),
+    ])
+    target_cfg = cfg.clone()
+
+    # Set up target
+    target_heliostat = Heliostat(target_cfg.H, device)
+
+    # Set up model
     model, (model_xi, model_yi), use_splines = load_model(
         args.model_path, device)
+
     if use_splines:
         rows, cols = model.control_points.shape[:-1]
-        eval_points = utils.initialize_spline_eval_points(rows, cols, device)
 
-    target_sun = target.sun / target.sun.norm()
+        cfg.merge_from_list([
+            'NURBS.SET_UP_WITH_KNOWLEDGE',
+            True,
+            'NURBS.SPLINE_DEGREE',
+            model.degree_x,
+            'H.NURBS.ROWS',
+            rows,
+            'H.NURBS.COLS',
+            cols,
+        ])
+
+        heliostat = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+        heliostat.ctrl_points_xy = model.control_points[:, :, :-1]
+        heliostat.ctrl_points_z = model.control_points[:, :, -1:]
+        heliostat.ctrl_weights = model.control_point_weights
+        heliostat.knots_x = model.knots_x
+        heliostat.knots_y = model.knots_y
+    else:
+        heliostat = Heliostat(cfg.H, cfg.NURBS, device)
+        heliostat._normals_orig = model
+
+    heliostats = [target_heliostat, heliostat]
+
     for test in range(args.num_tests):
         sun = th.rand_like(target.sun)
         # Allow negative x and y values
         sun[:-1] -= 0.5
         sun /= sun.norm()
 
-        from_sun = target.heliostat_origin_center - sun
-        from_sun /= from_sun.norm()
-        from_sun = from_sun.unsqueeze(0)
+        target_cfg.merge_from_list([
+            'AC.SUN.ORIGIN',
+            sun.tolist(),
+        ])
 
-        target_hel_coords = th.stack(utils.heliostat_coord_system(
-            target.heliostat_origin_center,
-            sun,
-            target.receiver_origin_center,
-            verbose=False,
-        ))
-        target_hel_rotated = utils.rotate_heliostat(
-            target.heliostat_points, target_hel_coords)
-        target_hel_in_field = (
-            target_hel_rotated
-            + target.heliostat_origin_center
-        )
+        env = Environment(target_cfg.AC, device)
+        for hel in heliostats:
+            hel.align(env.sun_origin, env.receiver_center, verbose=False)
 
-        target_normals = utils.rotate_heliostat(
-            target.heliostat_normals, target_hel_coords)
-        target_normals /= target_normals.norm(dim=-1).unsqueeze(-1)
+        target_renderer = Renderer(target_heliostat, env)
+        renderer = Renderer(heliostat, env)
+        for renderer_ in [target_renderer, renderer]:
+            renderer_.xi = model_xi
+            renderer_.yi = model_yi
 
-        target_ray_directions = utils.reflect_rays_(from_sun, target_normals)
+        target_bitmap = target_renderer.render()
+        bitmap = renderer.render()
 
-        intersections = utils.compute_receiver_intersections(
-            target.receiver_normal,
-            target.receiver_origin_center,
-            target_ray_directions,
-            target_hel_in_field,
-            target.xi,
-            target.yi,
-        )
-        dx_ints, dy_ints, indices = utils.get_intensities_and_sampling_indices(
-            intersections,
-            target.receiver_origin_center,
-            target.receiver_width,
-            target.receiver_height,
-        )
-        target_bitmap = utils.sample_bitmap_(
-            dx_ints,
-            dy_ints,
-            indices,
-            target.receiver_width,
-            target.receiver_height,
-            bitmap_height,
-            bitmap_width,
-        )
-        target_num_missed = indices.numel() - indices.count_nonzero()
-
-        # Model
-        if use_splines:
-            hel_origin, normals = (
-                nurbs.calc_normals_and_surface_slow(
-                    eval_points[:, 0],
-                    eval_points[:, 1],
-                    model.degree_x,
-                    model.degree_y,
-                    model.control_points,
-                    model.control_point_weights,
-                    model.knots_x,
-                    model.knots_y,
-                )
-            )
-
-            hel_rotated = utils.rotate_heliostat(hel_origin, target_hel_coords)
-            hel_in_field = hel_rotated + target.heliostat_origin_center
-
-            normals = utils.rotate_heliostat(normals, target_hel_coords)
-            normals = normals / normals.norm(dim=-1).unsqueeze(-1)
-            ray_directions = utils.reflect_rays_(from_sun, normals)
-        else:
-            hel_in_field = target_hel_in_field
-            normals = utils.rotate_heliostat(model, target_hel_coords)
-            normals /= normals.norm(dim=-1).unsqueeze(-1)
-            ray_directions = utils.reflect_rays_(from_sun, normals)
-
-        intersections = utils.compute_receiver_intersections(
-            target.receiver_normal,
-            target.receiver_origin_center,
-            ray_directions,
-            hel_in_field,
-            model_xi,
-            model_yi,
-        )
-        dx_ints, dy_ints, indices = utils.get_intensities_and_sampling_indices(
-            intersections,
-            target.receiver_origin_center,
-            target.receiver_width,
-            target.receiver_height,
-        )
-        bitmap = utils.sample_bitmap_(
-            dx_ints,
-            dy_ints,
-            indices,
-            target.receiver_width,
-            target.receiver_height,
-            bitmap_height,
-            bitmap_width,
-        )
-
-        num_missed = indices.numel() - indices.count_nonzero()
-        ray_dir_diff = utils.calc_ray_diffs(
-            ray_directions,
-            target_ray_directions,
-        )
-        normal_diff = utils.calc_ray_diffs(
-            normals,
-            target_normals,
-        )
-        normal_cos_diff = th.mean(utils.batch_dot(
-            normals,
-            target_normals,
-        ))
+        # ray_dir_diff = utils.calc_ray_diffs(
+        #     ray_directions,
+        #     target_ray_directions,
+        # )
+        # normal_diff = utils.calc_ray_diffs(
+        #     normals,
+        #     target_normals,
+        # )
+        # normal_cos_diff = th.mean(utils.batch_dot(
+        #     normals,
+        #     target_normals,
+        # ))
         loss = th.nn.functional.mse_loss(bitmap, target_bitmap, 0.1)
 
         # if first_plot:
@@ -299,14 +305,16 @@ def main():
         print(
             f'test {test}: '
             f'sun {sun.detach().cpu().numpy()}, '
-            f'loss {loss.detach().cpu().numpy()}, '
-            f'target missed {target_num_missed.detach().cpu().numpy()}, '
-            f'missed {num_missed.detach().cpu().numpy()}, '
-            f'ray dir diff {ray_dir_diff.detach().cpu().numpy()}, '
-            f'normal diff {normal_diff.detach().cpu().numpy()}, '
-            f'normal cos diff {normal_cos_diff.detach().cpu().numpy()}'
+            f'loss {loss.detach().cpu().numpy()}'
+            # f'target missed {target_num_missed.detach().cpu().numpy()}, '
+            # f'missed {num_missed.detach().cpu().numpy()}, '
+            # f'ray dir diff {ray_dir_diff.detach().cpu().numpy()}, '
+            # f'normal diff {normal_diff.detach().cpu().numpy()}, '
+            # f'normal cos diff {normal_cos_diff.detach().cpu().numpy()}'
         )
         # print()
+        for hel in heliostats:
+            hel.align_reverse()
 
 
 if __name__ == '__main__':
