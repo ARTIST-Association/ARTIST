@@ -197,7 +197,7 @@ class Renderer(object):
     def __init__(self, Heliostat, Environment):
         self.H = Heliostat
         self.ENV = Environment
-        self.xi, self.yi = self.ENV.Sun.sample_() # Evtl. in render jedesmal aufrufen
+        self.xi, self.yi = self.ENV.sun.sample_() # Evtl. in render jedesmal aufrufen
     def render(self):
         # TODO Max: use for reflection instead
 

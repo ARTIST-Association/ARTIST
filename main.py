@@ -61,9 +61,9 @@ def main():
         None,  # TODO
 
         th.tensor(ENV.cfg.SUN.ORIGIN, dtype=th.float32, device=device),
-        ENV.Sun.num_rays,
-        ENV.Sun.mean,
-        ENV.Sun.cov,
+        ENV.sun.num_rays,
+        ENV.sun.mean,
+        ENV.sun.cov,
     )
     H.align(ENV.sun_origin, ENV.receiver_center)
     R = Renderer(H, ENV)

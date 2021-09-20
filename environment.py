@@ -34,4 +34,4 @@ class Environment(object):
 
         sun_origin                              = th.tensor(self.cfg.SUN.ORIGIN, dtype=th.float32, device = device)
         self.sun_origin                         = sun_origin/th.linalg.norm(sun_origin)
-        self.Sun                                = Sun_Distribution(self.cfg.SUN, device)
+        self.sun                                = Sun_Distribution(self.cfg.SUN, device)
