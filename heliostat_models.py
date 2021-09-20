@@ -198,7 +198,7 @@ class Heliostat(object):
                 cfg.IDEAL, self.device)
         elif cfg.SHAPE == "Real":
             heliostat, heliostat_normals, params = real_heliostat(
-                cfg.REAL, self.device)
+                cfg.DEFLECT_DATA, self.device)
         elif cfg.SHAPE == "Other":
             heliostat, heliostat_normals, params = other_objects(
                 cfg.OTHER, self.device)

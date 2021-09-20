@@ -42,11 +42,11 @@ _C.H.NURBS.ROWS                         = 32
 _C.H.NURBS.COLS                         = 32
 
 _C.H.DEFLECT_DATA                       = CN()
-_C.H.DEFLECT_DATA.FILENAME              = "NoFilename"
+_C.H.DEFLECT_DATA.FILENAME              = "Helio_AA33_Rim0_STRAL-Input.binp"
 _C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 1000
-_C.H.CONCENTRATORHEADER_STRUCT_FMT      = '=5f2I2f'
-_C.H.FACETHEADER_STRUCT_FMT             = '=i9fI'
-_C.H.RAY_STRUCT_FMT                     = '=7f'
+_C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
+_C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
+_C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()
