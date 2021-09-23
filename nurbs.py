@@ -272,7 +272,7 @@ def project_control_points(control_points, control_point_weights):
 
 
 def evaluate_nurbs(
-        evaluation_point,
+        evaluation_points,
         degree,
         control_points,
         control_point_weights,
@@ -293,18 +293,16 @@ def evaluate_nurbs(
         'knots must be ordered monotonically increasing in value'
 
     projected = project_control_points(control_points, control_point_weights)
-    span = find_span(
-        evaluation_point,
-        degree,
-        len(control_points),
-        knots,
+    spans = find_span(evaluation_points, degree, len(control_points), knots)
+    spansmdeg = spans - degree
+    basis_values = get_basis(evaluation_points, spans, degree, knots)
+    Cw = th.zeros(
+        (len(evaluation_points), projected.shape[-1]),
+        device=control_points.device,
     )
-    spanmdeg = span - degree
-    basis_values = get_basis(evaluation_point, span, degree, knots)
-    Cw = th.zeros(projected.shape[-1])
     for j in range(next_degree):
-        Cw += basis_values[j] * projected[spanmdeg + j]
-    return Cw[:-1] / Cw[-1]
+        Cw += basis_values[:, j] * projected[spansmdeg + j]
+    return Cw[:, :-1] / Cw[:, -1]
 
 
 def calc_bspline_derivs(
