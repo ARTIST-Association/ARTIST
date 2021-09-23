@@ -123,12 +123,13 @@ def main():
     R = Renderer(H, ENV)
 
     opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
-    sched = th.optim.lr_scheduler.ReduceLROnPlateau(
+    sched = th.optim.lr_scheduler.OneCycleLR(
         opt,
-        factor=0.5,
-        min_lr=1e-12,
-        patience=10,
-        verbose=True,
+        total_steps=cfg.TRAIN_PARAMS.EPOCHS,
+        max_lr=6e-4,
+        pct_start=0.1,
+        div_factor=1e6,
+        final_div_factor=1e4,
     )
 
     # loss = th.nn.functional.mse_loss()
@@ -185,7 +186,7 @@ def main():
         #         break
 
         opt.step()
-        sched.step(loss)
+        sched.step()
         H.align_reverse()
         # if epoch % 1 == 0:
         #     num_missed = indices.numel() - indices.count_nonzero()
