@@ -55,18 +55,10 @@ def get_basis(evaluation_points, span, degree, knots):
         right[:, j] = knots[span + j] - evaluation_points
         saved = th.zeros(num_evaluation_points, device=device)
         for r in range(j):
-            divisor = right[:, r + 1] + left[:, j - r]
-            tmp = th.empty_like(divisor)
-            nonzero_indices = divisor != 0
-            tmp[~nonzero_indices] = 0
-            tmp[nonzero_indices] = (
-                basis_values[nonzero_indices, r]
-                / divisor[nonzero_indices]
-            )
+            tmp = basis_values[:, r] / (right[:, r + 1] + left[:, j - r])
             basis_values[:, r] = saved + right[:, r + 1] * tmp
             saved = left[:, j - r] * tmp
         basis_values[:, j] = saved
-    basis_values[span == len(knots) - degree - 1, -1] = 1
     return basis_values
 
 
@@ -287,7 +279,6 @@ def evaluate_nurbs(
         knots,
 ):
     next_degree = degree + 1
-    num_control_points = len(control_points)
     assert control_points.shape[-1] == 2, \
         "please use another evaluation function for this NURBS' dimensionality"
     assert control_points.ndim == 2, \
@@ -296,14 +287,14 @@ def evaluate_nurbs(
         'control point weights must be greater than zero'
     assert (knots[:next_degree] == 0).all(), \
         f'first {next_degree} knots must be zero'
-    assert (knots[num_control_points] == 1).all(), \
+    assert (knots[len(control_points)] == 1).all(), \
         f'last {next_degree} knots must be one'
     assert (knots.sort().values == knots).all(), \
         'knots must be ordered monotonically increasing in value'
 
     projected = project_control_points(control_points, control_point_weights)
-    spans = find_span(evaluation_points, degree, num_control_points, knots)
-    spansmdeg = th.clamp(spans, max=num_control_points - 1) - degree
+    spans = find_span(evaluation_points, degree, len(control_points), knots)
+    spansmdeg = spans - degree
     basis_values = get_basis(evaluation_points, spans, degree, knots)
     Cw = th.zeros(
         (len(evaluation_points), projected.shape[-1]),
@@ -332,7 +323,7 @@ def calc_bspline_derivs(
         result[k] = 0
     span = find_span(evaluation_point, degree, num_control_points, knots)
     basis_derivs = calc_basis_derivs(evaluation_point, span, degree, knots, du)
-    spanmdeg = th.clamp(span, num_control_points) - degree
+    spanmdeg = span - degree
     for k in range(du + 1):
         result[k] = 0
         for j in range(next_degree):
@@ -713,14 +704,12 @@ def evaluate_nurbs_surface_at_spans(
         (num_evaluation_points, degree_y + 1, projected.shape[-1]),
         device=device,
     )
-    spansmdeg_x = th.clamp(spans_x, max=control_points.shape[0] - 1) - degree_x
-    spansmdeg_y = th.clamp(spans_y, max=control_points.shape[1] - 1) - degree_y
     for j in range(degree_y + 1):
         tmp[:, j] = 0
         for k in range(degree_x + 1):
             tmp[:, j] += (
                 basis_values_x[:, k].unsqueeze(-1)
-                * projected[spansmdeg_x + k, spansmdeg_y + j]
+                * projected[spans_x - degree_x + k, spans_y - degree_y + j]
             )
     Sw = th.zeros((num_evaluation_points, projected.shape[-1]), device=device)
     for j in range(degree_y + 1):
@@ -822,8 +811,8 @@ def calc_bspline_derivs_surface(
         (num_evaluation_points, next_degree_y, control_points.shape[-1]),
         device=device,
     )
-    spanmdegree_x = th.clamp(spans_x, max=num_control_points_x - 1) - degree_x
-    spanmdegree_y = th.clamp(spans_y, max=num_control_points_y - 1) - degree_y
+    spanmdegree_x = spans_x - degree_x
+    spanmdegree_y = spans_y - degree_y
     for k in range(du + 1):
         for s in range(next_degree_y):
             tmp[:, s] = 0
@@ -893,8 +882,8 @@ def calc_bspline_derivs_surface_slow(
         )
         for _ in range(next_degree_y)
     ]
-    spanmdegree_x = th.clamp(spans_x, max=num_control_points_x - 1) - degree_x
-    spanmdegree_y = th.clamp(spans_y, max=num_control_points_y - 1) - degree_y
+    spanmdegree_x = spans_x - degree_x
+    spanmdegree_y = spans_y - degree_y
     for k in range(du + 1):
         for s in range(next_degree_y):
             tmp[s] = th.zeros_like(tmp[s])
