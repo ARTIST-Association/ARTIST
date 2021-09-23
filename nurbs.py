@@ -20,15 +20,14 @@ def setup_nurbs(degree, num_control_points, device):
 
 
 def find_span(evaluation_points, degree, num_control_points, knots):
-    after_num_control_points = num_control_points + 1
     result = th.empty(
         len(evaluation_points),
         dtype=th.int64,
         device=knots.device,
     )
     not_upper_span_indices = \
-        evaluation_points != knots[after_num_control_points]
-    result[~not_upper_span_indices] = num_control_points
+        evaluation_points != knots[num_control_points]
+    result[~not_upper_span_indices] = num_control_points - 1
     spans = th.searchsorted(
         knots,
         evaluation_points[not_upper_span_indices],
