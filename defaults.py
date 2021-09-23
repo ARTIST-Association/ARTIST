@@ -38,8 +38,8 @@ _C.H.NURBS                              = CN()
 _C.H.NURBS.NORMAL_VECS                  = [0, 0, 1]
 _C.H.NURBS.WIDTH                        = 4 # in m
 _C.H.NURBS.HEIGHT                       = 4 # in m
-_C.H.NURBS.ROWS                         = 32
-_C.H.NURBS.COLS                         = 32
+_C.H.NURBS.ROWS                         = 8
+_C.H.NURBS.COLS                         = 8
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA33_Rim0_STRAL-Input.binp"
