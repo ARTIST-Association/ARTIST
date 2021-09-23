@@ -579,7 +579,7 @@ def _cartesian_linspace_around(
         minval_y = th.tensor(minval_y, dtype=dtype, device=device)
     if not isinstance(maxval_y, th.Tensor):
         maxval_y = th.tensor(maxval_y, dtype=dtype, device=device)
-    spline_max = 1 - nurbs.EPS
+    spline_max = 1
 
     minval_x = minval_x.clamp(0, spline_max)
     maxval_x = maxval_x.clamp(0, spline_max)

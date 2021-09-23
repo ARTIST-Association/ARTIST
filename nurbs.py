@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import torch as th
 
-EPS = 1e-7
-
 
 def setup_nurbs(degree, num_control_points, device):
     assert num_control_points > degree, \
@@ -1124,8 +1122,8 @@ def plot_surface(
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
-    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
-    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
     res = evaluate_nurbs_surface_flex(
@@ -1186,8 +1184,8 @@ def plot_surface_derivs(
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
-    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
-    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
     res = calc_derivs_surface(
@@ -1298,8 +1296,8 @@ def plot_surface_derivs_slow(
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
-    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
-    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
     res = calc_derivs_surface_slow(
@@ -1406,8 +1404,8 @@ def plot_surface_normals(
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
-    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
-    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
     res = evaluate_nurbs_surface_flex(
@@ -1488,8 +1486,8 @@ def plot_surface_normals_slow(
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
-    xs = th.hstack([xs, th.tensor(1 - EPS, device=device)])
-    ys = th.hstack([ys, th.tensor(1 - EPS, device=device)])
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
 
     eval_points = th.cartesian_prod(xs, ys)
     res, normals = calc_normals_and_surface_slow(
@@ -1565,7 +1563,7 @@ def get_inversion_start_values(
     evaluation_points_x = th.hstack([
         th.linspace(
             knots_x[span_x],
-            knots_x[span_x + 1] - EPS,
+            knots_x[span_x + 1],
             num_samples,
             device=device,
         )
@@ -1574,7 +1572,7 @@ def get_inversion_start_values(
     evaluation_points_y = th.hstack([
         th.linspace(
             knots_y[span_y],
-            knots_y[span_y + 1] - EPS,
+            knots_y[span_y + 1],
             num_samples,
             device=device,
         )
@@ -1622,7 +1620,7 @@ def invert_points(
         num_samples=8,
         norm_p=2,
         distance_tolerance=1e-5,
-        cosine_tolerance=EPS,
+        cosine_tolerance=1e-7,
 ):
     argmin_distances, min_distances = get_inversion_start_values(
         world_points,
@@ -1638,7 +1636,7 @@ def invert_points(
 
     # TODO We should handle differing x and y limits here.
     point_min = 0
-    point_max = 1 - EPS
+    point_max = 1
 
     derivs = calc_derivs_surface(
         argmin_distances[:, 0],
