@@ -1636,6 +1636,7 @@ def invert_points(
         norm_p=norm_p,
     )
 
+    # TODO We should handle differing x and y limits here.
     point_min = 0
     point_max = 1 - EPS
 
