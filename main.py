@@ -127,10 +127,10 @@ def main():
         sched = th.optim.lr_scheduler.OneCycleLR(
             opt,
             total_steps=cfg.TRAIN_PARAMS.EPOCHS,
-            max_lr=6e-6,
+            max_lr=6e-4,
             pct_start=0.1,
-            div_factor=1e4,
-            final_div_factor=1e6,
+            div_factor=1e6,
+            final_div_factor=1e4,
             # three_phase=True,
         )
     else:
