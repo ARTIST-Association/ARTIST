@@ -87,10 +87,10 @@ def ideal_heliostat(ideal_configs, device):
     row = th.arange(cfg.ROWS, device=device)
 
     h_x = (row/(cfg.ROWS-1) * cfg.HEIGHT) - (cfg.HEIGHT / 2)
-    h_x = th.tile(h_x, (cfg.ROWS,))
+    h_x = th.tile(h_x, (columns,))
     # heliostat y position
     h_y = (column/(columns-1) * cfg.WIDTH) - (cfg.WIDTH / 2)
-    h_y = th.tile(h_y.unsqueeze(-1), (1, columns)).ravel()
+    h_y = th.tile(h_y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
     h_z = th.zeros_like(h_x)
 
     h = th.hstack(list(map(
