@@ -81,16 +81,8 @@ def real_heliostat(real_configs, device):
 def ideal_heliostat(ideal_configs, device):
     """Return an ideally shaped heliostat lying flat on the ground."""
     cfg = ideal_configs
-    # points_on_hel   = rows*cols # reflection points on hel
-    points_on_hel = th.tensor(
-        cfg.ROWS * cfg.COLS,
-        dtype=th.float32,
-        device=device,
-    )
-    # target_hel_origin = define_heliostat(
-    #     cfg.HEIGHT, cfg.WIDTH, rows, points_on_hel, device)
 
-    columns = int(points_on_hel)//cfg.ROWS
+    columns = cfg.COLS
     column = th.arange(columns, device=device)
     row = th.arange(cfg.ROWS, device=device)
 
