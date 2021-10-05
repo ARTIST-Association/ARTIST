@@ -99,8 +99,6 @@ def main():
     # Plot and Save Stuff
     # ===================
     im = plt.imshow(target_bitmap.detach().cpu().numpy(), cmap='jet')
-    im.set_data(target_bitmap.detach().cpu().numpy())
-    im.autoscale()
     plt.savefig(os.path.join("images", "original.jpeg"))
     # plotter.plot_bitmap(target_bitmap)  # Target Bitmap Plot
 
