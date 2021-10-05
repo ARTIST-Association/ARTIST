@@ -122,15 +122,26 @@ def main():
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
-    sched = th.optim.lr_scheduler.OneCycleLR(
-        opt,
-        total_steps=cfg.TRAIN_PARAMS.EPOCHS,
-        max_lr=6e-4,
-        pct_start=0.1,
-        div_factor=1e6,
-        final_div_factor=1e4,
-    )
+    if cfg.USE_NURBS:
+        opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
+        sched = th.optim.lr_scheduler.OneCycleLR(
+            opt,
+            total_steps=cfg.TRAIN_PARAMS.EPOCHS,
+            max_lr=6e-6,
+            pct_start=0.1,
+            div_factor=1e4,
+            final_div_factor=1e6,
+            # three_phase=True,
+        )
+    else:
+        opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
+        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            factor=0.5,
+            min_lr=1e-12,
+            patience=10,
+            verbose=True,
+        )
 
     # loss = th.nn.functional.mse_loss()
     # def loss_func(pred, target, compute_intersections, rayPoints):
