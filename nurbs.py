@@ -1566,18 +1566,18 @@ def get_inversion_start_values(
             knots_x[span_x + 1],
             num_samples,
             device=device,
-        )
+        )[:-1]
         for span_x in start_spans_x[:-1]
-    ])
+    ] + [knots_x[start_spans_x[-1]]])
     evaluation_points_y = th.hstack([
         th.linspace(
             knots_y[span_y],
             knots_y[span_y + 1],
             num_samples,
             device=device,
-        )
+        )[:-1]
         for span_y in start_spans_y[:-1]
-    ])
+    ] + [knots_y[start_spans_y[-1]]])
     evaluation_points = th.cartesian_prod(
         evaluation_points_x, evaluation_points_y)
     del start_spans_x
