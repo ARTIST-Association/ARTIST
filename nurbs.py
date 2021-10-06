@@ -284,7 +284,7 @@ def evaluate_nurbs(
         'control point weights must be greater than zero'
     assert (knots[:next_degree] == 0).all(), \
         f'first {next_degree} knots must be zero'
-    assert (knots[len(control_points)] == 1).all(), \
+    assert (knots[len(control_points):] == 1).all(), \
         f'last {next_degree} knots must be one'
     assert (knots.sort().values == knots).all(), \
         'knots must be ordered monotonically increasing in value'
@@ -512,7 +512,7 @@ def calc_derivs(
 #     #     'control point weights must be greater than zero'
 #     # assert (knots[:degree + 1] == 0).all(), \
 #     #     f'first {degree + 1} knots must be zero'
-#     # assert (knots[len(control_points)] == 1).all(), \
+#     # assert (knots[len(control_points):] == 1).all(), \
 #     #     f'last {degree + 1} knots must be one'
 #     # assert (knots.sort().values == knots).all(), \
 #     #     'knots must be ordered monotonically increasing in value'
@@ -670,13 +670,13 @@ def check_nurbs_constraints(
         'control point weights must be greater than zero'
     assert (knots_x[:degree_x + 1] == 0).all(), \
         f'first {degree_x + 1} knots must be zero'
-    assert (knots_x[control_points.shape[0]] == 1).all(), \
+    assert (knots_x[control_points.shape[0]:] == 1).all(), \
         f'last {degree_x + 1} knots must be one'
     assert (knots_x.sort().values == knots_x).all(), \
         'knots must be ordered monotonically increasing in value'
     assert (knots_y[:degree_y + 1] == 0).all(), \
         f'first {degree_y + 1} knots must be zero'
-    assert (knots_y[control_points.shape[1]] == 1).all(), \
+    assert (knots_y[control_points.shape[1]:] == 1).all(), \
         f'last {degree_y + 1} knots must be one'
     assert (knots_y.sort().values == knots_y).all(), \
         'knots must be ordered monotonically increasing in value'
