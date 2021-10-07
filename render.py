@@ -293,7 +293,7 @@ class Renderer(object):
         self.H = Heliostat
         self.ENV = Environment
         # Evtl. in render jedesmal aufrufen
-        self.xi, self.yi = self.ENV.sun.sample()
+        self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
     def render(self):
         # TODO Max: use for reflection instead

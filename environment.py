@@ -22,12 +22,13 @@ class Sun_Distribution(object):
         if self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
 
-    def sample(self):
+    def sample(self, num_rays_on_hel):
         if self.dist_type == "Normal":
             distribution = th.distributions.MultivariateNormal(
                 self.mean, self.cov)
-            # TODO Überprüfen ob hier .T hin muss
-            xi, yi = distribution.sample((self.num_rays,)).T
+            xi, yi = distribution.sample(
+                (self.num_rays, num_rays_on_hel),
+            ).transpose(0, 1).T
             return xi, yi
 
 
