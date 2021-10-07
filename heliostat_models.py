@@ -80,34 +80,23 @@ def real_heliostat(real_configs, device):
 
 def ideal_heliostat(ideal_configs, device):
     """Return an ideally shaped heliostat lying flat on the ground."""
-        cfg = ideal_configs
-    rows = cfg.ROWS +1
-    columns = cfg.COLS +1 
-    
-    # points_on_hel   = rows*cols # reflection points on hel
-    points_on_hel = th.tensor(
-        rows * columns,
-        dtype=th.float32,
-        device=device,
-    )
-    # target_hel_origin = define_heliostat(
-    #     cfg.HEIGHT, cfg.WIDTH, rows, points_on_hel, device)
+    cfg = ideal_configs
 
-    columns = int(points_on_hel)//rows
-    column = th.arange(columns, device=device)
-    row = th.arange(rows, device=device)
+    columns = cfg.COLS
+    column = th.arange(columns + 1, device=device)
+    row = th.arange(cfg.ROWS + 1, device=device)
 
-    h_x = (row/(rows-1) * cfg.HEIGHT) - (cfg.HEIGHT / 2)
+    h_x = (row/cfg.ROWS * cfg.HEIGHT) - (cfg.HEIGHT / 2)
     # Use points at centers of grid squares.
     h_x = h_x[:-1] + (h_x[1:] - h_x[:-1]) / 2
     # As we lost a point in the step above, subtract one.
-    h_x = th.tile(h_x, (columns - 1,))
+    h_x = th.tile(h_x, (columns,))
     # heliostat y position
-    h_y = (column/(columns-1) * cfg.WIDTH) - (cfg.WIDTH / 2)
+    h_y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
     # Use points at centers of grid squares.
     h_y = h_y[:-1] + (h_y[1:] - h_y[:-1]) / 2
     # As we lost a point in the step above, subtract one.
-    h_y = th.tile(h_y.unsqueeze(-1), (1, rows - 1)).ravel()
+    h_y = th.tile(h_y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
     h_z = th.zeros_like(h_x)
 
     h = th.hstack(list(map(
