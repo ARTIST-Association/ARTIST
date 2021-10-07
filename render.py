@@ -46,7 +46,7 @@ def Ry(alpha, mat):
         rots_x.shape[1],
         -1,
     )
-    return th.matmul(rots, mat.transpose(0, -1))
+    return th.matmul(rots, mat)
 
 
 def Rz(alpha, mat):
@@ -148,7 +148,7 @@ def compute_receiver_intersections(
         inv_rot,
         Rz(
             yi,
-            Ry(xi, rotated_has)
+            Ry(xi, rotated_has.transpose(0, -1))
         ).transpose(0, -1)
     ).transpose(0, -1).transpose(1, -1)
 
