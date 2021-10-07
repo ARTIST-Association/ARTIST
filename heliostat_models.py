@@ -89,13 +89,11 @@ def ideal_heliostat(ideal_configs, device):
     h_x = (row/cfg.ROWS * cfg.HEIGHT) - (cfg.HEIGHT / 2)
     # Use points at centers of grid squares.
     h_x = h_x[:-1] + (h_x[1:] - h_x[:-1]) / 2
-    # As we lost a point in the step above, subtract one.
     h_x = th.tile(h_x, (columns,))
     # heliostat y position
     h_y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
     # Use points at centers of grid squares.
     h_y = h_y[:-1] + (h_y[1:] - h_y[:-1]) / 2
-    # As we lost a point in the step above, subtract one.
     h_y = th.tile(h_y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
     h_z = th.zeros_like(h_x)
 
