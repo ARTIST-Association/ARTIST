@@ -5,23 +5,10 @@ def Rx(alpha, mat):
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
-    rots_x = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [th.ones_like(alpha), zeros, zeros]
-    )))
-    rots_y = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [zeros, coss, -sins],
-    )))
-    rots_z = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [zeros, sins, coss],
-    )))
-    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
-        rots_x.shape[0],
-        rots_x.shape[1],
-        -1,
-    )
+    rots_x = th.stack([th.ones_like(alpha), zeros, zeros], -1)
+    rots_y = th.stack([zeros, coss, -sins], -1)
+    rots_z = th.stack([zeros, sins, coss], -1)
+    rots = th.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
     return th.matmul(rots, mat)
 
 
@@ -29,23 +16,10 @@ def Ry(alpha, mat):
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
-    rots_x = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [coss, zeros, sins],
-    )))
-    rots_y = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [zeros, th.ones_like(alpha), zeros],
-    )))
-    rots_z = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [-sins, zeros, coss],
-    )))
-    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
-        rots_x.shape[0],
-        rots_x.shape[1],
-        -1,
-    )
+    rots_x = th.stack([coss, zeros, sins], -1)
+    rots_y = th.stack([zeros, th.ones_like(alpha), zeros], -1)
+    rots_z = th.stack([-sins, zeros, coss], -1)
+    rots = th.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
     return th.matmul(rots, mat)
 
 
@@ -53,23 +27,10 @@ def Rz(alpha, mat):
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
-    rots_x = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [coss, -sins, zeros],
-    )))
-    rots_y = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [sins, coss, zeros],
-    )))
-    rots_z = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
-        [zeros, zeros, th.ones_like(alpha)],
-    )))
-    rots = th.hstack([rots_x, rots_y, rots_z]).reshape(
-        rots_x.shape[0],
-        rots_x.shape[1],
-        -1,
-    )
+    rots_x = th.stack([coss, -sins, zeros], -1)
+    rots_y = th.stack([sins, coss, zeros], -1)
+    rots_z = th.stack([zeros, zeros, th.ones_like(alpha)], -1)
+    rots = th.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
     return th.matmul(rots, mat)
 
 
@@ -145,8 +106,8 @@ def compute_receiver_intersections(
     rotated_has = th.matmul(rotates, has.unsqueeze(-1))
 
     # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-    rot_y = Ry(xi, rotated_has.transpose(0, -1))
-    rot_z = Rz(yi, rot_y).transpose(0, -1)
+    rot_y = Ry(xi, rotated_has)
+    rot_z = Rz(yi, rot_y).transpose(0, -1).squeeze(0)
     rays = th.matmul(inv_rot, rot_z).transpose(0, -1).transpose(1, -1)
 
     # rays = rays.to(th.float32)
