@@ -143,14 +143,11 @@ def compute_receiver_intersections(
     # rays_tmp: first rotate aimpoint in right coord system,
     # apply xi, yi distortion, rotate back
     rotated_has = th.matmul(rotates, has.unsqueeze(-1))
+
     # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-    rays = th.matmul(
-        inv_rot,
-        Rz(
-            yi,
-            Ry(xi, rotated_has.transpose(0, -1))
-        ).transpose(0, -1)
-    ).transpose(0, -1).transpose(1, -1)
+    rot_y = Ry(xi, rotated_has.transpose(0, -1))
+    rot_z = Rz(yi, rot_y).transpose(0, -1)
+    rays = th.matmul(inv_rot, rot_z).transpose(0, -1).transpose(1, -1)
 
     # rays = rays.to(th.float32)
 
