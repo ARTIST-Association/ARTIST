@@ -195,7 +195,10 @@ def main():
         #         break
 
         opt.step()
-        sched.step()
+        if cfg.USE_NURBS:
+            sched.step()
+        else:
+            sched.step(loss)
         H.align_reverse()
         # if epoch % 1 == 0:
         #     num_missed = indices.numel() - indices.count_nonzero()
