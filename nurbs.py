@@ -1738,9 +1738,9 @@ def invert_points(
             nth_deriv=2,
         )
 
-        surface_point = derivs[:, 0, 0]
+        surface_points = derivs[:, 0, 0]
 
-        point_difference = surface_point - world_points
+        point_difference = surface_points - world_points
         prev_min_distances = min_distances
         min_distances = th.linalg.norm(
             point_difference,
