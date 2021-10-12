@@ -112,8 +112,119 @@ def ideal_heliostat(ideal_configs, device):
     return h, h_normal_vectors, params
 
 
-def other_objects():  # For later
-    return None
+def other_objects(config, device):  # Read Wavefront OBJ files.
+    name = None
+    vertices = []
+    weights = []
+    face_indices = []
+    with open(config.FILENAME, 'r') as obj_file:
+        for line in obj_file:
+            contents = line.split()
+
+            if not contents:
+                continue
+            elif contents[0] == 'v':
+                vertices.append(th.tensor(
+                    list(map(float, contents[1:4])),
+                    dtype=th.float32,
+                    device=device,
+                ))
+                weights.append(
+                    th.tensor(
+                        float(contents[4]),
+                        dtype=th.float32,
+                        device=device,
+                    )
+                    if len(contents) > 4
+                    else th.ones((0,), device=device)
+                )
+            elif contents[0] == 'f':
+                if len(contents) > 4:
+                    raise ValueError('can only load triangular faces')
+                # face_indices.append(list(map(
+                #     lambda x: int(x) - 1,
+                #     contents[1:4],
+                # )))
+                indices = th.tensor(
+                    list(map(
+                        lambda x: int(x),
+                        contents[1:4],
+                    )),
+                    dtype=th.long,
+                    device=device,
+                )
+                indices -= 1
+                assert indices.unique().numel() == indices.numel()
+                face_indices.append(indices)
+            elif contents[0] == 'o':
+                if name is not None:
+                    raise ValueError(
+                        f'found multiple objects in {config.FILENAME}; '
+                        f'this is not supported'
+                    )
+                name = contents[1]
+
+    use_weighted_avg = config.USE_WEIGHTED_AVG
+
+    vertices = th.stack(vertices)
+    if use_weighted_avg:
+        adjacent_surface_normals = [[] for i in range(len(vertices))]
+        face_areas = [[] for i in range(len(vertices))]
+    else:
+        vertex_normals = th.zeros_like(vertices)
+        num_adjacent_faces = th.zeros(
+            vertices.shape[:-1] + (1,),
+            device=device,
+        )
+
+    # face_centers = []
+    # face_normals = []
+
+    for triangle_indices in face_indices:
+        a, b, c = vertices[triangle_indices]
+
+        bma = b - a
+        cma = c - a
+        normal = th.cross(bma, cma)
+        magnitude = normal.norm()
+        normal /= magnitude
+        # face_centers.append(a + bma / 2 + cma / 2)
+        # face_normals.append(normal)
+
+        if use_weighted_avg:
+            for i in triangle_indices:
+                adjacent_surface_normals[i].append(normal)
+                area = magnitude / 2
+                face_areas[i].append(area)
+        else:
+            vertex_normals[triangle_indices] += normal
+            num_adjacent_faces[triangle_indices] += 1
+    # import plotter
+    # plotter.plot_heliostat(th.stack(face_centers), th.stack(face_normals))
+
+    if use_weighted_avg:
+        vertex_normals = th.empty_like(vertices)
+        for (i, (normals, areas)) in enumerate(zip(
+                adjacent_surface_normals,
+                face_areas,
+        )):
+            normals = th.stack(normals)
+            areas = th.stack(areas).unsqueeze(-1)
+            weighted_avg = (normals * areas).sum(0) / areas.sum()
+            vertex_normals[i] = weighted_avg
+    else:
+        vertex_normals /= num_adjacent_faces
+
+    vertex_normals /= vertex_normals.norm()
+
+    # FIXME Remove when `cfg.POSITION_ON_FIELD` is fixed.
+    # Manually center the vertices as `cfg.POSITION_ON_FIELD` does not
+    # work.
+    vertices[:, 0] -= vertices[:, 0].min() / 2
+    vertices[:, 1] -= vertices[:, 1].max() / 2
+
+    # plotter.plot_heliostat(vertices, vertex_normals)
+    return vertices, vertex_normals, {'name': name}
 
 
 # Heliostat-specific functions
