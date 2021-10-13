@@ -249,7 +249,7 @@ def calc_basis_derivs_slow(
                     (a[s1][j] - a[s1][j - 1])
                     / ndu[pk + 1][rk + j]
                 )
-                d += a[s2, j] * ndu[rk + j][pk]
+                d += a[s2][j] * ndu[rk + j][pk]
             if r <= pk:
                 a[s2][k] = -a[s1][k - 1] / ndu[pk + 1][r]
                 d += a[s2][k] * ndu[r][pk]
