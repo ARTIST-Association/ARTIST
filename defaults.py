@@ -34,6 +34,14 @@ _C.H.IDEAL.HEIGHT                       = 4 # in m
 _C.H.IDEAL.ROWS                         = 32
 _C.H.IDEAL.COLS                         = 32
 
+_C.H.FUNCTION                           = CN()
+_C.H.FUNCTION.WIDTH                     = 4 # in m
+_C.H.FUNCTION.HEIGHT                    = 4 # in m
+_C.H.FUNCTION.ROWS                      = 64
+_C.H.FUNCTION.COLS                      = 64
+_C.H.FUNCTION.NAME                      = "sin"
+_C.H.FUNCTION.REDUCTION_FACTOR          = 1000
+
 _C.H.NURBS                              = CN()
 _C.H.NURBS.NORMAL_VECS                  = [0, 0, 1]
 _C.H.NURBS.WIDTH                        = 4 # in m
