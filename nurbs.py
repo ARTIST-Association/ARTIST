@@ -1700,7 +1700,7 @@ def invert_points(
             th.hstack([
                 both_dir_dot,
                 (
-                    th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
+                    th.linalg.norm(Sv, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
                     + batch_dot(point_difference, derivs[:, 0, 2])
                 ),
             ]),
