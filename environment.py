@@ -20,7 +20,7 @@ class Sun_Distribution(object):
                 device=device,
             )
 
-        if self.dist_type == "Pillbox":
+        elif self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
 
     def sample(self, num_rays_on_hel):
