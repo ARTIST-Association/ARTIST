@@ -129,15 +129,13 @@ def main():
     R = Renderer(H, ENV)
 
     if cfg.USE_NURBS:
-        opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
-        sched = th.optim.lr_scheduler.OneCycleLR(
+        opt = th.optim.Adam(H.setup_params(), lr=3e-6, weight_decay=0.1)
+        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
-            total_steps=cfg.TRAIN_PARAMS.EPOCHS,
-            max_lr=6e-4,
-            pct_start=0.1,
-            div_factor=1e6,
-            final_div_factor=1e4,
-            # three_phase=True,
+            factor=0.5,
+            min_lr=1e-12,
+            patience=10,
+            verbose=True,
         )
     else:
         opt = th.optim.Adam(H.setup_params(), lr=3e-4, weight_decay=0.1)
@@ -204,7 +202,7 @@ def main():
 
         opt.step()
         if cfg.USE_NURBS:
-            sched.step()
+            sched.step(loss)
         else:
             sched.step(loss)
         H.align_reverse()
