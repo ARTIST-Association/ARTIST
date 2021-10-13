@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 import torch as th
 
 
+class NoConvergenceError(RuntimeError):
+    pass
+
+
 def setup_nurbs(degree, num_control_points, device):
     assert num_control_points > degree, \
         f'need at least {degree + 1} control points'
@@ -1619,6 +1623,7 @@ def invert_points(
         knots_y,
         num_samples=8,
         norm_p=2,
+        max_iters=100,
         distance_tolerance=1e-5,
         cosine_tolerance=1e-7,
 ):
@@ -1654,7 +1659,7 @@ def invert_points(
 
     point_difference = surface_points - world_points
 
-    while True:
+    for i in range(max_iters):
         Su = derivs[:, 1, 0]
         Sv = derivs[:, 0, 1]
 
@@ -1783,6 +1788,12 @@ def invert_points(
         ).all()
         if have_insignificant_change:
             break
+    else:
+        raise NoConvergenceError(
+            f'not all point inversions converged; '
+            f'try to increase `num_samples`, `max_iters`, '
+            f'`distance_tolerance`, or `cosine_tolerance`'
+        )
     return argmin_distances, min_distances
 
 
