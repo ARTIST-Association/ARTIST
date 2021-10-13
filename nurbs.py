@@ -1756,26 +1756,11 @@ def invert_points(
         surface_points = derivs[:, 0, 0]
 
         point_difference = surface_points - world_points
-        prev_min_distances = min_distances
         min_distances = th.linalg.norm(
             point_difference,
             ord=norm_p,
             dim=-1,
         )
-
-        error_indices = min_distances > prev_min_distances
-        argmin_distances = th.where(
-            error_indices.unsqueeze(-1),
-            prev_argmin_distances,
-            argmin_distances,
-        )
-        min_distances = th.where(
-            error_indices, prev_min_distances, min_distances)
-        if error_indices.all():
-            # FIXME why does this happen?
-            argmin_distances = prev_argmin_distances
-            min_distances = prev_min_distances
-            break
 
         insignificant_change_indices = th.linalg.norm(
             (
