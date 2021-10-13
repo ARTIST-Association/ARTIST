@@ -100,10 +100,10 @@ def ideal_heliostat(ideal_configs, device):
     h_y = th.tile(h_y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
     h_z = th.zeros_like(h_x)
 
-    h = th.hstack(list(map(
-        lambda t: t.unsqueeze(-1),
+    h = th.stack(
         [h_x, h_y, h_z],
-    ))).reshape(len(h_x), -1)
+        -1,
+    ).reshape(len(h_x), -1)
 
     normal_vector_direction = th.tensor(
         [0, 0, 1],
