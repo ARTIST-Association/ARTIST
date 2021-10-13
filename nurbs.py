@@ -399,8 +399,10 @@ def calc_derivs(
         knots,
         nth_deriv=1,
 ):
+    dtype = control_points.dtype
     device = control_points.device
     next_nth_deriv = nth_deriv + 1
+
     projected = project_control_points(control_points, control_point_weights)
     Cwders = calc_bspline_derivs(
         evaluation_point, degree, projected, knots, nth_deriv)
@@ -410,7 +412,11 @@ def calc_derivs(
     for k in th.arange(next_nth_deriv, device=device):
         v = Aders[k]
         for i in th.arange(1, k + 1, device=device):
-            v -= th.binomial(k.float(), i.float()) * wders[i] * result[k - i]
+            v -= (
+                th.binomial(k.to(dtype), i.to(dtype))
+                * wders[i]
+                * result[k - i]
+            )
         result[k] = v / wders[0]
     return result
 
@@ -931,8 +937,10 @@ def calc_derivs_surface(
         knots_y,
     )
 
+    dtype = control_points.dtype
     device = control_points.device
     next_nth_deriv = nth_deriv + 1
+
     projected = project_control_points(control_points, control_point_weights)
     Swders = calc_bspline_derivs_surface(
         evaluation_points_x,
@@ -952,24 +960,24 @@ def calc_derivs_surface(
             vs = Aders[:, k, m]
             for j in th.arange(1, m + 1, device=device):
                 vs -= (
-                    th.binomial(m.float(), j.float())
+                    th.binomial(m.to(dtype), j.to(dtype))
                     * wders[:, 0, j].unsqueeze(-1)
                     * result[:, k, m - j]
                 )
             for i in th.arange(1, k + 1, device=device):
                 vs -= (
-                    th.binomial(k.float(), i.float())
+                    th.binomial(k.to(dtype), i.to(dtype))
                     * wders[:, i, 0].unsqueeze(-1)
                     * result[:, k - i, m]
                 )
                 vs2 = th.zeros_like(vs)
                 for j in th.arange(1, m + 1, device=device):
                     vs2 += (
-                        th.binomial(m.float(), j.float())
+                        th.binomial(m.to(dtype), j.to(dtype))
                         * wders[:, i, j].unsqueeze(-1)
                         * result[:, k - i, m - j]
                     )
-                vs -= th.binomial(k.float(), i.float()) * vs2
+                vs -= th.binomial(k.to(dtype), i.to(dtype)) * vs2
             result[:, k, m] = vs / wders[:, 0, 0].unsqueeze(-1)
     return result
 
@@ -985,8 +993,10 @@ def calc_derivs_surface_slow(
         knots_y,
         nth_deriv=1,
 ):
+    dtype = control_points.dtype
     device = control_points.device
     next_nth_deriv = nth_deriv + 1
+
     projected = project_control_points(control_points, control_point_weights)
     Swders = calc_bspline_derivs_surface_slow(
         evaluation_points_x,
@@ -1012,24 +1022,24 @@ def calc_derivs_surface_slow(
             vs = Aders[:, k, m]
             for j in th.arange(1, m + 1, device=device):
                 vs = vs - (
-                    th.binomial(m.float(), j.float())
+                    th.binomial(m.to(dtype), j.to(dtype))
                     * wders[:, 0, j].unsqueeze(-1)
                     * result[k][m - j]
                 )
             for i in th.arange(1, k + 1, device=device):
                 vs = vs - (
-                    th.binomial(k.float(), i.float())
+                    th.binomial(k.to(dtype), i.to(dtype))
                     * wders[:, i, 0].unsqueeze(-1)
                     * result[k - i][m]
                 )
                 vs2 = th.zeros_like(vs)
                 for j in th.arange(1, m + 1, device=device):
                     vs2 += (
-                        th.binomial(m.float(), j.float())
+                        th.binomial(m.to(dtype), j.to(dtype))
                         * wders[:, i, j].unsqueeze(-1)
                         * result[k - i][m - j]
                     )
-                vs = vs - th.binomial(k.float(), i.float()) * vs2
+                vs = vs - th.binomial(k.to(dtype), i.to(dtype)) * vs2
             result[k][m] = vs / wders[:, 0, 0].unsqueeze(-1)
     return result
 

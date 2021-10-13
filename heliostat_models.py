@@ -21,6 +21,7 @@ def reflect_rays(rays, normals):
 def real_heliostat(real_configs, device):
     """Return a heliostat loaded from deflectometric data."""
     cfg = real_configs
+    dtype = th.get_default_dtype()
     concentratorHeader_struct_len = struct.calcsize(
         cfg.CONCENTRATORHEADER_STRUCT_FMT)
     facetHeader_struct_len = struct.calcsize(cfg.FACETHEADER_STRUCT_FMT)
@@ -68,10 +69,12 @@ def real_heliostat(real_configs, device):
 
         h_normal_vecs = th.tensor(
             directions[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
+            dtype=dtype,
             device=device,
         )
         h = th.tensor(
             positions[0::int(len(positions)/cfg.TAKE_N_VECTORS)],
+            dtype=dtype,
             device=device,
         )
         params = {"width_height": width_height}
@@ -104,7 +107,7 @@ def ideal_heliostat(ideal_configs, device):
 
     normal_vector_direction = th.tensor(
         [0, 0, 1],
-        dtype=th.float32,
+        dtype=th.get_default_dtype(),
         device=device,
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
@@ -113,6 +116,7 @@ def ideal_heliostat(ideal_configs, device):
 
 
 def other_objects(config, device):  # Read Wavefront OBJ files.
+    dtype = th.get_default_dtype()
     name = None
     vertices = []
     weights = []
@@ -126,13 +130,13 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
             elif contents[0] == 'v':
                 vertices.append(th.tensor(
                     list(map(float, contents[1:4])),
-                    dtype=th.float32,
+                    dtype=dtype,
                     device=device,
                 ))
                 weights.append(
                     th.tensor(
                         float(contents[4]),
-                        dtype=th.float32,
+                        dtype=dtype,
                         device=device,
                     )
                     if len(contents) > 4
@@ -236,7 +240,7 @@ def rotate(h, hel_coordsystem, clockwise):
     ele_degrees = 270-euler[2]
 
     ele_radians = th.deg2rad(ele_degrees)
-    ele_axis = th.tensor([0, 1, 0], dtype=th.float32, device=h.device)
+    ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
     ele_vector = ele_radians * ele_axis
     if not clockwise:
         ele_vector = -ele_vector
@@ -245,7 +249,7 @@ def rotate(h, hel_coordsystem, clockwise):
     # TODO Max: re-add ax-offsets
     azi_degrees = euler[1]-90
     azi_radians = th.deg2rad(azi_degrees)
-    azi_axis = th.tensor([0, 0, 1], dtype=th.float32, device=h.device)
+    azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
     azi_vector = azi_radians * azi_axis
     if not clockwise:
         azi_vector = -azi_vector
@@ -272,7 +276,11 @@ def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
     z = pSun + z
     z = z/th.linalg.norm(z)
 
-    x = th.tensor([z[1], -z[0], 0], dtype=th.float32, device=Position.device)
+    x = th.tensor(
+        [z[1], -z[0], 0],
+        dtype=Position.dtype,
+        device=Position.device,
+    )
     x = x/th.linalg.norm(x)
     y = th.cross(z, x)
 
@@ -285,7 +293,10 @@ class Heliostat(object):
         self.device = device
 
         self.position_on_field = th.tensor(
-            self.cfg.POSITION_ON_FIELD, dtype=th.float32, device=self.device)
+            self.cfg.POSITION_ON_FIELD,
+            dtype=th.get_default_dtype(),
+            device=self.device,
+        )
 
         self.state = None
         self.from_sun = None

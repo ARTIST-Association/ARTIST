@@ -234,7 +234,7 @@ def sample_bitmap(
     # Flux density map for heliostat field
     total_bitmap = th.zeros(
         [bitmap_height, bitmap_width],
-        dtype=th.float32,
+        dtype=dx_ints.dtype,
         device=dx_ints.device,
     )
     # Add up all distributed intensities in the corresponding indices.

@@ -569,8 +569,10 @@ def _cartesian_linspace_around(
         maxval_y,
         num_y,
         device,
-        dtype=th.float32,
+        dtype=None,
 ):
+    if dtype is None:
+        dtype = th.get_default_dtype()
     if not isinstance(minval_x, th.Tensor):
         minval_x = th.tensor(minval_x, dtype=dtype, device=device)
     if not isinstance(maxval_x, th.Tensor):

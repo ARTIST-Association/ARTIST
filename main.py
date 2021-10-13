@@ -57,7 +57,11 @@ def main():
     ENV = Environment(cfg.AC, device)
     target_save_data = (
         H.position_on_field,
-        th.tensor(H.cfg.IDEAL.NORMAL_VECS, dtype=th.float32, device=device),
+        th.tensor(
+            H.cfg.IDEAL.NORMAL_VECS,
+            dtype=th.get_default_dtype(),
+            device=device,
+        ),
         H.discrete_points,
         H.normals,
         None,  # TODO
@@ -68,7 +72,11 @@ def main():
         ENV.receiver_plane_normal,
         None,  # TODO
 
-        th.tensor(ENV.cfg.SUN.ORIGIN, dtype=th.float32, device=device),
+        th.tensor(
+            ENV.cfg.SUN.ORIGIN,
+            dtype=th.get_default_dtype(),
+            device=device,
+        ),
         ENV.sun.num_rays,
         ENV.sun.mean,
         ENV.sun.cov,

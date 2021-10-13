@@ -6,16 +6,17 @@ class Sun_Distribution(object):
         self.dist_type = sun_configs.DISTRIBUTION
         self.num_rays = sun_configs.GENERATE_N_RAYS
 
+        dtype = th.get_default_dtype()
         if self.dist_type == "Normal":
             self.cfg = sun_configs.NORMAL_DIST
             self.mean = th.tensor(
                 self.cfg.MEAN,
-                dtype=th.float32,
+                dtype=dtype,
                 device=device,
             )
             self.cov = th.tensor(
                 self.cfg.COV,
-                dtype=th.float32,
+                dtype=dtype,
                 device=device,
             )
 
@@ -35,15 +36,16 @@ class Sun_Distribution(object):
 class Environment(object):
     def __init__(self, ambient_conditions_config, device):
         self.cfg = ambient_conditions_config
+        dtype = th.get_default_dtype()
 
         self.receiver_center = th.tensor(
             self.cfg.RECEIVER.CENTER,
-            dtype=th.float32,
+            dtype=dtype,
             device=device,
         )
         self.receiver_plane_normal = th.tensor(
             self.cfg.RECEIVER.PLANE_NORMAL,
-            dtype=th.float32,
+            dtype=dtype,
             device=device,
         )
         self.receiver_plane_x = self.cfg.RECEIVER.PLANE_X
@@ -53,7 +55,7 @@ class Environment(object):
 
         sun_origin = th.tensor(
             self.cfg.SUN.ORIGIN,
-            dtype=th.float32,
+            dtype=dtype,
             device=device,
         )
         self.sun_origin = sun_origin / th.linalg.norm(sun_origin)

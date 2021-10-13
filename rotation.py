@@ -181,7 +181,7 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
         [1, 0, 0],
         [0, cl, sl],
         [0, -sl, cl],
-    ], dtype=th.float32, device=mat.device)
+    ], dtype=mat.dtype, device=mat.device)
 
     angles = th.empty(num_rots, 3, device=mat.device)
     eps = 1e-7
