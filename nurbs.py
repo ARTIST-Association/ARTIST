@@ -1684,7 +1684,10 @@ def invert_points(
         if points_coincide and have_zero_cosine:
             break
 
-        both_dir_dot = batch_dot(point_difference, derivs[:, 1, 1])
+        both_dir_dot = (
+            batch_dot(Su, Sv)
+            + batch_dot(point_difference, derivs[:, 1, 1])
+        )
 
         J = th.stack([
             th.hstack([
@@ -1692,10 +1695,10 @@ def invert_points(
                     th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
                     + batch_dot(point_difference, derivs[:, 2, 0])
                 ),
-                batch_dot(Su, Sv) + both_dir_dot,
+                both_dir_dot,
             ]),
             th.hstack([
-                batch_dot(Su, Sv) + both_dir_dot,
+                both_dir_dot,
                 (
                     th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
                     + batch_dot(point_difference, derivs[:, 0, 2])
