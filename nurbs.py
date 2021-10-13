@@ -1658,35 +1658,37 @@ def invert_points(
     surface_points = derivs[:, 0, 0]
 
     point_difference = surface_points - world_points
+    no_change_indices = th.zeros_like(min_distances, dtype=th.bool)
 
     for i in range(max_iters):
         Su = derivs[:, 1, 0]
         Sv = derivs[:, 0, 1]
 
-        points_coincide = (min_distances <= distance_tolerance).all()
-        have_zero_cosine = (
+        points_coincide_indices = min_distances <= distance_tolerance
+        no_change_indices = no_change_indices | points_coincide_indices
+
+        zero_cosine_indices = (
             (
-                (
-                    th.linalg.norm(
-                        batch_dot(Su, point_difference),
-                        ord=norm_p,
-                        dim=-1,
-                    )
-                    / (th.linalg.norm(Su, ord=norm_p, dim=-1) * min_distances)
-                ) <= cosine_tolerance
-            ).all()
-            or (
-                (
-                    th.linalg.norm(
-                        batch_dot(Sv, point_difference),
-                        ord=norm_p,
-                        dim=-1,
-                    )
-                    / (th.linalg.norm(Sv, ord=norm_p, dim=-1) * min_distances)
-                ) <= cosine_tolerance
-            ).all()
+                th.linalg.norm(
+                    batch_dot(Su, point_difference),
+                    ord=norm_p,
+                    dim=-1,
+                )
+                / (th.linalg.norm(Su, ord=norm_p, dim=-1) * min_distances)
+            ) <= cosine_tolerance
+        ) & (
+            (
+                th.linalg.norm(
+                    batch_dot(Sv, point_difference),
+                    ord=norm_p,
+                    dim=-1,
+                )
+                / (th.linalg.norm(Sv, ord=norm_p, dim=-1) * min_distances)
+            ) <= cosine_tolerance
         )
-        if points_coincide and have_zero_cosine:
+        no_change_indices = no_change_indices | zero_cosine_indices
+
+        if points_coincide_indices.all() and zero_cosine_indices.all():
             break
 
         both_dir_dot = (
@@ -1717,10 +1719,15 @@ def invert_points(
 
         delta = th.linalg.solve(J, kappa)
 
-        prev_argmin_distances = argmin_distances
-        argmin_distances = delta + prev_argmin_distances
+        prev_argmin_distances = argmin_distances.clone()
+        change_indices = ~no_change_indices
+        argmin_distances[change_indices] = (
+            delta[change_indices]
+            + prev_argmin_distances[change_indices]
+        )
 
-        argmin_distances = argmin_distances.clamp(point_min, point_max)
+        argmin_distances[change_indices] = \
+            argmin_distances[change_indices].clamp(point_min, point_max)
 
         # TODO We always assume non-closed surfaces.
         # argmin_distance_x = argmin_distance[:, 0]
@@ -1770,27 +1777,29 @@ def invert_points(
             min_distances = prev_min_distances
             break
 
-        have_insignificant_change = (
-            th.linalg.norm(
+        insignificant_change_indices = th.linalg.norm(
+            (
                 (
-                    (
-                        argmin_distances[:, 0]
-                        - prev_argmin_distances[:, 0]
-                    ).unsqueeze(-1) * Su
-                    + (
-                        argmin_distances[:, 1]
-                        - prev_argmin_distances[:, 1]
-                    ).unsqueeze(-1) * Sv
-                ),
-                ord=norm_p,
-                dim=-1,
-            ) <= distance_tolerance
-        ).all()
-        if have_insignificant_change:
+                    argmin_distances[:, 0]
+                    - prev_argmin_distances[:, 0]
+                ).unsqueeze(-1) * Su
+                + (
+                    argmin_distances[:, 1]
+                    - prev_argmin_distances[:, 1]
+                ).unsqueeze(-1) * Sv
+            ),
+            ord=norm_p,
+            dim=-1,
+        ) <= distance_tolerance
+        no_change_indices = no_change_indices | insignificant_change_indices
+        if no_change_indices.all():
             break
     else:
+        # We recalculate here in order to handle `max_iters == 0`.
+        change_indices = ~no_change_indices
+        num_unconverged = change_indices.count_nonzero()
         raise NoConvergenceError(
-            f'not all point inversions converged; '
+            f'convergence failed for {num_unconverged} points; '
             f'try to increase `num_samples`, `max_iters`, '
             f'`distance_tolerance`, or `cosine_tolerance`'
         )
