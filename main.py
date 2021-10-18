@@ -173,7 +173,7 @@ def main():
     epochs = cfg.TRAIN_PARAMS.EPOCHS
     epoch_shift_width = len(str(epochs))
     for epoch in range(epochs):
-        opt.zero_grad()
+        opt.zero_grad(set_to_none=True)
         loss = 0
         H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         # print(ray_directions)
