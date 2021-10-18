@@ -261,3 +261,44 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             'nurbs_config': self.nurbs_cfg,
         }
         return data
+
+    @classmethod
+    def from_dict(
+            cls,
+            data,
+            device,
+            config=None,
+            nurbs_config=None,
+            # Wether to disregard what standard initialization did and
+            # load all data we have.
+            restore_strictly=False,
+    ):
+        if config is None:
+            config = data['config']
+        if nurbs_config is None:
+            nurbs_config = data['nurbs_config']
+        self = cls(config, nurbs_config, device)
+        self._from_dict(data, restore_strictly)
+        return self
+
+    def _from_dict(self, data, restore_strictly):
+        # Keep normals from standard initialization here.
+        normals_orig = self._normals_orig
+        super()._from_dict(self, data, restore_strictly)
+        self._normals_orig = normals_orig
+
+        self.degree_x = data['degree_x']
+        self.degree_y = data['degree_y']
+        ctrl_points = data['control_points']
+        self.ctrl_points_xy = ctrl_points[:, :, :-1]
+        self.ctrl_points_z = ctrl_points[:, :, -1:]
+        self.ctrl_weights = data['control_point_weights']
+        self.knots_x = data['knots_x']
+        self.knots_y = data['knots_y']
+
+        if restore_strictly:
+            self._eval_points = data['evaluation_points']
+            self._orig_world_points = data['original_world_points']
+            self._normals_orig = data['_heliostat_normals']
+        else:
+            self.initialize_eval_points()

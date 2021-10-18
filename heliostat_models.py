@@ -467,3 +467,18 @@ class Heliostat(object):
             'config': self.cfg,
             'params': self.params,
         }
+
+    @classmethod
+    def from_dict(cls, data, device, config=None, restore_strictly=True):
+        if config is None:
+            config = data['config']
+        self = cls(config, device)
+        self._from_dict(data, restore_strictly)
+        return self
+
+    def _from_dict(self, data, restore_strictly):
+        self._normals_orig = data['heliostat_normals']
+
+        if restore_strictly:
+            self._discrete_points_orig = data['heliostat_points']
+            self.params = data['params']
