@@ -83,51 +83,56 @@ def real_heliostat(real_configs, device):
 
 def heliostat_by_function(heliostat_function_cfg, device):
     cfg = heliostat_function_cfg
-    
-    width = cfg.WIDTH/2
-    height = cfg.HEIGHT/2
+
+    width = cfg.WIDTH / 2
+    height = cfg.HEIGHT / 2
     X = th.linspace(-width, width, cfg.ROWS)
     Y = th.linspace(-height, height, cfg.COLS)
-    
+
     X, Y = th.meshgrid(X, Y)
     # Z = np.zeros_like(X)
     reduction = cfg.REDUCTION_FACTOR
     if cfg.NAME == "sin":
-        Z = th.sin(X+Y)/reduction# + np.cos(Y)
+        Z = th.sin(X + Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
-        Z = th.sin(X)/reduction + th.cos(Y)/reduction
+        Z = th.sin(X) / reduction + th.cos(Y) / reduction
     else:
-        raise Exception("Z-Function not implemented in heliostat_models.py")
-    
-    stacked = th.stack((X,Y,Z)).T
-    
+        raise ValueError("Z-Function not implemented in heliostat_models.py")
+
+    stacked = th.stack((X, Y, Z)).T
+
     normal_vecs = th.zeros_like(stacked)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i,j],Y[i,j],Z[i,j]])#.squeeze(0)
-                next_row_vec = th.tensor([X[i,j+1],Y[i,j+1],Z[i,j+1]])#.squeeze(0)
-                next_col_vec = th.tensor([X[i+1,j],Y[i+1,j],Z[i+1,j]])#.squeeze(0)
-            except:
-                origin = th.tensor([X[i,j],Y[i,j],Z[i,j]])#.squeeze(0)
-                next_row_vec = th.tensor([X[i,j-1],Y[i,j-1],Z[i,j-1]])#.squeeze(0)
-                next_col_vec = th.tensor([X[i-1,j],Y[i-1,j],Z[i-1,j]])#.squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+            except Exception:
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
             vec_1 = next_row_vec - origin
-            
+
             vec_2 = next_col_vec - origin
-            
-            vec_1 = vec_1/th.linalg.norm(vec_1)
-            vec_2 = vec_2/th.linalg.norm(vec_2)
-    
+
+            vec_1 = vec_1 / th.linalg.norm(vec_1)
+            vec_2 = vec_2 / th.linalg.norm(vec_2)
+
             n = th.cross(vec_1, vec_2)
             n = n/th.linalg.norm(n)
             if n[2] < 0:
                 n = -n
-            normal_vecs[i,j] = n
-    h = stacked.reshape(X.shape[0]*X.shape[1],-1)
-    h_normal_vecs = normal_vecs.reshape(X.shape[0]*X.shape[1],-1)
-    params =  None
+            normal_vecs[i, j] = n
+    h = stacked.reshape(X.shape[0] * X.shape[1], -1)
+    h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1)
+    params = None
     return h, h_normal_vecs, params
+
 
 def ideal_heliostat(ideal_configs, device):
     """Return an ideally shaped heliostat lying flat on the ground."""
