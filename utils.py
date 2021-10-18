@@ -613,7 +613,7 @@ def initialize_spline_eval_points_perfectly(
         knots_x,
         knots_y,
 ):
-    eval_points, distances = nurbs.invert_points(
+    eval_points, distances = nurbs.invert_points_slow(
             points,
             degree_x,
             degree_y,
