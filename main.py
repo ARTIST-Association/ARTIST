@@ -217,19 +217,19 @@ def main():
             sched.step(loss)
         else:
             sched.step()
-        H.align_reverse()
-        # if epoch % 1 == 0:
-        #     num_missed = indices.numel() - indices.count_nonzero()
-        #     ray_diff = calc_ray_diffs(
-        #         ray_directions.detach(),
-        #         target_ray_directions,
-        #     )
-        print(
-            f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-            f'loss: {loss.detach().cpu().numpy()}, '
-            # f'missed: {num_missed.detach().cpu().item()}, '
-            # f'ray differences: {ray_diff.detach().cpu().item()}'
-        )
+        with th.no_grad():
+            num_missed = R.indices.numel() - R.indices.count_nonzero()
+            ray_diff = utils.calc_ray_diffs(
+                R.ray_directions,
+                H.get_ray_directions().detach(),
+            )
+            print(
+                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+                f'loss: {loss.detach().cpu().numpy()}, '
+                f'missed: {num_missed.detach().cpu().item()}, '
+                f'ray differences: {ray_diff.detach().cpu().item()}'
+            )
+            H.align_reverse()
     # Diff Raytracing >
 
     # Save trained model and optimizer state
