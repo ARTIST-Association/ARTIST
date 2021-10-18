@@ -357,7 +357,7 @@ class Heliostat(object):
 
         self.load()
 
-     def load(self):
+    def load(self):
 
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
