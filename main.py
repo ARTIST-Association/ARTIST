@@ -166,6 +166,19 @@ def main():
             verbose=True,
         )
 
+    # Load optimizer state.
+    if cfg.CP_PATH is not None and cfg.CP_PATH != '':
+        opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
+        if not os.path.isfile(opt_cp_path):
+            print(
+                f'Warning: cannot find optimizer under {opt_cp_path}; '
+                f'please rename your optimizer checkpoint accordingly. '
+                f'Continuing with newly created optimizer...'
+            )
+        cp = th.load(opt_cp_path, map_location=device)
+        opt.load_state_dict(cp['opt'])
+        del cp
+
     # loss = th.nn.functional.mse_loss()
     # def loss_func(pred, target, compute_intersections, rayPoints):
     #     loss = th.nn.functional.mse_loss(pred, target, 0.1)
