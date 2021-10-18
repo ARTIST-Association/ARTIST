@@ -452,7 +452,18 @@ class Heliostat(object):
         return reflect_rays_(self.from_sun, self.normals)
 
     def to_dict(self):
+        if self.state != 'OnGround':
+            print(
+                'Warning; saving aligned heliostat! It is recommended to '
+                '`align_reverse` the heliostat beforehand!'
+            )
+        return self._to_dict()
+
+    def _to_dict(self):
         return {
             'heliostat_points': self._discrete_points_orig,
             'heliostat_normals': self._normals_orig,
+
+            'config': self.cfg,
+            'params': self.params,
         }

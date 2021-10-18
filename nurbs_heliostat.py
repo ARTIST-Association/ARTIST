@@ -244,12 +244,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-    def to_dict(self):
-        if self.state != 'OnGround':
-            print(
-                'Warning; saving aligned heliostat! It is recommended to '
-                '`align_reverse` the heliostat beforehand!'
-            )
+    def _to_dict(self):
+        data = super()._to_dict()
 
         data = {
             'degree_x': self.degree_x,
@@ -261,10 +257,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
             'evaluation_points': self.eval_points,
             'original_world_points': self._orig_world_points,
-            '_heliostat_points': self._discrete_points_orig,
-            '_heliostat_normals': self._normals_orig,
 
-            'config': self.cfg,
             'nurbs_config': self.nurbs_cfg,
         }
         return data
