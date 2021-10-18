@@ -3,7 +3,7 @@ import os
 
 _C = CN()
 # UNIQUE EXPERIMENT IDENTIFIER
-_C.ID                                   = 'LongRunWeekend1'
+_C.ID                                   = 'Default'
 _C.LOGDIR                               = 'Images'
 _C.SEED                                 = 0
 _C.USE_GPU                              = True
@@ -19,6 +19,7 @@ _C.NURBS                                = CN()
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
 _C.NURBS.SPLINE_DEGREE                  = 3
+_C.NURBS.OPTIMIZE_Z_ONLY                = True
 
 # H = Heliostat
 _C.H                                    = CN()
@@ -51,7 +52,7 @@ _C.H.NURBS.COLS                         = 6
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA33_Rim0_STRAL-Input.binp"
-_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 100
+_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 1000
 _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
