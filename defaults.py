@@ -9,6 +9,7 @@ _C.SEED                                 = 0
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
+_C.CP_PATH                              = None
 
 # NURBS settings
 

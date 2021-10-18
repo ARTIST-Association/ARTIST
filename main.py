@@ -120,11 +120,18 @@ def main():
     # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
     # TODO Load other Constants than in Setup
-    if cfg.USE_NURBS:
-        H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+    if cfg.CP_PATH is not None and cfg.CP_PATH != '':
+        cp = th.load(cfg.CP_PATH, map_location=device)
+        if cfg.USE_NURBS:
+            H = NURBSHeliostat.from_dict(cp, device)
+        else:
+            H = Heliostat.from_dict(cp, device)
     else:
-        # Create Heliostat Object and Load Model defined in config file
-        H = Heliostat(cfg.H, device)
+        if cfg.USE_NURBS:
+            H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+        else:
+            # Create Heliostat Object and Load Model defined in config file
+            H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
