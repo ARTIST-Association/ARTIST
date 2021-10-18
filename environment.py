@@ -53,8 +53,11 @@ class Environment(object):
         self.receiver_resolution_x = self.cfg.RECEIVER.RESOLUTION_X
         self.receiver_resolution_y = self.cfg.RECEIVER.RESOLUTION_Y
 
+        sun_origin = self.cfg.SUN.ORIGIN
+        if isinstance(sun_origin[0], list):
+            sun_origin = sun_origin[0]
         sun_origin = th.tensor(
-            self.cfg.SUN.ORIGIN,
+            sun_origin,
             dtype=dtype,
             device=device,
         )

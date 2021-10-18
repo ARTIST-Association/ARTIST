@@ -53,62 +53,79 @@ def main():
     # Set up Environment
     # =================
     # Create Heliostat Object and Load Model defined in config file
+    targets = None
+    sun_origins = cfg.AC.SUN.ORIGIN
+    if not isinstance(sun_origins[0], list):
+        sun_origins = [sun_origins]
+    sun_origins = th.tensor(
+        sun_origins, dtype=th.get_default_dtype(), device=device)
+    sun_origins_normed = sun_origins / sun_origins.norm(dim=1).unsqueeze(-1)
+
     H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
-    target_save_data = (
-        H.position_on_field,
-        th.tensor(
-            H.cfg.IDEAL.NORMAL_VECS,
-            dtype=th.get_default_dtype(),
-            device=device,
-        ),
-        H.discrete_points,
-        H.normals,
-        None,  # TODO
+    for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
+            sun_origins,
+            sun_origins_normed
+    )):
+        ENV.sun_origin = sun_origin_normed
+        target_save_data = (
+            H.position_on_field,
+            th.tensor(
+                H.cfg.IDEAL.NORMAL_VECS,
+                dtype=th.get_default_dtype(),
+                device=device,
+            ),
+            H.discrete_points,
+            H.normals,
+            None,  # TODO
 
-        ENV.receiver_center,
-        ENV.receiver_plane_x,
-        ENV.receiver_plane_y,
-        ENV.receiver_plane_normal,
-        None,  # TODO
+            ENV.receiver_center,
+            ENV.receiver_plane_x,
+            ENV.receiver_plane_y,
+            ENV.receiver_plane_normal,
+            None,  # TODO
 
-        th.tensor(
-            ENV.cfg.SUN.ORIGIN,
-            dtype=th.get_default_dtype(),
-            device=device,
-        ),
-        ENV.sun.num_rays,
-        ENV.sun.mean,
-        ENV.sun.cov,
-    )
-    H.align(ENV.sun_origin, ENV.receiver_center)
-    R = Renderer(H, ENV)
-    utils.save_target(
-        *(
-            target_save_data
-            + (
-                R.xi,
-                R.yi,
+            sun_origin,
+            ENV.sun.num_rays,
+            ENV.sun.mean,
+            ENV.sun.cov,
+        )
+        H.align(ENV.sun_origin, ENV.receiver_center, verbose=(i == 0))
+        R = Renderer(H, ENV)
+        utils.save_target(
+            *(
+                target_save_data
+                + (
+                    R.xi,
+                    R.yi,
 
-                # We need the heliostat to be aligned here.
-                H.get_ray_directions(),
-                H.discrete_points,
-                'target.pt',
+                    # We need the heliostat to be aligned here.
+                    H.get_ray_directions(),
+                    H.discrete_points,
+                    f'target_{i}.pt',
+                )
             )
         )
-    )
-    del target_save_data
+        del target_save_data
 
-    # Render Step
-    # ===========
-    target_bitmap = R.render()
-    targets = target_bitmap.detach().clone().unsqueeze(0)
+        # Render Step
+        # ===========
+        target_bitmap = R.render()
+        if targets is None:
+            targets = th.empty(
+                (len(sun_origins),) + target_bitmap.shape,
+                dtype=th.get_default_dtype(),
+                device=device,
+            )
+        targets[i] = target_bitmap
+        H.align_reverse()
 
-    # Plot and Save Stuff
-    # ===================
-    im = plt.imshow(target_bitmap.detach().cpu().numpy(), cmap='jet')
-    plt.savefig(os.path.join("images", "original.jpeg"))
-    # plotter.plot_bitmap(target_bitmap)  # Target Bitmap Plot
+        # Plot and Save Stuff
+        # ===================
+        im = plt.imshow(target_bitmap.detach().cpu().numpy(), cmap='jet')
+        plt.savefig(os.path.join("images", f"original_{i}.jpeg"))
+        # plotter.plot_bitmap(target_bitmap)  # Target Bitmap Plot
+    del sun_origins
 
     # Delete Setup
     # ============
@@ -196,14 +213,20 @@ def main():
     for epoch in range(epochs):
         opt.zero_grad(set_to_none=True)
         loss = 0
-        H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
+        num_missed = 0.0
+        ray_diff = 0
         # print(ray_directions)
-        for target in targets:
+        for (i, (target, sun_origin)) in enumerate(zip(
+                targets,
+                sun_origins_normed,
+        )):
+            ENV.sun_origin = sun_origin
+            H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
             pred_bitmap = R.render()
             if epoch % 10 == 0:
                 im.set_data(pred_bitmap.detach().cpu().numpy())
                 im.autoscale()
-                plt.savefig(os.path.join("images", f"{epoch}.png"))
+                plt.savefig(os.path.join("images", f"{epoch}_{i}.png"))
             loss += th.nn.functional.mse_loss(pred_bitmap, target)
             # loss += loss_func(
             #     pred_bitmap,
@@ -218,6 +241,13 @@ def main():
             #     ),
             #     rayPoints,
             # )
+            with th.no_grad():
+                H.align_reverse()
+                num_missed += R.indices.numel() - R.indices.count_nonzero()
+                ray_diff += utils.calc_ray_diffs(
+                    R.ray_directions,
+                    H.get_ray_directions().detach(),
+                )
         # if epoch %  10== 0:#
         #     im.set_data(pred.detach().cpu().numpy())
         #     im.autoscale()
@@ -239,18 +269,14 @@ def main():
         else:
             sched.step()
         with th.no_grad():
-            num_missed = R.indices.numel() - R.indices.count_nonzero()
-            ray_diff = utils.calc_ray_diffs(
-                R.ray_directions,
-                H.get_ray_directions().detach(),
-            )
+            num_missed /= len(targets)
+            ray_diff /= len(targets)
             print(
                 f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                 f'loss: {loss.detach().cpu().numpy()}, '
                 f'missed: {num_missed.detach().cpu().item()}, '
                 f'ray differences: {ray_diff.detach().cpu().item()}'
             )
-            H.align_reverse()
     # Diff Raytracing >
 
     # Save trained model and optimizer state
