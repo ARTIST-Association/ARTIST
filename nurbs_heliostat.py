@@ -35,19 +35,16 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.knots_x, self.knots_y, self.degree_x, self.degree_y)
         self.ctrl_weights[:] = 1
 
-        self.ctrl_points_xy = ctrl_points[:, :, :-1]
-        self.ctrl_points_z = ctrl_points[:, :, -1:]
-
-        self.initialize_control_points()
+        self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
 
-    def initialize_control_points(self):
+    def initialize_control_points(self, ctrl_points):
         heliostat_config = self.cfg
         nurbs_config = self.nurbs_cfg
 
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
             utils.initialize_spline_ctrl_points(
-                self.ctrl_points,
+                ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
@@ -59,13 +56,15 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             # Use perfect, unrotated heliostat at `position_on_field` as
             # starting point with width and height as initially guessed.
             utils.initialize_spline_ctrl_points(
-                self.ctrl_points,
+                ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
                 heliostat_config.NURBS.WIDTH,
                 heliostat_config.NURBS.HEIGHT,
             )
+        self.ctrl_points_xy = ctrl_points[:, :, :-1]
+        self.ctrl_points_z = ctrl_points[:, :, -1:]
 
     def initialize_eval_points(self):
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
