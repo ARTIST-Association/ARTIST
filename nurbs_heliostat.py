@@ -47,7 +47,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
             utils.initialize_spline_ctrl_points(
-                self.control_points,
+                self.ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
@@ -59,7 +59,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             # Use perfect, unrotated heliostat at `position_on_field` as
             # starting point with width and height as initially guessed.
             utils.initialize_spline_ctrl_points(
-                self.control_points,
+                self.ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
@@ -75,7 +75,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
                         self._orig_world_points,
                         self.degree_x,
                         self.degree_y,
-                        self.control_points,
+                        self.ctrl_points,
                         self.ctrl_weights,
                         self.knots_x,
                         self.knots_y,
