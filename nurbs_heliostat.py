@@ -39,6 +39,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
                 self.position_on_field,
                 self.rows,
                 self.cols,
+                # FIXME Get these for the current heliostat!
                 heliostat_config.IDEAL.WIDTH,
                 heliostat_config.IDEAL.HEIGHT,
             )
