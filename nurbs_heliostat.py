@@ -42,11 +42,11 @@ class NURBSHeliostat(heliostat_models.Heliostat):
                 heliostat_config.IDEAL.WIDTH,
                 heliostat_config.IDEAL.HEIGHT,
             )
-            self._world_eval_points = self._discrete_points_orig.clone()
+            self._orig_world_points = self._discrete_points_orig.clone()
             if not self.recalc_eval_points:
                 self._eval_points = \
                     utils.initialize_spline_eval_points_perfectly(
-                        self._world_eval_points,
+                        self._orig_world_points,
                         self.degree_x,
                         self.degree_y,
                         ctrl_points,
@@ -103,7 +103,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
     @staticmethod
     @functools.lru_cache(maxsize=1)
-    def _invert_world_eval_points(
+    def _invert_world_points(
             eval_points,
             degree_x,
             degree_y,
@@ -125,8 +125,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     @property
     def eval_points(self):
         if self.recalc_eval_points:
-            self._eval_points = self._invert_world_eval_points(
-                self._world_eval_points,
+            self._eval_points = self._invert_world_points(
+                self._orig_world_points,
                 self.degree_x,
                 self.degree_y,
                 self.ctrl_points,
