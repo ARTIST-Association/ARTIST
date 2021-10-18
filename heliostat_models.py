@@ -83,19 +83,19 @@ def real_heliostat(real_configs, device):
 
 def heliostat_by_function(heliostat_function_cfg, device):
     cfg = heliostat_function_cfg
-    
-    width = cfg.WIDTH/2
-    height = cfg.HEIGHT/2
+
+    width = cfg.WIDTH / 2
+    height = cfg.HEIGHT / 2
     X = th.linspace(-width, width, cfg.ROWS)
     Y = th.linspace(-height, height, cfg.COLS)
-    
+
     X, Y = th.meshgrid(X, Y)
     # Z = np.zeros_like(X)
     reduction = cfg.REDUCTION_FACTOR
     if cfg.NAME == "sin":
-        Z = th.sin(X+Y)/reduction# + np.cos(Y)
+        Z = th.sin(X + Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
-        Z = th.sin(X)/reduction + th.cos(Y)/reduction
+        Z = th.sin(X) / reduction + th.cos(Y) / reduction
     else:
         raise Exception("Z-Function not implemented in heliostat_models.py")
     
@@ -106,20 +106,24 @@ def heliostat_by_function(heliostat_function_cfg, device):
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i,j],Y[i,j],Z[i,j]])#.squeeze(0)
-                next_row_vec = th.tensor([X[i,j+1],Y[i,j+1],Z[i,j+1]])#.squeeze(0)
-                next_col_vec = th.tensor([X[i+1,j],Y[i+1,j],Z[i+1,j]])#.squeeze(0)
-            except:
-                origin = th.tensor([X[i,j],Y[i,j],Z[i,j]])#.squeeze(0)
-                next_row_vec = th.tensor([X[i,j-1],Y[i,j-1],Z[i,j-1]])#.squeeze(0)
-                next_col_vec = th.tensor([X[i-1,j],Y[i-1,j],Z[i-1,j]])#.squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+            except Exception:
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
             vec_1 = next_row_vec - origin
-            
+
             vec_2 = next_col_vec - origin
-            
-            vec_1 = vec_1/th.linalg.norm(vec_1)
-            vec_2 = vec_2/th.linalg.norm(vec_2)
-    
+
+            vec_1 = vec_1 / th.linalg.norm(vec_1)
+            vec_2 = vec_2 / th.linalg.norm(vec_2)
+
             n = th.cross(vec_1, vec_2)
             n = n/th.linalg.norm(n)
             if n[2] < 0:
@@ -128,7 +132,9 @@ def heliostat_by_function(heliostat_function_cfg, device):
     h = stacked.reshape(X.shape[0]*X.shape[1],-1).to(device)
     h_normal_vecs = normal_vecs.reshape(X.shape[0]*X.shape[1],-1).to(device)
     params =  None
+
     return h, h_normal_vecs, params
+
 
 def ideal_heliostat(ideal_configs, device):
     """Return an ideally shaped heliostat lying flat on the ground."""
@@ -448,7 +454,33 @@ class Heliostat(object):
         return reflect_rays_(self.from_sun, self.normals)
 
     def to_dict(self):
+        if self.state != 'OnGround':
+            print(
+                'Warning; saving aligned heliostat! It is recommended to '
+                '`align_reverse` the heliostat beforehand!'
+            )
+        return self._to_dict()
+
+    def _to_dict(self):
         return {
             'heliostat_points': self._discrete_points_orig,
             'heliostat_normals': self._normals_orig,
+
+            'config': self.cfg,
+            'params': self.params,
         }
+
+    @classmethod
+    def from_dict(cls, data, device, config=None, restore_strictly=True):
+        if config is None:
+            config = data['config']
+        self = cls(config, device)
+        self._from_dict(data, restore_strictly)
+        return self
+
+    def _from_dict(self, data, restore_strictly):
+        self._normals_orig = data['heliostat_normals']
+
+        if restore_strictly:
+            self._discrete_points_orig = data['heliostat_points']
+            self.params = data['params']

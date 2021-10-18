@@ -13,6 +13,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         self.nurbs_cfg = nurbs_config
 
         self.fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
+        self.recalc_eval_points = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
 
         spline_degree = nurbs_config.SPLINE_DEGREE
         self.degree_x = spline_degree
@@ -28,44 +29,63 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
+        self._orig_world_points = self._discrete_points_orig.clone()
+
         utils.initialize_spline_knots(
             self.knots_x, self.knots_y, self.degree_x, self.degree_y)
         self.ctrl_weights[:] = 1
 
+        self.ctrl_points_xy = ctrl_points[:, :, :-1]
+        self.ctrl_points_z = ctrl_points[:, :, -1:]
+
+        self.initialize_control_points()
+        self.initialize_eval_points()
+
+    def initialize_control_points(self):
+        heliostat_config = self.cfg
+        nurbs_config = self.nurbs_cfg
+
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
             utils.initialize_spline_ctrl_points(
-                ctrl_points,
+                self.ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
+                # FIXME Get these for the current heliostat!
                 heliostat_config.IDEAL.WIDTH,
                 heliostat_config.IDEAL.HEIGHT,
-            )
-            self.eval_points = utils.initialize_spline_eval_points_perfectly(
-                self._discrete_points_orig,
-                self.degree_x,
-                self.degree_y,
-                ctrl_points,
-                self.ctrl_weights,
-                self.knots_x,
-                self.knots_y,
             )
         else:
             # Use perfect, unrotated heliostat at `position_on_field` as
             # starting point with width and height as initially guessed.
             utils.initialize_spline_ctrl_points(
-                ctrl_points,
+                self.ctrl_points,
                 self.position_on_field,
                 self.rows,
                 self.cols,
                 heliostat_config.NURBS.WIDTH,
                 heliostat_config.NURBS.HEIGHT,
             )
-            self.eval_points = utils.initialize_spline_eval_points(
-                self.rows, self.cols, self.device)
 
-        self.ctrl_points_xy = ctrl_points[:, :, :-1]
-        self.ctrl_points_z = ctrl_points[:, :, -1:]
+    def initialize_eval_points(self):
+        if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
+            if not self.recalc_eval_points:
+                self._eval_points = \
+                    utils.initialize_spline_eval_points_perfectly(
+                        self._orig_world_points,
+                        self.degree_x,
+                        self.degree_y,
+                        self.ctrl_points,
+                        self.ctrl_weights,
+                        self.knots_x,
+                        self.knots_y,
+                    )
+        else:
+            # Unless we change the knots, we don't need to recalculate
+            # as we simply distribute the points uniformly.
+            self.recalc_eval_points = False
+            self._eval_points = utils.initialize_spline_eval_points(
+                self.rows, self.cols, self.device)
 
     def setup_params(self):
         self.ctrl_points_z.requires_grad_(True)
@@ -89,6 +109,41 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     @property
     def ctrl_points(self):
         return th.cat([self.ctrl_points_xy, self.ctrl_points_z], dim=-1)
+
+    @staticmethod
+    @functools.lru_cache(maxsize=1)
+    def _invert_world_points(
+            eval_points,
+            degree_x,
+            degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+    ):
+        return utils.initialize_spline_eval_points_perfectly(
+            eval_points,
+            degree_x,
+            degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+        )
+
+    @property
+    def eval_points(self):
+        if self.recalc_eval_points:
+            self._eval_points = self._invert_world_points(
+                self._orig_world_points,
+                self.degree_x,
+                self.degree_y,
+                self.ctrl_points,
+                self.ctrl_weights,
+                self.knots_x,
+                self.knots_y,
+            )
+        return self._eval_points
 
     def _get_alignment(self):
         if self.state == 'OnGround':
@@ -185,12 +240,61 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-    def to_dict(self):
-        return {
+    def _to_dict(self):
+        data = super()._to_dict()
+
+        data = {
             'degree_x': self.degree_x,
             'degree_y': self.degree_y,
             'control_points': self.ctrl_points,
             'control_point_weights': self.ctrl_weights,
             'knots_x': self.knots_x,
             'knots_y': self.knots_y,
+
+            'evaluation_points': self.eval_points,
+            'original_world_points': self._orig_world_points,
+
+            'nurbs_config': self.nurbs_cfg,
         }
+        return data
+
+    @classmethod
+    def from_dict(
+            cls,
+            data,
+            device,
+            config=None,
+            nurbs_config=None,
+            # Wether to disregard what standard initialization did and
+            # load all data we have.
+            restore_strictly=False,
+    ):
+        if config is None:
+            config = data['config']
+        if nurbs_config is None:
+            nurbs_config = data['nurbs_config']
+        self = cls(config, nurbs_config, device)
+        self._from_dict(data, restore_strictly)
+        return self
+
+    def _from_dict(self, data, restore_strictly):
+        # Keep normals from standard initialization here.
+        normals_orig = self._normals_orig
+        super()._from_dict(self, data, restore_strictly)
+        self._normals_orig = normals_orig
+
+        self.degree_x = data['degree_x']
+        self.degree_y = data['degree_y']
+        ctrl_points = data['control_points']
+        self.ctrl_points_xy = ctrl_points[:, :, :-1]
+        self.ctrl_points_z = ctrl_points[:, :, -1:]
+        self.ctrl_weights = data['control_point_weights']
+        self.knots_x = data['knots_x']
+        self.knots_y = data['knots_y']
+
+        if restore_strictly:
+            self._eval_points = data['evaluation_points']
+            self._orig_world_points = data['original_world_points']
+            self._normals_orig = data['_heliostat_normals']
+        else:
+            self.initialize_eval_points()

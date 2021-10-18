@@ -1801,6 +1801,184 @@ def invert_points(
     return argmin_distances, min_distances
 
 
+def invert_points_slow(
+        world_points,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        num_samples=8,
+        norm_p=2,
+        max_iters=100,
+        distance_tolerance=1e-5,
+        cosine_tolerance=1e-7,
+):
+    argmin_distances, min_distances = get_inversion_start_values(
+        world_points,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        num_samples,
+        norm_p=norm_p,
+    )
+
+    # TODO We should handle differing x and y limits here.
+    point_min = 0
+    point_max = 1
+
+    derivs = calc_derivs_surface_slow(
+        argmin_distances[:, 0],
+        argmin_distances[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+        nth_deriv=2,
+    )
+
+    surface_points = derivs[0][0]
+
+    point_difference = surface_points - world_points
+    no_change_indices = th.zeros_like(min_distances, dtype=th.bool)
+
+    for i in range(max_iters):
+        Su = derivs[1][0]
+        Sv = derivs[0][1]
+
+        points_coincide_indices = min_distances <= distance_tolerance
+        no_change_indices = no_change_indices | points_coincide_indices
+
+        zero_cosine_indices = (
+            (
+                th.linalg.norm(
+                    batch_dot(Su, point_difference),
+                    ord=norm_p,
+                    dim=-1,
+                )
+                / (th.linalg.norm(Su, ord=norm_p, dim=-1) * min_distances)
+            ) <= cosine_tolerance
+        ) & (
+            (
+                th.linalg.norm(
+                    batch_dot(Sv, point_difference),
+                    ord=norm_p,
+                    dim=-1,
+                )
+                / (th.linalg.norm(Sv, ord=norm_p, dim=-1) * min_distances)
+            ) <= cosine_tolerance
+        )
+        no_change_indices = no_change_indices | zero_cosine_indices
+
+        if points_coincide_indices.all() and zero_cosine_indices.all():
+            break
+
+        both_dir_dot = (
+            batch_dot(Su, Sv)
+            + batch_dot(point_difference, derivs[1][1])
+        )
+
+        J = th.stack([
+            th.hstack([
+                (
+                    th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
+                    + batch_dot(point_difference, derivs[2][0])
+                ),
+                both_dir_dot,
+            ]),
+            th.hstack([
+                both_dir_dot,
+                (
+                    th.linalg.norm(Sv, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
+                    + batch_dot(point_difference, derivs[0][2])
+                ),
+            ]),
+        ], dim=1)
+        kappa = -th.hstack([
+            batch_dot(point_difference, Su),
+            batch_dot(point_difference, Sv),
+        ])
+
+        delta = th.linalg.solve(J, kappa)
+
+        prev_argmin_distances = argmin_distances.clone()
+        change_indices = ~no_change_indices
+        argmin_distances[change_indices] = (
+            delta[change_indices]
+            + prev_argmin_distances[change_indices]
+        )
+
+        argmin_distances[change_indices] = \
+            argmin_distances[change_indices].clamp(point_min, point_max)
+
+        # TODO We always assume non-closed surfaces.
+        # argmin_distance_x = argmin_distance[:, 0]
+        # argmin_distance_y = argmin_distance[:, 1]
+
+        # argmin_distance_x = argmin_distance_x.clamp(point_min, point_max)
+        # argmin_distance_y = argmin_distance_y.clamp(point_min, point_max)
+
+        # argmin_distance = th.stack([
+        #     argmin_distance_x,
+        #     argmin_distance_y,
+        # ], dim=-1)
+
+        derivs = calc_derivs_surface_slow(
+            argmin_distances[:, 0],
+            argmin_distances[:, 1],
+            degree_x,
+            degree_y,
+            control_points,
+            control_point_weights,
+            knots_x,
+            knots_y,
+            nth_deriv=2,
+        )
+
+        surface_points = derivs[0][0]
+
+        point_difference = surface_points - world_points
+        min_distances = th.linalg.norm(
+            point_difference,
+            ord=norm_p,
+            dim=-1,
+        )
+
+        insignificant_change_indices = th.linalg.norm(
+            (
+                (
+                    argmin_distances[:, 0]
+                    - prev_argmin_distances[:, 0]
+                ).unsqueeze(-1) * Su
+                + (
+                    argmin_distances[:, 1]
+                    - prev_argmin_distances[:, 1]
+                ).unsqueeze(-1) * Sv
+            ),
+            ord=norm_p,
+            dim=-1,
+        ) <= distance_tolerance
+        no_change_indices = no_change_indices | insignificant_change_indices
+        if no_change_indices.all():
+            break
+    else:
+        # We recalculate here in order to handle `max_iters == 0`.
+        change_indices = ~no_change_indices
+        num_unconverged = change_indices.count_nonzero()
+        raise NoConvergenceError(
+            f'convergence failed for {num_unconverged} points; '
+            f'try to increase `num_samples`, `max_iters`, '
+            f'`distance_tolerance`, or `cosine_tolerance`'
+        )
+    return argmin_distances, min_distances
+
+
 # def rational_basis_surface_flex(
 #         evaluation_point_x,
 #         evaluation_point_y,

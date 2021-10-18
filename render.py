@@ -52,7 +52,7 @@ def LinePlaneCollision(
     return Psis
 
 
-def compute_receiver_intersections(
+def compute_ray_directions(
         planeNormal,
         planePoint,
         ray_directions,
@@ -111,10 +111,18 @@ def compute_receiver_intersections(
     rays = th.matmul(inv_rot, rot_z).transpose(0, -1).transpose(1, -1)
 
     # rays = rays.to(th.float32)
+    return rays
 
+
+def compute_receiver_intersections(
+        planeNormal,
+        planePoint,
+        ray_directions,
+        hel_in_field,
+):
     # Execute the kernel
     intersections = LinePlaneCollision(
-        planeNormal, planePoint, rays, hel_in_field, epsilon=1e-6)
+        planeNormal, planePoint, ray_directions, hel_in_field, epsilon=1e-6)
     # print(intersections)
     return intersections
 
@@ -256,14 +264,20 @@ class Renderer(object):
     def render(self):
         # TODO Max: use for reflection instead
 
-        intersections = compute_receiver_intersections(
+        self.ray_directions = compute_ray_directions(
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
             self.H.get_ray_directions(),  # line directions
             self.H.discrete_points,  # points on line
             self.xi,
             self.yi
-            )
+        )
+        intersections = compute_receiver_intersections(
+            self.ENV.receiver_plane_normal,
+            self.ENV.receiver_center,
+            self.ray_directions,
+            self.H.discrete_points,
+        )
 
         dx_ints = (
             intersections[:, :, 1]
@@ -275,7 +289,7 @@ class Renderer(object):
             + self.ENV.receiver_plane_y / 2
             - self.ENV.receiver_center[2]
         )
-        indices = (
+        self.indices = (
             (-1 <= dx_ints)
             & (dx_ints < self.ENV.receiver_plane_x + 1)
             & (-1 <= dy_ints)
@@ -284,7 +298,7 @@ class Renderer(object):
         total_bitmap = sample_bitmap(
             dx_ints,
             dy_ints,
-            indices,
+            self.indices,
             self.ENV.receiver_plane_x,
             self.ENV.receiver_plane_y,
             self.ENV.receiver_resolution_x,

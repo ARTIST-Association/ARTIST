@@ -119,6 +119,8 @@ def _cartesian_linspace_around(
     return points
 
 
+# TODO choose uniformly between spans (not super important
+#      as our knots are uniform as well)
 def initialize_spline_eval_points(
         rows,
         cols,
@@ -136,7 +138,7 @@ def initialize_spline_eval_points_perfectly(
         knots_x,
         knots_y,
 ):
-    eval_points, distances = nurbs.invert_points(
+    eval_points, distances = nurbs.invert_points_slow(
             points,
             degree_x,
             degree_y,
@@ -190,7 +192,8 @@ def initialize_spline_knots(
 
 
 def calc_ray_diffs(pred, target):
-    return th.nn.functional.l1_loss(pred, target)
+    # We could broadcast here but to avoid a warning, we tile manually.
+    return th.nn.functional.l1_loss(pred, target.tile(len(pred), 1, 1))
 
 
 def calc_reflection_normals_(in_reflections, out_reflections):

@@ -9,6 +9,7 @@ _C.SEED                                 = 0
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
+_C.CP_PATH                              = None
 
 # NURBS settings
 
@@ -18,6 +19,8 @@ _C.NURBS                                = CN()
 # origins.
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
+_C.NURBS.OPTIMIZE_Z_ONLY                = True
+_C.NURBS.RECALCULATE_EVAL_POINTS        = True
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # H = Heliostat

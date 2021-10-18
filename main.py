@@ -125,11 +125,19 @@ def main():
     # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
     # TODO Load other Constants than in Setup
-    if cfg.USE_NURBS:
-        H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+    load_cp = cfg.CP_PATH is not None and cfg.CP_PATH != ''
+    if load_cp:
+        cp = th.load(cfg.CP_PATH, map_location=device)
+        if cfg.USE_NURBS:
+            H = NURBSHeliostat.from_dict(cp, device)
+        else:
+            H = Heliostat.from_dict(cp, device)
     else:
-        # Create Heliostat Object and Load Model defined in config file
-        H = Heliostat(cfg.H, device)
+        if cfg.USE_NURBS:
+            H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+        else:
+            # Create Heliostat Object and Load Model defined in config file
+            H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
     
@@ -172,7 +180,20 @@ def main():
             
             verbose=True,
         )
-    
+
+    # Load optimizer state.
+    if load_cp:
+        opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
+        if not os.path.isfile(opt_cp_path):
+            print(
+                f'Warning: cannot find optimizer under {opt_cp_path}; '
+                f'please rename your optimizer checkpoint accordingly. '
+                f'Continuing with newly created optimizer...'
+            )
+        cp = th.load(opt_cp_path, map_location=device)
+        opt.load_state_dict(cp['opt'])
+        del cp
+
     # loss = th.nn.functional.mse_loss()
     # def loss_func(pred, target, compute_intersections, rayPoints):
     #     loss = th.nn.functional.mse_loss(pred, target, 0.1)
@@ -232,8 +253,22 @@ def main():
         if cfg.USE_NURBS:
             sched.step(loss)
         else:
-            sched.step(loss)
-        H.align_reverse()
+            sched.step()
+        
+        with th.no_grad():
+            num_missed = R.indices.numel() - R.indices.count_nonzero()
+            ray_diff = utils.calc_ray_diffs(
+                R.ray_directions,
+                H.get_ray_directions().detach(),
+            )
+            print(
+                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+                f'loss: {loss.detach().cpu().numpy()}, '
+                f'missed: {num_missed.detach().cpu().item()}, '
+                f'ray differences: {ray_diff.detach().cpu().item()}'
+            )
+            H.align_reverse()
+
         if epoch %50 ==0:
             plotter.plot_surface_diff(H_target._discrete_points_orig, th.tile(th.tensor([0,0,1], device=device),(1024,1)), H_target._normals_orig,  H._normals_orig, epoch, logdir_images)
         # if epoch % 1 == 0:
@@ -261,6 +296,8 @@ def main():
             
             th.save(save_data, f'{logdir_files}\\{model_name}.pt')
             th.save({'opt': opt.state_dict()}, f'{logdir_files}\\{model_name}_opt.pt')
+    # Diff Raytracing >
+
 
 
 if __name__ == '__main__':
