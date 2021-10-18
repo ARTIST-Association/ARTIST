@@ -1,19 +1,25 @@
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import torch as th
 
 
-def plot_surface_diff(hel_origin, ideal_normal_vecs, target_normal_vectors):
-    differences = th.sum(ideal_normal_vecs * target_normal_vectors, dim=-1).detach().cpu()
+def plot_surface_diff(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir):
+    matplotlib.use('Agg')
+    differences_target = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu()
+    differences_pred = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu()
 
     x = hel_origin[:,0].detach().cpu()
     y = hel_origin[:,1].detach().cpu()
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    ax.set_zlim3d(0.9999, 1.0001)
-    surf = ax.plot_trisurf(x, y, differences, cmap=cm.coolwarm,
+    # ax.set_zlim3d(1, 1.00001)
+    surf = ax.plot_trisurf(x, y, abs(differences_target-differences_pred), cmap=cm.coolwarm,
                             linewidth=0, antialiased=False)
-    exit()
+    # surf = ax.plot_trisurf(x, y, differences_pred, cmap=cm.coolwarm,
+    #                         linewidth=0, antialiased=False)
+    fig.savefig(f"{logdir}//test_{epoch}")
+
 
 def plot_normal_vectors(points_on_hel, normal_vectors):
     '''
@@ -88,7 +94,3 @@ def plot_heliostat(h_rotated, ray_directions):
     plt.show()
     exit()
 
-def plot_bitmap(bitmap):
-    plt.imshow(bitmap.detach().cpu().numpy(), cmap='jet')
-    plt.show()
-    exit()

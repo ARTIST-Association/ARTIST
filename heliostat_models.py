@@ -99,6 +99,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     else:
         raise Exception("Z-Function not implemented in heliostat_models.py")
     
+    print(Z.max())
     stacked = th.stack((X,Y,Z)).T
     
     normal_vecs = th.zeros_like(stacked)
@@ -124,8 +125,8 @@ def heliostat_by_function(heliostat_function_cfg, device):
             if n[2] < 0:
                 n = -n
             normal_vecs[i,j] = n
-    h = stacked.reshape(X.shape[0]*X.shape[1],-1)
-    h_normal_vecs = normal_vecs.reshape(X.shape[0]*X.shape[1],-1)
+    h = stacked.reshape(X.shape[0]*X.shape[1],-1).to(device)
+    h_normal_vecs = normal_vecs.reshape(X.shape[0]*X.shape[1],-1).to(device)
     params =  None
     return h, h_normal_vecs, params
 
@@ -357,7 +358,7 @@ class Heliostat(object):
 
         self.load()
 
-     def load(self):
+    def load(self):
 
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
