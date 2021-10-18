@@ -26,7 +26,7 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 # H = Heliostat
 _C.H                                    = CN()
 _C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
-# Possible Modes: "Ideal", "Real", "Other"
+# Possible Modes: "Ideal", "Real", "Function", "Other"
 # "Real" For Deflec Data
 _C.H.SHAPE                              = "Function"
 
