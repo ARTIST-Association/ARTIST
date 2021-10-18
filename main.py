@@ -120,7 +120,8 @@ def main():
     # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
     # TODO Load other Constants than in Setup
-    if cfg.CP_PATH is not None and cfg.CP_PATH != '':
+    load_cp = cfg.CP_PATH is not None and cfg.CP_PATH != ''
+    if load_cp:
         cp = th.load(cfg.CP_PATH, map_location=device)
         if cfg.USE_NURBS:
             H = NURBSHeliostat.from_dict(cp, device)
@@ -167,7 +168,7 @@ def main():
         )
 
     # Load optimizer state.
-    if cfg.CP_PATH is not None and cfg.CP_PATH != '':
+    if load_cp:
         opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
         if not os.path.isfile(opt_cp_path):
             print(
