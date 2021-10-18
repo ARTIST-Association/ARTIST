@@ -594,6 +594,8 @@ def _cartesian_linspace_around(
     return points
 
 
+# TODO choose uniformly between spans (not super important
+#      as our knots are uniform as well)
 def initialize_spline_eval_points(
         rows,
         cols,
