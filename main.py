@@ -95,7 +95,7 @@ def main():
             ENV.sun.cov,
         )
         H_target.align(ENV.sun_origin, ENV.receiver_center, verbose=(i == 0))
-        R = Renderer(H, ENV)
+        R = Renderer(H_target, ENV)
         utils.save_target(
             *(
                 target_save_data
@@ -104,8 +104,8 @@ def main():
                     R.yi,
 
                     # We need the heliostat to be aligned here.
-                    H.get_ray_directions(),
-                    H.discrete_points,
+                    H_target.get_ray_directions(),
+                    H_target.discrete_points,
                     f'target_{i}.pt',
                 )
             )
@@ -241,10 +241,6 @@ def main():
             H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
             pred_bitmap = R.render()
 
-            if epoch % 10 == 0:
-                im.set_data(pred_bitmap.detach().cpu().numpy())
-                im.autoscale()
-                plt.savefig(os.path.join("images", f"{epoch}_{i}.png"))
             loss += th.nn.functional.mse_loss(pred_bitmap, target)
             # loss += loss_func(
             #     pred_bitmap,
