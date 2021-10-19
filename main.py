@@ -326,11 +326,13 @@ def main():
             # f'ray differences: {ray_diff.detach().cpu().item()}'
         )
         if loss.detach().cpu() < best_result:
+            # Remember best checkpoint data (to store later).
             best_result = loss.detach().cpu()
             save_data = H.to_dict()
             save_data['xi'] = R.xi
             save_data['yi'] = R.yi
         if epoch % 100 == 0:
+            # Store remembered data and optimizer state.
             model_name = type(H).__name__
             th.save(save_data, os.path.join(logdir_files, f'{model_name}.pt'))
             th.save(
