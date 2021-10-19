@@ -287,7 +287,7 @@ def main():
         #         break
     
         opt.step()
-        if cfg.USE_NURBS:
+        if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
             sched.step(loss)
         else:
             sched.step()
