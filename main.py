@@ -125,8 +125,8 @@ def main():
         # Plot and Save Stuff
         # ===================
         # print(H._normals_orig.shape)
-        writer.add_image("originals", utils.colorize(target_bitmap))
         # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
+    writer.add_image("originals", utils.colorize(target_bitmap))
     del sun_origins
 
     # Initialization >
