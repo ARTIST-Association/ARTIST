@@ -307,7 +307,6 @@ def main():
                 f'missed: {num_missed.detach().cpu().item()}, '
                 f'ray differences: {ray_diff.detach().cpu().item()}'
             )
-            H.align_reverse()
 
         if epoch %50 ==0:
             plotter.plot_surface_diff(H_target._discrete_points_orig, th.tile(th.tensor([0,0,1], device=device),(1024,1)), H_target._normals_orig,  H._normals_orig, epoch, logdir_images)
