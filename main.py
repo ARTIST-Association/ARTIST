@@ -1,3 +1,4 @@
+import copy
 import os
 
 
@@ -331,12 +332,13 @@ def main():
             save_data = H.to_dict()
             save_data['xi'] = R.xi
             save_data['yi'] = R.yi
+            opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}
         if epoch % 100 == 0:
             # Store remembered data and optimizer state.
             model_name = type(H).__name__
             th.save(save_data, os.path.join(logdir_files, f'{model_name}.pt'))
             th.save(
-                {'opt': opt.state_dict()},
+                opt_save_data,
                 os.path.join(logdir_files, f'{model_name}_opt.pt'),
             )
 
