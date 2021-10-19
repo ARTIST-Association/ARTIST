@@ -28,7 +28,7 @@ def load_heliostat(cfg, device):
     return H
 
 
-def load_optimizer(opt, cp_path, device):
+def load_optimizer_state(opt, cp_path, device):
     if not os.path.isfile(cp_path):
         print(
             f'Warning: cannot find optimizer under {cp_path}; '
@@ -115,7 +115,7 @@ def build_optimizer(cfg, params, device):
     # Load optimizer state.
     if _should_load_cp(cfg):
         opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
-        load_optimizer(opt, opt_cp_path, device)
+        load_optimizer_state(opt, opt_cp_path, device)
     return opt, sched
 
 
