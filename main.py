@@ -218,9 +218,10 @@ def main():
                 f'please rename your optimizer checkpoint accordingly. '
                 f'Continuing with newly created optimizer...'
             )
-        cp = th.load(opt_cp_path, map_location=device)
-        opt.load_state_dict(cp['opt'])
-        del cp
+        else:
+            cp = th.load(opt_cp_path, map_location=device)
+            opt.load_state_dict(cp['opt'])
+            del cp
 
     # loss = th.nn.functional.mse_loss()
     # def loss_func(pred, target, compute_intersections, rayPoints):
