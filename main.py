@@ -228,7 +228,7 @@ def main():
     best_result = th.tensor(float('inf'))
     last_save= 0
     for epoch in range(epochs):
-        opt.zero_grad()
+        opt.zero_grad(set_to_none=True)
         loss = 0
         num_missed = 0.0
         ray_diff = 0
