@@ -305,27 +305,13 @@ def main():
             print(
                 f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                 f'loss: {loss.detach().cpu().numpy()}, '
+                f'lr: {opt.param_groups[0]["lr"]:.2e}, '
                 f'missed: {num_missed.detach().cpu().item()}, '
                 f'ray differences: {ray_diff.detach().cpu().item()}'
             )
 
         if epoch %50 ==0:
             plotter.plot_surface_diff(H_target._discrete_points_orig, th.tile(th.tensor([0,0,1], device=device),(1024,1)), H_target._normals_orig,  H._normals_orig, epoch, logdir_images)
-        # if epoch % 1 == 0:
-        #     num_missed = indices.numel() - indices.count_nonzero()
-        #     ray_diff = calc_ray_diffs(
-        #         ray_directions.detach(),
-        #         target_ray_directions,
-        #     )
-        print(
-            f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-            f'loss: {loss.detach().cpu().numpy()}, '
-    
-            f'lr: {opt.param_groups[0]["lr"]:.2e}'
-                        # f'lr: {sched.get_lr()}'
-            # f'missed: {num_missed.detach().cpu().item()}, '
-            # f'ray differences: {ray_diff.detach().cpu().item()}'
-        )
         if loss.detach().cpu() < best_result:
             # Remember best checkpoint data (to store later).
             best_result = loss.detach().cpu()
