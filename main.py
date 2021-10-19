@@ -309,6 +309,7 @@ def main():
 
         if epoch %50 ==0:
             plotter.plot_surface_diff(H_target._discrete_points_orig, th.tile(th.tensor([0,0,1], device=device),(1024,1)), H_target._normals_orig,  H._normals_orig, epoch, logdir_images)
+
         if loss.detach().cpu() < best_result:
             # Remember best checkpoint data (to store later).
             best_result = loss.detach().cpu()
