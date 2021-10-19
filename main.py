@@ -131,12 +131,6 @@ def main():
         # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
     del sun_origins
 
-    
-    # Delete Setup
-    # ============
-    # del H
-    del ENV
-    del R
     # Initialization >
     
     # TODO Bis hierhin fertig refactored
