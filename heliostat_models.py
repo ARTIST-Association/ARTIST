@@ -97,11 +97,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
     elif cfg.NAME == "sin+cos":
         Z = th.sin(X) / reduction + th.cos(Y) / reduction
     else:
-        raise Exception("Z-Function not implemented in heliostat_models.py")
-    
+        raise ValueError("Z-Function not implemented in heliostat_models.py")
+
     print(Z.max())
-    stacked = th.stack((X,Y,Z)).T
-    
+    stacked = th.stack((X, Y, Z)).T
+
     normal_vecs = th.zeros_like(stacked)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
@@ -128,10 +128,10 @@ def heliostat_by_function(heliostat_function_cfg, device):
             n = n/th.linalg.norm(n)
             if n[2] < 0:
                 n = -n
-            normal_vecs[i,j] = n
-    h = stacked.reshape(X.shape[0]*X.shape[1],-1).to(device)
-    h_normal_vecs = normal_vecs.reshape(X.shape[0]*X.shape[1],-1).to(device)
-    params =  None
+            normal_vecs[i, j] = n
+    h = stacked.reshape(X.shape[0] * X.shape[1], -1).to(device)
+    h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
+    params = None
 
     return h, h_normal_vecs, params
 
