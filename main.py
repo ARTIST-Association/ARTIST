@@ -5,6 +5,7 @@ import os
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 
+import data
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
 from heliostat_models import Heliostat
@@ -118,85 +119,6 @@ def build_optimizer(cfg, params, device):
     return opt, sched
 
 
-def create_target(H, ENV, sun_origin, sun_origin_normed, nth_point):
-    device = H.device
-    ENV.sun_origin = sun_origin_normed
-    target_save_data = (
-        H.position_on_field,
-        th.tensor(
-            H.cfg.IDEAL.NORMAL_VECS,
-            dtype=th.get_default_dtype(),
-            device=device,
-        ),
-        H.discrete_points,
-        H.normals,
-        None,  # TODO
-
-        ENV.receiver_center,
-        ENV.receiver_plane_x,
-        ENV.receiver_plane_y,
-        ENV.receiver_plane_normal,
-        None,  # TODO
-
-        sun_origin,
-        ENV.sun.num_rays,
-        ENV.sun.mean,
-        ENV.sun.cov,
-    )
-    H.align(ENV.sun_origin, ENV.receiver_center, verbose=(nth_point == 0))
-    R = Renderer(H, ENV)
-    utils.save_target(
-        *(
-            target_save_data
-            + (
-                R.xi,
-                R.yi,
-
-                # We need the heliostat to be aligned here.
-                H.get_ray_directions(),
-                H.discrete_points,
-                f'target_{nth_point}.pt',
-            )
-        )
-    )
-
-    # Render Step
-    # ===========
-    target_bitmap = R.render()
-    H.align_reverse()
-    return target_bitmap
-
-
-def generate_dataset(cfg, H, ENV):
-    device = H.device
-    sun_origins = cfg.AC.SUN.ORIGIN
-    if not isinstance(sun_origins[0], list):
-        sun_origins = [sun_origins]
-    sun_origins = th.tensor(
-        sun_origins, dtype=th.get_default_dtype(), device=device)
-    sun_origins_normed = sun_origins / sun_origins.norm(dim=1).unsqueeze(-1)
-
-    targets = None
-    for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
-            sun_origins,
-            sun_origins_normed
-    )):
-        target_bitmap = create_target(H, ENV, sun_origin, sun_origin_normed, i)
-        if targets is None:
-            targets = th.empty(
-                (len(sun_origins),) + target_bitmap.shape,
-                dtype=th.get_default_dtype(),
-                device=device,
-            )
-        targets[i] = target_bitmap
-
-        # Plot and Save Stuff
-        # ===================
-        # print(H._normals_orig.shape)
-        # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
-    return targets, sun_origins_normed
-
-
 def train_batch(opt, sched, H, ENV, R, targets, sun_origins):
     opt.zero_grad(set_to_none=True)
     loss = 0
@@ -291,7 +213,7 @@ def main():
     # Create Heliostat Object and Load Model defined in config file
     H_target = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
-    targets, sun_origins = generate_dataset(cfg, H_target, ENV)
+    targets, sun_origins = data.generate_dataset(cfg, H_target, ENV)
     writer.add_image("originals", utils.colorize(targets[-1]))
 
     # Initialization >
