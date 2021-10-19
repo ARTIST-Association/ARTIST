@@ -187,6 +187,18 @@ def main():
             cooldown=400,
             verbose=True,
         )
+        # max_lr = 6e-5
+        # start_lr = 1e-10
+        # final_lr = 1e-8
+        # sched = th.optim.lr_scheduler.OneCycleLR(
+        #     opt,
+        #     total_steps=cfg.TRAIN_PARAMS.EPOCHS,
+        #     max_lr=max_lr,
+        #     pct_start=0.1,
+        #     div_factor=max_lr / start_lr,
+        #     final_div_factor=max_lr / final_lr,
+        #     # three_phase=True,
+        # )
     else:
         opt = th.optim.Adam(H.setup_params(), lr=3e-6, weight_decay=0.1)
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
