@@ -213,7 +213,12 @@ def main():
     # Create Heliostat Object and Load Model defined in config file
     H_target = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
-    targets, sun_origins = data.generate_dataset(cfg, H_target, ENV)
+    targets, sun_origins = data.generate_dataset(
+        cfg,
+        H_target,
+        ENV,
+        logdir_files,
+    )
     writer.add_image("originals", utils.colorize(targets[-1]))
 
     # Initialization >
