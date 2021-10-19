@@ -6,9 +6,9 @@ Created on Mon Jul  5 12:38:11 2021
 """
 
 import math
+
 from matplotlib import cm
 import torch as th
-import numpy as np
 
 import nurbs
 

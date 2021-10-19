@@ -1,18 +1,15 @@
 import copy
+from datetime import datetime
 import os
 
-
 import torch as th
-
-from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
 from heliostat_models import Heliostat
 from nurbs_heliostat import NURBSHeliostat
-from torch.utils.tensorboard import SummaryWriter
 import plotter
-import matplotlib.pyplot as plt
 from render import Renderer
 import utils
 
