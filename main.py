@@ -15,10 +15,6 @@ from render import Renderer
 import utils
 
 
-def _should_load_cp(cfg):
-    return cfg.CP_PATH is not None and cfg.CP_PATH != ''
-
-
 def load_heliostat(cfg, device):
     cp = th.load(cfg.CP_PATH, map_location=device)
     if cfg.USE_NURBS:
@@ -41,7 +37,7 @@ def load_optimizer_state(opt, cp_path, device):
 
 
 def build_heliostat(cfg, device):
-    if _should_load_cp(cfg):
+    if cfg.CP_PATH:
         H = load_heliostat(cfg, device)
     else:
         if cfg.USE_NURBS:
@@ -113,7 +109,7 @@ def build_optimizer(cfg, params, device):
         )
 
     # Load optimizer state.
-    if _should_load_cp(cfg):
+    if cfg.CP_PATH:
         opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
         load_optimizer_state(opt, opt_cp_path, device)
     return opt, sched
