@@ -13,6 +13,7 @@ import plotter
 from render import Renderer
 import utils
 
+
 def main():
     # < Initialization
     # Load Defaults
@@ -26,18 +27,17 @@ def main():
         cfg = cfg_default
     cfg.freeze()
 
-
     # Set up Logging
     # ==============
     now = datetime.now()
-    time_str =now.strftime("%y%m%d_%H%M")
+    time_str = now.strftime("%y%m%d_%H%M")
     logdir = os.path.join(cfg.LOGDIR, cfg.ID+"_"+time_str)
     logdir_files = os.path.join(logdir, "Logfiles")
     logdir_images = os.path.join(logdir, "Images")
     cfg.merge_from_list(["LOGDIR", logdir])
     os.makedirs(logdir, exist_ok=True)
     os.makedirs(logdir_files, exist_ok=True)
-    os.makedirs(logdir_images,exist_ok=True)
+    os.makedirs(logdir_images, exist_ok=True)
     with open(os.path.join(logdir, "config.yaml"), "w") as f:
         f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
@@ -169,8 +169,15 @@ def main():
         larger than 5 to 0
         """
 
-        opt = th.optim.Adamax(H.setup_params(), lr=2e-4, weight_decay=0.2)#
-        # sched = th.optim.lr_scheduler.CyclicLR(opt,base_lr=1e-8, max_lr=2e-4, step_size_up=250, cycle_momentum=False,mode="triangular2" )
+        opt = th.optim.Adamax(H.setup_params(), lr=2e-4, weight_decay=0.2)
+        # sched = th.optim.lr_scheduler.CyclicLR(
+        #     opt,
+        #     base_lr=1e-8,
+        #     max_lr=2e-4,
+        #     step_size_up=250,
+        #     cycle_momentum=False,
+        #     mode="triangular2",
+        # )
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=0.5,
@@ -230,7 +237,7 @@ def main():
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
-    last_save= 0
+    # last_save = 0
     for epoch in range(epochs):
         opt.zero_grad(set_to_none=True)
         loss = 0
@@ -277,10 +284,6 @@ def main():
         if epoch % 50 == 0:
             writer.add_image("prediction", utils.colorize(pred_bitmap), epoch)
 
-
-
-
-
         loss.backward()
         # if not use_splines:
         #     if (
@@ -307,8 +310,15 @@ def main():
                 f'ray differences: {ray_diff.detach().cpu().item()}'
             )
 
-        if epoch %50 ==0:
-            plotter.plot_surface_diff(H_target._discrete_points_orig, th.tile(th.tensor([0,0,1], device=device),(1024,1)), H_target._normals_orig,  H._normals_orig, epoch, logdir_images)
+        if epoch % 50 == 0:
+            plotter.plot_surface_diff(
+                H_target._discrete_points_orig,
+                th.tile(th.tensor([0, 0, 1], device=device), (1024, 1)),
+                H_target._normals_orig,
+                H._normals_orig,
+                epoch,
+                logdir_images,
+            )
 
         if loss.detach().cpu() < best_result:
             # Remember best checkpoint data (to store later).
@@ -327,7 +337,6 @@ def main():
             )
 
     # Diff Raytracing >
-
 
 
 if __name__ == '__main__':

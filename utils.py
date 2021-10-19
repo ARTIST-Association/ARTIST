@@ -12,7 +12,8 @@ import torch as th
 
 import nurbs
 
-def colorize(image_tensor , colormap='jet'):
+
+def colorize(image_tensor, colormap='jet'):
     """
 
     Parameters
@@ -27,18 +28,16 @@ def colorize(image_tensor , colormap='jet'):
     colored image tensor of CHW
 
     """
-    image_tensor= image_tensor.clone()/image_tensor.max()
+    image_tensor = image_tensor.clone() / image_tensor.max()
     prediction_image = image_tensor.detach().cpu().numpy()
-    
+
     color_map = cm.get_cmap('jet')
-    mapped_image = th.tensor(color_map(prediction_image)).permute(2,1,0)
+    mapped_image = th.tensor(color_map(prediction_image)).permute(2, 1, 0)
     # mapped_image8 = (255*mapped_image).astype('uint8')
     # print(colored_prediction_image.shape)
-    
-    
-    
-    
+
     return mapped_image
+
 
 def flatten_aimpoints(aimpoints):
     X = th.flatten(aimpoints[0])
@@ -46,8 +45,6 @@ def flatten_aimpoints(aimpoints):
     Z = th.flatten(aimpoints[2])
     aimpoints = th.stack((X, Y, Z), dim=1)
     return aimpoints
-
-
 
 
 def curl(f, arg):
