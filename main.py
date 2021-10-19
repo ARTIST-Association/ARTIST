@@ -25,8 +25,8 @@ def main():
     else:
         cfg = cfg_default
     cfg.freeze()
-    
-    
+
+
     # Set up Logging
     # ==============
     now = datetime.now()
@@ -41,8 +41,8 @@ def main():
     with open(os.path.join(logdir, "config.yaml"), "w") as f:
         f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
-    writer = SummaryWriter(logdir) 
-    
+    writer = SummaryWriter(logdir)
+
     # Set system params
     # =================
     th.manual_seed(cfg.SEED)
@@ -51,7 +51,7 @@ def main():
         if cfg.USE_GPU and th.cuda.is_available()
         else 'cpu'
     )
-    
+
     # Set up Environment
     # =================
     # Create Heliostat Object and Load Model defined in config file
@@ -130,7 +130,7 @@ def main():
     del sun_origins
 
     # Initialization >
-    
+
     # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
     # TODO Load other Constants than in Setup
@@ -149,7 +149,7 @@ def main():
             H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
-    
+
     if cfg.USE_NURBS:
         """
         In order to avoid
@@ -162,13 +162,13 @@ def main():
         """
         Mehrere Sonnenstände
         """
-        
+
         """
         We exclude the light source
         in the loss function by setting the weights of pixels with radiance
         larger than 5 to 0
         """
-        
+
         opt = th.optim.Adamax(H.setup_params(), lr=2e-4, weight_decay=0.2)#
         # sched = th.optim.lr_scheduler.CyclicLR(opt,base_lr=1e-8, max_lr=2e-4, step_size_up=250, cycle_momentum=False,mode="triangular2" )
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
@@ -198,7 +198,7 @@ def main():
             factor=0.5,
             min_lr=1e-12,
             patience=10,
-            
+
             verbose=True,
         )
 
@@ -225,10 +225,10 @@ def main():
     #     #     ])
     #     #     loss += th.sum(th.abs(curls))
     #     return loss
-    
+
     epochs = cfg.TRAIN_PARAMS.EPOCHS
     epoch_shift_width = len(str(epochs))
-    
+
     best_result = th.tensor(float('inf'))
     last_save= 0
     for epoch in range(epochs):
@@ -276,11 +276,11 @@ def main():
         writer.add_scalar("train/loss", loss.item(), epoch)
         if epoch % 50 == 0:
             writer.add_image("prediction", utils.colorize(pred_bitmap), epoch)
-            
-            
-    
-            
-    
+
+
+
+
+
         loss.backward()
         # if not use_splines:
         #     if (
@@ -289,13 +289,13 @@ def main():
         #     ):
         #         print('no more optimization possible; ending...')
         #         break
-    
+
         opt.step()
         if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
             sched.step(loss)
         else:
             sched.step()
-        
+
         with th.no_grad():
             num_missed /= len(targets)
             ray_diff /= len(targets)
