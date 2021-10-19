@@ -328,8 +328,11 @@ def main():
             model_name = type(H).__name__
         if epoch % 100 == 0:
             
-            th.save(save_data, f'{logdir_files}\\{model_name}.pt')
-            th.save({'opt': opt.state_dict()}, f'{logdir_files}\\{model_name}_opt.pt')
+            th.save(save_data, os.path.join(logdir_files, f'{model_name}.pt'))
+            th.save(
+                {'opt': opt.state_dict()},
+                os.path.join(logdir_files, f'{model_name}_opt.pt'),
+            )
 
     # Diff Raytracing >
 
