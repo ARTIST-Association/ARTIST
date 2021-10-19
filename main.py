@@ -14,6 +14,240 @@ from render import Renderer
 import utils
 
 
+def _should_load_cp(cfg):
+    return cfg.CP_PATH is not None and cfg.CP_PATH != ''
+
+
+def load_heliostat(cfg, device):
+    cp = th.load(cfg.CP_PATH, map_location=device)
+    if cfg.USE_NURBS:
+        H = NURBSHeliostat.from_dict(cp, device)
+    else:
+        H = Heliostat.from_dict(cp, device)
+    return H
+
+
+def load_optimizer(opt, cp_path, device):
+    if not os.path.isfile(cp_path):
+        print(
+            f'Warning: cannot find optimizer under {cp_path}; '
+            f'please rename your optimizer checkpoint accordingly. '
+            f'Continuing with newly created optimizer...'
+        )
+        return
+    cp = th.load(cp_path, map_location=device)
+    opt.load_state_dict(cp['opt'])
+
+
+def build_heliostat(cfg, device):
+    if _should_load_cp(cfg):
+        H = load_heliostat(cfg, device)
+    else:
+        if cfg.USE_NURBS:
+            H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+        else:
+            # Create Heliostat Object and Load Model defined in config file
+            H = Heliostat(cfg.H, device)
+    return H
+
+
+def build_optimizer(cfg, params, device):
+    if cfg.USE_NURBS:
+        """
+        In order to avoid
+        getting stuck in local minima, we perform the optimization in a
+        multi-scale fashion, starting from 64 ×64 and linearly increasing to
+        """
+        """
+        reset stark ausgelagerte NURBS
+        """
+        """
+        Mehrere Sonnenstände
+        """
+
+        """
+        We exclude the light source
+        in the loss function by setting the weights of pixels with radiance
+        larger than 5 to 0
+        """
+
+        opt = th.optim.Adamax(params, lr=2e-4, weight_decay=0.2)
+        # sched = th.optim.lr_scheduler.CyclicLR(
+        #     opt,
+        #     base_lr=1e-8,
+        #     max_lr=2e-4,
+        #     step_size_up=250,
+        #     cycle_momentum=False,
+        #     mode="triangular2",
+        # )
+        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            factor=0.5,
+            min_lr=1e-7,
+            patience=200,
+            cooldown=400,
+            verbose=True,
+        )
+        # max_lr = 6e-5
+        # start_lr = 1e-10
+        # final_lr = 1e-8
+        # sched = th.optim.lr_scheduler.OneCycleLR(
+        #     opt,
+        #     total_steps=cfg.TRAIN_PARAMS.EPOCHS,
+        #     max_lr=max_lr,
+        #     pct_start=0.1,
+        #     div_factor=max_lr / start_lr,
+        #     final_div_factor=max_lr / final_lr,
+        #     # three_phase=True,
+        # )
+    else:
+        opt = th.optim.Adam(params, lr=3e-6, weight_decay=0.1)
+        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            factor=0.5,
+            min_lr=1e-12,
+            patience=10,
+
+            verbose=True,
+        )
+
+    # Load optimizer state.
+    if _should_load_cp(cfg):
+        opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
+        load_optimizer(opt, opt_cp_path, device)
+    return opt, sched
+
+
+def create_target(H, ENV, sun_origin, sun_origin_normed, nth_point):
+    device = H.device
+    ENV.sun_origin = sun_origin_normed
+    target_save_data = (
+        H.position_on_field,
+        th.tensor(
+            H.cfg.IDEAL.NORMAL_VECS,
+            dtype=th.get_default_dtype(),
+            device=device,
+        ),
+        H.discrete_points,
+        H.normals,
+        None,  # TODO
+
+        ENV.receiver_center,
+        ENV.receiver_plane_x,
+        ENV.receiver_plane_y,
+        ENV.receiver_plane_normal,
+        None,  # TODO
+
+        sun_origin,
+        ENV.sun.num_rays,
+        ENV.sun.mean,
+        ENV.sun.cov,
+    )
+    H.align(ENV.sun_origin, ENV.receiver_center, verbose=(nth_point == 0))
+    R = Renderer(H, ENV)
+    utils.save_target(
+        *(
+            target_save_data
+            + (
+                R.xi,
+                R.yi,
+
+                # We need the heliostat to be aligned here.
+                H.get_ray_directions(),
+                H.discrete_points,
+                f'target_{nth_point}.pt',
+            )
+        )
+    )
+
+    # Render Step
+    # ===========
+    target_bitmap = R.render()
+    H.align_reverse()
+    return target_bitmap
+
+
+def generate_dataset(cfg, H, ENV):
+    device = H.device
+    sun_origins = cfg.AC.SUN.ORIGIN
+    if not isinstance(sun_origins[0], list):
+        sun_origins = [sun_origins]
+    sun_origins = th.tensor(
+        sun_origins, dtype=th.get_default_dtype(), device=device)
+    sun_origins_normed = sun_origins / sun_origins.norm(dim=1).unsqueeze(-1)
+
+    targets = None
+    for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
+            sun_origins,
+            sun_origins_normed
+    )):
+        target_bitmap = create_target(H, ENV, sun_origin, sun_origin_normed, i)
+        if targets is None:
+            targets = th.empty(
+                (len(sun_origins),) + target_bitmap.shape,
+                dtype=th.get_default_dtype(),
+                device=device,
+            )
+        targets[i] = target_bitmap
+
+        # Plot and Save Stuff
+        # ===================
+        # print(H._normals_orig.shape)
+        # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
+    return targets, sun_origins_normed
+
+
+def train_batch(opt, sched, H, ENV, R, targets, sun_origins):
+    opt.zero_grad(set_to_none=True)
+    loss = 0
+    num_missed = 0.0
+    ray_diff = 0
+    # print(ray_directions)
+    for (i, (target, sun_origin)) in enumerate(zip(
+            targets,
+            sun_origins,
+    )):
+        ENV.sun_origin = sun_origin
+        H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
+        pred_bitmap = R.render()
+
+        loss += th.nn.functional.mse_loss(pred_bitmap, target)
+        # loss += loss_func(
+        #     pred_bitmap,
+        #     target,
+        #     lambda rayPoints: compute_receiver_intersections(
+        #         planeNormal,
+        #         aimpoint,
+        #         ray_directions,
+        #         rayPoints,
+        #         xi,
+        #         yi,
+        #     ),
+        #     rayPoints,
+        # )
+
+        with th.no_grad():
+            H.align_reverse()
+            num_missed += R.indices.numel() - R.indices.count_nonzero()
+            ray_diff += utils.calc_ray_diffs(
+                R.ray_directions,
+                H.get_ray_directions().detach(),
+            )
+    loss /= len(targets)
+    loss.backward()
+
+    opt.step()
+    if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
+        sched.step(loss)
+    else:
+        sched.step()
+
+    with th.no_grad():
+        num_missed /= len(targets)
+        ray_diff /= len(targets)
+    return loss, pred_bitmap, num_missed, ray_diff
+
+
 def main():
     # < Initialization
     # Load Defaults
@@ -55,173 +289,21 @@ def main():
     # Set up Environment
     # =================
     # Create Heliostat Object and Load Model defined in config file
-    targets = None
-    sun_origins = cfg.AC.SUN.ORIGIN
-    if not isinstance(sun_origins[0], list):
-        sun_origins = [sun_origins]
-    sun_origins = th.tensor(
-        sun_origins, dtype=th.get_default_dtype(), device=device)
-    sun_origins_normed = sun_origins / sun_origins.norm(dim=1).unsqueeze(-1)
-
     H_target = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
-    for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
-            sun_origins,
-            sun_origins_normed
-    )):
-        ENV.sun_origin = sun_origin_normed
-        target_save_data = (
-            H_target.position_on_field,
-            th.tensor(
-                H_target.cfg.IDEAL.NORMAL_VECS,
-                dtype=th.get_default_dtype(),
-                device=device,
-            ),
-            H_target.discrete_points,
-            H_target.normals,
-            None,  # TODO
-
-            ENV.receiver_center,
-            ENV.receiver_plane_x,
-            ENV.receiver_plane_y,
-            ENV.receiver_plane_normal,
-            None,  # TODO
-
-            sun_origin,
-            ENV.sun.num_rays,
-            ENV.sun.mean,
-            ENV.sun.cov,
-        )
-        H_target.align(ENV.sun_origin, ENV.receiver_center, verbose=(i == 0))
-        R = Renderer(H_target, ENV)
-        utils.save_target(
-            *(
-                target_save_data
-                + (
-                    R.xi,
-                    R.yi,
-
-                    # We need the heliostat to be aligned here.
-                    H_target.get_ray_directions(),
-                    H_target.discrete_points,
-                    f'target_{i}.pt',
-                )
-            )
-        )
-        del target_save_data
-
-        # Render Step
-        # ===========
-        target_bitmap = R.render()
-        if targets is None:
-            targets = th.empty(
-                (len(sun_origins),) + target_bitmap.shape,
-                dtype=th.get_default_dtype(),
-                device=device,
-            )
-        targets[i] = target_bitmap
-        H_target.align_reverse()
-
-        # Plot and Save Stuff
-        # ===================
-        # print(H._normals_orig.shape)
-        # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
-    writer.add_image("originals", utils.colorize(target_bitmap))
-    del sun_origins
+    targets, sun_origins = generate_dataset(cfg, H_target, ENV)
+    writer.add_image("originals", utils.colorize(targets[-1]))
 
     # Initialization >
 
     # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
     # TODO Load other Constants than in Setup
-    load_cp = cfg.CP_PATH is not None and cfg.CP_PATH != ''
-    if load_cp:
-        cp = th.load(cfg.CP_PATH, map_location=device)
-        if cfg.USE_NURBS:
-            H = NURBSHeliostat.from_dict(cp, device)
-        else:
-            H = Heliostat.from_dict(cp, device)
-    else:
-        if cfg.USE_NURBS:
-            H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
-        else:
-            # Create Heliostat Object and Load Model defined in config file
-            H = Heliostat(cfg.H, device)
+    H = build_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    if cfg.USE_NURBS:
-        """
-        In order to avoid
-        getting stuck in local minima, we perform the optimization in a
-        multi-scale fashion, starting from 64 ×64 and linearly increasing to
-        """
-        """
-        reset stark ausgelagerte NURBS
-        """
-        """
-        Mehrere Sonnenstände
-        """
-
-        """
-        We exclude the light source
-        in the loss function by setting the weights of pixels with radiance
-        larger than 5 to 0
-        """
-
-        opt = th.optim.Adamax(H.setup_params(), lr=2e-4, weight_decay=0.2)
-        # sched = th.optim.lr_scheduler.CyclicLR(
-        #     opt,
-        #     base_lr=1e-8,
-        #     max_lr=2e-4,
-        #     step_size_up=250,
-        #     cycle_momentum=False,
-        #     mode="triangular2",
-        # )
-        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
-            opt,
-            factor=0.5,
-            min_lr=1e-7,
-            patience=200,
-            cooldown=400,
-            verbose=True,
-        )
-        # max_lr = 6e-5
-        # start_lr = 1e-10
-        # final_lr = 1e-8
-        # sched = th.optim.lr_scheduler.OneCycleLR(
-        #     opt,
-        #     total_steps=cfg.TRAIN_PARAMS.EPOCHS,
-        #     max_lr=max_lr,
-        #     pct_start=0.1,
-        #     div_factor=max_lr / start_lr,
-        #     final_div_factor=max_lr / final_lr,
-        #     # three_phase=True,
-        # )
-    else:
-        opt = th.optim.Adam(H.setup_params(), lr=3e-6, weight_decay=0.1)
-        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
-            opt,
-            factor=0.5,
-            min_lr=1e-12,
-            patience=10,
-
-            verbose=True,
-        )
-
-    # Load optimizer state.
-    if load_cp:
-        opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
-        if not os.path.isfile(opt_cp_path):
-            print(
-                f'Warning: cannot find optimizer under {opt_cp_path}; '
-                f'please rename your optimizer checkpoint accordingly. '
-                f'Continuing with newly created optimizer...'
-            )
-        else:
-            cp = th.load(opt_cp_path, map_location=device)
-            opt.load_state_dict(cp['opt'])
-            del cp
+    opt, sched = build_optimizer(cfg, H.setup_params(), device)
 
     # loss = th.nn.functional.mse_loss()
     # def loss_func(pred, target, compute_intersections, rayPoints):
@@ -240,52 +322,21 @@ def main():
     best_result = th.tensor(float('inf'))
     # last_save = 0
     for epoch in range(epochs):
-        opt.zero_grad(set_to_none=True)
-        loss = 0
-        num_missed = 0.0
-        ray_diff = 0
-        # print(ray_directions)
-        for (i, (target, sun_origin)) in enumerate(zip(
-                targets,
-                sun_origins_normed,
-        )):
-            ENV.sun_origin = sun_origin
-            H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
-            pred_bitmap = R.render()
+        loss, pred_bitmap, num_missed, ray_diff = train_batch(
+            opt,
+            sched,
+            H,
+            ENV,
+            R,
+            targets,
+            sun_origins,
+        )
 
-            loss += th.nn.functional.mse_loss(pred_bitmap, target)
-            # loss += loss_func(
-            #     pred_bitmap,
-            #     target,
-            #     lambda rayPoints: compute_receiver_intersections(
-            #         planeNormal,
-            #         aimpoint,
-            #         ray_directions,
-            #         rayPoints,
-            #         xi,
-            #         yi,
-            #     ),
-            #     rayPoints,
-            # )
-
-            with th.no_grad():
-                H.align_reverse()
-                num_missed += R.indices.numel() - R.indices.count_nonzero()
-                ray_diff += utils.calc_ray_diffs(
-                    R.ray_directions,
-                    H.get_ray_directions().detach(),
-                )
         # if epoch %  10== 0:#
         #     im.set_data(pred.detach().cpu().numpy())
         #     im.autoscale()
         #     plt.savefig(os.path.join("images", f"{epoch}.png"))
 
-        loss /= len(targets)
-        writer.add_scalar("train/loss", loss.item(), epoch)
-        if epoch % 50 == 0:
-            writer.add_image("prediction", utils.colorize(pred_bitmap), epoch)
-
-        loss.backward()
         # if not use_splines:
         #     if (
         #             ray_directions.grad is None
@@ -294,22 +345,17 @@ def main():
         #         print('no more optimization possible; ending...')
         #         break
 
-        opt.step()
-        if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
-            sched.step(loss)
-        else:
-            sched.step()
+        writer.add_scalar("train/loss", loss.item(), epoch)
+        if epoch % 50 == 0:
+            writer.add_image("prediction", utils.colorize(pred_bitmap), epoch)
 
-        with th.no_grad():
-            num_missed /= len(targets)
-            ray_diff /= len(targets)
-            print(
-                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-                f'loss: {loss.detach().cpu().numpy()}, '
-                f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-                f'missed: {num_missed.detach().cpu().item()}, '
-                f'ray differences: {ray_diff.detach().cpu().item()}'
-            )
+        print(
+            f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+            f'loss: {loss.detach().cpu().numpy()}, '
+            f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+            f'missed: {num_missed.detach().cpu().item()}, '
+            f'ray differences: {ray_diff.detach().cpu().item()}'
+        )
 
         if epoch % 50 == 0:
             plotter.plot_surface_diff(
