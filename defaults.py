@@ -9,7 +9,7 @@ _C.SEED                                 = 0
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
-_C.CP_PATH                              = None
+_C.CP_PATH                              = ""
 
 # NURBS settings
 
@@ -49,19 +49,19 @@ _C.H.NURBS                              = CN()
 _C.H.NURBS.NORMAL_VECS                  = [0, 0, 1]
 _C.H.NURBS.WIDTH                        = 4 # in m
 _C.H.NURBS.HEIGHT                       = 4 # in m
-_C.H.NURBS.ROWS                         = 6
-_C.H.NURBS.COLS                         = 6
+_C.H.NURBS.ROWS                         = 20
+_C.H.NURBS.COLS                         = 20
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA33_Rim0_STRAL-Input.binp"
-_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 100
+_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 1000
 _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()
-_C.H.OTHER.FILENAME                     = 'tinker.obj'
+_C.H.OTHER.FILENAME                     = ''
 _C.H.OTHER.USE_WEIGHTED_AVG             = True
 
 # TODO add heliostat up vec ("rotation")
@@ -79,7 +79,14 @@ _C.AC.RECEIVER.RESOLUTION_X             = 128
 _C.AC.RECEIVER.RESOLUTION_Y             = 128
 
 _C.AC.SUN                               = CN()
-_C.AC.SUN.ORIGIN                        = [-1, 0, 0]
+_C.AC.SUN.ORIGIN                        = [[-1, 0, 0.1],
+                                            [-1,-1,0.1],
+                                            [1,0,0.1],
+                                            [1,1,0.1],
+                                            [0,1,0.1],
+                                            [0,0.1,1],
+                                            [1,1,1]
+                                            ]
 _C.AC.SUN.GENERATE_N_RAYS               = 1000
 _C.AC.SUN.DISTRIBUTION                  = "Normal"
 
