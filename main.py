@@ -68,7 +68,7 @@ def main():
     for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
             sun_origins,
             sun_origins_normed
-    )):
+        )):
         ENV.sun_origin = sun_origin_normed
         target_save_data = (
             H_target.position_on_field,
@@ -122,18 +122,15 @@ def main():
         targets[i] = target_bitmap
         H_target.align_reverse()
 
-        # Plot and Save Stuff
+        # Plot Stuff
         # ===================
-        # print(H._normals_orig.shape)
-        writer.add_image("originals", utils.colorize(target_bitmap))
+        writer.add_image(f"images_{i}/originals", utils.colorize(target_bitmap))
         # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
     del sun_origins
 
     # Initialization >
 
-    # TODO Bis hierhin fertig refactored
     # < Diff Raytracing
-    # TODO Load other Constants than in Setup
     load_cp = cfg.CP_PATH is not None and cfg.CP_PATH != ''
     if load_cp:
         cp = th.load(cfg.CP_PATH, map_location=device)
@@ -145,30 +142,11 @@ def main():
         if cfg.USE_NURBS:
             H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
         else:
-            # Create Heliostat Object and Load Model defined in config file
             H = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
     if cfg.USE_NURBS:
-        """
-        In order to avoid
-        getting stuck in local minima, we perform the optimization in a
-        multi-scale fashion, starting from 64 ×64 and linearly increasing to
-        """
-        """
-        reset stark ausgelagerte NURBS
-        """
-        """
-        Mehrere Sonnenstände
-        """
-
-        """
-        We exclude the light source
-        in the loss function by setting the weights of pixels with radiance
-        larger than 5 to 0
-        """
-
         opt = th.optim.Adamax(H.setup_params(), lr=2e-4, weight_decay=0.2)
         # sched = th.optim.lr_scheduler.CyclicLR(
         #     opt,
@@ -199,7 +177,7 @@ def main():
         #     # three_phase=True,
         # )
     else:
-        opt = th.optim.Adam(H.setup_params(), lr=3e-6, weight_decay=0.1)
+        opt = th.optim.Adam(H.setup_params(), lr=3e-6, weight_decay=0.4)
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=0.5,
@@ -252,7 +230,7 @@ def main():
             H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
             pred_bitmap = R.render()
 
-            loss += th.nn.functional.mse_loss(pred_bitmap, target)
+            loss += th.nn.functional.l1_loss(pred_bitmap, target)
             # loss += loss_func(
             #     pred_bitmap,
             #     target,
@@ -266,14 +244,16 @@ def main():
             #     ),
             #     rayPoints,
             # )
-
+            if epoch % 50 == 0:
+                writer.add_image(f"images_{i}/prediction", utils.colorize(pred_bitmap), epoch)
             with th.no_grad():
                 H.align_reverse()
-                num_missed += R.indices.numel() - R.indices.count_nonzero()
-                ray_diff += utils.calc_ray_diffs(
-                    R.ray_directions,
-                    H.get_ray_directions().detach(),
-                )
+            #     num_missed += R.indices.numel() - R.indices.count_nonzero()
+            #     ray_diff += utils.calc_ray_diffs(
+            #         R.ray_directions,
+            #         H.get_ray_directions().detach(),
+            #     )
+            
         # if epoch %  10== 0:#
         #     im.set_data(pred.detach().cpu().numpy())
         #     im.autoscale()
@@ -281,8 +261,7 @@ def main():
 
         loss /= len(targets)
         writer.add_scalar("train/loss", loss.item(), epoch)
-        if epoch % 50 == 0:
-            writer.add_image("prediction", utils.colorize(pred_bitmap), epoch)
+        
 
         loss.backward()
         # if not use_splines:
@@ -298,7 +277,7 @@ def main():
             sched.step(loss)
         else:
             sched.step()
-
+ 
         with th.no_grad():
             num_missed /= len(targets)
             ray_diff /= len(targets)
@@ -306,19 +285,19 @@ def main():
                 f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                 f'loss: {loss.detach().cpu().numpy()}, '
                 f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-                f'missed: {num_missed.detach().cpu().item()}, '
-                f'ray differences: {ray_diff.detach().cpu().item()}'
+                # f'missed: {num_missed.detach().cpu().item()}, '
+                # f'ray differences: {ray_diff.detach().cpu().item()}'
             )
 
-        if epoch % 50 == 0:
-            plotter.plot_surface_diff(
-                H_target._discrete_points_orig,
-                th.tile(th.tensor([0, 0, 1], device=device), (1024, 1)),
-                H_target._normals_orig,
-                H._normals_orig,
-                epoch,
-                logdir_images,
-            )
+        # if epoch % 50 == 0:
+        #     plotter.plot_surface_diff(
+        #         H_target._discrete_points_orig,
+        #         th.tile(th.tensor([0, 0, 1], device=device), (1024, 1)),
+        #         H_target._normals_orig,
+        #         H._normals_orig,
+        #         epoch,
+        #         logdir_images,
+        #     )
 
         if loss.detach().cpu() < best_result:
             # Remember best checkpoint data (to store later).
