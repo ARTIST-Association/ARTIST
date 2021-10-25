@@ -92,7 +92,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.ctrl_points_xy.requires_grad_(True)
         if not self.fix_spline_ctrl_weights:
             self.ctrl_weights.requires_grad_(True)
-
+            
         # self.knots_x.requires_grad_(True)
         # self.knots_y.requires_grad_(True)
 
@@ -246,10 +246,10 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     def _to_dict(self):
         data = super()._to_dict()
 
-        data = {
+        data.update({
             'degree_x': self.degree_x,
             'degree_y': self.degree_y,
-            'control_points': self.ctrl_points,
+            'control_points': self.ctrl_points.detach().cpu(),
             'control_point_weights': self.ctrl_weights,
             'knots_x': self.knots_x,
             'knots_y': self.knots_y,
@@ -258,7 +258,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             'original_world_points': self._orig_world_points,
 
             'nurbs_config': self.nurbs_cfg,
-        }
+        })
         return data
 
     @classmethod
@@ -276,6 +276,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
+            
         self = cls(config, nurbs_config, device)
         self._from_dict(data, restore_strictly)
         return self
@@ -283,7 +284,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     def _from_dict(self, data, restore_strictly):
         # Keep normals from standard initialization here.
         normals_orig = self._normals_orig
-        super()._from_dict(self, data, restore_strictly)
+        super()._from_dict(data, restore_strictly)
         self._normals_orig = normals_orig
 
         self.degree_x = data['degree_x']
