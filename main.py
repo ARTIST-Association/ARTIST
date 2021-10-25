@@ -55,7 +55,7 @@ def build_heliostat(cfg, device):
 def build_optimizer(cfg, params, device):
     if cfg.USE_NURBS:
         # print(params)
-        opt = th.optim.Adamax(params, lr=1e-4, weight_decay=0.2)
+        opt = th.optim.Adamax(params, lr=1e-4)
         # sched = th.optim.lr_scheduler.CyclicLR(
         #     opt,
         #     base_lr=1e-8,
@@ -85,7 +85,7 @@ def build_optimizer(cfg, params, device):
         #     # three_phase=True,
         # )
     else:
-        opt = th.optim.Adam(params, lr=3e-6, weight_decay=0.1)
+        opt = th.optim.Adam(params, lr=3e-6)
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=0.5,
@@ -102,8 +102,15 @@ def build_optimizer(cfg, params, device):
     return opt, sched
 
 
-def loss_func(pred_bitmap, target):
-    return th.nn.functional.l1_loss(pred_bitmap, target)
+def loss_func(pred_bitmap, target, opt, weight_decay_factor):
+    loss = th.nn.functional.l1_loss(pred_bitmap, target)
+    weight_decay = sum(
+        param.norm(p=1)
+        for group in opt.param_groups
+        for param in group['params']
+    )
+    loss += weight_decay_factor * weight_decay
+    return loss
 
 
 def train_batch(
@@ -115,6 +122,7 @@ def train_batch(
         targets,
         sun_origins,
         epoch,
+        weight_decay_factor=0,
         writer=None,
 ):
     # Initialize Parameters
@@ -134,7 +142,10 @@ def train_batch(
         H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         pred_bitmap = R.render()
 
-        loss += loss_func(pred_bitmap, target) / len(targets)
+        loss += (
+            loss_func(pred_bitmap, target, opt, weight_decay_factor)
+            / len(targets)
+        )
 
         # Plot target images to TensorBoard
         if writer:
@@ -240,6 +251,7 @@ def main():
     R = Renderer(H, ENV)
 
     opt, sched = build_optimizer(cfg, H.setup_params(), device)
+    weight_decay_factor = 0.2 if cfg.USE_NURBS else 0.1
 
     epochs = cfg.TRAIN_PARAMS.EPOCHS
     epoch_shift_width = len(str(epochs))
@@ -255,6 +267,7 @@ def main():
             targets,
             sun_origins,
             epoch,
+            weight_decay_factor,
             writer,
         )
         # if not use_splines:
