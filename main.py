@@ -102,6 +102,10 @@ def build_optimizer(cfg, params, device):
     return opt, sched
 
 
+def loss_func(pred_bitmap, target):
+    return th.nn.functional.l1_loss(pred_bitmap, target)
+
+
 def train_batch(
         opt,
         sched,
@@ -130,7 +134,7 @@ def train_batch(
         H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         pred_bitmap = R.render()
 
-        loss += th.nn.functional.l1_loss(pred_bitmap, target) / len(targets)
+        loss += loss_func(pred_bitmap, target) / len(targets)
 
         # Plot target images to TensorBoard
         if writer:
