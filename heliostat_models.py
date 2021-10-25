@@ -467,11 +467,11 @@ class Heliostat(object):
 
     def _to_dict(self):
         return {
-            'heliostat_points': self._discrete_points_orig,
-            'heliostat_normals': self._normals_orig,
+            'heliostat_points': self._discrete_points_orig.clone(),
+            'heliostat_normals': self._normals_orig.clone(),
 
-            'config': self.cfg,
-            'params': self.params,
+            'config': self.cfg.copy(),
+            'params': self.params.copy(),
         }
 
     @classmethod

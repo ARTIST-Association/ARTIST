@@ -249,15 +249,15 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         data.update({
             'degree_x': self.degree_x,
             'degree_y': self.degree_y,
-            'control_points': self.ctrl_points,
-            'control_point_weights': self.ctrl_weights,
-            'knots_x': self.knots_x,
-            'knots_y': self.knots_y,
+            'control_points': self.ctrl_points.clone(),
+            'control_point_weights': self.ctrl_weights.clone(),
+            'knots_x': self.knots_x.clone(),
+            'knots_y': self.knots_y.clone(),
 
-            'evaluation_points': self.eval_points,
-            'original_world_points': self._orig_world_points,
+            'evaluation_points': self.eval_points.clone(),
+            'original_world_points': self._orig_world_points.clone(),
 
-            'nurbs_config': self.nurbs_cfg,
+            'nurbs_config': self.nurbs_cfg.copy(),
         })
         return data
 
