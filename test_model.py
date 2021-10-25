@@ -170,8 +170,8 @@ def main():
         'H.IDEAL.NORMAL_VECS',
         target.heliostat_face_normal.tolist(),
         # We assign this as well just in case.
-        'H.NURBS.NORMAL_VECS',
-        target.heliostat_face_normal.tolist(),
+        # 'H.NURBS.NORMAL_VECS',
+        # target.heliostat_face_normal.tolist(),
         # TODO Missing `heliostat_up_dir`
 
         'AC.RECEIVER.CENTER',

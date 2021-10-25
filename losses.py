@@ -1,4 +1,5 @@
-#this file is not used right know it inherits all lines of deprecated code associated with losses
+# this file is not used right know it inherits all lines of deprecated
+# code associated with losses
 
 # loss += loss_func(
 #     pred_bitmap,

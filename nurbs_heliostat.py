@@ -92,7 +92,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.ctrl_points_xy.requires_grad_(True)
         if not self.fix_spline_ctrl_weights:
             self.ctrl_weights.requires_grad_(True)
-            
+
         # self.knots_x.requires_grad_(True)
         # self.knots_y.requires_grad_(True)
 
@@ -276,7 +276,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
-            
+
         self = cls(config, nurbs_config, device)
         self._from_dict(data, restore_strictly)
         return self

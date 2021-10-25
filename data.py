@@ -11,8 +11,8 @@ def create_target(
         ENV,
         sun_origin,
         sun_origin_normed,
-        save_path = None,
-        verbose = False,
+        save_path=None,
+        verbose=False,
 ):
     device = H.device
     ENV.sun_origin = sun_origin_normed
@@ -39,6 +39,7 @@ def create_target(
             ENV.sun.mean,
             ENV.sun.cov,
         )
+
     H.align(ENV.sun_origin, ENV.receiver_center, verbose=verbose)
     R = Renderer(H, ENV)
     if save_path:
@@ -65,6 +66,11 @@ def create_target(
 
 
 def generate_dataset(cfg, H, ENV, save_dir, writer=None):
+    if save_dir:
+        save_path = os.path.join(save_dir, 'target.pt')
+    else:
+        save_path = None
+
     device = H.device
     sun_origins = cfg.AC.SUN.ORIGIN
     if not isinstance(sun_origins[0], list):
@@ -75,13 +81,9 @@ def generate_dataset(cfg, H, ENV, save_dir, writer=None):
 
     targets = None
     last_i = len(sun_origins) - 1
-    if save_dir:
-        save_path = os.path.join(save_dir, 'target.pt')
-    else:
-        save_path = None
     for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
             sun_origins,
-            sun_origins_normed
+            sun_origins_normed,
     )):
         target_bitmap = create_target(
             H,
@@ -99,7 +101,10 @@ def generate_dataset(cfg, H, ENV, save_dir, writer=None):
             )
         targets[i] = target_bitmap
         if writer:
-            writer.add_image(f"target_{i}/originals", utils.colorize(target_bitmap))
+            writer.add_image(
+                f"target_{i}/originals",
+                utils.colorize(target_bitmap),
+            )
 
         # Plot and Save Stuff
         # ===================

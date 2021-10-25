@@ -62,7 +62,7 @@ _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()
-_C.H.OTHER.FILENAME                     = ''
+_C.H.OTHER.FILENAME                     = 'tinker.obj'
 _C.H.OTHER.USE_WEIGHTED_AVG             = True
 
 # TODO add heliostat up vec ("rotation")

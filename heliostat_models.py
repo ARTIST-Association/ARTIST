@@ -66,7 +66,6 @@ def real_heliostat(real_configs, device):
                 positions.append([ray_data[0], ray_data[1], ray_data[2]])
                 directions.append([ray_data[3], ray_data[4], ray_data[5]])
                 # powers.append(ray_data[6])
-        
 
         h_normal_vecs = th.tensor(
             directions[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
@@ -97,9 +96,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
         Z = th.sin(X + Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
         Z = th.sin(X) / reduction + th.cos(Y) / reduction
-    
     elif cfg.NAME == "random":
-        Z = (th.sin(X)+th.sin(2*Y)+th.sin(3*X)+th.sin(4*Y)) / reduction + (th.cos(Y)+ th.cos(2*X)+ th.cos(3*Y)+ th.cos(4*Y)) / reduction
+        Z = (
+            th.sin(X) + th.sin(2 * Y) + th.sin(3 * X) + th.sin(4 * Y)
+            + th.cos(Y) + th.cos(2 * X) + th.cos(3 * Y) + th.cos(4 * Y)
+        ) / reduction
     else:
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
