@@ -12,8 +12,8 @@ _C.USE_NURBS                            = True
 _C.SAVE_RESULTS                         = True
 _C.CP_PATH                              = ""
 # _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\reflect\\Results\\DeflecThirdTestMoreSuns_211021_1325\\Logfiles\\NURBSHeliostat.pt"
-# NURBS settings
 
+# NURBS settings
 _C.NURBS                                = CN()
 # If setting this to `False`, be aware that the NURBS surface will
 # always be evaluated at each surface position independently of the ray
