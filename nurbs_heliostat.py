@@ -13,6 +13,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         self.nurbs_cfg = nurbs_config
 
         self.fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
+        self.fix_spline_knots = nurbs_config.FIX_SPLINE_KNOTS
         self.recalc_eval_points = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
 
         spline_degree = nurbs_config.SPLINE_DEGREE
@@ -93,8 +94,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         if not self.fix_spline_ctrl_weights:
             self.ctrl_weights.requires_grad_(True)
 
-        # self.knots_x.requires_grad_(True)
-        # self.knots_y.requires_grad_(True)
+        if not self.fix_spline_knots:
+            self.knots_x.requires_grad_(True)
+            self.knots_y.requires_grad_(True)
 
         opt_params = [self.ctrl_points_z]
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
@@ -102,9 +104,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         if not self.fix_spline_ctrl_weights:
             opt_params.append(self.ctrl_weights)
 
-        if self.knots_x.requires_grad:
+        if not self.fix_spline_knots:
             opt_params.append(self.knots_x)
-        if self.knots_y.requires_grad:
             opt_params.append(self.knots_y)
 
         return opt_params

@@ -20,6 +20,7 @@ _C.NURBS                                = CN()
 # origins.
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
+_C.NURBS.FIX_SPLINE_KNOTS               = True
 _C.NURBS.OPTIMIZE_Z_ONLY                = False
 _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
