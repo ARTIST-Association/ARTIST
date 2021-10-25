@@ -300,7 +300,7 @@ def main():
             if loss.detach().cpu() < best_result:
                 # Remember best checkpoint data (to store on disk later).
                 best_result = loss.detach().cpu()
-                save_data = H.to_dict()
+                save_data = copy.deepcopy(H.to_dict())
                 save_data['xi'] = R.xi
                 save_data['yi'] = R.yi
                 opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}

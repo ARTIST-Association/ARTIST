@@ -249,7 +249,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         data.update({
             'degree_x': self.degree_x,
             'degree_y': self.degree_y,
-            'control_points': self.ctrl_points.detach().cpu(),
+            'control_points': self.ctrl_points,
             'control_point_weights': self.ctrl_weights,
             'knots_x': self.knots_x,
             'knots_y': self.knots_y,
