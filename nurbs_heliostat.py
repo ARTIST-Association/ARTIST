@@ -12,9 +12,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
 
-        self.fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
-        self.fix_spline_knots = nurbs_config.FIX_SPLINE_KNOTS
-        self.recalc_eval_points = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
+        self._fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
+        self._fix_spline_knots = nurbs_config.FIX_SPLINE_KNOTS
+        self._recalc_eval_points = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
 
         spline_degree = nurbs_config.SPLINE_DEGREE
         self.degree_x = spline_degree
@@ -38,6 +38,18 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
         self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
+
+    @property
+    def fix_spline_ctrl_weights(self):
+        return self._fix_spline_ctrl_weights
+
+    @property
+    def fix_spline_knots(self):
+        return self._fix_spline_knots
+
+    @property
+    def recalc_eval_points(self):
+        return self._recalc_eval_points
 
     def initialize_control_points(self, ctrl_points):
         heliostat_config = self.cfg
