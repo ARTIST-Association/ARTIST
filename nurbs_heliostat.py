@@ -104,14 +104,14 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
     def setup_params(self):
         self.ctrl_points_z.requires_grad_(True)
-        if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
-            self.ctrl_points_xy.requires_grad_(True)
-        if not self.fix_spline_ctrl_weights:
-            self.ctrl_weights.requires_grad_(True)
+        optimize_xy = not self.nurbs_cfg.OPTIMIZE_Z_ONLY
+        self.ctrl_points_xy.requires_grad_(optimize_xy)
+        optimize_ctrl_weights = not self.fix_spline_ctrl_weights
+        self.ctrl_weights.requires_grad_(optimize_ctrl_weights)
 
-        if not self.fix_spline_knots:
-            self.knots_x.requires_grad_(True)
-            self.knots_y.requires_grad_(True)
+        optimize_knots = not self.fix_spline_knots
+        self.knots_x.requires_grad_(optimize_knots)
+        self.knots_y.requires_grad_(optimize_knots)
 
         opt_params = [self.ctrl_points_z]
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
