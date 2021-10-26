@@ -350,6 +350,9 @@ def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
 class Heliostat(object):
     def __init__(self, heliostat_config, device):
         self.cfg = heliostat_config
+        if not self.cfg.is_frozen():
+            self.cfg = self.cfg.clone()
+            self.cfg.freeze()
         self.device = device
         self.position_on_field = th.tensor(
             self.cfg.POSITION_ON_FIELD,

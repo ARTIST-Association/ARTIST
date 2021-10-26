@@ -11,6 +11,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
+        if not self.nurbs_cfg.is_frozen():
+            self.nurbs_cfg = self.nurbs_cfg.clone()
+            self.nurbs_cfg.freeze()
 
         self._fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
         self._fix_spline_knots = nurbs_config.FIX_SPLINE_KNOTS
