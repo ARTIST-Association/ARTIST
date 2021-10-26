@@ -1,3 +1,4 @@
+import functools
 import struct
 
 import torch as th
@@ -360,6 +361,7 @@ class Heliostat(object):
             device=self.device,
         )
 
+        self._checked_dict = False
         self.state = None
         self.from_sun = None
         self.alignment = None
@@ -460,22 +462,58 @@ class Heliostat(object):
 
         return reflect_rays_(self.from_sun, self.normals)
 
+    @property
+    @functools.lru_cache()
+    def dict_keys(self):
+        """All keys we assume in the dictionary returned by `_to_dict`."""
+        return {
+            'heliostat_points',
+            'heliostat_normals',
+
+            'config',
+            'params',
+        }
+
+    def _check_dict(self, data):
+        """Check whether the given data dictionary has the correct keys;
+        only do this once to save some cycles.
+
+        The reason we can safely do it just once is that all keys must
+        always be the same due to read-only constraints of the
+        heliostat's properties.
+        """
+        if self._checked_dict:
+            return
+        assert data.keys() == self.dict_keys
+        self._checked_dict = True
+
+    @functools.lru_cache()
+    def _fixed_dict(self):
+        """The part of the heliostat's configuration that does not change."""
+        data = {
+            'heliostat_points': self._discrete_points_orig,
+
+            'config': self.cfg,
+            'params': self.params.copy(),
+        }
+        return data
+
     def to_dict(self):
         if self.state != 'OnGround':
             print(
                 'Warning; saving aligned heliostat! It is recommended to '
                 '`align_reverse` the heliostat beforehand!'
             )
-        return self._to_dict()
+        data = self._to_dict()
+        self._check_dict(data)
+        return data
 
     def _to_dict(self):
-        return {
-            'heliostat_points': self._discrete_points_orig.clone(),
+        data = self._fixed_dict()
+        data.update({
             'heliostat_normals': self._normals_orig.clone(),
-
-            'config': self.cfg.copy(),
-            'params': self.params.copy(),
-        }
+        })
+        return data
 
     @classmethod
     def from_dict(cls, data, device, config=None, restore_strictly=True):

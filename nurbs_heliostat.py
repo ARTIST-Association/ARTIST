@@ -259,22 +259,66 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-    def _to_dict(self):
-        data = super()._to_dict()
+    @property
+    @functools.lru_cache()
+    def dict_keys(self):
+        keys = super().dict_keys
+        keys = keys.union({
+            'degree_x',
+            'degree_y',
+            'control_points',
+            'control_point_weights',
+            'knots_x',
+            'knots_y',
 
+            'evaluation_points',
+            'original_world_points',
+
+            'nurbs_config',
+        })
+        return keys
+
+    @functools.lru_cache()
+    def _fixed_dict(self):
+        data = super()._fixed_dict()
         data.update({
             'degree_x': self.degree_x,
             'degree_y': self.degree_y,
-            'control_points': self.ctrl_points.clone(),
-            'control_point_weights': self.ctrl_weights.clone(),
-            'knots_x': self.knots_x.clone(),
-            'knots_y': self.knots_y.clone(),
 
-            'evaluation_points': self.eval_points.clone(),
-            'original_world_points': self._orig_world_points.clone(),
-
-            'nurbs_config': self.nurbs_cfg.copy(),
+            'nurbs_config': self.nurbs_cfg,
         })
+
+        if self.fix_spline_ctrl_weights:
+            data['control_point_weights'] = self.ctrl_weights
+
+        if self.fix_spline_knots:
+            data['knots_x'] = self.knots_x
+            data['knots_y'] = self.knots_y
+
+        if not self.recalc_eval_points:
+            data['evaluation_points'] = self.eval_points
+        return data
+
+    def _to_dict(self):
+        data = super()._to_dict()
+
+        ctrl_points = self.ctrl_points.clone()
+        ctrl_points.requires_grad_(False)
+        data.update({
+            'control_points': self.ctrl_points.clone(),
+
+            'original_world_points': self._orig_world_points,
+        })
+
+        if not self.fix_spline_ctrl_weights:
+            data['control_point_weights'] = self.ctrl_weights.clone()
+
+        if not self.fix_spline_knots:
+            data['knots_x'] = self.knots_x.clone()
+            data['knots_y'] = self.knots_y.clone()
+
+        if self.recalc_eval_points:
+            data['evaluation_points'] = self.eval_points.clone()
         return data
 
     @classmethod
