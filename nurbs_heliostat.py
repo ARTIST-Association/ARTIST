@@ -303,7 +303,6 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         data = super()._to_dict()
 
         ctrl_points = self.ctrl_points.clone()
-        ctrl_points.requires_grad_(False)
         data.update({
             'control_points': self.ctrl_points.clone(),
 
