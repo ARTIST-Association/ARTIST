@@ -16,7 +16,7 @@ import utils
 
 
 def load_heliostat(cfg, device):
-    cp = th.load(cfg.CP_PATH, map_location=device)
+    cp = th.load(os.path.expanduser(cfg.CP_PATH), map_location=device)
     if cfg.USE_NURBS:
         H = NURBSHeliostat.from_dict(
             cp,
@@ -30,6 +30,7 @@ def load_heliostat(cfg, device):
 
 
 def load_optimizer_state(opt, cp_path, device):
+    cp_path = os.path.expanduser(cp_path)
     if not os.path.isfile(cp_path):
         print(
             f'Warning: cannot find optimizer under {cp_path}; '
