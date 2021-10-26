@@ -333,16 +333,16 @@ def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
-    z = z/th.linalg.norm(z)
+    z = z / th.linalg.norm(z)
     z = pSun + z
-    z = z/th.linalg.norm(z)
+    z = z / th.linalg.norm(z)
 
     x = th.tensor(
         [z[1], -z[0], 0],
         dtype=Position.dtype,
         device=Position.device,
     )
-    x = x/th.linalg.norm(x)
+    x = x / th.linalg.norm(x)
     y = th.cross(z, x)
 
     return x, y, z
