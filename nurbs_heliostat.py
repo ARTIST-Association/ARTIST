@@ -291,6 +291,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         self.degree_x = data['degree_x']
         self.degree_y = data['degree_y']
         ctrl_points = data['control_points']
+        ctrl_points.requires_grad_(False)
         self.ctrl_points_xy = ctrl_points[:, :, :-1]
         self.ctrl_points_z = ctrl_points[:, :, -1:]
         self.ctrl_weights = data['control_point_weights']
