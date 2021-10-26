@@ -131,7 +131,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # target_hel_in_field = target_hel_rotated+ position_on_field
 
 # target_normal_vectors = rotate_heliostat(target_normal_vectors_orig,target_hel_coords)
-# target_normal_vectors /= target_normal_vectors.norm(dim=-1).unsqueeze(-1)
+# target_normal_vectors /= th.linalg.norm(target_normal_vectors, dim=-1).unsqueeze(-1)
 
 
 
@@ -142,7 +142,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # plot_normal_vectors(target_hel_in_field, target_normal_vectors)
 
 # from_sun = position_on_field - sun
-# from_sun /= from_sun.norm()
+# from_sun /= th.linalg.norm(from_sun)
 # from_sun = from_sun.unsqueeze(0)
 # target_ray_directions = reflect_rays_(from_sun, target_normal_vectors)
 # target_rayPoints = target_hel_in_field #Any point along the ray
@@ -210,7 +210,7 @@ save_target(
 # ##Define ideal heliostat.
 
 # ray_direction = (aimpoint- position_on_field)
-# ray_direction /= ray_direction.norm()
+# ray_direction /= th.linalg.norm(ray_direction)
 # ray_directions =  th.tile(ray_direction, (len(target_hel_in_field), 1)) #works only for planar heliostat
 # # ray_directions += th.randn_like(ray_directions) * 0.3 # Da wir jetzt nicht mehr mit Idealen Heliostaten Rechnen kann das eigentlich weg, es schadet aber glaube ich auch nicht
 # rayPoints = target_hel_in_field #maybe define the ideal heliostat on its own
@@ -329,7 +329,10 @@ sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             rayPoints = hel_rotated + position_on_field
 
             surface_normals = rotate_heliostat(surface_normals, target_hel_coords)
-            surface_normals = surface_normals / surface_normals.norm(dim=-1).unsqueeze(-1)
+            surface_normals = (
+                surface_normals
+                / th.linalg.norm(surface_normals, dim=-1).unsqueeze(-1)
+            )
             ray_directions = reflect_rays_(from_sun, surface_normals)
         intersections = compute_receiver_intersections(
             planeNormal,

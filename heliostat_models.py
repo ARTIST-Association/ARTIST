@@ -251,7 +251,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
         bma = b - a
         cma = c - a
         normal = th.cross(bma, cma)
-        magnitude = normal.norm()
+        magnitude = th.linalg.norm(normal)
         normal /= magnitude
         # face_centers.append(a + bma / 2 + cma / 2)
         # face_normals.append(normal)
@@ -280,7 +280,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     else:
         vertex_normals /= num_adjacent_faces
 
-    vertex_normals /= vertex_normals.norm()
+    vertex_normals /= th.linalg.norm(vertex_normals)
 
     # FIXME Remove when `cfg.POSITION_ON_FIELD` is fixed.
     # Manually center the vertices as `cfg.POSITION_ON_FIELD` does not
@@ -404,7 +404,7 @@ class Heliostat(object):
         # TODO Max: fix for other aimpoints
         # TODO Evtl auf H.Discrete Points umstellen
         from_sun = self.position_on_field - sun_origin
-        from_sun /= from_sun.norm()
+        from_sun /= th.linalg.norm(from_sun)
         self.from_sun = from_sun.unsqueeze(0)
 
         self.alignment = th.stack(heliostat_coord_system(
@@ -422,7 +422,7 @@ class Heliostat(object):
             self.normals, self.alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
-            / normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
 
         self._discrete_points_aligned = hel_rotated_in_field

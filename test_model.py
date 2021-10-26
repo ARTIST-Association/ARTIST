@@ -232,7 +232,7 @@ def main():
         sun = th.rand_like(target.sun)
         # Allow negative x and y values
         sun[:-1] -= 0.5
-        sun /= sun.norm()
+        sun /= th.linalg.norm(sun)
 
         target_cfg.merge_from_list([
             'AC.SUN.ORIGIN',

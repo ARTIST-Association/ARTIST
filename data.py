@@ -77,7 +77,8 @@ def generate_dataset(cfg, H, ENV, save_dir, writer=None):
         sun_origins = [sun_origins]
     sun_origins = th.tensor(
         sun_origins, dtype=th.get_default_dtype(), device=device)
-    sun_origins_normed = sun_origins / sun_origins.norm(dim=1).unsqueeze(-1)
+    sun_origins_normed = \
+        sun_origins / th.linalg.norm(sun_origins, dim=1).unsqueeze(-1)
 
     targets = None
     last_i = len(sun_origins) - 1

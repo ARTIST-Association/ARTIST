@@ -207,7 +207,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             normals, alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
-            / normal_vectors_rotated.norm(dim=-1).unsqueeze(-1)
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
         return hel_rotated, normal_vectors_rotated
 

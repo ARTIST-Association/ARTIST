@@ -106,7 +106,15 @@ def build_optimizer(cfg, params, device):
 def loss_func(pred_bitmap, target, opt, weight_decay_factor):
     loss = th.nn.functional.l1_loss(pred_bitmap, target)
     weight_decay = sum(
-        param.norm(p=1)
+        th.linalg.norm(
+            th.linalg.norm(
+                th.linalg.norm(param, ord=1, dim=-1),
+                ord=1,
+                dim=-1,
+            ),
+            ord=1,
+            dim=-1
+        )
         for group in opt.param_groups
         for param in group['params']
     )
