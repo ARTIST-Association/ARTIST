@@ -263,12 +263,13 @@ class Renderer(object):
 
     def render(self):
         # TODO Max: use for reflection instead
+        surface_points, surface_normals = self.H()
 
         self.ray_directions = compute_ray_directions(
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
-            self.H.get_ray_directions(),  # line directions
-            self.H.discrete_points,  # points on line
+            surface_normals,  # line directions
+            surface_points,  # points on line
             self.xi,
             self.yi
         )
@@ -276,7 +277,7 @@ class Renderer(object):
             self.ENV.receiver_plane_normal,
             self.ENV.receiver_center,
             self.ray_directions,
-            self.H.discrete_points,
+            surface_points,
         )
 
         dx_ints = (

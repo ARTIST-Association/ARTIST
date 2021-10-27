@@ -396,6 +396,9 @@ class Heliostat(object):
         self.params = params
         self.state = "OnGround"
 
+    def __call__(self):
+        return (self.discrete_points, self.get_ray_directions())
+
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
