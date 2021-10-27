@@ -1,3 +1,4 @@
+import copy
 import functools
 import struct
 
@@ -494,7 +495,7 @@ class Heliostat(object):
             'heliostat_points': self._discrete_points_orig,
 
             'config': self.cfg,
-            'params': self.params.copy(),
+            'params': copy.deepcopy(self.params),
         }
         return data
 
