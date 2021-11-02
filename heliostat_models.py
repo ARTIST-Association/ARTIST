@@ -132,7 +132,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
             vec_2 = vec_2 / th.linalg.norm(vec_2)
 
             n = th.cross(vec_1, vec_2)
-            n = n/th.linalg.norm(n)
+            n = n / th.linalg.norm(n)
             if n[2] < 0:
                 n = -n
             normal_vecs[i, j] = n
