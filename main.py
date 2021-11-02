@@ -246,6 +246,7 @@ def train_batch(
         sched.step(loss)
     else:
         sched.step()
+    H.step(verbose=True)
 
     return loss, pred_bitmap, num_missed, ray_diff
 

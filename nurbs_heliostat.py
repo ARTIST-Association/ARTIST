@@ -3,11 +3,13 @@ import functools
 import torch as th
 
 import heliostat_models
+from heliostat_models import AlignmentState, Heliostat
 import nurbs
+from nurbs_progressive_growing import ProgressiveGrowing
 import utils
 
 
-class NURBSHeliostat(heliostat_models.Heliostat):
+class NURBSHeliostat(Heliostat):
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
@@ -24,6 +26,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         self.degree_y = spline_degree
         self.rows = heliostat_config.NURBS.ROWS
         self.cols = heliostat_config.NURBS.COLS
+
+        self._progressive_growing = ProgressiveGrowing(self)
 
         (
             ctrl_points,
@@ -64,10 +68,16 @@ class NURBSHeliostat(heliostat_models.Heliostat):
                 self.position_on_field,
                 self.rows,
                 self.cols,
-                # FIXME Get these for the current heliostat!
-                heliostat_config.IDEAL.WIDTH,
-                heliostat_config.IDEAL.HEIGHT,
+                self.width,
+                self.height,
             )
+            if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
+                utils.adjust_spline_ctrl_points(
+                    ctrl_points,
+                    self._discrete_points_orig,
+                    self.nurbs_cfg.OPTIMIZE_Z_ONLY,
+                    k=4,
+                )
         else:
             # Use perfect, unrotated heliostat at `position_on_field` as
             # starting point with width and height as initially guessed.
@@ -129,6 +139,10 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     def ctrl_points(self):
         return th.cat([self.ctrl_points_xy, self.ctrl_points_z], dim=-1)
 
+    @ctrl_points.setter
+    def ctrl_points(self):
+        raise AttributeError('ctrl_points is not a writable attribute')
+
     @staticmethod
     @functools.lru_cache(maxsize=1)
     def _invert_world_points(
@@ -165,9 +179,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         return self._eval_points
 
     def _get_alignment(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return None
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self.alignment
         else:
             raise ValueError(f'unknown state {self.state}')
@@ -184,7 +198,37 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             knots_y,
             alignment,
             position_on_field,
+            indices_x=None,
+            indices_y=None,
     ):
+        device = ctrl_points.device
+
+        if indices_x is not None:
+            ctrl_points = ctrl_points[indices_x, :]
+            ctrl_weights = ctrl_weights[indices_x, :]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_x = th.empty(
+                len(indices_x) + degree_x + 1,
+                device=device,
+                dtype=knots_x.dtype,
+            )
+            utils.initialize_spline_knots_(knots_x, degree_x)
+
+        if indices_y is not None:
+            ctrl_points = ctrl_points[:, indices_y]
+            ctrl_weights = ctrl_weights[:, indices_y]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_y = th.empty(
+                len(indices_y) + degree_y + 1,
+                device=device,
+                dtype=knots_y.dtype,
+            )
+            utils.initialize_spline_knots_(knots_y, degree_y)
+
         surface_points, normals = nurbs.calc_normals_and_surface_slow(
             eval_points[:, 0],
             eval_points[:, 1],
@@ -224,12 +268,14 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.knots_y,
             alignment,
             self.position_on_field,
+            self._progressive_growing.row_indices,
+            self._progressive_growing.col_indices,
         )
 
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             self._discrete_points_orig = discrete_points
             return self._discrete_points_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             self._discrete_points_aligned = discrete_points
             return self._discrete_points_aligned
         else:
@@ -250,14 +296,18 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.position_on_field,
         )
 
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             self._normals_orig = normals
             return self._normals_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             self._normals_aligned = normals
             return self._normals_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
+
+    @th.no_grad()
+    def step(self, verbose=False):
+        self._progressive_growing.step(verbose)
 
     @property
     @functools.lru_cache()
@@ -273,6 +323,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
 
             'evaluation_points',
             'original_world_points',
+            '_progressive_growing_step',
 
             'nurbs_config',
         })
@@ -306,6 +357,7 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             'control_points': self.ctrl_points.clone(),
 
             'original_world_points': self._orig_world_points,
+            '_progressive_growing_step': self._progressive_growing.get_step(),
         })
 
         if not self.fix_spline_ctrl_weights:
@@ -354,6 +406,8 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         self.ctrl_weights = data['control_point_weights']
         self.knots_x = data['knots_x']
         self.knots_y = data['knots_y']
+
+        self._progressive_growing.set_step(data['_progressive_growing_step'])
 
         if restore_strictly:
             self._eval_points = data['evaluation_points']

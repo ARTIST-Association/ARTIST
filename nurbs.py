@@ -993,6 +993,17 @@ def calc_derivs_surface_slow(
         knots_y,
         nth_deriv=1,
 ):
+    check_nurbs_constraints(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+
     dtype = control_points.dtype
     device = control_points.device
     next_nth_deriv = nth_deriv + 1

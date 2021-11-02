@@ -147,6 +147,41 @@ def initialize_spline_eval_points_perfectly(
     return eval_points
 
 
+def horizontal_distance(a, b, ord=2):
+    return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
+
+
+def distance_weighted_avg(distances, points):
+    # Handle distances of 0 just in case with a very small value.
+    distances = th.where(
+        distances == 0,
+        th.tensor(
+            th.finfo(distances.dtype).tiny,
+            device=distances.device,
+            dtype=distances.dtype,
+        ),
+        distances,
+    )
+    inv_distances = 1 / distances.unsqueeze(-1)
+    weighted = inv_distances * points
+    total = weighted.sum(dim=-2)
+    total = total / inv_distances.sum(dim=-2)
+    return total
+
+
+def calc_knn_averages(points, neighbours, k):
+    distances = horizontal_distance(
+        points.unsqueeze(1),
+        neighbours.unsqueeze(0),
+    )
+    distances, closest_indices = distances.sort(dim=-1)
+    distances = distances[..., :k]
+    closest_indices = closest_indices[..., :k]
+
+    averaged = distance_weighted_avg(distances, neighbours[closest_indices])
+    return averaged
+
+
 def initialize_spline_ctrl_points(
         control_points,
         origin,
@@ -168,10 +203,33 @@ def initialize_spline_ctrl_points(
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
 
-# def initialize_spline_ctrl_points_perfectly(control_points, points):
-#     # FIXME need to sort points so normals always point in the
-#     #       correct direction
-#     control_points[:] = points.reshape(control_points.shape)
+def adjust_spline_ctrl_points(
+        control_points,
+        points,
+        change_z_only,
+        k=4,
+):
+    new_control_points = calc_knn_averages(
+        control_points.reshape(-1, control_points.shape[-1]),
+        points,
+        k,
+    )
+    new_control_points = new_control_points.reshape(control_points.shape)
+
+    if not change_z_only:
+        control_points[:, :, :-1] = new_control_points[:, :, :-1]
+    control_points[:, :, -1:] = new_control_points[:, :, -1:]
+
+
+def initialize_spline_knots_(
+        knots,
+        spline_degree,
+):
+    num_knot_vals = len(knots[spline_degree:-spline_degree])
+    knot_vals = th.linspace(0, 1, num_knot_vals)
+    knots[:spline_degree] = 0
+    knots[spline_degree:-spline_degree] = knot_vals
+    knots[-spline_degree:] = 1
 
 
 def initialize_spline_knots(
@@ -180,12 +238,8 @@ def initialize_spline_knots(
         spline_degree_x,
         spline_degree_y,
 ):
-    num_knot_vals_x = len(knots_x[spline_degree_x:-spline_degree_x])
-    knot_vals_x = th.linspace(0, 1, num_knot_vals_x)
-    num_knot_vals_y = len(knots_y[spline_degree_y:-spline_degree_y])
-    knot_vals_y = th.linspace(0, 1, num_knot_vals_y)
-    knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
-    knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y
+    initialize_spline_knots_(knots_x, spline_degree_x)
+    initialize_spline_knots_(knots_y, spline_degree_y)
 
 
 def calc_ray_diffs(pred, target):

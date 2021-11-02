@@ -1,4 +1,5 @@
 import copy
+from enum import Enum
 import functools
 import struct
 
@@ -6,6 +7,12 @@ import torch as th
 
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
+
+
+class AlignmentState(Enum):
+    UNINITIALIZED = None
+    ON_GROUND = 'OnGround'
+    ALIGNED = 'Aligned'
 
 
 def reflect_rays_(rays, normals):
@@ -79,8 +86,15 @@ def real_heliostat(real_configs, device):
             dtype=dtype,
             device=device,
         )
-        params = {"width_height": width_height}
-        return h, h_normal_vecs, params  # width_height #,powers
+        params = None
+        return (
+            h,
+            h_normal_vecs,
+            width_height[1],
+            width_height[0],
+            params,
+            # powers,
+        )
 
 
 def heliostat_by_function(heliostat_function_cfg, device):
@@ -149,7 +163,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
             vec_2 = vec_2 / th.linalg.norm(vec_2)
 
             n = th.cross(vec_1, vec_2)
-            n = n/th.linalg.norm(n)
+            n = n / th.linalg.norm(n)
             if n[2] < 0:
                 n = -n
             normal_vecs[i, j] = n
@@ -157,7 +171,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
     params = None
 
-    return h, h_normal_vecs, params
+    return h, h_normal_vecs, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def ideal_heliostat(ideal_configs, device):
@@ -191,7 +205,7 @@ def ideal_heliostat(ideal_configs, device):
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
-    return h, h_normal_vectors, params
+    return h, h_normal_vectors, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def other_objects(config, device):  # Read Wavefront OBJ files.
@@ -303,11 +317,23 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     # FIXME Remove when `cfg.POSITION_ON_FIELD` is fixed.
     # Manually center the vertices as `cfg.POSITION_ON_FIELD` does not
     # work.
-    vertices[:, 0] -= vertices[:, 0].min() / 2
-    vertices[:, 1] -= vertices[:, 1].max() / 2
+    x_min = vertices[:, 0].min()
+    x_max = vertices[:, 0].max()
+    y_min = vertices[:, 1].min()
+    y_max = vertices[:, 1].max()
+    height = y_max - y_min
+    width = x_max - x_min
+
+    vertices[:, 0] -= x_min + width / 2
+    vertices[:, 1] -= y_min + height / 2
+
+    # We add a bit more so we don't evaluate at the edges.
+    height += 2e-6
+    width += 2e-6
 
     # plotter.plot_heliostat(vertices, vertex_normals)
-    return vertices, vertex_normals, {'name': name}
+    params = {'name': name}
+    return vertices, vertex_normals, height, width, params
 
 
 # Heliostat-specific functions
@@ -377,7 +403,7 @@ class Heliostat(object):
         )
 
         self._checked_dict = False
-        self.state = None
+        self.state = AlignmentState.UNINITIALIZED
         self.from_sun = None
         self.alignment = None
         self._discrete_points_orig = None
@@ -393,27 +419,32 @@ class Heliostat(object):
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
         if shape == "ideal":
-            heliostat, heliostat_normals, params = ideal_heliostat(
-                cfg.IDEAL, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                ideal_heliostat(cfg.IDEAL, self.device)
         elif shape == "real":
-            heliostat, heliostat_normals, params = real_heliostat(
-                cfg.DEFLECT_DATA, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                real_heliostat(cfg.DEFLECT_DATA, self.device)
         elif shape == "function":
-            heliostat, heliostat_normals, params = heliostat_by_function(
-                cfg.FUNCTION, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                heliostat_by_function(cfg.FUNCTION, self.device)
         elif shape == "other":
-            heliostat, heliostat_normals, params = other_objects(
-                cfg.OTHER, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                other_objects(cfg.OTHER, self.device)
 
         self._discrete_points_orig = heliostat
         self._normals_orig = heliostat_normals
         self.params = params
-        self.state = "OnGround"
+        self.state = AlignmentState.ON_GROUND
+        self.height = height
+        self.width = width
+
+    def __call__(self):
+        return (self.discrete_points, self.get_ray_directions())
 
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
-        if self.state == 'Aligned':
+        if self.state is AlignmentState.ALIGNED:
             raise ValueError('Heliostat is already aligned')
 
         # TODO Max: fix for other aimpoints
@@ -441,25 +472,25 @@ class Heliostat(object):
 
         self._discrete_points_aligned = hel_rotated_in_field
         self._normals_aligned = normal_vectors_rotated
-        self.state = "Aligned"
+        self.state = AlignmentState.ALIGNED
 
     def align_reverse(self):
-        self.state = "OnGround"
+        self.state = AlignmentState.ON_GROUND
 
     @property
     def discrete_points(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return self._discrete_points_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self._discrete_points_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
 
     @property
     def normals(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return self._normals_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self._normals_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
@@ -475,6 +506,9 @@ class Heliostat(object):
             raise ValueError('Heliostat has to be aligned first')
 
         return reflect_rays_(self.from_sun, self.normals)
+
+    def step(self, *args, **kwargs):
+        pass
 
     @property
     @functools.lru_cache()
@@ -513,7 +547,7 @@ class Heliostat(object):
         return data
 
     def to_dict(self):
-        if self.state != 'OnGround':
+        if self.state is not AlignmentState.ON_GROUND:
             print(
                 'Warning; saving aligned heliostat! It is recommended to '
                 '`align_reverse` the heliostat beforehand!'
