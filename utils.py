@@ -151,6 +151,37 @@ def horizontal_distance(a, b, ord=2):
     return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
 
 
+def distance_weighted_avg(distances, points):
+    # Handle distances of 0 just in case with a very small value.
+    distances = th.where(
+        distances == 0,
+        th.tensor(
+            th.finfo(distances.dtype).tiny,
+            device=distances.device,
+            dtype=distances.dtype,
+        ),
+        distances,
+    )
+    inv_distances = 1 / distances.unsqueeze(-1)
+    weighted = inv_distances * points
+    total = weighted.sum(dim=-2)
+    total = total / inv_distances.sum(dim=-2)
+    return total
+
+
+def calc_knn_averages(points, neighbours, k):
+    distances = horizontal_distance(
+        points.unsqueeze(1),
+        neighbours.unsqueeze(0),
+    )
+    distances, closest_indices = distances.sort(dim=-1)
+    distances = distances[..., :k]
+    closest_indices = closest_indices[..., :k]
+
+    averaged = distance_weighted_avg(distances, neighbours[closest_indices])
+    return averaged
+
+
 def initialize_spline_ctrl_points(
         control_points,
         origin,
