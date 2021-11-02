@@ -169,12 +169,12 @@ class ProgressiveGrowing:
 
         if verbose:
             if not already_done and self._done_growing():
-                print('finished growing NURBS')
+                print('Finished growing NURBS.')
             else:
                 print(
-                    f'grew NURBS to '
+                    f'Grew NURBS to '
                     f'{len(self.row_indices)}'
-                    f'×{len(self.col_indices)}'
+                    f'×{len(self.col_indices)}.'
                 )
 
     def step(self, verbose):
