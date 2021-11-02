@@ -3,11 +3,12 @@ import functools
 import torch as th
 
 import heliostat_models
+from heliostat_models import AlignmentState, Heliostat
 import nurbs
 import utils
 
 
-class NURBSHeliostat(heliostat_models.Heliostat):
+class NURBSHeliostat(Heliostat):
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
@@ -199,9 +200,9 @@ class NURBSHeliostat(heliostat_models.Heliostat):
         return self._eval_points
 
     def _get_alignment(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return None
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self.alignment
         else:
             raise ValueError(f'unknown state {self.state}')
@@ -292,10 +293,10 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self._progressive_growing_col_indices,
         )
 
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             self._discrete_points_orig = discrete_points
             return self._discrete_points_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             self._discrete_points_aligned = discrete_points
             return self._discrete_points_aligned
         else:
@@ -316,10 +317,10 @@ class NURBSHeliostat(heliostat_models.Heliostat):
             self.position_on_field,
         )
 
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             self._normals_orig = normals
             return self._normals_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             self._normals_aligned = normals
             return self._normals_aligned
         else:

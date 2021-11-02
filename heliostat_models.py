@@ -1,4 +1,5 @@
 import copy
+from enum import Enum
 import functools
 import struct
 
@@ -6,6 +7,12 @@ import torch as th
 
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
+
+
+class AlignmentState(Enum):
+    UNINITIALIZED = None
+    ON_GROUND = 'OnGround'
+    ALIGNED = 'Aligned'
 
 
 def reflect_rays_(rays, normals):
@@ -363,7 +370,7 @@ class Heliostat(object):
         )
 
         self._checked_dict = False
-        self.state = None
+        self.state = AlignmentState.UNINITIALIZED
         self.from_sun = None
         self.alignment = None
         self._discrete_points_orig = None
@@ -394,7 +401,7 @@ class Heliostat(object):
         self._discrete_points_orig = heliostat
         self._normals_orig = heliostat_normals
         self.params = params
-        self.state = "OnGround"
+        self.state = AlignmentState.ON_GROUND
 
     def __call__(self):
         return (self.discrete_points, self.get_ray_directions())
@@ -402,7 +409,7 @@ class Heliostat(object):
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
-        if self.state == 'Aligned':
+        if self.state is AlignmentState.ALIGNED:
             raise ValueError('Heliostat is already aligned')
 
         # TODO Max: fix for other aimpoints
@@ -431,25 +438,25 @@ class Heliostat(object):
 
         self._discrete_points_aligned = hel_rotated_in_field
         self._normals_aligned = normal_vectors_rotated
-        self.state = "Aligned"
+        self.state = AlignmentState.ALIGNED
 
     def align_reverse(self):
-        self.state = "OnGround"
+        self.state = AlignmentState.ON_GROUND
 
     @property
     def discrete_points(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return self._discrete_points_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self._discrete_points_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
 
     @property
     def normals(self):
-        if self.state == 'OnGround':
+        if self.state is AlignmentState.ON_GROUND:
             return self._normals_orig
-        elif self.state == 'Aligned':
+        elif self.state is AlignmentState.ALIGNED:
             return self._normals_aligned
         else:
             raise ValueError(f'unknown state {self.state}')
@@ -506,7 +513,7 @@ class Heliostat(object):
         return data
 
     def to_dict(self):
-        if self.state != 'OnGround':
+        if self.state is not AlignmentState.ON_GROUND:
             print(
                 'Warning; saving aligned heliostat! It is recommended to '
                 '`align_reverse` the heliostat beforehand!'
