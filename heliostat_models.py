@@ -466,6 +466,9 @@ class Heliostat(object):
 
         return reflect_rays_(self.from_sun, self.normals)
 
+    def step(self, *args, **kwargs):
+        pass
+
     @property
     @functools.lru_cache()
     def dict_keys(self):
