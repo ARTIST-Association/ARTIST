@@ -203,10 +203,22 @@ def initialize_spline_ctrl_points(
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
 
-# def initialize_spline_ctrl_points_perfectly(control_points, points):
-#     # FIXME need to sort points so normals always point in the
-#     #       correct direction
-#     control_points[:] = points.reshape(control_points.shape)
+def adjust_spline_ctrl_points(
+        control_points,
+        points,
+        change_z_only,
+        k=4,
+):
+    new_control_points = calc_knn_averages(
+        control_points.reshape(-1, control_points.shape[-1]),
+        points,
+        k,
+    )
+    new_control_points = new_control_points.reshape(control_points.shape)
+
+    if not change_z_only:
+        control_points[:, :, :-1] = new_control_points[:, :, :-1]
+    control_points[:, :, -1:] = new_control_points[:, :, -1:]
 
 
 def initialize_spline_knots_(

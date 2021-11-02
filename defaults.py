@@ -19,6 +19,9 @@ _C.NURBS                                = CN()
 # always be evaluated at each surface position independently of the ray
 # origins.
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
+# Whether to initialize the control points according to known
+# discretized values.
+_C.NURBS.INITIALIZE_WITH_KNOWLEDGE      = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
 _C.NURBS.FIX_SPLINE_KNOTS               = True
 _C.NURBS.OPTIMIZE_Z_ONLY                = False
