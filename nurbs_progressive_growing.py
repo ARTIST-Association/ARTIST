@@ -103,6 +103,14 @@ class ProgressiveGrowing:
         new_indices = new_indices.sort()[0]
         return new_indices
 
+    @staticmethod
+    def _distance_weighted_avg(distances, points):
+        inv_distances = 1 / distances.unsqueeze(-1)
+        weighted = inv_distances * points
+        total = weighted.sum(dim=-2)
+        total = total / inv_distances.sum(dim=-2)
+        return total
+
     def _calc_grown_control_points_per_dim(
             self,
             old_ctrl_points,
@@ -117,10 +125,12 @@ class ProgressiveGrowing:
             old_ctrl_points.unsqueeze(1),
             world_points.unsqueeze(0),
         )
-        closest_indices = distances.argsort(dim=-1)
+        distances, closest_indices = distances.sort(dim=-1)
+        distances = distances[..., :k]
         closest_indices = closest_indices[..., :k]
 
-        new_control_points = world_points[closest_indices].mean(dim=-2)
+        new_control_points = self._distance_weighted_avg(
+            distances, world_points[closest_indices])
         new_control_points = new_control_points.reshape(old_ctrl_points_shape)
 
         return new_control_points
