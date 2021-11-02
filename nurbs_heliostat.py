@@ -178,6 +178,11 @@ class NURBSHeliostat(Heliostat):
             )
         return self._eval_points
 
+    def _align(self):
+        # No need to align points; we do it live in
+        # `_update_aligned_surface_and_normals`.
+        pass
+
     def _get_alignment(self):
         if self.state is AlignmentState.ON_GROUND:
             return None

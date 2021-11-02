@@ -459,6 +459,10 @@ class Heliostat(object):
             receiver_center,
         ))
 
+        self._align()
+        self.state = AlignmentState.ALIGNED
+
+    def _align(self):
         hel_rotated = rotate(
             self.discrete_points, self.alignment, clockwise=True)
         hel_rotated_in_field = hel_rotated + self.position_on_field
@@ -472,7 +476,6 @@ class Heliostat(object):
 
         self._discrete_points_aligned = hel_rotated_in_field
         self._normals_aligned = normal_vectors_rotated
-        self.state = AlignmentState.ALIGNED
 
     def align_reverse(self):
         self.state = AlignmentState.ON_GROUND
