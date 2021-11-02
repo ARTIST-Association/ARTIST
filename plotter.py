@@ -20,28 +20,35 @@ def colorbar(mappable):
 
 
 
-def plot_surfaces(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir):
+def plot_surfaces(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir, writer = None):
 
+
+    
+    target = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
+    pred = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
+    diff = abs(pred-target)
+    
+    
+    im_target = target.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
+    im_pred = pred.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
+    im_diff = diff.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target)))) 
+    
+    
+    if writer:
+      writer.add_scalar("train/normal_diffs", np.sum(diff)/len(diff), epoch)
+
+    
+    minmin = np.min((np.min(target), np.min(pred)))
+    maxmax = np.max((np.max(target), np.max(pred)))
     matplotlib.use('Agg')
     plt.close("all")
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
     
-    target = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
-    im_target = target.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    
-    pred = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
-    im_pred = pred.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    
-    im_diff = abs(im_pred-im_target)
-    
-    # minmin = np.min((np.min(target), np.min(pred)))
-    # maxmax = np.max((np.max(target), np.max(pred)))
-    
-    im1 = ax1.imshow(im_target, cmap="plasma")#, vmin=minmin, vmax=maxmax
-    im2 = ax2.imshow(im_pred, cmap="plasma")#, vmin=minmin, vmax=maxmax
+    im1 = ax1.imshow(im_target, cmap="plasma", vmin=minmin, vmax=maxmax)#
+    im2 = ax2.imshow(im_pred, cmap="plasma", vmin=minmin, vmax=maxmax)#
     colorbar(im1)
     
-    im3 = ax3.imshow(im_diff, cmap='magma')
+    im3 = ax3.imshow(im_diff, cmap='jet', norm=matplotlib.colors.LogNorm())
     colorbar(im3)
    
     

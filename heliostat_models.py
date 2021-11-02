@@ -86,16 +86,34 @@ def real_heliostat(real_configs, device):
 def heliostat_by_function(heliostat_function_cfg, device):
     cfg = heliostat_function_cfg
 
-    width = cfg.WIDTH / 2
-    height = cfg.HEIGHT / 2
-    X = th.linspace(-width, width, cfg.ROWS)
-    Y = th.linspace(-height, height, cfg.COLS)
+    # width = cfg.WIDTH / 2
+    # height = cfg.HEIGHT / 2
+   
+    # X = th.linspace(-width, width, cfg.ROWS)
+    # Y = th.linspace(-height, height, cfg.COLS)
+    # X, Y = th.meshgrid(X, Y)
+    
+    
+    columns = cfg.COLS
+    column = th.arange(columns + 1, device=device)
+    row = th.arange(cfg.ROWS + 1, device=device)
 
-    X, Y = th.meshgrid(X, Y)
-    # Z = np.zeros_like(X)
+    X = (row/cfg.ROWS * cfg.HEIGHT) - (cfg.HEIGHT / 2)
+    # Use points at centers of grid squares.
+    X = X[:-1] + (X[1:] - X[:-1]) / 2
+    X = th.tile(X, (columns,))
+    X = X.reshape(cfg.ROWS,cfg.COLS)
+    # heliostat y position
+    Y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
+    # Use points at centers of grid squares.
+    Y = Y[:-1] + (Y[1:] - Y[:-1]) / 2
+    Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
+    Y = Y.reshape(cfg.ROWS,cfg.COLS)
+    
     reduction = cfg.REDUCTION_FACTOR
+    fr  = cfg.FREQUENCY
     if cfg.NAME == "sin":
-        Z = th.sin(X + Y) / reduction  # + np.cos(Y)
+        Z = th.sin(fr * X + fr* Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
         Z = th.sin(X) / reduction + th.cos(Y) / reduction
     elif cfg.NAME == "random":
@@ -106,9 +124,8 @@ def heliostat_by_function(heliostat_function_cfg, device):
     else:
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
-    print(Z.max())
     stacked = th.stack((X, Y, Z)).T
-
+    
     normal_vecs = th.zeros_like(stacked)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
@@ -322,14 +339,11 @@ def rotate(h, hel_coordsystem, clockwise):
     return h_rotated.squeeze(-1)
 
 
-def heliostat_coord_system(Position, Sun, Aimpoint, verbose=True):
+def heliostat_coord_system(Position, Sun, Aimpoint):
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
-    if verbose:
-        print("Sun", pSun)
-        print("Position", pPosition)
-        print("Aimpoint", pAimpoint)
+
 
     # Berechnung Idealer Heliostat
     # 0. Iteration
@@ -412,7 +426,6 @@ class Heliostat(object):
             self.position_on_field,
             sun_origin,
             receiver_center,
-            verbose=verbose,
         ))
 
         hel_rotated = rotate(

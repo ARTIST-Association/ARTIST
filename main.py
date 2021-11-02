@@ -14,6 +14,29 @@ import plotter
 from render import Renderer
 import utils
 
+def check_consistency(cfg):
+    print("Loaded Switches:")
+    print(f"Heliostat shape: {cfg.H.SHAPE}")
+    print(f"Solar distribustion: {cfg.AC.SUN.DISTRIBUTION}")
+    print(f"Scheduler: {cfg.TRAIN.SCHEDULER.NAME}")
+    print(f"Optimizer: {cfg.TRAIN.OPTIMIZER.NAME}")
+    print(f"Loss: {cfg.TRAIN.LOSS.NAME}")
+    
+    warnings_found = False
+    if cfg.TRAIN.LOSS.USE_L1_WEIGHT_DECAY == True:
+        if not cfg.TRAIN.OPTIMIZER.WEIGHT_DECAY == 0:
+            warnings_found = True
+            print("WARNING: Do you realy want to use L2 and L1 Weight Decay?")
+    if cfg.TRAIN.SCHEDULER.NAME.lower() == "cyclic":
+        if not cfg.TRAIN.SCHEDULER.CYCLIC.BASE_LR == cfg.TRAIN.OPTIMIZER.LR:
+            warnings_found = True
+            print("WARNING: Cyclic base lr and optimizer lr should be the same")
+    if not warnings_found:
+        print("No warnings found. Good Luck!")
+        print("=============================")
+            
+        
+
 
 def load_heliostat(cfg, device):
     cp = th.load(os.path.expanduser(cfg.CP_PATH), map_location=device)
@@ -53,76 +76,111 @@ def build_heliostat(cfg, device):
     return H
 
 
-def build_optimizer(cfg, params, device):
-    if cfg.USE_NURBS:
-        # print(params)
-        opt = th.optim.Adamax(params, lr=1e-4)
-        # sched = th.optim.lr_scheduler.CyclicLR(
-        #     opt,
-        #     base_lr=1e-8,
-        #     max_lr=8.3e-5,
-        #     step_size_up=100,
-        #     cycle_momentum=False,
-        #     mode="triangular2",
-        # )
-        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
-            opt,
-            factor=0.5,
-            min_lr=1e-8,
-            patience=100,
-            cooldown=200,
-            verbose=True,
-        )
-        # max_lr = 6e-5
-        # start_lr = 1e-10
-        # final_lr = 1e-8
-        # sched = th.optim.lr_scheduler.OneCycleLR(
-        #     opt,
-        #     total_steps=cfg.TRAIN_PARAMS.EPOCHS,
-        #     max_lr=max_lr,
-        #     pct_start=0.1,
-        #     div_factor=max_lr / start_lr,
-        #     final_div_factor=max_lr / final_lr,
-        #     # three_phase=True,
-        # )
+def _build_optimizer(cfg_optimizer, params):
+    cfg = cfg_optimizer
+    name = cfg.NAME.lower()
+    
+    if name == "adam":
+        opt = th.optim.Adam(params, 
+                            lr=cfg.LR,
+                            betas=(cfg.BETAS[0],cfg.BETAS[1]),
+                            eps = cfg.EPS,
+                            weight_decay=cfg.WEIGHT_DECAY)
+    elif name == "adamax":
+        opt = th.optim.Adamax(params, 
+                    lr=cfg.LR,
+                    betas=(cfg.BETAS[0],cfg.BETAS[1]),
+                    eps = cfg.EPS,
+                    weight_decay=cfg.WEIGHT_DECAY)
+    elif name == "adamw":
+        opt = th.optim.Adam(params, 
+                        lr=cfg.LR,
+                        betas=(cfg.BETAS[0],cfg.BETAS[1]),
+                        eps = cfg.EPS,
+                        weight_decay=cfg.WEIGHT_DECAY)
     else:
-        opt = th.optim.Adam(params, lr=3e-6)
+        raise ValueError("Optimizer name not found, change name or implement new optimizer")
+    
+    return opt
+
+def _build_scheduler(cfg_scheduler, opt):
+    name = cfg_scheduler.NAME.lower()
+    if name == "reduceonplateu":
+        cfg = cfg_scheduler.ROP
         sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
-            factor=0.5,
-            min_lr=1e-12,
-            patience=10,
-
-            verbose=True,
+            factor=cfg.FACTOR,
+            min_lr=cfg.MIN_LR,
+            patience=cfg.PATIENCE,
+            cooldown=cfg.COOLDOWN,
+            verbose=cfg.VERBOSE,
         )
+    elif name == "cyclic":
+        cfg = cfg_scheduler.Cyclic
+        sched = th.optim.lr_scheduler.CyclicLR(
+            opt,
+            base_lr=cfg.BASE_LR,
+            max_lr=cfg.MAX_LR,
+            step_size_up=cfg.STEP_SIZE_UP,
+            cycle_momentum=cfg.CYCLE_MOMENTUM,
+            mode=cfg.MODE,
+        )
+    elif name == "onecycle":
+        cfg = cfg.scheduler.ONE_CYCLE
+        sched = th.optim.lr_scheduler.OneCycleLR(
+            opt,
+            total_steps=cfg.TOTAL_STEPS,
+            max_lr=cfg.MAX_LR,
+            pct_start=cfg.PCT_START,
+            div_factor=cfg.MAX_LR / cfg.START_LR,
+            final_div_factor=cfg.MAX_LR / cfg.FINAL_LR,
+            three_phase=cfg.THREE_PHASE,
+        )
+    else:
+        raise ValueError("Scheduler name not found, change name or implement new scheduler")
+    
+    return sched
+    
 
+def build_optimizer_scheduler(cfg, params, device):
+    opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
     # Load optimizer state.
-    if cfg.CP_PATH:
+    if cfg.LOAD_OPTIMIZER_STATE:
         opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
         load_optimizer_state(opt, opt_cp_path, device)
+    
+    sched = _build_scheduler(cfg.TRAIN.SCHEDULER, opt)
     return opt, sched
 
 
-def loss_func(pred_bitmap, target, opt, weight_decay_factor):
-    loss = th.nn.functional.l1_loss(pred_bitmap, target)
-    weight_decay = sum(
-        th.linalg.norm(
+def loss_func(cfg_loss, pred_bitmap, target, opt):
+    cfg = cfg_loss
+    name = cfg.NAME.lower()
+    if name == "mse":
+        loss = th.nn.functional.mse_loss(pred_bitmap, target)
+    if name == "l1":
+        loss = th.nn.functional.l1_loss(pred_bitmap, target)
+        
+    if cfg.USE_L1_WEIGHT_DECAY:
+        weight_decay = sum(
             th.linalg.norm(
-                th.linalg.norm(param, ord=1, dim=-1),
+                th.linalg.norm(
+                    th.linalg.norm(param, ord=1, dim=-1),
+                    ord=1,
+                    dim=-1,
+                ),
                 ord=1,
-                dim=-1,
-            ),
-            ord=1,
-            dim=-1
+                dim=-1
+            )
+            for group in opt.param_groups
+            for param in group['params']
         )
-        for group in opt.param_groups
-        for param in group['params']
-    )
-    loss += weight_decay_factor * weight_decay
+        loss += cfg.WEIGHT_DECAY_FACTOR * weight_decay
     return loss
 
 
 def train_batch(
+        cfg_train,
         opt,
         sched,
         H,
@@ -131,7 +189,6 @@ def train_batch(
         targets,
         sun_origins,
         epoch,
-        weight_decay_factor=0,
         writer=None,
 ):
     # Initialize Parameters
@@ -150,9 +207,9 @@ def train_batch(
         ENV.sun_origin = sun_origin
         H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
         pred_bitmap = R.render()
-
+        # loss += th.nn.functional.l1_loss(pred_bitmap, target)/len(targets)
         loss += (
-            loss_func(pred_bitmap, target, opt, weight_decay_factor)
+            loss_func(cfg_train.LOSS, pred_bitmap, target, opt)
             / len(targets)
         )
 
@@ -210,12 +267,14 @@ def main():
     if cfg.SAVE_RESULTS:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
-        logdir = os.path.join(cfg.LOGDIR, cfg.ID+"_"+time_str)
-        logdir_files = os.path.join(logdir, "Logfiles")
-        logdir_images = os.path.join(logdir, "Images")
-        logdir_diffs = os.path.join(logdir_images, "Diffs")
+        root_logdir     = os.path.join(cfg.LOGDIR, cfg.ID)
+        logdir          = os.path.join(root_logdir , cfg.EXPERIMENT_NAME+f"_{time_str}")
+        logdir_files    = os.path.join(logdir, "Logfiles")
+        logdir_images   = os.path.join(logdir, "Images")
+        logdir_diffs    = os.path.join(logdir_images, "Diffs")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
         cfg.merge_from_list(["LOGDIR", logdir])
+        os.makedirs(root_logdir, exist_ok=True)
         os.makedirs(logdir, exist_ok=True)
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
@@ -231,6 +290,7 @@ def main():
         logdir_files = None
         logdir_images = None
 
+    check_consistency(cfg)
     # Set system params
     # =================
     th.manual_seed(cfg.SEED)
@@ -243,6 +303,11 @@ def main():
     # Create Dataset
     # ==============
     # Create Heliostat Object and Load Model defined in config file
+    print("Create dataset using:")
+    print(f"Sun position(s): {cfg.AC.SUN.ORIGIN}")
+    print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
+    print(f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}x{cfg.AC.RECEIVER.RESOLUTION_Y}")
+    print("=============================")
     H_target = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
@@ -255,19 +320,22 @@ def main():
 
     # Start Diff Raytracing
     # =====================
+    print("Initialize Diff Raytracing")
+    print(f"Use {cfg.H.NURBS.ROWS}x{cfg.H.NURBS.COLS} NURBS")
+    print("=============================")
     H = build_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    opt, sched = build_optimizer(cfg, H.setup_params(), device)
-    weight_decay_factor = 0.2 if cfg.USE_NURBS else 0.1
+    opt, sched = build_optimizer_scheduler(cfg, H.setup_params(), device)
 
-    epochs = cfg.TRAIN_PARAMS.EPOCHS
+    epochs = cfg.TRAIN.EPOCHS
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
     for epoch in range(epochs):
         loss, pred_bitmap, num_missed, ray_diff = train_batch(
+            cfg.TRAIN,
             opt,
             sched,
             H,
@@ -276,16 +344,8 @@ def main():
             targets,
             sun_origins,
             epoch,
-            weight_decay_factor,
             writer,
         )
-        # if not use_splines:
-        #     if (
-        #             ray_directions.grad is None
-        #             or (ray_directions.grad == 0).all()
-        #     ):
-        #         print('no more optimization possible; ending...')
-        #         break
 
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -308,6 +368,7 @@ def main():
                 H._normals_orig,
                 epoch,
                 logdir_surfaces,
+                writer
             )
             # plotter.plot_diffs(
             #     H_target._discrete_points_orig,
