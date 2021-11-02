@@ -174,18 +174,25 @@ def initialize_spline_ctrl_points(
 #     control_points[:] = points.reshape(control_points.shape)
 
 
+def initialize_spline_knots_(
+        knots,
+        spline_degree,
+):
+    num_knot_vals = len(knots[spline_degree:-spline_degree])
+    knot_vals = th.linspace(0, 1, num_knot_vals)
+    knots[:spline_degree] = 0
+    knots[spline_degree:-spline_degree] = knot_vals
+    knots[-spline_degree:] = 1
+
+
 def initialize_spline_knots(
         knots_x,
         knots_y,
         spline_degree_x,
         spline_degree_y,
 ):
-    num_knot_vals_x = len(knots_x[spline_degree_x:-spline_degree_x])
-    knot_vals_x = th.linspace(0, 1, num_knot_vals_x)
-    num_knot_vals_y = len(knots_y[spline_degree_y:-spline_degree_y])
-    knot_vals_y = th.linspace(0, 1, num_knot_vals_y)
-    knots_x[spline_degree_x:-spline_degree_x] = knot_vals_x
-    knots_y[spline_degree_y:-spline_degree_y] = knot_vals_y
+    initialize_spline_knots_(knots_x, spline_degree_x)
+    initialize_spline_knots_(knots_y, spline_degree_y)
 
 
 def calc_ray_diffs(pred, target):
