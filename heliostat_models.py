@@ -154,7 +154,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
     params = None
 
-    return h, h_normal_vecs, height, width, params
+    return h, h_normal_vecs, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def ideal_heliostat(ideal_configs, device):
