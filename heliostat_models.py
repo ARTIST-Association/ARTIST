@@ -86,8 +86,15 @@ def real_heliostat(real_configs, device):
             dtype=dtype,
             device=device,
         )
-        params = {"width_height": width_height}
-        return h, h_normal_vecs, params  # width_height #,powers
+        params = None
+        return (
+            h,
+            h_normal_vecs,
+            width_height[1],
+            width_height[0],
+            params,
+            # powers,
+        )
 
 
 def heliostat_by_function(heliostat_function_cfg, device):
@@ -147,7 +154,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
     params = None
 
-    return h, h_normal_vecs, params
+    return h, h_normal_vecs, height, width, params
 
 
 def ideal_heliostat(ideal_configs, device):
@@ -181,7 +188,7 @@ def ideal_heliostat(ideal_configs, device):
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
-    return h, h_normal_vectors, params
+    return h, h_normal_vectors, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def other_objects(config, device):  # Read Wavefront OBJ files.
@@ -303,8 +310,13 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     vertices[:, 0] -= x_min + width / 2
     vertices[:, 1] -= y_min + height / 2
 
+    # We add a bit more so we don't evaluate at the edges.
+    height += 2e-6
+    width += 2e-6
+
     # plotter.plot_heliostat(vertices, vertex_normals)
-    return vertices, vertex_normals, {'name': name}
+    params = {'name': name}
+    return vertices, vertex_normals, height, width, params
 
 
 # Heliostat-specific functions
@@ -393,22 +405,24 @@ class Heliostat(object):
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
         if shape == "ideal":
-            heliostat, heliostat_normals, params = ideal_heliostat(
-                cfg.IDEAL, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                ideal_heliostat(cfg.IDEAL, self.device)
         elif shape == "real":
-            heliostat, heliostat_normals, params = real_heliostat(
-                cfg.DEFLECT_DATA, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                real_heliostat(cfg.DEFLECT_DATA, self.device)
         elif shape == "function":
-            heliostat, heliostat_normals, params = heliostat_by_function(
-                cfg.FUNCTION, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                heliostat_by_function(cfg.FUNCTION, self.device)
         elif shape == "other":
-            heliostat, heliostat_normals, params = other_objects(
-                cfg.OTHER, self.device)
+            heliostat, heliostat_normals, height, width, params = \
+                other_objects(cfg.OTHER, self.device)
 
         self._discrete_points_orig = heliostat
         self._normals_orig = heliostat_normals
         self.params = params
         self.state = AlignmentState.ON_GROUND
+        self.height = height
+        self.width = width
 
     def __call__(self):
         return (self.discrete_points, self.get_ray_directions())

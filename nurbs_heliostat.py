@@ -68,9 +68,8 @@ class NURBSHeliostat(Heliostat):
                 self.position_on_field,
                 self.rows,
                 self.cols,
-                # FIXME Get these for the current heliostat!
-                heliostat_config.IDEAL.WIDTH,
-                heliostat_config.IDEAL.HEIGHT,
+                self.width,
+                self.height,
             )
         else:
             # Use perfect, unrotated heliostat at `position_on_field` as
