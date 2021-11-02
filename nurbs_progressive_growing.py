@@ -108,7 +108,11 @@ class ProgressiveGrowing:
         # Handle distances of 0 just in case with a very small value.
         distances = th.where(
             distances == 0,
-            th.finfo(distances.dtype).tiny,
+            th.tensor(
+                th.finfo(distances.dtype).tiny,
+                device=distances.device,
+                dtype=distances.dtype,
+            ),
             distances,
         )
         inv_distances = 1 / distances.unsqueeze(-1)
