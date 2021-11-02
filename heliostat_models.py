@@ -293,8 +293,15 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     # FIXME Remove when `cfg.POSITION_ON_FIELD` is fixed.
     # Manually center the vertices as `cfg.POSITION_ON_FIELD` does not
     # work.
-    vertices[:, 0] -= vertices[:, 0].min() / 2
-    vertices[:, 1] -= vertices[:, 1].max() / 2
+    x_min = vertices[:, 0].min()
+    x_max = vertices[:, 0].max()
+    y_min = vertices[:, 1].min()
+    y_max = vertices[:, 1].max()
+    height = y_max - y_min
+    width = x_max - x_min
+
+    vertices[:, 0] -= x_min + width / 2
+    vertices[:, 1] -= y_min + height / 2
 
     # plotter.plot_heliostat(vertices, vertex_normals)
     return vertices, vertex_normals, {'name': name}
