@@ -5,6 +5,7 @@ import torch as th
 import heliostat_models
 from heliostat_models import AlignmentState, Heliostat
 import nurbs
+from nurbs_progressive_growing import ProgressiveGrowing
 import utils
 
 
@@ -26,7 +27,7 @@ class NURBSHeliostat(Heliostat):
         self.rows = heliostat_config.NURBS.ROWS
         self.cols = heliostat_config.NURBS.COLS
 
-        self.setup_progressive_growing()
+        self._progressive_growing = ProgressiveGrowing(self)
 
         (
             ctrl_points,
@@ -44,34 +45,6 @@ class NURBSHeliostat(Heliostat):
 
         self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
-
-    def setup_progressive_growing(self):
-        self._progressive_growing_interval = \
-            self.nurbs_cfg.PROGRESSIVE_GROWING_INTERVAL
-        self._progressive_growing_step = 0
-
-        if self._no_progressive_growing():
-            self._progressive_growing_row_indices = None
-            self._progressive_growing_col_indices = None
-            return
-
-        device = self.device
-
-        self._progressive_growing_row_indices = \
-            self._progressive_growing_start_indices(
-                self.rows, self.degree_x, device)
-        self._progressive_growing_col_indices = \
-            self._progressive_growing_start_indices(
-                self.cols, self.degree_y, device)
-
-    def _no_progressive_growing(self):
-        return self._progressive_growing_interval < 1
-
-    @staticmethod
-    def _progressive_growing_start_indices(final_size, degree, device):
-        assert final_size > degree, \
-            'the NURBS does not have enough control points'
-        return th.linspace(0, final_size - 1, degree + 1).round().long()
 
     @property
     def fix_spline_ctrl_weights(self):
@@ -289,8 +262,8 @@ class NURBSHeliostat(Heliostat):
             self.knots_y,
             alignment,
             self.position_on_field,
-            self._progressive_growing_row_indices,
-            self._progressive_growing_col_indices,
+            self._progressive_growing.row_indices,
+            self._progressive_growing.col_indices,
         )
 
         if self.state is AlignmentState.ON_GROUND:
@@ -326,163 +299,9 @@ class NURBSHeliostat(Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-    def _grow_indices(self, indices, final_size):
-        if indices is None or len(indices) == final_size:
-            return None
-        elif len(indices) > final_size:
-            raise ValueError('overshot goal size')
-
-        between_indices = indices[:-1] + (indices[1:] - indices[:-1]) / 2
-        between_indices_middle = th.tensor(
-            len(between_indices) / 2,
-            device=self.device,
-        ).round().long()
-
-        # Round lower values down, upper values up.
-        # This makes the indices become mirrored around the middle
-        # index.
-        between_indices = th.cat([
-            between_indices[:between_indices_middle].long(),
-            between_indices[between_indices_middle:].round().long(),
-        ])
-
-        grown_indices = th.cat([indices, between_indices])
-        grown_indices = grown_indices.sort()[0]
-        grown_indices = grown_indices.unique_consecutive()
-
-        if len(grown_indices) == final_size:
-            return None
-        return grown_indices
-
-    def _done_growing(self):
-        return (
-            self._progressive_growing_row_indices is None
-            and self._progressive_growing_col_indices is None
-        )
-
-    @staticmethod
-    def _horizontal_dist(a, b, ord=2):
-        return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
-
-    def _find_new_indices(self, old_indices, curr_indices, final_size):
-        dtype = old_indices.dtype
-
-        if curr_indices is None:
-            curr_indices = th.arange(
-                final_size,
-                device=self.device,
-                dtype=dtype,
-            )
-
-        old_indices_set = set(map(int, old_indices))
-        curr_indices_set = set(map(int, curr_indices))
-        new_indices = curr_indices_set.difference(old_indices_set)
-        if not new_indices:
-            # No new indices; quit early.
-            return None
-
-        new_indices = th.tensor(
-            list(new_indices),
-            device=self.device,
-            dtype=dtype,
-        )
-        new_indices = new_indices.sort()[0]
-        return new_indices
-
-    def _calc_grown_control_points_per_dim(
-            self,
-            old_ctrl_points,
-            k,
-    ):
-        old_ctrl_points_shape = old_ctrl_points.shape
-        world_points = self.discrete_points
-
-        old_ctrl_points = old_ctrl_points.reshape(
-            -1, self.ctrl_points.shape[-1])
-        distances = self._horizontal_dist(
-            old_ctrl_points.unsqueeze(1),
-            world_points.unsqueeze(0),
-        )
-        closest_indices = distances.argsort(dim=-1)
-        closest_indices = closest_indices[..., :k]
-
-        new_control_points = world_points[closest_indices].mean(dim=-2)
-        new_control_points = new_control_points.reshape(old_ctrl_points_shape)
-
-        return new_control_points
-
-    def _set_grown_control_points(self, old_row_indices, old_col_indices, k=4):
-        new_row_indices = self._find_new_indices(
-            old_row_indices,
-            self._progressive_growing_row_indices,
-            self.rows,
-        )
-        if new_row_indices is not None:
-            new_row_control_points = self._calc_grown_control_points_per_dim(
-                self.ctrl_points[new_row_indices, :], k)
-
-            if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
-                self.ctrl_points_xy[new_row_indices, :] = \
-                    new_row_control_points[..., :-1]
-            self.ctrl_points_z[new_row_indices, :] = \
-                new_row_control_points[..., -1:]
-
-        new_col_indices = self._find_new_indices(
-            old_col_indices,
-            self._progressive_growing_col_indices,
-            self.cols,
-        )
-        if new_col_indices is not None:
-            new_col_control_points = self._calc_grown_control_points_per_dim(
-                self.ctrl_points[:, new_col_indices], k)
-
-            if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
-                self.ctrl_points_xy[:, new_col_indices] = \
-                    new_col_control_points[..., :-1]
-            self.ctrl_points_z[:, new_col_indices] = \
-                new_col_control_points[..., -1:]
-
-    def _grow_nurbs(self, verbose=False):
-        already_done = self._done_growing()
-        if already_done:
-            return
-
-        old_row_indices = self._progressive_growing_row_indices
-        old_col_indices = self._progressive_growing_col_indices
-
-        self._progressive_growing_row_indices = self._grow_indices(
-            self._progressive_growing_row_indices, self.rows)
-        self._progressive_growing_col_indices = self._grow_indices(
-            self._progressive_growing_col_indices, self.cols)
-
-        self._set_grown_control_points(old_row_indices, old_col_indices, k=4)
-
-        if verbose:
-            if not already_done and self._done_growing():
-                print('finished growing NURBS')
-            else:
-                print(
-                    f'grew NURBS to '
-                    f'{len(self._progressive_growing_row_indices)}'
-                    f'×{len(self._progressive_growing_col_indices)}'
-                )
-
     @th.no_grad()
     def step(self, verbose=False):
-        self._progressive_growing_step += 1
-        if (
-                self._no_progressive_growing()
-                or (
-                    (
-                        self._progressive_growing_step
-                        % self._progressive_growing_interval
-                    )
-                    != 0
-                )
-        ):
-            return
-
-        self._grow_nurbs(verbose=verbose)
+        self._progressive_growing.step(verbose)
 
     @property
     @functools.lru_cache()
@@ -532,7 +351,7 @@ class NURBSHeliostat(Heliostat):
             'control_points': self.ctrl_points.clone(),
 
             'original_world_points': self._orig_world_points,
-            '_progressive_growing_step': self._progressive_growing_step,
+            '_progressive_growing_step': self._progressive_growing.get_step(),
         })
 
         if not self.fix_spline_ctrl_weights:
@@ -582,7 +401,7 @@ class NURBSHeliostat(Heliostat):
         self.knots_x = data['knots_x']
         self.knots_y = data['knots_y']
 
-        self._progressive_growing_step = data['_progressive_growing_step']
+        self._progressive_growing.set_step(data['_progressive_growing_step'])
 
         if restore_strictly:
             self._eval_points = data['evaluation_points']
