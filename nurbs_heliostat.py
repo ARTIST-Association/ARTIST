@@ -159,6 +159,10 @@ class NURBSHeliostat(heliostat_models.Heliostat):
     def ctrl_points(self):
         return th.cat([self.ctrl_points_xy, self.ctrl_points_z], dim=-1)
 
+    @ctrl_points.setter
+    def ctrl_points(self):
+        raise AttributeError('ctrl_points is not a writable attribute')
+
     @staticmethod
     @functools.lru_cache(maxsize=1)
     def _invert_world_points(
