@@ -1,5 +1,7 @@
 import torch as th
 
+import utils
+
 
 class ProgressiveGrowing:
     def __init__(self, heliostat):
@@ -74,10 +76,6 @@ class ProgressiveGrowing:
             return None
         return grown_indices
 
-    @staticmethod
-    def _horizontal_dist(a, b, ord=2):
-        return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
-
     def _find_new_indices(self, old_indices, curr_indices, final_size):
         dtype = old_indices.dtype
 
@@ -131,7 +129,7 @@ class ProgressiveGrowing:
 
         old_ctrl_points = old_ctrl_points.reshape(
             -1, self.heliostat.ctrl_points.shape[-1])
-        distances = self._horizontal_dist(
+        distances = utils.horizontal_distance(
             old_ctrl_points.unsqueeze(1),
             world_points.unsqueeze(0),
         )

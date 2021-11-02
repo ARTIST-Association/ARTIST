@@ -147,6 +147,10 @@ def initialize_spline_eval_points_perfectly(
     return eval_points
 
 
+def horizontal_distance(a, b, ord=2):
+    return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
+
+
 def initialize_spline_ctrl_points(
         control_points,
         origin,
