@@ -105,6 +105,12 @@ class ProgressiveGrowing:
 
     @staticmethod
     def _distance_weighted_avg(distances, points):
+        # Handle distances of 0 just in case with a very small value.
+        distances = th.where(
+            distances == 0,
+            th.finfo(distances.dtype).tiny,
+            distances,
+        )
         inv_distances = 1 / distances.unsqueeze(-1)
         weighted = inv_distances * points
         total = weighted.sum(dim=-2)
