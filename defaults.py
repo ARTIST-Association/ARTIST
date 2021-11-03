@@ -17,6 +17,8 @@ _C.LOAD_OPTIMIZER_STATE                 = False
 
 # NURBS settings
 _C.NURBS                                = CN()
+# Whether to use the available width and height information to set up
+# the NURBS surface.
 # If setting this to `False`, be aware that the NURBS surface will
 # always be evaluated at each surface position independently of the ray
 # origins.
