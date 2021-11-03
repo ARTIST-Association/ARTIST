@@ -484,6 +484,9 @@ class Heliostat(object):
     def align_reverse(self):
         self.state = AlignmentState.ON_GROUND
 
+    def reset_cache(self):
+        pass
+
     @property
     def discrete_points(self):
         if self.state is AlignmentState.ON_GROUND:

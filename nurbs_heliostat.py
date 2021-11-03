@@ -10,6 +10,8 @@ import utils
 
 
 class NURBSHeliostat(Heliostat):
+    DISABLE_CACHING = False
+
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
@@ -26,6 +28,9 @@ class NURBSHeliostat(Heliostat):
         self.degree_y = spline_degree
         self.rows = heliostat_config.NURBS.ROWS
         self.cols = heliostat_config.NURBS.COLS
+
+        self._steps = 0
+        self.reset_cache()
 
         self._progressive_growing = ProgressiveGrowing(self)
 
@@ -45,6 +50,12 @@ class NURBSHeliostat(Heliostat):
 
         self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
+
+    def reset_cache(self):
+        self._ctrl_points_cached_at_steps = -1
+        self._eval_points_cached_at_steps = -1
+        self._cached_at_steps = -1
+        self._cached_at_alignment = -1
 
     @property
     def fix_spline_ctrl_weights(self):
@@ -113,6 +124,7 @@ class NURBSHeliostat(Heliostat):
             self.recalc_eval_points = False
             self._eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
+        self._eval_points_cached_at_steps = self._steps
 
     def setup_params(self):
         self.ctrl_points_z.requires_grad_(True)
@@ -137,47 +149,62 @@ class NURBSHeliostat(Heliostat):
 
         return opt_params
 
+    def _needs_ctrl_points_update(self):
+        return (
+            self.DISABLE_CACHING
+            or self._steps != self._ctrl_points_cached_at_steps
+        )
+
+    def _needs_eval_points_update(self):
+        return (
+            self.DISABLE_CACHING
+            or self._steps != self._eval_points_cached_at_steps
+        )
+
+    def _needs_steps_update(self):
+        # FIXME does not work correctly
+        return True
+        return (
+            self.DISABLE_CACHING
+            or self._steps != self._cached_at_steps
+        )
+
+    def _needs_alignment_update(self):
+        return (
+            self.DISABLE_CACHING
+            or self._get_alignment() is not self._cached_at_alignment
+        )
+
     @property
     def ctrl_points(self):
-        return th.cat([self.ctrl_points_xy, self.ctrl_points_z], dim=-1)
+        if self._needs_ctrl_points_update():
+            self._cached_ctrl_points = th.cat([
+                self.ctrl_points_xy,
+                self.ctrl_points_z,
+            ], dim=-1)
+            self._ctrl_points_cached_at_steps = self._steps
+        return self._cached_ctrl_points
 
     @ctrl_points.setter
     def ctrl_points(self):
         raise AttributeError('ctrl_points is not a writable attribute')
 
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def _invert_world_points(
-            eval_points,
-            degree_x,
-            degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-    ):
+    def _invert_world_points(self):
         return utils.initialize_spline_eval_points_perfectly(
-            eval_points,
-            degree_x,
-            degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
+            self._orig_world_points,
+            self.degree_x,
+            self.degree_y,
+            self.ctrl_points,
+            self.ctrl_weights,
+            self.knots_x,
+            self.knots_y,
         )
 
     @property
     def eval_points(self):
-        if self.recalc_eval_points:
-            self._eval_points = self._invert_world_points(
-                self._orig_world_points,
-                self.degree_x,
-                self.degree_y,
-                self.ctrl_points,
-                self.ctrl_weights,
-                self.knots_x,
-                self.knots_y,
-            )
+        if self.recalc_eval_points and self._needs_eval_points_update():
+            self._eval_points = self._invert_world_points()
+            self._eval_points_cached_at_steps = self._steps
         return self._eval_points
 
     @property
@@ -197,61 +224,70 @@ class NURBSHeliostat(Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def _get_aligned_surface_and_normals(
-            eval_points,
-            degree_x,
-            degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-            alignment,
-            position_on_field,
-    ):
-        surface_points, normals = nurbs.calc_normals_and_surface_slow(
-            eval_points[:, 0],
-            eval_points[:, 1],
-            degree_x,
-            degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-        )
+    def _update_aligned_surface_and_normals(self):
+        needs_steps_update = self._needs_steps_update()
+        needs_alignment_update = self._needs_alignment_update()
+        needs_update = needs_steps_update or needs_alignment_update
+        if not needs_update:
+            return
+
+        alignment = self._get_alignment()
+
+        # Here we don't need to worry about the alignment yet.
+        if needs_steps_update:
+            eval_points = self.eval_points
+            ctrl_points, ctrl_weights, knots_x, knots_y = \
+                self._progressive_growing.select()
+
+            surface_points, normals = nurbs.calc_normals_and_surface_slow(
+                eval_points[:, 0],
+                eval_points[:, 1],
+                self.degree_x,
+                self.degree_y,
+                ctrl_points,
+                ctrl_weights,
+                knots_x,
+                knots_y,
+            )
+
+            self._cached_discrete_points_unaligned = surface_points
+            self._cached_normals_unaligned = normals
+            self._cached_at_steps = self._steps
+            self._cached_at_alignment = alignment
+
         if alignment is None:
-            return surface_points, normals
+            self._cached_discrete_points = \
+                self._cached_discrete_points_unaligned
+            self._cached_normals = self._cached_normals_unaligned
+            return
+
+        if not needs_update:
+            self._cached_discrete_points = self._cached_discrete_points_aligned
+            self._cached_normals = self._cached_normals_aligned
+            return
 
         hel_rotated = heliostat_models.rotate(
-            surface_points, alignment, clockwise=True)
+            self._cached_discrete_points_unaligned, alignment, clockwise=True)
         # Place in field
-        hel_rotated = hel_rotated + position_on_field
+        hel_rotated = hel_rotated + self.position_on_field
 
         normal_vectors_rotated = heliostat_models.rotate(
-            normals, alignment, clockwise=True)
+            self._cached_normals_unaligned, alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
-        return hel_rotated, normal_vectors_rotated
+
+        self._cached_discrete_points_aligned = hel_rotated
+        self._cached_normals_aligned = normal_vectors_rotated
+        self._cached_discrete_points = self._cached_discrete_points_aligned
+        self._cached_normals = self._cached_normals_aligned
+        self._cached_at_alignment = alignment
 
     @property
     def discrete_points(self):
-        alignment = self._get_alignment()
-        ctrl_points, ctrl_weights, knots_x, knots_y = \
-            self._progressive_growing.select()
-        discrete_points, _ = self._get_aligned_surface_and_normals(
-            self.eval_points,
-            self.degree_x,
-            self.degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-            alignment,
-            self.position_on_field,
-        )
+        self._update_aligned_surface_and_normals()
+        discrete_points = self._cached_discrete_points
 
         if self.state is AlignmentState.ON_GROUND:
             self._discrete_points_orig = discrete_points
@@ -264,20 +300,8 @@ class NURBSHeliostat(Heliostat):
 
     @property
     def normals(self):
-        alignment = self._get_alignment()
-        ctrl_points, ctrl_weights, knots_x, knots_y = \
-            self._progressive_growing.select()
-        _, normals = self._get_aligned_surface_and_normals(
-            self.eval_points,
-            self.degree_x,
-            self.degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-            alignment,
-            self.position_on_field,
-        )
+        self._update_aligned_surface_and_normals()
+        normals = self._cached_normals
 
         if self.state is AlignmentState.ON_GROUND:
             self._normals_orig = normals
@@ -290,6 +314,7 @@ class NURBSHeliostat(Heliostat):
 
     @th.no_grad()
     def step(self, verbose=False):
+        self._steps += 1
         self._progressive_growing.step(verbose)
 
     @property

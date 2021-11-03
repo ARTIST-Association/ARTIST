@@ -193,6 +193,8 @@ def train_batch(
 ):
     # Initialize Parameters
     # =====================
+    # Reset cache so we don't use cached but reset gradients.
+    H.reset_cache()
     opt.zero_grad(set_to_none=True)
     loss = 0
     num_missed = 0.0
