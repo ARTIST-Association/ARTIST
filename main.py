@@ -33,13 +33,29 @@ def check_consistency(cfg):
             warnings_found = True
             print(
                 "WARNING: Cyclic base lr and optimizer lr should be the same")
+    if not os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
+        warnings_found = True
+        print(
+            "WARNING: Checkpoint path not found; "
+            "continuing without loading..."
+        )
+    if (
+            cfg.LOAD_OPTIMIZER_STATE
+            and not os.path.isfile(_get_opt_cp_path(cfg.CP_PATH))
+    ):
+        warnings_found = True
+        print(
+            "WARNING: Optimizer checkpoint not found; "
+            "continuing without loading..."
+        )
     if not warnings_found:
         print("No warnings found. Good Luck!")
         print("=============================")
 
 
 def load_heliostat(cfg, device):
-    cp = th.load(os.path.expanduser(cfg.CP_PATH), map_location=device)
+    cp_path = os.path.expanduser(cfg.CP_PATH)
+    cp = th.load(cp_path, map_location=device)
     if cfg.USE_NURBS:
         H = NURBSHeliostat.from_dict(
             cp,
@@ -66,7 +82,7 @@ def load_optimizer_state(opt, cp_path, device):
 
 
 def build_heliostat(cfg, device):
-    if cfg.CP_PATH:
+    if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
         H = load_heliostat(cfg, device)
     else:
         if cfg.USE_NURBS:
@@ -151,11 +167,15 @@ def _build_scheduler(cfg_scheduler, opt):
     return sched
 
 
+def _get_opt_cp_path(cp_path):
+    return os.path.expanduser(cp_path[:-3] + '_opt.pt')
+
+
 def build_optimizer_scheduler(cfg, params, device):
     opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
     # Load optimizer state.
     if cfg.LOAD_OPTIMIZER_STATE:
-        opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
+        opt_cp_path = _get_opt_cp_path(cfg.CP_PATH)
         load_optimizer_state(opt, opt_cp_path, device)
 
     sched = _build_scheduler(cfg.TRAIN.SCHEDULER, opt)
