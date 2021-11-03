@@ -480,7 +480,11 @@ class Heliostat(object):
         self._normals_aligned = normal_vectors_rotated
 
     def align_reverse(self):
+        self._align_reverse()
         self.state = AlignmentState.ON_GROUND
+
+    def _align_reverse(self):
+        pass
 
     def reset_cache(self):
         pass
