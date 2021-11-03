@@ -10,7 +10,7 @@ import utils
 
 
 class NURBSHeliostat(Heliostat):
-    DISABLE_CACHING = False
+    DISABLE_CACHING = True
 
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
