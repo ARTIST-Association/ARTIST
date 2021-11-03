@@ -14,6 +14,7 @@ import plotter
 from render import Renderer
 import utils
 
+
 def check_consistency(cfg):
     print("Loaded Switches:")
     print(f"Heliostat shape: {cfg.H.SHAPE}")
@@ -21,21 +22,20 @@ def check_consistency(cfg):
     print(f"Scheduler: {cfg.TRAIN.SCHEDULER.NAME}")
     print(f"Optimizer: {cfg.TRAIN.OPTIMIZER.NAME}")
     print(f"Loss: {cfg.TRAIN.LOSS.NAME}")
-    
+
     warnings_found = False
-    if cfg.TRAIN.LOSS.USE_L1_WEIGHT_DECAY == True:
+    if cfg.TRAIN.LOSS.USE_L1_WEIGHT_DECAY:
         if not cfg.TRAIN.OPTIMIZER.WEIGHT_DECAY == 0:
             warnings_found = True
             print("WARNING: Do you realy want to use L2 and L1 Weight Decay?")
     if cfg.TRAIN.SCHEDULER.NAME.lower() == "cyclic":
         if not cfg.TRAIN.SCHEDULER.CYCLIC.BASE_LR == cfg.TRAIN.OPTIMIZER.LR:
             warnings_found = True
-            print("WARNING: Cyclic base lr and optimizer lr should be the same")
+            print(
+                "WARNING: Cyclic base lr and optimizer lr should be the same")
     if not warnings_found:
         print("No warnings found. Good Luck!")
         print("=============================")
-            
-        
 
 
 def load_heliostat(cfg, device):
@@ -79,29 +79,37 @@ def build_heliostat(cfg, device):
 def _build_optimizer(cfg_optimizer, params):
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
-    
+
     if name == "adam":
-        opt = th.optim.Adam(params, 
-                            lr=cfg.LR,
-                            betas=(cfg.BETAS[0],cfg.BETAS[1]),
-                            eps = cfg.EPS,
-                            weight_decay=cfg.WEIGHT_DECAY)
+        opt = th.optim.Adam(
+            params,
+            lr=cfg.LR,
+            betas=(cfg.BETAS[0], cfg.BETAS[1]),
+            eps=cfg.EPS,
+            weight_decay=cfg.WEIGHT_DECAY,
+        )
     elif name == "adamax":
-        opt = th.optim.Adamax(params, 
-                    lr=cfg.LR,
-                    betas=(cfg.BETAS[0],cfg.BETAS[1]),
-                    eps = cfg.EPS,
-                    weight_decay=cfg.WEIGHT_DECAY)
+        opt = th.optim.Adamax(
+            params,
+            lr=cfg.LR,
+            betas=(cfg.BETAS[0], cfg.BETAS[1]),
+            eps=cfg.EPS,
+            weight_decay=cfg.WEIGHT_DECAY,
+        )
     elif name == "adamw":
-        opt = th.optim.Adam(params, 
-                        lr=cfg.LR,
-                        betas=(cfg.BETAS[0],cfg.BETAS[1]),
-                        eps = cfg.EPS,
-                        weight_decay=cfg.WEIGHT_DECAY)
+        opt = th.optim.Adam(
+            params,
+            lr=cfg.LR,
+            betas=(cfg.BETAS[0], cfg.BETAS[1]),
+            eps=cfg.EPS,
+            weight_decay=cfg.WEIGHT_DECAY,
+        )
     else:
-        raise ValueError("Optimizer name not found, change name or implement new optimizer")
-    
+        raise ValueError(
+            "Optimizer name not found, change name or implement new optimizer")
+
     return opt
+
 
 def _build_scheduler(cfg_scheduler, opt):
     name = cfg_scheduler.NAME.lower()
@@ -137,10 +145,11 @@ def _build_scheduler(cfg_scheduler, opt):
             three_phase=cfg.THREE_PHASE,
         )
     else:
-        raise ValueError("Scheduler name not found, change name or implement new scheduler")
-    
+        raise ValueError(
+            "Scheduler name not found, change name or implement new scheduler")
+
     return sched
-    
+
 
 def build_optimizer_scheduler(cfg, params, device):
     opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
@@ -148,7 +157,7 @@ def build_optimizer_scheduler(cfg, params, device):
     if cfg.LOAD_OPTIMIZER_STATE:
         opt_cp_path = cfg.CP_PATH[:-3] + '_opt.pt'
         load_optimizer_state(opt, opt_cp_path, device)
-    
+
     sched = _build_scheduler(cfg.TRAIN.SCHEDULER, opt)
     return opt, sched
 
@@ -158,9 +167,12 @@ def loss_func(cfg_loss, pred_bitmap, target, opt):
     name = cfg.NAME.lower()
     if name == "mse":
         loss = th.nn.functional.mse_loss(pred_bitmap, target)
-    if name == "l1":
+    elif name == "l1":
         loss = th.nn.functional.l1_loss(pred_bitmap, target)
-        
+    else:
+        raise ValueError(
+            "Loss function name not found, change name or implement new loss")
+
     if cfg.USE_L1_WEIGHT_DECAY:
         weight_decay = sum(
             th.linalg.norm(
@@ -270,11 +282,14 @@ def main():
     if cfg.SAVE_RESULTS:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
-        root_logdir     = os.path.join(cfg.LOGDIR, cfg.ID)
-        logdir          = os.path.join(root_logdir , cfg.EXPERIMENT_NAME+f"_{time_str}")
-        logdir_files    = os.path.join(logdir, "Logfiles")
-        logdir_images   = os.path.join(logdir, "Images")
-        logdir_diffs    = os.path.join(logdir_images, "Diffs")
+        root_logdir = os.path.join(cfg.LOGDIR, cfg.ID)
+        logdir = os.path.join(
+            root_logdir,
+            cfg.EXPERIMENT_NAME + f"_{time_str}",
+        )
+        logdir_files = os.path.join(logdir, "Logfiles")
+        logdir_images = os.path.join(logdir, "Images")
+        logdir_diffs = os.path.join(logdir_images, "Diffs")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
         cfg.merge_from_list(["LOGDIR", logdir])
         os.makedirs(root_logdir, exist_ok=True)
@@ -309,7 +324,10 @@ def main():
     print("Create dataset using:")
     print(f"Sun position(s): {cfg.AC.SUN.ORIGIN}")
     print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
-    print(f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}x{cfg.AC.RECEIVER.RESOLUTION_Y}")
+    print(
+        f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
+        f"{cfg.AC.RECEIVER.RESOLUTION_Y}"
+    )
     print("=============================")
     H_target = Heliostat(cfg.H, device)
     ENV = Environment(cfg.AC, device)

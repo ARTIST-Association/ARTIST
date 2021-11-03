@@ -102,12 +102,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
 
     # width = cfg.WIDTH / 2
     # height = cfg.HEIGHT / 2
-   
+
     # X = th.linspace(-width, width, cfg.ROWS)
     # Y = th.linspace(-height, height, cfg.COLS)
     # X, Y = th.meshgrid(X, Y)
-    
-    
+
     columns = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
@@ -116,18 +115,18 @@ def heliostat_by_function(heliostat_function_cfg, device):
     # Use points at centers of grid squares.
     X = X[:-1] + (X[1:] - X[:-1]) / 2
     X = th.tile(X, (columns,))
-    X = X.reshape(cfg.ROWS,cfg.COLS)
+    X = X.reshape(cfg.ROWS, cfg.COLS)
     # heliostat y position
     Y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
     # Use points at centers of grid squares.
     Y = Y[:-1] + (Y[1:] - Y[:-1]) / 2
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
-    Y = Y.reshape(cfg.ROWS,cfg.COLS)
-    
+    Y = Y.reshape(cfg.ROWS, cfg.COLS)
+
     reduction = cfg.REDUCTION_FACTOR
-    fr  = cfg.FREQUENCY
+    fr = cfg.FREQUENCY
     if cfg.NAME == "sin":
-        Z = th.sin(fr * X + fr* Y) / reduction  # + np.cos(Y)
+        Z = th.sin(fr * X + fr * Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
         Z = th.sin(X) / reduction + th.cos(Y) / reduction
     elif cfg.NAME == "random":
@@ -139,7 +138,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
     stacked = th.stack((X, Y, Z)).T
-    
+
     normal_vecs = th.zeros_like(stacked)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
@@ -369,7 +368,6 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
-
 
     # Berechnung Idealer Heliostat
     # 0. Iteration
