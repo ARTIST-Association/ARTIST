@@ -180,6 +180,10 @@ class NURBSHeliostat(Heliostat):
             )
         return self._eval_points
 
+    @property
+    def shape(self):
+        return self._progressive_growing.get_shape()
+
     def _align(self):
         # No need to align points; we do it live in
         # `_update_aligned_surface_and_normals`.

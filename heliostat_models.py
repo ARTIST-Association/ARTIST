@@ -441,6 +441,10 @@ class Heliostat(object):
     def __call__(self):
         return (self.discrete_points, self.get_ray_directions())
 
+    @property
+    def shape(self):
+        return (self.rows, self.cols)
+
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')

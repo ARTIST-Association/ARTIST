@@ -177,6 +177,21 @@ class ProgressiveGrowing:
                     f'×{len(self.col_indices)}.'
                 )
 
+    def get_shape(self):
+        rows = self.row_indices
+        if rows is None:
+            rows = self.rows
+        else:
+            rows = len(rows)
+
+        cols = self.col_indices
+        if cols is None:
+            cols = self.cols
+        else:
+            cols = len(cols)
+
+        return (rows, cols)
+
     def step(self, verbose):
         self._step += 1
         if (
