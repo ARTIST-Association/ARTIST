@@ -18,7 +18,7 @@ import utils
 def check_consistency(cfg):
     print("Loaded Switches:")
     print(f"Heliostat shape: {cfg.H.SHAPE}")
-    print(f"Solar distribustion: {cfg.AC.SUN.DISTRIBUTION}")
+    print(f"Solar distribution: {cfg.AC.SUN.DISTRIBUTION}")
     print(f"Scheduler: {cfg.TRAIN.SCHEDULER.NAME}")
     print(f"Optimizer: {cfg.TRAIN.OPTIMIZER.NAME}")
     print(f"Loss: {cfg.TRAIN.LOSS.NAME}")
@@ -27,12 +27,12 @@ def check_consistency(cfg):
     if cfg.TRAIN.LOSS.USE_L1_WEIGHT_DECAY:
         if not cfg.TRAIN.OPTIMIZER.WEIGHT_DECAY == 0:
             warnings_found = True
-            print("WARNING: Do you realy want to use L2 and L1 Weight Decay?")
+            print("WARNING: Do you really want to use L2 and L1 weight decay?")
     if cfg.TRAIN.SCHEDULER.NAME.lower() == "cyclic":
         if not cfg.TRAIN.SCHEDULER.CYCLIC.BASE_LR == cfg.TRAIN.OPTIMIZER.LR:
             warnings_found = True
             print(
-                "WARNING: Cyclic base lr and optimizer lr should be the same")
+                "WARNING: Cyclic base LR and optimizer LR should be the same")
     if not os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
         warnings_found = True
         print(
