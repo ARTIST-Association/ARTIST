@@ -209,37 +209,7 @@ class NURBSHeliostat(Heliostat):
             knots_y,
             alignment,
             position_on_field,
-            indices_x=None,
-            indices_y=None,
     ):
-        device = ctrl_points.device
-
-        if indices_x is not None:
-            ctrl_points = ctrl_points[indices_x, :]
-            ctrl_weights = ctrl_weights[indices_x, :]
-
-            # FIXME can we make this more dynamic, basing it on the
-            #       available knot points?
-            knots_x = th.empty(
-                len(indices_x) + degree_x + 1,
-                device=device,
-                dtype=knots_x.dtype,
-            )
-            utils.initialize_spline_knots_(knots_x, degree_x)
-
-        if indices_y is not None:
-            ctrl_points = ctrl_points[:, indices_y]
-            ctrl_weights = ctrl_weights[:, indices_y]
-
-            # FIXME can we make this more dynamic, basing it on the
-            #       available knot points?
-            knots_y = th.empty(
-                len(indices_y) + degree_y + 1,
-                device=device,
-                dtype=knots_y.dtype,
-            )
-            utils.initialize_spline_knots_(knots_y, degree_y)
-
         surface_points, normals = nurbs.calc_normals_and_surface_slow(
             eval_points[:, 0],
             eval_points[:, 1],
@@ -269,18 +239,18 @@ class NURBSHeliostat(Heliostat):
     @property
     def discrete_points(self):
         alignment = self._get_alignment()
+        ctrl_points, ctrl_weights, knots_x, knots_y = \
+            self._progressive_growing.select()
         discrete_points, _ = self._get_aligned_surface_and_normals(
             self.eval_points,
             self.degree_x,
             self.degree_y,
-            self.ctrl_points,
-            self.ctrl_weights,
-            self.knots_x,
-            self.knots_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
             alignment,
             self.position_on_field,
-            self._progressive_growing.row_indices,
-            self._progressive_growing.col_indices,
         )
 
         if self.state is AlignmentState.ON_GROUND:
@@ -295,14 +265,16 @@ class NURBSHeliostat(Heliostat):
     @property
     def normals(self):
         alignment = self._get_alignment()
+        ctrl_points, ctrl_weights, knots_x, knots_y = \
+            self._progressive_growing.select()
         _, normals = self._get_aligned_surface_and_normals(
             self.eval_points,
             self.degree_x,
             self.degree_y,
-            self.ctrl_points,
-            self.ctrl_weights,
-            self.knots_x,
-            self.knots_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
             alignment,
             self.position_on_field,
         )

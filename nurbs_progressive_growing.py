@@ -177,6 +177,44 @@ class ProgressiveGrowing:
                     f'×{len(self.col_indices)}.'
                 )
 
+    def select(self):
+        degree_x = self.heliostat.degree_x
+        degree_y = self.heliostat.degree_y
+        ctrl_points = self.heliostat.ctrl_points
+        ctrl_weights = self.heliostat.ctrl_weights
+        knots_x = self.heliostat.knots_x
+        knots_y = self.heliostat.knots_y
+        indices_x = self.row_indices
+        indices_y = self.col_indices
+
+        if indices_x is not None:
+            ctrl_points = ctrl_points[indices_x, :]
+            ctrl_weights = ctrl_weights[indices_x, :]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_x = th.empty(
+                len(indices_x) + degree_x + 1,
+                device=self.device,
+                dtype=knots_x.dtype,
+            )
+            utils.initialize_spline_knots_(knots_x, degree_x)
+
+        if indices_y is not None:
+            ctrl_points = ctrl_points[:, indices_y]
+            ctrl_weights = ctrl_weights[:, indices_y]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_y = th.empty(
+                len(indices_y) + degree_y + 1,
+                device=self.device,
+                dtype=knots_y.dtype,
+            )
+            utils.initialize_spline_knots_(knots_y, degree_y)
+
+        return ctrl_points, ctrl_weights, knots_x, knots_y
+
     def get_shape(self):
         rows = self.row_indices
         if rows is None:
