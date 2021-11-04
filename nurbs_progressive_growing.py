@@ -38,6 +38,16 @@ class ProgressiveGrowing:
     def _no_progressive_growing(self):
         return self._interval < 1
 
+    def _calc_uniform_indices(self, start_size, final_size):
+        indices = th.linspace(
+            0,
+            final_size - 1,
+            start_size,
+            device=self.device,
+        )
+        indices = utils.round_positionally(indices)
+        return indices
+
     def _calc_start_indices(self, start_size, final_size, degree):
         if start_size < 1:
             start_size = degree + 1
@@ -51,13 +61,7 @@ class ProgressiveGrowing:
             f'must be at least {degree + 1}'
         )
 
-        indices = th.linspace(
-            0,
-            final_size - 1,
-            start_size,
-            device=self.device,
-        )
-        indices = utils.round_positionally(indices)
+        indices = self._calc_uniform_indices(start_size, final_size)
         return indices
 
     def _done_growing(self):
