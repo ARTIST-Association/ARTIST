@@ -6,8 +6,9 @@ import utils
 class ProgressiveGrowing:
     def __init__(self, heliostat):
         self.heliostat = heliostat
+        self.cfg = self.heliostat.nurbs_cfg.GROWING
 
-        self._interval = self.heliostat.nurbs_cfg.PROGRESSIVE_GROWING_INTERVAL
+        self._interval = self.cfg.INTERVAL
         self._step = 0
 
         if self._no_progressive_growing():
@@ -17,18 +18,16 @@ class ProgressiveGrowing:
 
         self.device = self.heliostat.device
 
-        self.row_indices = \
-            self._calc_start_indices(
-                self.heliostat.rows,
-                self.heliostat.degree_x,
-                self.heliostat.device,
-            )
-        self.col_indices = \
-            self._calc_start_indices(
-                self.heliostat.cols,
-                self.heliostat.degree_y,
-                self.heliostat.device,
-            )
+        self.row_indices = self._calc_start_indices(
+            self.cfg.START_ROWS,
+            self.heliostat.rows,
+            self.heliostat.degree_x,
+        )
+        self.col_indices = self._calc_start_indices(
+            self.cfg.START_COLS,
+            self.heliostat.cols,
+            self.heliostat.degree_y,
+        )
 
     def get_step(self):
         return self._step
@@ -39,11 +38,27 @@ class ProgressiveGrowing:
     def _no_progressive_growing(self):
         return self._interval < 1
 
-    @staticmethod
-    def _calc_start_indices(final_size, degree, device):
-        assert final_size > degree, \
-            'the NURBS does not have enough control points'
-        return th.linspace(0, final_size - 1, degree + 1).round().long()
+    def _calc_start_indices(self, start_size, final_size, degree):
+        if start_size < 1:
+            start_size = degree + 1
+
+        assert start_size > degree, (
+            f'NURBS growing start size is too small; '
+            f'must be at least {degree + 1}'
+        )
+        assert final_size > degree, (
+            f'NURBS growing final size is too small; '
+            f'must be at least {degree + 1}'
+        )
+
+        indices = th.linspace(
+            0,
+            final_size - 1,
+            start_size,
+            device=self.device,
+        )
+        indices = utils.round_positionally(indices)
+        return indices
 
     def _done_growing(self):
         return self.row_indices is None and self.col_indices is None
@@ -55,18 +70,7 @@ class ProgressiveGrowing:
             raise ValueError('overshot goal size')
 
         between_indices = indices[:-1] + (indices[1:] - indices[:-1]) / 2
-        between_indices_middle = th.tensor(
-            len(between_indices) / 2,
-            device=self.device,
-        ).round().long()
-
-        # Round lower values down, upper values up.
-        # This makes the indices become mirrored around the middle
-        # index.
-        between_indices = th.cat([
-            between_indices[:between_indices_middle].long(),
-            between_indices[between_indices_middle:].round().long(),
-        ])
+        between_indices = utils.round_positionally(between_indices)
 
         grown_indices = th.cat([indices, between_indices])
         grown_indices = grown_indices.sort()[0]
@@ -169,13 +173,66 @@ class ProgressiveGrowing:
 
         if verbose:
             if not already_done and self._done_growing():
-                print('finished growing NURBS')
+                print('Finished growing NURBS.')
             else:
                 print(
-                    f'grew NURBS to '
+                    f'Grew NURBS to '
                     f'{len(self.row_indices)}'
-                    f'×{len(self.col_indices)}'
+                    f'×{len(self.col_indices)}.'
                 )
+
+    def select(self):
+        degree_x = self.heliostat.degree_x
+        degree_y = self.heliostat.degree_y
+        ctrl_points = self.heliostat.ctrl_points
+        ctrl_weights = self.heliostat.ctrl_weights
+        knots_x = self.heliostat.knots_x
+        knots_y = self.heliostat.knots_y
+        indices_x = self.row_indices
+        indices_y = self.col_indices
+
+        if indices_x is not None:
+            ctrl_points = ctrl_points[indices_x, :]
+            ctrl_weights = ctrl_weights[indices_x, :]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_x = th.empty(
+                len(indices_x) + degree_x + 1,
+                device=self.device,
+                dtype=knots_x.dtype,
+            )
+            utils.initialize_spline_knots_(knots_x, degree_x)
+
+        if indices_y is not None:
+            ctrl_points = ctrl_points[:, indices_y]
+            ctrl_weights = ctrl_weights[:, indices_y]
+
+            # FIXME can we make this more dynamic, basing it on the
+            #       available knot points?
+            knots_y = th.empty(
+                len(indices_y) + degree_y + 1,
+                device=self.device,
+                dtype=knots_y.dtype,
+            )
+            utils.initialize_spline_knots_(knots_y, degree_y)
+
+        return ctrl_points, ctrl_weights, knots_x, knots_y
+
+    def get_shape(self):
+        rows = self.row_indices
+        if rows is None:
+            rows = self.rows
+        else:
+            rows = len(rows)
+
+        cols = self.col_indices
+        if cols is None:
+            cols = self.cols
+        else:
+            cols = len(cols)
+
+        return (rows, cols)
 
     def step(self, verbose):
         self._step += 1

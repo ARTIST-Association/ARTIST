@@ -102,12 +102,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
 
     # width = cfg.WIDTH / 2
     # height = cfg.HEIGHT / 2
-   
+
     # X = th.linspace(-width, width, cfg.ROWS)
     # Y = th.linspace(-height, height, cfg.COLS)
     # X, Y = th.meshgrid(X, Y)
-    
-    
+
     columns = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
@@ -116,19 +115,19 @@ def heliostat_by_function(heliostat_function_cfg, device):
     # Use points at centers of grid squares.
     X = X[:-1] + (X[1:] - X[:-1]) / 2
     X = th.tile(X, (columns,))
-    X = X.reshape(cfg.ROWS,cfg.COLS)
+    X = X.reshape(cfg.ROWS, cfg.COLS)
     # heliostat y position
     Y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
     # Use points at centers of grid squares.
     Y = Y[:-1] + (Y[1:] - Y[:-1]) / 2
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
-    Y = Y.reshape(cfg.ROWS,cfg.COLS)
-    # Z = th.zeros_like(Y)
-    
+
+    Y = Y.reshape(cfg.ROWS, cfg.COLS)
+
     reduction = cfg.REDUCTION_FACTOR
-    fr  = cfg.FREQUENCY
+    fr = cfg.FREQUENCY
     if cfg.NAME == "sin":
-        Z = th.sin(fr * X + fr* Y) / reduction  # + np.cos(Y)
+        Z = th.sin(fr * X + fr * Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
         Z = th.sin(X) / reduction + th.cos(Y) / reduction
     elif cfg.NAME == "random":
@@ -140,7 +139,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
     stacked = th.stack((X, Y, Z)).T
-    
+
     normal_vecs = th.zeros_like(stacked)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
@@ -371,7 +370,6 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
     pPosition = Position
     pAimpoint = Aimpoint
 
-
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
@@ -442,6 +440,10 @@ class Heliostat(object):
     def __call__(self):
         return (self.discrete_points, self.get_ray_directions())
 
+    @property
+    def shape(self):
+        return (self.rows, self.cols)
+
     def align(self, sun_origin, receiver_center, verbose=True):
         if self.discrete_points is None:
             raise ValueError('Heliostat has to be loaded first')
@@ -460,6 +462,10 @@ class Heliostat(object):
             receiver_center,
         ))
 
+        self._align()
+        self.state = AlignmentState.ALIGNED
+
+    def _align(self):
         hel_rotated = rotate(
             self.discrete_points, self.alignment, clockwise=True)
         hel_rotated_in_field = hel_rotated + self.position_on_field
@@ -473,10 +479,16 @@ class Heliostat(object):
 
         self._discrete_points_aligned = hel_rotated_in_field
         self._normals_aligned = normal_vectors_rotated
-        self.state = AlignmentState.ALIGNED
 
     def align_reverse(self):
+        self._align_reverse()
         self.state = AlignmentState.ON_GROUND
+
+    def _align_reverse(self):
+        pass
+
+    def reset_cache(self):
+        pass
 
     @property
     def discrete_points(self):

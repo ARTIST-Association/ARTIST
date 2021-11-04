@@ -303,8 +303,8 @@ class Renderer(object):
             self.ENV.receiver_plane_x,
             self.ENV.receiver_plane_y,
             self.ENV.receiver_resolution_x,
-            self.ENV.receiver_resolution_y
-            )
+            self.ENV.receiver_resolution_y,
+        )
         # target_num_missed = indices.numel() - indices.count_nonzero()
         # print('Missed for target:', target_num_missed.detach().cpu().item())
         return total_bitmap
