@@ -39,6 +39,9 @@ _C.NURBS.GROWING.INTERVAL = 0
 # 0 starts with minimum size
 _C.NURBS.GROWING.START_ROWS = 0
 _C.NURBS.GROWING.START_COLS = 0
+# 0 grows a new index between all old ones
+_C.NURBS.GROWING.STEP_SIZE_ROWS = 0
+_C.NURBS.GROWING.STEP_SIZE_COLS = 0
 
 # H = Heliostat
 _C.H                                    = CN()

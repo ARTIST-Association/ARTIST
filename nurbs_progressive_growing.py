@@ -67,24 +67,36 @@ class ProgressiveGrowing:
     def _done_growing(self):
         return self.row_indices is None and self.col_indices is None
 
-    def _grow_indices(self, indices, final_size):
+    def _grow_indices(self, indices, final_size, step_size):
         if indices is None or len(indices) == final_size:
             return None
         elif len(indices) > final_size:
             raise ValueError('overshot goal size')
 
-        between_indices = indices[:-1] + (indices[1:] - indices[:-1]) / 2
-        between_indices = utils.round_positionally(between_indices)
+        if step_size < 1:
+            between_indices = indices[:-1] + (indices[1:] - indices[:-1]) / 2
+            between_indices = utils.round_positionally(between_indices)
 
-        grown_indices = th.cat([indices, between_indices])
-        grown_indices = grown_indices.sort()[0]
-        grown_indices = grown_indices.unique_consecutive()
+            grown_indices = th.cat([indices, between_indices])
+            grown_indices = grown_indices.sort()[0]
+            grown_indices = grown_indices.unique_consecutive()
+        else:
+            grown_indices = self._calc_uniform_indices(
+                min(len(indices) + step_size, final_size),
+                final_size,
+            )
 
         if len(grown_indices) == final_size:
             return None
         return grown_indices
 
-    def _find_new_indices(self, old_indices, curr_indices, final_size):
+    def _find_new_indices(
+            self,
+            old_indices,
+            curr_indices,
+            final_size,
+            with_old_indices,
+    ):
         dtype = old_indices.dtype
 
         if curr_indices is None:
@@ -94,8 +106,12 @@ class ProgressiveGrowing:
                 dtype=dtype,
             )
 
+        if with_old_indices:
+            return curr_indices
+
         old_indices_set = set(map(int, old_indices))
         curr_indices_set = set(map(int, curr_indices))
+
         new_indices = curr_indices_set.difference(old_indices_set)
         if not new_indices:
             # No new indices; quit early.
@@ -123,11 +139,14 @@ class ProgressiveGrowing:
         return new_ctrl_points
 
     def _set_grown_control_points(self, old_row_indices, old_col_indices, k=4):
+        with_old_indices = self.cfg.STEP_SIZE_ROWS > 0
         new_row_indices = self._find_new_indices(
             old_row_indices,
             self.row_indices,
             self.heliostat.rows,
+            with_old_indices,
         )
+
         if new_row_indices is not None:
             new_row_control_points = self._calc_grown_control_points_per_dim(
                 self.heliostat.ctrl_points[new_row_indices, :], k)
@@ -140,11 +159,14 @@ class ProgressiveGrowing:
 
             self.heliostat.invalidate_control_points_caches()
 
+        with_old_indices = self.cfg.STEP_SIZE_COLS > 0
         new_col_indices = self._find_new_indices(
             old_col_indices,
             self.col_indices,
             self.heliostat.cols,
+            with_old_indices,
         )
+
         if new_col_indices is not None:
             new_col_control_points = self._calc_grown_control_points_per_dim(
                 self.heliostat.ctrl_points[:, new_col_indices], k)
@@ -166,9 +188,15 @@ class ProgressiveGrowing:
         old_col_indices = self.col_indices
 
         self.row_indices = self._grow_indices(
-            self.row_indices, self.heliostat.rows)
+            self.row_indices,
+            self.heliostat.rows,
+            self.cfg.STEP_SIZE_ROWS,
+        )
         self.col_indices = self._grow_indices(
-            self.col_indices, self.heliostat.cols)
+            self.col_indices,
+            self.heliostat.cols,
+            self.cfg.STEP_SIZE_COLS,
+        )
 
         self._set_grown_control_points(old_row_indices, old_col_indices, k=4)
 
