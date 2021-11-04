@@ -17,18 +17,14 @@ class ProgressiveGrowing:
 
         self.device = self.heliostat.device
 
-        self.row_indices = \
-            self._calc_start_indices(
-                self.heliostat.rows,
-                self.heliostat.degree_x,
-                self.heliostat.device,
-            )
-        self.col_indices = \
-            self._calc_start_indices(
-                self.heliostat.cols,
-                self.heliostat.degree_y,
-                self.heliostat.device,
-            )
+        self.row_indices = self._calc_start_indices(
+            self.heliostat.rows,
+            self.heliostat.degree_x,
+        )
+        self.col_indices = self._calc_start_indices(
+            self.heliostat.cols,
+            self.heliostat.degree_y,
+        )
 
     def get_step(self):
         return self._step
@@ -39,11 +35,17 @@ class ProgressiveGrowing:
     def _no_progressive_growing(self):
         return self._interval < 1
 
-    @staticmethod
-    def _calc_start_indices(final_size, degree, device):
+    def _calc_start_indices(self, final_size, degree):
         assert final_size > degree, \
             'the NURBS does not have enough control points'
-        return th.linspace(0, final_size - 1, degree + 1).round().long()
+        indices = th.linspace(
+            0,
+            final_size - 1,
+            degree + 1,
+            device=self.device,
+        )
+        indices = utils.round_positionally(indices)
+        return indices
 
     def _done_growing(self):
         return self.row_indices is None and self.col_indices is None
@@ -55,18 +57,7 @@ class ProgressiveGrowing:
             raise ValueError('overshot goal size')
 
         between_indices = indices[:-1] + (indices[1:] - indices[:-1]) / 2
-        between_indices_middle = th.tensor(
-            len(between_indices) / 2,
-            device=self.device,
-        ).round().long()
-
-        # Round lower values down, upper values up.
-        # This makes the indices become mirrored around the middle
-        # index.
-        between_indices = th.cat([
-            between_indices[:between_indices_middle].long(),
-            between_indices[between_indices_middle:].round().long(),
-        ])
+        between_indices = utils.round_positionally(between_indices)
 
         grown_indices = th.cat([indices, between_indices])
         grown_indices = grown_indices.sort()[0]

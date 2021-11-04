@@ -147,6 +147,40 @@ def initialize_spline_eval_points_perfectly(
     return eval_points
 
 
+def round_positionally(x):
+    """Round usually but round .5 decimal point depending on position.
+
+    If the decimal point is .5, values in the lower half of `x` are
+    rounded down while values in the upper half of `x` are rounded up.
+
+    The halfway point is obtained by rounding up.
+    """
+    x_middle = th.tensor(
+        len(x) / 2,
+        device=x.device,
+    ).round().long()
+
+    # Round lower values down, upper values up.
+    # This makes the indices become mirrored around the middle
+    # index.
+    lower_half = x[:x_middle]
+    upper_half = x[x_middle:]
+
+    lower_half = th.where(
+        th.isclose(lower_half % 1, 0.5),
+        lower_half.long(),
+        lower_half,
+    )
+    upper_half = th.where(
+        th.isclose(upper_half % 1, 0.5),
+        upper_half.ceil().long(),
+        upper_half,
+    )
+
+    x = th.cat([lower_half, upper_half])
+    return x
+
+
 def horizontal_distance(a, b, ord=2):
     return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
 
