@@ -240,13 +240,13 @@ def initialize_spline_ctrl_points(
 
 def adjust_spline_ctrl_points(
         control_points,
-        points,
+        world_points,
         change_z_only,
         k=4,
 ):
     new_control_points = calc_knn_averages(
         control_points.reshape(-1, control_points.shape[-1]),
-        points,
+        world_points,
         k,
     )
     new_control_points = new_control_points.reshape(control_points.shape)
