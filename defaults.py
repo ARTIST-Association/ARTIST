@@ -36,6 +36,9 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 _C.NURBS.GROWING = CN()
 # 0 turns progressive growing off
 _C.NURBS.GROWING.INTERVAL = 0
+# 0 starts with minimum size
+_C.NURBS.GROWING.START_ROWS = 0
+_C.NURBS.GROWING.START_COLS = 0
 
 # H = Heliostat
 _C.H                                    = CN()

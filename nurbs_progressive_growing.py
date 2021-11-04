@@ -19,10 +19,12 @@ class ProgressiveGrowing:
         self.device = self.heliostat.device
 
         self.row_indices = self._calc_start_indices(
+            self.cfg.START_ROWS,
             self.heliostat.rows,
             self.heliostat.degree_x,
         )
         self.col_indices = self._calc_start_indices(
+            self.cfg.START_COLS,
             self.heliostat.cols,
             self.heliostat.degree_y,
         )
@@ -36,13 +38,23 @@ class ProgressiveGrowing:
     def _no_progressive_growing(self):
         return self._interval < 1
 
-    def _calc_start_indices(self, final_size, degree):
-        assert final_size > degree, \
-            'the NURBS does not have enough control points'
+    def _calc_start_indices(self, start_size, final_size, degree):
+        if start_size < 1:
+            start_size = degree + 1
+
+        assert start_size > degree, (
+            f'NURBS growing start size is too small; '
+            f'must be at least {degree + 1}'
+        )
+        assert final_size > degree, (
+            f'NURBS growing final size is too small; '
+            f'must be at least {degree + 1}'
+        )
+
         indices = th.linspace(
             0,
             final_size - 1,
-            degree + 1,
+            start_size,
             device=self.device,
         )
         indices = utils.round_positionally(indices)
