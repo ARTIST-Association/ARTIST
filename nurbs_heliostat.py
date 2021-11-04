@@ -144,7 +144,7 @@ class NURBSHeliostat(Heliostat):
         raise AttributeError('ctrl_points is not a writable attribute')
 
     @staticmethod
-    @functools.lru_cache(maxsize=1)
+    # @functools.lru_cache(maxsize=1)
     def _invert_world_points(
             eval_points,
             degree_x,
@@ -187,7 +187,7 @@ class NURBSHeliostat(Heliostat):
             raise ValueError(f'unknown state {self.state}')
 
     @staticmethod
-    @functools.lru_cache(maxsize=1)
+    # @functools.lru_cache(maxsize=1)
     def _get_aligned_surface_and_normals(
             eval_points,
             degree_x,

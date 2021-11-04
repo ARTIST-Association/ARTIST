@@ -123,6 +123,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     Y = Y[:-1] + (Y[1:] - Y[:-1]) / 2
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
     Y = Y.reshape(cfg.ROWS,cfg.COLS)
+    # Z = th.zeros_like(Y)
     
     reduction = cfg.REDUCTION_FACTOR
     fr  = cfg.FREQUENCY

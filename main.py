@@ -14,7 +14,7 @@ import plotter
 from render import Renderer
 import utils
 
-def check_consistency(cfg):
+def check_consistency(cfg): 
     print("Loaded Switches:")
     print(f"Heliostat shape: {cfg.H.SHAPE}")
     print(f"Solar distribustion: {cfg.AC.SUN.DISTRIBUTION}")
@@ -215,7 +215,7 @@ def train_batch(
 
         # Plot target images to TensorBoard
         if writer:
-            if epoch % 50 == 0:
+            if epoch % 5 == 0:
                 writer.add_image(
                     f"target_{i}/prediction",
                     utils.colorize(pred_bitmap),
@@ -280,7 +280,7 @@ def main():
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
         os.makedirs(logdir_diffs, exist_ok=True)
-        os.makedirs(logdir_surfaces, exist_ok=True)
+        
         with open(os.path.join(logdir, "config.yaml"), "w") as f:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
@@ -310,6 +310,7 @@ def main():
     print(f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}x{cfg.AC.RECEIVER.RESOLUTION_Y}")
     print("=============================")
     H_target = Heliostat(cfg.H, device)
+    # plotter.plot_normal_vectors(H_target._discrete_points_orig, H_target._normals_orig)
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
         cfg,
@@ -358,19 +359,25 @@ def main():
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
 
-        if epoch % 50 == 0 and cfg.SAVE_RESULTS:
-            plotter.plot_surfaces(
-                H_target._discrete_points_orig,
-                th.tile(
-                    th.tensor([0, 0, 1], device=device),
-                    (H_target._discrete_points_orig.shape[0], 1),
-                ),
-                H_target._normals_orig,
-                H._normals_orig,
-                epoch,
-                logdir_surfaces,
-                writer
-            )
+        # if epoch % 50 == 0 and cfg.SAVE_RESULTS:
+        #     plotter.plot_surfaces_mrad(
+        #         th.tile(
+        #             th.tensor([0, 0, 1], device=device),
+        #             (H_target._discrete_points_orig.shape[0], 1),
+        #         ),
+        #         H_target._normals_orig,
+        #         H._normals_orig,
+        #         epoch,
+        #         logdir_surfaces,
+        #         writer
+        #     )
+        #     plotter.plot_surfaces_mm(
+        #         H_target._discrete_points_orig,
+        #         H._discrete_points_orig,
+        #         epoch,
+        #         logdir_surfaces,
+        #         writer
+        #     )
             # plotter.plot_diffs(
             #     H_target._discrete_points_orig,
             #     th.tile(

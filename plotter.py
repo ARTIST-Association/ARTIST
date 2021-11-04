@@ -20,8 +20,11 @@ def colorbar(mappable):
 
 
 
-def plot_surfaces(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir, writer = None):
-
+def plot_surfaces_mrad(ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir_surfaces, writer = None):
+    
+    logdir_mrad = os.path.join(logdir_surfaces, "mrad")
+    os.makedirs(logdir_surfaces, exist_ok=True)
+    os.makedirs(logdir_mrad, exist_ok=True)
 
     
     target = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
@@ -35,7 +38,7 @@ def plot_surfaces(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal
     
     
     if writer:
-      writer.add_scalar("train/normal_diffs", np.sum(diff)/len(diff), epoch)
+      writer.add_scalar("test/normal_diffs", np.sum(diff)/len(diff), epoch)
 
     
     minmin = np.min((np.min(target), np.min(pred)))
@@ -53,33 +56,44 @@ def plot_surfaces(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal
    
     
     plt.tight_layout(h_pad=0.5)
-    # fig.subplots_adjust(right=0.85)
-    # cbar_ax = fig.add_axes([0.88, 0.15, 0.04, 0.7])
+    fig.savefig(f"{logdir_mrad}//test_{epoch}")
 
-    # fig.colorbar(im1, ax = axes[3])
-    # fig.colorbar(im3, ax = axes[4])
-    
-    # bbox_ax = axes[0].get_position()
-    
-    # fig.add_axes() adds the colorbar axes
-    # they're bounded by [x0, y0, x_width, y_width]
+def plot_surfaces_mm(hel_points_origin, hel_points_pred, epoch, logdir_surfaces, writer = None):
+       
+    logdir_mm = os.path.join(logdir_surfaces, "mm")
+    os.makedirs(logdir_surfaces, exist_ok=True)
+    os.makedirs(logdir_mm, exist_ok=True)
 
-    # hel_origin = hel_origin.detach().cpu()
-
-    # x = hel_origin[:,0].detach().cpu()
-    # y = hel_origin[:,1].detach().cpu()
-    # # fig = plt.figure()
-    # # ax = plt.axes(projection='3d')
-    # # ax.set_zlim3d(1, 1.00001)
+    target = hel_points_origin[:,2].detach().cpu().numpy()
+    pred = hel_points_pred[:,2].detach().cpu().numpy()
+    diff = abs(pred-target)
     
-    # surf = ax.imshow(x, y, abs(differences_target), cmap=cm.coolwarm,
-    #                         linewidth=0, antialiased=False)
-    # # surf = ax.scatter(hel_origin[:,0],hel_origin[:,1],hel_origin[:,2])
-    # surf = ax.plot_trisurf(x, y, differences_pred, cmap=cm.coolwarm,
-    #                         linewidth=0, antialiased=False)
-    # # fig.show()
-    # exit()
-    fig.savefig(f"{logdir}//test_{epoch}")
+    
+    im_target = target.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
+    im_pred = pred.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
+    im_diff = diff.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target)))) 
+    
+    
+    if writer:
+      writer.add_scalar("test/location_diffs", np.sum(diff)/len(diff), epoch)
+
+    
+    minmin = np.min((np.min(target), np.min(pred)))
+    maxmax = np.max((np.max(target), np.max(pred)))
+    matplotlib.use('Agg')
+    plt.close("all")
+    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
+    
+    im1 = ax1.imshow(im_target, cmap="plasma", vmin=minmin, vmax=maxmax)#
+    im2 = ax2.imshow(im_pred, cmap="plasma", vmin=minmin, vmax=maxmax)#
+    colorbar(im1)
+    
+    im3 = ax3.imshow(im_diff, cmap='jet', norm=matplotlib.colors.LogNorm())
+    colorbar(im3)
+   
+    
+    plt.tight_layout(h_pad=0.5)
+    fig.savefig(f"{logdir_mm}//test_{epoch}")
 
 def plot_diffs(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir):
 
@@ -114,6 +128,7 @@ def plot_normal_vectors(points_on_hel, normal_vectors):
     None.
 
     '''
+    matplotlib.use('QT5Agg')
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     ax.set_xlim3d(-4, 4)
