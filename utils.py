@@ -165,17 +165,18 @@ def round_positionally(x):
     # index.
     lower_half = x[:x_middle]
     upper_half = x[x_middle:]
+    point_five = th.tensor(0.5, device=x.device)
 
     lower_half = th.where(
-        th.isclose(lower_half % 1, 0.5),
-        lower_half.long(),
+        th.isclose(lower_half % 1, point_five),
+        lower_half.floor(),
         lower_half,
-    )
+    ).long()
     upper_half = th.where(
-        th.isclose(upper_half % 1, 0.5),
-        upper_half.ceil().long(),
+        th.isclose(upper_half % 1, point_five),
+        upper_half.ceil(),
         upper_half,
-    )
+    ).long()
 
     x = th.cat([lower_half, upper_half])
     return x
