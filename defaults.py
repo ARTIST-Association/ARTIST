@@ -30,9 +30,12 @@ _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
 _C.NURBS.FIX_SPLINE_KNOTS               = True
 _C.NURBS.OPTIMIZE_Z_ONLY                = True
 _C.NURBS.RECALCULATE_EVAL_POINTS        = False
-# 0 turns progressive growing off
-_C.NURBS.PROGRESSIVE_GROWING_INTERVAL   = 0
 _C.NURBS.SPLINE_DEGREE                  = 3
+
+# NURBS progressive growing
+_C.NURBS.GROWING = CN()
+# 0 turns progressive growing off
+_C.NURBS.GROWING.INTERVAL = 0
 
 # H = Heliostat
 _C.H                                    = CN()

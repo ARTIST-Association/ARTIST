@@ -6,8 +6,9 @@ import utils
 class ProgressiveGrowing:
     def __init__(self, heliostat):
         self.heliostat = heliostat
+        self.cfg = self.heliostat.nurbs_cfg.GROWING
 
-        self._interval = self.heliostat.nurbs_cfg.PROGRESSIVE_GROWING_INTERVAL
+        self._interval = self.cfg.INTERVAL
         self._step = 0
 
         if self._no_progressive_growing():
