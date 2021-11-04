@@ -110,20 +110,13 @@ class ProgressiveGrowing:
             old_ctrl_points,
             k,
     ):
-        old_ctrl_points_shape = old_ctrl_points.shape
         world_points = self.heliostat.discrete_points
-
-        old_ctrl_points = old_ctrl_points.reshape(
-            -1, self.heliostat.ctrl_points.shape[-1])
-
-        new_control_points = utils.calc_knn_averages(
+        new_ctrl_points = utils.calc_closest_ctrl_points(
             old_ctrl_points,
             world_points,
             k,
         )
-        new_control_points = new_control_points.reshape(old_ctrl_points_shape)
-
-        return new_control_points
+        return new_ctrl_points
 
     def _set_grown_control_points(self, old_row_indices, old_col_indices, k=4):
         new_row_indices = self._find_new_indices(
