@@ -126,7 +126,7 @@ class NURBSHeliostat(Heliostat):
         else:
             # Unless we change the knots, we don't need to recalculate
             # as we simply distribute the points uniformly.
-            self.recalc_eval_points = False
+            self._recalc_eval_points = False
             self._cached_eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
         self._eval_points_cache_valid = True
