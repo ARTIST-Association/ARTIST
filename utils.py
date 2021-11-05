@@ -165,17 +165,18 @@ def round_positionally(x):
     # index.
     lower_half = x[:x_middle]
     upper_half = x[x_middle:]
+    point_five = th.tensor(0.5, device=x.device)
 
     lower_half = th.where(
-        th.isclose(lower_half % 1, 0.5),
-        lower_half.long(),
+        th.isclose(lower_half % 1, point_five),
+        lower_half.floor(),
         lower_half,
-    )
+    ).long()
     upper_half = th.where(
-        th.isclose(upper_half % 1, 0.5),
-        upper_half.ceil().long(),
+        th.isclose(upper_half % 1, point_five),
+        upper_half.ceil(),
         upper_half,
-    )
+    ).long()
 
     x = th.cat([lower_half, upper_half])
     return x
@@ -237,18 +238,26 @@ def initialize_spline_ctrl_points(
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
 
+def calc_closest_ctrl_points(control_points, world_points, k=4):
+    new_control_points = calc_knn_averages(
+        control_points.reshape(-1, control_points.shape[-1]),
+        world_points,
+        k,
+    )
+    return new_control_points.reshape(control_points.shape)
+
+
 def adjust_spline_ctrl_points(
         control_points,
-        points,
+        world_points,
         change_z_only,
         k=4,
 ):
-    new_control_points = calc_knn_averages(
-        control_points.reshape(-1, control_points.shape[-1]),
-        points,
+    new_control_points = calc_closest_ctrl_points(
+        control_points,
+        world_points,
         k,
     )
-    new_control_points = new_control_points.reshape(control_points.shape)
 
     if not change_z_only:
         control_points[:, :, :-1] = new_control_points[:, :, :-1]

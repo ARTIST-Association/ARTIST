@@ -56,6 +56,12 @@ class NURBSHeliostat(Heliostat):
         self._orig_surface_cache_valid = False
         self._aligned_surface_cache_valid = False
 
+    def invalidate_control_points_caches(self):
+        self.reset_cache()
+        # These can stay the same even after a training step;
+        # unless we want to recalculate.
+        self._eval_points_cache_valid = not self._recalc_eval_points
+
     @property
     def fix_spline_ctrl_weights(self):
         return self._fix_spline_ctrl_weights
@@ -303,10 +309,7 @@ class NURBSHeliostat(Heliostat):
 
     @th.no_grad()
     def step(self, verbose=False):
-        self.reset_cache()
-        # These can stay the same even after a training step;
-        # unless we want to recalculate.
-        self._eval_points_cache_valid = not self._recalc_eval_points
+        self.invalidate_control_points_caches()
 
         self._progressive_growing.step(verbose)
 
