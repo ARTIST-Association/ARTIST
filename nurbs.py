@@ -1,3 +1,5 @@
+from typing import List, Optional, Tuple
+
 import matplotlib.pyplot as plt
 import torch as th
 
@@ -9,7 +11,11 @@ class NoConvergenceError(RuntimeError):
     pass
 
 
-def setup_nurbs(degree, num_control_points, device):
+def setup_nurbs(
+        degree: int,
+        num_control_points: int,
+        device: th.device,
+) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
     """Return uninitialized parameters for a NURBS curve with the
     desired properties on the desired device.
     """
@@ -27,7 +33,12 @@ def setup_nurbs(degree, num_control_points, device):
     return control_points, control_point_weights, knots
 
 
-def find_span(evaluation_points, degree, num_control_points, knots):
+def find_span(
+        evaluation_points: th.Tensor,
+        degree: int,
+        num_control_points: int,
+        knots: th.Tensor,
+) -> th.Tensor:
     """For each evaluation point, return the span in which it lies."""
     result = th.empty(
         len(evaluation_points),
@@ -46,7 +57,12 @@ def find_span(evaluation_points, degree, num_control_points, knots):
     return result
 
 
-def get_basis(evaluation_points, span, degree, knots):
+def get_basis(
+        evaluation_points: th.Tensor,
+        span: th.Tensor,
+        degree: int,
+        knots: th.Tensor,
+) -> th.Tensor:
     """Return the basis functions applied to the evaluation points."""
     device = knots.device
     num_evaluation_points = len(evaluation_points)
@@ -71,7 +87,12 @@ def get_basis(evaluation_points, span, degree, knots):
     return basis_values
 
 
-def get_all_basis(evaluation_point, span, degree, knots):
+def get_all_basis(
+        evaluation_point: th.Tensor,
+        span: th.Tensor,
+        degree: int,
+        knots: th.Tensor,
+) -> th.Tensor:
     # FIXME
     device = knots.device
     next_degree = degree + 1
@@ -98,12 +119,12 @@ def get_all_basis(evaluation_point, span, degree, knots):
 
 
 def calc_basis_derivs(
-        evaluation_points,
-        span,
-        degree,
-        knots,
-        nth_deriv=1,
-):
+        evaluation_points: th.Tensor,
+        span: th.Tensor,
+        degree: int,
+        knots: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return the first `nth_deriv` derivatives for the basis functions
     applied to the given evaluation points. The k-th derivative is at
     index k, 0 <= k <= `nth_deriv`.
@@ -180,12 +201,12 @@ def calc_basis_derivs(
 
 
 def calc_basis_derivs_slow(
-        evaluation_points,
-        span,
-        degree,
-        knots,
-        nth_deriv=1,
-):
+        evaluation_points: th.Tensor,
+        span: th.Tensor,
+        degree: int,
+        knots: th.Tensor,
+        nth_deriv: int = 1,
+) -> List[List[th.Tensor]]:
     """Return the first `nth_deriv` derivatives for the basis functions
     applied to the given evaluation points. The k-th derivative is at
     index k, 0 <= k <= `nth_deriv`.
@@ -285,7 +306,10 @@ def calc_basis_derivs_slow(
     return ders
 
 
-def project_control_points(control_points, control_point_weights):
+def project_control_points(
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+) -> th.Tensor:
     """Project the given n-D control points with their weights into (n +
     1)-D space.
     """
@@ -296,12 +320,12 @@ def project_control_points(control_points, control_point_weights):
 
 @th.no_grad()
 def check_nurbs_constraints(
-        evaluation_points,
-        degree,
-        control_points,
-        control_point_weights,
-        knots,
-):
+        evaluation_points: th.Tensor,
+        degree: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots: th.Tensor,
+) -> None:
     """Assert that NURBS constraints are fulfilled for evaluating the
     given curve.
     """
@@ -321,12 +345,12 @@ def check_nurbs_constraints(
 
 
 def evaluate_nurbs(
-        evaluation_points,
-        degree,
-        control_points,
-        control_point_weights,
-        knots,
-):
+        evaluation_points: th.Tensor,
+        degree: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots: th.Tensor,
+) -> th.Tensor:
     """Return the result for evaluating a NURBS curve with the given
     parameters on the given evaluation points.
     """
@@ -352,12 +376,12 @@ def evaluate_nurbs(
 
 
 def calc_bspline_derivs(
-        evaluation_point,
-        degree,
-        control_points,
-        knots,
-        nth_deriv=1,
-):
+        evaluation_point: th.Tensor,
+        degree: int,
+        control_points: th.Tensor,
+        knots: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return the first `nth_deriv` derivatives for the given B-spline
     curve at the given evaluation points. The k-th derivative is at
     index k, 0 <= k <= `nth_deriv`.
@@ -440,13 +464,13 @@ def calc_bspline_derivs_2(
 
 
 def calc_derivs(
-        evaluation_point,
-        degree,
-        control_points,
-        control_point_weights,
-        knots,
-        nth_deriv=1,
-):
+        evaluation_point: th.Tensor,
+        degree: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return the first `nth_deriv` derivatives for the given NURBS
     curve at the given evaluation points. The k-th derivative is at
     index k, 0 <= k <= `nth_deriv`.
@@ -677,12 +701,12 @@ class NURBSCurve:
 
 
 def setup_nurbs_surface(
-        degree_x,
-        degree_y,
-        num_control_points_x,
-        num_control_points_y,
-        device,
-):
+        degree_x: int,
+        degree_y: int,
+        num_control_points_x: int,
+        num_control_points_y: int,
+        device: th.device,
+) -> Tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
     """Return uninitialized parameters for a NURBS surface with the
     desired properties on the given device.
     """
@@ -719,15 +743,15 @@ def setup_nurbs_surface(
 
 @th.no_grad()
 def check_nurbs_surface_constraints(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+) -> None:
     """Assert that NURBS constraints are fulfilled for evaluating the
     given surface.
     """
@@ -756,16 +780,16 @@ def check_nurbs_surface_constraints(
 
 
 def evaluate_nurbs_surface_at_spans(
-        num_evaluation_points,
-        spans_x,
-        spans_y,
-        basis_values_x,
-        basis_values_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-):
+        num_evaluation_points: int,
+        spans_x: th.Tensor,
+        spans_y: th.Tensor,
+        basis_values_x: th.Tensor,
+        basis_values_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+) -> th.Tensor:
     """Return evaluations of the given NURBS surface at the given spans
     with the corresponding basis values.
     """
@@ -789,15 +813,15 @@ def evaluate_nurbs_surface_at_spans(
 
 
 def evaluate_nurbs_surface_flex(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+) -> th.Tensor:
     """Return evaluations of the given NURBS surface at the given
     evaluation points in x- and y-direction.
     """
@@ -837,15 +861,15 @@ def evaluate_nurbs_surface_flex(
 
 
 def calc_bspline_derivs_surface(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        knots_x,
-        knots_y,
-        nth_deriv=1,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return partial derivatives up to `nth_deriv` at the given
     evaluation points for the given B-spline surface.
 
@@ -912,15 +936,15 @@ def calc_bspline_derivs_surface(
 
 
 def calc_bspline_derivs_surface_slow(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        knots_x,
-        knots_y,
-        nth_deriv=1,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return partial derivatives up to `nth_deriv` at the given
     evaluation points for the given B-spline surface.
 
@@ -993,16 +1017,16 @@ def calc_bspline_derivs_surface_slow(
 
 
 def calc_derivs_surface(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        nth_deriv=1,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        nth_deriv: int = 1,
+) -> th.Tensor:
     """Return partial derivatives up to `nth_deriv` at the given
     evaluation points for the given NURBS surface.
 
@@ -1067,16 +1091,16 @@ def calc_derivs_surface(
 
 
 def calc_derivs_surface_slow(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        nth_deriv=1,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        nth_deriv: int = 1,
+) -> List[List[th.Tensor]]:
     """Return partial derivatives up to `nth_deriv` at the given
     evaluation points for the given NURBS surface.
 
@@ -1150,15 +1174,15 @@ def calc_derivs_surface_slow(
 
 
 def calc_normals_surface(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+) -> th.Tensor:
     """Return the normals of the given NURBS surface at the given
     evaluation points.
     """
@@ -1178,15 +1202,15 @@ def calc_normals_surface(
 
 
 def calc_normals_surface_slow(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+) -> th.Tensor:
     """Return the normals of the given NURBS surface at the given
     evaluation points.
 
@@ -1209,15 +1233,15 @@ def calc_normals_surface_slow(
 
 
 def calc_normals_and_surface_slow(
-        evaluation_points_x,
-        evaluation_points_y,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-):
+        evaluation_points_x: th.Tensor,
+        evaluation_points_y: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+) -> Tuple[th.Tensor, th.Tensor]:
     """Return both the evaluation and normals of the given NURBS surface
     at the given evaluation points.
     """
@@ -1240,15 +1264,15 @@ def calc_normals_and_surface_slow(
 
 
 def plot_surface(
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        step_granularity_x=0.02,
-        step_granularity_y=0.02,
-        show_plot=True,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        show_plot: bool = True,
 ):
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
@@ -1298,17 +1322,17 @@ def plot_surface(
 
 
 def plot_surface_derivs(
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        step_granularity_x=0.02,
-        step_granularity_y=0.02,
-        nth_deriv=1,
-        show_plot=True,
-        plot_normals=None,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        nth_deriv: int = 1,
+        show_plot: bool = True,
+        plot_normals: Optional[bool] = None,
 ):
     if plot_normals is None:
         plot_normals = nth_deriv == 1
@@ -1410,17 +1434,17 @@ def plot_surface_derivs(
 
 
 def plot_surface_derivs_slow(
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        step_granularity_x=0.02,
-        step_granularity_y=0.02,
-        nth_deriv=1,
-        show_plot=True,
-        plot_normals=None,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        nth_deriv: int = 1,
+        show_plot: bool = True,
+        plot_normals: Optional[bool] = None,
 ):
     if plot_normals is None:
         plot_normals = nth_deriv == 1
@@ -1522,15 +1546,15 @@ def plot_surface_derivs_slow(
 
 
 def plot_surface_normals(
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        step_granularity_x=0.02,
-        step_granularity_y=0.02,
-        show_plot=True,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        show_plot: bool = True,
 ):
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
@@ -1604,15 +1628,15 @@ def plot_surface_normals(
 
 
 def plot_surface_normals_slow(
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        step_granularity_x=0.02,
-        step_granularity_y=0.02,
-        show_plot=True,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        show_plot: bool = True,
 ):
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
@@ -1676,16 +1700,16 @@ def plot_surface_normals_slow(
 
 
 def get_inversion_start_values(
-        world_points,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        num_samples,
-        norm_p=2,
-):
+        world_points: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        num_samples: int,
+        norm_p: int = 2,
+) -> Tuple[th.Tensor, th.Tensor]:
     """Return values in `world_points` and their distance; the values
     chosen minimize the distance to the given NURBS surface.
 
@@ -1742,7 +1766,7 @@ def get_inversion_start_values(
     return evaluation_points[argmin_distances], min_distances
 
 
-def batch_dot(x, y):
+def batch_dot(x: th.Tensor, y: th.Tensor) -> th.Tensor:
     """Return a dot product over the batch dimensions of tensors `x` and
     `y`.
     """
@@ -1750,19 +1774,19 @@ def batch_dot(x, y):
 
 
 def invert_points(
-        world_points,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        num_samples=8,
-        norm_p=2,
-        max_iters=100,
-        distance_tolerance=1e-5,
-        cosine_tolerance=1e-7,
-):
+        world_points: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        num_samples: int = 8,
+        norm_p: int = 2,
+        max_iters: int = 100,
+        distance_tolerance: float = 1e-5,
+        cosine_tolerance: float = 1e-7,
+) -> Tuple[th.Tensor, th.Tensor]:
     """Return evaluation points and their evaluated distances to
     `world_points` for the given NURBS surface. The returned evaluation
     points are calculated so that `world_points` are fitted to the
@@ -1933,19 +1957,19 @@ def invert_points(
 
 
 def invert_points_slow(
-        world_points,
-        degree_x,
-        degree_y,
-        control_points,
-        control_point_weights,
-        knots_x,
-        knots_y,
-        num_samples=8,
-        norm_p=2,
-        max_iters=100,
-        distance_tolerance=1e-5,
-        cosine_tolerance=1e-7,
-):
+        world_points: th.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: th.Tensor,
+        control_point_weights: th.Tensor,
+        knots_x: th.Tensor,
+        knots_y: th.Tensor,
+        num_samples: int = 8,
+        norm_p: int = 2,
+        max_iters: int = 100,
+        distance_tolerance: float = 1e-5,
+        cosine_tolerance: float = 1e-7,
+) -> Tuple[th.Tensor, th.Tensor]:
     """Return evaluation points and their evaluated distances to
     `world_points` for the given NURBS surface. The returned evaluation
     points are calculated so that `world_points` are fitted to the
