@@ -1466,7 +1466,6 @@ def plot_surface_derivs_slow(
         knots_y,
         nth_deriv,
     )
-    res = res.reshape((len(xs), len(ys)) + res.shape[1:])
     if plot_normals:
         normals = calc_normals_surface_slow(
             eval_points[:, 0],
@@ -1497,30 +1496,30 @@ def plot_surface_derivs_slow(
         alpha=0.1,
     )
     ax.plot_surface(
-        res[:, :, 0, 0, 0].detach().cpu().numpy(),
-        res[:, :, 0, 0, 1].detach().cpu().numpy(),
-        res[:, :, 0, 0, 2].detach().cpu().numpy(),
+        res[0][0][:, 0].detach().cpu().numpy(),
+        res[0][0][:, 1].detach().cpu().numpy(),
+        res[0][0][:, 2].detach().cpu().numpy(),
         cmap='plasma',
         alpha=0.3,
     )
     ax.quiver(
-        res[:, :, 0, 0, 0].detach().cpu().numpy(),
-        res[:, :, 0, 0, 1].detach().cpu().numpy(),
-        res[:, :, 0, 0, 2].detach().cpu().numpy(),
-        res[:, :, 1, 0, 0].detach().cpu().numpy(),
-        res[:, :, 1, 0, 1].detach().cpu().numpy(),
-        res[:, :, 1, 0, 2].detach().cpu().numpy(),
+        res[0][0][:, 0].detach().cpu().numpy(),
+        res[0][0][:, 1].detach().cpu().numpy(),
+        res[0][0][:, 2].detach().cpu().numpy(),
+        res[1][0][:, 0].detach().cpu().numpy(),
+        res[1][0][:, 1].detach().cpu().numpy(),
+        res[1][0][:, 2].detach().cpu().numpy(),
         length=0.05,
         alpha=0.8,
         label='dS/dx',
     )
     ax.quiver(
-        res[:, :, 0, 0, 0].detach().cpu().numpy(),
-        res[:, :, 0, 0, 1].detach().cpu().numpy(),
-        res[:, :, 0, 0, 2].detach().cpu().numpy(),
-        res[:, :, 0, 1, 0].detach().cpu().numpy(),
-        res[:, :, 0, 1, 1].detach().cpu().numpy(),
-        res[:, :, 0, 1, 2].detach().cpu().numpy(),
+        res[0][0][:, 0].detach().cpu().numpy(),
+        res[0][0][:, 1].detach().cpu().numpy(),
+        res[0][0][:, 2].detach().cpu().numpy(),
+        res[0][1][:, 0].detach().cpu().numpy(),
+        res[0][1][:, 1].detach().cpu().numpy(),
+        res[0][1][:, 2].detach().cpu().numpy(),
         length=0.05,
         color='red',
         alpha=0.8,
@@ -1528,9 +1527,9 @@ def plot_surface_derivs_slow(
     )
     if plot_normals:
         ax.quiver(
-            res[:, :, 0, 0, 0].detach().cpu().numpy(),
-            res[:, :, 0, 0, 1].detach().cpu().numpy(),
-            res[:, :, 0, 0, 2].detach().cpu().numpy(),
+            res[0][0][:, 0].detach().cpu().numpy(),
+            res[0][0][:, 1].detach().cpu().numpy(),
+            res[0][0][:, 2].detach().cpu().numpy(),
             normals[:, :, 0].detach().cpu().numpy(),
             normals[:, :, 1].detach().cpu().numpy(),
             normals[:, :, 2].detach().cpu().numpy(),
