@@ -105,7 +105,7 @@ def get_all_basis(
     for j in range(1, next_degree):
         left[j] = evaluation_point - knots[next_span - j]
         right[j] = knots[span + j] - evaluation_point
-        saved = 0
+        saved = th.tensor(0, dtype=basis_values.dtype, device=device)
         for r in range(j):
             tmp = basis_values[r, r] / (right[r + 1] + left[j - r])
             # correct(er) results when r and j indices are swapped here
@@ -144,7 +144,7 @@ def calc_basis_derivs(
     for j in range(1, next_degree):
         left[:, j] = evaluation_points - knots[next_span - j]
         right[:, j] = knots[span + j] - evaluation_points
-        saved = 0
+        saved = th.zeros(num_evaluation_points, device=device)
         for r in range(j):
             ndu[:, j, r] = right[:, r + 1] + left[:, j - r]
             tmp = ndu[:, r, j - 1] / ndu[:, j, r]
@@ -164,7 +164,7 @@ def calc_basis_derivs(
         s2 = 1
         a[:, 0, 0] = 1
         for k in range(1, next_nth_deriv):
-            d = 0
+            d = th.zeros(num_evaluation_points, device=device)
             rk = r - k
             pk = degree - k
             if r >= k:
@@ -241,7 +241,7 @@ def calc_basis_derivs_slow(
     for j in range(1, next_degree):
         left[j] = evaluation_points - knots[next_span - j]
         right[j] = knots[span + j] - evaluation_points
-        saved = 0
+        saved = th.zeros(num_evaluation_points, device=device)
         for r in range(j):
             ndu[j][r] = right[r + 1] + left[j - r]
             tmp = ndu[r][j - 1] / ndu[j][r]
@@ -270,7 +270,7 @@ def calc_basis_derivs_slow(
         s2 = 1
         a[0][0] = th.ones_like(a[0][0])
         for k in range(1, next_nth_deriv):
-            d = 0
+            d = th.zeros(num_evaluation_points, device=device)
             rk = r - k
             pk = degree - k
             if r >= k:
