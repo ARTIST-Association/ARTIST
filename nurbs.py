@@ -272,7 +272,8 @@ def project_control_points(control_points, control_point_weights):
     return projected
 
 
-def evaluate_nurbs(
+@th.no_grad()
+def check_nurbs_constraints(
         evaluation_points,
         degree,
         control_points,
@@ -293,6 +294,22 @@ def evaluate_nurbs(
     assert (knots.sort().values == knots).all(), \
         'knots must be ordered monotonically increasing in value'
 
+
+def evaluate_nurbs(
+        evaluation_points,
+        degree,
+        control_points,
+        control_point_weights,
+        knots,
+):
+    check_nurbs_constraints(
+        evaluation_points,
+        degree,
+        control_points,
+        control_point_weights,
+        knots,
+    )
+
     projected = project_control_points(control_points, control_point_weights)
     spans = find_span(evaluation_points, degree, len(control_points), knots)
     spansmdeg = spans - degree
@@ -301,7 +318,7 @@ def evaluate_nurbs(
         (len(evaluation_points), projected.shape[-1]),
         device=control_points.device,
     )
-    for j in range(next_degree):
+    for j in range(degree + 1):
         Cw += basis_values[:, j] * projected[spansmdeg + j]
     return Cw[:, :-1] / Cw[:, -1]
 
@@ -662,7 +679,8 @@ def setup_nurbs_surface(
     return control_points, control_point_weights, knots_x, knots_y
 
 
-def check_nurbs_constraints(
+@th.no_grad()
+def check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
         degree_x,
@@ -672,22 +690,24 @@ def check_nurbs_constraints(
         knots_x,
         knots_y,
 ):
+    next_degree_x = degree_x + 1
+    next_degree_y = degree_y + 1
     assert control_points.shape[-1] == 3, \
         "please use another evaluation function for this NURBS' dimensionality"
     assert control_points.ndim == 3, \
         "please use another evaluation function for this NURBS' dimensionality"
     assert (control_point_weights > 0).all(), \
         'control point weights must be greater than zero'
-    assert (knots_x[:degree_x + 1] == 0).all(), \
-        f'first {degree_x + 1} knots must be zero'
+    assert (knots_x[:next_degree_x] == 0).all(), \
+        f'first {next_degree_x} knots must be zero'
     assert (knots_x[control_points.shape[0]:] == 1).all(), \
-        f'last {degree_x + 1} knots must be one'
+        f'last {next_degree_x} knots must be one'
     assert (knots_x.sort().values == knots_x).all(), \
         'knots must be ordered monotonically increasing in value'
-    assert (knots_y[:degree_y + 1] == 0).all(), \
-        f'first {degree_y + 1} knots must be zero'
+    assert (knots_y[:next_degree_y] == 0).all(), \
+        f'first {next_degree_y} knots must be zero'
     assert (knots_y[control_points.shape[1]:] == 1).all(), \
-        f'last {degree_y + 1} knots must be one'
+        f'last {next_degree_y} knots must be one'
     assert (knots_y.sort().values == knots_y).all(), \
         'knots must be ordered monotonically increasing in value'
     assert evaluation_points_x.shape == evaluation_points_x.shape, \
@@ -734,7 +754,7 @@ def evaluate_nurbs_surface_flex(
         knots_x,
         knots_y,
 ):
-    check_nurbs_constraints(
+    check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
         degree_x,
@@ -926,7 +946,7 @@ def calc_derivs_surface(
     derivatives with respect to `evaluation_points_x` `k` times and
     `evaluation_points_y` `l` times.
     """
-    check_nurbs_constraints(
+    check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
         degree_x,
@@ -993,7 +1013,7 @@ def calc_derivs_surface_slow(
         knots_y,
         nth_deriv=1,
 ):
-    check_nurbs_constraints(
+    check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
         degree_x,
