@@ -3,10 +3,16 @@ import torch as th
 
 
 class NoConvergenceError(RuntimeError):
+    """An error indicating that NURBS point inversion failed to fit
+    towards a satisfying result.
+    """
     pass
 
 
 def setup_nurbs(degree, num_control_points, device):
+    """Return uninitialized parameters for a NURBS curve with the
+    desired properties on the desired device.
+    """
     assert num_control_points > degree, \
         f'need at least {degree + 1} control points'
     control_points = th.empty((num_control_points, 2), device=device)
@@ -22,6 +28,7 @@ def setup_nurbs(degree, num_control_points, device):
 
 
 def find_span(evaluation_points, degree, num_control_points, knots):
+    """For each evaluation point, return the span in which it lies."""
     result = th.empty(
         len(evaluation_points),
         dtype=th.int64,
@@ -40,6 +47,7 @@ def find_span(evaluation_points, degree, num_control_points, knots):
 
 
 def get_basis(evaluation_points, span, degree, knots):
+    """Return the basis functions applied to the evaluation points."""
     device = knots.device
     num_evaluation_points = len(evaluation_points)
     next_degree = degree + 1
@@ -96,6 +104,10 @@ def calc_basis_derivs(
         knots,
         nth_deriv=1,
 ):
+    """Return the first `nth_deriv` derivatives for the basis functions
+    applied to the given evaluation points. The k-th derivative is at
+    index k, 0 <= k <= `nth_deriv`.
+    """
     device = knots.device
     num_evaluation_points = len(evaluation_points)
     next_span = span + 1
@@ -174,6 +186,13 @@ def calc_basis_derivs_slow(
         knots,
         nth_deriv=1,
 ):
+    """Return the first `nth_deriv` derivatives for the basis functions
+    applied to the given evaluation points. The k-th derivative is at
+    index k, 0 <= k <= `nth_deriv`.
+
+    This function is slightly slower than `calc_basis_derivs` but is
+    fully differentiable.
+    """
     device = knots.device
     num_evaluation_points = len(evaluation_points)
     next_span = span + 1
@@ -267,6 +286,9 @@ def calc_basis_derivs_slow(
 
 
 def project_control_points(control_points, control_point_weights):
+    """Project the given n-D control points with their weights into (n +
+    1)-D space.
+    """
     projected = control_point_weights * control_points
     projected = th.cat([projected, control_point_weights], dim=-1)
     return projected
@@ -280,6 +302,9 @@ def check_nurbs_constraints(
         control_point_weights,
         knots,
 ):
+    """Assert that NURBS constraints are fulfilled for evaluating the
+    given curve.
+    """
     next_degree = degree + 1
     assert control_points.shape[-1] == 2, \
         "please use another evaluation function for this NURBS' dimensionality"
@@ -302,6 +327,9 @@ def evaluate_nurbs(
         control_point_weights,
         knots,
 ):
+    """Return the result for evaluating a NURBS curve with the given
+    parameters on the given evaluation points.
+    """
     check_nurbs_constraints(
         evaluation_points,
         degree,
@@ -330,6 +358,10 @@ def calc_bspline_derivs(
         knots,
         nth_deriv=1,
 ):
+    """Return the first `nth_deriv` derivatives for the given B-spline
+    curve at the given evaluation points. The k-th derivative is at
+    index k, 0 <= k <= `nth_deriv`.
+    """
     device = control_points.device
     next_degree = degree + 1
     next_nth_deriv = nth_deriv + 1
@@ -346,7 +378,6 @@ def calc_bspline_derivs(
         result[k] = 0
         for j in range(next_degree):
             result[k] += basis_derivs[k, j] * control_points[spanmdeg + j]
-    # the k-th derivative is at index k, 0 <= k <= nth_deriv
     return result
 
 
@@ -416,6 +447,10 @@ def calc_derivs(
         knots,
         nth_deriv=1,
 ):
+    """Return the first `nth_deriv` derivatives for the given NURBS
+    curve at the given evaluation points. The k-th derivative is at
+    index k, 0 <= k <= `nth_deriv`.
+    """
     dtype = control_points.dtype
     device = control_points.device
     next_nth_deriv = nth_deriv + 1
@@ -648,6 +683,9 @@ def setup_nurbs_surface(
         num_control_points_y,
         device,
 ):
+    """Return uninitialized parameters for a NURBS surface with the
+    desired properties on the given device.
+    """
     next_degree_x = degree_x + 1
     next_degree_y = degree_y + 1
     assert num_control_points_x > degree_x, \
@@ -690,6 +728,9 @@ def check_nurbs_surface_constraints(
         knots_x,
         knots_y,
 ):
+    """Assert that NURBS constraints are fulfilled for evaluating the
+    given surface.
+    """
     next_degree_x = degree_x + 1
     next_degree_y = degree_y + 1
     assert control_points.shape[-1] == 3, \
@@ -725,6 +766,9 @@ def evaluate_nurbs_surface_at_spans(
         control_points,
         control_point_weights,
 ):
+    """Return evaluations of the given NURBS surface at the given spans
+    with the corresponding basis values.
+    """
     device = control_points.device
     projected = project_control_points(control_points, control_point_weights)
     tmp = th.empty(
@@ -754,6 +798,9 @@ def evaluate_nurbs_surface_flex(
         knots_x,
         knots_y,
 ):
+    """Return evaluations of the given NURBS surface at the given
+    evaluation points in x- and y-direction.
+    """
     check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
@@ -799,6 +846,13 @@ def calc_bspline_derivs_surface(
         knots_y,
         nth_deriv=1,
 ):
+    """Return partial derivatives up to `nth_deriv` at the given
+    evaluation points for the given B-spline surface.
+
+    The resulting 4-D tensor `derivs` contains at `derivs[:, k, l]` the
+    derivatives with respect to `evaluation_points_x` `k` times and
+    `evaluation_points_y` `l` times.
+    """
     device = control_points.device
     num_evaluation_points = len(evaluation_points_x)
     next_nth_deriv = nth_deriv + 1
@@ -867,6 +921,16 @@ def calc_bspline_derivs_surface_slow(
         knots_y,
         nth_deriv=1,
 ):
+    """Return partial derivatives up to `nth_deriv` at the given
+    evaluation points for the given B-spline surface.
+
+    The resulting 4-D tensor `derivs` contains at `derivs[:, k, l]` the
+    derivatives with respect to `evaluation_points_x` `k` times and
+    `evaluation_points_y` `l` times.
+
+    This function is slightly slower than `calc_bspline_derivs_surface`
+    but is fully differentiable.
+    """
     device = control_points.device
     num_evaluation_points = len(evaluation_points_x)
     next_nth_deriv = nth_deriv + 1
@@ -940,7 +1004,7 @@ def calc_derivs_surface(
         nth_deriv=1,
 ):
     """Return partial derivatives up to `nth_deriv` at the given
-    evaluation points for the given NURBS.
+    evaluation points for the given NURBS surface.
 
     The resulting 4-D tensor `derivs` contains at `derivs[:, k, l]` the
     derivatives with respect to `evaluation_points_x` `k` times and
@@ -1013,6 +1077,16 @@ def calc_derivs_surface_slow(
         knots_y,
         nth_deriv=1,
 ):
+    """Return partial derivatives up to `nth_deriv` at the given
+    evaluation points for the given NURBS surface.
+
+    The resulting 4-D tensor `derivs` contains at `derivs[:, k, l]` the
+    derivatives with respect to `evaluation_points_x` `k` times and
+    `evaluation_points_y` `l` times.
+
+    This function is slightly slower than `calc_derivs_surface` but is
+    fully differentiable.
+    """
     check_nurbs_surface_constraints(
         evaluation_points_x,
         evaluation_points_y,
@@ -1085,6 +1159,9 @@ def calc_normals_surface(
         knots_x,
         knots_y,
 ):
+    """Return the normals of the given NURBS surface at the given
+    evaluation points.
+    """
     derivs = calc_derivs_surface(
         evaluation_points_x,
         evaluation_points_y,
@@ -1110,6 +1187,12 @@ def calc_normals_surface_slow(
         knots_x,
         knots_y,
 ):
+    """Return the normals of the given NURBS surface at the given
+    evaluation points.
+
+    This function is slightly slower than `calc_normals_surface` but is
+    fully differentiable.
+    """
     derivs = calc_derivs_surface_slow(
         evaluation_points_x,
         evaluation_points_y,
@@ -1135,6 +1218,9 @@ def calc_normals_and_surface_slow(
         knots_x,
         knots_y,
 ):
+    """Return both the evaluation and normals of the given NURBS surface
+    at the given evaluation points.
+    """
     derivs = calc_derivs_surface_slow(
         evaluation_points_x,
         evaluation_points_y,
@@ -1600,6 +1686,12 @@ def get_inversion_start_values(
         num_samples,
         norm_p=2,
 ):
+    """Return values in `world_points` and their distance; the values
+    chosen minimize the distance to the given NURBS surface.
+
+    The values are used as start values for Newton iterations for point
+    inversion.
+    """
     device = control_points.device
 
     start_spans_x = th.arange(degree_x, len(knots_x) - degree_x, device=device)
@@ -1651,6 +1743,9 @@ def get_inversion_start_values(
 
 
 def batch_dot(x, y):
+    """Return a dot product over the batch dimensions of tensors `x` and
+    `y`.
+    """
     return (x * y).sum(-1).unsqueeze(-1)
 
 
@@ -1668,6 +1763,11 @@ def invert_points(
         distance_tolerance=1e-5,
         cosine_tolerance=1e-7,
 ):
+    """Return evaluation points and their evaluated distances to
+    `world_points` for the given NURBS surface. The returned evaluation
+    points are calculated so that `world_points` are fitted to the
+    desired error tolerances.
+    """
     argmin_distances, min_distances = get_inversion_start_values(
         world_points,
         degree_x,
@@ -1846,6 +1946,14 @@ def invert_points_slow(
         distance_tolerance=1e-5,
         cosine_tolerance=1e-7,
 ):
+    """Return evaluation points and their evaluated distances to
+    `world_points` for the given NURBS surface. The returned evaluation
+    points are calculated so that `world_points` are fitted to the
+    desired error tolerances.
+
+    This function is slightly slower than `invert_points` but fully
+    differentiable.
+    """
     argmin_distances, min_distances = get_inversion_start_values(
         world_points,
         degree_x,
