@@ -156,7 +156,7 @@ def _elem_basis_vec(axis: bytes, device: torch.device) -> torch.Tensor:
     elif axis == b'z':
         vec[2] = 1
     else:
-        raise ValueError(f'unknown axis {axis}')
+        raise ValueError(f'unknown axis {axis.decode()}')
     return vec
 
 
@@ -197,8 +197,14 @@ def _compute_euler_from_matrix(
         res = th.mm(c, mat[ind, :, :])
         matrix_trans = th.mm(res, c.T.mm(rot))
 
-        matrix_trans[2, 2] = min(matrix_trans[2, 2], 1)
-        matrix_trans[2, 2] = max(matrix_trans[2, 2], -1)
+        matrix_trans[2, 2] = th.minimum(
+            matrix_trans[2, 2],
+            th.tensor(1, device=mat.device),
+        )
+        matrix_trans[2, 2] = th.maximum(
+            matrix_trans[2, 2],
+            th.tensor(-1, device=mat.device),
+        )
         _angles[1] = th.acos(matrix_trans[2, 2])
 
         safe1 = th.abs(_angles[1]) >= eps
