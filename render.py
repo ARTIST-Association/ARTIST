@@ -39,7 +39,7 @@ def LinePlaneCollision(
         planePoint,
         rayDirections,
         rayPoints,
-        epsilon=1e-6,
+        epsilon: float = 1e-6,
 ):
 
     ndotu = rayDirections.matmul(planeNormal)
@@ -131,10 +131,10 @@ def sample_bitmap(
         dx_ints,
         dy_ints,
         indices,
-        planex,
-        planey,
-        bitmap_height,
-        bitmap_width,
+        planex: int,
+        planey: int,
+        bitmap_height: int,
+        bitmap_width: int,
 ):
 
     x_ints = dx_ints[indices]/planex*bitmap_height
