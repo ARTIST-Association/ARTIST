@@ -1,13 +1,14 @@
 import math
 import re
 
+import torch
 import torch as th
 
 # Rotation functions ported from here:
 # https://github.com/scipy/scipy/blob/50dbaf94a570fa817d0d72e0b94d9f87c4909a4e/scipy/spatial/transform/rotation.pyx
 
 
-def rot_from_matrix(mat):
+def rot_from_matrix(mat: torch.Tensor) -> torch.Tensor:
     is_single = False
     if (mat.ndim not in [2, 3] or mat.shape[-2:] != (3, 3)):
         raise ValueError(
@@ -60,7 +61,7 @@ def rot_from_matrix(mat):
         return quat
 
 
-def rot_from_rotvec(vec, degrees=False):
+def rot_from_rotvec(vec: torch.Tensor, degrees: bool = False) -> torch.Tensor:
     is_single = False
     if degrees:
         vec = th.deg2rad(vec)
@@ -98,11 +99,11 @@ def rot_from_rotvec(vec, degrees=False):
         return quat
 
 
-def rot_is_single(rot):
+def rot_is_single(rot: torch.Tensor) -> bool:
     return rot.shape == (4,)
 
 
-def rot_as_matrix(rot):
+def rot_as_matrix(rot: torch.Tensor) -> torch.Tensor:
     is_single = rot_is_single(rot)
     if is_single:
         rot = rot[None, :]
@@ -146,7 +147,7 @@ def rot_as_matrix(rot):
         return mat
 
 
-def _elem_basis_vec(axis, device):
+def _elem_basis_vec(axis: bytes, device: torch.device) -> torch.Tensor:
     vec = th.zeros(3, device=device)
     if axis == b'x':
         vec[0] = 1
@@ -159,7 +160,11 @@ def _elem_basis_vec(axis, device):
     return vec
 
 
-def _compute_euler_from_matrix(mat, seq, extrinsic=False):
+def _compute_euler_from_matrix(
+        mat: torch.Tensor,
+        seq: bytes,
+        extrinsic: bool = False,
+) -> torch.Tensor:
     if extrinsic:
         seq = seq[::-1]
     num_rots = mat.shape[0]
@@ -257,7 +262,11 @@ def _compute_euler_from_matrix(mat, seq, extrinsic=False):
     return angles
 
 
-def rot_as_euler(rot, seq, degrees=False):
+def rot_as_euler(
+        rot: torch.Tensor,
+        seq: str,
+        degrees: bool = False,
+) -> torch.Tensor:
     if len(seq) != 3:
         raise ValueError(f'expected 3 axes, got {seq}')
 
@@ -284,7 +293,7 @@ def rot_as_euler(rot, seq, degrees=False):
     return angles[0] if rot_is_single(rot) else angles
 
 
-def rot_apply(rot, vecs):
+def rot_apply(rot: torch.Tensor, vecs: torch.Tensor) -> torch.Tensor:
     mat = rot_as_matrix(rot)
     # mat: (3, 3)
     # vec: (1, 3)
