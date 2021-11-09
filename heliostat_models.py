@@ -338,7 +338,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 # Heliostat-specific functions
 # ============================
 
-def rotate(h, hel_coordsystem, clockwise):
+def rotate(h, hel_coordsystem, clockwise: bool):
     r = rot_from_matrix(hel_coordsystem)
     euler = rot_as_euler(r, 'xyx', degrees=True)
     ele_degrees = 270-euler[2]
