@@ -1,5 +1,7 @@
 import functools
+from typing import Tuple
 
+import torch
 import torch as th
 
 import heliostat_models
@@ -7,6 +9,27 @@ from heliostat_models import AlignmentState, Heliostat
 import nurbs
 from nurbs_progressive_growing import ProgressiveGrowing
 import utils
+
+
+def _calc_normals_and_surface(
+        eval_points,
+        degree_x: int,
+        degree_y: int,
+        ctrl_points,
+        ctrl_weights,
+        knots_x,
+        knots_y,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    return nurbs.calc_normals_and_surface_slow(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        ctrl_points,
+        ctrl_weights,
+        knots_x,
+        knots_y,
+    )
 
 
 class NURBSHeliostat(Heliostat):
@@ -232,9 +255,8 @@ class NURBSHeliostat(Heliostat):
             ctrl_points, ctrl_weights, knots_x, knots_y = \
                 self._progressive_growing.select()
 
-            surface_points, normals = nurbs.calc_normals_and_surface_slow(
-                eval_points[:, 0],
-                eval_points[:, 1],
+            surface_points, normals = _calc_normals_and_surface(
+                eval_points,
                 self.degree_x,
                 self.degree_y,
                 ctrl_points,
