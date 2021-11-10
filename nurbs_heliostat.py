@@ -33,8 +33,6 @@ def _calc_normals_and_surface(
 
 
 class NURBSHeliostat(Heliostat):
-    DISABLE_CACHING = True
-
     def __init__(self, heliostat_config, nurbs_config, device):
         super().__init__(heliostat_config, device)
         self.nurbs_cfg = nurbs_config
@@ -51,8 +49,6 @@ class NURBSHeliostat(Heliostat):
         self.degree_y = spline_degree
         self.rows = nurbs_config.ROWS
         self.cols = nurbs_config.COLS
-
-        self.reset_cache()
 
         self._progressive_growing = ProgressiveGrowing(self)
 
@@ -72,18 +68,6 @@ class NURBSHeliostat(Heliostat):
 
         self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
-
-    def reset_cache(self):
-        self._ctrl_points_cache_valid = False
-        self._eval_points_cache_valid = False
-        self._orig_surface_cache_valid = False
-        self._aligned_surface_cache_valid = False
-
-    def invalidate_control_points_caches(self):
-        self.reset_cache()
-        # These can stay the same even after a training step;
-        # unless we want to recalculate.
-        self._eval_points_cache_valid = not self._recalc_eval_points
 
     @property
     def fix_spline_ctrl_weights(self):
@@ -135,7 +119,7 @@ class NURBSHeliostat(Heliostat):
     def initialize_eval_points(self):
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
             if not self.recalc_eval_points:
-                self._cached_eval_points = \
+                self._eval_points = \
                     utils.initialize_spline_eval_points_perfectly(
                         self._orig_world_points,
                         self.degree_x,
@@ -149,9 +133,8 @@ class NURBSHeliostat(Heliostat):
             # Unless we change the knots, we don't need to recalculate
             # as we simply distribute the points uniformly.
             self._recalc_eval_points = False
-            self._cached_eval_points = utils.initialize_spline_eval_points(
+            self._eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
-        self._eval_points_cache_valid = True
 
     def setup_params(self):
         self.ctrl_points_z.requires_grad_(True)
@@ -176,29 +159,12 @@ class NURBSHeliostat(Heliostat):
 
         return opt_params
 
-    def _needs_ctrl_points_update(self):
-        return self.DISABLE_CACHING or not self._ctrl_points_cache_valid
-
-    def _needs_eval_points_update(self):
-        return self.DISABLE_CACHING or not self._eval_points_cache_valid
-
-    def _needs_unaligned_surface_update(self):
-        # FIXME does not work correctly
-        return True
-        return self.DISABLE_CACHING or not self._orig_surface_cache_valid
-
-    def _needs_aligned_surface_update(self):
-        return self.DISABLE_CACHING or not self._aligned_surface_cache_valid
-
     @property
     def ctrl_points(self):
-        if self._needs_ctrl_points_update():
-            self._cached_ctrl_points = th.cat([
-                self.ctrl_points_xy,
-                self.ctrl_points_z,
-            ], dim=-1)
-            self._ctrl_points_cache_valid = True
-        return self._cached_ctrl_points
+        return th.cat([
+            self.ctrl_points_xy,
+            self.ctrl_points_z,
+        ], dim=-1)
 
     @ctrl_points.setter
     def ctrl_points(self):
@@ -218,19 +184,18 @@ class NURBSHeliostat(Heliostat):
 
     @property
     def eval_points(self):
-        if self.recalc_eval_points and self._needs_eval_points_update():
-            self._cached_eval_points = self._invert_world_points()
-            self._eval_points_cache_valid = True
-        return self._cached_eval_points
+        if self.recalc_eval_points:
+            eval_points = self._invert_world_points()
+        else:
+            eval_points = self._eval_points
+        return eval_points
 
     @property
     def shape(self):
         return self._progressive_growing.get_shape()
 
     def _align(self):
-        # No need to align points; we do it live in
-        # `_update_aligned_surface_and_normals`.
-        self._aligned_surface_cache_valid = False
+        pass
 
     def _get_alignment(self):
         if self.state is AlignmentState.ON_GROUND:
@@ -240,70 +205,43 @@ class NURBSHeliostat(Heliostat):
         else:
             raise ValueError(f'unknown state {self.state}')
 
-
-    def _update_aligned_surface_and_normals(self):
-        needs_unaligned_update = self._needs_unaligned_surface_update()
-        needs_aligned_update = self._needs_aligned_surface_update()
-        needs_update = needs_unaligned_update or needs_aligned_update
-        if not needs_update:
-            return
-
+    def _calc_aligned_surface_and_normals(self):
         alignment = self._get_alignment()
 
-        # Here we don't need to worry about the alignment yet.
-        if needs_unaligned_update:
-            eval_points = self.eval_points
-            ctrl_points, ctrl_weights, knots_x, knots_y = \
-                self._progressive_growing.select()
+        eval_points = self.eval_points
+        ctrl_points, ctrl_weights, knots_x, knots_y = \
+            self._progressive_growing.select()
 
-            surface_points, normals = _calc_normals_and_surface(
-                eval_points,
-                self.degree_x,
-                self.degree_y,
-                ctrl_points,
-                ctrl_weights,
-                knots_x,
-                knots_y,
-
-            )
-
-            self._cached_discrete_points_unaligned = surface_points
-            self._cached_normals_unaligned = normals
-            self._orig_surface_cache_valid = True
+        surface_points, normals = _calc_normals_and_surface(
+            eval_points,
+            self.degree_x,
+            self.degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+        )
 
         if alignment is None:
-            self._cached_discrete_points = \
-                self._cached_discrete_points_unaligned
-            self._cached_normals = self._cached_normals_unaligned
-            return
-
-        if not needs_update:
-            self._cached_discrete_points = self._cached_discrete_points_aligned
-            self._cached_normals = self._cached_normals_aligned
-            return
+            return surface_points, normals
 
         hel_rotated = heliostat_models.rotate(
-            self._cached_discrete_points_unaligned, alignment, clockwise=True)
+            surface_points, alignment, clockwise=True)
         # Place in field
         hel_rotated = hel_rotated + self.position_on_field
 
         normal_vectors_rotated = heliostat_models.rotate(
-            self._cached_normals_unaligned, alignment, clockwise=True)
+            normals, alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
 
-        self._cached_discrete_points_aligned = hel_rotated
-        self._cached_normals_aligned = normal_vectors_rotated
-        self._cached_discrete_points = self._cached_discrete_points_aligned
-        self._cached_normals = self._cached_normals_aligned
-        self._aligned_surface_cache_valid = True
+        return hel_rotated, normal_vectors_rotated
 
     @property
     def discrete_points(self):
-        self._update_aligned_surface_and_normals()
-        discrete_points = self._cached_discrete_points
+        discrete_points, _ = self._calc_aligned_surface_and_normals()
 
         if self.state is AlignmentState.ON_GROUND:
             self._discrete_points_orig = discrete_points
@@ -316,8 +254,7 @@ class NURBSHeliostat(Heliostat):
 
     @property
     def normals(self):
-        self._update_aligned_surface_and_normals()
-        normals = self._cached_normals
+        _, normals = self._calc_aligned_surface_and_normals()
 
         if self.state is AlignmentState.ON_GROUND:
             self._normals_orig = normals
@@ -330,8 +267,6 @@ class NURBSHeliostat(Heliostat):
 
     @th.no_grad()
     def step(self, verbose=False):
-        self.invalidate_control_points_caches()
-
         self._progressive_growing.step(verbose)
 
     @property
@@ -435,7 +370,7 @@ class NURBSHeliostat(Heliostat):
         self._progressive_growing.set_step(data['_progressive_growing_step'])
 
         if restore_strictly:
-            self._cached_eval_points = data['evaluation_points']
+            self._eval_points = data['evaluation_points']
             self._orig_world_points = data['original_world_points']
             self._normals_orig = data['_heliostat_normals']
         else:
