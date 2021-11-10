@@ -33,12 +33,14 @@ def check_consistency(cfg):
             warnings_found = True
             print(
                 "WARNING: Cyclic base LR and optimizer LR should be the same")
-    if not os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
-        warnings_found = True
-        print(
-            "WARNING: Checkpoint path not found; "
-            "continuing without loading..."
-        )
+    if not cfg.CP_PATH == "":
+        print("continue without loading...")
+        if not os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
+            warnings_found = True
+            print(
+                "WARNING: Checkpoint path not found; "
+                "continuing without loading..."
+            )
     if (
             cfg.LOAD_OPTIMIZER_STATE
             and not os.path.isfile(_get_opt_cp_path(cfg.CP_PATH))
@@ -140,7 +142,7 @@ def _build_scheduler(cfg_scheduler, opt):
             verbose=cfg.VERBOSE,
         )
     elif name == "cyclic":
-        cfg = cfg_scheduler.Cyclic
+        cfg = cfg_scheduler.CYCLIC
         sched = th.optim.lr_scheduler.CyclicLR(
             opt,
             base_lr=cfg.BASE_LR,
@@ -228,6 +230,9 @@ def train_batch(
         epoch,
         writer=None,
 ):
+    # print(epoch)
+    # if epoch == 0:
+    #     last_lr = opt.param_groups[0]["lr"]
     # Initialize Parameters
     # =====================
     # Reset cache so we don't use cached but reset gradients.
@@ -250,7 +255,7 @@ def train_batch(
 
         # Plot target images to TensorBoard
         if writer:
-            if epoch % 5 == 0:
+            if epoch % 50 == 0:
                 writer.add_image(
                     f"target_{i}/prediction",
                     utils.colorize(pred_bitmap),
@@ -281,20 +286,25 @@ def train_batch(
         sched.step(loss)
     else:
         sched.step()
+        
+    # if opt.param_groups[0]["lr"] < last_lr:
     H.step(verbose=True)
+        # last_lr = opt.param_groups[0]["lr"]
 
     return loss, pred_bitmap, num_missed, ray_diff
 
 
-def main():
+def main(config_file_name = None):
     # Load Defaults
     # =============
-    config_file_name = None
+    # config_file_name = None
     cfg_default = get_cfg_defaults()
     if config_file_name:
-        config_file = os.path.join("configs", config_file_name)
-        cfg = load_config_file(cfg_default, config_file)
+        print(f"load: {config_file_name}")
+        # config_file = os.path.join("configs", config_file_name)
+        cfg = load_config_file(cfg_default, config_file_name)
     else:
+        print("No config loaded. Use defaults")
         cfg = cfg_default
     cfg.freeze()
 
@@ -364,7 +374,7 @@ def main():
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
-    print(f"Use {cfg.H.NURBS.ROWS}x{cfg.H.NURBS.COLS} NURBS")
+    print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
     H = build_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
@@ -377,6 +387,12 @@ def main():
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
+    state_dict = {"epoch": 0, 
+                  "current_loss": float('inf'),
+                  "best_loss": float('inf'),
+                  "last_lr": opt.param_groups[0]["lr"],
+                  "current_lr": opt.param_groups[0]["lr"],
+                  }
     for epoch in range(epochs):
         loss, pred_bitmap, num_missed, ray_diff = train_batch(
             opt,
@@ -401,36 +417,22 @@ def main():
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
 
-        # if epoch % 50 == 0 and cfg.SAVE_RESULTS:
-        #     plotter.plot_surfaces_mrad(
-        #         th.tile(
-        #             th.tensor([0, 0, 1], device=device),
-        #             (H_target._discrete_points_orig.shape[0], 1),
-        #         ),
-        #         H_target._normals_orig,
-        #         H._normals_orig,
-        #         epoch,
-        #         logdir_surfaces,
-        #         writer
-        #     )
-        #     plotter.plot_surfaces_mm(
-        #         H_target._discrete_points_orig,
-        #         H._discrete_points_orig,
-        #         epoch,
-        #         logdir_surfaces,
-        #         writer
-        #     )
-            # plotter.plot_diffs(
-            #     H_target._discrete_points_orig,
-            #     th.tile(
-            #         th.tensor([0, 0, 1], device=device),
-            #         (H_target._discrete_points_orig.shape[0], 1),
-            #     ),
-            #     H_target._normals_orig,
-            #     H._normals_orig,
-            #     epoch,
-            #     logdir_diffs,
-            # )
+        if (epoch % 50 == 0) and cfg.SAVE_RESULTS:
+
+            plotter.plot_surfaces_mrad(
+                H_target,
+                H,
+                epoch,
+                logdir_surfaces,
+                writer
+            )
+            plotter.plot_surfaces_mm(
+                H_target,
+                H,
+                epoch,
+                logdir_surfaces,
+                writer
+            )
 
         # Save Section
         if cfg.SAVE_RESULTS:
@@ -442,7 +444,7 @@ def main():
                 save_data['yi'] = R.yi
                 opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}
                 found_new_best_result = True
-            if epoch % 100 == 0 and found_new_best_result:
+            # if epoch % 100 == 0 and found_new_best_result:
                 # Store remembered data and optimizer state on disk.
                 model_name = type(H).__name__
                 th.save(

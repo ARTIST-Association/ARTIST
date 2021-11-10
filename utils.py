@@ -9,7 +9,7 @@ import math
 
 from matplotlib import cm
 import torch as th
-
+import os
 import nurbs
 
 
@@ -37,6 +37,16 @@ def colorize(image_tensor, colormap='jet'):
     # print(colored_prediction_image.shape)
 
     return mapped_image
+
+
+def load_config_file(cfg, config_file_loc, experiment_name=None):
+    if len(os.path.splitext(config_file_loc)[1]) == 0:
+        config_file_loc += '.yaml'
+    cfg.merge_from_file(config_file_loc)
+    if experiment_name:
+        cfg.merge_from_list(["NAME", experiment_name])
+    cfg.freeze()
+    return cfg
 
 
 def flatten_aimpoints(aimpoints):

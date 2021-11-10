@@ -26,8 +26,8 @@ class NURBSHeliostat(Heliostat):
         spline_degree = nurbs_config.SPLINE_DEGREE
         self.degree_x = spline_degree
         self.degree_y = spline_degree
-        self.rows = heliostat_config.NURBS.ROWS
-        self.cols = heliostat_config.NURBS.COLS
+        self.rows = nurbs_config.ROWS
+        self.cols = nurbs_config.COLS
 
         self.reset_cache()
 
@@ -75,7 +75,6 @@ class NURBSHeliostat(Heliostat):
         return self._recalc_eval_points
 
     def initialize_control_points(self, ctrl_points):
-        heliostat_config = self.cfg
         nurbs_config = self.nurbs_cfg
 
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
@@ -95,8 +94,8 @@ class NURBSHeliostat(Heliostat):
                 self.position_on_field,
                 self.rows,
                 self.cols,
-                heliostat_config.NURBS.WIDTH,
-                heliostat_config.NURBS.HEIGHT,
+                nurbs_config.WIDTH,
+                nurbs_config.HEIGHT,
             )
 
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:

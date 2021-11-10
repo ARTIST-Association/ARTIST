@@ -90,6 +90,7 @@ def real_heliostat(real_configs, device):
         return (
             h,
             h_normal_vecs,
+            h_normal_vecs, #TODO Implement get_ideal_vecs.
             width_height[1],
             width_height[0],
             params,
@@ -144,17 +145,14 @@ def heliostat_by_function(heliostat_function_cfg, device):
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
-                next_row_vec = th.tensor(
-                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
-                next_col_vec = th.tensor(
-                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec    = th.tensor([X[i, j + 1], Y[i, j + 1], Z[i, j + 1]] )  # .squeeze(0)
+                next_col_vec    = th.tensor([X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
             except Exception:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
-                next_row_vec = th.tensor(
-                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
-                next_col_vec = th.tensor(
-                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
+                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]]             )  # .squeeze(0)
+                next_row_vec    = th.tensor([X[i, j - 1], Y[i, j - 1], Z[i, j - 1]] )  # .squeeze(0)
+                next_col_vec    = th.tensor([X[i - 1, j], Y[i - 1, j], Z[i - 1, j]] )  # .squeeze(0)
+            
             vec_1 = next_row_vec - origin
 
             vec_2 = next_col_vec - origin
@@ -163,15 +161,21 @@ def heliostat_by_function(heliostat_function_cfg, device):
             vec_2 = vec_2 / th.linalg.norm(vec_2)
 
             n = th.cross(vec_1, vec_2)
+            # print(f"{n[2]:.10}")
             n = n / th.linalg.norm(n)
+            # print(n)
             if n[2] < 0:
                 n = -n
+                # print("hello")
             normal_vecs[i, j] = n
+            # print(normal_vecs)
+            # exit()
     h = stacked.reshape(X.shape[0] * X.shape[1], -1).to(device)
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
+    h_ideal_vecs = th.tile(th.tensor([0, 0, 1]), (h_normal_vecs.shape[0], 1)).to(device)
+    
     params = None
-
-    return h, h_normal_vecs, cfg.HEIGHT, cfg.WIDTH, params
+    return h, h_normal_vecs, h_ideal_vecs, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def ideal_heliostat(ideal_configs, device):
@@ -205,7 +209,7 @@ def ideal_heliostat(ideal_configs, device):
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
-    return h, h_normal_vectors, cfg.HEIGHT, cfg.WIDTH, params
+    return h, h_normal_vectors, h_normal_vectors, cfg.HEIGHT, cfg.WIDTH, params
 
 
 def other_objects(config, device):  # Read Wavefront OBJ files.
@@ -333,7 +337,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 
     # plotter.plot_heliostat(vertices, vertex_normals)
     params = {'name': name}
-    return vertices, vertex_normals, height, width, params
+    return vertices, vertex_normals, vertex_normals, height, width, params #TODO Implement Ideal Vecs
 
 
 # Heliostat-specific functions
@@ -418,20 +422,21 @@ class Heliostat(object):
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
         if shape == "ideal":
-            heliostat, heliostat_normals, height, width, params = \
+            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
                 ideal_heliostat(cfg.IDEAL, self.device)
         elif shape == "real":
-            heliostat, heliostat_normals, height, width, params = \
+            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
                 real_heliostat(cfg.DEFLECT_DATA, self.device)
         elif shape == "function":
-            heliostat, heliostat_normals, height, width, params = \
+            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
                 heliostat_by_function(cfg.FUNCTION, self.device)
         elif shape == "other":
-            heliostat, heliostat_normals, height, width, params = \
+            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
                 other_objects(cfg.OTHER, self.device)
 
         self._discrete_points_orig = heliostat
         self._normals_orig = heliostat_normals
+        self._normals_ideal = heliostat_ideal_vecs
         self.params = params
         self.state = AlignmentState.ON_GROUND
         self.height = height

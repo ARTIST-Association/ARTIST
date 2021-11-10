@@ -18,82 +18,133 @@ def colorbar(mappable):
     plt.sca(last_axes)
     return cbar
 
-
-
-def plot_surfaces_mrad(ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir_surfaces, writer = None):
-    
+def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces, writer = None):
     logdir_mrad = os.path.join(logdir_surfaces, "mrad")
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mrad, exist_ok=True)
 
     
-    target = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
-    pred = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
-    diff = abs(pred-target)
-    
-    
-    im_target = target.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    im_pred = pred.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    im_diff = diff.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target)))) 
-    
+    target_normal_vecs = heliostat_target._normals_orig
+    ideal_normal_vecs = heliostat_target._normals_ideal
+    pred_normal_vecs = heliostat_pred._normals_orig
+
+    target_angles = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
+    pred_angles = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
+    diff_angles = abs(target_angles-pred_angles)
     
     if writer:
-      writer.add_scalar("test/normal_diffs", np.sum(diff)/len(diff), epoch)
+      writer.add_scalar("test/normal_diffs", np.sum(diff_angles)/len(diff_angles), epoch)
+    
+        #Get discrete points
+    target_points = heliostat_target._discrete_points_orig
+    target_points = target_points.detach().cpu().numpy()
+    
+    pred_points = heliostat_pred._discrete_points_orig
+    pred_points = pred_points.detach().cpu().numpy()
+    diff_points = pred_points.copy()
+    
+    target_points[:,2] = target_angles #/ 1e-3
+    pred_points[:,2] = pred_angles #/ 1e-3
+    diff_points[:,2] = diff_angles #/ 1e-3
+    
+    target = target_points 
+    pred = pred_points
+    diff = diff_points 
+
+
 
     
-    minmin = np.min((np.min(target), np.min(pred)))
-    maxmax = np.max((np.max(target), np.max(pred)))
-    matplotlib.use('Agg')
-    plt.close("all")
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
+    plt.subplots_adjust(left=0.03, top=0.95, right =0.97, bottom=0.15)
     
-    im1 = ax1.imshow(im_target, cmap="plasma", vmin=minmin, vmax=maxmax)#
-    im2 = ax2.imshow(im_pred, cmap="plasma", vmin=minmin, vmax=maxmax)#
-    colorbar(im1)
+    p0 = ax1.get_position().get_points().flatten()
+    p1 = ax2.get_position().get_points().flatten()
+    p2 = ax3.get_position().get_points().flatten()
+    ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
+    ax_cbar1 = fig.add_axes([p2[0], 0.05, p2[2]-p2[0], 0.05])
     
-    im3 = ax3.imshow(im_diff, cmap='jet', norm=matplotlib.colors.LogNorm())
-    colorbar(im3)
-   
+    im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
+    ax1.set_xlim(np.min(target[:,0]),np.max(target[:,0]))
+    ax1.set_ylim(np.min(target[:,1]),np.max(target[:,1]))
+    ax1.title.set_text('Original Surface [mrad]')
+    ax1.set_aspect("equal")
     
-    plt.tight_layout(h_pad=0.5)
+    im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
+    ax2.set_xlim(np.min(pred[:,0]),np.max(pred[:,0]))
+    ax2.set_ylim(np.min(pred[:,1]),np.max(pred[:,1]))
+    ax2.title.set_text('Predicted Surface [mrad]')
+    ax2.set_aspect("equal")
+    
+    im3 = ax3.scatter(diff[:,0],diff[:,1], c=diff[:,2], cmap="magma")
+    ax3.set_xlim(np.min(diff[:,0]),np.max(diff[:,0]))
+    ax3.set_ylim(np.min(diff[:,1]),np.max(diff[:,1]))
+    ax3.title.set_text('Difference [mrad]')
+    ax3.set_aspect("equal")
+    
+    plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
+    plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
+    
     fig.savefig(f"{logdir_mrad}//test_{epoch}")
 
-def plot_surfaces_mm(hel_points_origin, hel_points_pred, epoch, logdir_surfaces, writer = None):
-       
+
+def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, writer = None):
+    
     logdir_mm = os.path.join(logdir_surfaces, "mm")
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
 
-    target = hel_points_origin[:,2].detach().cpu().numpy()
-    pred = hel_points_pred[:,2].detach().cpu().numpy()
-    diff = abs(pred-target)
+    target = heliostat_target._discrete_points_orig
+    target = target.detach().cpu().numpy()
+    target[:,2] = target[:,2]#/1e-3
     
+    pred = heliostat_pred._discrete_points_orig
+    pred = pred.detach().cpu().numpy()
+    pred[:,2] = pred[:,2]#/1e-3
     
-    im_target = target.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    im_pred = pred.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target))))
-    im_diff = diff.reshape(int(np.sqrt(len(target))),int(np.sqrt(len(target)))) 
-    
-    
+    diff = pred.copy()
+    diff[:,2] = pred[:,2]-target[:,2]#/10e-3
     if writer:
-      writer.add_scalar("test/location_diffs", np.sum(diff)/len(diff), epoch)
+        writer.add_scalar("test/location_diffs", np.sum(abs(diff[:,2]))/len(diff[:,2]), epoch)
+    
+    
 
-    
-    minmin = np.min((np.min(target), np.min(pred)))
-    maxmax = np.max((np.max(target), np.max(pred)))
-    matplotlib.use('Agg')
-    plt.close("all")
+
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
+    plt.subplots_adjust(left=0.03, top=0.95, right =0.97, bottom=0.15)
     
-    im1 = ax1.imshow(im_target, cmap="plasma", vmin=minmin, vmax=maxmax)#
-    im2 = ax2.imshow(im_pred, cmap="plasma", vmin=minmin, vmax=maxmax)#
-    colorbar(im1)
+    p0 = ax1.get_position().get_points().flatten()
+    p1 = ax2.get_position().get_points().flatten()
+    p2 = ax3.get_position().get_points().flatten()
+    ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
+    ax_cbar1 = fig.add_axes([p2[0], 0.05, p2[2]-p2[0], 0.05])
     
-    im3 = ax3.imshow(im_diff, cmap='jet', norm=matplotlib.colors.LogNorm())
-    colorbar(im3)
+    im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
+    ax1.set_xlim(np.min(target[:,0]),np.max(target[:,0]))
+    ax1.set_ylim(np.min(target[:,1]),np.max(target[:,1]))
+    ax1.title.set_text('Original Surface [mm]')
+    ax1.set_aspect("equal")
+    
+    im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
+    ax2.set_xlim(np.min(pred[:,0]),np.max(pred[:,0]))
+    ax2.set_ylim(np.min(pred[:,1]),np.max(pred[:,1]))
+    ax2.title.set_text('Predicted Surface [mm]')
+    ax2.set_aspect("equal")
+    
+    im3 = ax3.scatter(diff[:,0],diff[:,1], c=diff[:,2], cmap="magma")
+    ax3.set_xlim(np.min(diff[:,0]),np.max(diff[:,0]))
+    ax3.set_ylim(np.min(diff[:,1]),np.max(diff[:,1]))
+    ax3.title.set_text('Difference [mm]')
+    ax3.set_aspect("equal")
+    
+    plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
+    plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
+    
+    # colorbar(im3)
    
     
-    plt.tight_layout(h_pad=0.5)
+    
     fig.savefig(f"{logdir_mm}//test_{epoch}")
+
 
 def plot_diffs(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir):
 

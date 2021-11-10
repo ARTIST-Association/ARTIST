@@ -3,8 +3,9 @@ import os
 
 _C = CN()
 # UNIQUE EXPERIMENT IDENTIFIER
-_C.ID                                   = 'FortschrittsG'
-_C.EXPERIMENT_NAME                      = "SuperSimpleBestResult"
+
+_C.ID                                   = 'NotGiven'
+_C.EXPERIMENT_NAME                      = "NotGiven"
 _C.LOGDIR                               = 'Results'
 _C.SEED                                 = 0
 _C.USE_GPU                              = True
@@ -12,7 +13,7 @@ _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
 _C.SAVE_RESULTS                         = True
 _C.CP_PATH                              = ""
-# _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\SuperSimpleTargetBoosting6Nurbs\\BR_Receiver32x32\\Logfiles\\NURBSHeliostat.pt"
+# _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MediumC\\BR_StandardCase_211105_1011\\Logfiles\\NURBSHeliostat.pt"
 _C.LOAD_OPTIMIZER_STATE                 = False
 
 # NURBS settings
@@ -33,25 +34,26 @@ _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # NURBS progressive growing
-_C.NURBS.GROWING = CN()
+_C.NURBS.GROWING                        = CN()
 # 0 turns progressive growing off
-_C.NURBS.GROWING.INTERVAL = 0
+_C.NURBS.GROWING.INTERVAL               = 0
 # 0 starts with minimum size
-_C.NURBS.GROWING.START_ROWS = 0
-_C.NURBS.GROWING.START_COLS = 0
+_C.NURBS.GROWING.START_ROWS             = 0
+_C.NURBS.GROWING.START_COLS             = 0
 # 0 grows a new index between all old ones
-_C.NURBS.GROWING.STEP_SIZE_ROWS = 0
-_C.NURBS.GROWING.STEP_SIZE_COLS = 0
+_C.NURBS.GROWING.STEP_SIZE_ROWS         = 0
+_C.NURBS.GROWING.STEP_SIZE_COLS         = 0
+
+_C.NURBS.WIDTH                        = 4 # in m
+_C.NURBS.HEIGHT                       = 4 # in m
+_C.NURBS.ROWS                         = 18
+_C.NURBS.COLS                         = 18
 
 # H = Heliostat
 _C.H                                    = CN()
 _C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
 
-_C.H.NURBS                              = CN()
-_C.H.NURBS.WIDTH                        = 4 # in m
-_C.H.NURBS.HEIGHT                       = 4 # in m
-_C.H.NURBS.ROWS                         = 6
-_C.H.NURBS.COLS                         = 6
+
 
 
 _C.H.SHAPE                              = "Function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other
@@ -69,7 +71,7 @@ _C.H.FUNCTION.HEIGHT                    = 4 # in m
 _C.H.FUNCTION.ROWS                      = 64
 _C.H.FUNCTION.COLS                      = 64
 _C.H.FUNCTION.NAME                      = "sin"
-_C.H.FUNCTION.FREQUENCY                 = 0.5
+_C.H.FUNCTION.FREQUENCY                 = 4
 _C.H.FUNCTION.REDUCTION_FACTOR          = 500
 
 _C.H.DEFLECT_DATA                       = CN()
@@ -95,8 +97,8 @@ _C.AC.RECEIVER.PLANE_NORMAL             = [1, 0, 0] # NWU
 _C.AC.RECEIVER.PLANE_X                  = 15 # in m
 _C.AC.RECEIVER.PLANE_Y                  = 15 # in m
 # These X and Y are height and width respectively.
-_C.AC.RECEIVER.RESOLUTION_X             = 32
-_C.AC.RECEIVER.RESOLUTION_Y             = 32
+_C.AC.RECEIVER.RESOLUTION_X             = 128
+_C.AC.RECEIVER.RESOLUTION_Y             = 128
 
 _C.AC.SUN                               = CN()
 _C.AC.SUN.ORIGIN                        = [
@@ -111,16 +113,16 @@ _C.AC.SUN.NORMAL_DIST.MEAN              = [0,0]
 _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 _C.TRAIN                                = CN()
-_C.TRAIN.EPOCHS                         = 6000
+_C.TRAIN.EPOCHS                         = 2500
 
 _C.TRAIN.SCHEDULER                      = CN()
 _C.TRAIN.SCHEDULER.NAME                 = "ReduceOnPlateu"                      #SWITCH FOR SCHEDULER: ReduceOnPLateu, Cyclic, OneCycle
 
 _C.TRAIN.SCHEDULER.ROP                  = CN()
-_C.TRAIN.SCHEDULER.ROP.FACTOR           = 0.5
-_C.TRAIN.SCHEDULER.ROP.MIN_LR           = 1e-8
-_C.TRAIN.SCHEDULER.ROP.PATIENCE         = 300
-_C.TRAIN.SCHEDULER.ROP.COOLDOWN         = 600
+_C.TRAIN.SCHEDULER.ROP.FACTOR           = 0.1
+_C.TRAIN.SCHEDULER.ROP.MIN_LR           = 1e-6
+_C.TRAIN.SCHEDULER.ROP.PATIENCE         = 200
+_C.TRAIN.SCHEDULER.ROP.COOLDOWN         = 400
 _C.TRAIN.SCHEDULER.ROP.VERBOSE          = True
 
 _C.TRAIN.SCHEDULER.CYCLIC               = CN()
@@ -139,7 +141,7 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 
 _C.TRAIN.OPTIMIZER                      = CN()
 _C.TRAIN.OPTIMIZER.NAME                 = "Adamax"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
-_C.TRAIN.OPTIMIZER.LR                   = 2e-4
+_C.TRAIN.OPTIMIZER.LR                   = 1e-6
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
 _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0
