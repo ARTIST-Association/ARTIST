@@ -218,9 +218,8 @@ def build_loss_funcs(cfg_loss):
     return loss_func, test_loss_func
 
 
-def train_batch(
+def calc_batch_loss(
         opt,
-        sched,
         H,
         ENV,
         R,
@@ -229,16 +228,17 @@ def train_batch(
         loss_func,
         epoch,
         writer=None,
+        return_extras=True,
 ):
     # print(epoch)
     # if epoch == 0:
     #     last_lr = opt.param_groups[0]["lr"]
     # Initialize Parameters
     # =====================
-    opt.zero_grad(set_to_none=True)
     loss = 0
-    num_missed = 0.0
-    ray_diff = 0
+    if return_extras:
+        num_missed = 0.0
+        ray_diff = 0
 
     # Batch Loop
     # ==========
@@ -251,29 +251,63 @@ def train_batch(
             H_aligned, return_extras=True)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
 
-        # Plot target images to TensorBoard
-        if writer:
-            if epoch % 50 == 0:
-                writer.add_image(
-                    f"target_{i}/prediction",
-                    utils.colorize(pred_bitmap),
-                    epoch,
-                )
-
-        # Compare metrics
         with th.no_grad():
-            num_missed += (
-                (indices.numel() - indices.count_nonzero())
-                / len(targets)
-            )
-            ray_diff += utils.calc_ray_diffs(
-                ray_directions,
-                H_aligned.get_ray_directions().detach(),
-            ) / len(targets)
+            # Plot target images to TensorBoard
+            if writer:
+                if epoch % 50 == 0:
+                    writer.add_image(
+                        f"target_{i}/prediction",
+                        utils.colorize(pred_bitmap),
+                        epoch,
+                    )
+
+            if return_extras:
+                # Compare metrics
+                num_missed += (
+                    (indices.numel() - indices.count_nonzero())
+                    / len(targets)
+                )
+                ray_diff += utils.calc_ray_diffs(
+                    ray_directions,
+                    H_aligned.get_ray_directions().detach(),
+                ) / len(targets)
+
+    if return_extras:
+        return loss, pred_bitmap, num_missed, ray_diff
+    return loss
+
+
+def train_batch(
+        opt,
+        sched,
+        H,
+        ENV,
+        R,
+        targets,
+        sun_origins,
+        loss_func,
+        epoch,
+        writer=None,
+):
+    opt.zero_grad(set_to_none=True)
+
+    loss, pred_bitmap, num_missed, ray_diff = calc_batch_loss(
+        opt,
+        H,
+        ENV,
+        R,
+        targets,
+        sun_origins,
+        loss_func,
+        epoch,
+        writer,
+        return_extras=True,
+    )
 
     # Plot loss to Tensorboard
-    if writer:
-        writer.add_scalar("train/loss", loss.item(), epoch)
+    with th.no_grad():
+        if writer:
+            writer.add_scalar("train/loss", loss.item(), epoch)
 
     # Update training parameters
     # ==========================
