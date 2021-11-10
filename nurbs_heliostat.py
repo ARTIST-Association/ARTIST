@@ -1,5 +1,7 @@
 import functools
+from typing import Tuple
 
+import torch
 import torch as th
 
 import heliostat_models
@@ -7,6 +9,27 @@ from heliostat_models import AlignmentState, Heliostat
 import nurbs
 from nurbs_progressive_growing import ProgressiveGrowing
 import utils
+
+
+def _calc_normals_and_surface(
+        eval_points,
+        degree_x: int,
+        degree_y: int,
+        ctrl_points,
+        ctrl_weights,
+        knots_x,
+        knots_y,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    return nurbs.calc_normals_and_surface_slow(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        ctrl_points,
+        ctrl_weights,
+        knots_x,
+        knots_y,
+    )
 
 
 class NURBSHeliostat(Heliostat):
@@ -125,7 +148,7 @@ class NURBSHeliostat(Heliostat):
         else:
             # Unless we change the knots, we don't need to recalculate
             # as we simply distribute the points uniformly.
-            self.recalc_eval_points = False
+            self._recalc_eval_points = False
             self._cached_eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
         self._eval_points_cache_valid = True
@@ -233,9 +256,8 @@ class NURBSHeliostat(Heliostat):
             ctrl_points, ctrl_weights, knots_x, knots_y = \
                 self._progressive_growing.select()
 
-            surface_points, normals = nurbs.calc_normals_and_surface_slow(
-                eval_points[:, 0],
-                eval_points[:, 1],
+            surface_points, normals = _calc_normals_and_surface(
+                eval_points,
                 self.degree_x,
                 self.degree_y,
                 ctrl_points,
