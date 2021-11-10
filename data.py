@@ -62,6 +62,7 @@ def create_target(
     return target_bitmap
 
 
+@th.no_grad()
 def generate_dataset(cfg, H, ENV, save_dir, writer=None):
     if save_dir:
         save_path = os.path.join(save_dir, 'target.pt')
