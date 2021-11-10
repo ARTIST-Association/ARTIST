@@ -152,6 +152,9 @@ _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
 
 
+_C.TEST = CN()
+_C.TEST.NUM_SAMPLES = 4
+_C.TEST.INTERVAL = 15
 
 
 def get_cfg_defaults():

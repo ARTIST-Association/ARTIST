@@ -107,3 +107,16 @@ def generate_dataset(sun_origins, H, ENV, save_dir, writer=None):
         # print(H._normals_orig.shape)
         # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
     return targets, sun_origins_normed
+
+
+@th.no_grad()
+def generate_test_dataset(cfg, H, ENV, save_dir, writer=None):
+    sun_origins = th.randn(cfg.NUM_SAMPLES, 3)
+    sun_origins[:-1] -= 0.5
+    return generate_dataset(
+        sun_origins.tolist(),
+        H,
+        ENV,
+        save_dir,
+        writer,
+    )

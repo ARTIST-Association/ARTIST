@@ -184,19 +184,19 @@ def build_optimizer_scheduler(cfg, params, device):
     return opt, sched
 
 
-def build_loss_func(cfg_loss):
+def build_loss_funcs(cfg_loss):
     cfg = cfg_loss
     name = cfg.NAME.lower()
     if name == "mse":
-        loss_func = th.nn.MSELoss()
+        test_loss_func = th.nn.MSELoss()
     elif name == "l1":
-        loss_func = th.nn.L1Loss()
+        test_loss_func = th.nn.L1Loss()
     else:
         raise ValueError(
             "Loss function name not found, change name or implement new loss")
 
-    def loss_func_(pred_bitmap, target_bitmap, opt):
-        loss = loss_func(pred_bitmap, target_bitmap)
+    def loss_func(pred_bitmap, target_bitmap, opt):
+        loss = test_loss_func(pred_bitmap, target_bitmap)
 
         if cfg.USE_L1_WEIGHT_DECAY:
             weight_decay = sum(
@@ -215,7 +215,7 @@ def build_loss_func(cfg_loss):
             loss += cfg.WEIGHT_DECAY_FACTOR * weight_decay
         return loss
 
-    return loss_func_
+    return loss_func, test_loss_func
 
 
 def train_batch(
@@ -291,7 +291,34 @@ def train_batch(
     return loss, pred_bitmap, num_missed, ray_diff
 
 
-def main(config_file_name = None):
+@th.no_grad()
+def test_batch(
+        heliostat,
+        env,
+        renderer,
+        targets,
+        sun_origins,
+        loss_func,
+        epoch,
+        writer=None,
+):
+    loss = 0
+    for (i, (target, sun_origin)) in enumerate(zip(
+            targets,
+            sun_origins,
+    )):
+        heliostat_aligned = heliostat.align(
+            env.sun_origin, env.receiver_center)
+        pred_bitmap = renderer.render(heliostat_aligned)
+
+        loss += loss_func(pred_bitmap, target) / len(targets)
+
+    if writer:
+        writer.add_scalar("test/loss", loss.item(), epoch)
+    return loss
+
+
+def main(config_file_name=None):
     # Load Defaults
     # =============
     # config_file_name = None
@@ -368,6 +395,14 @@ def main(config_file_name = None):
         writer,
     )
 
+    test_targets, test_sun_origins = data.generate_test_dataset(
+        cfg.TEST,
+        H_target,
+        ENV,
+        None,
+        writer,
+    )
+
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
@@ -378,7 +413,7 @@ def main(config_file_name = None):
     R = Renderer(H, ENV)
 
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
-    loss_func = build_loss_func(cfg.TRAIN.LOSS)
+    loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
 
     epochs = cfg.TRAIN.EPOCHS
     epoch_shift_width = len(str(epochs))
@@ -414,7 +449,23 @@ def main(config_file_name = None):
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
 
-        if (epoch % 50 == 0) and cfg.SAVE_RESULTS:
+        if epoch % cfg.TEST.INTERVAL == 0:
+            test_loss = test_batch(
+                H,
+                ENV,
+                R,
+                test_targets,
+                test_sun_origins,
+                test_loss_func,
+                epoch,
+                writer,
+            )
+            print(
+                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+                f'test loss: {test_loss.item()}'
+            )
+
+        if epoch % 50 == 0 and cfg.SAVE_RESULTS:
 
             plotter.plot_surfaces_mrad(
                 H_target,
