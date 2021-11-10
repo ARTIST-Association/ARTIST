@@ -224,9 +224,7 @@ def main():
         heliostat.knots_y = model.knots_y
     else:
         heliostat = Heliostat(cfg.H, cfg.NURBS, device)
-        heliostat._normals_orig = model
-
-    heliostats = [target_heliostat, heliostat]
+        heliostat._normals = model
 
     for test in range(args.num_tests):
         sun = th.rand_like(target.sun)
@@ -240,11 +238,12 @@ def main():
         ])
 
         env = Environment(target_cfg.AC, device)
-        for hel in heliostats:
-            hel.align(env.sun_origin, env.receiver_center, verbose=False)
+        target_heliostat_aligned = target_heliostat.align(
+            env.sun_origin, env.receiver_center)
+        heliostat_aligned = heliostat.align(env.sun_origin, env.receiver_center)
 
-        target_renderer = Renderer(target_heliostat, env)
-        renderer = Renderer(heliostat, env)
+        target_renderer = Renderer(target_heliostat_aligned, env)
+        renderer = Renderer(heliostat_aligned, env)
         for renderer_ in [target_renderer, renderer]:
             renderer_.xi = model_xi
             renderer_.yi = model_yi
@@ -313,8 +312,6 @@ def main():
             # f'normal cos diff {normal_cos_diff.detach().cpu().numpy()}'
         )
         # print()
-        for hel in heliostats:
-            hel.align_reverse()
 
 
 if __name__ == '__main__':
