@@ -9,12 +9,6 @@ from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
 
 
-class AlignmentState(Enum):
-    UNINITIALIZED = None
-    ON_GROUND = 'OnGround'
-    ALIGNED = 'Aligned'
-
-
 def reflect_rays_(rays, normals):
     return rays - 2 * utils.batch_dot(rays, normals) * normals
 
@@ -431,7 +425,6 @@ class Heliostat(AbstractHeliostat):
         )
 
         self._checked_dict = False
-        self.state = AlignmentState.UNINITIALIZED
         self.params = None
 
         self.load()
@@ -459,7 +452,6 @@ class Heliostat(AbstractHeliostat):
         self._normals = heliostat_normals
         self._normals_ideal = heliostat_ideal_vecs
         self.params = params
-        self.state = AlignmentState.ON_GROUND
         self.height = height
         self.width = width
 
@@ -520,11 +512,6 @@ class Heliostat(AbstractHeliostat):
         return data
 
     def to_dict(self):
-        if self.state is not AlignmentState.ON_GROUND:
-            print(
-                'Warning; saving aligned heliostat! It is recommended to '
-                '`align_reverse` the heliostat beforehand!'
-            )
         data = self._to_dict()
         self._check_dict(data)
         return data
@@ -581,7 +568,6 @@ class AlignedHeliostat(AbstractHeliostat):
 
         if align_points:
             self._align()
-        self.state = AlignmentState.ALIGNED
 
     def _align(self):
         hel_rotated = rotate(
