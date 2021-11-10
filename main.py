@@ -361,7 +361,7 @@ def main(config_file_name = None):
     # plotter.plot_normal_vectors(H_target._discrete_points_orig, H_target._normals_orig)
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
-        cfg,
+        cfg.AC.SUN.ORIGIN,
         H_target,
         ENV,
         logdir_files,

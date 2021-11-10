@@ -63,14 +63,13 @@ def create_target(
 
 
 @th.no_grad()
-def generate_dataset(cfg, H, ENV, save_dir, writer=None):
+def generate_dataset(sun_origins, H, ENV, save_dir, writer=None):
     if save_dir:
         save_path = os.path.join(save_dir, 'target.pt')
     else:
         save_path = None
 
     device = H.device
-    sun_origins = cfg.AC.SUN.ORIGIN
     if not isinstance(sun_origins[0], list):
         sun_origins = [sun_origins]
     sun_origins = th.tensor(
