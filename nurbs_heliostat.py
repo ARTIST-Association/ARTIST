@@ -5,7 +5,7 @@ import torch
 import torch as th
 
 import heliostat_models
-from heliostat_models import AlignmentState, Heliostat
+from heliostat_models import AbstractHeliostat, AlignedHeliostat, Heliostat
 import nurbs
 from nurbs_progressive_growing import ProgressiveGrowing
 import utils
@@ -32,9 +32,45 @@ def _calc_normals_and_surface(
     )
 
 
-class NURBSHeliostat(Heliostat):
-    def __init__(self, heliostat_config, nurbs_config, device):
-        super().__init__(heliostat_config, device)
+class AbstractNURBSHeliostat(AbstractHeliostat):
+    def __len__(self):
+        raise NotImplementedError('please override `__len__`')
+
+    def _calc_normals_and_surface(self):
+        raise NotImplementedError(
+            'please override `_calc_normals_and_surface`')
+
+    def __call__(self):
+        discrete_points, normals = self.discrete_points_and_normals()
+        return (discrete_points, self.get_ray_directions(normals))
+
+    def discrete_points_and_normals(self):
+        discrete_points, normals = self._calc_normals_and_surface()
+        return discrete_points, normals
+
+    @property
+    def discrete_points(self):
+        discrete_points, _ = self._calc_normals_and_surface()
+        return discrete_points
+
+    @property
+    def normals(self):
+        _, normals = self._calc_normals_and_surface()
+        return normals
+
+    def get_ray_directions(self, normals=None):
+        raise NotImplementedError('please override `get_ray_directions`')
+
+
+class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
+    def __init__(
+            self,
+            heliostat_config,
+            nurbs_config,
+            device,
+            setup_params=True,
+    ):
+        super().__init__(heliostat_config, device, setup_params=False)
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
@@ -60,7 +96,7 @@ class NURBSHeliostat(Heliostat):
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
-        self._orig_world_points = self._discrete_points_orig.clone()
+        self._orig_world_points = self._discrete_points.clone()
 
         utils.initialize_spline_knots(
             self.knots_x, self.knots_y, self.degree_x, self.degree_y)
@@ -68,6 +104,17 @@ class NURBSHeliostat(Heliostat):
 
         self.initialize_control_points(ctrl_points)
         self.initialize_eval_points()
+        if setup_params:
+            self.setup_params()
+
+    def __len__(self):
+        return len(self.eval_points)
+
+    def align(self, sun_origin, receiver_center):
+        return AlignedNURBSHeliostat(self, sun_origin, receiver_center)
+
+    def get_ray_directions(self, normals=None):
+        raise NotImplementedError('Heliostat has to be aligned first')
 
     @property
     def fix_spline_ctrl_weights(self):
@@ -108,7 +155,7 @@ class NURBSHeliostat(Heliostat):
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
             utils.adjust_spline_ctrl_points(
                 ctrl_points,
-                self._discrete_points_orig,
+                self._discrete_points,
                 self.nurbs_cfg.OPTIMIZE_Z_ONLY,
                 k=4,
             )
@@ -147,6 +194,7 @@ class NURBSHeliostat(Heliostat):
         self.knots_x.requires_grad_(optimize_knots)
         self.knots_y.requires_grad_(optimize_knots)
 
+    def get_params(self):
         opt_params = [self.ctrl_points_z]
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
             opt_params.append(self.ctrl_points_xy)
@@ -194,26 +242,14 @@ class NURBSHeliostat(Heliostat):
     def shape(self):
         return self._progressive_growing.get_shape()
 
-    def _align(self):
-        pass
-
-    def _get_alignment(self):
-        if self.state is AlignmentState.ON_GROUND:
-            return None
-        elif self.state is AlignmentState.ALIGNED:
-            return self.alignment
-        else:
-            raise ValueError(f'unknown state {self.state}')
-
-    def _calc_aligned_surface_and_normals(self):
-        alignment = self._get_alignment()
-
+    def _calc_normals_and_surface(self):
         eval_points = self.eval_points
         ctrl_points, ctrl_weights, knots_x, knots_y = \
             self._progressive_growing.select()
 
-        surface_points, normals = _calc_normals_and_surface(
-            eval_points,
+        surface_points, normals = nurbs.calc_normals_and_surface_slow(
+            eval_points[:, 0],
+            eval_points[:, 1],
             self.degree_x,
             self.degree_y,
             ctrl_points,
@@ -222,48 +258,7 @@ class NURBSHeliostat(Heliostat):
             knots_y,
         )
 
-        if alignment is None:
-            return surface_points, normals
-
-        hel_rotated = heliostat_models.rotate(
-            surface_points, alignment, clockwise=True)
-        # Place in field
-        hel_rotated = hel_rotated + self.position_on_field
-
-        normal_vectors_rotated = heliostat_models.rotate(
-            normals, alignment, clockwise=True)
-        normal_vectors_rotated = (
-            normal_vectors_rotated
-            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        )
-
-        return hel_rotated, normal_vectors_rotated
-
-    @property
-    def discrete_points(self):
-        discrete_points, _ = self._calc_aligned_surface_and_normals()
-
-        if self.state is AlignmentState.ON_GROUND:
-            self._discrete_points_orig = discrete_points
-            return self._discrete_points_orig
-        elif self.state is AlignmentState.ALIGNED:
-            self._discrete_points_aligned = discrete_points
-            return self._discrete_points_aligned
-        else:
-            raise ValueError(f'unknown state {self.state}')
-
-    @property
-    def normals(self):
-        _, normals = self._calc_aligned_surface_and_normals()
-
-        if self.state is AlignmentState.ON_GROUND:
-            self._normals_orig = normals
-            return self._normals_orig
-        elif self.state is AlignmentState.ALIGNED:
-            self._normals_aligned = normals
-            return self._normals_aligned
-        else:
-            raise ValueError(f'unknown state {self.state}')
+        return surface_points, normals
 
     @th.no_grad()
     def step(self, verbose=False):
@@ -353,9 +348,9 @@ class NURBSHeliostat(Heliostat):
 
     def _from_dict(self, data, restore_strictly):
         # Keep normals from standard initialization here.
-        normals_orig = self._normals_orig
+        normals = self._normals
         super()._from_dict(data, restore_strictly)
-        self._normals_orig = normals_orig
+        self._normals = normals
 
         self.degree_x = data['degree_x']
         self.degree_y = data['degree_y']
@@ -372,6 +367,40 @@ class NURBSHeliostat(Heliostat):
         if restore_strictly:
             self._eval_points = data['evaluation_points']
             self._orig_world_points = data['original_world_points']
-            self._normals_orig = data['_heliostat_normals']
+            self._normals = data['_heliostat_normals']
         else:
             self.initialize_eval_points()
+
+
+class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
+    def __init__(self, heliostat, sun_origin, receiver_center):
+        assert isinstance(heliostat, NURBSHeliostat), \
+            'can only align NURBS heliostat'
+        AlignedHeliostat.__init__(
+            self, heliostat, sun_origin, receiver_center, align_points=False)
+
+    def __len__(self):
+        return len(self._heliostat.eval_points)
+
+    def _calc_normals_and_surface(self):
+        surface_points, normals = \
+            NURBSHeliostat._calc_normals_and_surface(self._heliostat)
+
+        hel_rotated = heliostat_models.rotate(
+            surface_points, self.alignment, clockwise=True)
+        # Place in field
+        hel_rotated = hel_rotated + self._heliostat.position_on_field
+
+        normal_vectors_rotated = heliostat_models.rotate(
+            normals, self.alignment, clockwise=True)
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        )
+
+        return hel_rotated, normal_vectors_rotated
+
+    def get_ray_directions(self, normals=None):
+        if normals is None:
+            normals = self.normals
+        return heliostat_models.reflect_rays_(self.from_sun, normals)

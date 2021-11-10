@@ -24,9 +24,9 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     os.makedirs(logdir_mrad, exist_ok=True)
 
     
-    target_normal_vecs = heliostat_target._normals_orig
+    target_normal_vecs = heliostat_target.normals
     ideal_normal_vecs = heliostat_target._normals_ideal
-    pred_normal_vecs = heliostat_pred._normals_orig
+    pred_normal_vecs = heliostat_pred.normals
 
     target_angles = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
     pred_angles = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
@@ -36,10 +36,10 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
       writer.add_scalar("test/normal_diffs", np.sum(diff_angles)/len(diff_angles), epoch)
     
         #Get discrete points
-    target_points = heliostat_target._discrete_points_orig
+    target_points = heliostat_target.discrete_points
     target_points = target_points.detach().cpu().numpy()
     
-    pred_points = heliostat_pred._discrete_points_orig
+    pred_points = heliostat_pred.discrete_points
     pred_points = pred_points.detach().cpu().numpy()
     diff_points = pred_points.copy()
     
@@ -93,11 +93,11 @@ def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, w
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
 
-    target = heliostat_target._discrete_points_orig
+    target = heliostat_target.discrete_points
     target = target.detach().cpu().numpy()
     target[:,2] = target[:,2]#/1e-3
     
-    pred = heliostat_pred._discrete_points_orig
+    pred = heliostat_pred.discrete_points
     pred = pred.detach().cpu().numpy()
     pred[:,2] = pred[:,2]#/1e-3
     

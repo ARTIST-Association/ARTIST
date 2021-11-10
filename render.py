@@ -261,11 +261,13 @@ class Renderer(object):
         # Evtl. in render jedesmal aufrufen
         self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
-    def render(self):
+    def render(self, heliostat=None, return_extras=False):
+        if heliostat is None:
+            heliostat = self.H
         # TODO Max: use for reflection instead
-        surface_points, surface_normals = self.H()
+        surface_points, surface_normals = heliostat()
 
-        self.ray_directions = compute_ray_directions(
+        ray_directions = compute_ray_directions(
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
             surface_normals,  # line directions
@@ -276,7 +278,7 @@ class Renderer(object):
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal,
             self.ENV.receiver_center,
-            self.ray_directions,
+            ray_directions,
             surface_points,
         )
 
@@ -290,7 +292,7 @@ class Renderer(object):
             + self.ENV.receiver_plane_y / 2
             - self.ENV.receiver_center[2]
         )
-        self.indices = (
+        indices = (
             (-1 <= dx_ints)
             & (dx_ints < self.ENV.receiver_plane_x + 1)
             & (-1 <= dy_ints)
@@ -299,7 +301,7 @@ class Renderer(object):
         total_bitmap = sample_bitmap(
             dx_ints,
             dy_ints,
-            self.indices,
+            indices,
             self.ENV.receiver_plane_x,
             self.ENV.receiver_plane_y,
             self.ENV.receiver_resolution_x,
@@ -307,4 +309,7 @@ class Renderer(object):
         )
         # target_num_missed = indices.numel() - indices.count_nonzero()
         # print('Missed for target:', target_num_missed.detach().cpu().item())
+
+        if return_extras:
+            return total_bitmap, (ray_directions, indices)
         return total_bitmap

@@ -392,8 +392,33 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
     return x, y, z
 
 
-class Heliostat(object):
-    def __init__(self, heliostat_config, device):
+class AbstractHeliostat:
+    def __init__(self):
+        raise NotImplementedError('do not construct an abstract class')
+
+    def __len__(self):
+        return len(self._discrete_points)
+
+    def __call__(self):
+        return (self.discrete_points, self.get_ray_directions())
+
+    @property
+    def discrete_points(self):
+        return self._discrete_points
+
+    @property
+    def normals(self):
+        return self._normals
+
+    def get_ray_directions(self):
+        raise NotImplementedError('please override `get_ray_directions`')
+
+    def align(self):
+        raise NotImplementedError('please override `align`')
+
+
+class Heliostat(AbstractHeliostat):
+    def __init__(self, heliostat_config, device, setup_params=True):
         self.cfg = heliostat_config
         if not self.cfg.is_frozen():
             self.cfg = self.cfg.clone()
@@ -407,15 +432,11 @@ class Heliostat(object):
 
         self._checked_dict = False
         self.state = AlignmentState.UNINITIALIZED
-        self.from_sun = None
-        self.alignment = None
-        self._discrete_points_orig = None
-        self._normals_orig = None
-        self._discrete_points_aligned = None
-        self._normals_aligned = None
         self.params = None
 
         self.load()
+        if setup_params:
+            self.setup_params()
 
     def load(self):
 
@@ -434,93 +455,30 @@ class Heliostat(object):
             heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
                 other_objects(cfg.OTHER, self.device)
 
-        self._discrete_points_orig = heliostat
-        self._normals_orig = heliostat_normals
+        self._discrete_points = heliostat
+        self._normals = heliostat_normals
         self._normals_ideal = heliostat_ideal_vecs
         self.params = params
         self.state = AlignmentState.ON_GROUND
         self.height = height
         self.width = width
 
-    def __call__(self):
-        return (self.discrete_points, self.get_ray_directions())
-
     @property
     def shape(self):
         return (self.rows, self.cols)
 
-    def align(self, sun_origin, receiver_center, verbose=True):
-        if self.discrete_points is None:
-            raise ValueError('Heliostat has to be loaded first')
-        if self.state is AlignmentState.ALIGNED:
-            raise ValueError('Heliostat is already aligned')
-
-        # TODO Max: fix for other aimpoints
-        # TODO Evtl auf H.Discrete Points umstellen
-        from_sun = self.position_on_field - sun_origin
-        from_sun /= th.linalg.norm(from_sun)
-        self.from_sun = from_sun.unsqueeze(0)
-
-        self.alignment = th.stack(heliostat_coord_system(
-            self.position_on_field,
-            sun_origin,
-            receiver_center,
-        ))
-
-        self._align()
-        self.state = AlignmentState.ALIGNED
-
-    def _align(self):
-        hel_rotated = rotate(
-            self.discrete_points, self.alignment, clockwise=True)
-        hel_rotated_in_field = hel_rotated + self.position_on_field
-
-        normal_vectors_rotated = rotate(
-            self.normals, self.alignment, clockwise=True)
-        normal_vectors_rotated = (
-            normal_vectors_rotated
-            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        )
-
-        self._discrete_points_aligned = hel_rotated_in_field
-        self._normals_aligned = normal_vectors_rotated
-
-    def align_reverse(self):
-        self._align_reverse()
-        self.state = AlignmentState.ON_GROUND
-
-    def _align_reverse(self):
-        pass
-
-    @property
-    def discrete_points(self):
-        if self.state is AlignmentState.ON_GROUND:
-            return self._discrete_points_orig
-        elif self.state is AlignmentState.ALIGNED:
-            return self._discrete_points_aligned
-        else:
-            raise ValueError(f'unknown state {self.state}')
-
-    @property
-    def normals(self):
-        if self.state is AlignmentState.ON_GROUND:
-            return self._normals_orig
-        elif self.state is AlignmentState.ALIGNED:
-            return self._normals_aligned
-        else:
-            raise ValueError(f'unknown state {self.state}')
+    def align(self, sun_origin, receiver_center):
+        return AlignedHeliostat(self, sun_origin, receiver_center)
 
     def setup_params(self):
-        self._normals_orig.requires_grad_(True)
+        self._normals.requires_grad_(True)
 
-        opt_params = [self._normals_orig]
+    def get_params(self):
+        opt_params = [self._normals]
         return opt_params
 
     def get_ray_directions(self):
-        if self.alignment is None:
-            raise ValueError('Heliostat has to be aligned first')
-
-        return reflect_rays_(self.from_sun, self.normals)
+        raise NotImplementedError('Heliostat has to be aligned first')
 
     def step(self, *args, **kwargs):
         pass
@@ -554,7 +512,7 @@ class Heliostat(object):
     def _fixed_dict(self):
         """The part of the heliostat's configuration that does not change."""
         data = {
-            'heliostat_points': self._discrete_points_orig,
+            'heliostat_points': self._discrete_points,
 
             'config': self.cfg,
             'params': copy.deepcopy(self.params),
@@ -574,7 +532,7 @@ class Heliostat(object):
     def _to_dict(self):
         data = self._fixed_dict()
         data.update({
-            'heliostat_normals': self._normals_orig.clone(),
+            'heliostat_normals': self._normals.clone(),
         })
         return data
 
@@ -587,8 +545,58 @@ class Heliostat(object):
         return self
 
     def _from_dict(self, data, restore_strictly):
-        self._normals_orig = data['heliostat_normals']
+        self._normals = data['heliostat_normals']
 
         if restore_strictly:
-            self._discrete_points_orig = data['heliostat_points']
+            self._discrete_points = data['heliostat_points']
             self.params = data['params']
+
+
+class AlignedHeliostat(AbstractHeliostat):
+    def __init__(
+            self,
+            heliostat,
+            sun_origin,
+            receiver_center,
+            align_points=True,
+    ):
+        if heliostat.discrete_points is None:
+            raise ValueError('Heliostat has to be loaded first')
+        if isinstance(heliostat, AlignedHeliostat):
+            raise ValueError('Heliostat is already aligned')
+
+        self._heliostat = heliostat
+
+        # TODO Max: fix for other aimpoints
+        # TODO Evtl auf H.Discrete Points umstellen
+        from_sun = self._heliostat.position_on_field - sun_origin
+        from_sun /= th.linalg.norm(from_sun)
+        self.from_sun = from_sun.unsqueeze(0)
+
+        self.alignment = th.stack(heliostat_coord_system(
+            self._heliostat.position_on_field,
+            sun_origin,
+            receiver_center,
+        ))
+
+        if align_points:
+            self._align()
+        self.state = AlignmentState.ALIGNED
+
+    def _align(self):
+        hel_rotated = rotate(
+            self._heliostat.discrete_points, self.alignment, clockwise=True)
+        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
+
+        normal_vectors_rotated = rotate(
+            self._heliostat.normals, self.alignment, clockwise=True)
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        )
+
+        self._discrete_points = hel_rotated_in_field
+        self._normals = normal_vectors_rotated
+
+    def get_ray_directions(self):
+        return reflect_rays_(self.from_sun, self.normals)

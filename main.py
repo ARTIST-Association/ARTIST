@@ -246,9 +246,9 @@ def train_batch(
             targets,
             sun_origins,
     )):
-        ENV.sun_origin = sun_origin
-        H.align(ENV.sun_origin, ENV.receiver_center, verbose=False)
-        pred_bitmap = R.render()
+        H_aligned = H.align(sun_origin, ENV.receiver_center)
+        pred_bitmap, (ray_directions, indices) = R.render(
+            H_aligned, return_extras=True)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
 
         # Plot target images to TensorBoard
@@ -262,14 +262,13 @@ def train_batch(
 
         # Compare metrics
         with th.no_grad():
-            H.align_reverse()
             num_missed += (
-                (R.indices.numel() - R.indices.count_nonzero())
+                (indices.numel() - indices.count_nonzero())
                 / len(targets)
             )
             ray_diff += utils.calc_ray_diffs(
-                R.ray_directions,
-                H.get_ray_directions().detach(),
+                ray_directions,
+                H_aligned.get_ray_directions().detach(),
             ) / len(targets)
 
     # Plot loss to Tensorboard
@@ -378,7 +377,7 @@ def main(config_file_name = None):
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    opt, sched = build_optimizer_scheduler(cfg, H.setup_params(), device)
+    opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
     loss_func = build_loss_func(cfg.TRAIN.LOSS)
 
     epochs = cfg.TRAIN.EPOCHS

@@ -15,7 +15,6 @@ def create_target(
         verbose=False,
 ):
     device = H.device
-    ENV.sun_origin = sun_origin_normed
     if save_path:
         target_save_data = (
             H.position_on_field,
@@ -40,8 +39,8 @@ def create_target(
             ENV.sun.cov,
         )
 
-    H.align(ENV.sun_origin, ENV.receiver_center, verbose=verbose)
-    R = Renderer(H, ENV)
+    H_aligned = H.align(sun_origin_normed, ENV.receiver_center)
+    R = Renderer(H_aligned, ENV)
     if save_path:
         utils.save_target(
             *(
@@ -51,8 +50,8 @@ def create_target(
                     R.yi,
 
                     # We need the heliostat to be aligned here.
-                    H.get_ray_directions(),
-                    H.discrete_points,
+                    H_aligned.get_ray_directions(),
+                    H_aligned.discrete_points,
                     save_path,
                 )
             )
@@ -61,7 +60,6 @@ def create_target(
     # Render Step
     # ===========
     target_bitmap = R.render()
-    H.align_reverse()
     return target_bitmap
 
 
