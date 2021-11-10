@@ -12,7 +12,6 @@ def create_target(
         sun_origin,
         sun_origin_normed,
         save_path=None,
-        verbose=False,
 ):
     device = H.device
     if save_path:
@@ -79,7 +78,6 @@ def generate_dataset(cfg, H, ENV, save_dir, writer=None):
         sun_origins / th.linalg.norm(sun_origins, dim=1).unsqueeze(-1)
 
     targets = None
-    last_i = len(sun_origins) - 1
     for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
             sun_origins,
             sun_origins_normed,
@@ -90,7 +88,6 @@ def generate_dataset(cfg, H, ENV, save_dir, writer=None):
             sun_origin,
             sun_origin_normed,
             save_path=save_path,
-            verbose=(i == last_i),
         )
         if targets is None:
             targets = th.empty(
