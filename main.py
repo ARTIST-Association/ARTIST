@@ -300,19 +300,19 @@ def calc_batch_loss(train_objects, return_extras=True):
                 ) / len(targets)
 
     if return_extras:
-        return loss, pred_bitmap, num_missed, ray_diff
+        return loss, (pred_bitmap, num_missed, ray_diff)
     return loss
 
 
 def calc_batch_grads(train_objects, return_extras=True):
     train_objects.opt.zero_grad(set_to_none=True)
 
-    loss, pred_bitmap, num_missed, ray_diff = calc_batch_loss(
+    loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_loss(
         train_objects, return_extras=True)
 
     loss.backward()
     if return_extras:
-        return loss, pred_bitmap, num_missed, ray_diff
+        return loss, (pred_bitmap, num_missed, ray_diff)
     return loss
 
 
@@ -326,7 +326,7 @@ def train_batch(train_objects):
             lambda: calc_batch_grads(train_objects, return_extras=False),
         )
     else:
-        loss, pred_bitmap, num_missed, ray_diff = calc_batch_grads(
+        loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_grads(
             train_objects)
         opt.step()
 
