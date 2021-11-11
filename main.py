@@ -1,3 +1,4 @@
+import collections
 import copy
 from datetime import datetime
 import os
@@ -13,6 +14,25 @@ from nurbs_heliostat import NURBSHeliostat
 import plotter
 from render import Renderer
 import utils
+
+
+TrainObjects = collections.namedtuple(
+    'TrainObjects',
+    [
+        'opt',
+        'sched',
+        'H',
+        'ENV',
+        'R',
+        'targets',
+        'sun_origins',
+        'loss_func',
+        'epoch',
+        'writer',
+    ],
+    # 'writer' is None by default
+    defaults=[None],
+)
 
 
 def check_consistency(cfg):
@@ -218,8 +238,14 @@ def build_loss_funcs(cfg_loss):
     return loss_func, test_loss_func
 
 
-def calc_batch_loss(
+def calc_batch_loss(train_objects, return_extras=True):
+    # print(epoch)
+    # if epoch == 0:
+    #     last_lr = opt.param_groups[0]["lr"]
+    (
         opt,
+        # Don't need scheduler.
+        _,
         H,
         ENV,
         R,
@@ -227,12 +253,8 @@ def calc_batch_loss(
         sun_origins,
         loss_func,
         epoch,
-        writer=None,
-        return_extras=True,
-):
-    # print(epoch)
-    # if epoch == 0:
-    #     last_lr = opt.param_groups[0]["lr"]
+        writer,
+    ) = train_objects
     # Initialize Parameters
     # =====================
     loss = 0
@@ -277,50 +299,39 @@ def calc_batch_loss(
     return loss
 
 
-def train_batch(
-        opt,
-        sched,
-        H,
-        ENV,
-        R,
-        targets,
-        sun_origins,
-        loss_func,
-        epoch,
-        writer=None,
-):
-    opt.zero_grad(set_to_none=True)
+def calc_batch_grads(train_objects, return_extras=True):
+    train_objects.opt.zero_grad(set_to_none=True)
 
     loss, pred_bitmap, num_missed, ray_diff = calc_batch_loss(
-        opt,
-        H,
-        ENV,
-        R,
-        targets,
-        sun_origins,
-        loss_func,
-        epoch,
-        writer,
-        return_extras=True,
-    )
+        train_objects, return_extras=True)
+
+    loss.backward()
+    if return_extras:
+        return loss, pred_bitmap, num_missed, ray_diff
+    return loss
+
+
+def train_batch(train_objects):
+    loss, pred_bitmap, num_missed, ray_diff = calc_batch_grads(train_objects)
+    train_objects.opt.step()
 
     # Plot loss to Tensorboard
     with th.no_grad():
+        writer = train_objects.writer
         if writer:
-            writer.add_scalar("train/loss", loss.item(), epoch)
+            writer.add_scalar("train/loss", loss.item(), train_objects.epoch)
 
     # Update training parameters
     # ==========================
-    loss.backward()
-    opt.step()
+    sched = train_objects.sched
     if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
         sched.step(loss)
     else:
         sched.step()
-        
+
     # if opt.param_groups[0]["lr"] < last_lr:
-    H.step(verbose=True)
-        # last_lr = opt.param_groups[0]["lr"]
+    train_objects.H.step(verbose=True)
+    #     last_lr = opt.param_groups[0]["lr"]
 
     return loss, pred_bitmap, num_missed, ray_diff
 
@@ -460,7 +471,7 @@ def main(config_file_name=None):
                   "current_lr": opt.param_groups[0]["lr"],
                   }
     for epoch in range(epochs):
-        loss, pred_bitmap, num_missed, ray_diff = train_batch(
+        train_objects = TrainObjects(
             opt,
             sched,
             H,
@@ -472,6 +483,7 @@ def main(config_file_name=None):
             epoch,
             writer,
         )
+        loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
 
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
