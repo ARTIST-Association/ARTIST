@@ -8,6 +8,7 @@ _C.ID                                   = 'NotGiven'
 _C.EXPERIMENT_NAME                      = "NotGiven"
 _C.LOGDIR                               = 'Results'
 _C.SEED                                 = 0
+_C.USE_FLOAT64                          = False
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True

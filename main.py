@@ -392,6 +392,9 @@ def main(config_file_name=None):
         cfg = cfg_default
     cfg.freeze()
 
+    if cfg.USE_FLOAT64:
+        th.set_default_dtype(th.float64)
+
     # Set up Logging
     # ==============
     if cfg.SAVE_RESULTS:
