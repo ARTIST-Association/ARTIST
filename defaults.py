@@ -108,6 +108,7 @@ _C.AC.SUN.ORIGIN                        = [
                                             ]
 _C.AC.SUN.GENERATE_N_RAYS               = 100
 _C.AC.SUN.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
+_C.AC.SUN.REDRAW_RANDOM_VARIABLES       = False
 
 _C.AC.SUN.NORMAL_DIST                   = CN()
 _C.AC.SUN.NORMAL_DIST.MEAN              = [0,0]

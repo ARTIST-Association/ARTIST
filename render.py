@@ -258,12 +258,19 @@ class Renderer(object):
     def __init__(self, Heliostat, Environment):
         self.H = Heliostat
         self.ENV = Environment
-        # Evtl. in render jedesmal aufrufen
-        self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
+        self.redraw_random_variables = self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
+
+        if not self.redraw_random_variables:
+            self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
     def render(self, heliostat=None, return_extras=False):
         if heliostat is None:
             heliostat = self.H
+        if self.redraw_random_variables:
+            xi, yi = self.ENV.sun.sample(len(self.H.discrete_points))
+        else:
+            xi = self.xi
+            yi = self.yi
         # TODO Max: use for reflection instead
         surface_points, surface_normals = heliostat()
 
@@ -272,8 +279,8 @@ class Renderer(object):
             self.ENV.receiver_center,  # Point on plane
             surface_normals,  # line directions
             surface_points,  # points on line
-            self.xi,
-            self.yi
+            xi,
+            yi
         )
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal,
@@ -311,5 +318,5 @@ class Renderer(object):
         # print('Missed for target:', target_num_missed.detach().cpu().item())
 
         if return_extras:
-            return total_bitmap, (ray_directions, indices)
+            return total_bitmap, (ray_directions, indices, xi, yi)
         return total_bitmap

@@ -274,7 +274,7 @@ def calc_batch_loss(train_objects, return_extras=True):
             sun_origins,
     )):
         H_aligned = H.align(sun_origin, ENV.receiver_center)
-        pred_bitmap, (ray_directions, indices) = R.render(
+        pred_bitmap, (ray_directions, indices, _, _) = R.render(
             H_aligned, return_extras=True)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
 
