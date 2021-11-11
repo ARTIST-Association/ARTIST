@@ -409,7 +409,7 @@ def main(config_file_name=None):
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
         os.makedirs(logdir_diffs, exist_ok=True)
-        
+
         with open(os.path.join(logdir, "config.yaml"), "w") as f:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
@@ -442,7 +442,8 @@ def main(config_file_name=None):
     )
     print("=============================")
     H_target = Heliostat(cfg.H, device)
-    # plotter.plot_normal_vectors(H_target._discrete_points_orig, H_target._normals_orig)
+    # plotter.plot_normal_vectors(
+    #     H_target._discrete_points_orig, H_target._normals_orig)
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
         cfg.AC.SUN.ORIGIN,
@@ -476,12 +477,13 @@ def main(config_file_name=None):
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
-    state_dict = {"epoch": 0, 
-                  "current_loss": float('inf'),
-                  "best_loss": float('inf'),
-                  "last_lr": opt.param_groups[0]["lr"],
-                  "current_lr": opt.param_groups[0]["lr"],
-                  }
+    state_dict = {
+        "epoch": 0,
+        "current_loss": float('inf'),
+        "best_loss": float('inf'),
+        "last_lr": opt.param_groups[0]["lr"],
+        "current_lr": opt.param_groups[0]["lr"],
+    }
     for epoch in range(epochs):
         train_objects = TrainObjects(
             opt,

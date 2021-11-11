@@ -1,5 +1,4 @@
 import copy
-from enum import Enum
 import functools
 import struct
 
@@ -84,7 +83,7 @@ def real_heliostat(real_configs, device):
         return (
             h,
             h_normal_vecs,
-            h_normal_vecs, #TODO Implement get_ideal_vecs.
+            h_normal_vecs,  # TODO Implement get_ideal_vecs.
             width_height[1],
             width_height[0],
             params,
@@ -436,18 +435,24 @@ class Heliostat(AbstractHeliostat):
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
         if shape == "ideal":
-            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
-                ideal_heliostat(cfg.IDEAL, self.device)
+            heliostat_properties = ideal_heliostat(cfg.IDEAL, self.device)
         elif shape == "real":
-            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
-                real_heliostat(cfg.DEFLECT_DATA, self.device)
+            heliostat_properties = real_heliostat(
+                cfg.DEFLECT_DATA, self.device)
         elif shape == "function":
-            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
-                heliostat_by_function(cfg.FUNCTION, self.device)
+            heliostat_properties = heliostat_by_function(
+                cfg.FUNCTION, self.device)
         elif shape == "other":
-            heliostat, heliostat_normals, heliostat_ideal_vecs, height, width, params = \
-                other_objects(cfg.OTHER, self.device)
+            heliostat_properties = other_objects(cfg.OTHER, self.device)
 
+        (
+            heliostat,
+            heliostat_normals,
+            heliostat_ideal_vecs,
+            height,
+            width,
+            params,
+        ) = heliostat_properties
         self._discrete_points = heliostat
         self._normals = heliostat_normals
         self._normals_ideal = heliostat_ideal_vecs

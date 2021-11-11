@@ -218,7 +218,6 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def ctrl_points(self):
         raise AttributeError('ctrl_points is not a writable attribute')
 
-
     def _invert_world_points(self):
         return utils.initialize_spline_eval_points_perfectly(
             self._orig_world_points,
