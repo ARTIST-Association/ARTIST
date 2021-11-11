@@ -142,6 +142,11 @@ def _build_optimizer(cfg_optimizer, params):
             eps=cfg.EPS,
             weight_decay=cfg.WEIGHT_DECAY,
         )
+    elif name == "lbfgs":
+        opt = th.optim.LBFGS(
+            params,
+            lr=cfg.LR,
+        )
     else:
         raise ValueError(
             "Optimizer name not found, change name or implement new optimizer")
@@ -312,8 +317,15 @@ def calc_batch_grads(train_objects, return_extras=True):
 
 
 def train_batch(train_objects):
-    loss, pred_bitmap, num_missed, ray_diff = calc_batch_grads(train_objects)
-    train_objects.opt.step()
+    opt = train_objects.opt
+    if isinstance(opt, th.optim.LBFGS):
+        loss = opt.step(
+            lambda: calc_batch_grads(train_objects, return_extras=False),
+        )
+    else:
+        loss, pred_bitmap, num_missed, ray_diff = calc_batch_grads(
+            train_objects)
+        opt.step()
 
     # Plot loss to Tensorboard
     with th.no_grad():
