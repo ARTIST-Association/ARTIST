@@ -319,6 +319,9 @@ def calc_batch_grads(train_objects, return_extras=True):
 def train_batch(train_objects):
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
+        with th.no_grad():
+            _, pred_bitmap, num_missed, ray_diff = calc_batch_loss(
+                train_objects)
         loss = opt.step(
             lambda: calc_batch_grads(train_objects, return_extras=False),
         )
