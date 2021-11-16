@@ -368,7 +368,7 @@ def test_batch(
             sun_origins,
     )):
         heliostat_aligned = heliostat.align(
-            env.sun_origin, env.receiver_center)
+            sun_origin, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
 
         loss += loss_func(pred_bitmap, target) / len(targets)
