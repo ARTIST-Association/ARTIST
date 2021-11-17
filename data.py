@@ -41,12 +41,19 @@ def create_target(
     H_aligned = H.align(sun_origin_normed, ENV.receiver_center)
     R = Renderer(H_aligned, ENV)
     if save_path:
+        if R.redraw_random_variables:
+            xi = None
+            yi = None
+        else:
+            xi = R.xi
+            yi = R.yi
+
         utils.save_target(
             *(
                 target_save_data
                 + (
-                    R.xi,
-                    R.yi,
+                    xi,
+                    yi,
 
                     # We need the heliostat to be aligned here.
                     H_aligned.get_ray_directions(),
