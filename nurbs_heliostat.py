@@ -335,14 +335,17 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly=False,
+            setup_params=True,
     ):
         if config is None:
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
 
-        self = cls(config, nurbs_config, device)
+        self = cls(config, nurbs_config, device, setup_params=False)
         self._from_dict(data, restore_strictly)
+        if setup_params:
+            self.setup_params()
         return self
 
     def _from_dict(self, data, restore_strictly):

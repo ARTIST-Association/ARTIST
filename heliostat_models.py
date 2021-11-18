@@ -529,11 +529,20 @@ class Heliostat(AbstractHeliostat):
         return data
 
     @classmethod
-    def from_dict(cls, data, device, config=None, restore_strictly=True):
+    def from_dict(
+            cls,
+            data,
+            device,
+            config=None,
+            restore_strictly=True,
+            setup_params=True,
+    ):
         if config is None:
             config = data['config']
-        self = cls(config, device)
+        self = cls(config, device, setup_params=False)
         self._from_dict(data, restore_strictly)
+        if setup_params:
+            self.setup_params()
         return self
 
     def _from_dict(self, data, restore_strictly):
