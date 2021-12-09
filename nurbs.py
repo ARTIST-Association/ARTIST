@@ -88,6 +88,108 @@ def get_basis(
     return basis_values
 
 
+def get_single_basis(
+        evaluation_points: torch.Tensor,
+        span: torch.Tensor,
+        degree: int,
+        knots: torch.Tensor,
+) -> torch.Tensor:
+    device = knots.device
+    last_knot_index = len(knots) - 1
+    next_degree = degree + 1
+
+    basis = th.empty((len(evaluation_points), next_degree), device=device)
+    result = th.empty((len(evaluation_points),), device=device)
+    not_done_indices = th.ones_like(result, dtype=th.bool, device=device)
+
+    edge_indices = (
+        (
+            (span == 0)
+            & (evaluation_points == knots[0])
+        ) | (
+            (span == last_knot_index - degree - 1)
+            & (evaluation_points == knots[-1])
+        )
+    )
+    result[edge_indices] = 1
+    not_done_indices = not_done_indices & ~edge_indices
+
+    local_indices = (
+        not_done_indices
+        & (
+            (evaluation_points < knots[span])
+            | (evaluation_points >= knots[span + next_degree])
+        )
+    )
+    result[local_indices] = 0
+    not_done_indices = not_done_indices & ~local_indices
+
+    curr_eval_points = evaluation_points[not_done_indices]
+    if len(span) > 1:
+        curr_span = span[not_done_indices]
+    else:
+        curr_span = span
+    next_curr_span = curr_span + 1
+    for j in range(next_degree):
+        basis[not_done_indices, j] = th.where(
+            (
+                (curr_eval_points >= knots[curr_span + j])
+                & (curr_eval_points < knots[next_curr_span + j])
+            ),
+            th.tensor(1.0, device=device),
+            th.tensor(0.0, device=device),
+        )
+
+    for k in range(1, next_degree):
+        curr_basis = basis[not_done_indices, 0]
+        saved = th.where(
+            curr_basis == 0,
+            th.tensor(0.0, device=device),
+            (
+                ((curr_eval_points - knots[curr_span]) * curr_basis)
+                / (knots[curr_span + k] - knots[curr_span])
+            ),
+        )
+
+        for j in range(next_degree - k):
+            left = knots[next_curr_span + j]
+            right = knots[next_curr_span + j + k]
+
+            zero_basis_indices = not_done_indices & (basis[:, j + 1] == 0)
+            dense_zero_basis_indices = zero_basis_indices[not_done_indices]
+
+            basis[zero_basis_indices, j] = saved[dense_zero_basis_indices]
+
+            not_zero_basis_indices = not_done_indices & ~zero_basis_indices
+            not_dense_zero_basis_indices = \
+                not_zero_basis_indices[not_done_indices]
+
+            if len(span) > 1:
+                left = left[not_dense_zero_basis_indices]
+                right = right[not_dense_zero_basis_indices]
+
+            tmp = (
+                basis[not_zero_basis_indices, j + 1]
+                / (right - left)
+            )
+            basis[not_zero_basis_indices, j] = (
+                saved[not_dense_zero_basis_indices]
+                + (
+                    (right - curr_eval_points[not_dense_zero_basis_indices])
+                    * tmp
+                )
+            )
+
+            nonzeros = (
+                curr_eval_points[not_dense_zero_basis_indices] - left
+            ) * tmp
+            saved[dense_zero_basis_indices] = 0
+            saved[not_dense_zero_basis_indices] = nonzeros
+
+    result[not_done_indices] = basis[not_done_indices, 0]
+    return result
+
+
 def get_all_basis(
         evaluation_point: torch.Tensor,
         span: torch.Tensor,
@@ -2140,6 +2242,246 @@ def invert_points_slow(
             f'`distance_tolerance`, or `cosine_tolerance`'
         )
     return argmin_distances, min_distances
+
+
+def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
+    dtype = world_points.dtype
+    device = world_points.device
+
+    if in_row_dir:
+        def wp(row, col):
+            return world_points[row * (num_other_points + 1) + col]
+    else:
+        def wp(row, col):
+            return world_points[row + col * (num_points + 1)]
+
+    num_nondegenerate = num_other_points + 1
+    params = th.zeros(num_points, dtype=dtype, device=device)
+    params[-1] = 1
+    cds = th.empty(
+        num_points,
+        dtype=dtype,
+        device=device,
+    )
+
+    for m in range(num_other_points + 1):
+        total = th.tensor(0, dtype=dtype, device=device)
+        for k in range(1, num_points + 1):
+            # chordal distances
+            cds[k - 1] = th.linalg.norm(wp(k, m) - wp(k - 1, m))
+            total += cds[k - 1]
+        if total == 0:
+            num_nondegenerate -= 1
+        else:
+            d = th.tensor(0, dtype=dtype, device=device)
+            for k in range(1, num_points):
+                d += cds[k - 1]
+                params[k] += d / total
+
+    if num_nondegenerate == 0:
+        raise ValueError()
+    params[1:num_points] /= num_nondegenerate
+    return params
+
+
+def get_mesh_params(world_points, num_points_x, num_points_y):
+    assert len(world_points) == num_points_x * num_points_y
+    params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
+    params_y = get_mesh_params_(
+        world_points, num_points_y, num_points_x, False)
+    return params_x, params_y
+
+
+def place_knots(params, num_control_points, degree, device):
+    # m = num_points
+    # n = num_control_points
+    num_points = len(params)
+
+    knots = th.empty((num_control_points + degree + 2,), device=device)
+    knots[:degree + 1] = 0
+    knots[-degree - 1:] = 1
+
+    d = (num_points + 1) / (num_control_points - degree + 1)
+    js = th.arange(1, num_control_points - degree + 1, device=device)
+    jds = js * d
+    ks = jds.long()
+    alphas = jds - ks
+    knots[degree + js] = (1 - alphas) * params[ks - 1] + alphas * params[ks]
+
+    return knots
+
+
+def calc_basis_mat(params, num_control_points, degree, knots):
+    # m = num_points
+    # n = num_control_points
+    num_points = len(params)
+
+    device = params.device
+    selected_params = params[1:num_points]
+    N = th.stack([
+        get_single_basis(
+            selected_params,
+            th.full((len(selected_params),), i, device=device),
+            degree,
+            knots,
+        )  # TODO .to_sparse()
+        for i in range(1, num_control_points)
+    ], -1)
+
+    assert N.shape == (num_points - 1, num_control_points - 1), f'{N.shape}'
+    return N
+
+
+def calc_basisTbasis(N):
+    return th.matmul(N.T, N)
+
+
+def calc_R(
+        world_points,
+        col,
+        params,
+        num_other_points,
+        N,
+        degree,
+        num_control_points,
+        knots,
+        in_row_dir,
+):
+    num_points = len(params)
+
+    device = world_points.device
+
+    if in_row_dir:
+        def wp(row):
+            return world_points[row * (num_other_points + 1) + col]
+    else:
+        def wp(row):
+            return world_points[col, row]
+
+    selected_params = params[1:num_points]
+    Rk = (
+        wp(th.arange(1, num_points))
+        - (
+            get_single_basis(
+                selected_params,
+                th.tensor([0], device=device),
+                degree,
+                knots,
+            ).unsqueeze(-1)
+            * wp(0).unsqueeze(0)
+        )
+        - (
+            get_single_basis(
+                selected_params,
+                th.tensor([num_control_points], device=device),
+                degree,
+                knots,
+            ).unsqueeze(-1)
+            * wp(num_points).unsqueeze(0)
+        )
+    )
+    R = th.matmul(N.T, Rk)
+    return R
+
+
+def approximate_surface(
+        world_points,
+        num_points_x,
+        num_points_y,
+        degree_x,
+        degree_y,
+        num_control_points_x,
+        num_control_points_y,
+        knots_x=None,
+        knots_y=None,
+):
+    # TODO Allow other direction first.
+    # r = num_points_x
+    # s = num_points_y
+    # Q = world points
+    # p = degree_x
+    # q = degree_y
+    # n = num_control_points_x
+    # m = num_control_points_y
+    assert len(world_points) == num_points_x * num_points_y
+
+    # Algorithms assumes for example `num_points + 1` points, so
+    # subtract one.
+    num_points_x -= 1
+    num_points_y -= 1
+    num_control_points_x -= 1
+    num_control_points_y -= 1
+
+    device = world_points.device
+
+    params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
+    if knots_x is None:
+        knots_x = place_knots(params_x, num_control_points_x, degree_x, device)
+
+    params_y = get_mesh_params_(
+        world_points, num_points_y, num_points_x, False)
+    if knots_y is None:
+        knots_y = place_knots(params_y, num_control_points_y, degree_y, device)
+
+    Nu = calc_basis_mat(params_x, num_control_points_x, degree_x, knots_x)
+    assert Nu.shape == (num_points_x - 1, num_control_points_x - 1)
+    NTNu = calc_basisTbasis(Nu)
+    assert NTNu.shape == (num_control_points_x - 1, num_control_points_x - 1)
+    NTNu_LU, NTNu_pivots = NTNu.lu()
+
+    tmp = th.empty(
+        (num_control_points_x + 1, num_points_y + 1, world_points.shape[-1]),
+        device=device,
+    )
+    for j in range(num_points_y + 1):
+        tmp[0, j] = world_points[0 * (num_points_y + 1) + j]
+        tmp[num_control_points_x, j] = \
+            world_points[num_control_points_x * (num_points_y + 1) + j]
+        Ru = calc_R(
+            world_points,
+            j,
+            params_x,
+            num_points_y,
+            Nu,
+            degree_x,
+            num_control_points_x,
+            knots_x,
+            True,
+        )
+        assert Ru.shape == (num_control_points_x - 1, 3), f'{Ru.shape}'
+        tmp[1:num_control_points_x, j] = th.lu_solve(Ru, NTNu_LU, NTNu_pivots)
+
+    Nv = calc_basis_mat(params_y, num_control_points_y, degree_y, knots_y)
+    assert Nv.shape == (num_points_y - 1, num_control_points_y - 1)
+    NTNv = calc_basisTbasis(Nv)
+    assert NTNv.shape == (num_control_points_y - 1, num_control_points_y - 1)
+    NTNv_LU, NTNv_pivots = NTNv.lu()
+
+    P = th.empty(
+        (
+            num_control_points_x + 1,
+            num_control_points_y + 1,
+            world_points.shape[-1],
+        ),
+        device=device,
+    )
+    for i in range(num_control_points_x + 1):
+        P[i, 0] = tmp[i, 0]
+        P[i, num_control_points_y] = tmp[i, num_points_y]
+        Rv = calc_R(
+            tmp,
+            i,
+            params_y,
+            num_points_x,
+            Nv,
+            degree_y,
+            num_control_points_y,
+            knots_y,
+            False,
+        )
+        assert Rv.shape == (num_control_points_y - 1, 3)
+        P[i, 1:num_control_points_y] = th.lu_solve(Rv, NTNv_LU, NTNv_pivots)
+    return P, knots_x, knots_y
 
 
 # def rational_basis_surface_flex(
