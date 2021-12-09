@@ -83,6 +83,8 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         spline_degree = nurbs_config.SPLINE_DEGREE
         self.degree_x = spline_degree
         self.degree_y = spline_degree
+        self.h_rows = self.rows
+        self.h_cols = self.cols
         self.rows = nurbs_config.ROWS
         self.cols = nurbs_config.COLS
 

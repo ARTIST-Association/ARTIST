@@ -79,6 +79,8 @@ def real_heliostat(real_configs, device):
             dtype=dtype,
             device=device,
         )
+        rows = None
+        cols = None
         params = None
         return (
             h,
@@ -86,6 +88,8 @@ def real_heliostat(real_configs, device):
             h_normal_vecs,  # TODO Implement get_ideal_vecs.
             width_height[1],
             width_height[0],
+            rows,
+            cols,
             params,
             # powers,
         )
@@ -168,7 +172,16 @@ def heliostat_by_function(heliostat_function_cfg, device):
     h_ideal_vecs = th.tile(th.tensor([0, 0, 1]), (h_normal_vecs.shape[0], 1)).to(device)
     
     params = None
-    return h, h_normal_vecs, h_ideal_vecs, cfg.HEIGHT, cfg.WIDTH, params
+    return (
+        h,
+        h_normal_vecs,
+        h_ideal_vecs,
+        cfg.HEIGHT,
+        cfg.WIDTH,
+        cfg.ROWS,
+        cfg.COLS,
+        params,
+    )
 
 
 def ideal_heliostat(ideal_configs, device):
@@ -202,7 +215,16 @@ def ideal_heliostat(ideal_configs, device):
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
-    return h, h_normal_vectors, h_normal_vectors, cfg.HEIGHT, cfg.WIDTH, params
+    return (
+        h,
+        h_normal_vectors,
+        h_normal_vectors,
+        cfg.HEIGHT,
+        cfg.WIDTH,
+        cfg.ROWS,
+        cfg.COLS,
+        params,
+    )
 
 
 def other_objects(config, device):  # Read Wavefront OBJ files.
@@ -329,8 +351,20 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     width += 2e-6
 
     # plotter.plot_heliostat(vertices, vertex_normals)
+    rows = None
+    cols = None
     params = {'name': name}
-    return vertices, vertex_normals, vertex_normals, height, width, params #TODO Implement Ideal Vecs
+    return (
+        vertices,
+        vertex_normals,
+        #TODO Implement Ideal Vecs
+        vertex_normals,
+        height,
+        width,
+        rows,
+        cols,
+        params,
+    )
 
 
 # Heliostat-specific functions
@@ -451,6 +485,8 @@ class Heliostat(AbstractHeliostat):
             heliostat_ideal_vecs,
             height,
             width,
+            rows,
+            cols,
             params,
         ) = heliostat_properties
         self._discrete_points = heliostat
@@ -459,6 +495,8 @@ class Heliostat(AbstractHeliostat):
         self.params = params
         self.height = height
         self.width = width
+        self.rows = rows
+        self.cols = cols
 
     @property
     def shape(self):
