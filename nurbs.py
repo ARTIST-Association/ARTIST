@@ -776,7 +776,7 @@ def check_nurbs_surface_constraints(
         f'last {next_degree_y} knots must be one'
     assert (knots_y.sort().values == knots_y).all(), \
         'knots must be ordered monotonically increasing in value'
-    assert evaluation_points_x.shape == evaluation_points_x.shape, \
+    assert evaluation_points_x.shape == evaluation_points_y.shape, \
         "evaluation point shapes don't match"
 
 
