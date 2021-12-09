@@ -257,21 +257,36 @@ def calc_closest_ctrl_points(control_points, world_points, k=4):
     return new_control_points.reshape(control_points.shape)
 
 
-def adjust_spline_ctrl_points(
+def initialize_spline_ctrl_points_perfectly(
         control_points,
         world_points,
+        num_points_x,
+        num_points_y,
+        degree_x,
+        degree_y,
+        knots_x,
+        knots_y,
         change_z_only,
-        k=4,
+        change_knots,
 ):
-    new_control_points = calc_closest_ctrl_points(
-        control_points,
+    new_control_points, new_knots_x, new_knots_y = nurbs.approximate_surface(
         world_points,
-        k,
+        num_points_x,
+        num_points_y,
+        degree_x,
+        degree_y,
+        control_points.shape[0],
+        control_points.shape[1],
+        knots_x if change_knots else None,
+        knots_y if change_knots else None,
     )
 
     if not change_z_only:
         control_points[:, :, :-1] = new_control_points[:, :, :-1]
     control_points[:, :, -1:] = new_control_points[:, :, -1:]
+    if change_knots:
+        knots_x[:] = new_knots_x
+        knots_y[:] = new_knots_y
 
 
 def initialize_spline_knots_(

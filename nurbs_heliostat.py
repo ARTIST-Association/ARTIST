@@ -134,32 +134,38 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         nurbs_config = self.nurbs_cfg
 
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
-            utils.initialize_spline_ctrl_points(
-                ctrl_points,
-                self.position_on_field,
-                self.rows,
-                self.cols,
-                self.width,
-                self.height,
-            )
+            width = self.width
+            height = self.height
         else:
             # Use perfect, unrotated heliostat at `position_on_field` as
             # starting point with width and height as initially guessed.
-            utils.initialize_spline_ctrl_points(
-                ctrl_points,
-                self.position_on_field,
-                self.rows,
-                self.cols,
-                nurbs_config.WIDTH,
-                nurbs_config.HEIGHT,
-            )
+            width = nurbs_config.WIDTH
+            height = nurbs_config.HEIGHT
 
+        utils.initialize_spline_ctrl_points(
+            ctrl_points,
+            self.position_on_field,
+            self.rows,
+            self.cols,
+            width,
+            height,
+        )
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
-            utils.adjust_spline_ctrl_points(
+            assert self.h_rows is not None and self.h_cols is not None, (
+                'can only initialize with knowledge on points with '
+                'matrix-like structure'
+            )
+            utils.initialize_spline_ctrl_points_perfectly(
                 ctrl_points,
                 self._discrete_points,
+                self.h_rows,
+                self.h_cols,
+                self.degree_x,
+                self.degree_y,
+                self.knots_x,
+                self.knots_y,
                 self.nurbs_cfg.OPTIMIZE_Z_ONLY,
-                k=4,
+                True,
             )
 
         self.ctrl_points_xy = ctrl_points[:, :, :-1]
