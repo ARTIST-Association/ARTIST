@@ -223,6 +223,8 @@ def plot_heliostat(h_rotated, ray_directions):
     ax = plt.axes(projection='3d')
 
 
+    if h_rotated.ndim == 3:
+        h_rotated = h_rotated.reshape(-1, h_rotated.shape[-1])
     # aimpoints = aimpoints-position_on_field
     # aimpoint = aimpoint-position_on_field
 
