@@ -10,6 +10,7 @@ import data
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
 from heliostat_models import Heliostat
+from multi_nurbs_heliostat import MultiNURBSHeliostat
 from nurbs_heliostat import NURBSHeliostat
 import plotter
 from render import Renderer
@@ -108,7 +109,15 @@ def build_heliostat(cfg, device):
         H = load_heliostat(cfg, device)
     else:
         if cfg.USE_NURBS:
-            H = NURBSHeliostat(cfg.H, cfg.NURBS, device)
+            if (
+                    cfg.NURBS.FACETS.POSITIONS is not None
+                    and len(cfg.NURBS.FACETS.POSITIONS) > 1
+            ):
+                nurbs_heliostat_cls = MultiNURBSHeliostat
+            else:
+                nurbs_heliostat_cls = NURBSHeliostat
+
+            H = nurbs_heliostat_cls(cfg.H, cfg.NURBS, device)
         else:
             H = Heliostat(cfg.H, device)
     return H

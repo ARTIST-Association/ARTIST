@@ -34,6 +34,21 @@ _C.NURBS.OPTIMIZE_Z_ONLY                = True
 _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
+# Multiple Facets
+_C.NURBS.FACETS = CN()
+# Relative to `cfg.H.POSITION_ON_FIELD`.
+_C.NURBS.FACETS.POSITIONS = [
+    [-1.0, 1.0, 0.0],
+    [1.0, 1.0, 0.0],
+    [-1.0, -1.0, 0.0],
+    [1.0, -1.0, 0.0],
+]
+# Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
+# width and height of the heliostat; see STRAL deflectometry data
+# format. If a single value, it will be used for all positions.
+_C.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
+_C.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
+
 # NURBS progressive growing
 _C.NURBS.GROWING                        = CN()
 # 0 turns progressive growing off
@@ -47,8 +62,8 @@ _C.NURBS.GROWING.STEP_SIZE_COLS         = 0
 
 _C.NURBS.WIDTH                        = 4 # in m
 _C.NURBS.HEIGHT                       = 4 # in m
-_C.NURBS.ROWS                         = 18
-_C.NURBS.COLS                         = 18
+_C.NURBS.ROWS                         = 5
+_C.NURBS.COLS                         = 5
 
 # H = Heliostat
 _C.H                                    = CN()
