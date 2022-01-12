@@ -62,6 +62,7 @@ _C.NURBS.GROWING.STEP_SIZE_COLS         = 0
 
 _C.NURBS.WIDTH                        = 4 # in m
 _C.NURBS.HEIGHT                       = 4 # in m
+# Both of these are used per facet!
 _C.NURBS.ROWS                         = 5
 _C.NURBS.COLS                         = 5
 
