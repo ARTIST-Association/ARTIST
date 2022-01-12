@@ -390,7 +390,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
             self, heliostat, sun_origin, receiver_center, align_points=False)
 
     def __len__(self):
-        return len(self._heliostat.eval_points)
+        return len(self._heliostat)
 
     def _calc_normals_and_surface(self):
         surface_points, normals = \
