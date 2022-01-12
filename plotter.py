@@ -85,6 +85,7 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
     
     fig.savefig(f"{logdir_mrad}//test_{epoch}")
+    plt.close(fig)
 
 
 def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, writer = None):
@@ -144,6 +145,7 @@ def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, w
     
     
     fig.savefig(f"{logdir_mm}//test_{epoch}")
+    plt.close(fig)
 
 
 def plot_diffs(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_vecs, epoch, logdir):
@@ -161,6 +163,7 @@ def plot_diffs(hel_origin, ideal_normal_vecs, target_normal_vecs, pred_normal_ve
                             linewidth=0, antialiased=False)
 
     fig.savefig(f"{logdir}//test_{epoch}")
+    plt.close(fig)
 
 
 
