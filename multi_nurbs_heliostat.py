@@ -1,3 +1,5 @@
+import functools
+
 import torch as th
 
 import heliostat_models
@@ -224,6 +226,63 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             i += offset
 
         return surface_points, normals
+
+    @property
+    @functools.lru_cache()
+    def dict_keys(self):
+        """All keys we assume in the dictionary returned by `_to_dict`."""
+        keys = super().dict_keys
+        keys = keys.union({
+            'nurbs_config',
+            'facets',
+        })
+        return keys
+
+    @functools.lru_cache()
+    def _fixed_dict(self):
+        data = super()._fixed_dict()
+        data['nurbs_config'] = self.nurbs_cfg
+        return data
+
+    def _to_dict(self):
+        data = super()._to_dict()
+        data['facets'] = [
+            facet._to_dict()
+            for facet in self.facets
+        ]
+        return data
+
+    @classmethod
+    def from_dict(
+            cls,
+            data,
+            device,
+            config=None,
+            nurbs_config=None,
+            # Wether to disregard what standard initialization did and
+            # load all data we have.
+            restore_strictly=False,
+            setup_params=True,
+    ):
+        if config is None:
+            config = data['config']
+        if nurbs_config is None:
+            nurbs_config = data['nurbs_config']
+
+        self = cls(config, nurbs_config, device, setup_params=False)
+        self._from_dict(data, restore_strictly)
+
+        if restore_strictly:
+            self.facets = self._create_facets(
+                config,
+                nurbs_config,
+                setup_params=setup_params,
+            )
+
+            for (facet, facet_data) in zip(self.facets, data['facets']):
+                facet._from_dict(facet_data, restore_strictly)
+
+        return self
 
 
 class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
