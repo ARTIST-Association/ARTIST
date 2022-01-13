@@ -48,6 +48,7 @@ _C.NURBS.FACETS.POSITIONS = [
 # format. If a single value, it will be used for all positions.
 _C.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
 _C.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
+_C.NURBS.FACETS.USE_CANTING = True
 
 # NURBS progressive growing
 _C.NURBS.GROWING                        = CN()

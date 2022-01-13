@@ -183,10 +183,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return AlignedMultiNURBSHeliostat(self, sun_origin, receiver_center)
 
     def _calc_normals_and_surface(self):
-        total_size = sum(
-            len(facet.eval_points)
-            for facet in self.facets
-        )
+        total_size = len(self)
         surface_points = th.empty((total_size, 3), device=self.device)
         normals = th.empty((total_size, 3), device=self.device)
 
@@ -209,21 +206,32 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             'can only align multi-NURBS heliostat'
         AlignedHeliostat.__init__(
             self, heliostat, sun_origin, receiver_center, align_points=False)
+        if self._heliostat.nurbs_cfg.FACETS.USE_CANTING:
+            self.facets = [
+                facet.align(sun_origin, receiver_center)
+                for facet in self._heliostat.facets
+            ]
+            self.device = self._heliostat.device
 
     def _calc_normals_and_surface(self):
-        surface_points, normals = \
-            MultiNURBSHeliostat._calc_normals_and_surface(self._heliostat)
+        if self._heliostat.nurbs_cfg.FACETS.USE_CANTING:
+            hel_rotated, normal_vectors_rotated = \
+                MultiNURBSHeliostat._calc_normals_and_surface(self)
+            hel_rotated = hel_rotated + self._heliostat.position_on_field
+        else:
+            surface_points, normals = \
+                MultiNURBSHeliostat._calc_normals_and_surface(self._heliostat)
 
-        hel_rotated = heliostat_models.rotate(
-            surface_points, self.alignment, clockwise=True)
-        # Place in field
-        hel_rotated = hel_rotated + self._heliostat.position_on_field
+            hel_rotated = heliostat_models.rotate(
+                surface_points, self.alignment, clockwise=True)
+            # Place in field
+            hel_rotated = hel_rotated + self._heliostat.position_on_field
 
-        normal_vectors_rotated = heliostat_models.rotate(
-            normals, self.alignment, clockwise=True)
-        normal_vectors_rotated = (
-            normal_vectors_rotated
-            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        )
+            normal_vectors_rotated = heliostat_models.rotate(
+                normals, self.alignment, clockwise=True)
+            normal_vectors_rotated = (
+                normal_vectors_rotated
+                / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+            )
 
         return hel_rotated, normal_vectors_rotated
