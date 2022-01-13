@@ -168,8 +168,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 True,
             )
 
-        self.ctrl_points_xy = ctrl_points[:, :, :-1]
-        self.ctrl_points_z = ctrl_points[:, :, -1:]
+        self.set_ctrl_points(ctrl_points)
 
     def initialize_eval_points(self):
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
@@ -224,7 +223,15 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     @ctrl_points.setter
     def ctrl_points(self):
-        raise AttributeError('ctrl_points is not a writable attribute')
+        raise AttributeError(
+            'ctrl_points is not a writable attribute; '
+            'use `set_ctrl_points` instead'
+        )
+
+    def set_ctrl_points(self, ctrl_points):
+        with th.no_grad():
+            self.ctrl_points_xy = ctrl_points[:, :, :-1]
+            self.ctrl_points_z = ctrl_points[:, :, -1:]
 
     def _invert_world_points(self):
         return utils.initialize_spline_eval_points_perfectly(
@@ -366,8 +373,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.degree_y = data['degree_y']
         ctrl_points = data['control_points']
         ctrl_points.requires_grad_(False)
-        self.ctrl_points_xy = ctrl_points[:, :, :-1]
-        self.ctrl_points_z = ctrl_points[:, :, -1:]
+        self.set_ctrl_points(ctrl_points)
         self.ctrl_weights = data['control_point_weights']
         self.knots_x = data['knots_x']
         self.knots_y = data['knots_y']
