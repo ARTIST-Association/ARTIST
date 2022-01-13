@@ -57,11 +57,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet._normals = self._normals[indices]
         facet._normals_ideal = self._normals_ideal[indices]
 
-        height = (th.linalg.norm(span_y) * 2).item()
-        width = (th.linalg.norm(span_x) * 2).item()
-        added_dims = height + width
-        height_ratio = height / added_dims
-        width_ratio = width / added_dims
+        added_dims = facet.height + facet.width
+        height_ratio = facet.height / added_dims
+        width_ratio = facet.width / added_dims
 
         # FIXME Not perfectly accurate.
         # Only way to really do this is by comparing values for
@@ -77,40 +75,39 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 width_ratio,
             )))
 
-    def _create_facet(
-            self,
-            position,
-            span_x,
-            span_y,
-            heliostat_config,
-            nurbs_config,
-            setup_params,
-    ):
+    @staticmethod
+    def _facet_heliostat_config(heliostat_config, position):
+        heliostat_config = heliostat_config.clone()
+        heliostat_config.defrost()
+        heliostat_config.POSITION_ON_FIELD = position.tolist()
+        return heliostat_config
+
+    @staticmethod
+    def _facet_nurbs_config(nurbs_config, span_x, span_y):
         height = (th.linalg.norm(span_y) * 2).item()
         width = (th.linalg.norm(span_x) * 2).item()
 
-        heliostat_config = heliostat_config.clone()
-        heliostat_config.defrost()
-        orig_nurbs_config = nurbs_config
         nurbs_config = nurbs_config.clone()
         nurbs_config.defrost()
 
-        heliostat_config.POSITION_ON_FIELD = position.tolist()
         nurbs_config.HEIGHT = height
         nurbs_config.WIDTH = width
 
         nurbs_config.SET_UP_WITH_KNOWLEDGE = False
         nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
+        return nurbs_config
 
-        facet = NURBSHeliostat(
-            heliostat_config,
+    def _adjust_facet(
+            self,
+            facet,
+            position,
+            span_x,
+            span_y,
+            orig_nurbs_config,
             nurbs_config,
-            self.device,
-            setup_params=False,
-        )
-
-        facet.height = height
-        facet.width = width
+    ):
+        facet.height = nurbs_config.HEIGHT
+        facet.width = nurbs_config.WIDTH
         # TODO initialize NURBS correctly
         # facet.position_on_field = self.position_on_field + position
         self._set_facet_points(facet, position, span_x, span_y)
@@ -124,6 +121,35 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         facet.initialize_control_points(facet.ctrl_points)
         facet.initialize_eval_points()
+
+    def _create_facet(
+            self,
+            position,
+            span_x,
+            span_y,
+            heliostat_config,
+            nurbs_config,
+            setup_params,
+    ):
+        orig_nurbs_config = nurbs_config
+        heliostat_config = self._facet_heliostat_config(
+            heliostat_config, position)
+        nurbs_config = self._facet_nurbs_config(nurbs_config, span_x, span_y)
+
+        facet = NURBSHeliostat(
+            heliostat_config,
+            nurbs_config,
+            self.device,
+            setup_params=False,
+        )
+        self._adjust_facet(
+            facet,
+            position,
+            span_x,
+            span_y,
+            orig_nurbs_config,
+            nurbs_config,
+        )
         if setup_params:
             facet.setup_params()
         return facet
