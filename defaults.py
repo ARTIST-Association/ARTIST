@@ -103,7 +103,9 @@ _C.H.NURBS = CN()
 _C.H.NURBS.MAX_ABS_NOISE = 0.01
 
 _C.H.NURBS.SPLINE_DEGREE = 3
-# Width and height given by `_C.H.IDEAL`
+# Width, height, rows and cols (discretization dimensions) given by
+# `_C.H.IDEAL`.
+# These are again the NURBS rows/cols of the control point matrix.
 _C.H.NURBS.ROWS = 4
 _C.H.NURBS.COLS = 4
 
