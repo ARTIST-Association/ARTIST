@@ -74,7 +74,7 @@ _C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
 
 
 
-_C.H.SHAPE                              = "Function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other
+_C.H.SHAPE                              = "Function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
 
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.NORMAL_VECS                  = [0, 0, 1]
