@@ -5,6 +5,7 @@ import os
 
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
+from yacs.config import CfgNode
 
 import data
 from defaults import get_cfg_defaults, load_config_file
@@ -102,6 +103,54 @@ def load_optimizer_state(opt, cp_path, device):
         return
     cp = th.load(cp_path, map_location=device)
     opt.load_state_dict(cp['opt'])
+
+
+def build_target_heliostat(cfg, device):
+    if cfg.H.SHAPE.lower() == 'nurbs':
+        cfg = cfg.clone()
+        cfg.defrost()
+        cfg.H.SHAPE = 'Ideal'
+        cfg.freeze()
+
+        nurbs_cfg = cfg.NURBS.clone()
+        nurbs_cfg.defrost()
+
+        # We need this to get correct shapes.
+        nurbs_cfg.SET_UP_WITH_KNOWLEDGE = True
+        # Deactivate good-for-training options.
+        nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE = False
+        nurbs_cfg.RECALCULATE_EVAL_POINTS = False
+        nurbs_cfg.GROWING.INTERVAL = 0
+
+        # Overwrite all attributes specified via `cfg.H.NURBS`.
+        node_stack = [(nurbs_cfg, cfg.H.NURBS)]
+        while node_stack:
+            node, h_node = node_stack.pop()
+
+            for attr in node.keys():
+                if not hasattr(h_node, attr):
+                    continue
+
+                if isinstance(getattr(node, attr), CfgNode):
+                    node_stack.append((
+                        getattr(node, attr),
+                        getattr(h_node, attr),
+                    ))
+                else:
+                    setattr(node, attr, getattr(h_node, attr))
+
+        nurbs_cfg.freeze()
+        H = MultiNURBSHeliostat(cfg.H, nurbs_cfg, device)
+
+        for facet in H.facets:
+            facet.set_ctrl_points(
+                facet.ctrl_points
+                + th.rand_like(facet.ctrl_points)
+                * cfg.H.NURBS.MAX_ABS_NOISE
+            )
+    else:
+        H = Heliostat(cfg.H, device)
+    return H
 
 
 def build_heliostat(cfg, device):
@@ -456,7 +505,7 @@ def main(config_file_name=None):
         f"{cfg.AC.RECEIVER.RESOLUTION_Y}"
     )
     print("=============================")
-    H_target = Heliostat(cfg.H, device)
+    H_target = build_target_heliostat(cfg, device)
     # plotter.plot_normal_vectors(
     #     H_target._discrete_points_orig, H_target._normals_orig)
     ENV = Environment(cfg.AC, device)

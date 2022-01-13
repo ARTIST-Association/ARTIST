@@ -99,6 +99,25 @@ _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
+_C.H.NURBS = CN()
+_C.H.NURBS.MAX_ABS_NOISE = 0.01
+
+_C.H.NURBS.SPLINE_DEGREE = 3
+# Width and height given by `_C.H.IDEAL`
+_C.H.NURBS.ROWS = 4
+_C.H.NURBS.COLS = 4
+
+_C.H.NURBS.FACETS = CN()
+_C.H.NURBS.FACETS.POSITIONS = [
+    [-1.0, 1.0, 0.0],
+    [1.0, 1.0, 0.0],
+    [-1.0, -1.0, 0.0],
+    [1.0, -1.0, 0.0],
+]
+_C.H.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
+_C.H.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
+_C.H.NURBS.FACETS.USE_CANTING = True
+
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()
 _C.H.OTHER.FILENAME                     = 'tinker.obj'

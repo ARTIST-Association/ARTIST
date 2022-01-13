@@ -468,7 +468,7 @@ class Heliostat(AbstractHeliostat):
 
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
-        if shape == "ideal":
+        if shape == "ideal" or shape == "nurbs":
             heliostat_properties = ideal_heliostat(cfg.IDEAL, self.device)
         elif shape == "real":
             heliostat_properties = real_heliostat(
