@@ -6,8 +6,8 @@ setup(
     version='0.0.1',
     install_requires=[
         'matplotlib',
-        'mpl_toolkits',
         'numpy',
+        'tensorboard',
         'torch',
         'yacs',
     ],
