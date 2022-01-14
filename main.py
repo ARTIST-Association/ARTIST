@@ -2,7 +2,7 @@ import collections
 import copy
 from datetime import datetime
 import os
-
+import matplotlib.pyplot as plt
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
@@ -506,8 +506,10 @@ def main(config_file_name=None):
     )
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
-    # plotter.plot_normal_vectors(
-    #     H_target._discrete_points_orig, H_target._normals_orig)
+    
+    plotter.plot_normal_vectors(
+        H_target.discrete_points, H_target._normals)
+    
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
         cfg.AC.SUN.ORIGIN,
@@ -516,7 +518,8 @@ def main(config_file_name=None):
         logdir_files,
         writer,
     )
-
+    # plt.imshow(targets.cpu().detach().squeeze())
+    
     test_targets, test_sun_origins = data.generate_test_dataset(
         cfg.TEST,
         H_target,
@@ -524,16 +527,30 @@ def main(config_file_name=None):
         None,
         writer,
     )
-
+    # plotter.test_surfaces(H_target)
+    # exit()
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
     H = build_heliostat(cfg, device)
+    # plotter.test_surfaces(H)
+    # plotter.plot_normal_vectors(
+    # H._discrete_points, H._normals)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
-
+    targets, sun_origins = data.generate_dataset(
+    cfg.AC.SUN.ORIGIN,
+    H,
+    ENV,
+    logdir_files,
+    writer,
+    )
+    plotter.plot_normal_vectors(
+        H.discrete_points, H._normals)
+    # plotter.test_surfaces(H)
+    plt.imshow(targets.cpu().detach().squeeze())
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
 

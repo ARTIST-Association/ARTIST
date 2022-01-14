@@ -18,6 +18,25 @@ def colorbar(mappable):
     plt.sca(last_axes)
     return cbar
 
+
+def test_surfaces(H):
+    
+    points_on_hel = H.discrete_points.detach().cpu().numpy()
+    ideal_vecs = H._normals_ideal.detach().cpu().numpy()
+    normal_vecs = H.normals.detach().cpu().numpy()
+    
+    
+    fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(ncols=7, figsize=(49,7))
+    im1 = ax1.scatter(points_on_hel[:,0],points_on_hel[:,1], c=points_on_hel[:,2])
+    im2 = ax2.scatter(points_on_hel[:,0],points_on_hel[:,1], c=ideal_vecs[:,0])
+    im3 = ax3.scatter(points_on_hel[:,0],points_on_hel[:,1], c=ideal_vecs[:,1])
+    im4 = ax4.scatter(points_on_hel[:,0],points_on_hel[:,1], c=ideal_vecs[:,2])
+    im5 = ax5.scatter(points_on_hel[:,0],points_on_hel[:,1], c=normal_vecs[:,0])
+    im6 = ax6.scatter(points_on_hel[:,0],points_on_hel[:,1], c=normal_vecs[:,1])
+    im7 = ax7.scatter(points_on_hel[:,0],points_on_hel[:,1], c=normal_vecs[:,2])
+    plt.show()
+    exit()
+
 def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces, writer = None):
     logdir_mrad = os.path.join(logdir_surfaces, "mrad")
     os.makedirs(logdir_surfaces, exist_ok=True)
@@ -187,10 +206,11 @@ def plot_normal_vectors(points_on_hel, normal_vectors):
     ax = plt.axes(projection='3d')
     ax.set_xlim3d(-4, 4)
     ax.set_ylim3d(-4, 4)
-    ax.set_zlim3d(0, 2)
+    ax.set_zlim3d(0.03, 0.06)
     to = points_on_hel.detach().cpu()
     tv = normal_vectors.detach().cpu()
-    ax.quiver(to[:,0], to[:,1], to[:,2], tv[:,0], tv[:,1], tv[:,2], length=0.1, normalize=False, color="b")
+    # plt.scatter(tv[:,0], tv[:,1], tv[:,2])
+    ax.quiver(to[:,0], to[:,1], to[:,2], tv[:,0], tv[:,1], tv[:,2], length=0.01, normalize=False, color="b")
     plt.show()
     exit()
 

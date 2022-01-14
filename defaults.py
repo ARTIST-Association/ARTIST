@@ -37,17 +37,36 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 # Multiple Facets
 _C.NURBS.FACETS = CN()
 # Relative to `cfg.H.POSITION_ON_FIELD`.
+# _C.NURBS.FACETS.POSITIONS = [
+#     [-1.0, 1.0, 0.0],
+#     [1.0, 1.0, 0.0],
+#     [-1.0, -1.0, 0.0],
+#     [1.0, -1.0, 0.0],
+# ]
+# # Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
+# # width and height of the heliostat; see STRAL deflectometry data
+# # format. If a single value, it will be used for all positions.
+# _C.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
+# _C.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
 _C.NURBS.FACETS.POSITIONS = [
-    [-1.0, 1.0, 0.0],
-    [1.0, 1.0, 0.0],
-    [-1.0, -1.0, 0.0],
-    [1.0, -1.0, 0.0],
+    [-0.8075000047683716, 0.6424999833106995, 0.040198374539613724],
+    [0.8075000047683716, 0.6424999833106995, 0.040198374539613724],
+    [-0.8075000047683716, -0.6424999833106995, 0.040198374539613724],
+    [0.8075000047683716, -0.6424999833106995, 0.040198374539613724],
 ]
-# Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
-# width and height of the heliostat; see STRAL deflectometry data
-# format. If a single value, it will be used for all positions.
-_C.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
-_C.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
+_C.NURBS.FACETS.SPANS_X = [
+    [0.8024845123291016, 0.0, -0.004984567407518625],
+    [0.8024845123291016, 0.0, 0.004984567407518625],
+    [0.8024845123291016, 0.0, -0.004984567407518625],
+    [0.8024845123291016, 0.0, 0.004984567407518625]
+    ]
+
+_C.NURBS.FACETS.SPANS_Y = [
+    [1.9569215510273352e-05, 0.6374922394752502, 0.0031505227088928223],
+    [-1.9569215510273352e-05, 0.6374922394752502, 0.0031505227088928223],
+    [-1.9569215510273352e-05, 0.6374922394752502, -0.0031505227088928223],
+    [1.9569215510273352e-05, 0.6374922394752502, -0.0031505227088928223]
+    ]
 _C.NURBS.FACETS.USE_CANTING = True
 
 # NURBS progressive growing
@@ -74,7 +93,7 @@ _C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
 
 
 
-_C.H.SHAPE                              = "Function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
+_C.H.SHAPE                              = "real"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
 
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.NORMAL_VECS                  = [0, 0, 1]
@@ -89,12 +108,12 @@ _C.H.FUNCTION.HEIGHT                    = 4 # in m
 _C.H.FUNCTION.ROWS                      = 64
 _C.H.FUNCTION.COLS                      = 64
 _C.H.FUNCTION.NAME                      = "sin"
-_C.H.FUNCTION.FREQUENCY                 = 4
-_C.H.FUNCTION.REDUCTION_FACTOR          = 500
+_C.H.FUNCTION.FREQUENCY                 = 2
+_C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
 _C.H.DEFLECT_DATA                       = CN()
-_C.H.DEFLECT_DATA.FILENAME              = "Helio_AA33_Rim0_STRAL-Input.binp"
-_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 2025
+_C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
+_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 2000
 _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
@@ -116,9 +135,33 @@ _C.H.NURBS.FACETS.POSITIONS = [
     [-1.0, -1.0, 0.0],
     [1.0, -1.0, 0.0],
 ]
+
+# _C.NURBS.FACETS.POSITIONS = [
+#     [-0.8075000047683716, 0.6424999833106995, 0.040198374539613724],
+#     [0.8075000047683716, 0.6424999833106995, 0.040198374539613724],
+#     [-0.8075000047683716, -0.6424999833106995, 0.040198374539613724],
+#     [0.8075000047683716, -0.6424999833106995, 0.040198374539613724],
+# ]
+# # Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
+# # width and height of the heliostat; see STRAL deflectometry data
+# # format. If a single value, it will be used for all positions.
+# _C.NURBS.FACETS.SPANS_X = [
+#     [0.8024845123291016, 0.0, -0.004984567407518625],
+#     [0.8024845123291016, 0.0, 0.004984567407518625],
+#     [0.8024845123291016, 0.0, -0.004984567407518625],
+#     [0.8024845123291016, 0.0, 0.004984567407518625]
+#     ]
+
+# _C.NURBS.FACETS.SPANS_Y = [
+#     [1.9569215510273352e-05, 0.6374922394752502, 0.0031505227088928223],
+#     [-1.9569215510273352e-05, 0.6374922394752502, 0.0031505227088928223],
+#     [-1.9569215510273352e-05, 0.6374922394752502, -0.0031505227088928223],
+#     [1.9569215510273352e-05, 0.6374922394752502, -0.0031505227088928223]
+#     ]
+
 _C.H.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
 _C.H.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
-_C.H.NURBS.FACETS.USE_CANTING = True
+_C.H.NURBS.FACETS.USE_CANTING = False
 
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()

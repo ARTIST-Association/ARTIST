@@ -3,7 +3,7 @@ import functools
 import struct
 
 import torch as th
-
+import numpy as np
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
 
@@ -31,6 +31,7 @@ def real_heliostat(real_configs, device):
 
     positions = []
     directions = []
+    ideal_normal_vecs=[]
     # powers = []
     with open(cfg.FILENAME, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
@@ -46,6 +47,7 @@ def real_heliostat(real_configs, device):
 
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
+        
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
             facetHeader_data = struct.Struct(
@@ -55,8 +57,11 @@ def real_heliostat(real_configs, device):
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
             # facet_pos = facetHeader_data[1:4]
-            # facet_vec_x = facetHeader_data[4:7]
-            # facet_vec_y = facetHeader_data[7:10]
+            facet_vec_x = np.array(facetHeader_data[4:7])
+            facet_vec_y = np.array(facetHeader_data[7:10])
+            facet_vec_z = np.cross(facet_vec_x, facet_vec_y).tolist()
+            # print("X", facet_vec_x)
+            # print("Y", facet_vec_y)
             n_rays = facetHeader_data[10]
 
             for r in range(n_rays):
@@ -67,10 +72,16 @@ def real_heliostat(real_configs, device):
 
                 positions.append([ray_data[0], ray_data[1], ray_data[2]])
                 directions.append([ray_data[3], ray_data[4], ray_data[5]])
+                ideal_normal_vecs.append(facet_vec_z)
                 # powers.append(ray_data[6])
 
         h_normal_vecs = th.tensor(
             directions[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
+            dtype=dtype,
+            device=device,
+        )
+        h_ideal_vecs = th.tensor(
+            ideal_normal_vecs[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
             dtype=dtype,
             device=device,
         )
@@ -79,13 +90,14 @@ def real_heliostat(real_configs, device):
             dtype=dtype,
             device=device,
         )
+        # print(h_ideal_vecs)
         rows = None
         cols = None
         params = None
         return (
             h,
             h_normal_vecs,
-            h_normal_vecs,  # TODO Implement get_ideal_vecs.
+            h_ideal_vecs,
             width_height[1],
             width_height[0],
             rows,
