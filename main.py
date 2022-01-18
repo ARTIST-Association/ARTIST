@@ -140,7 +140,12 @@ def build_target_heliostat(cfg, device):
                     setattr(node, attr, getattr(h_node, attr))
 
         nurbs_cfg.freeze()
-        H = MultiNURBSHeliostat(cfg.H, nurbs_cfg, device)
+        H = MultiNURBSHeliostat(
+            cfg.H,
+            nurbs_cfg,
+            device,
+            receiver_center=cfg.AC.RECEIVER.CENTER,
+        )
 
         for facet in H.facets:
             facet.set_ctrl_points(
@@ -163,10 +168,12 @@ def build_heliostat(cfg, device):
                     and len(cfg.NURBS.FACETS.POSITIONS) > 1
             ):
                 nurbs_heliostat_cls = MultiNURBSHeliostat
+                kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
             else:
                 nurbs_heliostat_cls = NURBSHeliostat
+                kwargs = {}
 
-            H = nurbs_heliostat_cls(cfg.H, cfg.NURBS, device)
+            H = nurbs_heliostat_cls(cfg.H, cfg.NURBS, device, **kwargs)
         else:
             H = Heliostat(cfg.H, device)
     return H

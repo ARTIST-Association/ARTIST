@@ -31,6 +31,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             device,
             setup_params=True,
+            receiver_center=None,
     ):
         super().__init__(heliostat_config, device, setup_params=False)
         self.nurbs_cfg = nurbs_config
@@ -38,8 +39,62 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
 
+        if (
+                self.nurbs_cfg.FACETS.CANTING.ENABLED
+                and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
+            assert receiver_center is not None, (
+                'must have receiver center to cant heliostat '
+                'toward when not using active canting'
+            )
+            self._receiver_center = th.tensor(
+                receiver_center,
+                dtype=self.position_on_field.dtype,
+                device=device,
+            )
+        else:
+            self._receiver_center = None
+
         self.facets = self._create_facets(
             heliostat_config, nurbs_config, setup_params=setup_params)
+
+    def _apply_canting(
+            self,
+            position_on_field,
+            discrete_points,
+            normals,
+            normals_ideal,
+    ):
+        up_dir = th.tensor([0, 0, 1], dtype=position_on_field.dtype)
+        focus_point = th.linalg.norm(
+            self._receiver_center - self.position_on_field
+        ).sqrt()
+
+        alignment = th.stack(heliostat_models.heliostat_coord_system(
+            position_on_field,
+            up_dir,
+            up_dir * focus_point,
+        ))
+
+        hel_rotated = heliostat_models.rotate(
+            discrete_points, alignment, clockwise=True)
+        hel_rotated_in_field = hel_rotated + self.position_on_field
+
+        normals_rotated = heliostat_models.rotate(
+            normals, alignment, clockwise=True)
+        normals_rotated = (
+            normals_rotated
+            / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
+        )
+
+        normals_ideal_rotated = heliostat_models.rotate(
+            normals_ideal, alignment, clockwise=True)
+        normals_ideal_rotated = (
+            normals_ideal_rotated
+            / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
+        )
+
+        return hel_rotated_in_field, normals_rotated, normals_ideal_rotated
 
     def _set_facet_points(self, facet, position, span_x, span_y):
         from_xyz = position - span_y - span_x
@@ -51,13 +106,31 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             to_xyz[:-1],
         )
 
-        facet._discrete_points = (
-            self._discrete_points[indices]
-            - self.position_on_field
-        )
+        facet_discrete_points = self._discrete_points[indices]
+        facet_normals = self._normals[indices]
+        facet_normals_ideal = self._normals_ideal[indices]
+
+        if (
+                self.nurbs_cfg.FACETS.CANTING.ENABLED
+                and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
+            (
+                facet_discrete_points,
+                facet_normals,
+                facet_normals_ideal,
+            ) = self._apply_canting(
+                position,
+                facet_discrete_points,
+                facet_normals,
+                facet_normals_ideal,
+            )
+
+        facet_discrete_points = facet_discrete_points - self.position_on_field
+
+        facet._discrete_points = facet_discrete_points
         facet._orig_world_points = facet._discrete_points.clone()
-        facet._normals = self._normals[indices]
-        facet._normals_ideal = self._normals_ideal[indices]
+        facet._normals = facet_normals
+        facet._normals_ideal = facet_normals_ideal
 
         added_dims = facet.height + facet.width
         height_ratio = facet.height / added_dims
@@ -235,6 +308,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         keys = keys.union({
             'nurbs_config',
             'facets',
+
+            'receiver_center',
         })
         return keys
 
@@ -242,6 +317,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _fixed_dict(self):
         data = super()._fixed_dict()
         data['nurbs_config'] = self.nurbs_cfg
+        data['receiver_center'] = self._receiver_center
         return data
 
     def _to_dict(self):
@@ -259,6 +335,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device,
             config=None,
             nurbs_config=None,
+            receiver_center=None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly=False,
@@ -268,8 +345,16 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
+        if receiver_center is None:
+            receiver_center = data['receiver_center']
 
-        self = cls(config, nurbs_config, device, setup_params=False)
+        self = cls(
+            config,
+            nurbs_config,
+            device,
+            receiver_center=receiver_center,
+            setup_params=False,
+        )
         self._from_dict(data, restore_strictly)
 
         if restore_strictly:
@@ -284,6 +369,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         return self
 
+    def _from_dict(self, data, restore_strictly):
+        super()._from_dict(data, restore_strictly)
+
+        if restore_strictly:
+            self._receiver_center = data['receiver_center']
+
 
 class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
     def __init__(self, heliostat, sun_origin, receiver_center):
@@ -291,7 +382,11 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             'can only align multi-NURBS heliostat'
         AlignedHeliostat.__init__(
             self, heliostat, sun_origin, receiver_center, align_points=False)
-        if self._heliostat.nurbs_cfg.FACETS.USE_CANTING:
+
+        if (
+                self._heliostat.nurbs_cfg.FACETS.CANTING.ENABLED
+                and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
             self.facets = [
                 facet.align(sun_origin, receiver_center)
                 for facet in self._heliostat.facets
@@ -299,7 +394,10 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             self.device = self._heliostat.device
 
     def _calc_normals_and_surface(self):
-        if self._heliostat.nurbs_cfg.FACETS.USE_CANTING:
+        if (
+                self._heliostat.nurbs_cfg.FACETS.CANTING.ENABLED
+                and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat._calc_normals_and_surface(self)
             hel_rotated = hel_rotated + self._heliostat.position_on_field
