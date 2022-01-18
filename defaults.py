@@ -165,9 +165,8 @@ _C.H.NURBS.FACETS.POSITIONS = [
 _C.H.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
 _C.H.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
 _C.H.NURBS.FACETS.CANTING = CN()
+# Always non-active canting.
 _C.H.NURBS.FACETS.CANTING.ENABLED = False
-# Whether to use active canting.
-_C.H.NURBS.FACETS.CANTING.ACTIVE = False
 
 _C.H.REAL                               = CN()
 _C.H.OTHER                              = CN()
