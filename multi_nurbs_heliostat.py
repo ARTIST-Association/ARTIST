@@ -72,7 +72,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
         focus_point = th.linalg.norm(
             self._receiver_center - self.position_on_field
-        ).sqrt()
+        )
 
         alignment = th.stack(heliostat_models.heliostat_coord_system(
             position_on_field,
