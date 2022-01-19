@@ -221,7 +221,7 @@ def ideal_heliostat(ideal_configs, device):
     ).reshape(len(h_x), -1)
 
     normal_vector_direction = th.tensor(
-        [0, 0, 1],
+        ideal_configs.NORMAL_VECS,
         dtype=th.get_default_dtype(),
         device=device,
     )

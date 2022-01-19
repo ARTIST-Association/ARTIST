@@ -65,15 +65,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             normals,
             normals_ideal,
     ):
-        up_dir = th.tensor([0, 0, 1], dtype=position_on_field.dtype)
+        h_normal = th.tensor(
+            self.cfg.IDEAL.NORMAL_VECS,
+            dtype=position_on_field.dtype,
+            device=self.device,
+        )
         focus_point = th.linalg.norm(
             self._receiver_center - self.position_on_field
         ).sqrt()
 
         alignment = th.stack(heliostat_models.heliostat_coord_system(
             position_on_field,
-            up_dir,
-            up_dir * focus_point,
+            h_normal,
+            h_normal * focus_point,
         ))
 
         hel_rotated = heliostat_models.rotate(
