@@ -43,9 +43,9 @@ _C.NURBS.FACETS = CN()
 #     [-1.0, -1.0, 0.0],
 #     [1.0, -1.0, 0.0],
 # ]
-# # Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
-# # width and height of the heliostat; see STRAL deflectometry data
-# # format. If a single value, it will be used for all positions.
+# Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
+# width and height of the heliostat; see STRAL deflectometry data
+# format. If a single value, it will be used for all positions.
 # _C.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
 # _C.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
 _C.NURBS.FACETS.POSITIONS = [
