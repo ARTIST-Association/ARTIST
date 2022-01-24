@@ -287,7 +287,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def align(self, sun_origin, receiver_center):
         return AlignedMultiNURBSHeliostat(self, sun_origin, receiver_center)
 
-    def _calc_normals_and_surface(self):
+    def _calc_normals_and_surface(self, reposition=True):
         total_size = len(self)
         surface_points = th.empty((total_size, 3), device=self.device)
         normals = th.empty((total_size, 3), device=self.device)
@@ -298,11 +298,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 facet.discrete_points_and_normals()
             offset = len(curr_surface_points)
 
+            if reposition:
+                curr_surface_points = \
+                    curr_surface_points + facet.position_on_field
             surface_points[i:i + offset] = curr_surface_points
             normals[i:i + offset] = curr_normals
             i += offset
 
         return surface_points, normals
+
+    def discrete_points_and_normals(self, reposition=True):
+        discrete_points, normals = self._calc_normals_and_surface(
+            reposition=reposition)
+        return discrete_points, normals
 
     @property
     @functools.lru_cache()
@@ -403,7 +411,8 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \
-                MultiNURBSHeliostat.discrete_points_and_normals(self)
+                MultiNURBSHeliostat.discrete_points_and_normals(
+                    self, reposition=False)
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             surface_points, normals = \
