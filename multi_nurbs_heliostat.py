@@ -110,7 +110,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             to_xyz[:-1],
         )
 
-        facet_discrete_points = self._discrete_points[indices]
+        facet_discrete_points = self._discrete_points[indices] - position
         facet_normals = self._normals[indices]
         facet_normals_ideal = self._normals_ideal[indices]
 
@@ -128,8 +128,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 facet_normals,
                 facet_normals_ideal,
             )
-
-        facet_discrete_points = facet_discrete_points - position
 
         facet._discrete_points = facet_discrete_points
         facet._orig_world_points = facet._discrete_points.clone()
