@@ -529,10 +529,9 @@ def main(config_file_name=None):
     )
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
-    
-    plotter.plot_normal_vectors(
-        H_target.discrete_points, H_target._normals)
-    
+
+    plotter.plot_normal_vectors(H_target.discrete_points, H_target._normals)
+
     ENV = Environment(cfg.AC, device)
     targets, sun_origins = data.generate_dataset(
         cfg.AC.SUN.ORIGIN,
@@ -542,7 +541,7 @@ def main(config_file_name=None):
         writer,
     )
     # plt.imshow(targets.cpu().detach().squeeze())
-    
+
     test_targets, test_sun_origins = data.generate_test_dataset(
         cfg.TEST,
         H_target,
@@ -570,8 +569,7 @@ def main(config_file_name=None):
         logdir_files,
         writer,
     )
-    plotter.plot_normal_vectors(
-        H.discrete_points, H._normals)
+    plotter.plot_normal_vectors(H.discrete_points, H._normals)
     # plotter.test_surfaces(H)
     plt.imshow(targets.cpu().detach().squeeze())
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
