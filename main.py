@@ -564,11 +564,11 @@ def main(config_file_name=None):
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
     targets, sun_origins = data.generate_dataset(
-    cfg.AC.SUN.ORIGIN,
-    H,
-    ENV,
-    logdir_files,
-    writer,
+        cfg.AC.SUN.ORIGIN,
+        H,
+        ENV,
+        logdir_files,
+        writer,
     )
     plotter.plot_normal_vectors(
         H.discrete_points, H._normals)
