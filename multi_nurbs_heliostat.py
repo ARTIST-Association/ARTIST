@@ -9,6 +9,7 @@ from nurbs_heliostat import (
     AlignedNURBSHeliostat,
     NURBSHeliostat,
 )
+from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 
 def _with_outer_list(values):
@@ -58,6 +59,23 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.facets = self._create_facets(
             heliostat_config, nurbs_config, setup_params=setup_params)
 
+    @staticmethod
+    def rotate_xy(h, hel_coordsystem, clockwise: bool):
+        r = rot_from_matrix(hel_coordsystem)
+        euler = rot_as_euler(r, 'xyx', degrees=True)
+        ele_degrees = 270-euler[2]
+
+        ele_radians = th.deg2rad(ele_degrees)
+        ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
+        ele_vector = ele_radians * ele_axis
+        if not clockwise:
+            ele_vector = -ele_vector
+        ele = rot_from_rotvec(ele_vector)
+
+        # darray with all heliostats (#heliostats, 3 coords)
+        h_rotated = rot_apply(ele, h.unsqueeze(-1))
+        return h_rotated.squeeze(-1)
+
     def _apply_canting(
             self,
             position_on_field,
@@ -80,25 +98,23 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             h_normal * focus_point,
         ))
 
-        hel_rotated = heliostat_models.rotate(
+        hel_rotated = self.rotate_xy(
             discrete_points, alignment, clockwise=True)
-        hel_rotated_in_field = hel_rotated + self.position_on_field
 
-        normals_rotated = heliostat_models.rotate(
-            normals, alignment, clockwise=True)
+        normals_rotated = self.rotate_xy(normals, alignment, clockwise=True)
         normals_rotated = (
             normals_rotated
             / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
         )
 
-        normals_ideal_rotated = heliostat_models.rotate(
+        normals_ideal_rotated = self.rotate_xy(
             normals_ideal, alignment, clockwise=True)
         normals_ideal_rotated = (
             normals_ideal_rotated
             / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
         )
 
-        return hel_rotated_in_field, normals_rotated, normals_ideal_rotated
+        return hel_rotated, normals_rotated, normals_ideal_rotated
 
     def _set_facet_points(self, facet, position, span_x, span_y):
         from_xyz = position - span_y - span_x
