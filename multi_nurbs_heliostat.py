@@ -403,11 +403,12 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \
-                MultiNURBSHeliostat._calc_normals_and_surface(self)
+                MultiNURBSHeliostat.discrete_points_and_normals(self)
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             surface_points, normals = \
-                MultiNURBSHeliostat._calc_normals_and_surface(self._heliostat)
+                MultiNURBSHeliostat.discrete_points_and_normals(
+                    self._heliostat)
 
             hel_rotated = heliostat_models.rotate(
                 surface_points, self.alignment, clockwise=True)
