@@ -129,7 +129,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 facet_normals_ideal,
             )
 
-        facet_discrete_points = facet_discrete_points - self.position_on_field
+        facet_discrete_points = facet_discrete_points - position
 
         facet._discrete_points = facet_discrete_points
         facet._orig_world_points = facet._discrete_points.clone()
