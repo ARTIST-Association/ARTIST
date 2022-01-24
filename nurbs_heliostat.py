@@ -144,7 +144,10 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         utils.initialize_spline_ctrl_points(
             ctrl_points,
-            self.position_on_field,
+            # We are only moved to `position_on_field` upon alignment,
+            # so initialize at the origin where the heliostat's discrete
+            # points are as well.
+            th.zeros_like(self.position_on_field),
             self.rows,
             self.cols,
             width,
