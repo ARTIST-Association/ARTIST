@@ -620,7 +620,11 @@ class AlignedHeliostat(AbstractHeliostat):
 
         # TODO Max: fix for other aimpoints
         # TODO Evtl auf H.Discrete Points umstellen
-        from_sun = self._heliostat.position_on_field - sun_origin
+        position = self._heliostat.position_on_field
+        position_norm = th.linalg.norm(position)
+        if position_norm != 0:
+            position /= position_norm
+        from_sun = position - sun_origin
         from_sun /= th.linalg.norm(from_sun)
         self.from_sun = from_sun.unsqueeze(0)
 
