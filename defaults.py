@@ -188,7 +188,7 @@ _C.AC.RECEIVER.RESOLUTION_X             = 128
 _C.AC.RECEIVER.RESOLUTION_Y             = 128
 
 _C.AC.SUN                               = CN()
-_C.AC.SUN.ORIGIN                        = [
+_C.AC.SUN.DIRECTION                     = [
                                             # [-1, 0, 0],
                                            [-0.43719268,  0.7004466,   0.564125  ],
                                             ]

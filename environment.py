@@ -53,13 +53,13 @@ class Environment(object):
         self.receiver_resolution_x = self.cfg.RECEIVER.RESOLUTION_X
         self.receiver_resolution_y = self.cfg.RECEIVER.RESOLUTION_Y
 
-        sun_origin = self.cfg.SUN.ORIGIN
-        if isinstance(sun_origin[0], list):
-            sun_origin = sun_origin[0]
-        sun_origin = th.tensor(
-            sun_origin,
+        sun_direction = self.cfg.SUN.DIRECTION
+        if isinstance(sun_direction[0], list):
+            sun_direction = sun_direction[0]
+        sun_direction = th.tensor(
+            sun_direction,
             dtype=dtype,
             device=device,
         )
-        self.sun_origin = sun_origin / th.linalg.norm(sun_origin)
+        self.sun_direction = sun_direction / th.linalg.norm(sun_direction)
         self.sun = Sun_Distribution(self.cfg.SUN, device)

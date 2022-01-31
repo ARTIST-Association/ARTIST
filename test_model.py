@@ -184,7 +184,7 @@ def main():
         target.receiver_normal.tolist(),
         # TODO Missing `receiver_up_dir`
 
-        'AC.SUN.ORIGIN',
+        'AC.SUN.DIRECTION',
         target.sun.tolist(),
         'AC.SUN.GENERATE_N_RAYS',
         target.num_rays,
@@ -233,15 +233,15 @@ def main():
         sun /= th.linalg.norm(sun)
 
         target_cfg.merge_from_list([
-            'AC.SUN.ORIGIN',
+            'AC.SUN.DIRECTION',
             sun.tolist(),
         ])
 
         env = Environment(target_cfg.AC, device)
         target_heliostat_aligned = target_heliostat.align(
-            env.sun_origin, env.receiver_center)
+            env.sun_direction, env.receiver_center)
         heliostat_aligned = heliostat.align(
-            env.sun_origin, env.receiver_center)
+            env.sun_direction, env.receiver_center)
 
         target_renderer = Renderer(target_heliostat_aligned, env)
         renderer = Renderer(heliostat_aligned, env)

@@ -357,8 +357,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             for param in facet.get_params()
         ]
 
-    def align(self, sun_origin, receiver_center):
-        return AlignedMultiNURBSHeliostat(self, sun_origin, receiver_center)
+    def align(self, sun_direction, receiver_center):
+        return AlignedMultiNURBSHeliostat(self, sun_direction, receiver_center)
 
     def _calc_normals_and_surface(self, reposition=True):
         total_size = len(self)
@@ -462,18 +462,18 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
 
 class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
-    def __init__(self, heliostat, sun_origin, receiver_center):
+    def __init__(self, heliostat, sun_direction, receiver_center):
         assert isinstance(heliostat, MultiNURBSHeliostat), \
             'can only align multi-NURBS heliostat'
         AlignedHeliostat.__init__(
-            self, heliostat, sun_origin, receiver_center, align_points=False)
+            self, heliostat, sun_direction, receiver_center, align_points=False)
 
         if (
                 self._heliostat.nurbs_cfg.FACETS.CANTING.ENABLED
                 and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
             self.facets = [
-                facet.align(sun_origin, receiver_center)
+                facet.align(sun_direction, receiver_center)
                 for facet in self._heliostat.facets
             ]
             self.device = self._heliostat.device

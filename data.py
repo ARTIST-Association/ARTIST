@@ -9,8 +9,8 @@ import utils
 def create_target(
         H,
         ENV,
-        sun_origin,
-        sun_origin_normed,
+        sun_direction,
+        sun_direction_normed,
         save_path=None,
 ):
     device = H.device
@@ -32,13 +32,13 @@ def create_target(
             ENV.receiver_plane_normal,
             None,  # TODO
 
-            sun_origin,
+            sun_direction,
             ENV.sun.num_rays,
             ENV.sun.mean,
             ENV.sun.cov,
         )
 
-    H_aligned = H.align(sun_origin_normed, ENV.receiver_center)
+    H_aligned = H.align(sun_direction_normed, ENV.receiver_center)
     R = Renderer(H_aligned, ENV)
     if save_path:
         if R.redraw_random_variables:
@@ -70,35 +70,35 @@ def create_target(
 
 
 @th.no_grad()
-def generate_dataset(sun_origins, H, ENV, save_dir, writer=None):
+def generate_dataset(sun_directions, H, ENV, save_dir, writer=None):
     if save_dir:
         save_path = os.path.join(save_dir, 'target.pt')
     else:
         save_path = None
 
     device = H.device
-    if not isinstance(sun_origins[0], list):
-        sun_origins = [sun_origins]
-    sun_origins = th.tensor(
-        sun_origins, dtype=th.get_default_dtype(), device=device)
-    sun_origins_normed = \
-        sun_origins / th.linalg.norm(sun_origins, dim=1).unsqueeze(-1)
+    if not isinstance(sun_directions[0], list):
+        sun_directions = [sun_directions]
+    sun_directions = th.tensor(
+        sun_directions, dtype=th.get_default_dtype(), device=device)
+    sun_directions_normed = \
+        sun_directions / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
 
     targets = None
-    for (i, (sun_origin, sun_origin_normed)) in enumerate(zip(
-            sun_origins,
-            sun_origins_normed,
+    for (i, (sun_direction, sun_direction_normed)) in enumerate(zip(
+            sun_directions,
+            sun_directions_normed,
     )):
         target_bitmap = create_target(
             H,
             ENV,
-            sun_origin,
-            sun_origin_normed,
+            sun_direction,
+            sun_direction_normed,
             save_path=save_path,
         )
         if targets is None:
             targets = th.empty(
-                (len(sun_origins),) + target_bitmap.shape,
+                (len(sun_directions),) + target_bitmap.shape,
                 dtype=th.get_default_dtype(),
                 device=device,
             )
@@ -113,15 +113,15 @@ def generate_dataset(sun_origins, H, ENV, save_dir, writer=None):
         # ===================
         # print(H._normals_orig.shape)
         # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
-    return targets, sun_origins_normed
+    return targets, sun_directions_normed
 
 
 @th.no_grad()
 def generate_test_dataset(cfg, H, ENV, save_dir, writer=None):
-    sun_origins = th.randn(cfg.NUM_SAMPLES, 3)
-    sun_origins[:-1] -= 0.5
+    sun_directions = th.randn(cfg.NUM_SAMPLES, 3)
+    sun_directions[:-1] -= 0.5
     return generate_dataset(
-        sun_origins.tolist(),
+        sun_directions.tolist(),
         H,
         ENV,
         save_dir,

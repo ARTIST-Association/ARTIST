@@ -27,7 +27,7 @@ TrainObjects = collections.namedtuple(
         'ENV',
         'R',
         'targets',
-        'sun_origins',
+        'sun_directions',
         'loss_func',
         'epoch',
         'writer',
@@ -336,7 +336,7 @@ def calc_batch_loss(train_objects, return_extras=True):
         ENV,
         R,
         targets,
-        sun_origins,
+        sun_directions,
         loss_func,
         epoch,
         writer,
@@ -350,11 +350,11 @@ def calc_batch_loss(train_objects, return_extras=True):
 
     # Batch Loop
     # ==========
-    for (i, (target, sun_origin)) in enumerate(zip(
+    for (i, (target, sun_direction)) in enumerate(zip(
             targets,
-            sun_origins,
+            sun_directions,
     )):
-        H_aligned = H.align(sun_origin, ENV.receiver_center)
+        H_aligned = H.align(sun_direction, ENV.receiver_center)
         pred_bitmap, (ray_directions, indices, _, _) = R.render(
             H_aligned, return_extras=True)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
@@ -438,18 +438,18 @@ def test_batch(
         env,
         renderer,
         targets,
-        sun_origins,
+        sun_directions,
         loss_func,
         epoch,
         writer=None,
 ):
     loss = 0
-    for (i, (target, sun_origin)) in enumerate(zip(
+    for (i, (target, sun_direction)) in enumerate(zip(
             targets,
-            sun_origins,
+            sun_directions,
     )):
         heliostat_aligned = heliostat.align(
-            sun_origin, env.receiver_center)
+            sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
 
         loss += loss_func(pred_bitmap, target) / len(targets)
@@ -521,7 +521,7 @@ def main(config_file_name=None):
     # ==============
     # Create Heliostat Object and Load Model defined in config file
     print("Create dataset using:")
-    print(f"Sun position(s): {cfg.AC.SUN.ORIGIN}")
+    print(f"Sun position(s): {cfg.AC.SUN.DIRECTION}")
     print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
     print(
         f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
@@ -533,8 +533,8 @@ def main(config_file_name=None):
     plotter.plot_normal_vectors(H_target.discrete_points, H_target.normals)
 
     ENV = Environment(cfg.AC, device)
-    targets, sun_origins = data.generate_dataset(
-        cfg.AC.SUN.ORIGIN,
+    targets, sun_directions = data.generate_dataset(
+        cfg.AC.SUN.DIRECTION,
         H_target,
         ENV,
         logdir_files,
@@ -542,7 +542,7 @@ def main(config_file_name=None):
     )
     # plt.imshow(targets.cpu().detach().squeeze())
 
-    test_targets, test_sun_origins = data.generate_test_dataset(
+    test_targets, test_sun_directions = data.generate_test_dataset(
         cfg.TEST,
         H_target,
         ENV,
@@ -562,8 +562,8 @@ def main(config_file_name=None):
     # H._discrete_points, H._normals)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
-    targets, sun_origins = data.generate_dataset(
-        cfg.AC.SUN.ORIGIN,
+    targets, sun_directions = data.generate_dataset(
+        cfg.AC.SUN.DIRECTION,
         H,
         ENV,
         logdir_files,
@@ -594,7 +594,7 @@ def main(config_file_name=None):
             ENV,
             R,
             targets,
-            sun_origins,
+            sun_directions,
             loss_func,
             epoch,
             writer,
@@ -617,7 +617,7 @@ def main(config_file_name=None):
                 ENV,
                 R,
                 test_targets,
-                test_sun_origins,
+                test_sun_directions,
                 test_loss_func,
                 epoch,
                 writer,

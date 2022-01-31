@@ -112,8 +112,8 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def __len__(self):
         return len(self.eval_points)
 
-    def align(self, sun_origin, receiver_center):
-        return AlignedNURBSHeliostat(self, sun_origin, receiver_center)
+    def align(self, sun_direction, receiver_center):
+        return AlignedNURBSHeliostat(self, sun_direction, receiver_center)
 
     def get_ray_directions(self, normals=None):
         raise NotImplementedError('Heliostat has to be aligned first')
@@ -392,11 +392,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
 
 class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
-    def __init__(self, heliostat, sun_origin, receiver_center):
+    def __init__(self, heliostat, sun_direction, receiver_center):
         assert isinstance(heliostat, NURBSHeliostat), \
             'can only align NURBS heliostat'
         AlignedHeliostat.__init__(
-            self, heliostat, sun_origin, receiver_center, align_points=False)
+            self, heliostat, sun_direction, receiver_center, align_points=False)
 
     def __len__(self):
         return len(self._heliostat)

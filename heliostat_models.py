@@ -514,8 +514,8 @@ class Heliostat(AbstractHeliostat):
     def shape(self):
         return (self.rows, self.cols)
 
-    def align(self, sun_origin, receiver_center):
-        return AlignedHeliostat(self, sun_origin, receiver_center)
+    def align(self, sun_direction, receiver_center):
+        return AlignedHeliostat(self, sun_direction, receiver_center)
 
     def setup_params(self):
         self._normals.requires_grad_(True)
@@ -607,7 +607,7 @@ class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
             heliostat,
-            sun_origin,
+            sun_direction,
             receiver_center,
             align_points=True,
     ):
@@ -624,13 +624,13 @@ class AlignedHeliostat(AbstractHeliostat):
         position_norm = th.linalg.norm(position)
         if position_norm != 0:
             position /= position_norm
-        from_sun = position - sun_origin
+        from_sun = position - sun_direction
         from_sun /= th.linalg.norm(from_sun)
         self.from_sun = from_sun.unsqueeze(0)
 
         self.alignment = th.stack(heliostat_coord_system(
             self._heliostat.position_on_field,
-            sun_origin,
+            sun_direction,
             receiver_center,
         ))
 
