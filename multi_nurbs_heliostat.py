@@ -66,6 +66,20 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
 
     @staticmethod
+    def rot_x_mat(angle, dtype, device):
+        cos_angle = th.cos(angle)
+        sin_angle = th.sin(angle)
+        return th.tensor(
+            [
+                [1, 0, 0],
+                [0, cos_angle, -sin_angle],
+                [0, sin_angle, cos_angle],
+            ],
+            dtype=dtype,
+            device=device,
+        )
+
+    @staticmethod
     def rot_y_mat(angle, dtype, device):
         cos_angle = th.cos(angle)
         sin_angle = th.sin(angle)
@@ -121,25 +135,25 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 device=self.device,
             ),
         )
+        if target_normal[0] < 0:
+            target_y_angle = -target_y_angle
         rot_y = self.rot_y_mat(
             target_y_angle, dtype=dtype, device=self.device)
         rot_h_normal = rot_y @ h_normal
 
-        target_z_angle = self.angle(
+        target_x_angle = self.angle(
             rot_h_normal,
-            target_normal * th.tensor(
-                [1, 1, 0],
-                dtype=dtype,
-                device=self.device,
-            ),
+            target_normal,
         )
-        rot_z = self.rot_z_mat(
-            target_z_angle, dtype=dtype, device=self.device)
+        if target_normal[1] > 0:
+            target_x_angle = -target_x_angle
+        rot_x = self.rot_x_mat(
+            target_x_angle, dtype=dtype, device=self.device)
 
-        full_rot = rot_z @ rot_y
+        full_rot = rot_x @ rot_y
 
         def look_at_receiver(hel_points):
-            return hel_points @ full_rot
+            return th.matmul(full_rot, hel_points.T).T
 
         hel_rotated = look_at_receiver(discrete_points)
 
