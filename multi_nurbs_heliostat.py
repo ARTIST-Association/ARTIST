@@ -9,7 +9,6 @@ from nurbs_heliostat import (
     AlignedNURBSHeliostat,
     NURBSHeliostat,
 )
-from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 
 
 def _with_outer_list(values):
@@ -60,21 +59,39 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             heliostat_config, nurbs_config, setup_params=setup_params)
 
     @staticmethod
-    def rotate_xy(h, hel_coordsystem, clockwise: bool):
-        r = rot_from_matrix(hel_coordsystem)
-        euler = rot_as_euler(r, 'xyx', degrees=True)
-        ele_degrees = 270-euler[2]
+    def angle(a, b):
+        return th.acos(
+            th.dot(a, b)
+            / (th.linalg.norm(a) * th.linalg.norm(b))
+        )
 
-        ele_radians = th.deg2rad(ele_degrees)
-        ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
-        ele_vector = ele_radians * ele_axis
-        if not clockwise:
-            ele_vector = -ele_vector
-        ele = rot_from_rotvec(ele_vector)
+    @staticmethod
+    def rot_y_mat(angle, dtype, device):
+        cos_angle = th.cos(angle)
+        sin_angle = th.sin(angle)
+        return th.tensor(
+            [
+                [cos_angle, 0, sin_angle],
+                [0, 1, 0],
+                [-sin_angle, 0, cos_angle],
+            ],
+            dtype=dtype,
+            device=device,
+        )
 
-        # darray with all heliostats (#heliostats, 3 coords)
-        h_rotated = rot_apply(ele, h.unsqueeze(-1))
-        return h_rotated.squeeze(-1)
+    @staticmethod
+    def rot_z_mat(angle, dtype, device):
+        cos_angle = th.cos(angle)
+        sin_angle = th.sin(angle)
+        return th.tensor(
+            [
+                [cos_angle, -sin_angle, 0],
+                [sin_angle, cos_angle, 0],
+                [0, 0, 1],
+            ],
+            dtype=dtype,
+            device=device,
+        )
 
     def _apply_canting(
             self,
@@ -83,36 +100,64 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             normals,
             normals_ideal,
     ):
+        dtype = position_on_field.dtype
+
         h_normal = th.tensor(
             self.cfg.IDEAL.NORMAL_VECS,
-            dtype=position_on_field.dtype,
+            dtype=dtype,
             device=self.device,
         )
-        focus_point = th.linalg.norm(
-            self._receiver_center - self.position_on_field
-        )
+        hel_to_recv = self._receiver_center - self.position_on_field
+        focus_distance = th.linalg.norm(hel_to_recv)
+        focus_point = h_normal * focus_distance
+        target_normal = focus_point - position_on_field
+        target_normal /= th.linalg.norm(target_normal)
 
-        alignment = th.stack(heliostat_models.heliostat_coord_system(
-            position_on_field,
+        target_y_angle = self.angle(
             h_normal,
-            h_normal * focus_point,
-        ))
-
-        hel_rotated = self.rotate_xy(
-            discrete_points, alignment, clockwise=True)
-
-        normals_rotated = self.rotate_xy(normals, alignment, clockwise=True)
-        normals_rotated = (
-            normals_rotated
-            / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
+            target_normal * th.tensor(
+                [1, 0, 1],
+                dtype=dtype,
+                device=self.device,
+            ),
         )
+        rot_y = self.rot_y_mat(
+            target_y_angle, dtype=dtype, device=self.device)
+        rot_h_normal = rot_y @ h_normal
 
-        normals_ideal_rotated = self.rotate_xy(
-            normals_ideal, alignment, clockwise=True)
-        normals_ideal_rotated = (
-            normals_ideal_rotated
-            / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
+        target_z_angle = self.angle(
+            rot_h_normal,
+            target_normal * th.tensor(
+                [1, 1, 0],
+                dtype=dtype,
+                device=self.device,
+            ),
         )
+        rot_z = self.rot_z_mat(
+            target_z_angle, dtype=dtype, device=self.device)
+
+        full_rot = rot_z @ rot_y
+
+        def look_at_receiver(hel_points):
+            return hel_points @ full_rot
+
+        hel_rotated = look_at_receiver(discrete_points)
+
+        if normals is not None:
+            normals_rotated = look_at_receiver(normals)
+            normals_rotated = (
+                normals_rotated
+                / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
+            )
+
+            normals_ideal_rotated = look_at_receiver(normals_ideal)
+            normals_ideal_rotated = (
+                normals_ideal_rotated
+                / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
+            )
+        else:
+            normals_rotated = None
+            normals_ideal_rotated = None
 
         return hel_rotated, normals_rotated, normals_ideal_rotated
 
