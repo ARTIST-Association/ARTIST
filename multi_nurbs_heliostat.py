@@ -114,8 +114,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             position_on_field,
             discrete_points,
-            normals,
-            normals_ideal,
+            normals=None,
+            normals_ideal=None,
     ):
         dtype = position_on_field.dtype
 
@@ -160,22 +160,20 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         hel_rotated = look_at_receiver(discrete_points)
 
-        if normals is not None:
-            normals_rotated = look_at_receiver(normals)
-            normals_rotated = (
-                normals_rotated
-                / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
-            )
+        if normals is None:
+            return hel_rotated
 
-            normals_ideal_rotated = look_at_receiver(normals_ideal)
-            normals_ideal_rotated = (
-                normals_ideal_rotated
-                / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
-            )
-        else:
-            normals_rotated = None
-            normals_ideal_rotated = None
+        normals_rotated = look_at_receiver(normals)
+        normals_rotated = (
+            normals_rotated
+            / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
+        )
 
+        normals_ideal_rotated = look_at_receiver(normals_ideal)
+        normals_ideal_rotated = (
+            normals_ideal_rotated
+            / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
+        )
         return hel_rotated, normals_rotated, normals_ideal_rotated
 
     def _set_facet_points(self, facet, position, span_x, span_y):
