@@ -396,7 +396,12 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         assert isinstance(heliostat, NURBSHeliostat), \
             'can only align NURBS heliostat'
         AlignedHeliostat.__init__(
-            self, heliostat, sun_direction, receiver_center, align_points=False)
+            self,
+            heliostat,
+            sun_direction,
+            receiver_center,
+            align_points=False,
+        )
 
     def __len__(self):
         return len(self._heliostat)

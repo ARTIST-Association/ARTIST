@@ -469,7 +469,12 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         assert isinstance(heliostat, MultiNURBSHeliostat), \
             'can only align multi-NURBS heliostat'
         AlignedHeliostat.__init__(
-            self, heliostat, sun_direction, receiver_center, align_points=False)
+            self,
+            heliostat,
+            sun_direction,
+            receiver_center,
+            align_points=False,
+        )
 
         if (
                 self._heliostat.nurbs_cfg.FACETS.CANTING.ENABLED
