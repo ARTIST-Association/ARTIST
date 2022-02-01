@@ -58,6 +58,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.facets = self._create_facets(
             heliostat_config, nurbs_config, setup_params=setup_params)
 
+        self._normals_ideal = th.cat(
+            [facet._normals_ideal for facet in self.facets])
+
     @staticmethod
     def angle(a, b):
         return th.acos(
