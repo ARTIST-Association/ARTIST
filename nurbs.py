@@ -2249,11 +2249,19 @@ def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
     device = world_points.device
 
     if in_row_dir:
-        def wp(row, col):
-            return world_points[row * (num_other_points + 1) + col]
+        if world_points.ndim == 3:
+            def wp(row, col):
+                return world_points[row, col]
+        else:
+            def wp(row, col):
+                return world_points[row * (num_other_points + 1) + col]
     else:
-        def wp(row, col):
-            return world_points[row + col * (num_points + 1)]
+        if world_points.ndim == 3:
+            def wp(row, col):
+                return world_points[col, row]
+        else:
+            def wp(row, col):
+                return world_points[row + col * (num_points + 1)]
 
     num_nondegenerate = num_other_points + 1
     params = th.zeros(num_points, dtype=dtype, device=device)
@@ -2352,11 +2360,19 @@ def calc_R(
     device = world_points.device
 
     if in_row_dir:
-        def wp(row):
-            return world_points[row * (num_other_points + 1) + col]
+        if world_points.ndim == 3:
+            def wp(row):
+                return world_points[row, col]
+        else:
+            def wp(row):
+                return world_points[row * (num_other_points + 1) + col]
     else:
-        def wp(row):
-            return world_points[col, row]
+        if world_points.ndim == 3:
+            def wp(row):
+                return world_points[col, row]
+        else:
+            def wp(row):
+                return world_points[row + col * (num_points + 1)]
 
     selected_params = params[1:num_points]
     Rk = (
