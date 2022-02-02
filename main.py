@@ -2,6 +2,7 @@ import collections
 import copy
 from datetime import datetime
 import os
+
 import matplotlib.pyplot as plt
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
@@ -569,6 +570,7 @@ def main(config_file_name=None):
         logdir_files,
         writer,
     )
+
     plotter.plot_normal_vectors(H.discrete_points, H.normals)
     # plotter.test_surfaces(H)
     plt.imshow(targets.cpu().detach().squeeze())

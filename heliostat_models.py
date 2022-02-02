@@ -2,8 +2,9 @@ import copy
 import functools
 import struct
 
-import torch as th
 import numpy as np
+import torch as th
+
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
 
@@ -31,7 +32,7 @@ def real_heliostat(real_configs, device):
 
     positions = []
     directions = []
-    ideal_normal_vecs=[]
+    ideal_normal_vecs = []
     # powers = []
     with open(cfg.FILENAME, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
@@ -47,7 +48,7 @@ def real_heliostat(real_configs, device):
 
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
-        
+
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
             facetHeader_data = struct.Struct(
@@ -76,17 +77,17 @@ def real_heliostat(real_configs, device):
                 # powers.append(ray_data[6])
 
         h_normal_vecs = th.tensor(
-            directions[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
+            directions[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
             dtype=dtype,
             device=device,
         )
         h_ideal_vecs = th.tensor(
-            ideal_normal_vecs[0::int(len(directions)/cfg.TAKE_N_VECTORS)],
+            ideal_normal_vecs[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
             dtype=dtype,
             device=device,
         )
         h = th.tensor(
-            positions[0::int(len(positions)/cfg.TAKE_N_VECTORS)],
+            positions[0::int(len(positions) / cfg.TAKE_N_VECTORS)],
             dtype=dtype,
             device=device,
         )
