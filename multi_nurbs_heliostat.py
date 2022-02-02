@@ -273,6 +273,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet.nurbs_cfg.freeze()
 
         facet.initialize_control_points(facet.ctrl_points)
+        # If we don't fit the control points, we instead cant them.
+        if (
+                not facet.nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE
+                and self.nurbs_cfg.FACETS.CANTING.ENABLED
+                and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
+            facet.set_ctrl_points(
+                self._apply_canting(
+                    position,
+                    facet.ctrl_points.reshape(-1, facet.ctrl_points.shape[-1]),
+                ).reshape(facet.ctrl_points.shape),
+            )
+
         facet.initialize_eval_points()
 
     def _create_facet(
