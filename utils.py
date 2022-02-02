@@ -258,6 +258,84 @@ def calc_closest_ctrl_points(control_points, world_points, k=4):
     return new_control_points.reshape(control_points.shape)
 
 
+def _make_structured_points_from_corners(points, rows, cols):
+    x_vals = points[:, 0]
+    y_vals = points[:, 1]
+
+    x_min = x_vals.min()
+    x_max = x_vals.max()
+    y_min = y_vals.min()
+    y_max = y_vals.max()
+
+    x_vals = th.linspace(x_min, x_max, rows, device=x_vals.device)
+    y_vals = th.linspace(y_min, y_max, cols, device=y_vals.device)
+
+    structured_points = th.cartesian_prod(x_vals, y_vals)
+
+    distances = th.linalg.norm(
+        (
+            structured_points.unsqueeze(1)
+            - points[:, :-1].unsqueeze(0)
+        ),
+        dim=-1,
+    )
+    argmin_distances = distances.argmin(1)
+    z_vals = points[argmin_distances, -1]
+    structured_points = th.cat(
+        [structured_points, z_vals.unsqueeze(-1)], dim=-1)
+
+    return structured_points, rows, cols
+
+
+def _make_structured_points_from_unique(points, tolerance):
+    x_vals = points[:, 0]
+    x_vals = th.unique(x_vals, sorted=True)
+
+    prev_i = 0
+    keep_indices = [prev_i]
+    for (i, x) in enumerate(x_vals[1:]):
+        if not th.isclose(x, x_vals[prev_i], atol=tolerance):
+            prev_i = i
+            keep_indices.append(prev_i)
+    x_vals = x_vals[keep_indices]
+
+    y_vals = points[:, 0]
+    y_vals = th.unique(y_vals, sorted=True)
+
+    prev_i = 0
+    keep_indices = [prev_i]
+    for (i, y) in enumerate(y_vals[1:]):
+        if not th.isclose(y, y_vals[prev_i], atol=tolerance):
+            prev_i = i
+            keep_indices.append(prev_i)
+    y_vals = y_vals[keep_indices]
+
+    structured_points = th.cartesian_prod(x_vals, y_vals)
+
+    distances = th.linalg.norm(
+        (
+            structured_points.unsqueeze(1)
+            - points[:, :-1].unsqueeze(0)
+        ),
+        dim=-1,
+    )
+    argmin_distances = distances.argmin(1)
+    z_vals = points[argmin_distances, -1]
+    structured_points = th.cat(
+        [structured_points, z_vals.unsqueeze(-1)], dim=-1)
+
+    rows = len(x_vals)
+    cols = len(y_vals)
+    return structured_points, rows, cols
+
+
+def make_structured_points(points, rows=None, cols=None, tolerance=0.0075):
+    if rows is None or cols is None:
+        return _make_structured_points_from_unique(points, tolerance)
+    else:
+        return _make_structured_points_from_corners(points, rows, cols)
+
+
 def initialize_spline_ctrl_points_perfectly(
         control_points,
         world_points,
