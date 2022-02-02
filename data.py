@@ -70,7 +70,7 @@ def create_target(
 
 
 @th.no_grad()
-def generate_dataset(sun_directions, H, ENV, save_dir, writer=None):
+def generate_dataset(sun_directions, H, ENV, save_dir, writer=None, prefix=''):
     if save_dir:
         save_path = os.path.join(save_dir, 'target.pt')
     else:
@@ -105,7 +105,7 @@ def generate_dataset(sun_directions, H, ENV, save_dir, writer=None):
         targets[i] = target_bitmap
         if writer:
             writer.add_image(
-                f"target_{i}/originals",
+                f"{prefix}target_{i}/originals",
                 utils.colorize(target_bitmap),
             )
 
