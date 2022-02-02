@@ -2452,7 +2452,7 @@ def approximate_surface(
     for j in range(num_points_y + 1):
         tmp[0, j] = world_points[0 * (num_points_y + 1) + j]
         tmp[num_control_points_x, j] = \
-            world_points[num_control_points_x * (num_points_y + 1) + j]
+            world_points[num_points_x * (num_points_y + 1) + j]
         Ru = calc_R(
             world_points,
             j,
