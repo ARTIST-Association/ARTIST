@@ -228,8 +228,8 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 
 
 _C.TRAIN.OPTIMIZER                      = CN()
-_C.TRAIN.OPTIMIZER.NAME                 = "Adamax"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
-_C.TRAIN.OPTIMIZER.LR                   = 1e-6
+_C.TRAIN.OPTIMIZER.NAME                 = "Adam"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
+_C.TRAIN.OPTIMIZER.LR                   = 1e-4
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
 _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0
