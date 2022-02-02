@@ -217,7 +217,7 @@ def _build_optimizer(cfg_optimizer, params):
             weight_decay=cfg.WEIGHT_DECAY,
         )
     elif name == "adamw":
-        opt = th.optim.Adam(
+        opt = th.optim.AdamW(
             params,
             lr=cfg.LR,
             betas=(cfg.BETAS[0], cfg.BETAS[1]),
