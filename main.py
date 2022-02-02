@@ -563,13 +563,6 @@ def main(config_file_name=None):
     # H._discrete_points, H._normals)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
-    targets, sun_directions = data.generate_dataset(
-        cfg.AC.SUN.DIRECTION,
-        H,
-        ENV,
-        logdir_files,
-        writer,
-    )
 
     plotter.plot_normal_vectors(H.discrete_points, H.normals)
     # plotter.test_surfaces(H)
