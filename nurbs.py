@@ -2264,10 +2264,10 @@ def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
                 return world_points[row + col * (num_points + 1)]
 
     num_nondegenerate = num_other_points + 1
-    params = th.zeros(num_points, dtype=dtype, device=device)
+    params = th.zeros(num_points + 1, dtype=dtype, device=device)
     params[-1] = 1
     cds = th.empty(
-        num_points,
+        num_points + 1,
         dtype=dtype,
         device=device,
     )
@@ -2293,7 +2293,7 @@ def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
 
 
 def get_mesh_params(world_points, num_points_x, num_points_y):
-    assert len(world_points) == num_points_x * num_points_y
+    assert len(world_points) == (num_points_x + 1) * (num_points_y + 1)
     params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
     params_y = get_mesh_params_(
         world_points, num_points_y, num_points_x, False)
@@ -2303,7 +2303,7 @@ def get_mesh_params(world_points, num_points_x, num_points_y):
 def place_knots(params, num_control_points, degree, device):
     # m = num_points
     # n = num_control_points
-    num_points = len(params)
+    num_points = len(params) - 1
 
     knots = th.empty((num_control_points + degree + 2,), device=device)
     knots[:degree + 1] = 0
@@ -2322,7 +2322,7 @@ def place_knots(params, num_control_points, degree, device):
 def calc_basis_mat(params, num_control_points, degree, knots):
     # m = num_points
     # n = num_control_points
-    num_points = len(params)
+    num_points = len(params) - 1
 
     device = params.device
     selected_params = params[1:num_points]
@@ -2355,7 +2355,7 @@ def calc_R(
         knots,
         in_row_dir,
 ):
-    num_points = len(params)
+    num_points = len(params) - 1
 
     device = world_points.device
 
