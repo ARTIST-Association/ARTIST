@@ -154,15 +154,19 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             height,
         )
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
-            assert self.h_rows is not None and self.h_cols is not None, (
-                'can only initialize with knowledge on points with '
-                'matrix-like structure'
-            )
+            if self.h_rows is None or self.h_cols is None:
+                world_points, rows, cols = utils.make_structured_points(
+                    self._discrete_points, self.rows, self.cols)
+            else:
+                world_points = self._discrete_points
+                rows = self.h_rows
+                cols = self.h_cols
+
             utils.initialize_spline_ctrl_points_perfectly(
                 ctrl_points,
-                self._discrete_points,
-                self.h_rows,
-                self.h_cols,
+                world_points,
+                rows,
+                cols,
                 self.degree_x,
                 self.degree_y,
                 self.knots_x,
