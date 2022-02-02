@@ -244,7 +244,10 @@ def plot_raytracer(h_rotated, h_matrix, position_on_field, aimpoint,aimpoints, s
 def plot_heliostat(h_rotated, ray_directions):
     if not isinstance(h_rotated, np.ndarray):
         h_rotated = h_rotated.detach().cpu().numpy()
-    if not isinstance(ray_directions, np.ndarray):
+    if (
+            ray_directions is not None
+            and not isinstance(ray_directions, np.ndarray)
+    ):
         ray_directions = ray_directions.detach().cpu().numpy()
 
     fig = plt.figure()
