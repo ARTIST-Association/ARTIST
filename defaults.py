@@ -27,7 +27,7 @@ _C.NURBS                                = CN()
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
 # Whether to initialize the control points according to known
 # discretized values.
-_C.NURBS.INITIALIZE_WITH_KNOWLEDGE      = False
+_C.NURBS.INITIALIZE_WITH_KNOWLEDGE      = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
 _C.NURBS.FIX_SPLINE_KNOTS               = True
 _C.NURBS.OPTIMIZE_Z_ONLY                = True
@@ -68,7 +68,7 @@ _C.NURBS.FACETS.SPANS_Y = [
     [1.9569215510273352e-05, 0.6374922394752502, -0.0031505227088928223]
     ]
 _C.NURBS.FACETS.CANTING = CN()
-_C.NURBS.FACETS.CANTING.ENABLED = True
+_C.NURBS.FACETS.CANTING.ENABLED = False
 # Whether to use active canting.
 _C.NURBS.FACETS.CANTING.ACTIVE = False
 
