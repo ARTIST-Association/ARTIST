@@ -126,4 +126,5 @@ def generate_test_dataset(cfg, H, ENV, save_dir, writer=None):
         ENV,
         save_dir,
         writer,
+        prefix='test_'
     )
