@@ -155,8 +155,15 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
             if self.h_rows is None or self.h_cols is None:
+                # Higher edge factor creates more interpolated points
+                # per control point, improving approximation accuracy.
+                # This, of course, is slower and consumer more memory.
+                edge_factor = 5
                 world_points, rows, cols = utils.make_structured_points(
-                    self._discrete_points, self.rows, self.cols)
+                    self._discrete_points,
+                    self.rows * edge_factor,
+                    self.cols * edge_factor,
+                )
             else:
                 world_points = self._discrete_points
                 rows = self.h_rows
