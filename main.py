@@ -452,17 +452,18 @@ def test_batch(
         heliostat_aligned = heliostat.align(
             sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
+        loss += loss_func(pred_bitmap, target) / len(targets)
+
         if writer:
             writer.add_image(
                             f"test_target_{i}/prediction",
                             utils.colorize(pred_bitmap),
                             epoch,
                         )
-        loss += loss_func(pred_bitmap, target) / len(targets)
 
     if writer:
         writer.add_scalar("test/loss", loss.item(), epoch)
-        
+
     return loss
 
 
