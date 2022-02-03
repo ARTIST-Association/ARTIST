@@ -106,70 +106,81 @@ def load_optimizer_state(opt, cp_path, device):
     opt.load_state_dict(cp['opt'])
 
 
-def build_target_heliostat(cfg, device):
-    if cfg.H.SHAPE.lower() == 'nurbs':
-        mnh_cfg = cfg.clone()
-        mnh_cfg.defrost()
-        mnh_cfg.H.SHAPE = 'Ideal'
-        mnh_cfg.freeze()
+def _build_multi_nurbs_target(cfg, device):
+    mnh_cfg = cfg.clone()
+    mnh_cfg.defrost()
+    mnh_cfg.H.SHAPE = 'Ideal'
+    mnh_cfg.freeze()
 
-        nurbs_cfg = mnh_cfg.NURBS.clone()
-        nurbs_cfg.defrost()
+    nurbs_cfg = mnh_cfg.NURBS.clone()
+    nurbs_cfg.defrost()
 
-        # We need this to get correct shapes.
-        nurbs_cfg.SET_UP_WITH_KNOWLEDGE = True
-        # Deactivate good-for-training options.
-        nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE = False
-        nurbs_cfg.RECALCULATE_EVAL_POINTS = False
-        nurbs_cfg.GROWING.INTERVAL = 0
-        # Can't use active canting with standard heliostat model.
-        nurbs_cfg.FACETS.CANTING.ACTIVE = False
+    # We need this to get correct shapes.
+    nurbs_cfg.SET_UP_WITH_KNOWLEDGE = True
+    # Deactivate good-for-training options.
+    nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE = False
+    nurbs_cfg.RECALCULATE_EVAL_POINTS = False
+    nurbs_cfg.GROWING.INTERVAL = 0
+    # Can't use active canting with standard heliostat model.
+    nurbs_cfg.FACETS.CANTING.ACTIVE = False
 
-        # Overwrite all attributes specified via `mnh_cfg.H.NURBS`.
-        node_stack = [(nurbs_cfg, mnh_cfg.H.NURBS)]
-        while node_stack:
-            node, h_node = node_stack.pop()
+    # Overwrite all attributes specified via `mnh_cfg.H.NURBS`.
+    node_stack = [(nurbs_cfg, mnh_cfg.H.NURBS)]
+    while node_stack:
+        node, h_node = node_stack.pop()
 
-            for attr in node.keys():
-                if not hasattr(h_node, attr):
-                    continue
+        for attr in node.keys():
+            if not hasattr(h_node, attr):
+                continue
 
-                if isinstance(getattr(node, attr), CfgNode):
-                    node_stack.append((
-                        getattr(node, attr),
-                        getattr(h_node, attr),
-                    ))
-                else:
-                    setattr(node, attr, getattr(h_node, attr))
+            if isinstance(getattr(node, attr), CfgNode):
+                node_stack.append((
+                    getattr(node, attr),
+                    getattr(h_node, attr),
+                ))
+            else:
+                setattr(node, attr, getattr(h_node, attr))
 
-        nurbs_cfg.freeze()
-        MNH = MultiNURBSHeliostat(
-            mnh_cfg.H,
-            nurbs_cfg,
-            device,
-            receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
+    nurbs_cfg.freeze()
+    mnh = MultiNURBSHeliostat(
+        mnh_cfg.H,
+        nurbs_cfg,
+        device,
+        receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
+    )
+
+    for facet in mnh.facets:
+        facet.set_ctrl_points(
+            facet.ctrl_points
+            + th.rand_like(facet.ctrl_points)
+            * mnh_cfg.H.NURBS.MAX_ABS_NOISE
         )
 
-        for facet in MNH.facets:
-            facet.set_ctrl_points(
-                facet.ctrl_points
-                + th.rand_like(facet.ctrl_points)
-                * mnh_cfg.H.NURBS.MAX_ABS_NOISE
-            )
+    return mnh
 
-        H = Heliostat(cfg.H, device)
-        discrete_points, normals = MNH.discrete_points_and_normals()
-        H._discrete_points = discrete_points
-        H._normals = normals
-        H._normals_ideal = th.cat([
-            facet._normals_ideal
-            for facet in MNH.facets
-        ])
-        H.params = nurbs_cfg
-        H.height = MNH.height
-        H.width = MNH.width
-        H.rows = MNH.rows
-        H.cols = MNH.cols
+
+def _multi_nurbs_to_standard(cfg, mnh):
+    H = Heliostat(cfg.H, mnh.device)
+    discrete_points, normals = mnh.discrete_points_and_normals()
+    H._discrete_points = discrete_points
+    H._normals = normals
+    H._normals_ideal = th.cat([
+        facet._normals_ideal
+        for facet in mnh.facets
+    ])
+    H.params = mnh.nurbs_cfg
+    H.height = mnh.height
+    H.width = mnh.width
+    H.rows = mnh.rows
+    H.cols = mnh.cols
+
+    return H
+
+
+def build_target_heliostat(cfg, device):
+    if cfg.H.SHAPE.lower() == 'nurbs':
+        mnh = _build_multi_nurbs_target(cfg, device)
+        H = _multi_nurbs_to_standard(cfg, mnh)
     else:
         H = Heliostat(cfg.H, device)
     return H
@@ -452,17 +463,18 @@ def test_batch(
         heliostat_aligned = heliostat.align(
             sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
+        loss += loss_func(pred_bitmap, target) / len(targets)
+
         if writer:
             writer.add_image(
                             f"test_target_{i}/prediction",
                             utils.colorize(pred_bitmap),
                             epoch,
                         )
-        loss += loss_func(pred_bitmap, target) / len(targets)
 
     if writer:
         writer.add_scalar("test/loss", loss.item(), epoch)
-        
+
     return loss
 
 
