@@ -217,7 +217,7 @@ def _build_optimizer(cfg_optimizer, params):
             weight_decay=cfg.WEIGHT_DECAY,
         )
     elif name == "adamw":
-        opt = th.optim.Adam(
+        opt = th.optim.AdamW(
             params,
             lr=cfg.LR,
             betas=(cfg.BETAS[0], cfg.BETAS[1]),
@@ -547,7 +547,7 @@ def main(config_file_name=None):
         logdir_files,
         writer,
     )
-    # plt.imshow(targets.cpu().detach().squeeze())
+    # plt.imshow(targets[0].cpu().detach().squeeze())
 
     test_targets, test_sun_directions = data.generate_test_dataset(
         cfg.TEST,
@@ -573,6 +573,7 @@ def main(config_file_name=None):
     # plotter.plot_normal_vectors(H.discrete_points, H.normals)
     # plotter.test_surfaces(H)
     # plt.imshow(targets.cpu().detach().squeeze())
+
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
 
