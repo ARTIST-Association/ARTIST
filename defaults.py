@@ -8,7 +8,7 @@ _C.ID                                   = 'NotGiven'
 _C.EXPERIMENT_NAME                      = "NotGiven"
 _C.LOGDIR                               = 'Results'
 _C.SEED                                 = 0
-_C.USE_FLOAT64                          = False
+_C.USE_FLOAT64                          = True
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
@@ -30,7 +30,7 @@ _C.NURBS.SET_UP_WITH_KNOWLEDGE          = True
 _C.NURBS.INITIALIZE_WITH_KNOWLEDGE      = True
 _C.NURBS.FIX_SPLINE_CTRL_WEIGHTS        = True
 _C.NURBS.FIX_SPLINE_KNOTS               = True
-_C.NURBS.OPTIMIZE_Z_ONLY                = True
+_C.NURBS.OPTIMIZE_Z_ONLY                = False
 _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
@@ -116,7 +116,7 @@ _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
-_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 2000
+_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 8000
 _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
@@ -179,13 +179,13 @@ _C.H.OTHER.USE_WEIGHTED_AVG             = True
 _C.AC                                   = CN()
 _C.AC.RECEIVER                          = CN()
 # in m in global coordinates
-_C.AC.RECEIVER.CENTER                   = [-15, 0, 0]
+_C.AC.RECEIVER.CENTER                   = [-20, 0, 0]
 _C.AC.RECEIVER.PLANE_NORMAL             = [1, 0, 0] # NWU
 _C.AC.RECEIVER.PLANE_X                  = 5 # in m
 _C.AC.RECEIVER.PLANE_Y                  = 5 # in m
 # These X and Y are height and width respectively.
-_C.AC.RECEIVER.RESOLUTION_X             = 1024
-_C.AC.RECEIVER.RESOLUTION_Y             = 1024
+_C.AC.RECEIVER.RESOLUTION_X             = 512
+_C.AC.RECEIVER.RESOLUTION_Y             = 512
 
 _C.AC.SUN                               = CN()
 _C.AC.SUN.DIRECTION                     = [
@@ -196,7 +196,7 @@ _C.AC.SUN.DIRECTION                     = [
                                            # [-0.18145668,  -0.5467466,  0.124455  ],
                                            # [-0.57245668,  0.46466,  0.76455  ],
                                             ]
-_C.AC.SUN.GENERATE_N_RAYS               = 5000
+_C.AC.SUN.GENERATE_N_RAYS               = 1500
 _C.AC.SUN.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
 _C.AC.SUN.REDRAW_RANDOM_VARIABLES       = False
 
