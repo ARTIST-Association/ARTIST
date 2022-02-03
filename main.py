@@ -452,11 +452,17 @@ def test_batch(
         heliostat_aligned = heliostat.align(
             sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
-
+        if writer:
+            writer.add_image(
+                            f"test_target_{i}/prediction",
+                            utils.colorize(pred_bitmap),
+                            epoch,
+                        )
         loss += loss_func(pred_bitmap, target) / len(targets)
 
     if writer:
         writer.add_scalar("test/loss", loss.item(), epoch)
+        
     return loss
 
 
@@ -531,7 +537,7 @@ def main(config_file_name=None):
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
 
-    plotter.plot_normal_vectors(H_target.discrete_points, H_target.normals)
+    # plotter.plot_normal_vectors(H_target.discrete_points, H_target.normals)
 
     ENV = Environment(cfg.AC, device)
     targets, sun_directions = data.generate_dataset(
@@ -564,9 +570,9 @@ def main(config_file_name=None):
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    plotter.plot_normal_vectors(H.discrete_points, H.normals)
+    # plotter.plot_normal_vectors(H.discrete_points, H.normals)
     # plotter.test_surfaces(H)
-    plt.imshow(targets.cpu().detach().squeeze())
+    # plt.imshow(targets.cpu().detach().squeeze())
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
 

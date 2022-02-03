@@ -86,8 +86,8 @@ _C.NURBS.GROWING.STEP_SIZE_COLS         = 0
 _C.NURBS.WIDTH                        = 4 # in m
 _C.NURBS.HEIGHT                       = 4 # in m
 # Both of these are used per facet!
-_C.NURBS.ROWS                         = 5
-_C.NURBS.COLS                         = 5
+_C.NURBS.ROWS                         = 6
+_C.NURBS.COLS                         = 6
 
 # H = Heliostat
 _C.H                                    = CN()
@@ -128,8 +128,8 @@ _C.H.NURBS.SPLINE_DEGREE = 3
 # Width, height, rows and cols (discretization dimensions) given by
 # `_C.H.IDEAL`.
 # These are again the NURBS rows/cols of the control point matrix.
-_C.H.NURBS.ROWS = 4
-_C.H.NURBS.COLS = 4
+_C.H.NURBS.ROWS = 8
+_C.H.NURBS.COLS = 8
 
 _C.H.NURBS.FACETS = CN()
 _C.H.NURBS.FACETS.POSITIONS = [
@@ -179,20 +179,24 @@ _C.H.OTHER.USE_WEIGHTED_AVG             = True
 _C.AC                                   = CN()
 _C.AC.RECEIVER                          = CN()
 # in m in global coordinates
-_C.AC.RECEIVER.CENTER                   = [-25, 0, 50]
+_C.AC.RECEIVER.CENTER                   = [-15, 0, 0]
 _C.AC.RECEIVER.PLANE_NORMAL             = [1, 0, 0] # NWU
-_C.AC.RECEIVER.PLANE_X                  = 15 # in m
-_C.AC.RECEIVER.PLANE_Y                  = 15 # in m
+_C.AC.RECEIVER.PLANE_X                  = 5 # in m
+_C.AC.RECEIVER.PLANE_Y                  = 5 # in m
 # These X and Y are height and width respectively.
-_C.AC.RECEIVER.RESOLUTION_X             = 128
-_C.AC.RECEIVER.RESOLUTION_Y             = 128
+_C.AC.RECEIVER.RESOLUTION_X             = 1024
+_C.AC.RECEIVER.RESOLUTION_Y             = 1024
 
 _C.AC.SUN                               = CN()
 _C.AC.SUN.DIRECTION                     = [
                                             # [-1, 0, 0],
                                            [-0.43719268,  0.7004466,   0.564125  ],
+                                           # [0.234519268,  0.1234766,   0.556725  ],
+                                           # [-0.35899268, -0.6578466,   0.967125  ],
+                                           # [-0.18145668,  -0.5467466,  0.124455  ],
+                                           # [-0.57245668,  0.46466,  0.76455  ],
                                             ]
-_C.AC.SUN.GENERATE_N_RAYS               = 100
+_C.AC.SUN.GENERATE_N_RAYS               = 5000
 _C.AC.SUN.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
 _C.AC.SUN.REDRAW_RANDOM_VARIABLES       = False
 
@@ -229,10 +233,10 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 
 _C.TRAIN.OPTIMIZER                      = CN()
 _C.TRAIN.OPTIMIZER.NAME                 = "Adam"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
-_C.TRAIN.OPTIMIZER.LR                   = 1e-4
+_C.TRAIN.OPTIMIZER.LR                   = 5e-5
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
-_C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0
+_C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0.0
 
 _C.TRAIN.LOSS                           = CN()
 _C.TRAIN.LOSS.NAME                      = "L1"                                  #SWITCH FOR LOSS: L1, MSE

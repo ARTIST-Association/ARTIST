@@ -119,7 +119,8 @@ def generate_dataset(sun_directions, H, ENV, save_dir, writer=None, prefix=''):
 @th.no_grad()
 def generate_test_dataset(cfg, H, ENV, save_dir, writer=None):
     sun_directions = th.randn(cfg.NUM_SAMPLES, 3)
-    sun_directions[:-1] -= 0.5
+    # sun_directions[:-1] -= 0.5
+    sun_directions[:,2] = th.abs(sun_directions[:,2])
     return generate_dataset(
         sun_directions.tolist(),
         H,
