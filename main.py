@@ -247,7 +247,7 @@ def _build_optimizer(cfg_optimizer, params):
     return opt
 
 
-def _build_scheduler(cfg_scheduler, opt):
+def _build_scheduler(cfg_scheduler, opt, total_steps):
     name = cfg_scheduler.NAME.lower()
     if name == "reduceonplateu":
         cfg = cfg_scheduler.ROP
@@ -270,10 +270,10 @@ def _build_scheduler(cfg_scheduler, opt):
             mode=cfg.MODE,
         )
     elif name == "onecycle":
-        cfg = cfg.scheduler.ONE_CYCLE
+        cfg = cfg_scheduler.ONE_CYCLE
         sched = th.optim.lr_scheduler.OneCycleLR(
             opt,
-            total_steps=cfg.TOTAL_STEPS,
+            total_steps=total_steps,
             max_lr=cfg.MAX_LR,
             pct_start=cfg.PCT_START,
             div_factor=cfg.MAX_LR / cfg.START_LR,
@@ -291,14 +291,14 @@ def _get_opt_cp_path(cp_path):
     return os.path.expanduser(cp_path[:-3] + '_opt.pt')
 
 
-def build_optimizer_scheduler(cfg, params, device):
+def build_optimizer_scheduler(cfg, total_steps, params, device):
     opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
     # Load optimizer state.
     if cfg.LOAD_OPTIMIZER_STATE:
         opt_cp_path = _get_opt_cp_path(cfg.CP_PATH)
         load_optimizer_state(opt, opt_cp_path, device)
 
-    sched = _build_scheduler(cfg.TRAIN.SCHEDULER, opt)
+    sched = _build_scheduler(cfg.TRAIN.SCHEDULER, opt, total_steps)
     return opt, sched
 
 
@@ -586,10 +586,13 @@ def main(config_file_name=None):
     # plotter.test_surfaces(H)
     # plt.imshow(targets.cpu().detach().squeeze())
 
-    opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
+    epochs = cfg.TRAIN.EPOCHS
+    steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
+
+    opt, sched = build_optimizer_scheduler(
+        cfg, epochs * steps_per_epoch, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
 
-    epochs = cfg.TRAIN.EPOCHS
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
