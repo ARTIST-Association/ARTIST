@@ -420,6 +420,13 @@ def rotate(h, hel_coordsystem):
     return rotated_points,rotated_normals
 
 
+def rotate_multi_nurbs(h, hel_coordsystem):
+    # r = rot_from_matrix(hel_coordsystem)
+
+    align_heliostat_origin   =throt.Rotate(hel_coordsystem)
+    h_rotated = align_heliostat_origin.transform_points(h)
+    return h_rotated
+
 
 
 def heliostat_coord_system(Position, Sun, Aimpoint):

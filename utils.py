@@ -14,7 +14,7 @@ import torch as th
 import nurbs
 
 
-def vec_to_ae(vec, device):
+def vec_to_ae(vec, device=None):
     """
     converts ENU vector to azimuth, elevation
 
@@ -106,7 +106,7 @@ def colorize(image_tensor, colormap='jet'):
 
     """
     image_tensor = image_tensor.clone() / image_tensor.max()
-    prediction_image = image_tensor.detach().cpu().numpy()
+    prediction_image = image_tensor.squeeze().detach().cpu().numpy()
 
     color_map = cm.get_cmap('jet')
     mapped_image = th.tensor(color_map(prediction_image)).permute(2, 1, 0)
@@ -467,7 +467,8 @@ def initialize_spline_knots(
 
 def calc_ray_diffs(pred, target):
     # We could broadcast here but to avoid a warning, we tile manually.
-    return th.nn.functional.l1_loss(pred, target.tile(len(pred), 1, 1))
+    #TODO stimmt das so noch?
+    return th.nn.functional.l1_loss(pred, target)
 
 
 def calc_reflection_normals_(in_reflections, out_reflections):

@@ -376,6 +376,8 @@ def calc_batch_loss(train_objects, return_extras=True):
         H_aligned = H.align(sun_direction, ENV.receiver_center)
         pred_bitmap, (ray_directions, indices, _, _) = R.render(
             H_aligned, return_extras=True)
+        # pred_bitmap = pred_bitmap.unsqueeze(0)
+        # print(pred_bitmap.shape)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
 
         with th.no_grad():
@@ -679,7 +681,6 @@ def main(config_file_name=None):
             writer,
         )
         loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
-
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
@@ -711,6 +712,7 @@ def main(config_file_name=None):
                                                                  test_targets,
                                                                  test_bitmaps,
                                                                  naive_targets,
+                                                                 sun_directions,
                                                                  epoch,
                                                                  logdir_enhanced_test
                                                                   )
