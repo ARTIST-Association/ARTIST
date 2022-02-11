@@ -4,6 +4,7 @@ import struct
 
 import numpy as np
 import torch as th
+import pytorch3d.transforms as throt
 
 from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
@@ -383,37 +384,49 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 # Heliostat-specific functions
 # ============================
 
-def rotate(h, hel_coordsystem, clockwise: bool):
-    r = rot_from_matrix(hel_coordsystem)
-    euler = rot_as_euler(r, 'xyx', degrees=True)
-    ele_degrees = 270-euler[2]
+# def rotate(h, hel_coordsystem, clockwise: bool):
+#     r = rot_from_matrix(hel_coordsystem)
+#     euler = rot_as_euler(r, 'xyx', degrees=True)
+#     ele_degrees = 270-euler[2]
 
-    ele_radians = th.deg2rad(ele_degrees)
-    ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
-    ele_vector = ele_radians * ele_axis
-    if not clockwise:
-        ele_vector = -ele_vector
-    ele = rot_from_rotvec(ele_vector)
+#     ele_radians = th.deg2rad(ele_degrees)
+#     ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
+#     ele_vector = ele_radians * ele_axis
+#     if not clockwise:
+#         ele_vector = -ele_vector
+#     ele = rot_from_rotvec(ele_vector)
 
-    # TODO Max: re-add ax-offsets
-    azi_degrees = euler[1]-90
-    azi_radians = th.deg2rad(azi_degrees)
-    azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
-    azi_vector = azi_radians * azi_axis
-    if not clockwise:
-        azi_vector = -azi_vector
-    azi = rot_from_rotvec(azi_vector)
+#     # TODO Max: re-add ax-offsets
+#     azi_degrees = euler[1]-90
+#     azi_radians = th.deg2rad(azi_degrees)
+#     azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
+#     azi_vector = azi_radians * azi_axis
+#     if not clockwise:
+#         azi_vector = -azi_vector
+#     azi = rot_from_rotvec(azi_vector)
 
-    # darray with all heliostats (#heliostats, 3 coords)
-    h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
-    return h_rotated.squeeze(-1)
+#     # darray with all heliostats (#heliostats, 3 coords)
+#     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
+#     return h_rotated.squeeze(-1)
+
+
+def rotate(h, hel_coordsystem):
+    # r = rot_from_matrix(hel_coordsystem)
+
+    align_heliostat_origin   =throt.Rotate(hel_coordsystem)
+    rotated_points = align_heliostat_origin.transform_points(h.discrete_points)
+
+    rotated_normals = align_heliostat_origin.transform_normals(h.normals)
+    return rotated_points,rotated_normals
+
+
 
 
 def heliostat_coord_system(Position, Sun, Aimpoint):
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
-
+    # print(pSun,pPosition,pAimpoint)
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
@@ -422,13 +435,12 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
     z = z / th.linalg.norm(z)
 
     x = th.tensor(
-        [z[1], -z[0], 0],
+        [-z[1], z[0], 0],
         dtype=Position.dtype,
         device=Position.device,
     )
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
-
     return x, y, z
 
 
@@ -619,14 +631,11 @@ class AlignedHeliostat(AbstractHeliostat):
 
         self._heliostat = heliostat
 
-        # TODO Max: fix for other aimpoints
-        # TODO Evtl auf H.Discrete Points umstellen
-        position = self._heliostat.position_on_field
-        position_norm = th.linalg.norm(position)
+        position_normed = self._heliostat.position_on_field.clone()
+        position_norm = th.linalg.norm(position_normed)
         if position_norm != 0:
-            position /= position_norm
-        from_sun = position - sun_direction
-        from_sun /= th.linalg.norm(from_sun)
+            position_normed /= position_norm
+        from_sun = -sun_direction
         self.from_sun = from_sun.unsqueeze(0)
 
         self.alignment = th.stack(heliostat_coord_system(
@@ -639,16 +648,9 @@ class AlignedHeliostat(AbstractHeliostat):
             self._align()
 
     def _align(self):
-        hel_rotated = rotate(
-            self._heliostat.discrete_points, self.alignment, clockwise=True)
-        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
-
-        normal_vectors_rotated = rotate(
-            self._heliostat.normals, self.alignment, clockwise=True)
-        normal_vectors_rotated = (
-            normal_vectors_rotated
-            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        )
+        hel_rotated, normal_vectors_rotated = rotate(self._heliostat, self.alignment)
+        normal_vectors_rotated = normal_vectors_rotated/ th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field #TODO Add Translation in rotate function
 
         self._discrete_points = hel_rotated_in_field
         self._normals = normal_vectors_rotated

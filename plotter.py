@@ -271,6 +271,63 @@ def plot_heliostat(h_rotated, ray_directions):
     plt.show()
     exit()
 
+def target_image_comparision_pred_orig_naive(hemisphere, original,predicted,naive, epoch, logdir):
+    loss =th.nn.L1Loss()
+    row = 12
+    column = 7
+    fig, axs = plt.subplots(column, row, figsize=(15, 15), sharex=True, sharey=True, gridspec_kw={'width_ratios': [1,1,1,0.2,1,1,1,0.2,1,1,1,0.2]})
+    j=0
+    
+    original = original.detach().cpu()
+    predicted = predicted.detach().cpu()
+    naive = naive.detach().cpu()
+    
+    for i, ax in enumerate(axs.flat):
+        #Modifications for all Plots
+        ax.set_aspect('equal')
+        ax.get_xaxis().set_ticks([])
+        ax.get_yaxis().set_ticks([])
+        
+        #Modification for each row
+        if i%row==0:
+            ax.set_ylabel("Azimuth = "+str(int(hemisphere[j,0])), fontweight='bold')
+    
+        #     ax.set_ylabel("Azimuth = "+str(int(hemisphere[j,0])))
+        
+        #Modification specific for each plot
+        if i%4==0:
+            
+            ax.imshow(predicted[j], cmap = "coolwarm")
+            output = loss(predicted[j],original[j])
+            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+            if i<row:
+                ax.set_title('Predicted', fontweight='bold')
+            
+        elif i%4==1:
+            ax.imshow(original[j], cmap = "coolwarm")
+            if i<row:
+                ax.set_title('Original', fontweight='bold')
+            if i>=row*(column-1):
+                ax.set_xlabel("Elevation = "+str(int(hemisphere[j,1])), fontweight='bold')
+        elif i%4==2:
+            ax.imshow(naive[j], cmap ="coolwarm")
+            
+            output = loss(naive[j],original[j])
+            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+            if i<row: 
+                ax.set_title('Naive', fontweight='bold')
+        elif i%4==3:
+            ax.set_visible(False)
+    
+            
+        if i%4==3:
+            j+=1
+            
+            
+    plt.subplots_adjust(wspace=0.05, hspace=0)
+    plt.savefig(os.path.join(logdir, f"enhanced_test_{epoch}"))
+    plt.close(fig)
+
 
 #Not Used Anymore but not deleted
 # if epoch %  10== 0:#

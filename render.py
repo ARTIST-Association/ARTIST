@@ -60,12 +60,12 @@ def compute_ray_directions(
         xi,
         yi,
 ):
+
     intersections = LinePlaneCollision(
         planeNormal, planePoint, ray_directions, hel_in_field)
     as_ = intersections
     has = as_-hel_in_field
-
-    # TODO Max: remove/use for ray reflection instead
+    has = has /th.linalg.norm(has,dim=1).unsqueeze(-1) #TODO Wieder der Vektor von vorher? Evtl. ist diese LinePlaneCollision unnötig
 
     # rotate: Calculate 3D rotationmatrix in heliostat system.
     # 1 axis is pointing towards the receiver, the other are orthogonal
@@ -112,6 +112,7 @@ def compute_ray_directions(
 
     # rays = rays.to(th.float32)
     return rays
+    # return rotated_has
 
 
 def compute_receiver_intersections(
@@ -259,7 +260,8 @@ class Renderer(object):
         self.H = Heliostat
         self.ENV = Environment
         self.redraw_random_variables = self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
-
+        # plotter.plot_raytracer(self.H.discrete_points, self.ENV.receiver_center, self.ENV.sun_direction)
+        # plotter.plot_normal_vectors(self.H.discrete_points, self.H._normals)
         if not self.redraw_random_variables:
             self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
@@ -271,28 +273,27 @@ class Renderer(object):
         else:
             xi = self.xi
             yi = self.yi
-        # TODO Max: use for reflection instead
-        surface_points, surface_normals = heliostat()
-
-        ray_directions = compute_ray_directions(
+        surface_points, ray_directions = heliostat()
+        distorted_ray_directions = compute_ray_directions( #TODO Maybe another name?
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
-            surface_normals,  # line directions
+            ray_directions,  # line directions
             surface_points,  # points on line
             xi,
             yi
         )
+
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal,
             self.ENV.receiver_center,
-            ray_directions,
+            distorted_ray_directions,
             surface_points,
         )
 
-        dx_ints = (
-            intersections[:, :, 1]
+        dx_ints = ( #TODO Make dependend of receiver plane
+            intersections[:, :, 0]
             + self.ENV.receiver_plane_x / 2
-            - self.ENV.receiver_center[1]
+            - self.ENV.receiver_center[0]
         )
         dy_ints = (
             intersections[:, :, 2]
@@ -314,8 +315,11 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
-        # target_num_missed = indices.numel() - indices.count_nonzero()
-        # print('Missed for target:', target_num_missed.detach().cpu().item())
+        target_num_missed = indices.numel() - indices.count_nonzero()
+
+        if target_num_missed > 0:
+            print('Missed for target:', target_num_missed.detach().cpu().item())
+            
 
         if return_extras:
             return total_bitmap, (ray_directions, indices, xi, yi)

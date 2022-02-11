@@ -503,25 +503,25 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 self._heliostat.nurbs_cfg.FACETS.CANTING.ENABLED
                 and self._heliostat.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
-            hel_rotated, normal_vectors_rotated = \
+            rotated_points, rotated_normals = \
                 MultiNURBSHeliostat.discrete_points_and_normals(
                     self, reposition=False)
-            hel_rotated = hel_rotated + self._heliostat.position_on_field
+            rotated_points = rotated_points + self._heliostat.position_on_field
         else:
-            surface_points, normals = \
-                MultiNURBSHeliostat.discrete_points_and_normals(
-                    self._heliostat)
+            # surface_points, normals = \
+            #     MultiNURBSHeliostat.discrete_points_and_normals(
+            #         self._heliostat)
 
-            hel_rotated = heliostat_models.rotate(
-                surface_points, self.alignment, clockwise=True)
+            rotated_points, rotated_normals = heliostat_models.rotate(
+                hel_rotated, self.alignment)#DAS HIER IST JETZT DEFINITV FALSCH
             # Place in field
-            hel_rotated = hel_rotated + self._heliostat.position_on_field
+            rotated_points = rotated_points + self._heliostat.position_on_field
 
-            normal_vectors_rotated = heliostat_models.rotate(
-                normals, self.alignment, clockwise=True)
-            normal_vectors_rotated = (
-                normal_vectors_rotated
-                / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+            # normal_vectors_rotated = heliostat_models.rotate(
+            #     normals, self.alignment)
+            rotated_normals = (
+                rotated_normals
+                / th.linalg.norm(rotated_normals, dim=-1).unsqueeze(-1)
             )
 
-        return hel_rotated, normal_vectors_rotated
+        return hel_rotated, rotated_normals

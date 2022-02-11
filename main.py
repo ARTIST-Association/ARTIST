@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 
 import matplotlib.pyplot as plt
+import copy
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
@@ -269,6 +270,12 @@ def _build_scheduler(cfg_scheduler, opt):
             cycle_momentum=cfg.CYCLE_MOMENTUM,
             mode=cfg.MODE,
         )
+    elif name == "exponential":
+            cfg = cfg_scheduler.EXP
+            sched = th.optim.lr_scheduler.ExponentialLR(opt,
+                                                        cfg.GAMMA,
+
+                                                        )
     elif name == "onecycle":
         cfg = cfg.scheduler.ONE_CYCLE
         sched = th.optim.lr_scheduler.OneCycleLR(
@@ -456,6 +463,7 @@ def test_batch(
         writer=None,
 ):
     loss = 0
+    bitmaps = []
     for (i, (target, sun_direction)) in enumerate(zip(
             targets,
             sun_directions,
@@ -464,6 +472,7 @@ def test_batch(
             sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
         loss += loss_func(pred_bitmap, target) / len(targets)
+        bitmaps.append(pred_bitmap)
 
         if writer:
             writer.add_image(
@@ -471,12 +480,61 @@ def test_batch(
                             utils.colorize(pred_bitmap),
                             epoch,
                         )
+            writer.add_scalar("test/loss", loss.item(), epoch)
+    bitmaps = th.stack(bitmaps)
+    return loss, bitmaps
 
-    if writer:
-        writer.add_scalar("test/loss", loss.item(), epoch)
+def generate_sun_array(cfg_sun_directions, device):
+    cfg = cfg_sun_directions
+    case = cfg.CASE
+    if case =="random":
+        cfg = cfg.RAND
+        sun_directions = th.rand(cfg.NUM_SAMPLES, 3, 
+                                 dtype=th.get_default_dtype(), 
+                                 device=device
+                                 )
+    
+        sun_directions[:,2] = th.abs(sun_directions[:,2])
+        # Allow negative x- and y-values.
+        sun_directions[:, :-1] -= 0.5
+        ae = utils.vec_to_ae(sun_directions)
 
-    return loss
+    elif case=="grid":
+        cfg = cfg.GRID
+        #create azi ele range space
+        azi = cfg.AZI_RANGE
+        azi = th.linspace(azi[0],azi[1],azi[2],
+                          dtype=th.get_default_dtype(),
+                          device=device
+                          )
+        
+        ele = cfg.ELE_RANGE
+        ele = th.linspace(ele[0], ele[1], ele[2],
+                          dtype=th.get_default_dtype(),
+                          device=device
+                          )
+        #all possible combinations of azi ele
+        ae = th.cartesian_prod(azi,ele)#.type(th.float32)
+        #create 3D vector from azi, ele
+        sun_directions = utils.ae_to_vec(ae[:,0],ae[:,1])
+    elif case =="vecs":
+        cfg = cfg.VECS
+        sun_directions = cfg.DIRECTIONS
+        if not isinstance(sun_directions[0],list):
+            sun_directions = [cfg.DIRECTIONS]
+        
+        sun_directions = th.tensor(sun_directions, 
+                                   dtype=th.get_default_dtype(), 
+                                   device=device)
 
+        sun_directions = \
+                   sun_directions / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+                    
+        ae = utils.vec_to_ae(sun_directions, device)
+    else:
+        exit("Something went wrong in generate_sun_rays")
+    return sun_directions, ae
+        
 
 def main(config_file_name=None):
     # Load Defaults
@@ -494,6 +552,8 @@ def main(config_file_name=None):
 
     if cfg.USE_FLOAT64:
         th.set_default_dtype(th.float64)
+    else:
+        th.set_default_dtype(th.float32)
 
     # Set up Logging
     # ==============
@@ -507,14 +567,14 @@ def main(config_file_name=None):
         )
         logdir_files = os.path.join(logdir, "Logfiles")
         logdir_images = os.path.join(logdir, "Images")
-        logdir_diffs = os.path.join(logdir_images, "Diffs")
+        logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
         cfg.merge_from_list(["LOGDIR", logdir])
         os.makedirs(root_logdir, exist_ok=True)
         os.makedirs(logdir, exist_ok=True)
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
-        os.makedirs(logdir_diffs, exist_ok=True)
+        os.makedirs(logdir_enhanced_test, exist_ok=True)
 
         with open(os.path.join(logdir, "config.yaml"), "w") as f:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
@@ -540,7 +600,6 @@ def main(config_file_name=None):
     # ==============
     # Create Heliostat Object and Load Model defined in config file
     print("Create dataset using:")
-    print(f"Sun direction(s): {cfg.AC.SUN.DIRECTION}")
     print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
     print(
         f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
@@ -548,43 +607,46 @@ def main(config_file_name=None):
     )
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
-
-    # plotter.plot_normal_vectors(H_target.discrete_points, H_target.normals)
-
     ENV = Environment(cfg.AC, device)
-    targets, sun_directions = data.generate_dataset(
-        cfg.AC.SUN.DIRECTION,
+    sun_directions, ae = generate_sun_array(cfg.TRAIN.SUN_DIRECTIONS, device)
+    
+    targets = data.generate_dataset(
         H_target,
         ENV,
+        sun_directions,
         logdir_files,
         writer,
     )
-    # plt.imshow(targets[0].cpu().detach().squeeze())
-
-    test_targets, test_sun_directions = data.generate_test_dataset(
-        cfg.TEST,
+    test_sun_directions, test_ae = generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device)
+ 
+    test_targets = data.generate_dataset(
         H_target,
         ENV,
+        test_sun_directions,
         None,
         writer,
+        "test_"
     )
-    # plotter.test_surfaces(H_target)
-    # exit()
+    H_naive = copy.deepcopy(H_target)
+    H_naive._normals = H_naive._normals_ideal
+    naive_targets = data.generate_dataset(
+        H_naive,
+        ENV,
+        test_sun_directions,
+        None,
+        writer,
+        "naive_"
+    )
+
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
     H = build_heliostat(cfg, device)
-    # plotter.test_surfaces(H)
-    # plotter.plot_normal_vectors(
-    # H._discrete_points, H._normals)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    # plotter.plot_normal_vectors(H.discrete_points, H.normals)
-    # plotter.test_surfaces(H)
-    # plt.imshow(targets.cpu().detach().squeeze())
 
     opt, sched = build_optimizer_scheduler(cfg, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
@@ -626,7 +688,7 @@ def main(config_file_name=None):
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
 
         if epoch % cfg.TEST.INTERVAL == 0:
-            test_loss = test_batch(
+            test_loss, test_bitmaps = test_batch(
                 H,
                 ENV,
                 R,
@@ -640,35 +702,32 @@ def main(config_file_name=None):
                 f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                 f'test loss: {test_loss.item()}'
             )
-
-        if epoch % 50 == 0 and cfg.SAVE_RESULTS:
-
-            plotter.plot_surfaces_mrad(
-                H_target,
-                H,
-                epoch,
-                logdir_surfaces,
-                writer
-            )
-            plotter.plot_surfaces_mm(
-                H_target,
-                H,
-                epoch,
-                logdir_surfaces,
-                writer
-            )
+            #Plotting stuff
+            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS: 
+                plotter.target_image_comparision_pred_orig_naive(test_ae, 
+                                                                 test_targets,
+                                                                 test_bitmaps,
+                                                                 naive_targets,
+                                                                 epoch,
+                                                                 logdir_enhanced_test
+                                                                  )
+                plotter.plot_surfaces_mrad(
+                    H_target,
+                    H,
+                    epoch,
+                    logdir_surfaces,
+                    writer
+                )
 
         # Save Section
-        if cfg.SAVE_RESULTS:
-            if loss.detach().cpu() < best_result:
+
+        if test_loss.detach().cpu() < best_result:
+            if cfg.SAVE_RESULTS:
                 # Remember best checkpoint data (to store on disk later).
-                best_result = loss.detach().cpu()
                 save_data = H.to_dict()
                 save_data['xi'] = R.xi
                 save_data['yi'] = R.yi
                 opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}
-                found_new_best_result = True
-            # if epoch % 100 == 0 and found_new_best_result:
                 # Store remembered data and optimizer state on disk.
                 model_name = type(H).__name__
                 th.save(
@@ -679,7 +738,7 @@ def main(config_file_name=None):
                     opt_save_data,
                     os.path.join(logdir_files, f'{model_name}_opt.pt'),
                 )
-                found_new_best_result = False
+            best_result = test_loss.detach().cpu()
 
     # Diff Raytracing >
 

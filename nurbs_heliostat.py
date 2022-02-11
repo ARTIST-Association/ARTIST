@@ -178,7 +178,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self.degree_y,
                 self.knots_x,
                 self.knots_y,
-                self.nurbs_cfg.OPTIMIZE_Z_ONLY,
+                False,
                 True,
             )
 

@@ -14,6 +14,82 @@ import torch as th
 import nurbs
 
 
+def vec_to_ae(vec, device):
+    """
+    converts ENU vector to azimuth, elevation
+
+    Parameters
+    ----------
+    vec : tensor (N,3)
+        Batch of N spherical vectors
+
+    Returns
+    -------
+    tensor
+        returns Azi, Ele in ENU coordsystem
+
+    """
+    vec = vec.type(th.float32)
+    if len(vec.shape) ==1:
+        vec = vec.unsqueeze(0)
+        
+    north = th.tensor([0,1,0],
+                      dtype=th.get_default_dtype(), 
+                      device=device
+                      )
+    up = th.tensor([0,0,1],
+                   dtype=th.get_default_dtype(), 
+                   device=device
+                   )
+
+    xy_plane = vec.clone()
+    xy_plane[:,2] = 0
+    xy_plane = xy_plane / th.linalg.norm(xy_plane, dim=1).unsqueeze(1)
+
+
+    a = -th.rad2deg(th.arccos(th.matmul(xy_plane, north)))
+    a =  th.where(vec[:,0]<0, a, -a )
+    
+    e = -(th.rad2deg(th.arccos(th.matmul(vec,up)))-90)
+    return th.stack([a,e],dim=1)
+
+def ae_to_vec(
+    az: th.tensor, el: th.tensor, srange: float = 1 , deg: bool = True
+    ) -> th.tensor:
+    """
+    Azimuth, Elevation, Slant range to target to East, North, Up
+
+    Parameters
+    ----------
+    azimuth : float
+            azimuth clockwise from north (degrees)
+    elevation : float
+        elevation angle above horizon, neglecting aberrations (degrees)
+    srange : float
+        slant range [meters]
+    deg : bool, optional
+        degrees input/output  (False: radians in/out)
+
+    Returns
+    --------
+    e : float
+        East ENU coordinate (meters)
+    n : float
+        North ENU coordinate (meters)
+    u : float
+        Up ENU coordinate (meters)
+    """
+    srange = 1
+    if deg:
+        el = th.deg2rad(el)
+        az = th.deg2rad(az)
+
+    r = srange * th.cos(el)
+
+    rot_vec = th.stack([r * th.sin(az), r * th.cos(az), srange * th.sin(el)],dim=1) 
+    return rot_vec
+
+
 def colorize(image_tensor, colormap='jet'):
     """
 

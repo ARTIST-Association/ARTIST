@@ -1,6 +1,5 @@
 import torch as th
-
-
+import utils
 class Sun_Distribution(object):
     def __init__(self, sun_configs, device):
         self.dist_type = sun_configs.DISTRIBUTION
@@ -53,13 +52,7 @@ class Environment(object):
         self.receiver_resolution_x = self.cfg.RECEIVER.RESOLUTION_X
         self.receiver_resolution_y = self.cfg.RECEIVER.RESOLUTION_Y
 
-        sun_direction = self.cfg.SUN.DIRECTION
-        if isinstance(sun_direction[0], list):
-            sun_direction = sun_direction[0]
-        sun_direction = th.tensor(
-            sun_direction,
-            dtype=dtype,
-            device=device,
-        )
-        self.sun_direction = sun_direction / th.linalg.norm(sun_direction)
         self.sun = Sun_Distribution(self.cfg.SUN, device)
+    
+            
+            

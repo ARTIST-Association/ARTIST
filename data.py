@@ -10,7 +10,6 @@ def create_target(
         H,
         ENV,
         sun_direction,
-        sun_direction_normed,
         save_path=None,
 ):
     device = H.device
@@ -38,7 +37,7 @@ def create_target(
             ENV.sun.cov,
         )
 
-    H_aligned = H.align(sun_direction_normed, ENV.receiver_center)
+    H_aligned = H.align(sun_direction, ENV.receiver_center)
     R = Renderer(H_aligned, ENV)
     if save_path:
         if R.redraw_random_variables:
@@ -70,30 +69,21 @@ def create_target(
 
 
 @th.no_grad()
-def generate_dataset(sun_directions, H, ENV, save_dir, writer=None, prefix=''):
+def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
+
     if save_dir:
         save_path = os.path.join(save_dir, 'target.pt')
     else:
         save_path = None
 
     device = H.device
-    if not isinstance(sun_directions[0], list):
-        sun_directions = [sun_directions]
-    sun_directions = th.tensor(
-        sun_directions, dtype=th.get_default_dtype(), device=device)
-    sun_directions_normed = \
-        sun_directions / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-
+    
     targets = None
-    for (i, (sun_direction, sun_direction_normed)) in enumerate(zip(
-            sun_directions,
-            sun_directions_normed,
-    )):
+    for i, sun_direction in enumerate(sun_directions):
         target_bitmap = create_target(
             H,
             ENV,
             sun_direction,
-            sun_direction_normed,
             save_path=save_path,
         )
         if targets is None:
@@ -108,26 +98,9 @@ def generate_dataset(sun_directions, H, ENV, save_dir, writer=None, prefix=''):
                 f"{prefix}target_{i}/originals",
                 utils.colorize(target_bitmap),
             )
-
-        # Plot and Save Stuff
-        # ===================
-        # print(H._normals_orig.shape)
-        # im = plt.imshow(target_bitmap.detach().cpu(),cmap = "jet")
-    return targets, sun_directions_normed
+    return targets
 
 
-@th.no_grad()
-def generate_test_dataset(cfg, H, ENV, save_dir, writer=None):
-    sun_directions = th.rand(cfg.NUM_SAMPLES, 3)
 
-    sun_directions[:,2] = th.abs(sun_directions[:,2])
-    # Allow negative x- and y-values.
-    sun_directions[:, :-1] -= 0.5
-    return generate_dataset(
-        sun_directions.tolist(),
-        H,
-        ENV,
-        save_dir,
-        writer,
-        prefix='test_'
-    )
+
+
