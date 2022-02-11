@@ -100,7 +100,3 @@ def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
             )
     return targets
 
-
-
-
-
