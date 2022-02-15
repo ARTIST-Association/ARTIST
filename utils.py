@@ -75,7 +75,6 @@ def ae_to_vec(
     u : float
         Up ENU coordinate (meters)
     """
-    srange = 1
     if deg:
         el = th.deg2rad(el)
         az = th.deg2rad(az)
