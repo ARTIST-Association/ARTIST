@@ -111,7 +111,6 @@ def compute_ray_directions(
     rot_z = Rz(yi, rot_y).transpose(0, -1).squeeze(0)
     rays = th.matmul(inv_rot, rot_z).transpose(0, -1).transpose(1, -1)
 
-    # rays = rays.to(th.float32)
     return rays
     # return rotated_has
 

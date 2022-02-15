@@ -524,7 +524,7 @@ def generate_sun_array(cfg_sun_directions, device):
                           device=device
                           )
         # all possible combinations of azi ele
-        ae = th.cartesian_prod(azi, ele)  # .type(th.float32)
+        ae = th.cartesian_prod(azi, ele)
         # create 3D vector from azi, ele
         sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
     elif case == "vecs":

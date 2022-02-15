@@ -29,7 +29,6 @@ def vec_to_ae(vec, device=None):
         returns Azi, Ele in ENU coordsystem
 
     """
-    vec = vec.type(th.float32)
     if len(vec.shape) == 1:
         vec = vec.unsqueeze(0)
 
