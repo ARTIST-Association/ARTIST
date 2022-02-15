@@ -32,9 +32,9 @@ def real_heliostat(real_configs, device):
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
+        positions,
         directions,
         ideal_normal_vecs,
-        positions,
         width,
         height,
     ) = bpro_loader.load_bpro(
