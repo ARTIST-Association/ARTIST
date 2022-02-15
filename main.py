@@ -505,6 +505,10 @@ def generate_sun_array(cfg_sun_directions, device):
 
         # Allow negative x- and y-values.
         sun_directions[:, :-1] -= 0.5
+        sun_directions = (
+            sun_directions
+            / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+        )
         ae = utils.vec_to_ae(sun_directions)
     elif case == "grid":
         cfg = cfg.GRID
