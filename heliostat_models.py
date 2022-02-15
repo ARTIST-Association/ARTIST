@@ -67,10 +67,10 @@ def real_heliostat(real_configs, device):
             # print("Y", facet_vec_y)
             n_rays = facetHeader_data[10]
 
-            for r in range(n_rays):
-                byte_data = file.read(ray_struct_len)
-                ray_data = ray_struct.unpack_from(byte_data)
+            byte_data = file.read(ray_struct_len * n_rays)
+            ray_datas = ray_struct.iter_unpack(byte_data)
 
+            for ray_data in ray_datas:
                 positions.append([ray_data[0], ray_data[1], ray_data[2]])
                 directions.append([ray_data[3], ray_data[4], ray_data[5]])
                 ideal_normal_vecs.append(facet_vec_z)
