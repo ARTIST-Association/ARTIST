@@ -636,7 +636,7 @@ class AlignedHeliostat(AbstractHeliostat):
             receiver_center,
             align_points=True,
     ):
-        if heliostat.discrete_points is None:
+        if not hasattr(heliostat, '_discrete_points'):
             raise ValueError('Heliostat has to be loaded first')
         if isinstance(heliostat, AlignedHeliostat):
             raise ValueError('Heliostat is already aligned')
