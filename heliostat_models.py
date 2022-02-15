@@ -638,10 +638,6 @@ class AlignedHeliostat(AbstractHeliostat):
 
         self._heliostat = heliostat
 
-        position_normed = self._heliostat.position_on_field.clone()
-        position_norm = th.linalg.norm(position_normed)
-        if position_norm != 0:
-            position_normed /= position_norm
         from_sun = -sun_direction
         self.from_sun = from_sun.unsqueeze(0)
 
