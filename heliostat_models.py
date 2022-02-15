@@ -25,10 +25,15 @@ def real_heliostat(real_configs, device):
     """Return a heliostat loaded from deflectometric data."""
     cfg = real_configs
     dtype = th.get_default_dtype()
-    concentratorHeader_struct_len = struct.calcsize(
+
+    concentratorHeader_struct = struct.Struct(
         cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct_len = struct.calcsize(cfg.FACETHEADER_STRUCT_FMT)
-    ray_struct_len = struct.calcsize(cfg.RAY_STRUCT_FMT)
+    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
+    ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
+
+    concentratorHeader_struct_len = concentratorHeader_struct.size
+    facetHeader_struct_len = facetHeader_struct.size
+    ray_struct_len = ray_struct.size
 
     positions = []
     directions = []
@@ -36,9 +41,8 @@ def real_heliostat(real_configs, device):
     # powers = []
     with open(cfg.FILENAME, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
-        concentratorHeader_data = struct.Struct(
-            cfg.CONCENTRATORHEADER_STRUCT_FMT,
-        ).unpack_from(byte_data)
+        concentratorHeader_data = concentratorHeader_struct.unpack_from(
+            byte_data)
         print("READING bpro filename: " + cfg.FILENAME)
 
         # hel_pos = concentratorHeader_data[0:3]
@@ -51,9 +55,7 @@ def real_heliostat(real_configs, device):
 
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
-            facetHeader_data = struct.Struct(
-                cfg.FACETHEADER_STRUCT_FMT,
-            ).unpack_from(byte_data)
+            facetHeader_data = facetHeader_struct.unpack_from(byte_data)
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
@@ -67,9 +69,7 @@ def real_heliostat(real_configs, device):
 
             for r in range(n_rays):
                 byte_data = file.read(ray_struct_len)
-                ray_data = struct.Struct(
-                    cfg.RAY_STRUCT_FMT,
-                ).unpack_from(byte_data)
+                ray_data = ray_struct.unpack_from(byte_data)
 
                 positions.append([ray_data[0], ray_data[1], ray_data[2]])
                 directions.append([ray_data[3], ray_data[4], ray_data[5]])
