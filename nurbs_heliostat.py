@@ -418,16 +418,11 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         return len(self._heliostat)
 
     def _calc_normals_and_surface(self):
-        surface_points, normals = \
-            NURBSHeliostat._calc_normals_and_surface(self._heliostat)
-
-        hel_rotated = heliostat_models.rotate(
-            surface_points, self.alignment, clockwise=True)
+        hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
+            self._heliostat, self.alignment)
+        # TODO Remove if translation is added to `rotate` function.
         # Place in field
         hel_rotated = hel_rotated + self._heliostat.position_on_field
-
-        normal_vectors_rotated = heliostat_models.rotate(
-            normals, self.alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)

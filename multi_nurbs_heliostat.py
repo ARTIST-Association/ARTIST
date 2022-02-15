@@ -508,17 +508,12 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                     self, reposition=False)
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
-            surface_points, normals = \
-                MultiNURBSHeliostat.discrete_points_and_normals(
-                    self._heliostat)
+            hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
+                self._heliostat, self.alignment)
 
-            hel_rotated = heliostat_models.rotate_multi_nurbs(
-                surface_points, self.alignment)
+            # TODO Remove if translation is added to `rotate` function.
             # Place in field
             hel_rotated = hel_rotated + self._heliostat.position_on_field
-
-            normal_vectors_rotated = heliostat_models.rotate_multi_nurbs(
-                normals, self.alignment)
             normal_vectors_rotated = (
                 normal_vectors_rotated
                 / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
