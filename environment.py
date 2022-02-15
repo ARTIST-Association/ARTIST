@@ -1,5 +1,6 @@
 import torch as th
-import utils
+
+
 class Sun_Distribution(object):
     def __init__(self, sun_configs, device):
         self.dist_type = sun_configs.DISTRIBUTION
@@ -53,6 +54,3 @@ class Environment(object):
         self.receiver_resolution_y = self.cfg.RECEIVER.RESOLUTION_Y
 
         self.sun = Sun_Distribution(self.cfg.SUN, device)
-    
-            
-            

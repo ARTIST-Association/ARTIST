@@ -77,9 +77,9 @@ def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
         save_path = None
 
     device = H.device
-    
+
     targets = None
-    for i, sun_direction in enumerate(sun_directions):
+    for (i, sun_direction) in enumerate(sun_directions):
         target_bitmap = create_target(
             H,
             ENV,
@@ -99,4 +99,3 @@ def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
                 utils.colorize(target_bitmap),
             )
     return targets
-

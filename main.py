@@ -3,8 +3,6 @@ import copy
 from datetime import datetime
 import os
 
-import matplotlib.pyplot as plt
-import copy
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
@@ -271,11 +269,8 @@ def _build_scheduler(cfg_scheduler, opt, total_steps):
             mode=cfg.MODE,
         )
     elif name == "exponential":
-            cfg = cfg_scheduler.EXP
-            sched = th.optim.lr_scheduler.ExponentialLR(opt,
-                                                        cfg.GAMMA,
-
-                                                        )
+        cfg = cfg_scheduler.EXP
+        sched = th.optim.lr_scheduler.ExponentialLR(opt, cfg.GAMMA)
     elif name == "onecycle":
         cfg = cfg_scheduler.ONE_CYCLE
         sched = th.optim.lr_scheduler.OneCycleLR(
@@ -486,56 +481,61 @@ def test_batch(
     bitmaps = th.stack(bitmaps)
     return loss, bitmaps
 
+
 def generate_sun_array(cfg_sun_directions, device):
     cfg = cfg_sun_directions
     case = cfg.CASE
-    if case =="random":
+    if case == "random":
         cfg = cfg.RAND
-        sun_directions = th.rand(cfg.NUM_SAMPLES, 3, 
-                                 dtype=th.get_default_dtype(), 
-                                 device=device
-                                 )
-    
+        sun_directions = th.rand(
+            (cfg.NUM_SAMPLES, 3),
+            dtype=th.get_default_dtype(),
+            device=device,
+        )
+
         # Allow negative x- and y-values.
         sun_directions[:, :-1] -= 0.5
         ae = utils.vec_to_ae(sun_directions)
-
-    elif case=="grid":
+    elif case == "grid":
         cfg = cfg.GRID
-        #create azi ele range space
+        # create azi ele range space
         azi = cfg.AZI_RANGE
-        azi = th.linspace(azi[0],azi[1],azi[2],
-                          dtype=th.get_default_dtype(),
-                          device=device
-                          )
-        
+        azi = th.linspace(
+            azi[0],
+            azi[1],
+            azi[2],
+            dtype=th.get_default_dtype(),
+            device=device,
+        )
+
         ele = cfg.ELE_RANGE
         ele = th.linspace(ele[0], ele[1], ele[2],
                           dtype=th.get_default_dtype(),
                           device=device
                           )
-        #all possible combinations of azi ele
-        ae = th.cartesian_prod(azi,ele)#.type(th.float32)
-        #create 3D vector from azi, ele
-        sun_directions = utils.ae_to_vec(ae[:,0],ae[:,1])
-    elif case =="vecs":
+        # all possible combinations of azi ele
+        ae = th.cartesian_prod(azi, ele)  # .type(th.float32)
+        # create 3D vector from azi, ele
+        sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
+    elif case == "vecs":
         cfg = cfg.VECS
         sun_directions = cfg.DIRECTIONS
-        if not isinstance(sun_directions[0],list):
-            sun_directions = [cfg.DIRECTIONS]
-        
-        sun_directions = th.tensor(sun_directions, 
-                                   dtype=th.get_default_dtype(), 
-                                   device=device)
+        if not isinstance(sun_directions[0], list):
+            sun_directions = [sun_directions]
 
-        sun_directions = \
-                   sun_directions / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-                    
+        sun_directions = th.tensor(
+            sun_directions, dtype=th.get_default_dtype(), device=device)
+
+        sun_directions = (
+            sun_directions
+            / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+        )
+
         ae = utils.vec_to_ae(sun_directions, device)
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae
-        
+
 
 def main(config_file_name=None):
     # Load Defaults
@@ -610,7 +610,7 @@ def main(config_file_name=None):
     H_target = build_target_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
     sun_directions, ae = generate_sun_array(cfg.TRAIN.SUN_DIRECTIONS, device)
-    
+
     targets = data.generate_dataset(
         H_target,
         ENV,
@@ -618,8 +618,9 @@ def main(config_file_name=None):
         logdir_files,
         writer,
     )
-    test_sun_directions, test_ae = generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device)
- 
+    test_sun_directions, test_ae = generate_sun_array(
+        cfg.TEST.SUN_DIRECTIONS, device)
+
     test_targets = data.generate_dataset(
         H_target,
         ENV,
@@ -647,7 +648,6 @@ def main(config_file_name=None):
     H = build_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
-
 
     epochs = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
@@ -705,16 +705,17 @@ def main(config_file_name=None):
                 f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                 f'test loss: {test_loss.item()}'
             )
-            #Plotting stuff
-            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS: 
-                plotter.target_image_comparision_pred_orig_naive(test_ae, 
-                                                                 test_targets,
-                                                                 test_bitmaps,
-                                                                 naive_targets,
-                                                                 sun_directions,
-                                                                 epoch,
-                                                                 logdir_enhanced_test
-                                                                  )
+            # Plotting stuff
+            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
+                plotter.target_image_comparision_pred_orig_naive(
+                    test_ae,
+                    test_targets,
+                    test_bitmaps,
+                    naive_targets,
+                    sun_directions,
+                    epoch,
+                    logdir_enhanced_test,
+                )
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,

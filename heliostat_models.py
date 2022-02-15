@@ -6,7 +6,6 @@ import numpy as np
 import torch as th
 import pytorch3d.transforms as throt
 
-from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
 import utils
 
 
@@ -156,14 +155,18 @@ def heliostat_by_function(heliostat_function_cfg, device):
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
-                next_row_vec    = th.tensor([X[i, j + 1], Y[i, j + 1], Z[i, j + 1]] )  # .squeeze(0)
-                next_col_vec    = th.tensor([X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
             except Exception:
-                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]]             )  # .squeeze(0)
-                next_row_vec    = th.tensor([X[i, j - 1], Y[i, j - 1], Z[i, j - 1]] )  # .squeeze(0)
-                next_col_vec    = th.tensor([X[i - 1, j], Y[i - 1, j], Z[i - 1, j]] )  # .squeeze(0)
-            
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
+
             vec_1 = next_row_vec - origin
 
             vec_2 = next_col_vec - origin
@@ -183,8 +186,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
             # exit()
     h = stacked.reshape(X.shape[0] * X.shape[1], -1).to(device)
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
-    h_ideal_vecs = th.tile(th.tensor([0, 0, 1]), (h_normal_vecs.shape[0], 1)).to(device)
-    
+    h_ideal_vecs = th.tile(
+        th.tensor([0, 0, 1]),
+        (h_normal_vecs.shape[0], 1),
+    ).to(device)
+
     params = None
     return (
         h,
@@ -371,7 +377,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     return (
         vertices,
         vertex_normals,
-        #TODO Implement Ideal Vecs
+        # TODO Implement Ideal Vecs
         vertex_normals,
         height,
         width,
@@ -413,20 +419,19 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 def rotate(h, hel_coordsystem):
     # r = rot_from_matrix(hel_coordsystem)
 
-    align_heliostat_origin   =throt.Rotate(hel_coordsystem)
+    align_heliostat_origin = throt.Rotate(hel_coordsystem)
     rotated_points = align_heliostat_origin.transform_points(h.discrete_points)
 
     rotated_normals = align_heliostat_origin.transform_normals(h.normals)
-    return rotated_points,rotated_normals
+    return rotated_points, rotated_normals
 
 
 def rotate_multi_nurbs(h, hel_coordsystem):
     # r = rot_from_matrix(hel_coordsystem)
 
-    align_heliostat_origin   =throt.Rotate(hel_coordsystem)
+    align_heliostat_origin = throt.Rotate(hel_coordsystem)
     h_rotated = align_heliostat_origin.transform_points(h)
     return h_rotated
-
 
 
 def heliostat_coord_system(Position, Sun, Aimpoint):
@@ -655,9 +660,14 @@ class AlignedHeliostat(AbstractHeliostat):
             self._align()
 
     def _align(self):
-        hel_rotated, normal_vectors_rotated = rotate(self._heliostat, self.alignment)
-        normal_vectors_rotated = normal_vectors_rotated/ th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field #TODO Add Translation in rotate function
+        hel_rotated, normal_vectors_rotated = rotate(
+            self._heliostat, self.alignment)
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        )
+        # TODO Add Translation in rotate function
+        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
 
         self._discrete_points = hel_rotated_in_field
         self._normals = normal_vectors_rotated

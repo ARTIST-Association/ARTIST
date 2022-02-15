@@ -30,32 +30,29 @@ def vec_to_ae(vec, device=None):
 
     """
     vec = vec.type(th.float32)
-    if len(vec.shape) ==1:
+    if len(vec.shape) == 1:
         vec = vec.unsqueeze(0)
-        
-    north = th.tensor([0,1,0],
-                      dtype=th.get_default_dtype(), 
-                      device=device
-                      )
-    up = th.tensor([0,0,1],
-                   dtype=th.get_default_dtype(), 
-                   device=device
-                   )
+
+    north = th.tensor([0, 1, 0], dtype=th.get_default_dtype(), device=device)
+    up = th.tensor([0, 0, 1], dtype=th.get_default_dtype(), device=device)
 
     xy_plane = vec.clone()
-    xy_plane[:,2] = 0
+    xy_plane[:, 2] = 0
     xy_plane = xy_plane / th.linalg.norm(xy_plane, dim=1).unsqueeze(1)
 
-
     a = -th.rad2deg(th.arccos(th.matmul(xy_plane, north)))
-    a =  th.where(vec[:,0]<0, a, -a )
-    
-    e = -(th.rad2deg(th.arccos(th.matmul(vec,up)))-90)
-    return th.stack([a,e],dim=1)
+    a = th.where(vec[:, 0] < 0, a, -a)
+
+    e = -(th.rad2deg(th.arccos(th.matmul(vec, up))) - 90)
+    return th.stack([a, e], dim=1)
+
 
 def ae_to_vec(
-    az: th.tensor, el: th.tensor, srange: float = 1 , deg: bool = True
-    ) -> th.tensor:
+        az: th.Tensor,
+        el: th.Tensor,
+        srange: float = 1,
+        deg: bool = True,
+) -> th.Tensor:
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -86,7 +83,10 @@ def ae_to_vec(
 
     r = srange * th.cos(el)
 
-    rot_vec = th.stack([r * th.sin(az), r * th.cos(az), srange * th.sin(el)],dim=1) 
+    rot_vec = th.stack(
+        [r * th.sin(az), r * th.cos(az), srange * th.sin(el)],
+        dim=1,
+    )
     return rot_vec
 
 
@@ -467,7 +467,7 @@ def initialize_spline_knots(
 
 def calc_ray_diffs(pred, target):
     # We could broadcast here but to avoid a warning, we tile manually.
-    #TODO stimmt das so noch?
+    # TODO stimmt das so noch?
     return th.nn.functional.l1_loss(pred, target)
 
 
