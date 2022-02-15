@@ -496,7 +496,6 @@ def generate_sun_array(cfg_sun_directions, device):
                                  device=device
                                  )
     
-        sun_directions[:,2] = th.abs(sun_directions[:,2])
         # Allow negative x- and y-values.
         sun_directions[:, :-1] -= 0.5
         ae = utils.vec_to_ae(sun_directions)
