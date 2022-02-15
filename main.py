@@ -459,7 +459,7 @@ def test_batch(
         epoch,
         writer=None,
 ):
-    loss = 0
+    mean_loss = 0
     bitmaps = []
     for (i, (target, sun_direction)) in enumerate(zip(
             targets,
@@ -468,7 +468,8 @@ def test_batch(
         heliostat_aligned = heliostat.align(
             sun_direction, env.receiver_center)
         pred_bitmap = renderer.render(heliostat_aligned)
-        loss += loss_func(pred_bitmap, target) / len(targets)
+        loss = loss_func(pred_bitmap, target)
+        mean_loss += loss / len(targets)
         bitmaps.append(pred_bitmap)
 
         if writer:
@@ -477,9 +478,12 @@ def test_batch(
                             utils.colorize(pred_bitmap),
                             epoch,
                         )
-            writer.add_scalar("test/loss", loss.item(), epoch)
+            writer.add_scalar(f"test_{i}/loss", loss.item(), epoch)
+
+    if writer:
+        writer.add_scalar("test/loss", mean_loss.item(), epoch)
     bitmaps = th.stack(bitmaps)
-    return loss, bitmaps
+    return mean_loss, bitmaps
 
 
 def generate_sun_array(cfg_sun_directions, device):
