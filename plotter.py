@@ -21,12 +21,12 @@ def colorbar(mappable):
 
 
 def test_surfaces(H):
-    
+
     points_on_hel = H.discrete_points.detach().cpu().numpy()
     ideal_vecs = H._normals_ideal.detach().cpu().numpy()
     normal_vecs = H.normals.detach().cpu().numpy()
-    
-    
+
+
     fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(ncols=7, figsize=(49,7))
     im1 = ax1.scatter(points_on_hel[:,0],points_on_hel[:,1], c=points_on_hel[:,2])
     im2 = ax2.scatter(points_on_hel[:,0],points_on_hel[:,1], c=ideal_vecs[:,0])
@@ -43,7 +43,7 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mrad, exist_ok=True)
 
-    
+
     target_normal_vecs = heliostat_target.normals
     ideal_normal_vecs = heliostat_target._normals_ideal
     pred_normal_vecs = heliostat_pred.normals
@@ -51,65 +51,65 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     target_angles = th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1).detach().cpu().numpy()
     pred_angles = th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1).detach().cpu().numpy()
     diff_angles = abs(target_angles-pred_angles)
-    
+
     if writer:
       writer.add_scalar("test/normal_diffs", np.sum(diff_angles)/len(diff_angles), epoch)
-    
+
         #Get discrete points
     target_points = heliostat_target.discrete_points
     target_points = target_points.detach().cpu().numpy()
-    
+
     pred_points = heliostat_pred.discrete_points
     pred_points = pred_points.detach().cpu().numpy()
     diff_points = pred_points.copy()
-    
+
     target_points[:,2] = target_angles #/ 1e-3
     pred_points[:,2] = pred_angles #/ 1e-3
     diff_points[:,2] = diff_angles #/ 1e-3
-    
-    target = target_points 
+
+    target = target_points
     pred = pred_points
-    diff = diff_points 
+    diff = diff_points
 
 
 
-    
+
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
     plt.subplots_adjust(left=0.03, top=0.95, right =0.97, bottom=0.15)
-    
+
     p0 = ax1.get_position().get_points().flatten()
     p1 = ax2.get_position().get_points().flatten()
     p2 = ax3.get_position().get_points().flatten()
     ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
     ax_cbar1 = fig.add_axes([p2[0], 0.05, p2[2]-p2[0], 0.05])
-    
+
     im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
     ax1.set_xlim(np.min(target[:,0]),np.max(target[:,0]))
     ax1.set_ylim(np.min(target[:,1]),np.max(target[:,1]))
     ax1.title.set_text('Original Surface [mrad]')
     ax1.set_aspect("equal")
-    
+
     im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
     ax2.set_xlim(np.min(pred[:,0]),np.max(pred[:,0]))
     ax2.set_ylim(np.min(pred[:,1]),np.max(pred[:,1]))
     ax2.title.set_text('Predicted Surface [mrad]')
     ax2.set_aspect("equal")
-    
+
     im3 = ax3.scatter(diff[:,0],diff[:,1], c=diff[:,2], cmap="magma")
     ax3.set_xlim(np.min(diff[:,0]),np.max(diff[:,0]))
     ax3.set_ylim(np.min(diff[:,1]),np.max(diff[:,1]))
     ax3.title.set_text('Difference [mrad]')
     ax3.set_aspect("equal")
-    
+
     plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
     plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
-    
+
     fig.savefig(os.path.join(logdir_mrad, f"test_{epoch}"))
     plt.close(fig)
 
 
 def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, writer = None):
-    
+
     logdir_mm = os.path.join(logdir_surfaces, "mm")
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
@@ -117,53 +117,53 @@ def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, w
     target = heliostat_target.discrete_points
     target = target.detach().cpu().numpy()
     target[:,2] = target[:,2]#/1e-3
-    
+
     pred = heliostat_pred.discrete_points
     pred = pred.detach().cpu().numpy()
     pred[:,2] = pred[:,2]#/1e-3
-    
+
     diff = pred.copy()
     diff[:,2] = pred[:,2]-target[:,2]#/10e-3
     if writer:
         writer.add_scalar("test/location_diffs", np.sum(abs(diff[:,2]))/len(diff[:,2]), epoch)
-    
-    
+
+
 
 
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
     plt.subplots_adjust(left=0.03, top=0.95, right =0.97, bottom=0.15)
-    
+
     p0 = ax1.get_position().get_points().flatten()
     p1 = ax2.get_position().get_points().flatten()
     p2 = ax3.get_position().get_points().flatten()
     ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
     ax_cbar1 = fig.add_axes([p2[0], 0.05, p2[2]-p2[0], 0.05])
-    
+
     im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
     ax1.set_xlim(np.min(target[:,0]),np.max(target[:,0]))
     ax1.set_ylim(np.min(target[:,1]),np.max(target[:,1]))
     ax1.title.set_text('Original Surface [mm]')
     ax1.set_aspect("equal")
-    
+
     im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
     ax2.set_xlim(np.min(pred[:,0]),np.max(pred[:,0]))
     ax2.set_ylim(np.min(pred[:,1]),np.max(pred[:,1]))
     ax2.title.set_text('Predicted Surface [mm]')
     ax2.set_aspect("equal")
-    
+
     im3 = ax3.scatter(diff[:,0],diff[:,1], c=diff[:,2], cmap="magma")
     ax3.set_xlim(np.min(diff[:,0]),np.max(diff[:,0]))
     ax3.set_ylim(np.min(diff[:,1]),np.max(diff[:,1]))
     ax3.title.set_text('Difference [mm]')
     ax3.set_aspect("equal")
-    
+
     plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
     plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
-    
+
     # colorbar(im3)
-   
-    
-    
+
+
+
     fig.savefig(os.path.join(logdir_mm, f"test_{epoch}"))
     plt.close(fig)
 
@@ -272,39 +272,39 @@ def plot_heliostat(h_rotated, ray_directions):
     plt.show()
     exit()
 
-def target_image_comparision_pred_orig_naive(ae, 
-                                             original, 
-                                             predicted, 
+def target_image_comparision_pred_orig_naive(ae,
+                                             original,
+                                             predicted,
                                              naive,
-                                             train_sun_position, 
+                                             train_sun_position,
                                              epoch,
                                              logdir,
-                                             num_azi_pos = 7, 
-                                             num_ele_pos=3, 
+                                             num_azi_pos = 7,
+                                             num_ele_pos=3,
                                              start_main_plot_at_row =1
                                              ):
     loss =th.nn.L1Loss()
     row = num_ele_pos *4
     column = num_azi_pos
-    fig, axs = plt.subplots(column+1, row, figsize=(15, 15), sharex=True, sharey=True, 
+    fig, axs = plt.subplots(column+1, row, figsize=(15, 15), sharex=True, sharey=True,
                             gridspec_kw={'width_ratios': [1,1,1,0.2,1,1,1,0.2,1,1,1,0.2],'height_ratios':[2,1,1,1,1,1,1,1]})
     gs = axs[1, 1].get_gridspec()
-    
+
     j=0
-    
+
     ae = ae.squeeze().detach().cpu()
     original = original.squeeze().detach().cpu()
     predicted = predicted.squeeze().detach().cpu()
     naive = naive.squeeze().detach().cpu()
     train_sun_position = train_sun_position.squeeze().detach().cpu()
-    
-    
-    smp = start_main_plot_at_row*row#start main plot 
+
+
+    smp = start_main_plot_at_row*row#start main plot
     for i, ax in enumerate(axs.flat):
         #Nested Subplots
         # if i==0:
         #     ax.remove()
-        
+
         if i<smp:
             ax.remove()
         #Modifications for all Plots
@@ -312,23 +312,23 @@ def target_image_comparision_pred_orig_naive(ae,
             ax.set_aspect('equal')
             ax.get_xaxis().set_ticks([])
             ax.get_yaxis().set_ticks([])
-        
+
         #Modification for each row
-            
+
         if i%row==0 and i>=smp:
             ax.set_ylabel("Azimuth = "+str(int(ae[j,0])), fontweight='bold')
-    
+
         #     ax.set_ylabel("Azimuth = "+str(int(ae[j,0])))
-        
+
         #Modification specific for each plot
         if i%4==0 and i>=smp:
-            
+
             ax.imshow(predicted[j], cmap = "coolwarm")
             output = loss(predicted[j],original[j])
             ax.set_xlabel("L1: "+f"{output.item():.4f}")
             if i-smp<row:
                 ax.set_title('Predicted', fontweight='bold')
-            
+
         elif i%4==1 and i>=smp:
             ax.imshow(original[j], cmap = "coolwarm")
             if i-smp<row:
@@ -337,37 +337,37 @@ def target_image_comparision_pred_orig_naive(ae,
                 ax.set_xlabel("Elevation = "+str(int(ae[j,1])), fontweight='bold')
         elif i%4==2 and i>=smp:
             ax.imshow(naive[j], cmap ="coolwarm")
-            
+
             output = loss(naive[j],original[j])
             ax.set_xlabel("L1: "+f"{output.item():.4f}")
-            if i-smp<row: 
+            if i-smp<row:
                 ax.set_title('Naive', fontweight='bold')
         elif i%4==3 and i>=smp:
             ax.remove()
-    
-            
+
+
         if i%4==3 and i>=smp:
             j+=1
-            
+
     axbig = fig.add_subplot(gs[0:1, 4:8],projection='polar')
 
     axbig.set_thetamin(-90)
-       
+
     axbig.set_thetamax(90)
-       
+
     axbig.set_theta_zero_location("N")
-       
+
     axbig.set_rorigin(-95)
-    
+
     axbig.scatter(th.deg2rad(ae[:,0]), -ae[:,1],color = 'r',marker='x',s=10, label="Test sun positions")
-    
+
     train_sun_position= utils.vec_to_ae(train_sun_position)
     print(train_sun_position)
     axbig.scatter(np.radians(train_sun_position[:,0]),-train_sun_position[:,1] ,color = 'b',marker='x',s=10, label="Train sun position")
     axbig.legend(loc='upper right',bbox_to_anchor=(-0.1, 0.5, 0.5, 0.5))
     axbig.set_yticks(np.arange(-90, 20, 30))
-    
-    
+
+
     axbig.set_yticklabels(abs(axbig.get_yticks()))
     axbig.set_ylabel('Azimuth',rotation=67.5)
     axbig.set_xlabel('Elevation')
