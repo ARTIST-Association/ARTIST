@@ -533,7 +533,7 @@ def generate_sun_array(cfg_sun_directions, device):
                     
         ae = utils.vec_to_ae(sun_directions, device)
     else:
-        exit("Something went wrong in generate_sun_rays")
+        raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae
         
 
