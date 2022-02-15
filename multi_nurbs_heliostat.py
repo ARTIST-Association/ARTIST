@@ -509,7 +509,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
-                self._heliostat, self.alignment)
+                self._heliostat, self.align_origin)
 
             # TODO Remove if translation is added to `rotate` function.
             # Place in field

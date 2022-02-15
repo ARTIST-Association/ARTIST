@@ -416,7 +416,7 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 #     return h_rotated.squeeze(-1)
 
 
-def rotate(h, hel_coordsystem):
+def rotate(h, align_origin):
     # r = rot_from_matrix(hel_coordsystem)
     if hasattr(h, 'discrete_points_and_normals'):
         discrete_points, normals = h.discrete_points_and_normals()
@@ -424,10 +424,8 @@ def rotate(h, hel_coordsystem):
         discrete_points = h.discrete_points
         normals = h.normals
 
-    align_heliostat_origin = throt.Rotate(hel_coordsystem)
-    rotated_points = align_heliostat_origin.transform_points(discrete_points)
-
-    rotated_normals = align_heliostat_origin.transform_normals(normals)
+    rotated_points = align_origin.transform_points(discrete_points)
+    rotated_normals = align_origin.transform_normals(normals)
     return rotated_points, rotated_normals
 
 
@@ -652,13 +650,14 @@ class AlignedHeliostat(AbstractHeliostat):
             sun_direction,
             receiver_center,
         ))
+        self.align_origin = throt.Rotate(self.alignment)
 
         if align_points:
             self._align()
 
     def _align(self):
         hel_rotated, normal_vectors_rotated = rotate(
-            self._heliostat, self.alignment)
+            self._heliostat, self.align_origin)
         # TODO Add Translation in rotate function
         hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
         normal_vectors_rotated = (
