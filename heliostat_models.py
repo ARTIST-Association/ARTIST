@@ -662,12 +662,12 @@ class AlignedHeliostat(AbstractHeliostat):
     def _align(self):
         hel_rotated, normal_vectors_rotated = rotate(
             self._heliostat, self.alignment)
+        # TODO Add Translation in rotate function
+        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
-        # TODO Add Translation in rotate function
-        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
 
         self._discrete_points = hel_rotated_in_field
         self._normals = normal_vectors_rotated
