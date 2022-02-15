@@ -232,6 +232,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _facet_heliostat_config(heliostat_config, position):
         heliostat_config = heliostat_config.clone()
         heliostat_config.defrost()
+
+        # We change the shape in order to speed up construction.
+        # Later, we need to do adjust all loaded values to be the same
+        # as the parent heliostat.
+        heliostat_config.SHAPE = 'ideal'
+        heliostat_config.ROWS = 2
+        heliostat_config.COLS = 2
+
         heliostat_config.POSITION_ON_FIELD = position.tolist()
         return heliostat_config
 
@@ -259,6 +267,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             orig_nurbs_config,
             nurbs_config,
     ):
+        # "Load" values from parent heliostat.
+        facet._discrete_points = self._discrete_points
+        facet._normals = self._normals
+        facet._normals_ideal = self._normals_ideal
+        facet.params = self.params
+        facet.h_rows = self.rows
+        facet.h_cols = self.cols
+
         facet.height = nurbs_config.HEIGHT
         facet.width = nurbs_config.WIDTH
         # TODO initialize NURBS correctly
