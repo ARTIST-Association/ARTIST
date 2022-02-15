@@ -29,7 +29,7 @@ def vec_to_ae(vec, device=None):
         returns Azi, Ele in ENU coordsystem
 
     """
-    if len(vec.shape) == 1:
+    if vec.ndim == 1:
         vec = vec.unsqueeze(0)
 
     north = th.tensor([0, 1, 0], dtype=th.get_default_dtype(), device=device)
