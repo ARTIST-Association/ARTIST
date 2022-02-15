@@ -330,4 +330,4 @@ class Renderer(object):
 
         if return_extras:
             return total_bitmap, (ray_directions, indices, xi, yi)
-        return total_bitmap.unsqueeze(0)
+        return total_bitmap
