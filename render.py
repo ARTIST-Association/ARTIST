@@ -138,8 +138,8 @@ def sample_bitmap(
         bitmap_width: int,
 ):
 
-    x_ints = dx_ints[indices]/planex*bitmap_height
-    y_ints = dy_ints[indices]/planey*bitmap_width
+    x_ints = dx_ints[indices] / planex * bitmap_height
+    y_ints = dy_ints[indices] / planey * bitmap_width
 
     # We assume a continuously positioned value in-between four
     # discretely positioned pixels, similar to this:
