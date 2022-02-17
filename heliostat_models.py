@@ -3,6 +3,7 @@ import functools
 import struct
 
 import pytorch3d.transforms as throt
+import torch
 import torch as th
 
 import bpro_loader
@@ -457,7 +458,19 @@ class AbstractHeliostat:
     def get_ray_directions(self):
         raise NotImplementedError('please override `get_ray_directions`')
 
-    def align(self):
+    def get_params(self) -> List[torch.Tensor]:
+        raise TypeError(
+            self.__class__.__name__ + ' has no trainable parameters')
+
+    def to_dict(self) -> Dict[str, Any]:
+        raise TypeError(
+            'cannot convert ' + self.__class__.__name__ + ' to dictionary')
+
+    def align(
+            self,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> 'AbstractHeliostat':
         raise NotImplementedError('please override `align`')
 
 
