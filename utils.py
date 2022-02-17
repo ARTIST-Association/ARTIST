@@ -7,10 +7,12 @@ Created on Mon Jul  5 12:38:11 2021
 
 import math
 import os
+from typing import Callable, Optional, Tuple, Union
 
 from matplotlib import cm
 import torch
 import torch as th
+from yacs.config import CfgNode
 
 import nurbs
 
@@ -49,11 +51,11 @@ def vec_to_ae(vec: torch.Tensor) -> torch.Tensor:
 
 
 def ae_to_vec(
-        az: th.Tensor,
-        el: th.Tensor,
-        srange: float = 1,
+        az: torch.Tensor,
+        el: torch.Tensor,
+        srange: float = 1.0,
         deg: bool = True,
-) -> th.Tensor:
+) -> torch.Tensor:
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -90,7 +92,10 @@ def ae_to_vec(
     return rot_vec
 
 
-def colorize(image_tensor, colormap='jet'):
+def colorize(
+        image_tensor: torch.Tensor,
+        colormap: str = 'jet',
+) -> torch.Tensor:
     """
 
     Parameters
@@ -116,7 +121,11 @@ def colorize(image_tensor, colormap='jet'):
     return mapped_image
 
 
-def load_config_file(cfg, config_file_loc, experiment_name=None):
+def load_config_file(
+        cfg: CfgNode,
+        config_file_loc: str,
+        experiment_name: Optional[str] = None,
+) -> CfgNode:
     if len(os.path.splitext(config_file_loc)[1]) == 0:
         config_file_loc += '.yaml'
     cfg.merge_from_file(config_file_loc)
@@ -126,7 +135,7 @@ def load_config_file(cfg, config_file_loc, experiment_name=None):
     return cfg
 
 
-def flatten_aimpoints(aimpoints):
+def flatten_aimpoints(aimpoints: torch.Tensor) -> torch.Tensor:
     X = th.flatten(aimpoints[0])
     Y = th.flatten(aimpoints[1])
     Z = th.flatten(aimpoints[2])
@@ -134,7 +143,10 @@ def flatten_aimpoints(aimpoints):
     return aimpoints
 
 
-def curl(f, arg):
+def curl(
+        f: Callable[[torch.Tensor], torch.Tensor],
+        arg: torch.Tensor,
+) -> torch.Tensor:
     jac = th.autograd.functional.jacobian(f, arg, create_graph=True)
 
     rot_x = jac[2][1] - jac[1][2]
@@ -144,14 +156,17 @@ def curl(f, arg):
     return th.tensor([rot_x, rot_y, rot_z])
 
 
-def find_larger_divisor(num):
+def find_larger_divisor(num: int) -> int:
     divisor = int(th.sqrt(th.tensor(num)))
     while num % divisor != 0:
         divisor += 1
     return divisor
 
 
-def find_perpendicular_pair(base_vec, vecs):
+def find_perpendicular_pair(
+        base_vec: torch.Tensor,
+        vecs: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     half_pi = th.tensor(math.pi, device=vecs.device) / 2
     for vec_x in vecs[1:]:
         surface_direction_x = vec_x - base_vec
@@ -171,14 +186,14 @@ def find_perpendicular_pair(base_vec, vecs):
 
 
 def _cartesian_linspace_around(
-        minval_x,
-        maxval_x,
-        num_x,
-        minval_y,
-        maxval_y,
-        num_y,
-        device,
-        dtype=None,
+        minval_x: Union[float, torch.Tensor],
+        maxval_x: Union[float, torch.Tensor],
+        num_x: int,
+        minval_y: Union[float, torch.Tensor],
+        maxval_y: Union[float, torch.Tensor],
+        num_y: int,
+        device: th.device,
+        dtype: Optional[th.dtype] = None,
 ):
     if dtype is None:
         dtype = th.get_default_dtype()
@@ -197,8 +212,10 @@ def _cartesian_linspace_around(
     minval_y = minval_y.clamp(0, spline_max)
     maxval_y = maxval_y.clamp(0, spline_max)
 
-    points_x = th.linspace(minval_x, maxval_x, num_x, device=device)
-    points_y = th.linspace(minval_y, maxval_y, num_y, device=device)
+    points_x = th.linspace(
+        minval_x, maxval_x, num_x, device=device)  # type: ignore[arg-type]
+    points_y = th.linspace(
+        minval_y, maxval_y, num_y, device=device)  # type: ignore[arg-type]
     points = th.cartesian_prod(points_x, points_y)
     return points
 
@@ -206,22 +223,22 @@ def _cartesian_linspace_around(
 # TODO choose uniformly between spans (not super important
 #      as our knots are uniform as well)
 def initialize_spline_eval_points(
-        rows,
-        cols,
-        device,
-):
+        rows: int,
+        cols: int,
+        device: th.device,
+) -> torch.Tensor:
     return _cartesian_linspace_around(0, 1, rows, 0, 1, cols, device)
 
 
 def initialize_spline_eval_points_perfectly(
-        points,
-        degree_x,
-        degree_y,
-        ctrl_points,
-        ctrl_weights,
-        knots_x,
-        knots_y,
-):
+        points: torch.Tensor,
+        degree_x: int,
+        degree_y: int,
+        ctrl_points: torch.Tensor,
+        ctrl_weights: torch.Tensor,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
+) -> torch.Tensor:
     eval_points, distances = nurbs.invert_points_slow(
             points,
             degree_x,
@@ -234,7 +251,7 @@ def initialize_spline_eval_points_perfectly(
     return eval_points
 
 
-def round_positionally(x):
+def round_positionally(x: torch.Tensor) -> torch.Tensor:
     """Round usually but round .5 decimal point depending on position.
 
     If the decimal point is .5, values in the lower half of `x` are
@@ -266,11 +283,18 @@ def round_positionally(x):
     return x
 
 
-def horizontal_distance(a, b, ord=2):
+def horizontal_distance(
+        a: torch.Tensor,
+        b: torch.Tensor,
+        ord: Union[int, float, str] = 2,
+) -> torch.Tensor:
     return th.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
 
 
-def distance_weighted_avg(distances, points):
+def distance_weighted_avg(
+        distances: torch.Tensor,
+        points: torch.Tensor,
+) -> torch.Tensor:
     # Handle distances of 0 just in case with a very small value.
     distances = th.where(
         distances == 0,
@@ -288,7 +312,11 @@ def distance_weighted_avg(distances, points):
     return total
 
 
-def calc_knn_averages(points, neighbours, k):
+def calc_knn_averages(
+        points: torch.Tensor,
+        neighbours: torch.Tensor,
+        k: int,
+) -> torch.Tensor:
     distances = horizontal_distance(
         points.unsqueeze(1),
         neighbours.unsqueeze(0),
@@ -302,12 +330,12 @@ def calc_knn_averages(points, neighbours, k):
 
 
 def initialize_spline_ctrl_points(
-        control_points,
-        origin,
-        rows,
-        cols,
-        h_width,
-        h_height,
+        control_points: torch.Tensor,
+        origin: torch.Tensor,
+        rows: int,
+        cols: int,
+        h_width: float,
+        h_height: float,
 ):
     device = control_points.device
     origin_offsets_x = th.linspace(
@@ -322,7 +350,11 @@ def initialize_spline_ctrl_points(
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
 
-def calc_closest_ctrl_points(control_points, world_points, k=4):
+def calc_closest_ctrl_points(
+        control_points: torch.Tensor,
+        world_points: torch.Tensor,
+        k: int = 4,
+) -> torch.Tensor:
     new_control_points = calc_knn_averages(
         control_points.reshape(-1, control_points.shape[-1]),
         world_points,
@@ -331,7 +363,11 @@ def calc_closest_ctrl_points(control_points, world_points, k=4):
     return new_control_points.reshape(control_points.shape)
 
 
-def _make_structured_points_from_corners(points, rows, cols):
+def _make_structured_points_from_corners(
+        points: torch.Tensor,
+        rows: int,
+        cols: int,
+) -> Tuple[torch.Tensor, int, int]:
     x_vals = points[:, 0]
     y_vals = points[:, 1]
 
@@ -340,8 +376,10 @@ def _make_structured_points_from_corners(points, rows, cols):
     y_min = y_vals.min()
     y_max = y_vals.max()
 
-    x_vals = th.linspace(x_min, x_max, rows, device=x_vals.device)
-    y_vals = th.linspace(y_min, y_max, cols, device=y_vals.device)
+    x_vals = th.linspace(
+        x_min, x_max, rows, device=x_vals.device)  # type: ignore[arg-type]
+    y_vals = th.linspace(
+        y_min, y_max, cols, device=y_vals.device)  # type: ignore[arg-type]
 
     structured_points = th.cartesian_prod(x_vals, y_vals)
 
@@ -360,7 +398,10 @@ def _make_structured_points_from_corners(points, rows, cols):
     return structured_points, rows, cols
 
 
-def _make_structured_points_from_unique(points, tolerance):
+def _make_structured_points_from_unique(
+        points: torch.Tensor,
+        tolerance: float,
+) -> Tuple[torch.Tensor, int, int]:
     x_vals = points[:, 0]
     x_vals = th.unique(x_vals, sorted=True)
 
@@ -402,7 +443,12 @@ def _make_structured_points_from_unique(points, tolerance):
     return structured_points, rows, cols
 
 
-def make_structured_points(points, rows=None, cols=None, tolerance=0.0075):
+def make_structured_points(
+        points: torch.Tensor,
+        rows: Optional[int] = None,
+        cols: Optional[int] = None,
+        tolerance: float = 0.0075,
+) -> Tuple[torch.Tensor, int, int]:
     if rows is None or cols is None:
         return _make_structured_points_from_unique(points, tolerance)
     else:
@@ -410,17 +456,17 @@ def make_structured_points(points, rows=None, cols=None, tolerance=0.0075):
 
 
 def initialize_spline_ctrl_points_perfectly(
-        control_points,
-        world_points,
-        num_points_x,
-        num_points_y,
-        degree_x,
-        degree_y,
-        knots_x,
-        knots_y,
-        change_z_only,
-        change_knots,
-):
+        control_points: torch.Tensor,
+        world_points: torch.Tensor,
+        num_points_x: int,
+        num_points_y: int,
+        degree_x: int,
+        degree_y: int,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
+        change_z_only: bool,
+        change_knots: bool,
+) -> None:
     new_control_points, new_knots_x, new_knots_y = nurbs.approximate_surface(
         world_points,
         num_points_x,
@@ -441,10 +487,7 @@ def initialize_spline_ctrl_points_perfectly(
         knots_y[:] = new_knots_y
 
 
-def initialize_spline_knots_(
-        knots,
-        spline_degree,
-):
+def initialize_spline_knots_(knots: torch.Tensor, spline_degree: int) -> None:
     num_knot_vals = len(knots[spline_degree:-spline_degree])
     knot_vals = th.linspace(0, 1, num_knot_vals)
     knots[:spline_degree] = 0
@@ -453,22 +496,25 @@ def initialize_spline_knots_(
 
 
 def initialize_spline_knots(
-        knots_x,
-        knots_y,
-        spline_degree_x,
-        spline_degree_y,
-):
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
+        spline_degree_x: int,
+        spline_degree_y: int,
+) -> None:
     initialize_spline_knots_(knots_x, spline_degree_x)
     initialize_spline_knots_(knots_y, spline_degree_y)
 
 
-def calc_ray_diffs(pred, target):
+def calc_ray_diffs(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     # We could broadcast here but to avoid a warning, we tile manually.
     # TODO stimmt das so noch?
     return th.nn.functional.l1_loss(pred, target)
 
 
-def calc_reflection_normals_(in_reflections, out_reflections):
+def calc_reflection_normals_(
+        in_reflections: torch.Tensor,
+        out_reflections: torch.Tensor,
+) -> torch.Tensor:
     normals = ((in_reflections + out_reflections) / 2 - in_reflections)
     # Handle pass-through "reflection"
     normals = th.where(
@@ -479,7 +525,10 @@ def calc_reflection_normals_(in_reflections, out_reflections):
     return normals
 
 
-def calc_reflection_normals(in_reflections, out_reflections):
+def calc_reflection_normals(
+        in_reflections: torch.Tensor,
+        out_reflections: torch.Tensor,
+) -> torch.Tensor:
     in_reflections = \
         in_reflections / th.linalg.norm(in_reflections, dim=-1).unsqueeze(-1)
     out_reflections = \
@@ -487,7 +536,7 @@ def calc_reflection_normals(in_reflections, out_reflections):
     return calc_reflection_normals_(in_reflections, out_reflections)
 
 
-def batch_dot(x, y):
+def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
 
@@ -501,29 +550,29 @@ def batch_dot(x, y):
 
 
 def save_target(
-        heliostat_origin_center,
-        heliostat_face_normal,
-        heliostat_points,
-        heliostat_normals,
-        heliostat_up_dir,
+        heliostat_origin_center: torch.Tensor,
+        heliostat_face_normal: torch.Tensor,
+        heliostat_points: torch.Tensor,
+        heliostat_normals: torch.Tensor,
+        heliostat_up_dir: Optional[torch.Tensor],
 
-        receiver_origin_center,
-        receiver_width,
-        receiver_height,
-        receiver_normal,
-        receiver_up_dir,
+        receiver_origin_center: torch.Tensor,
+        receiver_width: float,
+        receiver_height: float,
+        receiver_normal: torch.Tensor,
+        receiver_up_dir: Optional[torch.Tensor],
 
-        sun,
-        num_rays,
-        mean,
-        cov,
-        xi,
-        yi,
+        sun: torch.Tensor,
+        num_rays: int,
+        mean: torch.Tensor,
+        cov: torch.Tensor,
+        xi: Optional[torch.Tensor],
+        yi: Optional[torch.Tensor],
 
-        target_ray_directions,
-        target_ray_points,
-        path,
-):
+        target_ray_directions: torch.Tensor,
+        target_ray_points: torch.Tensor,
+        path: str,
+) -> None:
     th.save({
         'heliostat_origin_center': heliostat_origin_center,
         'heliostat_face_normal': heliostat_face_normal,

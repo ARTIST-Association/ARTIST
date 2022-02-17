@@ -1,7 +1,12 @@
+from typing import Optional, Tuple, Union
+import torch
 import torch as th
 
+from environment import Environment
+from heliostat_models import AbstractHeliostat
 
-def Rx(alpha, mat):
+
+def Rx(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -12,7 +17,7 @@ def Rx(alpha, mat):
     return th.matmul(rots, mat)
 
 
-def Ry(alpha, mat):
+def Ry(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -23,7 +28,7 @@ def Ry(alpha, mat):
     return th.matmul(rots, mat)
 
 
-def Rz(alpha, mat):
+def Rz(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -35,12 +40,12 @@ def Rz(alpha, mat):
 
 
 def LinePlaneCollision(
-        planeNormal,
-        planePoint,
-        rayDirections,
-        rayPoints,
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        rayDirections: torch.Tensor,
+        rayPoints: torch.Tensor,
         epsilon: float = 1e-6,
-):
+) -> torch.Tensor:
 
     ndotu = rayDirections.matmul(planeNormal)
     if (th.abs(ndotu) < epsilon).any():
@@ -53,13 +58,13 @@ def LinePlaneCollision(
 
 
 def compute_ray_directions(
-        planeNormal,
-        planePoint,
-        ray_directions,
-        hel_in_field,
-        xi,
-        yi,
-):
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        ray_directions: torch.Tensor,
+        hel_in_field: torch.Tensor,
+        xi: torch.Tensor,
+        yi: torch.Tensor,
+) -> torch.Tensor:
     intersections = LinePlaneCollision(
         planeNormal, planePoint, ray_directions, hel_in_field)
     as_ = intersections
@@ -116,11 +121,11 @@ def compute_ray_directions(
 
 
 def compute_receiver_intersections(
-        planeNormal,
-        planePoint,
-        ray_directions,
-        hel_in_field,
-):
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        ray_directions: torch.Tensor,
+        hel_in_field: torch.Tensor,
+) -> torch.Tensor:
     # Execute the kernel
     intersections = LinePlaneCollision(
         planeNormal, planePoint, ray_directions, hel_in_field, epsilon=1e-6)
@@ -129,14 +134,14 @@ def compute_receiver_intersections(
 
 
 def sample_bitmap(
-        dx_ints,
-        dy_ints,
-        indices,
-        planex: int,
-        planey: int,
+        dx_ints: torch.Tensor,
+        dy_ints: torch.Tensor,
+        indices: torch.Tensor,
+        planex: float,
+        planey: float,
         bitmap_height: int,
         bitmap_width: int,
-):
+) -> torch.Tensor:
 
     x_ints = dx_ints[indices] / planex * bitmap_height
     y_ints = dy_ints[indices] / planey * bitmap_width
@@ -256,10 +261,15 @@ def sample_bitmap(
 
 
 class Renderer(object):
-    def __init__(self, Heliostat, Environment):
-        self.H = Heliostat
-        self.ENV = Environment
-        self.redraw_random_variables = self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
+    def __init__(
+            self,
+            heliostat: AbstractHeliostat,
+            environment: Environment,
+    ) -> None:
+        self.H = heliostat
+        self.ENV = environment
+        self.redraw_random_variables: bool = \
+            self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
         # plotter.plot_raytracer(
         #     self.H.discrete_points,
         #     self.ENV.receiver_center,
@@ -270,7 +280,17 @@ class Renderer(object):
         if not self.redraw_random_variables:
             self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
-    def render(self, heliostat=None, return_extras=False):
+    def render(
+            self,
+            heliostat: Optional[AbstractHeliostat] = None,
+            return_extras: bool = False,
+    ) -> Union[
+        torch.Tensor,
+        Tuple[
+            torch.Tensor,
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        ],
+    ]:
         if heliostat is None:
             heliostat = self.H
         if self.redraw_random_variables:

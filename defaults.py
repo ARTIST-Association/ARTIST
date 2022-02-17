@@ -215,7 +215,7 @@ _C.TRAIN.SUN_DIRECTIONS.GRID            = CN()
 _C.TRAIN.SUN_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
 _C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
-_C.TRAIN.EPOCHS                         = 2500
+_C.TRAIN.EPOCHS                         = 20
 
 _C.TRAIN.SCHEDULER                      = CN()
 _C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateu, Cyclic, OneCycle, Exponential

@@ -1,20 +1,34 @@
 import copy
 import functools
 import struct
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import pytorch3d.transforms as throt
 import torch
 import torch as th
+from yacs.config import CfgNode
 
 import bpro_loader
 import utils
 
+HeliostatParams = Tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    float,
+    float,
+    Optional[int],
+    Optional[int],
+    Optional[Dict[str, Any]],
+]
+C = TypeVar('C', bound='Heliostat')
 
-def reflect_rays_(rays, normals):
+
+def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     return rays - 2 * utils.batch_dot(rays, normals) * normals
 
 
-def reflect_rays(rays, normals):
+def reflect_rays(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
     return reflect_rays_(rays, normals)
 
@@ -22,7 +36,9 @@ def reflect_rays(rays, normals):
 # Heliostat Models
 # ================
 
-def real_heliostat(real_configs, device):
+def real_heliostat(
+        real_configs: CfgNode, device: th.device,
+) -> HeliostatParams:
     """Return a heliostat loaded from deflectometric data."""
     cfg = real_configs
     dtype = th.get_default_dtype()
@@ -77,7 +93,10 @@ def real_heliostat(real_configs, device):
     )
 
 
-def heliostat_by_function(heliostat_function_cfg, device):
+def heliostat_by_function(
+        heliostat_function_cfg: CfgNode,
+        device: th.device,
+) -> HeliostatParams:
     cfg = heliostat_function_cfg
 
     # width = cfg.WIDTH / 2
@@ -87,7 +106,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     # Y = th.linspace(-height, height, cfg.COLS)
     # X, Y = th.meshgrid(X, Y)
 
-    columns = cfg.COLS
+    columns: int = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
 
@@ -104,8 +123,8 @@ def heliostat_by_function(heliostat_function_cfg, device):
 
     Y = Y.reshape(cfg.ROWS, cfg.COLS)
 
-    reduction = cfg.REDUCTION_FACTOR
-    fr = cfg.FREQUENCY
+    reduction: float = cfg.REDUCTION_FACTOR
+    fr: float = cfg.FREQUENCY
     if cfg.NAME == "sin":
         Z = th.sin(fr * X + fr * Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
@@ -173,11 +192,14 @@ def heliostat_by_function(heliostat_function_cfg, device):
     )
 
 
-def ideal_heliostat(ideal_configs, device):
+def ideal_heliostat(
+        ideal_configs: CfgNode,
+        device: th.device,
+) -> HeliostatParams:
     """Return an ideally shaped heliostat lying flat on the ground."""
     cfg = ideal_configs
 
-    columns = cfg.COLS
+    columns: int = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
 
@@ -402,20 +424,29 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
 #     return h_rotated.squeeze(-1)
 
 
-def rotate(h, align_origin):
+def rotate(
+        h: 'AbstractHeliostat',
+        align_origin: throt.Transform3d,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     # r = rot_from_matrix(hel_coordsystem)
     if hasattr(h, 'discrete_points_and_normals'):
-        discrete_points, normals = h.discrete_points_and_normals()
+        discrete_points, normals = \
+            h.discrete_points_and_normals()  # type: ignore[attr-defined]
     else:
         discrete_points = h.discrete_points
         normals = h.normals
 
-    rotated_points = align_origin.transform_points(discrete_points)
-    rotated_normals = align_origin.transform_normals(normals)
+    rotated_points: torch.Tensor = align_origin.transform_points(
+        discrete_points)
+    rotated_normals: torch.Tensor = align_origin.transform_normals(normals)
     return rotated_points, rotated_normals
 
 
-def heliostat_coord_system(Position, Sun, Aimpoint):
+def heliostat_coord_system(
+        Position: torch.Tensor,
+        Sun: torch.Tensor,
+        Aimpoint: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
@@ -438,24 +469,31 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
 
 
 class AbstractHeliostat:
-    def __init__(self):
+    device: th.device
+    position_on_field: torch.Tensor
+    cfg: CfgNode
+
+    _discrete_points: torch.Tensor
+    _normals: torch.Tensor
+
+    def __init__(self, *args, **kwargs) -> None:
         raise NotImplementedError('do not construct an abstract class')
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._discrete_points)
 
-    def __call__(self):
+    def __call__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         return (self.discrete_points, self.get_ray_directions())
 
     @property
-    def discrete_points(self):
+    def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
 
     @property
-    def normals(self):
+    def normals(self) -> torch.Tensor:
         return self._normals
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
     def get_params(self) -> List[torch.Tensor]:
@@ -475,7 +513,12 @@ class AbstractHeliostat:
 
 
 class Heliostat(AbstractHeliostat):
-    def __init__(self, heliostat_config, device, setup_params=True):
+    def __init__(
+            self,
+            heliostat_config: CfgNode,
+            device: th.device,
+            setup_params: bool = True,
+    ) -> None:
         self.cfg = heliostat_config
         if not self.cfg.is_frozen():
             self.cfg = self.cfg.clone()
@@ -488,13 +531,13 @@ class Heliostat(AbstractHeliostat):
         )
 
         self._checked_dict = False
-        self.params = None
+        self.params: Optional[Dict[str, Any]] = None
 
         self.load()
         if setup_params:
             self.setup_params()
 
-    def load(self):
+    def load(self) -> None:
 
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
@@ -531,28 +574,32 @@ class Heliostat(AbstractHeliostat):
         self.cols = cols
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.rows, self.cols)
 
-    def align(self, sun_direction, receiver_center):
+    def align(
+            self,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> 'AlignedHeliostat':
         return AlignedHeliostat(self, sun_direction, receiver_center)
 
-    def setup_params(self):
+    def setup_params(self) -> None:
         self._normals.requires_grad_(True)
 
-    def get_params(self):
+    def get_params(self) -> List[torch.Tensor]:
         opt_params = [self._normals]
         return opt_params
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('Heliostat has to be aligned first')
 
-    def step(self, *args, **kwargs):
+    def step(self, *args, **kwargs) -> None:
         pass
 
-    @property
+    @property  # type: ignore[misc]
     @functools.lru_cache()
-    def dict_keys(self):
+    def dict_keys(self) -> Set[str]:
         """All keys we assume in the dictionary returned by `_to_dict`."""
         return {
             'heliostat_points',
@@ -562,7 +609,7 @@ class Heliostat(AbstractHeliostat):
             'params',
         }
 
-    def _check_dict(self, data):
+    def _check_dict(self, data: Dict[str, Any]) -> None:
         """Check whether the given data dictionary has the correct keys;
         only do this once to save some cycles.
 
@@ -576,7 +623,7 @@ class Heliostat(AbstractHeliostat):
         self._checked_dict = True
 
     @functools.lru_cache()
-    def _fixed_dict(self):
+    def _fixed_dict(self) -> Dict[str, Any]:
         """The part of the heliostat's configuration that does not change."""
         data = {
             'heliostat_points': self._discrete_points,
@@ -586,12 +633,12 @@ class Heliostat(AbstractHeliostat):
         }
         return data
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         data = self._to_dict()
         self._check_dict(data)
         return data
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict[str, Any]:
         data = self._fixed_dict()
         data.update({
             'heliostat_normals': self._normals.clone(),
@@ -600,13 +647,13 @@ class Heliostat(AbstractHeliostat):
 
     @classmethod
     def from_dict(
-            cls,
-            data,
-            device,
-            config=None,
-            restore_strictly=True,
-            setup_params=True,
-    ):
+            cls: Type[C],
+            data: Dict[str, Any],
+            device: th.device,
+            config: Optional[CfgNode] = None,
+            restore_strictly: bool = True,
+            setup_params: bool = True,
+    ) -> C:
         if config is None:
             config = data['config']
         self = cls(config, device, setup_params=False)
@@ -615,7 +662,7 @@ class Heliostat(AbstractHeliostat):
             self.setup_params()
         return self
 
-    def _from_dict(self, data, restore_strictly):
+    def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         self._normals = data['heliostat_normals']
 
         if restore_strictly:
@@ -626,11 +673,11 @@ class Heliostat(AbstractHeliostat):
 class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
-            heliostat,
-            sun_direction,
-            receiver_center,
-            align_points=True,
-    ):
+            heliostat: Heliostat,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+            align_points: bool = True,
+    ) -> None:
         if not hasattr(heliostat, '_discrete_points'):
             raise ValueError('Heliostat has to be loaded first')
         if isinstance(heliostat, AlignedHeliostat):
@@ -651,7 +698,7 @@ class AlignedHeliostat(AbstractHeliostat):
         if align_points:
             self._align()
 
-    def _align(self):
+    def _align(self) -> None:
         hel_rotated, normal_vectors_rotated = rotate(
             self._heliostat, self.align_origin)
         # TODO Add Translation in rotate function
@@ -664,5 +711,5 @@ class AlignedHeliostat(AbstractHeliostat):
         self._discrete_points = hel_rotated_in_field
         self._normals = normal_vectors_rotated
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         return reflect_rays_(self.from_sun, self.normals)

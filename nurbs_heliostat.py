@@ -1,8 +1,10 @@
 import functools
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
+from pytorch3d.transforms import Transform3d
 import torch
 import torch as th
+from yacs.config import CfgNode
 
 import heliostat_models
 from heliostat_models import AbstractHeliostat, AlignedHeliostat, Heliostat
@@ -10,15 +12,17 @@ import nurbs
 from nurbs_progressive_growing import ProgressiveGrowing
 import utils
 
+C = TypeVar('C', bound='NURBSHeliostat')
+
 
 def _calc_normals_and_surface(
-        eval_points,
+        eval_points: torch.Tensor,
         degree_x: int,
         degree_y: int,
-        ctrl_points,
-        ctrl_weights,
-        knots_x,
-        knots_y,
+        ctrl_points: torch.Tensor,
+        ctrl_weights: torch.Tensor,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     return nurbs.calc_normals_and_surface_slow(
         eval_points[:, 0],
@@ -33,60 +37,64 @@ def _calc_normals_and_surface(
 
 
 class AbstractNURBSHeliostat(AbstractHeliostat):
-    def __len__(self):
+    def __len__(self) -> int:
         raise NotImplementedError('please override `__len__`')
 
-    def _calc_normals_and_surface(self):
+    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError(
             'please override `_calc_normals_and_surface`')
 
-    def __call__(self):
+    def __call__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         discrete_points, normals = self.discrete_points_and_normals()
         return (discrete_points, self.get_ray_directions(normals))
 
-    def discrete_points_and_normals(self):
+    def discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
         discrete_points, normals = self._calc_normals_and_surface()
         return discrete_points, normals
 
     @property
-    def discrete_points(self):
+    def discrete_points(self) -> torch.Tensor:
         discrete_points, _ = self._calc_normals_and_surface()
         return discrete_points
 
     @property
-    def normals(self):
+    def normals(self) -> torch.Tensor:
         _, normals = self._calc_normals_and_surface()
         return normals
 
-    def get_ray_directions(self, normals=None):
+    def get_ray_directions(
+            self,
+            normals: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
 
 class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def __init__(
             self,
-            heliostat_config,
-            nurbs_config,
-            device,
-            setup_params=True,
-    ):
+            heliostat_config: CfgNode,
+            nurbs_config: CfgNode,
+            device: th.device,
+            setup_params: bool = True,
+    ) -> None:
         super().__init__(heliostat_config, device, setup_params=False)
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
 
-        self._fix_spline_ctrl_weights = nurbs_config.FIX_SPLINE_CTRL_WEIGHTS
-        self._fix_spline_knots = nurbs_config.FIX_SPLINE_KNOTS
-        self._recalc_eval_points = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
+        self._fix_spline_ctrl_weights: bool = \
+            self.nurbs_cfg.FIX_SPLINE_CTRL_WEIGHTS
+        self._fix_spline_knots: bool = self.nurbs_cfg.FIX_SPLINE_KNOTS
+        self._recalc_eval_points: bool = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
 
-        spline_degree = nurbs_config.SPLINE_DEGREE
+        spline_degree: int = self.nurbs_cfg.SPLINE_DEGREE
         self.degree_x = spline_degree
         self.degree_y = spline_degree
-        self.h_rows = self.rows
-        self.h_cols = self.cols
-        self.rows = nurbs_config.ROWS
-        self.cols = nurbs_config.COLS
+        self.h_rows: Optional[int] = self.rows
+        self.h_cols: Optional[int] = self.cols
+        self.rows: int = self.nurbs_cfg.ROWS
+        self.cols: int = self.nurbs_cfg.COLS
 
         self._progressive_growing = ProgressiveGrowing(self)
 
@@ -109,28 +117,35 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if setup_params:
             self.setup_params()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.eval_points)
 
-    def align(self, sun_direction, receiver_center):
+    def align(  # type: ignore[override]
+            self,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> 'AlignedNURBSHeliostat':
         return AlignedNURBSHeliostat(self, sun_direction, receiver_center)
 
-    def get_ray_directions(self, normals=None):
+    def get_ray_directions(
+            self,
+            normals: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         raise NotImplementedError('Heliostat has to be aligned first')
 
     @property
-    def fix_spline_ctrl_weights(self):
+    def fix_spline_ctrl_weights(self) -> bool:
         return self._fix_spline_ctrl_weights
 
     @property
-    def fix_spline_knots(self):
+    def fix_spline_knots(self) -> bool:
         return self._fix_spline_knots
 
     @property
-    def recalc_eval_points(self):
+    def recalc_eval_points(self) -> bool:
         return self._recalc_eval_points
 
-    def initialize_control_points(self, ctrl_points):
+    def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
         nurbs_config = self.nurbs_cfg
 
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
@@ -184,7 +199,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         self.set_ctrl_points(ctrl_points)
 
-    def initialize_eval_points(self):
+    def initialize_eval_points(self) -> None:
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
             if not self.recalc_eval_points:
                 self._eval_points = \
@@ -204,9 +219,9 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self._eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
 
-    def setup_params(self):
+    def setup_params(self) -> None:
         self.ctrl_points_z.requires_grad_(True)
-        optimize_xy = not self.nurbs_cfg.OPTIMIZE_Z_ONLY
+        optimize_xy: bool = not self.nurbs_cfg.OPTIMIZE_Z_ONLY
         self.ctrl_points_xy.requires_grad_(optimize_xy)
         optimize_ctrl_weights = not self.fix_spline_ctrl_weights
         self.ctrl_weights.requires_grad_(optimize_ctrl_weights)
@@ -215,7 +230,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.knots_x.requires_grad_(optimize_knots)
         self.knots_y.requires_grad_(optimize_knots)
 
-    def get_params(self):
+    def get_params(self) -> List[torch.Tensor]:
         opt_params = [self.ctrl_points_z]
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
             opt_params.append(self.ctrl_points_xy)
@@ -229,25 +244,25 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return opt_params
 
     @property
-    def ctrl_points(self):
+    def ctrl_points(self) -> torch.Tensor:
         return th.cat([
             self.ctrl_points_xy,
             self.ctrl_points_z,
         ], dim=-1)
 
     @ctrl_points.setter
-    def ctrl_points(self):
+    def ctrl_points(self) -> None:
         raise AttributeError(
             'ctrl_points is not a writable attribute; '
             'use `set_ctrl_points` instead'
         )
 
-    def set_ctrl_points(self, ctrl_points):
+    def set_ctrl_points(self, ctrl_points: torch.Tensor) -> None:
         with th.no_grad():
             self.ctrl_points_xy = ctrl_points[:, :, :-1]
             self.ctrl_points_z = ctrl_points[:, :, -1:]
 
-    def _invert_world_points(self):
+    def _invert_world_points(self) -> torch.Tensor:
         return utils.initialize_spline_eval_points_perfectly(
             self._orig_world_points,
             self.degree_x,
@@ -259,7 +274,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
 
     @property
-    def eval_points(self):
+    def eval_points(self) -> torch.Tensor:
         if self.recalc_eval_points:
             eval_points = self._invert_world_points()
         else:
@@ -267,10 +282,10 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return eval_points
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int, int]:
         return self._progressive_growing.get_shape()
 
-    def _calc_normals_and_surface(self):
+    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         eval_points = self.eval_points
         ctrl_points, ctrl_weights, knots_x, knots_y = \
             self._progressive_growing.select()
@@ -289,14 +304,14 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return surface_points, normals
 
     @th.no_grad()
-    def step(self, verbose=False):
+    def step(self, verbose: bool = False) -> None:  # type: ignore[override]
         self._progressive_growing.step(verbose)
 
-    @property
+    @property  # type: ignore[misc]
     @functools.lru_cache()
-    def dict_keys(self):
+    def dict_keys(self) -> Set[str]:
         keys = super().dict_keys
-        keys = keys.union({
+        keys = keys.union({  # type: ignore[attr-defined]
             'degree_x',
             'degree_y',
             'control_points',
@@ -313,7 +328,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return keys
 
     @functools.lru_cache()
-    def _fixed_dict(self):
+    def _fixed_dict(self) -> Dict[str, Any]:
         data = super()._fixed_dict()
         data.update({
             'degree_x': self.degree_x,
@@ -333,7 +348,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             data['evaluation_points'] = self.eval_points
         return data
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict[str, Any]:
         data = super()._to_dict()
 
         data.update({
@@ -355,17 +370,17 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return data
 
     @classmethod
-    def from_dict(
-            cls,
-            data,
-            device,
-            config=None,
-            nurbs_config=None,
+    def from_dict(  # type: ignore[override]
+            cls: Type[C],
+            data: Dict[str, Any],
+            device: th.device,
+            config: Optional[CfgNode] = None,
+            nurbs_config: Optional[CfgNode] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
-            restore_strictly=False,
-            setup_params=True,
-    ):
+            restore_strictly: bool = False,
+            setup_params: bool = True,
+    ) -> C:
         if config is None:
             config = data['config']
         if nurbs_config is None:
@@ -377,7 +392,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.setup_params()
         return self
 
-    def _from_dict(self, data, restore_strictly):
+    def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         # Keep normals from standard initialization here.
         normals = self._normals
         super()._from_dict(data, restore_strictly)
@@ -403,21 +418,30 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
 
 class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
-    def __init__(self, heliostat, sun_direction, receiver_center):
+    _heliostat: NURBSHeliostat
+    align_origin: Transform3d
+    from_sun: torch.Tensor
+
+    def __init__(
+            self,
+            heliostat: NURBSHeliostat,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> None:
         assert isinstance(heliostat, NURBSHeliostat), \
             'can only align NURBS heliostat'
         AlignedHeliostat.__init__(
-            self,
+            self,  # type: ignore[arg-type]
             heliostat,
             sun_direction,
             receiver_center,
             align_points=False,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._heliostat)
 
-    def _calc_normals_and_surface(self):
+    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
             self._heliostat, self.align_origin)
         # TODO Remove if translation is added to `rotate` function.
@@ -430,7 +454,10 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
 
         return hel_rotated, normal_vectors_rotated
 
-    def get_ray_directions(self, normals=None):
+    def get_ray_directions(
+            self,
+            normals: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         if normals is None:
             normals = self.normals
         return heliostat_models.reflect_rays_(self.from_sun, normals)

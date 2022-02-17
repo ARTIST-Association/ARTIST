@@ -1,17 +1,22 @@
 import os
+from typing import Optional
 
+import torch
 import torch as th
+from torch.utils.tensorboard import SummaryWriter
 
+from environment import Environment
+from heliostat_models import AbstractHeliostat
 from render import Renderer
 import utils
 
 
 def create_target(
-        H,
-        ENV,
-        sun_direction,
-        save_path=None,
-):
+        H: AbstractHeliostat,
+        ENV: Environment,
+        sun_direction: torch.Tensor,
+        save_path: Optional[str] = None,
+) -> torch.Tensor:
     device = H.device
     if save_path:
         target_save_data = (
@@ -65,14 +70,22 @@ def create_target(
     # Render Step
     # ===========
     target_bitmap = R.render()
+    assert isinstance(target_bitmap, th.Tensor)
     return target_bitmap
 
 
 @th.no_grad()
-def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
+def generate_dataset(
+        H: AbstractHeliostat,
+        ENV: Environment,
+        sun_directions: torch.Tensor,
+        save_dir: Optional[str],
+        writer: Optional[SummaryWriter] = None,
+        prefix: str = '',
+) -> torch.Tensor:
 
     if save_dir:
-        save_path = os.path.join(save_dir, 'target.pt')
+        save_path: Optional[str] = os.path.join(save_dir, 'target.pt')
     else:
         save_path = None
 
@@ -98,4 +111,5 @@ def generate_dataset(H, ENV, sun_directions, save_dir, writer=None, prefix=''):
                 f"{prefix}target_{i}/originals",
                 utils.colorize(target_bitmap),
             )
+    assert targets is not None
     return targets
