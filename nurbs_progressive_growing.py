@@ -157,8 +157,6 @@ class ProgressiveGrowing:
             self.heliostat.ctrl_points_z[new_row_indices, :] = \
                 new_row_control_points[..., -1:]
 
-            self.heliostat.invalidate_control_points_caches()
-
         with_old_indices = self.cfg.STEP_SIZE_COLS > 0
         new_col_indices = self._find_new_indices(
             old_col_indices,
@@ -176,8 +174,6 @@ class ProgressiveGrowing:
                     new_col_control_points[..., :-1]
             self.heliostat.ctrl_points_z[:, new_col_indices] = \
                 new_col_control_points[..., -1:]
-
-            self.heliostat.invalidate_control_points_caches()
 
     def _grow_nurbs(self, verbose=False):
         already_done = self._done_growing()
