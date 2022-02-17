@@ -1,15 +1,16 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
 
 import torch
 import torch as th
 from yacs.config import CfgNode
 
-from nurbs_heliostat import NURBSHeliostat
+if TYPE_CHECKING:
+    from nurbs_heliostat import NURBSHeliostat
 import utils
 
 
 class ProgressiveGrowing:
-    def __init__(self, heliostat: NURBSHeliostat) -> None:
+    def __init__(self, heliostat: 'NURBSHeliostat') -> None:
         self.heliostat = heliostat
         self.cfg: CfgNode = self.heliostat.nurbs_cfg.GROWING
 
