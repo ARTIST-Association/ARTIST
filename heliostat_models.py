@@ -508,6 +508,8 @@ class Heliostat(AbstractHeliostat):
                 cfg.FUNCTION, self.device)
         elif shape == "other":
             heliostat_properties = other_objects(cfg.OTHER, self.device)
+        else:
+            raise ValueError('unknown heliostat shape')
 
         (
             heliostat,
