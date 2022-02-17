@@ -357,10 +357,10 @@ def calc_batch_loss(train_objects, return_extras=True):
     ) = train_objects
     # Initialize Parameters
     # =====================
-    loss = 0
+    loss = th.tensor(0.0, device=H.device)
     if return_extras:
-        num_missed = 0.0
-        ray_diff = 0
+        num_missed = th.tensor(0.0, device=H.device)
+        ray_diff = th.tensor(0.0, device=H.device)
 
     # Batch Loop
     # ==========
@@ -459,7 +459,7 @@ def test_batch(
         epoch,
         writer=None,
 ):
-    mean_loss = 0
+    mean_loss = th.tensor(0.0, device=heliostat.device)
     bitmaps = None
     for (i, (target, sun_direction)) in enumerate(zip(
             targets,
