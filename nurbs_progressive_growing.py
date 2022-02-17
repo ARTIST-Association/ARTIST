@@ -247,17 +247,17 @@ class ProgressiveGrowing:
     def get_shape(self):
         rows = self.row_indices
         if rows is None:
-            rows = self.heliostat.rows
+            num_rows = self.heliostat.rows
         else:
-            rows = len(rows)
+            num_rows = len(rows)
 
         cols = self.col_indices
         if cols is None:
-            cols = self.heliostat.cols
+            num_cols = self.heliostat.cols
         else:
-            cols = len(cols)
+            num_cols = len(cols)
 
-        return (rows, cols)
+        return (num_rows, num_cols)
 
     def step(self, verbose):
         self._step += 1
