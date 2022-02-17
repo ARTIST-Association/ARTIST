@@ -325,12 +325,12 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
 
     if use_weighted_avg:
         vertex_normals = th.empty_like(vertices)
-        for (i, (normals, areas)) in enumerate(zip(
+        for (i, (normals_list, areas_list)) in enumerate(zip(
                 adjacent_surface_normals,
                 face_areas,
         )):
-            normals = th.stack(normals)
-            areas = th.stack(areas).unsqueeze(-1)
+            normals = th.stack(normals_list)
+            areas = th.stack(areas_list).unsqueeze(-1)
             weighted_avg = (normals * areas).sum(0) / areas.sum()
             vertex_normals[i] = weighted_avg
     else:
