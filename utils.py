@@ -7,7 +7,7 @@ Created on Mon Jul  5 12:38:11 2021
 
 import math
 import os
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, TypeVar, Union
 
 from matplotlib import cm
 import torch
@@ -15,6 +15,14 @@ import torch as th
 from yacs.config import CfgNode
 
 import nurbs
+
+T = TypeVar('T')
+
+
+def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
+    if isinstance(values[0], list):
+        return values  # type: ignore[return-value]
+    return [values]  # type: ignore[list-item]
 
 
 def vec_to_ae(vec: torch.Tensor) -> torch.Tensor:

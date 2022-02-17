@@ -12,15 +12,9 @@ from nurbs_heliostat import (
     AlignedNURBSHeliostat,
     NURBSHeliostat,
 )
+import utils
 
 C = TypeVar('C', bound='MultiNURBSHeliostat')
-T = TypeVar('T')
-
-
-def _with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
-    if isinstance(values[0], list):
-        return values  # type: ignore[return-value]
-    return [values]  # type: ignore[list-item]
 
 
 def _indices_between(
@@ -393,11 +387,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config: CfgNode,
             setup_params: bool,
     ) -> List[NURBSHeliostat]:
-        positions = _with_outer_list(self.nurbs_cfg.FACETS.POSITIONS)
-        spans_x: List[List[float]] = _with_outer_list(
+        positions = utils.with_outer_list(self.nurbs_cfg.FACETS.POSITIONS)
+        spans_x: List[List[float]] = utils.with_outer_list(
             self.nurbs_cfg.FACETS.SPANS_X)
         spans_x = self._broadcast_spans(spans_x, len(positions))
-        spans_y: List[List[float]] = _with_outer_list(
+        spans_y: List[List[float]] = utils.with_outer_list(
             self.nurbs_cfg.FACETS.SPANS_Y)
         spans_y = self._broadcast_spans(spans_y, len(positions))
 
