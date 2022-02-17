@@ -24,6 +24,8 @@ class Sun_Distribution(object):
 
         elif self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
+        else:
+            raise ValueError("unknown sun distribution type")
 
     def sample(self, num_rays_on_hel):
         if self.dist_type == "Normal":
@@ -31,6 +33,8 @@ class Sun_Distribution(object):
                 (self.num_rays, num_rays_on_hel),
             ).transpose(0, 1).T
             return xi, yi
+        else:
+            raise ValueError('unknown sun distribution type')
 
 
 class Environment(object):
