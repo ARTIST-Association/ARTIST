@@ -242,10 +242,7 @@ def round_positionally(x):
 
     The halfway point is obtained by rounding up.
     """
-    x_middle = th.tensor(
-        len(x) / 2,
-        device=x.device,
-    ).round().long()
+    x_middle = int(th.tensor(len(x) / 2).round())
 
     # Round lower values down, upper values up.
     # This makes the indices become mirrored around the middle
