@@ -2300,11 +2300,12 @@ def get_mesh_params(world_points, num_points_x, num_points_y):
     return params_x, params_y
 
 
-def place_knots(params, num_control_points, degree, device):
+def place_knots(params, num_control_points, degree):
     # m = num_points
     # n = num_control_points
     num_points = len(params) - 1
 
+    device = params.device
     knots = th.empty((num_control_points + degree + 2,), device=device)
     knots[:degree + 1] = 0
     knots[-degree - 1:] = 1
@@ -2432,12 +2433,12 @@ def approximate_surface(
 
     params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
     if knots_x is None:
-        knots_x = place_knots(params_x, num_control_points_x, degree_x, device)
+        knots_x = place_knots(params_x, num_control_points_x, degree_x)
 
     params_y = get_mesh_params_(
         world_points, num_points_y, num_points_x, False)
     if knots_y is None:
-        knots_y = place_knots(params_y, num_control_points_y, degree_y, device)
+        knots_y = place_knots(params_y, num_control_points_y, degree_y)
 
     Nu = calc_basis_mat(params_x, num_control_points_x, degree_x, knots_x)
     assert Nu.shape == (num_points_x - 1, num_control_points_x - 1)
