@@ -666,7 +666,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    epochs = cfg.TRAIN.EPOCHS
+    epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
 
     opt, sched = build_optimizer_scheduler(
