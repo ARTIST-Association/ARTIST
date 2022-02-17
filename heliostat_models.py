@@ -2,8 +2,8 @@ import copy
 import functools
 import struct
 
-import torch as th
 import pytorch3d.transforms as throt
+import torch as th
 
 import bpro_loader
 import utils
