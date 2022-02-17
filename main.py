@@ -523,10 +523,13 @@ def generate_sun_array(cfg_sun_directions, device):
         )
 
         ele = cfg.ELE_RANGE
-        ele = th.linspace(ele[0], ele[1], ele[2],
-                          dtype=th.get_default_dtype(),
-                          device=device
-                          )
+        ele = th.linspace(
+            ele[0],
+            ele[1],
+            ele[2],
+            dtype=th.get_default_dtype(),
+            device=device,
+        )
         # all possible combinations of azi ele
         ae = th.cartesian_prod(azi, ele)
         # create 3D vector from azi, ele
