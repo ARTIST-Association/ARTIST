@@ -215,13 +215,21 @@ def ideal_heliostat(ideal_configs, device):
     )
 
 
-def other_objects(config, device):  # Read Wavefront OBJ files.
+def _read_wavefront(
+        filename: str,
+        device: th.device,
+) -> Tuple[
+    Optional[str],
+    torch.Tensor,
+    List[torch.Tensor],
+    List[torch.Tensor],
+]:
     dtype = th.get_default_dtype()
     name = None
     vertices = []
     weights = []
     face_indices = []
-    with open(config.FILENAME, 'r') as obj_file:
+    with open(filename, 'r') as obj_file:
         for line in obj_file:
             contents = line.split()
 
@@ -263,17 +271,26 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
             elif contents[0] == 'o':
                 if name is not None:
                     raise ValueError(
-                        f'found multiple objects in {config.FILENAME}; '
+                        f'found multiple objects in {filename}; '
                         f'this is not supported'
                     )
                 name = contents[1]
+    return (name, th.stack(vertices), weights, face_indices)
 
-    use_weighted_avg = config.USE_WEIGHTED_AVG
 
-    vertices = th.stack(vertices)
+# Read Wavefront OBJ files.
+def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
+    (name, vertices, weights, face_indices) = _read_wavefront(
+        config.FILENAME, device)
+    use_weighted_avg: bool = config.USE_WEIGHTED_AVG
+
     if use_weighted_avg:
-        adjacent_surface_normals = [[] for i in range(len(vertices))]
-        face_areas = [[] for i in range(len(vertices))]
+        adjacent_surface_normals: List[List[torch.Tensor]] = [
+            [] for i in range(len(vertices))
+        ]
+        face_areas: List[List[torch.Tensor]] = [
+            [] for i in range(len(vertices))
+        ]
     else:
         vertex_normals = th.zeros_like(vertices)
         num_adjacent_faces = th.zeros(
