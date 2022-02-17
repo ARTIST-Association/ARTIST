@@ -531,7 +531,7 @@ class Heliostat(AbstractHeliostat):
         )
 
         self._checked_dict = False
-        self.params: Optional[Dict[str, Any]] = None
+        self.params: Union[Dict[str, Any], CfgNode, None] = None
 
         self.load()
         if setup_params:
