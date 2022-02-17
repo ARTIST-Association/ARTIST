@@ -7,6 +7,10 @@ setup(
     install_requires=[
         'matplotlib>=3.4<4.0,',
         'numpy>=1.17,<2.0',
+        (
+            'pytorch3d '
+            '@ git+https://github.com/facebookresearch/pytorch3d.git@stable'
+        ),
         'tensorboard>=2.0,<3.0',
         'torch>=1.8,<2.0',
         'yacs>=0.1,<0.2',
