@@ -548,7 +548,7 @@ def generate_sun_array(cfg_sun_directions, device):
             / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
         )
 
-        ae = utils.vec_to_ae(sun_directions, device)
+        ae = utils.vec_to_ae(sun_directions)
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae
