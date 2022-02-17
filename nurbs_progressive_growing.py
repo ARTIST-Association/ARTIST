@@ -1,19 +1,24 @@
-import torch as th
+from typing import Optional, Tuple
 
+import torch
+import torch as th
+from yacs.config import CfgNode
+
+from nurbs_heliostat import NURBSHeliostat
 import utils
 
 
 class ProgressiveGrowing:
-    def __init__(self, heliostat):
+    def __init__(self, heliostat: NURBSHeliostat) -> None:
         self.heliostat = heliostat
-        self.cfg = self.heliostat.nurbs_cfg.GROWING
+        self.cfg: CfgNode = self.heliostat.nurbs_cfg.GROWING
 
-        self._interval = self.cfg.INTERVAL
+        self._interval: int = self.cfg.INTERVAL
         self._step = 0
 
         if self._no_progressive_growing():
-            self.row_indices = None
-            self.col_indices = None
+            self.row_indices: Optional[torch.Tensor] = None
+            self.col_indices: Optional[torch.Tensor] = None
             return
 
         self.device = self.heliostat.device
@@ -29,16 +34,20 @@ class ProgressiveGrowing:
             self.heliostat.degree_y,
         )
 
-    def get_step(self):
+    def get_step(self) -> int:
         return self._step
 
-    def set_step(self, step):
+    def set_step(self, step: int) -> None:
         self._step = step
 
-    def _no_progressive_growing(self):
+    def _no_progressive_growing(self) -> bool:
         return self._interval < 1
 
-    def _calc_uniform_indices(self, start_size, final_size):
+    def _calc_uniform_indices(
+            self,
+            start_size: int,
+            final_size: int,
+    ) -> torch.Tensor:
         indices = th.linspace(
             0,
             final_size - 1,
@@ -48,7 +57,12 @@ class ProgressiveGrowing:
         indices = utils.round_positionally(indices)
         return indices
 
-    def _calc_start_indices(self, start_size, final_size, degree):
+    def _calc_start_indices(
+            self,
+            start_size: int,
+            final_size: int,
+            degree: int,
+    ) -> torch.Tensor:
         if start_size < 1:
             start_size = degree + 1
 
@@ -64,10 +78,15 @@ class ProgressiveGrowing:
         indices = self._calc_uniform_indices(start_size, final_size)
         return indices
 
-    def _done_growing(self):
+    def _done_growing(self) -> bool:
         return self.row_indices is None and self.col_indices is None
 
-    def _grow_indices(self, indices, final_size, step_size):
+    def _grow_indices(
+            self,
+            indices: Optional[torch.Tensor],
+            final_size: int,
+            step_size: int,
+    ) -> Optional[torch.Tensor]:
         if indices is None or len(indices) == final_size:
             return None
         elif len(indices) > final_size:
@@ -92,11 +111,11 @@ class ProgressiveGrowing:
 
     def _find_new_indices(
             self,
-            old_indices,
-            curr_indices,
-            final_size,
-            with_old_indices,
-    ):
+            old_indices: torch.Tensor,
+            curr_indices: Optional[torch.Tensor],
+            final_size: int,
+            with_old_indices: bool,
+    ) -> Optional[torch.Tensor]:
         dtype = old_indices.dtype
 
         if curr_indices is None:
@@ -127,9 +146,9 @@ class ProgressiveGrowing:
 
     def _calc_grown_control_points_per_dim(
             self,
-            old_ctrl_points,
-            k,
-    ):
+            old_ctrl_points: torch.Tensor,
+            k: int,
+    ) -> torch.Tensor:
         world_points = self.heliostat.discrete_points
         new_ctrl_points = utils.calc_closest_ctrl_points(
             old_ctrl_points,
@@ -138,7 +157,12 @@ class ProgressiveGrowing:
         )
         return new_ctrl_points
 
-    def _set_grown_control_points(self, old_row_indices, old_col_indices, k=4):
+    def _set_grown_control_points(
+            self,
+            old_row_indices: torch.Tensor,
+            old_col_indices: torch.Tensor,
+            k: int = 4,
+    ) -> None:
         with_old_indices = self.cfg.STEP_SIZE_ROWS > 0
         new_row_indices = self._find_new_indices(
             old_row_indices,
@@ -175,13 +199,15 @@ class ProgressiveGrowing:
             self.heliostat.ctrl_points_z[:, new_col_indices] = \
                 new_col_control_points[..., -1:]
 
-    def _grow_nurbs(self, verbose=False):
+    def _grow_nurbs(self, verbose: bool = False) -> None:
         already_done = self._done_growing()
         if already_done:
             return
 
         old_row_indices = self.row_indices
         old_col_indices = self.col_indices
+        assert old_row_indices is not None
+        assert old_col_indices is not None
 
         self.row_indices = self._grow_indices(
             self.row_indices,
@@ -200,13 +226,17 @@ class ProgressiveGrowing:
             if not already_done and self._done_growing():
                 print('Finished growing NURBS.')
             else:
+                assert self.row_indices is not None
+                assert self.col_indices is not None
                 print(
                     f'Grew NURBS to '
                     f'{len(self.row_indices)}'
                     f'×{len(self.col_indices)}.'
                 )
 
-    def select(self):
+    def select(
+            self,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         degree_x = self.heliostat.degree_x
         degree_y = self.heliostat.degree_y
         ctrl_points = self.heliostat.ctrl_points
@@ -244,7 +274,7 @@ class ProgressiveGrowing:
 
         return ctrl_points, ctrl_weights, knots_x, knots_y
 
-    def get_shape(self):
+    def get_shape(self) -> Tuple[int, int]:
         rows = self.row_indices
         if rows is None:
             num_rows = self.heliostat.rows
@@ -259,7 +289,7 @@ class ProgressiveGrowing:
 
         return (num_rows, num_cols)
 
-    def step(self, verbose):
+    def step(self, verbose: bool) -> None:
         self._step += 1
         if (
                 self._no_progressive_growing()
