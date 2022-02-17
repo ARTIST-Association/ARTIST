@@ -1,9 +1,10 @@
 import os
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
+from yacs.config import CfgNode
 
 from environment import Environment
 from heliostat_models import AbstractHeliostat
@@ -113,3 +114,91 @@ def generate_dataset(
             )
     assert targets is not None
     return targets
+
+
+def _random_sun_array(
+        cfg: CfgNode,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    sun_directions = th.rand(
+        (cfg.NUM_SAMPLES, 3),
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+
+    # Allow negative x- and y-values.
+    sun_directions[:, :-1] -= 0.5
+    sun_directions = (
+        sun_directions
+        / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+    )
+    ae = utils.vec_to_ae(sun_directions)
+    return sun_directions, ae
+
+
+def _grid_sun_array(
+        cfg: CfgNode,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    # create azi ele range space
+    azi: List[float] = cfg.AZI_RANGE
+    azi = th.linspace(
+        azi[0],
+        azi[1],
+        int(azi[2]),
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+
+    ele: List[float] = cfg.ELE_RANGE
+    ele = th.linspace(
+        ele[0],
+        ele[1],
+        int(ele[2]),
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+    # all possible combinations of azi ele
+    ae = th.cartesian_prod(azi, ele)
+    # create 3D vector from azi, ele
+    sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
+    return sun_directions, ae
+
+
+def _vec_sun_array(
+        cfg: CfgNode,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    sun_directions: List[List[float]] = (
+        utils.with_outer_list(cfg.DIRECTIONS))
+
+    sun_directions: torch.Tensor = th.tensor(
+        sun_directions,
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+
+    sun_directions = (
+        sun_directions
+        / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+    )
+
+    ae = utils.vec_to_ae(sun_directions)
+    return sun_directions, ae
+
+
+def generate_sun_array(
+        cfg_sun_directions: CfgNode,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    cfg = cfg_sun_directions
+    case: str = cfg.CASE
+    if case == "random":
+        sun_directions, ae = _random_sun_array(cfg.RAND, device)
+    elif case == "grid":
+        sun_directions, ae = _grid_sun_array(cfg.GRID, device)
+    elif case == "vecs":
+        sun_directions, ae = _vec_sun_array(cfg.VECS, device)
+    else:
+        raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
+    return sun_directions, ae

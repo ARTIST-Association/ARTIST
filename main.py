@@ -550,71 +550,6 @@ def test_batch(
     return mean_loss, bitmaps
 
 
-def generate_sun_array(
-        cfg_sun_directions: CfgNode,
-        device: th.device,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    cfg = cfg_sun_directions
-    case = cfg.CASE
-    if case == "random":
-        cfg = cfg.RAND
-        sun_directions = th.rand(
-            (cfg.NUM_SAMPLES, 3),
-            dtype=th.get_default_dtype(),
-            device=device,
-        )
-
-        # Allow negative x- and y-values.
-        sun_directions[:, :-1] -= 0.5
-        sun_directions = (
-            sun_directions
-            / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-        )
-        ae = utils.vec_to_ae(sun_directions)
-    elif case == "grid":
-        cfg = cfg.GRID
-        # create azi ele range space
-        azi = cfg.AZI_RANGE
-        azi = th.linspace(
-            azi[0],
-            azi[1],
-            azi[2],
-            dtype=th.get_default_dtype(),
-            device=device,
-        )
-
-        ele = cfg.ELE_RANGE
-        ele = th.linspace(
-            ele[0],
-            ele[1],
-            ele[2],
-            dtype=th.get_default_dtype(),
-            device=device,
-        )
-        # all possible combinations of azi ele
-        ae = th.cartesian_prod(azi, ele)
-        # create 3D vector from azi, ele
-        sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
-    elif case == "vecs":
-        cfg = cfg.VECS
-        sun_directions = cfg.DIRECTIONS
-        if not isinstance(sun_directions[0], list):
-            sun_directions = [sun_directions]
-
-        sun_directions = th.tensor(
-            sun_directions, dtype=th.get_default_dtype(), device=device)
-
-        sun_directions = (
-            sun_directions
-            / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-        )
-
-        ae = utils.vec_to_ae(sun_directions)
-    else:
-        raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
-    return sun_directions, ae
-
-
 def main(config_file_name: Optional[str] = None) -> None:
     # Load Defaults
     # =============
@@ -690,7 +625,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
-    sun_directions, ae = generate_sun_array(cfg.TRAIN.SUN_DIRECTIONS, device)
+    sun_directions, ae = data.generate_sun_array(
+        cfg.TRAIN.SUN_DIRECTIONS, device)
 
     targets = data.generate_dataset(
         H_target,
@@ -699,7 +635,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir_files,
         writer,
     )
-    test_sun_directions, test_ae = generate_sun_array(
+    test_sun_directions, test_ae = data.generate_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
     test_targets = data.generate_dataset(
