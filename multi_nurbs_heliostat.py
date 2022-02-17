@@ -56,7 +56,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self._receiver_center = None
 
         self.facets = self._create_facets(
-            heliostat_config, nurbs_config, setup_params=setup_params)
+            self.cfg, self.nurbs_cfg, setup_params=setup_params)
 
         self._normals_ideal = th.cat(
             [facet._normals_ideal for facet in self.facets])
