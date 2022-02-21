@@ -1,7 +1,12 @@
+from typing import Optional, Tuple, Union
+import torch
 import torch as th
 
+from environment import Environment
+from heliostat_models import AbstractHeliostat
 
-def Rx(alpha, mat):
+
+def Rx(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -12,7 +17,7 @@ def Rx(alpha, mat):
     return th.matmul(rots, mat)
 
 
-def Ry(alpha, mat):
+def Ry(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -23,7 +28,7 @@ def Ry(alpha, mat):
     return th.matmul(rots, mat)
 
 
-def Rz(alpha, mat):
+def Rz(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
     coss = th.cos(alpha)
     sins = th.sin(alpha)
@@ -35,12 +40,12 @@ def Rz(alpha, mat):
 
 
 def LinePlaneCollision(
-        planeNormal,
-        planePoint,
-        rayDirections,
-        rayPoints,
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        rayDirections: torch.Tensor,
+        rayPoints: torch.Tensor,
         epsilon: float = 1e-6,
-):
+) -> torch.Tensor:
 
     ndotu = rayDirections.matmul(planeNormal)
     if (th.abs(ndotu) < epsilon).any():
@@ -53,19 +58,20 @@ def LinePlaneCollision(
 
 
 def compute_ray_directions(
-        planeNormal,
-        planePoint,
-        ray_directions,
-        hel_in_field,
-        xi,
-        yi,
-):
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        ray_directions: torch.Tensor,
+        hel_in_field: torch.Tensor,
+        xi: torch.Tensor,
+        yi: torch.Tensor,
+) -> torch.Tensor:
     intersections = LinePlaneCollision(
         planeNormal, planePoint, ray_directions, hel_in_field)
     as_ = intersections
-    has = as_-hel_in_field
-
-    # TODO Max: remove/use for ray reflection instead
+    has = as_ - hel_in_field
+    # TODO Wieder der Vektor von vorher?
+    #      Evtl. ist diese LinePlaneCollision unnötig
+    has = has / th.linalg.norm(has, dim=1).unsqueeze(-1)
 
     # rotate: Calculate 3D rotationmatrix in heliostat system.
     # 1 axis is pointing towards the receiver, the other are orthogonal
@@ -110,16 +116,16 @@ def compute_ray_directions(
     rot_z = Rz(yi, rot_y).transpose(0, -1).squeeze(0)
     rays = th.matmul(inv_rot, rot_z).transpose(0, -1).transpose(1, -1)
 
-    # rays = rays.to(th.float32)
     return rays
+    # return rotated_has
 
 
 def compute_receiver_intersections(
-        planeNormal,
-        planePoint,
-        ray_directions,
-        hel_in_field,
-):
+        planeNormal: torch.Tensor,
+        planePoint: torch.Tensor,
+        ray_directions: torch.Tensor,
+        hel_in_field: torch.Tensor,
+) -> torch.Tensor:
     # Execute the kernel
     intersections = LinePlaneCollision(
         planeNormal, planePoint, ray_directions, hel_in_field, epsilon=1e-6)
@@ -128,17 +134,17 @@ def compute_receiver_intersections(
 
 
 def sample_bitmap(
-        dx_ints,
-        dy_ints,
-        indices,
-        planex: int,
-        planey: int,
+        dx_ints: torch.Tensor,
+        dy_ints: torch.Tensor,
+        indices: torch.Tensor,
+        planex: float,
+        planey: float,
         bitmap_height: int,
         bitmap_width: int,
-):
+) -> torch.Tensor:
 
-    x_ints = dx_ints[indices]/planex*bitmap_height
-    y_ints = dy_ints[indices]/planey*bitmap_width
+    x_ints = dx_ints[indices] / planex * bitmap_height
+    y_ints = dy_ints[indices] / planey * bitmap_width
 
     # We assume a continuously positioned value in-between four
     # discretely positioned pixels, similar to this:
@@ -263,6 +269,7 @@ class Renderer(object):
         if not self.redraw_random_variables:
             self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
 
+###<<<<<<<<NICHT AUSGETAUSCHT
     def render(self, heliostat=None, return_extras=False):
         if heliostat is None:
             heliostat = self.H
@@ -272,12 +279,12 @@ class Renderer(object):
             xi = self.xi
             yi = self.yi
         # TODO Max: use for reflection instead
-        surface_points, surface_normals = heliostat()
+        surface_points, ray_directions = heliostat()
 
-        ray_directions = compute_ray_directions(
+        distorted_ray_directions = compute_ray_directions(
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
-            surface_normals,  # line directions
+            ray_directions,  # line directions
             surface_points,  # points on line
             xi,
             yi
@@ -285,14 +292,14 @@ class Renderer(object):
         intersections = compute_receiver_intersections(
             self.ENV.receiver_plane_normal,
             self.ENV.receiver_center,
-            ray_directions,
+            distorted_ray_directions,
             surface_points,
         )
 
-        dx_ints = (
-            intersections[:, :, 1]
+        dx_ints = (  # TODO Make dependent on receiver plane
+            intersections[:, :, 0]
             + self.ENV.receiver_plane_x / 2
-            - self.ENV.receiver_center[1]
+            - self.ENV.receiver_center[0]
         )
         dy_ints = (
             intersections[:, :, 2]
@@ -314,9 +321,12 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
-        # target_num_missed = indices.numel() - indices.count_nonzero()
-        # print('Missed for target:', target_num_missed.detach().cpu().item())
+        target_num_missed = indices.numel() - indices.count_nonzero()
+
+        if target_num_missed > 0:
+            print(
+                'Missed for target:', target_num_missed.detach().cpu().item())
 
         if return_extras:
-            return total_bitmap, (ray_directions, indices, xi, yi)
+            return total_bitmap, (distorted_ray_directions, indices, xi, yi)
         return total_bitmap

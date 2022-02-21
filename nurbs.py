@@ -1825,8 +1825,8 @@ def get_inversion_start_values(
 
     evaluation_points_x = th.hstack([
         th.linspace(
-            knots_x[span_x],
-            knots_x[span_x + 1],
+            knots_x[span_x],  # type: ignore[arg-type]
+            knots_x[span_x + 1],  # type: ignore[arg-type]
             num_samples,
             device=device,
         )[:-1]
@@ -1834,8 +1834,8 @@ def get_inversion_start_values(
     ] + [knots_x[start_spans_x[-1]]])
     evaluation_points_y = th.hstack([
         th.linspace(
-            knots_y[span_y],
-            knots_y[span_y + 1],
+            knots_y[span_y],  # type: ignore[arg-type]
+            knots_y[span_y + 1],  # type: ignore[arg-type]
             num_samples,
             device=device,
         )[:-1]
@@ -2244,7 +2244,12 @@ def invert_points_slow(
     return argmin_distances, min_distances
 
 
-def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
+def get_mesh_params_(
+        world_points: torch.Tensor,
+        num_points: int,
+        num_other_points: int,
+        in_row_dir: bool,
+) -> torch.Tensor:
     dtype = world_points.dtype
     device = world_points.device
 
@@ -2292,7 +2297,11 @@ def get_mesh_params_(world_points, num_points, num_other_points, in_row_dir):
     return params
 
 
-def get_mesh_params(world_points, num_points_x, num_points_y):
+def get_mesh_params(
+        world_points: torch.Tensor,
+        num_points_x: int,
+        num_points_y: int,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     assert len(world_points) == (num_points_x + 1) * (num_points_y + 1)
     params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
     params_y = get_mesh_params_(
@@ -2300,11 +2309,16 @@ def get_mesh_params(world_points, num_points_x, num_points_y):
     return params_x, params_y
 
 
-def place_knots(params, num_control_points, degree, device):
+def place_knots(
+        params: torch.Tensor,
+        num_control_points: int,
+        degree: int,
+) -> torch.Tensor:
     # m = num_points
     # n = num_control_points
     num_points = len(params) - 1
 
+    device = params.device
     knots = th.empty((num_control_points + degree + 2,), device=device)
     knots[:degree + 1] = 0
     knots[-degree - 1:] = 1
@@ -2319,7 +2333,12 @@ def place_knots(params, num_control_points, degree, device):
     return knots
 
 
-def calc_basis_mat(params, num_control_points, degree, knots):
+def calc_basis_mat(
+        params: torch.Tensor,
+        num_control_points: int,
+        degree: int,
+        knots: torch.Tensor,
+) -> torch.Tensor:
     # m = num_points
     # n = num_control_points
     num_points = len(params) - 1
@@ -2340,21 +2359,21 @@ def calc_basis_mat(params, num_control_points, degree, knots):
     return N
 
 
-def calc_basisTbasis(N):
+def calc_basisTbasis(N: torch.Tensor) -> torch.Tensor:
     return th.matmul(N.T, N)
 
 
 def calc_R(
-        world_points,
-        col,
-        params,
-        num_other_points,
-        N,
-        degree,
-        num_control_points,
-        knots,
-        in_row_dir,
-):
+        world_points: torch.Tensor,
+        col: int,
+        params: torch.Tensor,
+        num_other_points: int,
+        N: torch.Tensor,
+        degree: int,
+        num_control_points: int,
+        knots: torch.Tensor,
+        in_row_dir: bool,
+) -> torch.Tensor:
     num_points = len(params) - 1
 
     device = world_points.device
@@ -2401,16 +2420,16 @@ def calc_R(
 
 
 def approximate_surface(
-        world_points,
-        num_points_x,
-        num_points_y,
-        degree_x,
-        degree_y,
-        num_control_points_x,
-        num_control_points_y,
-        knots_x=None,
-        knots_y=None,
-):
+        world_points: torch.Tensor,
+        num_points_x: int,
+        num_points_y: int,
+        degree_x: int,
+        degree_y: int,
+        num_control_points_x: int,
+        num_control_points_y: int,
+        knots_x: Optional[torch.Tensor] = None,
+        knots_y: Optional[torch.Tensor] = None,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     # TODO Allow other direction first.
     # r = num_points_x
     # s = num_points_y
@@ -2432,12 +2451,12 @@ def approximate_surface(
 
     params_x = get_mesh_params_(world_points, num_points_x, num_points_y, True)
     if knots_x is None:
-        knots_x = place_knots(params_x, num_control_points_x, degree_x, device)
+        knots_x = place_knots(params_x, num_control_points_x, degree_x)
 
     params_y = get_mesh_params_(
         world_points, num_points_y, num_points_x, False)
     if knots_y is None:
-        knots_y = place_knots(params_y, num_control_points_y, degree_y, device)
+        knots_y = place_knots(params_y, num_control_points_y, degree_y)
 
     Nu = calc_basis_mat(params_x, num_control_points_x, degree_x, knots_x)
     assert Nu.shape == (num_points_x - 1, num_control_points_x - 1)

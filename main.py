@@ -2,8 +2,9 @@ import collections
 import copy
 from datetime import datetime
 import os
+from typing import Callable, List, Optional, Tuple, Type, Union
 
-import matplotlib.pyplot as plt
+import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
@@ -11,13 +12,27 @@ from yacs.config import CfgNode
 import data
 from defaults import get_cfg_defaults, load_config_file
 from environment import Environment
-from heliostat_models import Heliostat
+from heliostat_models import AbstractHeliostat, Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat
-from nurbs_heliostat import NURBSHeliostat
+from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
 import plotter
 from render import Renderer
 import utils
+import pytorch3d.transforms as throt
 
+LossFn = Callable[
+    [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
+    torch.Tensor,
+]
+TestLossFn = Callable[
+    [torch.Tensor, torch.Tensor],
+    torch.Tensor,
+]
+
+LRScheduler = Union[
+    th.optim.lr_scheduler._LRScheduler,
+    th.optim.lr_scheduler.ReduceLROnPlateau,
+]
 
 TrainObjects = collections.namedtuple(
     'TrainObjects',
@@ -37,8 +52,7 @@ TrainObjects = collections.namedtuple(
     defaults=[None],
 )
 
-
-def check_consistency(cfg):
+def check_consistency(cfg: CfgNode) -> None:
     print("Loaded Switches:")
     print(f"Heliostat shape: {cfg.H.SHAPE}")
     print(f"Solar distribution: {cfg.AC.SUN.DISTRIBUTION}")
@@ -78,11 +92,11 @@ def check_consistency(cfg):
         print("=============================")
 
 
-def load_heliostat(cfg, device):
+def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
     cp = th.load(cp_path, map_location=device)
     if cfg.USE_NURBS:
-        H = NURBSHeliostat.from_dict(
+        H: AbstractHeliostat = NURBSHeliostat.from_dict(
             cp,
             device,
             nurbs_config=cfg.NURBS,
@@ -93,7 +107,11 @@ def load_heliostat(cfg, device):
     return H
 
 
-def load_optimizer_state(opt, cp_path, device):
+def load_optimizer_state(
+        opt: th.optim.Optimizer,
+        cp_path: str,
+        device: th.device,
+) -> None:
     cp_path = os.path.expanduser(cp_path)
     if not os.path.isfile(cp_path):
         print(
@@ -106,7 +124,10 @@ def load_optimizer_state(opt, cp_path, device):
     opt.load_state_dict(cp['opt'])
 
 
-def _build_multi_nurbs_target(cfg, device):
+def _build_multi_nurbs_target(
+        cfg: CfgNode,
+        device: th.device,
+) -> MultiNURBSHeliostat:
     mnh_cfg = cfg.clone()
     mnh_cfg.defrost()
     mnh_cfg.H.SHAPE = 'Ideal'
@@ -159,7 +180,10 @@ def _build_multi_nurbs_target(cfg, device):
     return mnh
 
 
-def _multi_nurbs_to_standard(cfg, mnh):
+def _multi_nurbs_to_standard(
+        cfg: CfgNode,
+        mnh: MultiNURBSHeliostat,
+) -> Heliostat:
     H = Heliostat(cfg.H, mnh.device)
     discrete_points, normals = mnh.discrete_points_and_normals()
     H._discrete_points = discrete_points
@@ -177,7 +201,7 @@ def _multi_nurbs_to_standard(cfg, mnh):
     return H
 
 
-def build_target_heliostat(cfg, device):
+def build_target_heliostat(cfg: CfgNode, device: th.device) -> Heliostat:
     if cfg.H.SHAPE.lower() == 'nurbs':
         mnh = _build_multi_nurbs_target(cfg, device)
         H = _multi_nurbs_to_standard(cfg, mnh)
@@ -186,7 +210,10 @@ def build_target_heliostat(cfg, device):
     return H
 
 
-def build_heliostat(cfg, device):
+def build_heliostat(
+        cfg: CfgNode,
+        device: th.device,
+) -> AbstractHeliostat:
     if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
         H = load_heliostat(cfg, device)
     else:
@@ -195,7 +222,8 @@ def build_heliostat(cfg, device):
                     cfg.NURBS.FACETS.POSITIONS is not None
                     and len(cfg.NURBS.FACETS.POSITIONS) > 1
             ):
-                nurbs_heliostat_cls = MultiNURBSHeliostat
+                nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
+                    MultiNURBSHeliostat
                 kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
             else:
                 nurbs_heliostat_cls = NURBSHeliostat
@@ -207,12 +235,15 @@ def build_heliostat(cfg, device):
     return H
 
 
-def _build_optimizer(cfg_optimizer, params):
+def _build_optimizer(
+        cfg_optimizer: CfgNode,
+        params: List[torch.Tensor],
+) -> th.optim.Optimizer:
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
 
     if name == "adam":
-        opt = th.optim.Adam(
+        opt: th.optim.Optimizer = th.optim.Adam(
             params,
             lr=cfg.LR,
             betas=(cfg.BETAS[0], cfg.BETAS[1]),
@@ -247,11 +278,15 @@ def _build_optimizer(cfg_optimizer, params):
     return opt
 
 
-def _build_scheduler(cfg_scheduler, opt, total_steps):
+def _build_scheduler(
+        cfg_scheduler: CfgNode,
+        opt: th.optim.Optimizer,
+        total_steps: int,
+) -> LRScheduler:
     name = cfg_scheduler.NAME.lower()
     if name == "reduceonplateu":
-        cfg = cfg_scheduler.ROP
-        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
+        cfg: CfgNode = cfg_scheduler.ROP
+        sched: LRScheduler = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=cfg.FACTOR,
             min_lr=cfg.MIN_LR,
@@ -269,9 +304,12 @@ def _build_scheduler(cfg_scheduler, opt, total_steps):
             cycle_momentum=cfg.CYCLE_MOMENTUM,
             mode=cfg.MODE,
         )
+    elif name == "exponential":
+        cfg = cfg_scheduler.EXP
+        sched = th.optim.lr_scheduler.ExponentialLR(opt, cfg.GAMMA)
     elif name == "onecycle":
         cfg = cfg_scheduler.ONE_CYCLE
-        sched = th.optim.lr_scheduler.OneCycleLR(
+        sched = th.optim.lr_scheduler.OneCycleLR(  # type: ignore[attr-defined]
             opt,
             total_steps=total_steps,
             max_lr=cfg.MAX_LR,
@@ -287,11 +325,16 @@ def _build_scheduler(cfg_scheduler, opt, total_steps):
     return sched
 
 
-def _get_opt_cp_path(cp_path):
+def _get_opt_cp_path(cp_path: str) -> str:
     return os.path.expanduser(cp_path[:-3] + '_opt.pt')
 
 
-def build_optimizer_scheduler(cfg, total_steps, params, device):
+def build_optimizer_scheduler(
+        cfg: CfgNode,
+        total_steps: int,
+        params: List[torch.Tensor],
+        device: th.device,
+) -> Tuple[th.optim.Optimizer, LRScheduler]:
     opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
     # Load optimizer state.
     if cfg.LOAD_OPTIMIZER_STATE:
@@ -302,11 +345,11 @@ def build_optimizer_scheduler(cfg, total_steps, params, device):
     return opt, sched
 
 
-def build_loss_funcs(cfg_loss):
+def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
     cfg = cfg_loss
     name = cfg.NAME.lower()
     if name == "mse":
-        test_loss_func = th.nn.MSELoss()
+        test_loss_func: TestLossFn = th.nn.MSELoss()
     elif name == "l1":
         test_loss_func = th.nn.L1Loss()
     else:
@@ -336,7 +379,13 @@ def build_loss_funcs(cfg_loss):
     return loss_func, test_loss_func
 
 
-def calc_batch_loss(train_objects, return_extras=True):
+def calc_batch_loss(
+        train_objects: TrainObjects,
+        return_extras: bool = True,
+) -> Union[
+    torch.Tensor,
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+]:
     # print(epoch)
     # if epoch == 0:
     #     last_lr = opt.param_groups[0]["lr"]
@@ -355,10 +404,10 @@ def calc_batch_loss(train_objects, return_extras=True):
     ) = train_objects
     # Initialize Parameters
     # =====================
-    loss = 0
+    loss = th.tensor(0.0, device=H.device)
     if return_extras:
-        num_missed = 0.0
-        ray_diff = 0
+        num_missed = th.tensor(0.0, device=H.device)
+        ray_diff = th.tensor(0.0, device=H.device)
 
     # Batch Loop
     # ==========
@@ -369,6 +418,8 @@ def calc_batch_loss(train_objects, return_extras=True):
         H_aligned = H.align(sun_direction, ENV.receiver_center)
         pred_bitmap, (ray_directions, indices, _, _) = R.render(
             H_aligned, return_extras=True)
+        # pred_bitmap = pred_bitmap.unsqueeze(0)
+        # print(pred_bitmap.shape)
         loss += loss_func(pred_bitmap, target, opt) / len(targets)
 
         with th.no_grad():
@@ -397,7 +448,13 @@ def calc_batch_loss(train_objects, return_extras=True):
     return loss
 
 
-def calc_batch_grads(train_objects, return_extras=True):
+def calc_batch_grads(
+        train_objects: TrainObjects,
+        return_extras: bool = True,
+) -> Union[
+    torch.Tensor,
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+]:
     train_objects.opt.zero_grad(set_to_none=True)
 
     loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_loss(
@@ -409,14 +466,17 @@ def calc_batch_grads(train_objects, return_extras=True):
     return loss
 
 
-def train_batch(train_objects):
+def train_batch(
+        train_objects: TrainObjects,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():
             _, (pred_bitmap, num_missed, ray_diff) = calc_batch_loss(
                 train_objects)
-        loss = opt.step(
-            lambda: calc_batch_grads(train_objects, return_extras=False),
+        loss: torch.Tensor = opt.step(  # type: ignore[assignment]
+            lambda: calc_batch_grads(  # type: ignore[arg-type,return-value]
+                train_objects, return_extras=False),
         )
     else:
         loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_grads(
@@ -446,24 +506,35 @@ def train_batch(train_objects):
 
 @th.no_grad()
 def test_batch(
-        heliostat,
-        env,
-        renderer,
-        targets,
-        sun_directions,
-        loss_func,
-        epoch,
-        writer=None,
-):
-    loss = 0
+        heliostat: AbstractHeliostat,
+        env: Environment,
+        renderer: Renderer,
+        targets: torch.Tensor,
+        sun_directions: torch.Tensor,
+        loss_func: TestLossFn,
+        epoch: int,
+        writer: Optional[SummaryWriter] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    mean_loss = th.tensor(0.0, device=heliostat.device)
+    bitmaps: Optional[torch.Tensor] = None
     for (i, (target, sun_direction)) in enumerate(zip(
             targets,
             sun_directions,
     )):
         heliostat_aligned = heliostat.align(
             sun_direction, env.receiver_center)
-        pred_bitmap = renderer.render(heliostat_aligned)
-        loss += loss_func(pred_bitmap, target) / len(targets)
+        pred_bitmap: torch.Tensor = \
+            renderer.render(heliostat_aligned)  # type: ignore[assignment]
+
+        if bitmaps is None:
+            bitmaps = th.empty(
+                (len(targets),) + pred_bitmap.shape,
+                dtype=pred_bitmap.dtype,
+            )
+
+        loss = loss_func(pred_bitmap, target)
+        mean_loss += loss / len(targets)
+        bitmaps[i] = pred_bitmap.detach().cpu()
 
         if writer:
             writer.add_image(
@@ -471,14 +542,14 @@ def test_batch(
                             utils.colorize(pred_bitmap),
                             epoch,
                         )
+            writer.add_scalar(f"test_{i}/loss", loss.item(), epoch)
 
     if writer:
-        writer.add_scalar("test/loss", loss.item(), epoch)
+        writer.add_scalar("test/loss", mean_loss.item(), epoch)
+    assert bitmaps is not None
+    return mean_loss, bitmaps
 
-    return loss
-
-
-def main(config_file_name=None):
+def main(config_file_name: Optional[str] = None) -> None:
     # Load Defaults
     # =============
     # config_file_name = None
@@ -494,6 +565,8 @@ def main(config_file_name=None):
 
     if cfg.USE_FLOAT64:
         th.set_default_dtype(th.float64)
+    else:
+        th.set_default_dtype(th.float32)
 
     # Set up Logging
     # ==============
@@ -501,25 +574,28 @@ def main(config_file_name=None):
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
         root_logdir = os.path.join(cfg.LOGDIR, cfg.ID)
-        logdir = os.path.join(
+        logdir: Optional[str] = os.path.join(
             root_logdir,
             cfg.EXPERIMENT_NAME + f"_{time_str}",
         )
-        logdir_files = os.path.join(logdir, "Logfiles")
-        logdir_images = os.path.join(logdir, "Images")
-        logdir_diffs = os.path.join(logdir_images, "Diffs")
+        assert logdir is not None
+        logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
+        assert logdir_files is not None
+        logdir_images: Optional[str] = os.path.join(logdir, "Images")
+        assert logdir_images is not None
+        logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
         cfg.merge_from_list(["LOGDIR", logdir])
         os.makedirs(root_logdir, exist_ok=True)
         os.makedirs(logdir, exist_ok=True)
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
-        os.makedirs(logdir_diffs, exist_ok=True)
+        os.makedirs(logdir_enhanced_test, exist_ok=True)
 
         with open(os.path.join(logdir, "config.yaml"), "w") as f:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
-        writer = SummaryWriter(logdir)
+        writer: Optional[SummaryWriter] = SummaryWriter(logdir)
     else:
         writer = None
         logdir = None
@@ -536,11 +612,12 @@ def main(config_file_name=None):
         else 'cpu'
     )
 
+
     # Create Dataset
     # ==============
     # Create Heliostat Object and Load Model defined in config file
     print("Create dataset using:")
-    print(f"Sun direction(s): {cfg.AC.SUN.DIRECTION}")
+    # print(f"Sun direction(s): {cfg.AC.SUN.DIRECTION}")
     print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
     print(
         f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
@@ -552,22 +629,78 @@ def main(config_file_name=None):
     # plotter.plot_normal_vectors(H_target.discrete_points, H_target.normals)
 
     ENV = Environment(cfg.AC, device)
-    targets, sun_directions = data.generate_dataset(
-        cfg.AC.SUN.DIRECTION,
+    sun_directions, ae = data.generate_sun_array(
+        cfg.TRAIN.SUN_DIRECTIONS, device)
+    targets = data.generate_dataset(
         H_target,
         ENV,
+        sun_directions,
         logdir_files,
         writer,
     )
     # plt.imshow(targets[0].cpu().detach().squeeze())
 
-    test_targets, test_sun_directions = data.generate_test_dataset(
-        cfg.TEST,
+    test_sun_directions, test_ae = data.generate_sun_array(
+        cfg.TEST.SUN_DIRECTIONS, device)
+    test_targets = data.generate_dataset(
         H_target,
         ENV,
+        test_sun_directions,
         None,
         writer,
+        "test_"
     )
+    
+    
+    ####Better Testing######
+    # state = th.random.get_rng_state()
+    # H_validation = build_target_heliostat(cfg, device)
+    # ENV_validation = copy.deepcopy(ENV)
+    # grid_test_sun_directions, grid_test_ae = generate_sun_array(cfg.TEST.SUN, "grid", device)
+    # grid_test_targets, _ = data.generate_dataset(
+    #     grid_test_sun_directions,
+    #     H_validation,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "grid_"
+    # )
+    # # th.random.set_rng_state(state)
+    # H_naive = build_target_heliostat(cfg, device)
+    # H_naive._normals = H_naive._normals_ideal
+    # naive_targets, _ = data.generate_dataset(
+    #     grid_test_sun_directions,
+    #     H_naive,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "naive_"
+    # )
+    
+    # spheric_test_sun_directions, spheric_test_ae = generate_sun_array(cfg.TEST.SUN, "spheric", device, train_vec =sun_directions)
+    # spheric_test_targets, _ = data.generate_dataset(
+    #     spheric_test_sun_directions,
+    #     H_validation,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "spheric_"
+    # )
+    
+    # H_naive_spheric = build_target_heliostat(cfg, device)
+    # H_naive_spheric._normals = H_naive._normals_ideal
+    # naive_spheric_test_targets, _ = data.generate_dataset(
+    #     spheric_test_sun_directions,
+    #     H_naive_spheric,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "naive_spheric_"
+    # )
+
+    
+    
+    
     # plotter.test_surfaces(H_target)
     # exit()
     # Start Diff Raytracing
@@ -576,25 +709,18 @@ def main(config_file_name=None):
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
     H = build_heliostat(cfg, device)
-    # plotter.test_surfaces(H)
-    # plotter.plot_normal_vectors(
-    # H._discrete_points, H._normals)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-    # plotter.plot_normal_vectors(H.discrete_points, H.normals)
-    # plotter.test_surfaces(H)
-    # plt.imshow(targets.cpu().detach().squeeze())
-
-    epochs = cfg.TRAIN.EPOCHS
+    epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
-
+    
     opt, sched = build_optimizer_scheduler(
         cfg, epochs * steps_per_epoch, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
-
+    
     epoch_shift_width = len(str(epochs))
-
+    
     best_result = th.tensor(float('inf'))
     state_dict = {
         "epoch": 0,
@@ -603,7 +729,22 @@ def main(config_file_name=None):
         "last_lr": opt.param_groups[0]["lr"],
         "current_lr": opt.param_groups[0]["lr"],
     }
+    
+        
+    #Generate naive Losses before training
+    # spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
+    #                 H,
+    #                 ENV,
+    #                 R,
+    #                 spheric_test_targets,
+    #                 spheric_test_sun_directions,
+    #                 test_loss_func,
+    #                 0,
+    #                 reduction=False
+    #             )
+    
     for epoch in range(epochs):
+        
         train_objects = TrainObjects(
             opt,
             sched,
@@ -616,8 +757,9 @@ def main(config_file_name=None):
             epoch,
             writer,
         )
-        loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
 
+    
+        loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
@@ -627,53 +769,103 @@ def main(config_file_name=None):
         )
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
+    
+            if epoch % cfg.TEST.INTERVAL == 0:
+                test_loss, _ = test_batch(
+                    H,
+                    ENV,
+                    R,
+                    test_targets,
+                    test_sun_directions,
+                    test_loss_func,
+                    epoch,
+                    writer,
+                )
+            # if not epoch ==0:
+            #     grid_test_loss, grid_test_bitmaps = test_batch(
+            #                 H,
+            #                 ENV,
+            #                 R,
+            #                 grid_test_targets,
+            #                 grid_test_sun_directions,
+            #                 test_loss_func,
+            #                 epoch,
+            #             )
+                
+            #     plotter.target_image_comparision_pred_orig_naive(grid_test_ae, 
+            #                                                       grid_test_targets,
+            #                                                       grid_test_bitmaps,
+            #                                                       naive_targets,
+            #                                                       sun_directions,
+            #                                                       epoch,
+            #                                                       logdir_enhanced_test
+            #                                                       )
+                
+            #     spheric_train_loss, _ = test_batch(
+            #         H,
+            #         ENV,
+            #         R,
+            #         targets,
+            #         sun_directions,
+            #         test_loss_func,
+            #         epoch,
+            #     )
+            #     spheric_test_loss, spheric_test_bitmaps = test_batch(
+            #         H,
+            #         ENV,
+            #         R,
+            #         spheric_test_targets,
+            #         spheric_test_sun_directions,
+            #         test_loss_func,
+            #         epoch,
+            #         reduction=False
+            # )
+            #     plotter.spherical_loss_plot(sun_directions,
+            #                                 spheric_test_ae,
+            #                                 spheric_train_loss, 
+            #                                 spheric_test_loss,
+            #                                 spheric_naive_test_loss,
+            #                                 cfg.TEST.SUN.SPHERIC.NUM_SAMPLES,
+            #                                 epoch,
+            #                                 logdir_enhanced_test)
+            
+                print(
+                    f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+                    f'test loss: {test_loss.item()}'
+                )
+            
 
-        if epoch % cfg.TEST.INTERVAL == 0:
-            test_loss = test_batch(
-                H,
-                ENV,
-                R,
-                test_targets,
-                test_sun_directions,
-                test_loss_func,
-                epoch,
-                writer,
-            )
-            print(
-                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-                f'test loss: {test_loss.item()}'
-            )
-
-        if epoch % 50 == 0 and cfg.SAVE_RESULTS:
-
-            plotter.plot_surfaces_mrad(
-                H_target,
-                H,
-                epoch,
-                logdir_surfaces,
-                writer
-            )
-            plotter.plot_surfaces_mm(
-                H_target,
-                H,
-                epoch,
-                logdir_surfaces,
-                writer
-            )
+            # Plotting stuff
+            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
+                # plotter.target_image_comparision_pred_orig_naive(
+                #     test_ae,
+                #     test_targets,
+                #     test_bitmaps,
+                #     naive_targets,
+                #     sun_directions,
+                #     epoch,
+                #     logdir_enhanced_test,
+                # )
+                plotter.plot_surfaces_mrad(
+                    H_target,
+                    H,
+                    epoch,
+                    logdir_surfaces,
+                    writer
+                )
 
         # Save Section
-        if cfg.SAVE_RESULTS:
-            if loss.detach().cpu() < best_result:
+
+        if test_loss.detach().cpu() < best_result:
+            if cfg.SAVE_RESULTS:
                 # Remember best checkpoint data (to store on disk later).
-                best_result = loss.detach().cpu()
                 save_data = H.to_dict()
                 save_data['xi'] = R.xi
                 save_data['yi'] = R.yi
                 opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}
-                found_new_best_result = True
-            # if epoch % 100 == 0 and found_new_best_result:
                 # Store remembered data and optimizer state on disk.
                 model_name = type(H).__name__
+                assert logdir_files is not None
                 th.save(
                     save_data,
                     os.path.join(logdir_files, f'{model_name}.pt'),
@@ -682,10 +874,10 @@ def main(config_file_name=None):
                     opt_save_data,
                     os.path.join(logdir_files, f'{model_name}_opt.pt'),
                 )
-                found_new_best_result = False
+            best_result = test_loss.detach().cpu()
 
     # Diff Raytracing >
 
 
 if __name__ == '__main__':
-    main()
+    main("WorkingConfigs\\Test.yaml")

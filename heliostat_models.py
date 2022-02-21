@@ -1,19 +1,34 @@
 import copy
 import functools
 import struct
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-import numpy as np
+import pytorch3d.transforms as throt
+import torch
 import torch as th
+from yacs.config import CfgNode
 
-from rotation import rot_apply, rot_as_euler, rot_from_matrix, rot_from_rotvec
+import bpro_loader
 import utils
 
+HeliostatParams = Tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    float,
+    float,
+    Optional[int],
+    Optional[int],
+    Optional[Dict[str, Any]],
+]
+C = TypeVar('C', bound='Heliostat')
 
-def reflect_rays_(rays, normals):
+
+def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     return rays - 2 * utils.batch_dot(rays, normals) * normals
 
 
-def reflect_rays(rays, normals):
+def reflect_rays(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
     return reflect_rays_(rays, normals)
 
@@ -21,94 +36,67 @@ def reflect_rays(rays, normals):
 # Heliostat Models
 # ================
 
-def real_heliostat(real_configs, device):
+def real_heliostat(
+        real_configs: CfgNode, device: th.device,
+) -> HeliostatParams:
     """Return a heliostat loaded from deflectometric data."""
     cfg = real_configs
     dtype = th.get_default_dtype()
-    concentratorHeader_struct_len = struct.calcsize(
+
+    concentratorHeader_struct = struct.Struct(
         cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct_len = struct.calcsize(cfg.FACETHEADER_STRUCT_FMT)
-    ray_struct_len = struct.calcsize(cfg.RAY_STRUCT_FMT)
+    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
+    ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
-    positions = []
-    directions = []
-    ideal_normal_vecs = []
-    # powers = []
-    with open(cfg.FILENAME, "rb") as file:
-        byte_data = file.read(concentratorHeader_struct_len)
-        concentratorHeader_data = struct.Struct(
-            cfg.CONCENTRATORHEADER_STRUCT_FMT,
-        ).unpack_from(byte_data)
-        print("READING bpro filename: " + cfg.FILENAME)
+    (
+        positions,
+        directions,
+        ideal_normal_vecs,
+        width,
+        height,
+    ) = bpro_loader.load_bpro(
+        cfg.FILENAME,
+        concentratorHeader_struct,
+        facetHeader_struct,
+        ray_struct,
+    )
 
-        # hel_pos = concentratorHeader_data[0:3]
-        width_height = concentratorHeader_data[3:5]
-        # offsets = concentratorHeader_data[7:9]
-        n_xy = concentratorHeader_data[5:7]
-
-        nFacets = n_xy[0] * n_xy[1]
-        # nFacets =1
-
-        for f in range(nFacets):
-            byte_data = file.read(facetHeader_struct_len)
-            facetHeader_data = struct.Struct(
-                cfg.FACETHEADER_STRUCT_FMT,
-            ).unpack_from(byte_data)
-
-            # 0 for square, 1 for round 2 triangle, ...
-            # facetshape = facetHeader_data[0]
-            # facet_pos = facetHeader_data[1:4]
-            facet_vec_x = np.array(facetHeader_data[4:7])
-            facet_vec_y = np.array(facetHeader_data[7:10])
-            facet_vec_z = np.cross(facet_vec_x, facet_vec_y).tolist()
-            # print("X", facet_vec_x)
-            # print("Y", facet_vec_y)
-            n_rays = facetHeader_data[10]
-
-            for r in range(n_rays):
-                byte_data = file.read(ray_struct_len)
-                ray_data = struct.Struct(
-                    cfg.RAY_STRUCT_FMT,
-                ).unpack_from(byte_data)
-
-                positions.append([ray_data[0], ray_data[1], ray_data[2]])
-                directions.append([ray_data[3], ray_data[4], ray_data[5]])
-                ideal_normal_vecs.append(facet_vec_z)
-                # powers.append(ray_data[6])
-
-        h_normal_vecs = th.tensor(
-            directions[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-            dtype=dtype,
-            device=device,
-        )
-        h_ideal_vecs = th.tensor(
-            ideal_normal_vecs[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-            dtype=dtype,
-            device=device,
-        )
-        h = th.tensor(
-            positions[0::int(len(positions) / cfg.TAKE_N_VECTORS)],
-            dtype=dtype,
-            device=device,
-        )
-        # print(h_ideal_vecs)
-        rows = None
-        cols = None
-        params = None
-        return (
-            h,
-            h_normal_vecs,
-            h_ideal_vecs,
-            width_height[1],
-            width_height[0],
-            rows,
-            cols,
-            params,
-            # powers,
-        )
+    h_normal_vecs = th.tensor(
+        directions[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
+        dtype=dtype,
+        device=device,
+    )
+    h_ideal_vecs = th.tensor(
+        ideal_normal_vecs[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
+        dtype=dtype,
+        device=device,
+    )
+    h = th.tensor(
+        positions[0::int(len(positions) / cfg.TAKE_N_VECTORS)],
+        dtype=dtype,
+        device=device,
+    )
+    # print(h_ideal_vecs)
+    rows = None
+    cols = None
+    params = None
+    return (
+        h,
+        h_normal_vecs,
+        h_ideal_vecs,
+        height,
+        width,
+        rows,
+        cols,
+        params,
+        # powers,
+    )
 
 
-def heliostat_by_function(heliostat_function_cfg, device):
+def heliostat_by_function(
+        heliostat_function_cfg: CfgNode,
+        device: th.device,
+) -> HeliostatParams:
     cfg = heliostat_function_cfg
 
     # width = cfg.WIDTH / 2
@@ -118,7 +106,7 @@ def heliostat_by_function(heliostat_function_cfg, device):
     # Y = th.linspace(-height, height, cfg.COLS)
     # X, Y = th.meshgrid(X, Y)
 
-    columns = cfg.COLS
+    columns: int = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
 
@@ -135,8 +123,8 @@ def heliostat_by_function(heliostat_function_cfg, device):
 
     Y = Y.reshape(cfg.ROWS, cfg.COLS)
 
-    reduction = cfg.REDUCTION_FACTOR
-    fr = cfg.FREQUENCY
+    reduction: float = cfg.REDUCTION_FACTOR
+    fr: float = cfg.FREQUENCY
     if cfg.NAME == "sin":
         Z = th.sin(fr * X + fr * Y) / reduction  # + np.cos(Y)
     elif cfg.NAME == "sin+cos":
@@ -155,14 +143,18 @@ def heliostat_by_function(heliostat_function_cfg, device):
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
-                next_row_vec    = th.tensor([X[i, j + 1], Y[i, j + 1], Z[i, j + 1]] )  # .squeeze(0)
-                next_col_vec    = th.tensor([X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
             except Exception:
-                origin          = th.tensor([X[i, j], Y[i, j], Z[i, j]]             )  # .squeeze(0)
-                next_row_vec    = th.tensor([X[i, j - 1], Y[i, j - 1], Z[i, j - 1]] )  # .squeeze(0)
-                next_col_vec    = th.tensor([X[i - 1, j], Y[i - 1, j], Z[i - 1, j]] )  # .squeeze(0)
-            
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                next_row_vec = th.tensor(
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
+                next_col_vec = th.tensor(
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
+
             vec_1 = next_row_vec - origin
 
             vec_2 = next_col_vec - origin
@@ -182,8 +174,11 @@ def heliostat_by_function(heliostat_function_cfg, device):
             # exit()
     h = stacked.reshape(X.shape[0] * X.shape[1], -1).to(device)
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
-    h_ideal_vecs = th.tile(th.tensor([0, 0, 1]), (h_normal_vecs.shape[0], 1)).to(device)
-    
+    h_ideal_vecs = th.tile(
+        th.tensor([0, 0, 1]),
+        (h_normal_vecs.shape[0], 1),
+    ).to(device)
+
     params = None
     return (
         h,
@@ -197,11 +192,14 @@ def heliostat_by_function(heliostat_function_cfg, device):
     )
 
 
-def ideal_heliostat(ideal_configs, device):
+def ideal_heliostat(
+        ideal_configs: CfgNode,
+        device: th.device,
+) -> HeliostatParams:
     """Return an ideally shaped heliostat lying flat on the ground."""
     cfg = ideal_configs
 
-    columns = cfg.COLS
+    columns: int = cfg.COLS
     column = th.arange(columns + 1, device=device)
     row = th.arange(cfg.ROWS + 1, device=device)
 
@@ -240,13 +238,21 @@ def ideal_heliostat(ideal_configs, device):
     )
 
 
-def other_objects(config, device):  # Read Wavefront OBJ files.
+def _read_wavefront(
+        filename: str,
+        device: th.device,
+) -> Tuple[
+    Optional[str],
+    torch.Tensor,
+    List[torch.Tensor],
+    List[torch.Tensor],
+]:
     dtype = th.get_default_dtype()
     name = None
     vertices = []
     weights = []
     face_indices = []
-    with open(config.FILENAME, 'r') as obj_file:
+    with open(filename, 'r') as obj_file:
         for line in obj_file:
             contents = line.split()
 
@@ -288,17 +294,26 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
             elif contents[0] == 'o':
                 if name is not None:
                     raise ValueError(
-                        f'found multiple objects in {config.FILENAME}; '
+                        f'found multiple objects in {filename}; '
                         f'this is not supported'
                     )
                 name = contents[1]
+    return (name, th.stack(vertices), weights, face_indices)
 
-    use_weighted_avg = config.USE_WEIGHTED_AVG
 
-    vertices = th.stack(vertices)
+# Read Wavefront OBJ files.
+def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
+    (name, vertices, weights, face_indices) = _read_wavefront(
+        config.FILENAME, device)
+    use_weighted_avg: bool = config.USE_WEIGHTED_AVG
+
     if use_weighted_avg:
-        adjacent_surface_normals = [[] for i in range(len(vertices))]
-        face_areas = [[] for i in range(len(vertices))]
+        adjacent_surface_normals: List[List[torch.Tensor]] = [
+            [] for i in range(len(vertices))
+        ]
+        face_areas: List[List[torch.Tensor]] = [
+            [] for i in range(len(vertices))
+        ]
     else:
         vertex_normals = th.zeros_like(vertices)
         num_adjacent_faces = th.zeros(
@@ -333,12 +348,12 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 
     if use_weighted_avg:
         vertex_normals = th.empty_like(vertices)
-        for (i, (normals, areas)) in enumerate(zip(
+        for (i, (normals_list, areas_list)) in enumerate(zip(
                 adjacent_surface_normals,
                 face_areas,
         )):
-            normals = th.stack(normals)
-            areas = th.stack(areas).unsqueeze(-1)
+            normals = th.stack(normals_list)
+            areas = th.stack(areas_list).unsqueeze(-1)
             weighted_avg = (normals * areas).sum(0) / areas.sum()
             vertex_normals[i] = weighted_avg
     else:
@@ -370,10 +385,10 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
     return (
         vertices,
         vertex_normals,
-        #TODO Implement Ideal Vecs
+        # TODO Implement Ideal Vecs
         vertex_normals,
-        height,
-        width,
+        float(height),
+        float(width),
         rows,
         cols,
         params,
@@ -383,37 +398,59 @@ def other_objects(config, device):  # Read Wavefront OBJ files.
 # Heliostat-specific functions
 # ============================
 
-def rotate(h, hel_coordsystem, clockwise: bool):
-    r = rot_from_matrix(hel_coordsystem)
-    euler = rot_as_euler(r, 'xyx', degrees=True)
-    ele_degrees = 270-euler[2]
+# def rotate(h, hel_coordsystem, clockwise: bool):
+#     r = rot_from_matrix(hel_coordsystem)
+#     euler = rot_as_euler(r, 'xyx', degrees=True)
+#     ele_degrees = 270-euler[2]
 
-    ele_radians = th.deg2rad(ele_degrees)
-    ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
-    ele_vector = ele_radians * ele_axis
-    if not clockwise:
-        ele_vector = -ele_vector
-    ele = rot_from_rotvec(ele_vector)
+#     ele_radians = th.deg2rad(ele_degrees)
+#     ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
+#     ele_vector = ele_radians * ele_axis
+#     if not clockwise:
+#         ele_vector = -ele_vector
+#     ele = rot_from_rotvec(ele_vector)
 
-    # TODO Max: re-add ax-offsets
-    azi_degrees = euler[1]-90
-    azi_radians = th.deg2rad(azi_degrees)
-    azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
-    azi_vector = azi_radians * azi_axis
-    if not clockwise:
-        azi_vector = -azi_vector
-    azi = rot_from_rotvec(azi_vector)
+#     # TODO Max: re-add ax-offsets
+#     azi_degrees = euler[1]-90
+#     azi_radians = th.deg2rad(azi_degrees)
+#     azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
+#     azi_vector = azi_radians * azi_axis
+#     if not clockwise:
+#         azi_vector = -azi_vector
+#     azi = rot_from_rotvec(azi_vector)
 
-    # darray with all heliostats (#heliostats, 3 coords)
-    h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
-    return h_rotated.squeeze(-1)
+#     # darray with all heliostats (#heliostats, 3 coords)
+#     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
+#     return h_rotated.squeeze(-1)
 
 
-def heliostat_coord_system(Position, Sun, Aimpoint):
+def rotate(
+        h: 'AbstractHeliostat',
+        align_origin: throt.Transform3d,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    # r = rot_from_matrix(hel_coordsystem)
+    if hasattr(h, 'discrete_points_and_normals'):
+        discrete_points, normals = \
+            h.discrete_points_and_normals()  # type: ignore[attr-defined]
+    else:
+        discrete_points = h.discrete_points
+        normals = h.normals
+
+    rotated_points: torch.Tensor = align_origin.transform_points(
+        discrete_points)
+    rotated_normals: torch.Tensor = align_origin.transform_normals(normals)
+    return rotated_points, rotated_normals
+
+
+def heliostat_coord_system(
+        Position: torch.Tensor,
+        Sun: torch.Tensor,
+        Aimpoint: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
-
+    # print(pSun,pPosition,pAimpoint)
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
@@ -422,43 +459,66 @@ def heliostat_coord_system(Position, Sun, Aimpoint):
     z = z / th.linalg.norm(z)
 
     x = th.tensor(
-        [z[1], -z[0], 0],
+        [-z[1], z[0], 0],
         dtype=Position.dtype,
         device=Position.device,
     )
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
-
     return x, y, z
 
 
 class AbstractHeliostat:
-    def __init__(self):
+    device: th.device
+    position_on_field: torch.Tensor
+    cfg: CfgNode
+
+    _discrete_points: torch.Tensor
+    _normals: torch.Tensor
+
+    def __init__(self, *args, **kwargs) -> None:
         raise NotImplementedError('do not construct an abstract class')
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._discrete_points)
 
-    def __call__(self):
+    def __call__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         return (self.discrete_points, self.get_ray_directions())
 
     @property
-    def discrete_points(self):
+    def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
 
     @property
-    def normals(self):
+    def normals(self) -> torch.Tensor:
         return self._normals
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
-    def align(self):
+    def get_params(self) -> List[torch.Tensor]:
+        raise TypeError(
+            self.__class__.__name__ + ' has no trainable parameters')
+
+    def to_dict(self) -> Dict[str, Any]:
+        raise TypeError(
+            'cannot convert ' + self.__class__.__name__ + ' to dictionary')
+
+    def align(
+            self,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> 'AbstractHeliostat':
         raise NotImplementedError('please override `align`')
 
 
 class Heliostat(AbstractHeliostat):
-    def __init__(self, heliostat_config, device, setup_params=True):
+    def __init__(
+            self,
+            heliostat_config: CfgNode,
+            device: th.device,
+            setup_params: bool = True,
+    ) -> None:
         self.cfg = heliostat_config
         if not self.cfg.is_frozen():
             self.cfg = self.cfg.clone()
@@ -471,13 +531,13 @@ class Heliostat(AbstractHeliostat):
         )
 
         self._checked_dict = False
-        self.params = None
+        self.params: Union[Dict[str, Any], CfgNode, None] = None
 
         self.load()
         if setup_params:
             self.setup_params()
 
-    def load(self):
+    def load(self) -> None:
 
         cfg = self.cfg
         shape = cfg.SHAPE.lower()
@@ -491,6 +551,8 @@ class Heliostat(AbstractHeliostat):
                 cfg.FUNCTION, self.device)
         elif shape == "other":
             heliostat_properties = other_objects(cfg.OTHER, self.device)
+        else:
+            raise ValueError('unknown heliostat shape')
 
         (
             heliostat,
@@ -512,28 +574,32 @@ class Heliostat(AbstractHeliostat):
         self.cols = cols
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.rows, self.cols)
 
-    def align(self, sun_direction, receiver_center):
+    def align(
+            self,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+    ) -> 'AlignedHeliostat':
         return AlignedHeliostat(self, sun_direction, receiver_center)
 
-    def setup_params(self):
+    def setup_params(self) -> None:
         self._normals.requires_grad_(True)
 
-    def get_params(self):
+    def get_params(self) -> List[torch.Tensor]:
         opt_params = [self._normals]
         return opt_params
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('Heliostat has to be aligned first')
 
-    def step(self, *args, **kwargs):
+    def step(self, *args, **kwargs) -> None:
         pass
 
-    @property
+    @property  # type: ignore[misc]
     @functools.lru_cache()
-    def dict_keys(self):
+    def dict_keys(self) -> Set[str]:
         """All keys we assume in the dictionary returned by `_to_dict`."""
         return {
             'heliostat_points',
@@ -543,7 +609,7 @@ class Heliostat(AbstractHeliostat):
             'params',
         }
 
-    def _check_dict(self, data):
+    def _check_dict(self, data: Dict[str, Any]) -> None:
         """Check whether the given data dictionary has the correct keys;
         only do this once to save some cycles.
 
@@ -557,7 +623,7 @@ class Heliostat(AbstractHeliostat):
         self._checked_dict = True
 
     @functools.lru_cache()
-    def _fixed_dict(self):
+    def _fixed_dict(self) -> Dict[str, Any]:
         """The part of the heliostat's configuration that does not change."""
         data = {
             'heliostat_points': self._discrete_points,
@@ -567,12 +633,12 @@ class Heliostat(AbstractHeliostat):
         }
         return data
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         data = self._to_dict()
         self._check_dict(data)
         return data
 
-    def _to_dict(self):
+    def _to_dict(self) -> Dict[str, Any]:
         data = self._fixed_dict()
         data.update({
             'heliostat_normals': self._normals.clone(),
@@ -581,13 +647,13 @@ class Heliostat(AbstractHeliostat):
 
     @classmethod
     def from_dict(
-            cls,
-            data,
-            device,
-            config=None,
-            restore_strictly=True,
-            setup_params=True,
-    ):
+            cls: Type[C],
+            data: Dict[str, Any],
+            device: th.device,
+            config: Optional[CfgNode] = None,
+            restore_strictly: bool = True,
+            setup_params: bool = True,
+    ) -> C:
         if config is None:
             config = data['config']
         self = cls(config, device, setup_params=False)
@@ -596,7 +662,7 @@ class Heliostat(AbstractHeliostat):
             self.setup_params()
         return self
 
-    def _from_dict(self, data, restore_strictly):
+    def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         self._normals = data['heliostat_normals']
 
         if restore_strictly:
@@ -607,26 +673,19 @@ class Heliostat(AbstractHeliostat):
 class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
-            heliostat,
-            sun_direction,
-            receiver_center,
-            align_points=True,
-    ):
-        if heliostat.discrete_points is None:
+            heliostat: Heliostat,
+            sun_direction: torch.Tensor,
+            receiver_center: torch.Tensor,
+            align_points: bool = True,
+    ) -> None:
+        if not hasattr(heliostat, '_discrete_points'):
             raise ValueError('Heliostat has to be loaded first')
         if isinstance(heliostat, AlignedHeliostat):
             raise ValueError('Heliostat is already aligned')
 
         self._heliostat = heliostat
 
-        # TODO Max: fix for other aimpoints
-        # TODO Evtl auf H.Discrete Points umstellen
-        position = self._heliostat.position_on_field
-        position_norm = th.linalg.norm(position)
-        if position_norm != 0:
-            position /= position_norm
-        from_sun = position - sun_direction
-        from_sun /= th.linalg.norm(from_sun)
+        from_sun = -sun_direction
         self.from_sun = from_sun.unsqueeze(0)
 
         self.alignment = th.stack(heliostat_coord_system(
@@ -634,17 +693,16 @@ class AlignedHeliostat(AbstractHeliostat):
             sun_direction,
             receiver_center,
         ))
+        self.align_origin = throt.Rotate(self.alignment)
 
         if align_points:
             self._align()
 
-    def _align(self):
-        hel_rotated = rotate(
-            self._heliostat.discrete_points, self.alignment, clockwise=True)
+    def _align(self) -> None:
+        hel_rotated, normal_vectors_rotated = rotate(
+            self._heliostat, self.align_origin)
+        # TODO Add Translation in rotate function
         hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
-
-        normal_vectors_rotated = rotate(
-            self._heliostat.normals, self.alignment, clockwise=True)
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
@@ -653,5 +711,5 @@ class AlignedHeliostat(AbstractHeliostat):
         self._discrete_points = hel_rotated_in_field
         self._normals = normal_vectors_rotated
 
-    def get_ray_directions(self):
+    def get_ray_directions(self) -> torch.Tensor:
         return reflect_rays_(self.from_sun, self.normals)
