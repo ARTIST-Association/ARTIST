@@ -19,6 +19,7 @@ import plotter
 from render import Renderer
 import utils
 
+
 LossFn = Callable[
     [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
     torch.Tensor,
@@ -549,7 +550,6 @@ def test_batch(
     assert bitmaps is not None
     return mean_loss, bitmaps
 
-
 def main(config_file_name: Optional[str] = None) -> None:
     # Load Defaults
     # =============
@@ -613,6 +613,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         else 'cpu'
     )
 
+
     # Create Dataset
     # ==============
     # Create Heliostat Object and Load Model defined in config file
@@ -638,6 +639,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     test_sun_directions, test_ae = data.generate_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
+
     test_targets = data.generate_dataset(
         H_target,
         ENV,
@@ -646,17 +648,59 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
         "test_"
     )
-    H_naive = copy.deepcopy(H_target)
-    H_naive._normals = H_naive._normals_ideal
-    naive_targets = data.generate_dataset(
-        H_naive,
-        ENV,
-        test_sun_directions,
-        None,
-        writer,
-        "naive_"
-    )
+    
+    
+    ####Better Testing######
+    # state = th.random.get_rng_state()
+    # H_validation = build_target_heliostat(cfg, device)
+    # ENV_validation = copy.deepcopy(ENV)
+    # grid_test_sun_directions, grid_test_ae = generate_sun_array(cfg.TEST.SUN, "grid", device)
+    # grid_test_targets, _ = data.generate_dataset(
+    #     grid_test_sun_directions,
+    #     H_validation,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "grid_"
+    # )
+    # # th.random.set_rng_state(state)
+    # H_naive = build_target_heliostat(cfg, device)
+    # H_naive._normals = H_naive._normals_ideal
+    # naive_targets, _ = data.generate_dataset(
+    #     grid_test_sun_directions,
+    #     H_naive,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "naive_"
+    # )
+    
+    # spheric_test_sun_directions, spheric_test_ae = generate_sun_array(cfg.TEST.SUN, "spheric", device, train_vec =sun_directions)
+    # spheric_test_targets, _ = data.generate_dataset(
+    #     spheric_test_sun_directions,
+    #     H_validation,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "spheric_"
+    # )
+    
+    # H_naive_spheric = build_target_heliostat(cfg, device)
+    # H_naive_spheric._normals = H_naive._normals_ideal
+    # naive_spheric_test_targets, _ = data.generate_dataset(
+    #     spheric_test_sun_directions,
+    #     H_naive_spheric,
+    #     ENV_validation,
+    #     None,
+    #     None,
+    #     "naive_spheric_"
+    # )
 
+    
+    
+    
+    # plotter.test_surfaces(H_target)
+    # exit()
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
@@ -668,13 +712,13 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
-
+    
     opt, sched = build_optimizer_scheduler(
         cfg, epochs * steps_per_epoch, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
-
+    
     epoch_shift_width = len(str(epochs))
-
+    
     best_result = th.tensor(float('inf'))
     state_dict = {
         "epoch": 0,
@@ -683,7 +727,22 @@ def main(config_file_name: Optional[str] = None) -> None:
         "last_lr": opt.param_groups[0]["lr"],
         "current_lr": opt.param_groups[0]["lr"],
     }
+    
+        
+    #Generate naive Losses before training
+    # spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
+    #                 H,
+    #                 ENV,
+    #                 R,
+    #                 spheric_test_targets,
+    #                 spheric_test_sun_directions,
+    #                 test_loss_func,
+    #                 0,
+    #                 reduction=False
+    #             )
+    
     for epoch in range(epochs):
+        
         train_objects = TrainObjects(
             opt,
             sched,
@@ -696,6 +755,11 @@ def main(config_file_name: Optional[str] = None) -> None:
             epoch,
             writer,
         )
+<<<<<<< HEAD
+=======
+
+    
+>>>>>>> everythingfixednow
         loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -706,6 +770,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
+<<<<<<< HEAD
 
         if epoch % cfg.TEST.INTERVAL == 0:
             test_loss, test_bitmaps = test_batch(
@@ -733,6 +798,85 @@ def main(config_file_name: Optional[str] = None) -> None:
                     epoch,
                     logdir_enhanced_test,
                 )
+=======
+    
+            if epoch % cfg.TEST.INTERVAL == 0:
+                test_loss, _ = test_batch(
+                    H,
+                    ENV,
+                    R,
+                    test_targets,
+                    test_sun_directions,
+                    test_loss_func,
+                    epoch,
+                    writer,
+                )
+            # if not epoch ==0:
+            #     grid_test_loss, grid_test_bitmaps = test_batch(
+            #                 H,
+            #                 ENV,
+            #                 R,
+            #                 grid_test_targets,
+            #                 grid_test_sun_directions,
+            #                 test_loss_func,
+            #                 epoch,
+            #             )
+                
+            #     plotter.target_image_comparision_pred_orig_naive(grid_test_ae, 
+            #                                                       grid_test_targets,
+            #                                                       grid_test_bitmaps,
+            #                                                       naive_targets,
+            #                                                       sun_directions,
+            #                                                       epoch,
+            #                                                       logdir_enhanced_test
+            #                                                       )
+                
+            #     spheric_train_loss, _ = test_batch(
+            #         H,
+            #         ENV,
+            #         R,
+            #         targets,
+            #         sun_directions,
+            #         test_loss_func,
+            #         epoch,
+            #     )
+            #     spheric_test_loss, spheric_test_bitmaps = test_batch(
+            #         H,
+            #         ENV,
+            #         R,
+            #         spheric_test_targets,
+            #         spheric_test_sun_directions,
+            #         test_loss_func,
+            #         epoch,
+            #         reduction=False
+            # )
+            #     plotter.spherical_loss_plot(sun_directions,
+            #                                 spheric_test_ae,
+            #                                 spheric_train_loss, 
+            #                                 spheric_test_loss,
+            #                                 spheric_naive_test_loss,
+            #                                 cfg.TEST.SUN.SPHERIC.NUM_SAMPLES,
+            #                                 epoch,
+            #                                 logdir_enhanced_test)
+            
+                print(
+                    f'[{epoch:>{epoch_shift_width}}/{epochs}] '
+                    f'test loss: {test_loss.item()}'
+                )
+            
+
+            # Plotting stuff
+            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
+                # plotter.target_image_comparision_pred_orig_naive(
+                #     test_ae,
+                #     test_targets,
+                #     test_bitmaps,
+                #     naive_targets,
+                #     sun_directions,
+                #     epoch,
+                #     logdir_enhanced_test,
+                # )
+>>>>>>> everythingfixednow
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,
@@ -767,4 +911,4 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    main()
+    main("WorkingConfigs\\Best10m.yaml")

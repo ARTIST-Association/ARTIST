@@ -1,6 +1,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib.gridspec import GridSpec
 import torch as th
 import os
 import numpy as np
@@ -374,6 +375,221 @@ def target_image_comparision_pred_orig_naive(ae,
     plt.savefig(os.path.join(logdir, f"enhanced_test_{epoch}"))
     plt.close(fig)
 
+
+def target_image_comparision_pred_orig_naive(ae, 
+                                             original, 
+                                             predicted, 
+                                             naive,
+                                             train_sun_position, 
+                                             epoch,
+                                             logdir,
+                                             start_main_plot_at_row =1
+                                             ):
+    
+    num_azi = len(th.unique(ae[:,0]))
+    num_ele = len(th.unique(ae[:,1]))
+    
+    ae = ae.detach().cpu()
+    train_sun_position = train_sun_position.detach().cpu()
+    
+    small_width=[0.2]*num_ele*4
+    width_ratios= [1]*num_ele *4
+    width_ratios[3::4]=small_width[3::4]
+
+    column = num_azi
+    row    = num_ele
+    
+    height_ratios   =[1]*(num_azi+start_main_plot_at_row)
+    height_ratios[0]=2
+    
+
+    
+    
+    loss =th.nn.L1Loss()
+    row = num_ele *4
+    column = num_azi
+    fig, axs = plt.subplots(column+1, row, figsize=(5*num_ele, 2*num_azi), sharex=True, sharey=True, 
+                            gridspec_kw={'width_ratios': width_ratios,'height_ratios':height_ratios})
+    gs = axs[1, 1].get_gridspec()
+    
+    j=0
+    
+    original = original.detach().cpu()
+    predicted = predicted.detach().cpu()
+    naive = naive.detach().cpu()
+    
+    
+    smp = start_main_plot_at_row*row#start main plot 
+    for i, ax in enumerate(axs.flat):
+        #Nested Subplots
+        # if i==0:
+        #     ax.remove()
+        
+        if i<smp:
+            ax.remove()
+        #Modifications for all Plots
+        if i>=smp:
+            ax.set_aspect('equal')
+            ax.get_xaxis().set_ticks([])
+            ax.get_yaxis().set_ticks([])
+        
+        #Modification for each row
+            
+        if i%row==0 and i>=smp:
+            ax.set_ylabel("Azimuth = "+str(int(ae[j,0])), fontweight='bold')
+    
+        #     ax.set_ylabel("Azimuth = "+str(int(ae[j,0])))
+        
+        #Modification specific for each plot
+        if i%4==0 and i>=smp:
+            
+            ax.imshow(predicted[j], cmap = "coolwarm")
+            output = loss(predicted[j],original[j])
+            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+            if i-smp<row:
+                ax.set_title('Predicted', fontweight='bold')
+            
+        elif i%4==1 and i>=smp:
+            ax.imshow(original[j], cmap = "coolwarm")
+            if i-smp<row:
+                ax.set_title('Original', fontweight='bold')
+            if i-smp>=row*(column-1):
+                ax.set_xlabel("Elevation = "+str(int(ae[j,1])), fontweight='bold')
+        elif i%4==2 and i>=smp:
+            ax.imshow(naive[j], cmap ="coolwarm")
+            
+            output = loss(naive[j],original[j])
+            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+            if i-smp<row: 
+                ax.set_title('Naive', fontweight='bold')
+        elif i%4==3 and i>=smp:
+            ax.remove()
+    
+            
+        if i%4==3 and i>=smp:
+            j+=1
+            
+    axbig = fig.add_subplot(gs[0:1, 4:8],projection='polar')
+
+    axbig.set_thetamin(-90)
+       
+    axbig.set_thetamax(90)
+       
+    axbig.set_theta_zero_location("N")
+       
+    axbig.set_rorigin(-95)
+    
+    axbig.scatter(np.radians(ae[:,0]), -ae[:,1],color = 'r',marker='x',s=10, label="Test sun positions")
+    
+    train_sun_position= utils.vec_to_ae(train_sun_position)
+    axbig.scatter(np.radians(train_sun_position[:,0]),-train_sun_position[:,1] ,color = 'b',marker='x',s=10, label="Train sun position")
+    axbig.legend(loc='upper right',bbox_to_anchor=(-0.1, 0.5, 0.5, 0.5))
+    axbig.set_yticks(np.arange(-90, 20, 30))
+    
+    
+    axbig.set_yticklabels(abs(axbig.get_yticks()))
+    axbig.set_ylabel('Azimuth',rotation=67.5)
+    axbig.set_xlabel('Elevation')
+    
+    plt.subplots_adjust(wspace=0.05, hspace=0)
+    plt.tight_layout()
+    plt.savefig(os.path.join(logdir, f"enhanced_test_{epoch}"))
+    plt.close(fig)
+    
+def spherical_loss_plot(train_vec, spheric_ae, train_loss, spheric_losses, naive_losses, num_spheric_samples, epoch, logdir):
+    """
+    spheric_ae and losses are seperated in 3 parts
+    [:nums] = constant elevation and western azimuth hemisphere (from train vecor viewing position)
+    [nums:2*nums] = constant elevation and eastern hemisphere
+    [2*nums:] = constant azimuth with all possible elevations
+    """
+    
+    #To CPU
+    train_vec = train_vec.detach().cpu()
+    train_loss = train_loss.detach().cpu()
+    spheric_losses = spheric_losses.detach().cpu()
+    naive_losses = naive_losses.detach().cpu()
+    #Radial Plot Calculations
+    train_ae = utils.vec_to_ae(train_vec)
+    ae = spheric_ae.clone()
+
+    #Setup Figure
+    height_ratios=[1, 0.3]
+    fig = plt.figure(constrained_layout=True, figsize=(10,6))
+    gs = GridSpec(2, 2, figure=fig, height_ratios=height_ratios)
+    
+    #Fill First Plot
+    ax1 = fig.add_subplot(gs[0, 0],projection='polar')
+    ax1.set_theta_zero_location("N")
+    
+    nums =num_spheric_samples
+    l1 = ax1.scatter(th.deg2rad(ae[:nums,0]), -ae[:nums,1],marker='.',s=40, label="Test: Left-handed azimuth angles")
+    l2 = ax1.scatter(th.deg2rad(ae[nums:2*nums,0]), -ae[nums:2*nums,1],marker='.',s=40, label="Test: Right-handed azimuth angles")
+    l3 = ax1.scatter(th.deg2rad(ae[2*nums:,0]), -ae[2*nums:,1],marker='.',s=40, label="Test: Elevation angles")
+    l4 = ax1.scatter(th.deg2rad(train_ae[:,0]), -train_ae[:,1],marker='*',s=40, label="Azi./Ele. of training")
+    
+    #Axis Ticks
+    ax1.set_yticks(np.arange(-90, -10, 20))
+    ax1.set_yticklabels(abs(ax1.get_yticks()))
+    ax1.set_rlabel_position(0)
+    tick_labels = ["0","45","90","135","$\pm$ 180","-135","-90","-45"]
+    value_list = ax1.get_xticks().tolist()
+    ax1.xaxis.set_ticks(value_list)
+    ax1.set_xticklabels(tick_labels)
+    #Axis Labels
+    ax1.set_xlabel(r'Azimuth $\theta^{a}$ [°]')
+    label_position=ax1.get_rlabel_position()
+    ax1.text(np.math.radians(label_position+7),-63,r'Elevation $\theta^{e}$[°]',
+        rotation= 91,ha='center',va='center')
+
+    #Calculations For Second Plot
+    #predictions
+    ae[:nums,0] = ae[:nums,0]-train_ae[0,0]
+    azi_west_no_offsets = th.abs(th.where(ae[:nums,0]>0, ae[:nums,0], 360+ae[:nums,0])-360)#delay to zero
+    azi_west_loss = spheric_losses[:nums] # same for y values
+    
+    ae[nums:2*nums,0] = ae[nums:2*nums,0]-train_ae[0,0]
+    azi_east_no_offsets = th.where(ae[nums:2*nums,0]>0, ae[nums:2*nums,0], 360+ae[nums:2*nums,0])%360#delay to 0-180
+    azi_east_loss = spheric_losses[nums:2*nums] # same for y values
+    
+    ele_no_offsets = th.where(ae[2*nums:,0]<0, ae[2*nums:,1]-train_ae[0,1], 180-ae[2*nums:,1]-train_ae[0,1])#delay to 180-0
+    ele_loss = spheric_losses[2*nums:]
+    
+    #naive
+    naive_azi_west_loss   = naive_losses[:nums] # same for y values
+    naive_azi_east_loss   = naive_losses[nums:2*nums] # same for y values
+    naive_ele_loss        = naive_losses[2*nums:]
+    
+    
+    
+    
+    #Fill Second Figure
+    ax2 = fig.add_subplot(gs[:, 1])
+    ax2.plot(azi_west_no_offsets,azi_west_loss,marker='.',zorder=3)
+    ax2.plot(azi_east_no_offsets,azi_east_loss,marker='.',zorder=6)
+    ax2.plot(ele_no_offsets,ele_loss,marker='.',zorder=8)
+    ax2.scatter(0,train_loss,s=90,marker='*', color="r",zorder=10)
+    
+    l1_naive = ax2.plot(azi_west_no_offsets,naive_azi_west_loss,zorder=3, color="cornflowerblue", label="Naive loss left-azi")
+    l2_naive = ax2.plot(azi_east_no_offsets,naive_azi_east_loss,zorder=6, color="bisque", label="Naive loss right-azi")
+    l3_naive = ax2.plot(ele_no_offsets,naive_ele_loss,zorder=8, color="limegreen", label="Naive loss ele")
+    
+    # ax2.set_xlim(-20,180)
+    
+    #Axis Labels
+    ax2.set_xlabel(r'$|\theta^{a,e}_{test}|-\theta^{a,e}_{train}$ [°]')
+    ax2.set_ylabel('L1 Loss')
+    # ax2.set_ylim(0,12)
+
+    #Legend
+    ax3 = fig.add_subplot(gs[1, 0])
+    ax3.axis('off')
+    ax3.legend(handles=[l1,l1_naive[0],l2,l2_naive[0],l3,l3_naive[0], l4], loc="center")
+    
+    
+    # plt.tight_layout()
+    plt.savefig(os.path.join(logdir, f"spheric_test_{epoch}"))
+    plt.close(fig)
 
 #Not Used Anymore but not deleted
 # if epoch %  10== 0:#

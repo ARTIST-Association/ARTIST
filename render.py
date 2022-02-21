@@ -291,6 +291,7 @@ class Renderer(object):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
         ],
     ]:
+
         if heliostat is None:
             heliostat = self.H
         if self.redraw_random_variables:
@@ -300,6 +301,7 @@ class Renderer(object):
             yi = self.yi
         surface_points, ray_directions = heliostat()
         # TODO Maybe another name?
+
         distorted_ray_directions = compute_ray_directions(
             self.ENV.receiver_plane_normal,  # Intersection plane
             self.ENV.receiver_center,  # Point on plane
@@ -348,5 +350,5 @@ class Renderer(object):
                 'Missed for target:', target_num_missed.detach().cpu().item())
 
         if return_extras:
-            return total_bitmap, (ray_directions, indices, xi, yi)
+            return total_bitmap, (distorted_ray_directions, indices, xi, yi)
         return total_bitmap

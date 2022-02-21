@@ -6,12 +6,14 @@ import numpy as np
 Vector3d = List[float]
 
 
+
 def load_bpro(
         filename: str,
         concentratorHeader_struct: struct.Struct,
         facetHeader_struct: struct.Struct,
         ray_struct: struct.Struct,
 ) -> Tuple[List[Vector3d], List[Vector3d], List[np.ndarray], float, float]:
+
     concentratorHeader_struct_len = concentratorHeader_struct.size
     facetHeader_struct_len = facetHeader_struct.size
     ray_struct_len = ray_struct.size

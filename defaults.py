@@ -119,7 +119,8 @@ _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
-_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 5000
+
+_C.H.DEFLECT_DATA.TAKE_N_VECTORS        = 2000
 _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
@@ -182,16 +183,18 @@ _C.H.OTHER.USE_WEIGHTED_AVG             = True
 _C.AC                                   = CN()
 _C.AC.RECEIVER                          = CN()
 # in m in global coordinates
-_C.AC.RECEIVER.CENTER                   = [-13, -20, 30]
-_C.AC.RECEIVER.PLANE_NORMAL             = [0, 1, 0] # ENU
-_C.AC.RECEIVER.PLANE_X                  = 7 # in m
-_C.AC.RECEIVER.PLANE_Y                  = 7 # in m
+
+_C.AC.RECEIVER.CENTER                   = [0, -10, 0]
+_C.AC.RECEIVER.PLANE_NORMAL             = [0, 1, 0] # NWU
+_C.AC.RECEIVER.PLANE_X                  = 5 # in m
+_C.AC.RECEIVER.PLANE_Y                  = 5 # in m
 # These X and Y are height and width respectively.
 _C.AC.RECEIVER.RESOLUTION_X             = 256
 _C.AC.RECEIVER.RESOLUTION_Y             = 256
 
 _C.AC.SUN                               = CN()
-_C.AC.SUN.GENERATE_N_RAYS               = 100
+
+_C.AC.SUN.GENERATE_N_RAYS               = 300
 _C.AC.SUN.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
 _C.AC.SUN.REDRAW_RANDOM_VARIABLES       = False #TODO schauen wo das aufgerufen wird
 _C.AC.SUN.NORMAL_DIST                   = CN()
@@ -217,11 +220,27 @@ _C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
 _C.TRAIN.EPOCHS                         = 20
 
-_C.TRAIN.SCHEDULER                      = CN()
-_C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateu, Cyclic, OneCycle, Exponential
 
-_C.TRAIN.SCHEDULER.EXP                  = CN()
-_C.TRAIN.SCHEDULER.EXP.GAMMA            = .987
+_C.TRAIN.SUN_DIRECTIONS                 = CN()
+_C.TRAIN.SUN_DIRECTIONS.CASE            ="vecs"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
+
+_C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
+_C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.7004466,-0.43719268,   0.564125  ],]
+
+_C.TRAIN.SUN_DIRECTIONS.RAND            = CN()
+_C.TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES= 2
+
+_C.TRAIN.SUN_DIRECTIONS.GRID            = CN()
+_C.TRAIN.SUN_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
+_C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
+
+
+
+_C.TRAIN.SCHEDULER                      = CN()
+_C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateu, Cyclic, OneCycle
+
+_C.TRAIN.SCHEDULER.EXP          = CN()
+_C.TRAIN.SCHEDULER.EXP.GAMMA    = 0.9995
 
 _C.TRAIN.SCHEDULER.ROP                  = CN()
 _C.TRAIN.SCHEDULER.ROP.FACTOR           = 0.1
@@ -248,6 +267,7 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 _C.TRAIN.OPTIMIZER                      = CN()
 _C.TRAIN.OPTIMIZER.NAME                 = "Adam"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
 _C.TRAIN.OPTIMIZER.LR                   = 8e-6
+
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
 _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0

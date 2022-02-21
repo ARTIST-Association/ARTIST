@@ -14,6 +14,7 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+
 import nurbs
 
 # We would like to say that T can be everything but a list.
@@ -24,10 +25,10 @@ def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
     # Type errors come from T being able to be a list. So we ignore them
     # as "type negation" ("T can be everything except a list") is not
     # currently supported.
+
     if isinstance(values[0], list):
         return values  # type: ignore[return-value]
     return [values]  # type: ignore[list-item]
-
 
 def vec_to_ae(vec: torch.Tensor) -> torch.Tensor:
     """
@@ -68,6 +69,7 @@ def ae_to_vec(
         srange: float = 1.0,
         deg: bool = True,
 ) -> torch.Tensor:
+
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -103,11 +105,11 @@ def ae_to_vec(
     )
     return rot_vec
 
-
 def colorize(
         image_tensor: torch.Tensor,
         colormap: str = 'jet',
 ) -> torch.Tensor:
+
     """
 
     Parameters
