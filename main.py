@@ -755,11 +755,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             epoch,
             writer,
         )
-<<<<<<< HEAD
-=======
 
-    
->>>>>>> everythingfixednow
         loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -770,35 +766,6 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
-<<<<<<< HEAD
-
-        if epoch % cfg.TEST.INTERVAL == 0:
-            test_loss, test_bitmaps = test_batch(
-                H,
-                ENV,
-                R,
-                test_targets,
-                test_sun_directions,
-                test_loss_func,
-                epoch,
-                writer,
-            )
-            print(
-                f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-                f'test loss: {test_loss.item()}'
-            )
-            # Plotting stuff
-            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
-                plotter.target_image_comparision_pred_orig_naive(
-                    test_ae,
-                    test_targets,
-                    test_bitmaps,
-                    naive_targets,
-                    sun_directions,
-                    epoch,
-                    logdir_enhanced_test,
-                )
-=======
     
             if epoch % cfg.TEST.INTERVAL == 0:
                 test_loss, _ = test_batch(
@@ -876,7 +843,6 @@ def main(config_file_name: Optional[str] = None) -> None:
                 #     epoch,
                 #     logdir_enhanced_test,
                 # )
->>>>>>> everythingfixednow
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,
