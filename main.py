@@ -880,4 +880,4 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    main("WorkingConfigs\\Test.yaml")
+    main("WorkingConfigs\\Best10m.yaml")
