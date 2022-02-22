@@ -652,49 +652,52 @@ def main(config_file_name: Optional[str] = None) -> None:
     
     ####Better Testing######
     # state = th.random.get_rng_state()
-    # H_validation = build_target_heliostat(cfg, device)
-    # ENV_validation = copy.deepcopy(ENV)
-    # grid_test_sun_directions, grid_test_ae = generate_sun_array(cfg.TEST.SUN, "grid", device)
-    # grid_test_targets, _ = data.generate_dataset(
-    #     grid_test_sun_directions,
-    #     H_validation,
-    #     ENV_validation,
-    #     None,
-    #     None,
-    #     "grid_"
-    # )
-    # # th.random.set_rng_state(state)
-    # H_naive = build_target_heliostat(cfg, device)
-    # H_naive._normals = H_naive._normals_ideal
-    # naive_targets, _ = data.generate_dataset(
-    #     grid_test_sun_directions,
-    #     H_naive,
-    #     ENV_validation,
-    #     None,
-    #     None,
-    #     "naive_"
-    # )
+    # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
+    #     H_validation = build_target_heliostat(cfg, device)
+    #     ENV_validation = Environment(cfg.AC, device)
     
-    # spheric_test_sun_directions, spheric_test_ae = generate_sun_array(cfg.TEST.SUN, "spheric", device, train_vec =sun_directions)
-    # spheric_test_targets, _ = data.generate_dataset(
-    #     spheric_test_sun_directions,
-    #     H_validation,
-    #     ENV_validation,
-    #     None,
-    #     None,
-    #     "spheric_"
-    # )
-    
-    # H_naive_spheric = build_target_heliostat(cfg, device)
-    # H_naive_spheric._normals = H_naive._normals_ideal
-    # naive_spheric_test_targets, _ = data.generate_dataset(
-    #     spheric_test_sun_directions,
-    #     H_naive_spheric,
-    #     ENV_validation,
-    #     None,
-    #     None,
-    #     "naive_spheric_"
-    # )
+    # if cfg.TEST.PLOT.GRID:
+    #     grid_test_sun_directions, grid_test_ae = data.generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device, case="grid")
+    #     grid_test_targets = data.generate_dataset(
+    #         H_validation,
+    #         ENV_validation,
+    #         grid_test_sun_directions,
+    #         None,
+    #         None,
+    #         "grid_"
+    #     )
+    #     # # th.random.set_rng_state(state)
+    #     H_naive_grid = build_target_heliostat(cfg, device)
+    #     H_naive_grid._normals = H_naive_grid._normals_ideal
+    #     naive_targets = data.generate_dataset(
+    #         H_naive_grid,
+    #         ENV_validation,
+    #         grid_test_sun_directions,
+    #         None,
+    #         None,
+    #         "naive_"
+    #     )
+    # if cfg.TEST.PLOT.SPHERIC:
+    #     spheric_test_sun_directions, spheric_test_ae = data.generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device, train_vec =sun_directions, case="spheric")
+    #     spheric_test_targets = data.generate_dataset(
+    #         H_validation,
+    #         ENV_validation,
+    #         spheric_test_sun_directions,
+    #         None,
+    #         None,
+    #         "spheric_"
+    #     )
+        
+    #     H_naive_spheric = build_target_heliostat(cfg, device)
+    #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
+    #     naive_spheric_test_targets = data.generate_dataset(
+    #         H_naive_spheric,
+    #         ENV_validation,
+    #         spheric_test_sun_directions,
+    #         None,
+    #         None,
+    #         "naive_spheric_"
+    #     )
 
     
     

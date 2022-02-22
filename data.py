@@ -183,7 +183,7 @@ def _vec_sun_array(
         / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
     )
 
-    ae = utils.vec_to_ae(sun_directions, device=device)
+    ae = utils.vec_to_ae(sun_directions)
     return sun_directions, ae
 
 def _spheric_sun_array(
@@ -196,7 +196,7 @@ def _spheric_sun_array(
         if not train_vec.squeeze().shape ==th.Size([3]):
             raise(Exception("multiple sun vectors detected. spheric plot is only possible using 1 vector"))
         train_vec = train_vec  / th.linalg.norm(train_vec, dim=1).unsqueeze(1)
-        ae = utils.vec_to_ae(train_vec, device).squeeze()
+        ae = utils.vec_to_ae(train_vec).squeeze()
         ele_angles = th.linspace(0.1*180, 0.9*180, cfg.NUM_SAMPLES, dtype=th.get_default_dtype(), device=device)
         azi_angles = th.linspace(0, 180, cfg.NUM_SAMPLES, dtype=th.get_default_dtype(), device=device)
         
@@ -212,9 +212,9 @@ def _spheric_sun_array(
 
 
 
-        ae_azi_west_dir = utils.vec_to_ae(spheric_vecs_azi_west, device).detach().cpu()
-        ae_azi_east_dir = utils.vec_to_ae(spheric_vecs_azi_east, device).detach().cpu()
-        ae_ele_dir = th.nan_to_num(utils.vec_to_ae(spheric_vecs_ele, device)).detach().cpu()
+        ae_azi_west_dir = utils.vec_to_ae(spheric_vecs_azi_west).detach().cpu()
+        ae_azi_east_dir = utils.vec_to_ae(spheric_vecs_azi_east).detach().cpu()
+        ae_ele_dir = th.nan_to_num(utils.vec_to_ae(spheric_vecs_ele)).detach().cpu()
         
         ae = th.cat([ae_azi_west_dir,ae_azi_east_dir,ae_ele_dir],0)
         sun_directions = th.cat([spheric_vecs_azi_west, spheric_vecs_azi_east, spheric_vecs_ele],0)
@@ -225,10 +225,13 @@ def _spheric_sun_array(
 def generate_sun_array(
         cfg_sun_directions: CfgNode,
         device: th.device,
-        sun_direction: torch.Tensor = None
+        train_vec: torch.Tensor = None,
+        case: str = None
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     cfg = cfg_sun_directions
-    case: str = cfg.CASE
+    if not case:
+        case: str = cfg.CASE
+        
     if case == "random":
         sun_directions, ae = _random_sun_array(cfg.RAND, device)
     elif case == "grid":
@@ -237,7 +240,7 @@ def generate_sun_array(
         sun_directions, ae = _vec_sun_array(cfg.VECS, device)
 
     elif case == "spheric":
-            sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, sun_direction)
+            sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae

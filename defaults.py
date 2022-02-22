@@ -270,7 +270,7 @@ _C.TRAIN.OPTIMIZER.LR                   = 8e-6
 
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
-_C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0
+_C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0.
 
 _C.TRAIN.LOSS                           = CN()
 _C.TRAIN.LOSS.NAME                      = "L1"                                  #SWITCH FOR LOSS: L1, MSE
@@ -280,8 +280,8 @@ _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.5
 
 _C.TEST = CN()
 _C.TEST.INTERVAL                        = 15
+
 # Reduces test image array to 5, images will be generated with complete array
-_C.TEST.FAST_TESTING                    = True
 
 _C.TEST.SUN_DIRECTIONS                  = CN()
 _C.TEST.SUN_DIRECTIONS.CASE             ="grid"   #SWITCH FOR SUN DIRECTION VEKTOR GENERATION: vecs, random, grid
@@ -289,12 +289,23 @@ _C.TEST.SUN_DIRECTIONS.CASE             ="grid"   #SWITCH FOR SUN DIRECTION VEKT
 _C.TEST.SUN_DIRECTIONS.VECS             = CN()
 _C.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS  = [[-0.43719268,  0.7004466,   0.564125  ],]
 
+
 _C.TEST.SUN_DIRECTIONS.RAND             = CN()
 _C.TEST.SUN_DIRECTIONS.RAND.NUM_SAMPLES = 8
 
 _C.TEST.SUN_DIRECTIONS.GRID             = CN()
 _C.TEST.SUN_DIRECTIONS.GRID.AZI_RANGE   = [-90, 90, 7] #Start,Stop,Step
 _C.TEST.SUN_DIRECTIONS.GRID.ELE_RANGE   = [ 20, 80, 3] #Start,Stop,Step
+_C.TEST.SUN_DIRECTIONS.GRID.PLOT        = True
+
+_C.TEST.SUN_DIRECTIONS.SPHERIC          = CN()
+_C.TEST.SUN_DIRECTIONS.SPHERIC.NUM_SAMPLES =10
+
+_C.TEST.PLOT                            = CN()
+_C.TEST.PLOT.SPHERIC                     =True
+_C.TEST.PLOT.GRID                       = True
+
+
 
 def get_cfg_defaults():
     return _C.clone()
