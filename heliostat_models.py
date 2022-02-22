@@ -76,6 +76,9 @@ def real_heliostat(
         dtype=dtype,
         device=device,
     )
+    zs = utils.deflec_facet_zs(h, h_normal_vecs)
+    h[:, -1] += zs
+
     # print(h_ideal_vecs)
     rows = None
     cols = None
