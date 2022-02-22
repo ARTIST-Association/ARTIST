@@ -646,6 +646,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
         "test_"
     )
+    # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
 
     # Better Testing
     # ==============
@@ -858,6 +859,15 @@ def main(config_file_name: Optional[str] = None) -> None:
                     logdir_surfaces,
                     writer
                 )
+                plotter.plot_surfaces_mm(
+                    H_target,
+                    H,
+                    epoch,
+                    logdir_surfaces,
+                    writer
+                )
+                plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
+                plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
 
         # Save Section
 
