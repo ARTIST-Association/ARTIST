@@ -885,4 +885,4 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    main("WorkingConfigs\\Best10m.yaml")
+    main(os.path.join("WorkingConfigs", "Best10m.yaml"))
