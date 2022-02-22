@@ -14,7 +14,6 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
-
 import nurbs
 
 # We would like to say that T can be everything but a list.
@@ -82,6 +81,7 @@ def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
         return values  # type: ignore[return-value]
     return [values]  # type: ignore[list-item]
 
+
 def vec_to_ae(vec: torch.Tensor) -> torch.Tensor:
     """
     converts ENU vector to azimuth, elevation
@@ -121,7 +121,6 @@ def ae_to_vec(
         srange: float = 1.0,
         deg: bool = True,
 ) -> torch.Tensor:
-
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -157,11 +156,11 @@ def ae_to_vec(
     )
     return rot_vec
 
+
 def colorize(
         image_tensor: torch.Tensor,
         colormap: str = 'jet',
 ) -> torch.Tensor:
-
     """
 
     Parameters

@@ -1,6 +1,7 @@
 import os
 from typing import List, Optional, Tuple
 
+import pytorch3d.transforms as throt
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
@@ -10,7 +11,7 @@ from environment import Environment
 from heliostat_models import AbstractHeliostat
 from render import Renderer
 import utils
-import pytorch3d.transforms as throt
+
 
 def create_target(
         H: AbstractHeliostat,
@@ -186,12 +187,13 @@ def _vec_sun_array(
     ae = utils.vec_to_ae(sun_directions)
     return sun_directions, ae
 
+
 def _spheric_sun_array(
         cfg: CfgNode,
         device: th.device,
-        train_vec: Optional[th.Tensor]):
-
-    if train_vec == None:
+        train_vec: Optional[th.Tensor],
+):
+    if train_vec is None:
         raise(Exception("train_vec is None. Spheric testing needs a train vector"))
     if not train_vec.squeeze().shape ==th.Size([3]):
         raise(Exception("multiple sun vectors detected. spheric plot is only possible using 1 vector"))
@@ -232,14 +234,13 @@ def generate_sun_array(
     if not case:
         case = cfg.CASE
     assert case is not None
-        
+
     if case == "random":
         sun_directions, ae = _random_sun_array(cfg.RAND, device)
     elif case == "grid":
         sun_directions, ae = _grid_sun_array(cfg.GRID, device)
     elif case == "vecs":
         sun_directions, ae = _vec_sun_array(cfg.VECS, device)
-
     elif case == "spheric":
         sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
     else:
