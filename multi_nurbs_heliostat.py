@@ -465,6 +465,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             reposition=reposition)
         return discrete_points, normals
 
+    def step(self, verbose: bool = False) -> None:  # type: ignore[override]
+        self.facets[0].step(verbose)
+        for facet in self.facets[1:]:
+            facet.step(False)
+
     @property  # type: ignore[misc]
     @functools.lru_cache()
     def dict_keys(self) -> Set[str]:
