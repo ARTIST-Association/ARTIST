@@ -14,11 +14,62 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
-
 import nurbs
 
 # We would like to say that T can be everything but a list.
 T = TypeVar('T')
+
+
+def deflec_facet_zs(
+        points: torch.Tensor,
+        normals: torch.Tensor,
+) -> torch.Tensor:
+    """Calculate z values for a surface given by normals at x-y-planar
+    positions.
+
+    We are left with a different unknown offset for each z value; we
+    assume this to be constant.
+    """
+    distances = horizontal_distance(
+        points.unsqueeze(0),
+        points.unsqueeze(1),
+    )
+    distances, closest_indices = distances.sort(dim=-1)
+    del distances
+    # Take closest point that isn't the point itself.
+    closest_indices = closest_indices[..., 1]
+
+    midway_normal = normals + normals[closest_indices]
+    midway_normal /= th.linalg.norm(midway_normal, dim=-1, keepdims=True)
+
+    rot_z_90deg = th.tensor(
+        [
+            [0, -1, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+        ],
+        dtype=points.dtype,
+        device=points.device,
+    )
+
+    connector = points[closest_indices] - points
+    connector_norm = th.linalg.norm(connector, dim=-1)
+    orthogonal = th.matmul(rot_z_90deg, connector.T).T
+    orthogonal /= th.linalg.norm(orthogonal, dim=-1, keepdims=True)
+    tilted_connector = th.cross(orthogonal, midway_normal)
+    tilted_connector /= th.linalg.norm(tilted_connector, dim=-1, keepdims=True)
+
+    angle = th.acos(th.clamp(
+        (
+            batch_dot(tilted_connector, connector).squeeze(-1)
+            / connector_norm
+        ),
+        -1,
+        1,
+    ))
+    zs = connector_norm * th.tan(angle)
+
+    return zs
 
 
 def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
@@ -29,6 +80,7 @@ def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
     if isinstance(values[0], list):
         return values  # type: ignore[return-value]
     return [values]  # type: ignore[list-item]
+
 
 def vec_to_ae(vec: torch.Tensor) -> torch.Tensor:
     """
@@ -69,7 +121,6 @@ def ae_to_vec(
         srange: float = 1.0,
         deg: bool = True,
 ) -> torch.Tensor:
-
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -105,11 +156,11 @@ def ae_to_vec(
     )
     return rot_vec
 
+
 def colorize(
         image_tensor: torch.Tensor,
         colormap: str = 'jet',
 ) -> torch.Tensor:
-
     """
 
     Parameters

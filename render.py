@@ -291,7 +291,6 @@ class Renderer(object):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
         ],
     ]:
-
         if heliostat is None:
             heliostat = self.H
         if self.redraw_random_variables:

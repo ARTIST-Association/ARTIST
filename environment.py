@@ -69,4 +69,3 @@ class Environment(object):
         self.receiver_resolution_y: int = self.cfg.RECEIVER.RESOLUTION_Y
 
         self.sun = Sun_Distribution(self.cfg.SUN, device)
-
