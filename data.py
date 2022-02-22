@@ -189,7 +189,7 @@ def _vec_sun_array(
 def _spheric_sun_array(
         cfg: CfgNode,
         device: th.device,
-        train_vec: th.Tensor):
+        train_vec: Optional[th.Tensor]):
 
     if train_vec == None:
         raise(Exception("train_vec is None. Spheric testing needs a train vector"))
@@ -225,12 +225,13 @@ def _spheric_sun_array(
 def generate_sun_array(
         cfg_sun_directions: CfgNode,
         device: th.device,
-        train_vec: torch.Tensor = None,
-        case: str = None
+        train_vec: Optional[torch.Tensor] = None,
+        case: Optional[str] = None
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     cfg = cfg_sun_directions
     if not case:
-        case: str = cfg.CASE
+        case = cfg.CASE
+    assert case is not None
         
     if case == "random":
         sun_directions, ae = _random_sun_array(cfg.RAND, device)
