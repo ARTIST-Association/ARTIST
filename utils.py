@@ -142,7 +142,7 @@ def deflec_facet_zs_many(
         points: torch.Tensor,
         normals: torch.Tensor,
         num_samples: int = 4,
-        use_weighted_average: bool = True,
+        use_weighted_average: bool = False,
         eps: float = 1e-6,
 ) -> torch.Tensor:
     """Calculate z values for a surface given by normals at x-y-planar
