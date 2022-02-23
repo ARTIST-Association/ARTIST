@@ -68,17 +68,17 @@ def real_heliostat(
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(positions)):
         h_normal_vecs.append(th.tensor(
-            directions[f][0::step_size],
+            directions[f][::step_size],
             dtype=dtype,
             device=device,
         ))
         h_ideal_vecs.append(th.tensor(
-            ideal_normal_vecs[f][0::step_size],
+            ideal_normal_vecs[f][::step_size],
             dtype=dtype,
             device=device,
         ))
         h.append(th.tensor(
-            positions[f][0::step_size],
+            positions[f][::step_size],
             dtype=dtype,
             device=device,
         ))
