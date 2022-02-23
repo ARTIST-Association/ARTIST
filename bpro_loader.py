@@ -11,14 +11,17 @@ def load_bpro(
         concentratorHeader_struct: struct.Struct,
         facetHeader_struct: struct.Struct,
         ray_struct: struct.Struct,
-) -> Tuple[List[Vector3d], List[Vector3d], List[np.ndarray], float, float]:
+) -> Tuple[
+    List[List[Vector3d]],
+    List[List[Vector3d]],
+    List[List[np.ndarray]],
+    float,
+    float,
+]:
     concentratorHeader_struct_len = concentratorHeader_struct.size
     facetHeader_struct_len = facetHeader_struct.size
     ray_struct_len = ray_struct.size
 
-    positions = []
-    directions = []
-    ideal_normal_vecs = []
     # powers = []
     with open(filename, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
@@ -33,6 +36,9 @@ def load_bpro(
 
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
+        positions = [[] for _ in range(nFacets)]
+        directions = [[] for _ in range(nFacets)]
+        ideal_normal_vecs = [[] for _ in range(nFacets)]
 
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
@@ -52,9 +58,9 @@ def load_bpro(
             ray_datas = ray_struct.iter_unpack(byte_data)
 
             for ray_data in ray_datas:
-                positions.append([ray_data[0], ray_data[1], ray_data[2]])
-                directions.append([ray_data[3], ray_data[4], ray_data[5]])
-                ideal_normal_vecs.append(facet_vec_z)
+                positions[f].append([ray_data[0], ray_data[1], ray_data[2]])
+                directions[f].append([ray_data[3], ray_data[4], ray_data[5]])
+                ideal_normal_vecs[f].append(facet_vec_z)
                 # powers.append(ray_data[6])
 
     return positions, directions, ideal_normal_vecs, width, height

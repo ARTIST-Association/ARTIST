@@ -72,6 +72,197 @@ def deflec_facet_zs(
     return zs
 
 
+def _all_angles(points, closest_indices, remaining_indices):
+    connector = (points[closest_indices] - points).unsqueeze(1)
+    other_connectors = (
+        points[remaining_indices]
+        - points.unsqueeze(1)
+    )
+    angles = th.acos(th.clamp(
+        (
+            batch_dot(connector, other_connectors).squeeze(-1)
+            / (
+                th.linalg.norm(connector, dim=-1)
+                * th.linalg.norm(other_connectors, dim=-1)
+            )
+        ),
+        -1,
+        1,
+    )).squeeze(-1)
+    return angles
+
+
+def _find_angles_in_other_slices(angles, num_slices):
+    dtype = angles.dtype
+    device = angles.device
+    # Set up uniformly sized cake/pizza slices for which to find angles.
+    tau = th.tensor(math.pi, dtype=dtype, device=device) * 2
+    angle_slice = tau / num_slices
+
+    angle_slices = (
+        th.arange(
+            num_slices,
+            dtype=dtype,
+            device=device,
+        )
+        * angle_slice
+    ).unsqueeze(-1).unsqueeze(-1)
+    # We didn't calculate angles in the "zeroth" slice so we disregard them.
+    angle_start = angle_slices[1:] - angle_slice / 2
+    angle_end = angle_slices[1:] + angle_slice / 2
+
+    # Find all angles lying in each slice.
+    angles_in_slice = ((angle_start <= angles) & (angles < angle_end))
+    return angles_in_slice, angle_slices
+
+
+def deflec_facet_zs_many(
+        points: torch.Tensor,
+        normals: torch.Tensor,
+        num_samples: int = 4,
+        use_weighted_average: bool = True,
+        eps: float = 1e-6,
+) -> torch.Tensor:
+    """Calculate z values for a surface given by normals at x-y-planar
+    positions.
+
+    We are left with a different unknown offset for each z value; we
+    assume this to be constant.
+    """
+    # TODO When `num_samples == 1`, we can just use the old method.
+    device = points.device
+    dtype = points.dtype
+
+    distances = horizontal_distance(
+        points.unsqueeze(0),
+        points.unsqueeze(1),
+    )
+    distances, distance_sorted_indices = distances.sort(dim=-1)
+    del distances
+    # Take closest point that isn't the point itself.
+    closest_indices = distance_sorted_indices[..., 1]
+
+    # Take closest point in different directions from the given point.
+
+    # For that, first calculate angles between direction to closest
+    # point and all others, sorted by distance.
+    angles = _all_angles(
+        points,
+        closest_indices,
+        distance_sorted_indices[..., 2:],
+    ).unsqueeze(0)
+
+    # Find positions of all angles in each slice except the zeroth one.
+    angles_in_slice, angle_slices = _find_angles_in_other_slices(
+        angles, num_samples)
+
+    # And take the first one.angle we found in each slice. Remember
+    # these are still sorted by distance, so we obtain the first
+    # matching angle that is also closest to the desired point.
+    #
+    # We need to handle not having any slices except the zeroth one
+    # extra.
+    if len(angles_in_slice) > 1:
+        angle_indices = th.argmax(angles_in_slice.long(), dim=-1)
+    else:
+        angle_indices = th.empty((0, len(points)), dtype=th.long)
+
+    # Select the angles we found for each slice.
+    angles = th.gather(angles.squeeze(0), -1, angle_indices.T)
+
+    # Handle _not_ having found an angle. We here create an array of
+    # booleans, indicating whether we found an angle, for each slice.
+    found_angles = th.gather(
+        angles_in_slice,
+        -1,
+        angle_indices.unsqueeze(-1),
+    ).squeeze(-1)
+    # We always found something in the zeroth slice, so add those here.
+    found_angles = th.cat([
+        th.ones((1,) + found_angles.shape[1:], dtype=th.bool, device=device),
+        found_angles,
+    ], dim=0)
+    del angles_in_slice
+
+    # Set up some numbers for averaging.
+    if use_weighted_average:
+        angle_diffs = (
+            th.cat([
+                th.zeros((len(angles), 1), dtype=dtype, device=device),
+                angles,
+            ], dim=-1)
+            - angle_slices.squeeze(-1).T
+        )
+        # Inverse difference in angle.
+        weights = 1 / (angle_diffs + eps)
+        del angle_diffs
+    else:
+        # Number of samples we found angles for.
+        num_available_samples = th.count_nonzero(found_angles, dim=0)
+
+    # Finally, combine the indices of the closest points (zeroth slice)
+    # with the indices of all closest points in the other slices.
+    closest_indices = th.cat((
+        closest_indices.unsqueeze(0),
+        angle_indices,
+    ), dim=0)
+    del angle_indices, angle_slices
+
+    midway_normal = normals + normals[closest_indices]
+    midway_normal /= th.linalg.norm(midway_normal, dim=-1, keepdims=True)
+
+    rot_z_90deg = th.tensor(
+        [
+            [0, -1, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+        ],
+        dtype=dtype,
+        device=device,
+    )
+
+    connector = points[closest_indices] - points
+    connector_norm = th.linalg.norm(connector, dim=-1)
+    orthogonal = th.matmul(
+        rot_z_90deg.unsqueeze(0),
+        connector.transpose(-2, -1),
+    ).transpose(-2, -1)
+    orthogonal /= th.linalg.norm(orthogonal, dim=-1, keepdims=True)
+    tilted_connector = th.cross(orthogonal, midway_normal, dim=-1)
+    tilted_connector /= th.linalg.norm(tilted_connector, dim=-1, keepdims=True)
+
+    angle = th.acos(th.clamp(
+        (
+            batch_dot(tilted_connector, connector).squeeze(-1)
+            / connector_norm
+        ),
+        -1,
+        1,
+    ))
+    # Here, we handle values for which we did not find an angle. For
+    # some reason, the NaNs those create propagate even to supposedly
+    # unaffected values, so we handle them explicitly.
+    angle = th.where(
+        found_angles & ~th.isnan(angle),
+        angle,
+        th.tensor(0.0, dtype=dtype, device=device),
+    )
+
+    # Average over each slice.
+    if use_weighted_average:
+        zs = (
+            (weights.T * connector_norm * th.tan(angle)).sum(dim=0)
+            / (weights.T * found_angles.to(dtype)).sum(dim=0)
+        )
+    else:
+        zs = (
+            (connector_norm * th.tan(angle)).sum(dim=0)
+            / num_available_samples
+        )
+
+    return zs
+
+
 def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
     # Type errors come from T being able to be a list. So we ignore them
     # as "type negation" ("T can be everything except a list") is not

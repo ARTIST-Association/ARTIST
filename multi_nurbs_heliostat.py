@@ -537,6 +537,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             for (facet, facet_data) in zip(self.facets, data['facets']):
                 facet._from_dict(facet_data, restore_strictly)
 
+        if setup_params:
+            self.setup_params()
         return self
 
     def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:

@@ -96,11 +96,19 @@ def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
     cp = th.load(cp_path, map_location=device)
     if cfg.USE_NURBS:
-        H: AbstractHeliostat = NURBSHeliostat.from_dict(
+        if 'facets' in cp:
+            nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
+                MultiNURBSHeliostat
+            kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
+        else:
+            nurbs_heliostat_cls = NURBSHeliostat
+            kwargs = {}
+        H: AbstractHeliostat = nurbs_heliostat_cls.from_dict(
             cp,
             device,
             nurbs_config=cfg.NURBS,
             config=cfg.H,
+            **kwargs,
         )
     else:
         H = Heliostat.from_dict(cp, device)

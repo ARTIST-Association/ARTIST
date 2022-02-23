@@ -86,15 +86,17 @@ def generate_dataset(
         prefix: str = '',
 ) -> torch.Tensor:
 
-    if save_dir:
-        save_path: Optional[str] = os.path.join(save_dir, 'target.pt')
-    else:
-        save_path = None
-
     device = H.device
+    save_path: Optional[str] = None
 
     targets = None
     for (i, sun_direction) in enumerate(sun_directions):
+        if save_dir:
+            save_path = os.path.join(
+                save_dir,
+                f'{prefix}target_{i}.pt',
+            )
+
         target_bitmap = create_target(
             H,
             ENV,
