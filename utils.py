@@ -188,7 +188,8 @@ def deflec_facet_zs_many(
     if len(angles_in_slice) > 1:
         angle_indices = th.argmax(angles_in_slice.long(), dim=-1)
     else:
-        angle_indices = th.empty((0, len(points)), dtype=th.long)
+        angle_indices = th.empty(
+            (0, len(points)), dtype=th.long, device=device)
 
     # Select the angles we found for each slice.
     angles = th.gather(angles.squeeze(0), -1, angle_indices.T)
