@@ -72,7 +72,7 @@ def deflec_facet_zs(
     return zs
 
 
-def _all_angles(points, closest_indices, remaining_indices):
+def _all_angles(points, normals, closest_indices, remaining_indices):
     connector = (points[closest_indices] - points).unsqueeze(1)
     other_connectors = (
         points[remaining_indices]
@@ -89,6 +89,28 @@ def _all_angles(points, closest_indices, remaining_indices):
         -1,
         1,
     )).squeeze(-1)
+
+    # Give the angles a rotation direction.
+    angles *= (
+        1
+        - 2 * (
+            batch_dot(
+                normals.unsqueeze(1),
+                # Cross product does not support broadcasting, so do it
+                # manually.
+                th.cross(
+                    th.tile(connector, (1, other_connectors.shape[1], 1)),
+                    other_connectors,
+                    dim=-1,
+                ),
+            ).squeeze(-1)
+            < 0
+        )
+    )
+
+    # And convert to 360° rotations.
+    tau = 2 * th.tensor(math.pi, dtype=angles.dtype, device=angles.device)
+    angles = th.where(angles < 0, tau + angles, angles)
     return angles
 
 
@@ -96,7 +118,7 @@ def _find_angles_in_other_slices(angles, num_slices):
     dtype = angles.dtype
     device = angles.device
     # Set up uniformly sized cake/pizza slices for which to find angles.
-    tau = th.tensor(math.pi, dtype=dtype, device=device) * 2
+    tau = 2 * th.tensor(math.pi, dtype=dtype, device=device)
     angle_slice = tau / num_slices
 
     angle_slices = (
@@ -148,6 +170,7 @@ def deflec_facet_zs_many(
     # point and all others, sorted by distance.
     angles = _all_angles(
         points,
+        normals,
         closest_indices,
         distance_sorted_indices[..., 2:],
     ).unsqueeze(0)
