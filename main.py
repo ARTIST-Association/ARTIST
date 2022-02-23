@@ -284,7 +284,7 @@ def _build_scheduler(
         total_steps: int,
 ) -> LRScheduler:
     name = cfg_scheduler.NAME.lower()
-    if name == "reduceonplateu":
+    if name == "reduceonplateau":
         cfg: CfgNode = cfg_scheduler.ROP
         sched: LRScheduler = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
@@ -634,8 +634,9 @@ def main(config_file_name: Optional[str] = None) -> None:
         sun_directions,
         logdir_files,
         writer,
+        "train_"
     )
-    test_sun_directions, test_ae = data.generate_sun_array(
+    test_sun_directions, test_ae = data.generate_sun_array( 
         cfg.TEST.SUN_DIRECTIONS, device)
 
     test_targets = data.generate_dataset(
@@ -843,15 +844,15 @@ def main(config_file_name: Optional[str] = None) -> None:
 
             # Plotting stuff
             if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
-                # plotter.target_image_comparision_pred_orig_naive(
-                #     test_ae,
-                #     test_targets,
-                #     test_bitmaps,
-                #     naive_targets,
-                #     sun_directions,
-                #     epoch,
-                #     logdir_enhanced_test,
-                # )
+            #     # plotter.target_image_comparision_pred_orig_naive(
+            #     #     test_ae,
+            #     #     test_targets,
+            #     #     test_bitmaps,
+            #     #     naive_targets,
+            #     #     sun_directions,
+            #     #     epoch,
+            #     #     logdir_enhanced_test,
+            #     # )
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,
@@ -859,15 +860,15 @@ def main(config_file_name: Optional[str] = None) -> None:
                     logdir_surfaces,
                     writer
                 )
-                plotter.plot_surfaces_mm(
-                    H_target,
-                    H,
-                    epoch,
-                    logdir_surfaces,
-                    writer
-                )
-                plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
-                plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
+            #     plotter.plot_surfaces_mm(
+            #         H_target,
+            #         H,
+            #         epoch,
+            #         logdir_surfaces,
+            #         writer
+            #     )
+            #     plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
+            #     plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
 
         # Save Section
 
@@ -895,4 +896,4 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    main(os.path.join("WorkingConfigs", "Best10m.yaml"))
+    main(os.path.join("WorkingConfigs", "Test.yaml"))

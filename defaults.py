@@ -14,7 +14,7 @@ _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
 _C.SAVE_RESULTS                         = True
 _C.CP_PATH                              = ""
-# _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MediumC\\BR_StandardCase_211105_1011\\Logfiles\\NURBSHeliostat.pt"
+# _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MoreNURBS\\NotGiven_220223_1032\\Logfiles\\MultiNURBSHeliostat.pt"
 _C.LOAD_OPTIMIZER_STATE                 = False
 
 # NURBS settings
@@ -186,8 +186,8 @@ _C.AC.RECEIVER                          = CN()
 
 _C.AC.RECEIVER.CENTER                   = [0, -10, 0]
 _C.AC.RECEIVER.PLANE_NORMAL             = [0, 1, 0] # NWU
-_C.AC.RECEIVER.PLANE_X                  = 5 # in m
-_C.AC.RECEIVER.PLANE_Y                  = 5 # in m
+_C.AC.RECEIVER.PLANE_X                  = 5. # in m
+_C.AC.RECEIVER.PLANE_Y                  = 5. # in m
 # These X and Y are height and width respectively.
 _C.AC.RECEIVER.RESOLUTION_X             = 256
 _C.AC.RECEIVER.RESOLUTION_Y             = 256
@@ -204,49 +204,35 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 
 _C.TRAIN                                = CN()
-
+_C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.SUN_DIRECTIONS                 = CN()
-_C.TRAIN.SUN_DIRECTIONS.CASE            ="vecs"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TRAIN.SUN_DIRECTIONS.CASE            ="random"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
 
 _C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
 _C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.43719268,  0.7004466,   0.564125  ],]
 
 _C.TRAIN.SUN_DIRECTIONS.RAND            = CN()
-_C.TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES= 2
+_C.TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES= 10
 
 _C.TRAIN.SUN_DIRECTIONS.GRID            = CN()
 _C.TRAIN.SUN_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
 _C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
-_C.TRAIN.EPOCHS                         = 20
 
-
-_C.TRAIN.SUN_DIRECTIONS                 = CN()
-_C.TRAIN.SUN_DIRECTIONS.CASE            ="vecs"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
-
-_C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
-_C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.7004466,-0.43719268,   0.564125  ],]
-
-_C.TRAIN.SUN_DIRECTIONS.RAND            = CN()
-_C.TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES= 2
-
-_C.TRAIN.SUN_DIRECTIONS.GRID            = CN()
-_C.TRAIN.SUN_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
-_C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
 
 
 _C.TRAIN.SCHEDULER                      = CN()
-_C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateu, Cyclic, OneCycle
+_C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateau, Cyclic, OneCycle
 
 _C.TRAIN.SCHEDULER.EXP          = CN()
 _C.TRAIN.SCHEDULER.EXP.GAMMA    = 0.9995
 
 _C.TRAIN.SCHEDULER.ROP                  = CN()
 _C.TRAIN.SCHEDULER.ROP.FACTOR           = 0.1
-_C.TRAIN.SCHEDULER.ROP.MIN_LR           = 1e-6
-_C.TRAIN.SCHEDULER.ROP.PATIENCE         = 200
-_C.TRAIN.SCHEDULER.ROP.COOLDOWN         = 400
+_C.TRAIN.SCHEDULER.ROP.MIN_LR           = 1e-7
+_C.TRAIN.SCHEDULER.ROP.PATIENCE         = 20
+_C.TRAIN.SCHEDULER.ROP.COOLDOWN         = 10
 _C.TRAIN.SCHEDULER.ROP.VERBOSE          = True
 
 _C.TRAIN.SCHEDULER.CYCLIC               = CN()
@@ -291,7 +277,7 @@ _C.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS  = [[-0.43719268,  0.7004466,   0.564125 
 
 
 _C.TEST.SUN_DIRECTIONS.RAND             = CN()
-_C.TEST.SUN_DIRECTIONS.RAND.NUM_SAMPLES = 8
+_C.TEST.SUN_DIRECTIONS.RAND.NUM_SAMPLES = 5
 
 _C.TEST.SUN_DIRECTIONS.GRID             = CN()
 _C.TEST.SUN_DIRECTIONS.GRID.AZI_RANGE   = [-90, 90, 7] #Start,Stop,Step

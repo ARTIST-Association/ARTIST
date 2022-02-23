@@ -51,7 +51,10 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     
     target_angles = th.acos(th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1)).detach().cpu()
     pred_angles = th.acos(th.sum(ideal_normal_vecs * pred_normal_vecs, dim=-1)).detach().cpu()
-    print(target_angles.shape)
+    
+    target_angles = target_angles - th.min(target_angles)
+    pred_angles = pred_angles -th.min(pred_angles)
+
     diff_angles = abs(target_angles-pred_angles)
 
     if writer:
@@ -65,46 +68,61 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     pred_points = pred_points.detach().cpu()
     diff_points = pred_points.clone()
 
-    target_points[:,2] = target_angles #/ 1e-3
-    pred_points[:,2] = pred_angles #/ 1e-3
-    diff_points[:,2] = diff_angles #/ 1e-3
-
-    target = target_points
+    target_points[:,2] = target_angles / 1e-3
+    pred_points[:,2] = pred_angles / 1e-3
+    diff_points[:,2] = diff_angles / 1e-3
+    # print(th.max(pred_angles), th.mean(pred_angles))
+    target = target_points 
     pred = pred_points
+    pred = pred[pred[:,-1] <= th.max(target[:,-1])]
     diff = diff_points
+    diff = diff[diff[:,-1] <= th.max(target[:,-1])]
 
 
+    fig = plt.figure(figsize=(15,6))
+    # fig.suptitle("Controlling subplot sizes with width_ratios and height_ratios")
 
+    gs = GridSpec(2, 3, width_ratios=[1, 1, 1], height_ratios=[1, 0.05])
 
-    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15,5))
-    plt.subplots_adjust(left=0.03, top=0.95, right =0.97, bottom=0.15)
-
-    p0 = ax1.get_position().get_points().flatten()
-    p1 = ax2.get_position().get_points().flatten()
-    p2 = ax3.get_position().get_points().flatten()
-    ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
-    ax_cbar1 = fig.add_axes([p2[0], 0.05, p2[2]-p2[0], 0.05])
-
+    # p0 = ax1.get_position().get_points().flatten()
+    # p1 = ax2.get_position().get_points().flatten()
+    # p2 = ax3.get_position().get_points().flatten()
+    # ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
+    # ax_cbar1 = fig.add_axes([1.4*p2[0], 0.05, 0.02, 0.9])
+    ax1 = fig.add_subplot(gs[0, 0])
     im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
     ax1.set_xlim(th.min(target[:,0]),th.max(target[:,0]))
     ax1.set_ylim(th.min(target[:,1]),th.max(target[:,1]))
     ax1.title.set_text('Original Surface [mrad]')
     ax1.set_aspect("equal")
+    ax1.get_xaxis().set_ticks([])
+    ax1.get_yaxis().set_ticks([])
 
+    ax2 = fig.add_subplot(gs[0, 1])
     im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
     ax2.set_xlim(th.min(pred[:,0]),th.max(pred[:,0]))
     ax2.set_ylim(th.min(pred[:,1]),th.max(pred[:,1]))
     ax2.title.set_text('Predicted Surface [mrad]')
     ax2.set_aspect("equal")
+    ax2.get_xaxis().set_ticks([])
+    ax2.get_yaxis().set_ticks([])
 
+    ax3 = fig.add_subplot(gs[0, 2])
     im3 = ax3.scatter(diff[:,0],diff[:,1], c=diff[:,2], cmap="magma")
     ax3.set_xlim(th.min(diff[:,0]),th.max(diff[:,0]))
     ax3.set_ylim(th.min(diff[:,1]),th.max(diff[:,1]))
     ax3.title.set_text('Difference [mrad]')
     ax3.set_aspect("equal")
-
-    plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
-    plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
+    ax3.get_xaxis().set_ticks([])
+    ax2.get_yaxis().set_ticks([])
+    
+    # ax4 = fig.add_subplot(gs[1, 0:2])
+    ax4 = plt.subplot(gs[1,0:2])
+    plt.colorbar(im1, orientation='horizontal', cax=ax4, format='%.0e')
+    
+    ax5 = plt.subplot(gs[1,2])
+    plt.colorbar(im3, orientation='horizontal', cax=ax5, format='%.0e')
+    plt.tight_layout()
 
     fig.savefig(os.path.join(logdir_mrad, f"test_{epoch}"))
     plt.close(fig)
@@ -124,11 +142,16 @@ def plot_surfaces_mm(heliostat_target, heliostat_pred, epoch, logdir_surfaces, w
     # print(target.shape)
     # print(ideal.shape)
     target[:,-1] = target[:,-1] - ideal[:,-1]
+    
     # target[:,2] = target[:,2]#/1e-3
 
     pred = heliostat_pred.discrete_points
     pred = pred.detach().cpu()
     pred[:,-1] = pred[:,-1] - ideal[:,-1]
+
+    
+    
+    
     # pred[:,2] = pred[:,2]#/1e-3
 
     diff = pred.clone()
@@ -220,8 +243,15 @@ def plot_surfaces_3D_mrad(heliostat_target, heliostat_pred, epoch, logdir, write
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
+    ax.set_zlim(0.00005,0.00015)
     surf = ax.plot_trisurf(points[:,0], points[:,1], diff, cmap=cm.coolwarm,
                             linewidth=0, antialiased=False)
+    
+    
+    # if epoch > 30:
+    #     plt.show()
+    #     exit()
+    # else:
     fig.savefig(os.path.join(logdir_mrad, f"test_3D_{epoch}"))
     plt.close(fig)
 

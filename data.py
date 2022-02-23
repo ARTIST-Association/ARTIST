@@ -255,6 +255,7 @@ def generate_sun_array(
     cfg = cfg_sun_directions
     if not case:
         case = cfg.CASE
+        print(case)
     assert case is not None
 
     if case == "random":
