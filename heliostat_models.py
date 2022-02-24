@@ -408,6 +408,7 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
     params = {'name': name}
     return (
         vertices,
+        vertices,
         vertex_normals,
         # TODO Implement Ideal Vecs
         vertex_normals,
