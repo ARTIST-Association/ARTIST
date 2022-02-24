@@ -13,8 +13,8 @@ _C.USE_GPU                              = True
 _C.USE_CURL                             = False
 _C.USE_NURBS                            = True
 _C.SAVE_RESULTS                         = True
-_C.CP_PATH                              = ""
-# _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MoreNURBS\\NotGiven_220223_1032\\Logfiles\\MultiNURBSHeliostat.pt"
+# _C.CP_PATH                              = ""
+_C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MoreNURBS\\LongRunMultiSun\\Logfiles\\MultiNURBSHeliostat.pt"
 _C.LOAD_OPTIMIZER_STATE                 = False
 
 # NURBS settings

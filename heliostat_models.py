@@ -61,25 +61,40 @@ def real_heliostat(
         ray_struct,
     )
 
-    h_normal_vecs = th.tensor(
-        directions[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
-    h_ideal_vecs = th.tensor(
-        ideal_normal_vecs[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
-    h_ideal = th.tensor(
-        positions[0::int(len(positions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
-    
-    zs = utils.deflec_facet_zs(h_ideal, h_normal_vecs)
+
+    h_normal_vecs = []
+    h_ideal_vecs = []
+    h = []
+    zs = []
+    step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
+    for f in range(len(positions)):
+        h_normal_vecs.append(th.tensor(
+            directions[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        h_ideal_vecs.append(th.tensor(
+            ideal_normal_vecs[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        h.append(th.tensor(
+            positions[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        zs.append(utils.deflec_facet_zs_many(
+            h[-1],
+            h_normal_vecs[-1],
+            num_samples=4,
+        ))
+
+    h_normal_vecs = th.cat(h_normal_vecs, dim=0)
+    h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
+    h_ideal = th.cat(h, dim=0)
+    zs = th.cat(zs, dim=0)
     h = h_ideal.clone()
-    h[:, -1]+= zs
+    h[:, -1] += zs
 
     # print(h_ideal_vecs)
     rows = None
