@@ -87,6 +87,7 @@ def real_heliostat(
         zs.append(utils.deflec_facet_zs_many(
             h[-1],
             h_normal_vecs[-1],
+            h_ideal_vecs[-1],
             num_samples=4,
         ))
 

@@ -20,6 +20,39 @@ import nurbs
 T = TypeVar('T')
 
 
+def axis_angle_rotation(axis: torch.Tensor, angle_rad: float) -> torch.Tensor:
+    angle = th.tensor(angle_rad, dtype=axis.dtype, device=axis.device)
+    cos = th.cos(angle)
+    icos = 1 - cos
+    sin = th.sin(angle)
+    x = axis[..., 0]
+    y = axis[..., 1]
+    z = axis[..., 2]
+    axis_sq = axis**2
+
+    rows = [
+        th.stack(row, dim=-1)
+        for row in [
+                [
+                    cos + axis_sq[..., 0] * icos,
+                    x * y * icos - z * sin,
+                    x * z * icos + y * sin,
+                ],
+                [
+                    y * x * icos + z * sin,
+                    cos + axis_sq[..., 1] * icos,
+                    y * z * icos - x * sin,
+                ],
+                [
+                    z * x * icos - y * sin,
+                    z * y * icos + x * sin,
+                    cos + axis_sq[..., 2] * icos,
+                ],
+        ]
+    ]
+    return th.stack(rows, dim=1)
+
+
 def deflec_facet_zs(
         points: torch.Tensor,
         normals: torch.Tensor,
@@ -235,26 +268,18 @@ def deflec_facet_zs_many(
     midway_normal = normals + normals[closest_indices]
     midway_normal /= th.linalg.norm(midway_normal, dim=-1, keepdims=True)
 
-    rot_z_90deg = th.tensor(
-        [
-            [0, -1, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-        ],
-        dtype=dtype,
-        device=device,
-    )
+    rot_90deg = axis_angle_rotation(ideal_normals, math.pi / 2)
 
     connector = points[closest_indices] - points
     connector_norm = th.linalg.norm(connector, dim=-1)
     orthogonal = th.matmul(
-        rot_z_90deg.unsqueeze(0),
-        connector.transpose(-2, -1),
-    ).transpose(-2, -1)
+        rot_90deg.unsqueeze(0),
+        connector.unsqueeze(-1),
+    ).squeeze(-1)
     orthogonal /= th.linalg.norm(orthogonal, dim=-1, keepdims=True)
     tilted_connector = th.cross(midway_normal, orthogonal, dim=-1)
     tilted_connector /= th.linalg.norm(tilted_connector, dim=-1, keepdims=True)
-    tilted_connector *= th.sign(orthogonal[..., -1]).unsqueeze(-1)
+    tilted_connector *= th.sign(connector[..., -1]).unsqueeze(-1)
 
     angle = th.acos(th.clamp(
         (
