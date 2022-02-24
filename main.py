@@ -625,13 +625,11 @@ def main(config_file_name: Optional[str] = None) -> None:
     cached_generate_sun_array = disk_cache.disk_cache(
         data.generate_sun_array,
         'cached',
-        '',
         ignore_argnums=[1],
     )
     cached_generate_dataset = disk_cache.disk_cache(
         data.generate_dataset,
         'cached',
-        '',
         ignore_argnums=[3, 4, 5],
     )
 
