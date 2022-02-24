@@ -15,6 +15,7 @@ HeliostatParams = Tuple[
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
+    torch.Tensor,
     float,
     float,
     Optional[int],
