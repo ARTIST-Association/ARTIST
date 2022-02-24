@@ -11,6 +11,7 @@ from yacs.config import CfgNode
 
 import data
 from defaults import get_cfg_defaults, load_config_file
+import disk_cache
 from environment import Environment
 from heliostat_models import AbstractHeliostat, Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat
@@ -621,6 +622,19 @@ def main(config_file_name: Optional[str] = None) -> None:
         else 'cpu'
     )
 
+    cached_generate_sun_array = disk_cache.disk_cache(
+        data.generate_sun_array,
+        'cached',
+        '',
+        ignore_argnums=[1],
+    )
+    cached_generate_dataset = disk_cache.disk_cache(
+        data.generate_dataset,
+        'cached',
+        '',
+        ignore_argnums=[3, 4, 5],
+    )
+
     # Create Dataset
     # ==============
     # Create Heliostat Object and Load Model defined in config file
@@ -633,20 +647,20 @@ def main(config_file_name: Optional[str] = None) -> None:
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
-    sun_directions, ae = data.generate_sun_array(
+    sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
 
-    targets = data.generate_dataset(
+    targets = cached_generate_dataset(
         H_target,
         ENV,
         sun_directions,
         logdir_files,
         writer,
     )
-    test_sun_directions, test_ae = data.generate_sun_array(
+    test_sun_directions, test_ae = cached_generate_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
-    test_targets = data.generate_dataset(
+    test_targets = cached_generate_dataset(
         H_target,
         ENV,
         test_sun_directions,
@@ -663,12 +677,12 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     ENV_validation = Environment(cfg.AC, device)
 
     # if cfg.TEST.PLOT.GRID:
-    #     grid_test_sun_directions, grid_test_ae = data.generate_sun_array(
+    #     grid_test_sun_directions, grid_test_ae = cached_generate_sun_array(
     #         cfg.TEST.SUN_DIRECTIONS,
     #         device,
     #         case="grid",
     #     )
-    #     grid_test_targets = data.generate_dataset(
+    #     grid_test_targets = cached_generate_dataset(
     #         H_validation,
     #         ENV_validation,
     #         grid_test_sun_directions,
@@ -679,7 +693,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     # # th.random.set_rng_state(state)
     #     H_naive_grid = build_target_heliostat(cfg, device)
     #     H_naive_grid._normals = H_naive_grid._normals_ideal
-    #     naive_targets = data.generate_dataset(
+    #     naive_targets = cached_generate_dataset(
     #         H_naive_grid,
     #         ENV_validation,
     #         grid_test_sun_directions,
@@ -691,13 +705,13 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     (
     #         spheric_test_sun_directions,
     #         spheric_test_ae,
-    #     ) = data.generate_sun_array(
+    #     ) = cached_generate_sun_array(
     #         cfg.TEST.SUN_DIRECTIONS,
     #         device,
     #         train_vec=sun_directions,
     #         case="spheric",
     #     )
-    #     spheric_test_targets = data.generate_dataset(
+    #     spheric_test_targets = cached_generate_dataset(
     #         H_validation,
     #         ENV_validation,
     #         spheric_test_sun_directions,
@@ -708,7 +722,7 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     #     H_naive_spheric = build_target_heliostat(cfg, device)
     #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
-    #     naive_spheric_test_targets = data.generate_dataset(
+    #     naive_spheric_test_targets = cached_generate_dataset(
     #         H_naive_spheric,
     #         ENV_validation,
     #         spheric_test_sun_directions,
