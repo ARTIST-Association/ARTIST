@@ -94,7 +94,20 @@ def check_consistency(cfg: CfgNode) -> None:
         print("=============================")
 
 
-def set_up_dataset_caching(writer):
+def set_up_dataset_caching(
+        writer: Optional[SummaryWriter],
+) -> Tuple[
+    Tuple[Callable, Callable, Callable, Callable],
+    Tuple[Callable, Callable, Callable, Callable, Callable, Callable],
+]:
+    def make_cached_generate_sun_array(prefix=''):
+        return disk_cache.disk_cache(
+            data.generate_sun_array,
+            'cached',
+            prefix,
+            ignore_argnums=[1],
+        )
+
     def make_cached_generate_dataset(prefix=''):
         log_dataset = functools.partial(
             data.log_dataset,
@@ -109,20 +122,21 @@ def set_up_dataset_caching(writer):
             ignore_argnums=[3, 4, 5],
         )
 
-    cached_generate_sun_array = disk_cache.disk_cache(
-        data.generate_sun_array,
-        'cached',
-        ignore_argnums=[1],
-    )
-
     return (
-        cached_generate_sun_array,
-        make_cached_generate_dataset(),
-        make_cached_generate_dataset('test_'),
-        make_cached_generate_dataset('grid_'),
-        make_cached_generate_dataset('naive_'),
-        make_cached_generate_dataset('spheric_'),
-        make_cached_generate_dataset('naive_spheric_'),
+        (
+            make_cached_generate_sun_array(),
+            make_cached_generate_sun_array('test_'),
+            make_cached_generate_sun_array('grid_'),
+            make_cached_generate_sun_array('spheric_'),
+        ),
+        (
+            make_cached_generate_dataset(),
+            make_cached_generate_dataset('test_'),
+            make_cached_generate_dataset('grid_'),
+            make_cached_generate_dataset('naive_'),
+            make_cached_generate_dataset('spheric_'),
+            make_cached_generate_dataset('naive_spheric_'),
+        ),
     )
 
 
@@ -656,13 +670,20 @@ def main(config_file_name: Optional[str] = None) -> None:
     )
 
     (
-        cached_generate_sun_array,
-        cached_generate_dataset,
-        cached_generate_test_dataset,
-        cached_generate_grid_dataset,
-        cached_generate_naive_dataset,
-        cached_generate_spheric_dataset,
-        cached_generate_naive_spheric_dataset,
+        (
+            cached_generate_sun_array,
+            cached_generate_test_sun_array,
+            cached_generate_grid_sun_array,
+            cached_generate_spheric_sun_array,
+        ),
+        (
+            cached_generate_dataset,
+            cached_generate_test_dataset,
+            cached_generate_grid_dataset,
+            cached_generate_naive_dataset,
+            cached_generate_spheric_dataset,
+            cached_generate_naive_spheric_dataset,
+        ),
     ) = set_up_dataset_caching(writer)
 
     # Create Dataset
@@ -687,7 +708,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir_files,
         writer,
     )
-    test_sun_directions, test_ae = cached_generate_sun_array(
+    test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
     test_targets = cached_generate_test_dataset(
@@ -707,7 +728,10 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     ENV_validation = Environment(cfg.AC, device)
 
     # if cfg.TEST.PLOT.GRID:
-    #     grid_test_sun_directions, grid_test_ae = cached_generate_sun_array(
+    #     (
+    #         grid_test_sun_directions,
+    #         grid_test_ae,
+    #     ) = cached_generate_grid_sun_array(
     #         cfg.TEST.SUN_DIRECTIONS,
     #         device,
     #         case="grid",
@@ -735,7 +759,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     (
     #         spheric_test_sun_directions,
     #         spheric_test_ae,
-    #     ) = cached_generate_sun_array(
+    #     ) = cached_generate_spheric_sun_array(
     #         cfg.TEST.SUN_DIRECTIONS,
     #         device,
     #         train_vec=sun_directions,
