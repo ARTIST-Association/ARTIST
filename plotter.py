@@ -7,6 +7,7 @@ import os
 # import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import utils
+import numpy as np
 
 def colorbar(mappable):
     from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -538,7 +539,7 @@ def spherical_loss_plot(train_vec, spheric_ae, train_loss, spheric_losses, naive
     #Axis Labels
     ax1.set_xlabel(r'Azimuth $\theta^{a}$ [°]')
     label_position=ax1.get_rlabel_position()
-    ax1.text(th.math.radians(label_position+7),-63,r'Elevation $\theta^{e}$[°]',
+    ax1.text(np.deg2rad(label_position+7),-63,r'Elevation $\theta^{e}$[°]',
         rotation= 91,ha='center',va='center')
 
     #Calculations For Second Plot

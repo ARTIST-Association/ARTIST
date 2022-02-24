@@ -1,20 +1,12 @@
 AC:
   RECEIVER:
-    CENTER:
-    - 0
-    - -10
-    - 0
-    PLANE_NORMAL:
-    - 0
-    - 1
-    - 0
-    PLANE_X: 5
-    PLANE_Y: 5
-    RESOLUTION_X: 64
-    RESOLUTION_Y: 64
+    PLANE_X: 5.
+    PLANE_Y: 5.
+    RESOLUTION_X: 512
+    RESOLUTION_Y: 512
   SUN:
     DISTRIBUTION: Normal
-    GENERATE_N_RAYS: 300
+    GENERATE_N_RAYS: 1500
     NORMAL_DIST:
       COV:
       - - 4.3681e-06
@@ -25,6 +17,8 @@ AC:
       - 0
       - 0
     REDRAW_RANDOM_VARIABLES: false
+CP_PATH: ''
+EXPERIMENT_NAME: NotGiven
 H:
   DEFLECT_DATA:
     CONCENTRATORHEADER_STRUCT_FMT: =5f2I2f
@@ -32,6 +26,55 @@ H:
     FILENAME: Helio_AA39_Rim0_STRAL-Input_211028212814.binp
     RAY_STRUCT_FMT: =7f
     TAKE_N_VECTORS: 8000
+  FUNCTION:
+    COLS: 64
+    FREQUENCY: 2
+    HEIGHT: 4
+    NAME: sin
+    REDUCTION_FACTOR: 1000
+    ROWS: 64
+    WIDTH: 4
+  IDEAL:
+    COLS: 32
+    HEIGHT: 4
+    NORMAL_VECS:
+    - 0
+    - 0
+    - 1
+    ROWS: 32
+    WIDTH: 4
+  NURBS:
+    COLS: 8
+    FACETS:
+      CANTING:
+        ENABLED: false
+      POSITIONS:
+      - - -1.0
+        - 1.0
+        - 0.0
+      - - 1.0
+        - 1.0
+        - 0.0
+      - - -1.0
+        - -1.0
+        - 0.0
+      - - 1.0
+        - -1.0
+        - 0.0
+      SPANS_X:
+      - 0.0
+      - 1.0
+      - 0.0
+      SPANS_Y:
+      - 1.0
+      - 0.0
+      - 0.0
+    MAX_ABS_NOISE: 0.01
+    ROWS: 8
+    SPLINE_DEGREE: 3
+  OTHER:
+    FILENAME: tinker.obj
+    USE_WEIGHTED_AVG: true
   POSITION_ON_FIELD:
   - 0
   - 0
@@ -40,6 +83,7 @@ H:
   SHAPE: real
 ID: NotGiven
 LOAD_OPTIMIZER_STATE: false
+LOGDIR: Results\NotGiven\NotGiven_220203_1317
 NURBS:
   COLS: 6
   FACETS:
@@ -95,14 +139,16 @@ NURBS:
     STEP_SIZE_ROWS: 0
   HEIGHT: 4
   INITIALIZE_WITH_KNOWLEDGE: true
-  OPTIMIZE_Z_ONLY: false
+  OPTIMIZE_Z_ONLY: true
   RECALCULATE_EVAL_POINTS: false
   ROWS: 6
   SET_UP_WITH_KNOWLEDGE: true
   SPLINE_DEGREE: 3
   WIDTH: 4
 SAVE_RESULTS: true
-SEED: 42
+SEED: 0
+TEST:
+  INTERVAL: 15
 TRAIN:
   EPOCHS: 2500
   LOSS:
@@ -114,7 +160,7 @@ TRAIN:
     - 0.9
     - 0.999
     EPS: 1.0e-08
-    LR: 1.0e-04
+    LR: 0.0001
     NAME: Adam
     WEIGHT_DECAY: 0.0
   SCHEDULER:
@@ -125,12 +171,11 @@ TRAIN:
       MODE: triangular2
       STEP_SIZE_UP: 100
     EXP:
-      GAMMA: 0.995
+      GAMMA: 0.99
     NAME: Exponential
     ONE_CYCLE:
       FINAL_LR: 1.0e-08
       MAX_LR: 6.0e-05
-      PCT_START: 0.3
       START_LR: 1.0e-10
       THREE_PHASE: true
     ROP:
