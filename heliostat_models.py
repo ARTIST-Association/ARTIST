@@ -92,9 +92,25 @@ def real_heliostat(
     h_normal_vecs = th.cat(h_normal_vecs, dim=0)
     h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
+<<<<<<< HEAD
     zs = th.cat(zs, dim=0)
     h = h_ideal.clone()
     h[:, -1] += zs
+=======
+    # zs = th.cat(zs, dim=0)
+    h = h_ideal.clone()
+    # h[:, -1] += zs
+    
+    # import matplotlib.pyplot as plt
+    # fig = plt.figure(figsize =(14, 9))
+    # ax = plt.axes(projection ='3d') 
+    # h[:,2] = h[:,2]-h_ideal[:,2]
+    # h = h.detach().cpu()
+    # my_cmap = plt.get_cmap('hot')
+    # ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
+    # plt.show()
+    # exit()
+>>>>>>> temp
 
     # print(h_ideal_vecs)
     rows = None

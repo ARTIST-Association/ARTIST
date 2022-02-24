@@ -280,4 +280,8 @@ def log_dataset(
                 f"{prefix}target_{i}/originals",
                 utils.colorize(target),
             )
+<<<<<<< HEAD
     return targets
+=======
+    return targets
+>>>>>>> temp

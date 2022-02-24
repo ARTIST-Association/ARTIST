@@ -4,10 +4,10 @@ import os
 _C = CN()
 # UNIQUE EXPERIMENT IDENTIFIER
 
-_C.ID                                   = 'NotGiven'
-_C.EXPERIMENT_NAME                      = "NotGiven"
+_C.ID                                   = 'MakeRunableAgain'
+_C.EXPERIMENT_NAME                      = "MakeRunableAgain"
 _C.LOGDIR                               = 'Results'
-_C.SEED                                 = 42
+_C.SEED                                 = 12
 _C.USE_FLOAT64                          = False
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False

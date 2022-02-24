@@ -734,6 +734,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # Better Testing
     # ==============
     # state = th.random.get_rng_state()
+<<<<<<< HEAD
     # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
     #     H_validation = build_target_heliostat(cfg, device)
     #     ENV_validation = Environment(cfg.AC, device)
@@ -795,6 +796,69 @@ def main(config_file_name: Optional[str] = None) -> None:
     #         None,
     #         "naive_spheric_"
     #     )
+=======
+    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
+        H_validation = build_target_heliostat(cfg, device)
+        ENV_validation = Environment(cfg.AC, device)
+
+    if cfg.TEST.PLOT.GRID:
+        (
+            grid_test_sun_directions,
+            grid_test_ae,
+        ) = cached_generate_grid_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="grid",
+        )
+        grid_test_targets = cached_generate_grid_dataset(
+            H_validation,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            None,
+            "grid_"
+        )
+        # # th.random.set_rng_state(state)
+        H_naive_grid = build_target_heliostat(cfg, device)
+        H_naive_grid._normals = H_naive_grid._normals_ideal
+        naive_targets = cached_generate_naive_dataset(
+            H_naive_grid,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            None,
+            "naive_"
+        )
+    if cfg.TEST.PLOT.SPHERIC:
+        (
+            spheric_test_sun_directions,
+            spheric_test_ae,
+        ) = cached_generate_spheric_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            train_vec=sun_directions,
+            case="spheric",
+        )
+        spheric_test_targets = cached_generate_spheric_dataset(
+            H_validation,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            None,
+            "spheric_"
+        )
+
+        H_naive_spheric = build_target_heliostat(cfg, device)
+        H_naive_spheric._normals = H_naive_spheric._normals_ideal
+        naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
+            H_naive_spheric,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            None,
+            "naive_spheric_"
+        )
+>>>>>>> temp
 
     # plotter.test_surfaces(H_target)
     # exit()
@@ -982,6 +1046,12 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     # path_to_yaml = os.path.join("WorkingConfigs", "Best10m.yaml")
     # main(path_to_yaml)
     main()
+=======
+    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
+    main(path_to_yaml)
+    # main()
+>>>>>>> temp
