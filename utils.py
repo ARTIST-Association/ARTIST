@@ -218,7 +218,7 @@ def deflec_facet_zs_many(
             - angle_slices.squeeze(-1).T
         )
         # Inverse difference in angle.
-        weights = 1 / (angle_diffs + eps)
+        weights = 1 / (angle_diffs + eps).T
         del angle_diffs
     else:
         # Number of samples we found angles for.
@@ -275,8 +275,8 @@ def deflec_facet_zs_many(
     # Average over each slice.
     if use_weighted_average:
         zs = (
-            (weights.T * connector_norm * th.tan(angle)).sum(dim=0)
-            / (weights.T * found_angles.to(dtype)).sum(dim=0)
+            (weights * connector_norm * th.tan(angle)).sum(dim=0)
+            / (weights * found_angles.to(dtype)).sum(dim=0)
         )
     else:
         zs = (
