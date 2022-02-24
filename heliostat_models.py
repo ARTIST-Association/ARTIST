@@ -88,11 +88,11 @@ def real_heliostat(
             num_samples=4,
         ))
 
-    h_normal_vecs = th.cat(h_normal_vecs, dim=0)
-    h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
+    h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
+    h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
-    zs = th.cat(zs, dim=0)
-    h = h_ideal.clone()
+    zs: torch.Tensor = th.cat(zs, dim=0)
+    h: torch.Tensor = h_ideal.clone()
     h[:, -1] += zs
 
     # print(h_ideal_vecs)
