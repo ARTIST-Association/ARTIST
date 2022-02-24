@@ -527,15 +527,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
         self._from_dict(data, restore_strictly)
 
-        if restore_strictly:
-            self.facets = self._create_facets(
-                config,
-                nurbs_config,
-                setup_params=setup_params,
-            )
-
-            for (facet, facet_data) in zip(self.facets, data['facets']):
-                facet._from_dict(facet_data, restore_strictly)
+        for (facet, facet_data) in zip(self.facets, data['facets']):
+            facet._from_dict(facet_data, restore_strictly)
 
         if setup_params:
             self.setup_params()
