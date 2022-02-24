@@ -1,6 +1,7 @@
 import os
 from typing import List, Optional, Tuple
 
+import pytorch3d.transforms as throt
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
@@ -10,7 +11,7 @@ from environment import Environment
 from heliostat_models import AbstractHeliostat
 from render import Renderer
 import utils
-import pytorch3d.transforms as throt
+
 
 def create_target(
         H: AbstractHeliostat,
@@ -85,15 +86,17 @@ def generate_dataset(
         prefix: str = '',
 ) -> torch.Tensor:
 
-    if save_dir:
-        save_path: Optional[str] = os.path.join(save_dir, 'target.pt')
-    else:
-        save_path = None
-
     device = H.device
+    save_path: Optional[str] = None
 
     targets = None
     for (i, sun_direction) in enumerate(sun_directions):
+        if save_dir:
+            save_path = os.path.join(
+                save_dir,
+                f'{prefix}target_{i}.pt',
+            )
+
         target_bitmap = create_target(
             H,
             ENV,
@@ -107,12 +110,8 @@ def generate_dataset(
                 device=device,
             )
         targets[i] = target_bitmap
-        if writer:
-            writer.add_image(
-                f"{prefix}target_{i}/originals",
-                utils.colorize(target_bitmap),
-            )
     assert targets is not None
+    log_dataset(writer, targets, prefix=prefix)
     return targets
 
 
@@ -186,61 +185,99 @@ def _vec_sun_array(
     ae = utils.vec_to_ae(sun_directions)
     return sun_directions, ae
 
+
 def _spheric_sun_array(
         cfg: CfgNode,
         device: th.device,
-        train_vec: th.Tensor):
-    
-        if train_vec == None:
-            raise(Exception("train_vec is None. Spheric testing needs a train vector"))
-        if not train_vec.squeeze().shape ==th.Size([3]):
-            raise(Exception("multiple sun vectors detected. spheric plot is only possible using 1 vector"))
-        train_vec = train_vec  / th.linalg.norm(train_vec, dim=1).unsqueeze(1)
-        ae = utils.vec_to_ae(train_vec).squeeze()
-        ele_angles = th.linspace(0.1*180, 0.9*180, cfg.NUM_SAMPLES, dtype=th.get_default_dtype(), device=device)
-        azi_angles = th.linspace(0, 180, cfg.NUM_SAMPLES, dtype=th.get_default_dtype(), device=device)
-        
-        north = th.tensor([[0.,1.,0.]], dtype=th.get_default_dtype(), device=device)
-        t_ele = throt.Transform3d(device=device).rotate_axis_angle(ele_angles, "X").rotate_axis_angle(-ae[0], "Z")
-        spheric_vecs_ele = t_ele.transform_normals(north).squeeze()
-        
-        other_direction = train_vec.clone()
-        t_azi_western = throt.Transform3d(device=device).rotate_axis_angle(azi_angles, "Z")
-        spheric_vecs_azi_west = t_azi_western.transform_normals(other_direction).squeeze()
-        t_azi_eastern = throt.Transform3d(device=device).rotate_axis_angle(-azi_angles,  "Z")
-        spheric_vecs_azi_east = t_azi_eastern.transform_normals(other_direction).squeeze()
+        train_vec: Optional[th.Tensor],
+):
+    if train_vec is None:
+        raise ValueError(
+            "train_vec is None. Spheric testing needs a train vector")
+    if not train_vec.squeeze().shape == (3,):
+        raise ValueError(
+            "multiple sun vectors detected. "
+            "spheric plot is only possible using 1 vector"
+        )
+    train_vec = train_vec / th.linalg.norm(train_vec, dim=1).unsqueeze(1)
+    ae = utils.vec_to_ae(train_vec).squeeze()
+    ele_angles = th.linspace(
+        0.1 * 180,
+        0.9 * 180,
+        cfg.NUM_SAMPLES,
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+    azi_angles = th.linspace(
+        0,
+        180,
+        cfg.NUM_SAMPLES,
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
 
+    north = th.tensor([[0, 1, 0]], dtype=th.get_default_dtype(), device=device)
+    t_ele = throt.Transform3d(device=device) \
+                 .rotate_axis_angle(ele_angles, "X") \
+                 .rotate_axis_angle(-ae[0], "Z")
+    spheric_vecs_ele = t_ele.transform_normals(north).squeeze()
 
+    other_direction = train_vec.clone()
+    t_azi_western = throt.Transform3d(device=device) \
+                         .rotate_axis_angle(azi_angles, "Z")
+    spheric_vecs_azi_west = t_azi_western.transform_normals(
+        other_direction).squeeze()
+    t_azi_eastern = throt.Transform3d(device=device) \
+                         .rotate_axis_angle(-azi_angles,  "Z")
+    spheric_vecs_azi_east = t_azi_eastern.transform_normals(
+        other_direction).squeeze()
 
-        ae_azi_west_dir = utils.vec_to_ae(spheric_vecs_azi_west).detach().cpu()
-        ae_azi_east_dir = utils.vec_to_ae(spheric_vecs_azi_east).detach().cpu()
-        ae_ele_dir = th.nan_to_num(utils.vec_to_ae(spheric_vecs_ele)).detach().cpu()
-        
-        ae = th.cat([ae_azi_west_dir,ae_azi_east_dir,ae_ele_dir],0)
-        sun_directions = th.cat([spheric_vecs_azi_west, spheric_vecs_azi_east, spheric_vecs_ele],0)
+    ae_azi_west_dir = utils.vec_to_ae(spheric_vecs_azi_west).detach().cpu()
+    ae_azi_east_dir = utils.vec_to_ae(spheric_vecs_azi_east).detach().cpu()
+    ae_ele_dir = th.nan_to_num(
+        utils.vec_to_ae(spheric_vecs_ele)).detach().cpu()
 
-        return sun_directions, ae
+    ae = th.cat([ae_azi_west_dir, ae_azi_east_dir, ae_ele_dir], 0)
+    sun_directions = th.cat(
+        [spheric_vecs_azi_west, spheric_vecs_azi_east, spheric_vecs_ele], 0)
+
+    return sun_directions, ae
 
 
 def generate_sun_array(
         cfg_sun_directions: CfgNode,
         device: th.device,
-        train_vec: torch.Tensor = None,
-        case: str = None
+        train_vec: Optional[torch.Tensor] = None,
+        case: Optional[str] = None
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     cfg = cfg_sun_directions
     if not case:
-        case: str = cfg.CASE
-        
+        case = cfg.CASE
+        print(case)
+    assert case is not None
+
     if case == "random":
         sun_directions, ae = _random_sun_array(cfg.RAND, device)
     elif case == "grid":
         sun_directions, ae = _grid_sun_array(cfg.GRID, device)
     elif case == "vecs":
         sun_directions, ae = _vec_sun_array(cfg.VECS, device)
-
     elif case == "spheric":
-            sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
+        sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae
+
+
+def log_dataset(
+        writer: Optional[SummaryWriter],
+        targets: torch.Tensor,
+        prefix: str = '',
+) -> torch.Tensor:
+    if writer:
+        for (i, target) in enumerate(targets):
+            writer.add_image(
+                f"{prefix}target_{i}/originals",
+                utils.colorize(target),
+            )
+    return targets

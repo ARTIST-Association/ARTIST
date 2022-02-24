@@ -61,27 +61,58 @@ def real_heliostat(
         ray_struct,
     )
 
-    h_normal_vecs = th.tensor(
-        directions[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
-    h_ideal_vecs = th.tensor(
-        ideal_normal_vecs[0::int(len(directions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
-    h = th.tensor(
-        positions[0::int(len(positions) / cfg.TAKE_N_VECTORS)],
-        dtype=dtype,
-        device=device,
-    )
+
+    h_normal_vecs = []
+    h_ideal_vecs = []
+    h = []
+    zs = []
+    step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
+    for f in range(len(directions)):
+        h_normal_vecs.append(th.tensor(
+            directions[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        h_ideal_vecs.append(th.tensor(
+            ideal_normal_vecs[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        h.append(th.tensor(
+            positions[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
+        zs.append(utils.deflec_facet_zs_many(
+            h[-1],
+            h_normal_vecs[-1],
+            num_samples=4,
+        ))
+
+    h_normal_vecs = th.cat(h_normal_vecs, dim=0)
+    h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
+    h_ideal = th.cat(h, dim=0)
+    # zs = th.cat(zs, dim=0)
+    h = h_ideal.clone()
+    # h[:, -1] += zs
+    
+    # import matplotlib.pyplot as plt
+    # fig = plt.figure(figsize =(14, 9))
+    # ax = plt.axes(projection ='3d') 
+    # h[:,2] = h[:,2]-h_ideal[:,2]
+    # h = h.detach().cpu()
+    # my_cmap = plt.get_cmap('hot')
+    # ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
+    # plt.show()
+    # exit()
+
     # print(h_ideal_vecs)
     rows = None
     cols = None
     params = None
     return (
         h,
+        h_ideal,
         h_normal_vecs,
         h_ideal_vecs,
         height,
@@ -122,7 +153,7 @@ def heliostat_by_function(
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
 
     Y = Y.reshape(cfg.ROWS, cfg.COLS)
-
+    
     reduction: float = cfg.REDUCTION_FACTOR
     fr: float = cfg.FREQUENCY
     if cfg.NAME == "sin":
@@ -137,23 +168,25 @@ def heliostat_by_function(
     else:
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
-    stacked = th.stack((X, Y, Z)).T
+    Z_ideal = th.zeros_like(Z)
+    h_ideal = th.stack((X, Y, Z_ideal)).T
+    h = th.stack((X, Y, Z)).T
 
-    normal_vecs = th.zeros_like(stacked)
+    normal_vecs = th.zeros_like(h)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]]) 
                 next_row_vec = th.tensor(
-                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  # .squeeze(0)
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  
                 next_col_vec = th.tensor(
-                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])  # .squeeze(0)
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]]) 
             except Exception:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  # .squeeze(0)
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  
                 next_row_vec = th.tensor(
-                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  # .squeeze(0)
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  
                 next_col_vec = th.tensor(
-                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])  # .squeeze(0)
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])
 
             vec_1 = next_row_vec - origin
 
@@ -172,7 +205,7 @@ def heliostat_by_function(
             normal_vecs[i, j] = n
             # print(normal_vecs)
             # exit()
-    h = stacked.reshape(X.shape[0] * X.shape[1], -1).to(device)
+    h = h.reshape(X.shape[0] * X.shape[1], -1).to(device)
     h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
     h_ideal_vecs = th.tile(
         th.tensor([0, 0, 1]),
@@ -182,6 +215,7 @@ def heliostat_by_function(
     params = None
     return (
         h,
+        h_ideal,
         h_normal_vecs,
         h_ideal_vecs,
         cfg.HEIGHT,
@@ -228,8 +262,9 @@ def ideal_heliostat(
     params = None
     return (
         h,
+        h, # h_ideal
         h_normal_vectors,
-        h_normal_vectors,
+        h_normal_vectors, #h_ideal_normal_vecs
         cfg.HEIGHT,
         cfg.WIDTH,
         cfg.ROWS,
@@ -488,6 +523,10 @@ class AbstractHeliostat:
     @property
     def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
+    
+    @property
+    def ideal_discrete_points(self) -> torch.Tensor:
+        return self._ideal_discrete_points
 
     @property
     def normals(self) -> torch.Tensor:
@@ -556,6 +595,7 @@ class Heliostat(AbstractHeliostat):
 
         (
             heliostat,
+            heliostat_ideal,
             heliostat_normals,
             heliostat_ideal_vecs,
             height,
@@ -565,6 +605,7 @@ class Heliostat(AbstractHeliostat):
             params,
         ) = heliostat_properties
         self._discrete_points = heliostat
+        self._ideal_discrete_points = heliostat_ideal
         self._normals = heliostat_normals
         self._normals_ideal = heliostat_ideal_vecs
         self.params = params

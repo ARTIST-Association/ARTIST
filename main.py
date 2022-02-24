@@ -1,6 +1,7 @@
 import collections
 import copy
 from datetime import datetime
+import functools
 import os
 from typing import Callable, List, Optional, Tuple, Type, Union
 
@@ -11,6 +12,7 @@ from yacs.config import CfgNode
 
 import data
 from defaults import get_cfg_defaults, load_config_file
+import disk_cache
 from environment import Environment
 from heliostat_models import AbstractHeliostat, Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat
@@ -18,7 +20,6 @@ from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
 import plotter
 from render import Renderer
 import utils
-
 
 LossFn = Callable[
     [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
@@ -93,15 +94,69 @@ def check_consistency(cfg: CfgNode) -> None:
         print("=============================")
 
 
+def set_up_dataset_caching(
+        writer: Optional[SummaryWriter],
+) -> Tuple[
+    Tuple[Callable, Callable, Callable, Callable],
+    Tuple[Callable, Callable, Callable, Callable, Callable, Callable],
+]:
+    def make_cached_generate_sun_array(prefix=''):
+        return disk_cache.disk_cache(
+            data.generate_sun_array,
+            'cached',
+            prefix,
+            ignore_argnums=[1],
+        )
+
+    def make_cached_generate_dataset(prefix=''):
+        log_dataset = functools.partial(
+            data.log_dataset,
+            writer,
+            prefix=prefix,
+        )
+        return disk_cache.disk_cache(
+            data.generate_dataset,
+            'cached',
+            prefix,
+            on_load=log_dataset,
+            ignore_argnums=[3, 4, 5],
+        )
+
+    return (
+        (
+            make_cached_generate_sun_array(),
+            make_cached_generate_sun_array('test_'),
+            make_cached_generate_sun_array('grid_'),
+            make_cached_generate_sun_array('spheric_'),
+        ),
+        (
+            make_cached_generate_dataset(),
+            make_cached_generate_dataset('test_'),
+            make_cached_generate_dataset('grid_'),
+            make_cached_generate_dataset('naive_'),
+            make_cached_generate_dataset('spheric_'),
+            make_cached_generate_dataset('naive_spheric_'),
+        ),
+    )
+
+
 def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
     cp = th.load(cp_path, map_location=device)
     if cfg.USE_NURBS:
-        H: AbstractHeliostat = NURBSHeliostat.from_dict(
+        if 'facets' in cp:
+            nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
+                MultiNURBSHeliostat
+            kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
+        else:
+            nurbs_heliostat_cls = NURBSHeliostat
+            kwargs = {}
+        H: AbstractHeliostat = nurbs_heliostat_cls.from_dict(
             cp,
             device,
             nurbs_config=cfg.NURBS,
             config=cfg.H,
+            **kwargs,
         )
     else:
         H = Heliostat.from_dict(cp, device)
@@ -285,7 +340,7 @@ def _build_scheduler(
         total_steps: int,
 ) -> LRScheduler:
     name = cfg_scheduler.NAME.lower()
-    if name == "reduceonplateu":
+    if name == "reduceonplateau":
         cfg: CfgNode = cfg_scheduler.ROP
         sched: LRScheduler = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
@@ -515,8 +570,10 @@ def test_batch(
         loss_func: TestLossFn,
         epoch: int,
         writer: Optional[SummaryWriter] = None,
+        reduction: bool = True
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     mean_loss = th.tensor(0.0, device=heliostat.device)
+    losses = []
     bitmaps: Optional[torch.Tensor] = None
     for (i, (target, sun_direction)) in enumerate(zip(
             targets,
@@ -534,7 +591,10 @@ def test_batch(
             )
 
         loss = loss_func(pred_bitmap, target)
-        mean_loss += loss / len(targets)
+        if reduction:
+            mean_loss += loss / len(targets)
+        else:
+            losses.append(loss)
         bitmaps[i] = pred_bitmap.detach().cpu()
 
         if writer:
@@ -548,7 +608,11 @@ def test_batch(
     if writer:
         writer.add_scalar("test/loss", mean_loss.item(), epoch)
     assert bitmaps is not None
-    return mean_loss, bitmaps
+    if reduction:
+        return mean_loss, bitmaps
+    else:
+        return th.stack(losses), bitmaps
+
 
 def main(config_file_name: Optional[str] = None) -> None:
     # Load Defaults
@@ -613,6 +677,22 @@ def main(config_file_name: Optional[str] = None) -> None:
         else 'cpu'
     )
 
+    (
+        (
+            cached_generate_sun_array,
+            cached_generate_test_sun_array,
+            cached_generate_grid_sun_array,
+            cached_generate_spheric_sun_array,
+        ),
+        (
+            cached_generate_dataset,
+            cached_generate_test_dataset,
+            cached_generate_grid_dataset,
+            cached_generate_naive_dataset,
+            cached_generate_spheric_dataset,
+            cached_generate_naive_spheric_dataset,
+        ),
+    ) = set_up_dataset_caching(writer)
 
     # Create Dataset
     # ==============
@@ -626,21 +706,22 @@ def main(config_file_name: Optional[str] = None) -> None:
     print("=============================")
     H_target = build_target_heliostat(cfg, device)
     ENV = Environment(cfg.AC, device)
-    sun_directions, ae = data.generate_sun_array(
+    sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
 
-    targets = data.generate_dataset(
+    targets = cached_generate_dataset(
         H_target,
         ENV,
         sun_directions,
         logdir_files,
         writer,
+        "train_"
     )
-    test_sun_directions, test_ae = data.generate_sun_array(
+
+    test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
-
-    test_targets = data.generate_dataset(
+    test_targets = cached_generate_test_dataset(
         H_target,
         ENV,
         test_sun_directions,
@@ -648,60 +729,73 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
         "test_"
     )
-    
-    
-    ####Better Testing######
-    # state = th.random.get_rng_state()
-    # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
-    #     H_validation = build_target_heliostat(cfg, device)
-    #     ENV_validation = Environment(cfg.AC, device)
-    
-    # if cfg.TEST.PLOT.GRID:
-    #     grid_test_sun_directions, grid_test_ae = data.generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device, case="grid")
-    #     grid_test_targets = data.generate_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         grid_test_sun_directions,
-    #         None,
-    #         None,
-    #         "grid_"
-    #     )
-    #     # # th.random.set_rng_state(state)
-    #     H_naive_grid = build_target_heliostat(cfg, device)
-    #     H_naive_grid._normals = H_naive_grid._normals_ideal
-    #     naive_targets = data.generate_dataset(
-    #         H_naive_grid,
-    #         ENV_validation,
-    #         grid_test_sun_directions,
-    #         None,
-    #         None,
-    #         "naive_"
-    #     )
-    # if cfg.TEST.PLOT.SPHERIC:
-    #     spheric_test_sun_directions, spheric_test_ae = data.generate_sun_array(cfg.TEST.SUN_DIRECTIONS, device, train_vec =sun_directions, case="spheric")
-    #     spheric_test_targets = data.generate_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         spheric_test_sun_directions,
-    #         None,
-    #         None,
-    #         "spheric_"
-    #     )
-        
-    #     H_naive_spheric = build_target_heliostat(cfg, device)
-    #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
-    #     naive_spheric_test_targets = data.generate_dataset(
-    #         H_naive_spheric,
-    #         ENV_validation,
-    #         spheric_test_sun_directions,
-    #         None,
-    #         None,
-    #         "naive_spheric_"
-    #     )
+    # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
 
-    
-    
-    
+    # Better Testing
+    # ==============
+    # state = th.random.get_rng_state()
+    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
+        H_validation = build_target_heliostat(cfg, device)
+        ENV_validation = Environment(cfg.AC, device)
+
+    if cfg.TEST.PLOT.GRID:
+        (
+            grid_test_sun_directions,
+            grid_test_ae,
+        ) = cached_generate_grid_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="grid",
+        )
+        grid_test_targets = cached_generate_grid_dataset(
+            H_validation,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            None,
+            "grid_"
+        )
+        # # th.random.set_rng_state(state)
+        H_naive_grid = build_target_heliostat(cfg, device)
+        H_naive_grid._normals = H_naive_grid._normals_ideal
+        naive_targets = cached_generate_naive_dataset(
+            H_naive_grid,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            None,
+            "naive_"
+        )
+    if cfg.TEST.PLOT.SPHERIC:
+        (
+            spheric_test_sun_directions,
+            spheric_test_ae,
+        ) = cached_generate_spheric_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            train_vec=sun_directions,
+            case="spheric",
+        )
+        spheric_test_targets = cached_generate_spheric_dataset(
+            H_validation,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            None,
+            "spheric_"
+        )
+
+        H_naive_spheric = build_target_heliostat(cfg, device)
+        H_naive_spheric._normals = H_naive_spheric._normals_ideal
+        naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
+            H_naive_spheric,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            None,
+            "naive_spheric_"
+        )
+
     # plotter.test_surfaces(H_target)
     # exit()
     # Start Diff Raytracing
@@ -715,13 +809,13 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
-    
+
     opt, sched = build_optimizer_scheduler(
         cfg, epochs * steps_per_epoch, H.get_params(), device)
     loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
-    
+
     epoch_shift_width = len(str(epochs))
-    
+
     best_result = th.tensor(float('inf'))
     state_dict = {
         "epoch": 0,
@@ -730,9 +824,8 @@ def main(config_file_name: Optional[str] = None) -> None:
         "last_lr": opt.param_groups[0]["lr"],
         "current_lr": opt.param_groups[0]["lr"],
     }
-    
-        
-    #Generate naive Losses before training
+
+    # Generate naive Losses before training
     # spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
     #                 H,
     #                 ENV,
@@ -743,9 +836,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     #                 0,
     #                 reduction=False
     #             )
-    
+
     for epoch in range(epochs):
-        
         train_objects = TrainObjects(
             opt,
             sched,
@@ -769,7 +861,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)
-    
+
             if epoch % cfg.TEST.INTERVAL == 0:
                 test_loss, _ = test_batch(
                     H,
@@ -791,16 +883,17 @@ def main(config_file_name: Optional[str] = None) -> None:
             #                 test_loss_func,
             #                 epoch,
             #             )
-                
-            #     plotter.target_image_comparision_pred_orig_naive(grid_test_ae, 
-            #                                                       grid_test_targets,
-            #                                                       grid_test_bitmaps,
-            #                                                       naive_targets,
-            #                                                       sun_directions,
-            #                                                       epoch,
-            #                                                       logdir_enhanced_test
-            #                                                       )
-                
+
+            #     plotter.target_image_comparision_pred_orig_naive(
+            #         grid_test_ae,
+            #         grid_test_targets,
+            #         grid_test_bitmaps,
+            #         naive_targets,
+            #         sun_directions,
+            #         epoch,
+            #         logdir_enhanced_test,
+            #     )
+
             #     spheric_train_loss, _ = test_batch(
             #         H,
             #         ENV,
@@ -809,6 +902,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             #         sun_directions,
             #         test_loss_func,
             #         epoch,
+            #         reduction=False
             #     )
             #     spheric_test_loss, spheric_test_bitmaps = test_batch(
             #         H,
@@ -822,30 +916,29 @@ def main(config_file_name: Optional[str] = None) -> None:
             # )
             #     plotter.spherical_loss_plot(sun_directions,
             #                                 spheric_test_ae,
-            #                                 spheric_train_loss, 
+            #                                 spheric_train_loss,
             #                                 spheric_test_loss,
             #                                 spheric_naive_test_loss,
-            #                                 cfg.TEST.SUN.SPHERIC.NUM_SAMPLES,
+            #                                 cfg.TEST.SUN_DIRECTIONS.SPHERIC.NUM_SAMPLES,
             #                                 epoch,
             #                                 logdir_enhanced_test)
-            
+
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                     f'test loss: {test_loss.item()}'
                 )
-            
 
             # Plotting stuff
             if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
-                # plotter.target_image_comparision_pred_orig_naive(
-                #     test_ae,
-                #     test_targets,
-                #     test_bitmaps,
-                #     naive_targets,
-                #     sun_directions,
-                #     epoch,
-                #     logdir_enhanced_test,
-                # )
+            #     # plotter.target_image_comparision_pred_orig_naive(
+            #     #     test_ae,
+            #     #     test_targets,
+            #     #     test_bitmaps,
+            #     #     naive_targets,
+            #     #     sun_directions,
+            #     #     epoch,
+            #     #     logdir_enhanced_test,
+            #     # )
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,
@@ -853,6 +946,15 @@ def main(config_file_name: Optional[str] = None) -> None:
                     logdir_surfaces,
                     writer
                 )
+            #     plotter.plot_surfaces_mm(
+            #         H_target,
+            #         H,
+            #         epoch,
+            #         logdir_surfaces,
+            #         writer
+            #     )
+                # plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
+                # plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
 
         # Save Section
 
@@ -880,4 +982,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    main("WorkingConfigs\\Best10m.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
+    main(path_to_yaml)
+    # main()
