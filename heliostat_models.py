@@ -22,6 +22,7 @@ HeliostatParams = Tuple[
     Optional[int],
     Optional[Dict[str, Any]],
 ]
+A = TypeVar('A', bound='AbstractHeliostat')
 C = TypeVar('C', bound='Heliostat')
 
 
@@ -535,6 +536,11 @@ class AbstractHeliostat:
         raise TypeError(
             'cannot convert ' + self.__class__.__name__ + ' to dictionary')
 
+    @classmethod
+    def from_dict(cls: Type[A], data: Dict[str, Any], *args, **kwargs) -> A:
+        raise TypeError(
+            'cannot construct ' + cls.__name__ + ' from dictionary')
+
     def align(
             self,
             sun_direction: torch.Tensor,
@@ -679,7 +685,7 @@ class Heliostat(AbstractHeliostat):
         return data
 
     @classmethod
-    def from_dict(
+    def from_dict(  # type: ignore[override]
             cls: Type[C],
             data: Dict[str, Any],
             device: th.device,
