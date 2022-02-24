@@ -61,7 +61,6 @@ def real_heliostat(
         ray_struct,
     )
 
-
     h_normal_vecs = []
     h_ideal_vecs = []
     h = []
@@ -143,7 +142,7 @@ def heliostat_by_function(
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
 
     Y = Y.reshape(cfg.ROWS, cfg.COLS)
-    
+
     reduction: float = cfg.REDUCTION_FACTOR
     fr: float = cfg.FREQUENCY
     if cfg.NAME == "sin":
@@ -166,15 +165,15 @@ def heliostat_by_function(
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]]) 
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
                 next_row_vec = th.tensor(
-                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])
                 next_col_vec = th.tensor(
-                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]]) 
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])
             except Exception:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
                 next_row_vec = th.tensor(
-                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])
                 next_col_vec = th.tensor(
                     [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])
 
@@ -252,9 +251,9 @@ def ideal_heliostat(
     params = None
     return (
         h,
-        h, # h_ideal
+        h,  # h_ideal
         h_normal_vectors,
-        h_normal_vectors, #h_ideal_normal_vecs
+        h_normal_vectors,  # h_ideal_normal_vecs
         cfg.HEIGHT,
         cfg.WIDTH,
         cfg.ROWS,
@@ -513,7 +512,7 @@ class AbstractHeliostat:
     @property
     def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
-    
+
     @property
     def ideal_discrete_points(self) -> torch.Tensor:
         return self._ideal_discrete_points
