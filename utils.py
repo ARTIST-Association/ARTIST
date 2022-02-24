@@ -252,8 +252,9 @@ def deflec_facet_zs_many(
         connector.transpose(-2, -1),
     ).transpose(-2, -1)
     orthogonal /= th.linalg.norm(orthogonal, dim=-1, keepdims=True)
-    tilted_connector = th.cross(orthogonal, midway_normal, dim=-1)
+    tilted_connector = th.cross(midway_normal, orthogonal, dim=-1)
     tilted_connector /= th.linalg.norm(tilted_connector, dim=-1, keepdims=True)
+    tilted_connector *= th.sign(orthogonal[..., -1]).unsqueeze(-1)
 
     angle = th.acos(th.clamp(
         (
