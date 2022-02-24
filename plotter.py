@@ -421,16 +421,24 @@ def target_image_comparision_pred_orig_naive(ae,
         #Modification for each row
             
         if i%row==0 and i>=smp:
-            ax.set_ylabel("Azimuth = "+str(int(ae[j,0])), fontweight='bold')
+            ax.set_ylabel("Azimuth = "+str(int(ae[j,0])), fontweight='bold', fontsize=12)
     
         #     ax.set_ylabel("Azimuth = "+str(int(ae[j,0])))
         
         #Modification specific for each plot
+        
+        output_pred = loss(predicted[j],original[j])
+        output_naive = loss(naive[j],original[j])
+        
         if i%4==0 and i>=smp:
             
             ax.imshow(predicted[j], cmap = "coolwarm")
-            output = loss(predicted[j],original[j])
-            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+
+            if output_pred < output_naive:
+                font = "bold"
+            else:
+                font = "normal"
+            ax.set_xlabel("L1: "+f"{output_pred.item():.4f}", fontweight=font)
             if i-smp<row:
                 ax.set_title('Predicted', fontweight='bold')
             
@@ -439,12 +447,18 @@ def target_image_comparision_pred_orig_naive(ae,
             if i-smp<row:
                 ax.set_title('Original', fontweight='bold')
             if i-smp>=row*(column-1):
-                ax.set_xlabel("Elevation = "+str(int(ae[j,1])), fontweight='bold')
+                ax.set_xlabel("Elevation = "+str(int(ae[j,1])), fontweight='bold', fontsize=12)
+
+                
         elif i%4==2 and i>=smp:
             ax.imshow(naive[j], cmap ="coolwarm")
             
-            output = loss(naive[j],original[j])
-            ax.set_xlabel("L1: "+f"{output.item():.4f}")
+            if output_naive < output_pred:
+                font = "bold"
+            else:
+                font = "normal"
+            
+            ax.set_xlabel("L1: "+f"{output_naive.item():.4f}",fontweight=font)
             if i-smp<row: 
                 ax.set_title('Naive', fontweight='bold')
         elif i%4==3 and i>=smp:

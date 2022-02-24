@@ -664,31 +664,31 @@ def main(config_file_name: Optional[str] = None) -> None:
         H_validation = build_target_heliostat(cfg, device)
         ENV_validation = Environment(cfg.AC, device)
 
-    if cfg.TEST.PLOT.GRID:
-        grid_test_sun_directions, grid_test_ae = data.generate_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            case="grid",
-        )
-        grid_test_targets = data.generate_dataset(
-            H_validation,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            None,
-            "grid_"
+    # if cfg.TEST.PLOT.GRID:
+    #     grid_test_sun_directions, grid_test_ae = data.generate_sun_array(
+    #         cfg.TEST.SUN_DIRECTIONS,
+    #         device,
+    #         case="grid",
+    #     )
+    #     grid_test_targets = data.generate_dataset(
+    #         H_validation,
+    #         ENV_validation,
+    #         grid_test_sun_directions,
+    #         None,
+    #         None,
+    #         "grid_"
         )
     #     # # th.random.set_rng_state(state)
-        H_naive_grid = build_target_heliostat(cfg, device)
-        H_naive_grid._normals = H_naive_grid._normals_ideal
-        naive_targets = data.generate_dataset(
-            H_naive_grid,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            None,
-            "naive_"
-        )
+        # H_naive_grid = build_target_heliostat(cfg, device)
+        # H_naive_grid._normals = H_naive_grid._normals_ideal
+        # naive_targets = data.generate_dataset(
+        #     H_naive_grid,
+        #     ENV_validation,
+        #     grid_test_sun_directions,
+        #     None,
+        #     None,
+        #     "naive_"
+        # )
     # if cfg.TEST.PLOT.SPHERIC:
     #     (
     #         spheric_test_sun_directions,
@@ -759,37 +759,37 @@ def main(config_file_name: Optional[str] = None) -> None:
     #                 0,
     #                 reduction=False
     #             )
-    test_loss, _ = test_batch(
-                    H,
-                    ENV,
-                    R,
-                    test_targets,
-                    test_sun_directions,
-                    test_loss_func,
-                    0,
-                    writer,
-                )
+    # test_loss, _ = test_batch(
+    #                 H,
+    #                 ENV,
+    #                 R,
+    #                 test_targets,
+    #                 test_sun_directions,
+    #                 test_loss_func,
+    #                 0,
+    #                 writer,
+    #             )
 
-    grid_test_loss, grid_test_bitmaps = test_batch(
-                H,
-                ENV,
-                R,
-                grid_test_targets,
-                grid_test_sun_directions,
-                test_loss_func,
-                0,
-            )
+    # grid_test_loss, grid_test_bitmaps = test_batch(
+    #             H,
+    #             ENV,
+    #             R,
+    #             grid_test_targets,
+    #             grid_test_sun_directions,
+    #             test_loss_func,
+    #             0,
+    #         )
 
-    plotter.target_image_comparision_pred_orig_naive(
-        grid_test_ae,
-        grid_test_targets,
-        grid_test_bitmaps,
-        naive_targets,
-        sun_directions,
-        0,
-        logdir_enhanced_test,
-    )
-    exit()
+    # plotter.target_image_comparision_pred_orig_naive(
+    #     grid_test_ae,
+    #     grid_test_targets,
+    #     grid_test_bitmaps,
+    #     naive_targets,
+    #     sun_directions,
+    #     0,
+    #     logdir_enhanced_test,
+    # )
+    # exit()
 
     for epoch in range(epochs):
         train_objects = TrainObjects(
@@ -838,15 +838,15 @@ def main(config_file_name: Optional[str] = None) -> None:
             #                 epoch,
             #             )
 
-            #     plotter.target_image_comparision_pred_orig_naive(
-            #         grid_test_ae,
-            #         grid_test_targets,
-            #         grid_test_bitmaps,
-            #         naive_targets,
-            #         sun_directions,
-            #         epoch,
-            #         logdir_enhanced_test,
-            #     )
+                plotter.target_image_comparision_pred_orig_naive(
+                    grid_test_ae,
+                    grid_test_targets,
+                    grid_test_bitmaps,
+                    naive_targets,
+                    sun_directions,
+                    epoch,
+                    logdir_enhanced_test,
+                )
 
             #     spheric_train_loss, _ = test_batch(
             #         H,
@@ -906,8 +906,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             #         logdir_surfaces,
             #         writer
             #     )
-            #     plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
-            #     plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
+                plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
+                plotter.plot_surfaces_3D_mrad(H_target, H, epoch, logdir_surfaces, writer = None)
 
         # Save Section
 
