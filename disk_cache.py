@@ -134,13 +134,15 @@ def disk_cache(
                 result = on_load(result)
         else:
             result = func(*args, **kwargs)
-            th.save(result, new_path)
 
             if remove_outdated:
                 prev_hash_val, prev_path = find_disk_hash(
                     save_dir, file_prefix)
-                if prev_path is not None:
-                    prev_path.unlink()
+
+            th.save(result, new_path)
+
+            if remove_outdated and prev_path is not None:
+                prev_path.unlink()
         return result
 
     return wrapped
