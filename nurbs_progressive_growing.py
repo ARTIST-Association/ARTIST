@@ -4,6 +4,7 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+import nurbs
 if TYPE_CHECKING:
     from nurbs_heliostat import NURBSHeliostat
 import utils
@@ -148,13 +149,47 @@ class ProgressiveGrowing:
     def _calc_grown_control_points_per_dim(
             self,
             old_ctrl_points: torch.Tensor,
-            k: int,
     ) -> torch.Tensor:
-        world_points = self.heliostat.discrete_points
-        new_ctrl_points = utils.calc_closest_ctrl_points(
-            old_ctrl_points,
+        ctrl_points, ctrl_weights, knots_x, knots_y = \
+            self.select()
+
+        edge_factor = 5
+        rows = edge_factor * self.heliostat.rows
+        cols = edge_factor * self.heliostat.cols
+
+        eval_points = utils._cartesian_linspace_around(
+            0,
+            1,
+            rows,
+            0,
+            1,
+            cols,
+            old_ctrl_points.device,
+        )
+
+        world_points = nurbs.evaluate_nurbs_surface_flex(
+            eval_points[:, 0],
+            eval_points[:, 1],
+            self.heliostat.degree_x,
+            self.heliostat.degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+        )
+
+        new_ctrl_points = old_ctrl_points.clone()
+        utils.initialize_spline_ctrl_points_perfectly(
+            new_ctrl_points,
             world_points,
-            k,
+            rows,
+            cols,
+            self.heliostat.degree_x,
+            self.heliostat.degree_y,
+            self.heliostat.knots_x,
+            self.heliostat.knots_y,
+            self.heliostat.nurbs_cfg.INITIALIZE_Z_ONLY,
+            True,
         )
         return new_ctrl_points
 
@@ -162,7 +197,6 @@ class ProgressiveGrowing:
             self,
             old_row_indices: torch.Tensor,
             old_col_indices: torch.Tensor,
-            k: int = 4,
     ) -> None:
         with_old_indices = self.cfg.STEP_SIZE_ROWS > 0
         new_row_indices = self._find_new_indices(
@@ -174,7 +208,7 @@ class ProgressiveGrowing:
 
         if new_row_indices is not None:
             new_row_control_points = self._calc_grown_control_points_per_dim(
-                self.heliostat.ctrl_points[new_row_indices, :], k)
+                self.heliostat.ctrl_points[new_row_indices, :])
 
             if not self.heliostat.nurbs_cfg.OPTIMIZE_Z_ONLY:
                 self.heliostat.ctrl_points_xy[new_row_indices, :] = \
@@ -192,7 +226,7 @@ class ProgressiveGrowing:
 
         if new_col_indices is not None:
             new_col_control_points = self._calc_grown_control_points_per_dim(
-                self.heliostat.ctrl_points[:, new_col_indices], k)
+                self.heliostat.ctrl_points[:, new_col_indices])
 
             if not self.heliostat.nurbs_cfg.OPTIMIZE_Z_ONLY:
                 self.heliostat.ctrl_points_xy[:, new_col_indices] = \
@@ -221,7 +255,7 @@ class ProgressiveGrowing:
             self.cfg.STEP_SIZE_COLS,
         )
 
-        self._set_grown_control_points(old_row_indices, old_col_indices, k=4)
+        self._set_grown_control_points(old_row_indices, old_col_indices)
 
         if verbose:
             if not already_done and self._done_growing():
