@@ -110,12 +110,8 @@ def generate_dataset(
                 device=device,
             )
         targets[i] = target_bitmap
-        if writer:
-            writer.add_image(
-                f"{prefix}target_{i}/originals",
-                utils.colorize(target_bitmap),
-            )
     assert targets is not None
+    log_dataset(writer, targets, prefix=prefix)
     return targets
 
 
@@ -271,3 +267,17 @@ def generate_sun_array(
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, ae
+
+
+def log_dataset(
+        writer: Optional[SummaryWriter],
+        targets: torch.Tensor,
+        prefix: str = '',
+) -> torch.Tensor:
+    if writer:
+        for (i, target) in enumerate(targets):
+            writer.add_image(
+                f"{prefix}target_{i}/originals",
+                utils.colorize(target),
+            )
+    return targets

@@ -1,6 +1,7 @@
 import collections
 import copy
 from datetime import datetime
+import functools
 import os
 from typing import Callable, List, Optional, Tuple, Type, Union
 
@@ -91,6 +92,38 @@ def check_consistency(cfg: CfgNode) -> None:
     if not warnings_found:
         print("No warnings found. Good Luck!")
         print("=============================")
+
+
+def set_up_dataset_caching(writer):
+    def make_cached_generate_dataset(prefix=''):
+        log_dataset = functools.partial(
+            data.log_dataset,
+            writer,
+            prefix=prefix,
+        )
+        return disk_cache.disk_cache(
+            data.generate_dataset,
+            'cached',
+            prefix,
+            on_load=log_dataset,
+            ignore_argnums=[3, 4, 5],
+        )
+
+    cached_generate_sun_array = disk_cache.disk_cache(
+        data.generate_sun_array,
+        'cached',
+        ignore_argnums=[1],
+    )
+
+    return (
+        cached_generate_sun_array,
+        make_cached_generate_dataset(),
+        make_cached_generate_dataset('test_'),
+        make_cached_generate_dataset('grid_'),
+        make_cached_generate_dataset('naive_'),
+        make_cached_generate_dataset('spheric_'),
+        make_cached_generate_dataset('naive_spheric_'),
+    )
 
 
 def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
@@ -622,16 +655,15 @@ def main(config_file_name: Optional[str] = None) -> None:
         else 'cpu'
     )
 
-    cached_generate_sun_array = disk_cache.disk_cache(
-        data.generate_sun_array,
-        'cached',
-        ignore_argnums=[1],
-    )
-    cached_generate_dataset = disk_cache.disk_cache(
-        data.generate_dataset,
-        'cached',
-        ignore_argnums=[3, 4, 5],
-    )
+    (
+        cached_generate_sun_array,
+        cached_generate_dataset,
+        cached_generate_test_dataset,
+        cached_generate_grid_dataset,
+        cached_generate_naive_dataset,
+        cached_generate_spheric_dataset,
+        cached_generate_naive_spheric_dataset,
+    ) = set_up_dataset_caching(writer)
 
     # Create Dataset
     # ==============
@@ -663,7 +695,7 @@ def main(config_file_name: Optional[str] = None) -> None:
 >>>>>>> 04b68fb0a152b03b6c523f2228df74641b686c7c
         cfg.TEST.SUN_DIRECTIONS, device)
 
-    test_targets = cached_generate_dataset(
+    test_targets = cached_generate_test_dataset(
         H_target,
         ENV,
         test_sun_directions,
@@ -686,7 +718,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #         device,
     #         case="grid",
     #     )
-    #     grid_test_targets = cached_generate_dataset(
+    #     grid_test_targets = cached_generate_grid_dataset(
     #         H_validation,
     #         ENV_validation,
     #         grid_test_sun_directions,
@@ -709,7 +741,7 @@ def main(config_file_name: Optional[str] = None) -> None:
 =======
     #     H_naive_grid = build_target_heliostat(cfg, device)
     #     H_naive_grid._normals = H_naive_grid._normals_ideal
-    #     naive_targets = cached_generate_dataset(
+    #     naive_targets = cached_generate_naive_dataset(
     #         H_naive_grid,
     #         ENV_validation,
     #         grid_test_sun_directions,
@@ -728,7 +760,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #         train_vec=sun_directions,
     #         case="spheric",
     #     )
-    #     spheric_test_targets = cached_generate_dataset(
+    #     spheric_test_targets = cached_generate_spheric_dataset(
     #         H_validation,
     #         ENV_validation,
     #         spheric_test_sun_directions,
@@ -739,7 +771,7 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     #     H_naive_spheric = build_target_heliostat(cfg, device)
     #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
-    #     naive_spheric_test_targets = cached_generate_dataset(
+    #     naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
     #         H_naive_spheric,
     #         ENV_validation,
     #         spheric_test_sun_directions,

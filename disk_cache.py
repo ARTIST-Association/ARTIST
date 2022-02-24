@@ -44,15 +44,15 @@ def find_disk_hash(
         file_prefix: str,
 ) -> Tuple[Optional[str], Optional[Path]]:
     paths = save_dir.glob(glob.escape(file_prefix) + '*.pt')
-    most_recent = max(
+    least_recent = min(
         paths,
         key=lambda path: path.stat().st_mtime,
         default=None,
     )
-    if most_recent is None:
+    if least_recent is None:
         return None, None
-    hash_value = most_recent.name[len(file_prefix):-3]
-    return hash_value, most_recent
+    hash_value = least_recent.name[len(file_prefix):-3]
+    return hash_value, least_recent
 
 
 def hash_args(
@@ -134,13 +134,15 @@ def disk_cache(
                 result = on_load(result)
         else:
             result = func(*args, **kwargs)
-            th.save(result, new_path)
 
             if remove_outdated:
                 prev_hash_val, prev_path = find_disk_hash(
                     save_dir, file_prefix)
-                if prev_path is not None:
-                    prev_path.unlink()
+
+            th.save(result, new_path)
+
+            if remove_outdated and prev_path is not None:
+                prev_path.unlink()
         return result
 
     return wrapped
