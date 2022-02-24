@@ -174,6 +174,7 @@ def _find_angles_in_other_slices(angles, num_slices):
 def deflec_facet_zs_many(
         points: torch.Tensor,
         normals: torch.Tensor,
+        ideal_normals: torch.Tensor,
         num_samples: int = 4,
         use_weighted_average: bool = False,
         eps: float = 1e-6,
