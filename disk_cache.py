@@ -94,7 +94,7 @@ def hash_args(
 
     # Hash arguments and RNG state.
     hash_val = hashlib.md5(json.dumps(
-        (hash_args, hash_kwargs, th.get_rng_state()),
+        (hash_args, hash_kwargs, th.get_rng_state(), th.cuda.get_rng_state()),
         sort_keys=True,
         cls=ExtendedEncoder,
     ).encode()).hexdigest()
