@@ -94,7 +94,20 @@ def check_consistency(cfg: CfgNode) -> None:
         print("=============================")
 
 
-def set_up_dataset_caching(writer):
+def set_up_dataset_caching(
+        writer: Optional[SummaryWriter],
+) -> Tuple[
+    Tuple[Callable, Callable, Callable, Callable],
+    Tuple[Callable, Callable, Callable, Callable, Callable, Callable],
+]:
+    def make_cached_generate_sun_array(prefix=''):
+        return disk_cache.disk_cache(
+            data.generate_sun_array,
+            'cached',
+            prefix,
+            ignore_argnums=[1],
+        )
+
     def make_cached_generate_dataset(prefix=''):
         log_dataset = functools.partial(
             data.log_dataset,
@@ -109,20 +122,21 @@ def set_up_dataset_caching(writer):
             ignore_argnums=[3, 4, 5],
         )
 
-    cached_generate_sun_array = disk_cache.disk_cache(
-        data.generate_sun_array,
-        'cached',
-        ignore_argnums=[1],
-    )
-
     return (
-        cached_generate_sun_array,
-        make_cached_generate_dataset(),
-        make_cached_generate_dataset('test_'),
-        make_cached_generate_dataset('grid_'),
-        make_cached_generate_dataset('naive_'),
-        make_cached_generate_dataset('spheric_'),
-        make_cached_generate_dataset('naive_spheric_'),
+        (
+            make_cached_generate_sun_array(),
+            make_cached_generate_sun_array('test_'),
+            make_cached_generate_sun_array('grid_'),
+            make_cached_generate_sun_array('spheric_'),
+        ),
+        (
+            make_cached_generate_dataset(),
+            make_cached_generate_dataset('test_'),
+            make_cached_generate_dataset('grid_'),
+            make_cached_generate_dataset('naive_'),
+            make_cached_generate_dataset('spheric_'),
+            make_cached_generate_dataset('naive_spheric_'),
+        ),
     )
 
 
@@ -664,13 +678,20 @@ def main(config_file_name: Optional[str] = None) -> None:
     )
 
     (
-        cached_generate_sun_array,
-        cached_generate_dataset,
-        cached_generate_test_dataset,
-        cached_generate_grid_dataset,
-        cached_generate_naive_dataset,
-        cached_generate_spheric_dataset,
-        cached_generate_naive_spheric_dataset,
+        (
+            cached_generate_sun_array,
+            cached_generate_test_sun_array,
+            cached_generate_grid_sun_array,
+            cached_generate_spheric_sun_array,
+        ),
+        (
+            cached_generate_dataset,
+            cached_generate_test_dataset,
+            cached_generate_grid_dataset,
+            cached_generate_naive_dataset,
+            cached_generate_spheric_dataset,
+            cached_generate_naive_spheric_dataset,
+        ),
     ) = set_up_dataset_caching(writer)
 
     # Create Dataset
@@ -697,7 +718,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         "train_"
     )
 
-    test_sun_directions, test_ae = cached_generate_sun_array(
+    test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
     test_targets = cached_generate_test_dataset(
@@ -713,65 +734,67 @@ def main(config_file_name: Optional[str] = None) -> None:
     # Better Testing
     # ==============
     # state = th.random.get_rng_state()
-    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
-        H_validation = build_target_heliostat(cfg, device)
-        ENV_validation = Environment(cfg.AC, device)
+    # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
+    #     H_validation = build_target_heliostat(cfg, device)
+    #     ENV_validation = Environment(cfg.AC, device)
 
-    if cfg.TEST.PLOT.GRID:
-        grid_test_sun_directions, grid_test_ae = cached_generate_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            case="grid",
-        )
-        grid_test_targets = cached_generate_grid_dataset(
-            H_validation,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            None,
-            "grid_"
-        )
-        # # th.random.set_rng_state(state)
+    # if cfg.TEST.PLOT.GRID:
+    #     (
+    #         grid_test_sun_directions,
+    #         grid_test_ae,
+    #     ) = cached_generate_grid_sun_array(
+    #         cfg.TEST.SUN_DIRECTIONS,
+    #         device,
+    #         case="grid",
+    #     )
+    #     grid_test_targets = cached_generate_grid_dataset(
+    #         H_validation,
+    #         ENV_validation,
+    #         grid_test_sun_directions,
+    #         None,
+    #         None,
+    #         "grid_"
+    #     )
+    #     # # th.random.set_rng_state(state)
+    #     H_naive_grid = build_target_heliostat(cfg, device)
+    #     H_naive_grid._normals = H_naive_grid._normals_ideal
+    #     naive_targets = cached_generate_naive_dataset(
+    #         H_naive_grid,
+    #         ENV_validation,
+    #         grid_test_sun_directions,
+    #         None,
+    #         None,
+    #         "naive_"
+    #     )
+    # if cfg.TEST.PLOT.SPHERIC:
+    #     (
+    #         spheric_test_sun_directions,
+    #         spheric_test_ae,
+    #     ) = cached_generate_spheric_sun_array(
+    #         cfg.TEST.SUN_DIRECTIONS,
+    #         device,
+    #         train_vec=sun_directions,
+    #         case="spheric",
+    #     )
+    #     spheric_test_targets = cached_generate_spheric_dataset(
+    #         H_validation,
+    #         ENV_validation,
+    #         spheric_test_sun_directions,
+    #         None,
+    #         None,
+    #         "spheric_"
+    #     )
 
-        H_naive_grid = build_target_heliostat(cfg, device)
-        H_naive_grid._normals = H_naive_grid._normals_ideal
-        naive_targets = cached_generate_naive_dataset(
-            H_naive_grid,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            None,
-            "naive_"
-        )
-    if cfg.TEST.PLOT.SPHERIC:
-        (
-            spheric_test_sun_directions,
-            spheric_test_ae,
-        ) = cached_generate_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            train_vec=sun_directions,
-            case="spheric",
-        )
-        spheric_test_targets = cached_generate_spheric_dataset(
-            H_validation,
-            ENV_validation,
-            spheric_test_sun_directions,
-            None,
-            None,
-            "spheric_"
-        )
-
-        H_naive_spheric = build_target_heliostat(cfg, device)
-        H_naive_spheric._normals = H_naive_spheric._normals_ideal
-        naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
-            H_naive_spheric,
-            ENV_validation,
-            spheric_test_sun_directions,
-            None,
-            None,
-            "naive_spheric_"
-        )
+    #     H_naive_spheric = build_target_heliostat(cfg, device)
+    #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
+    #     naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
+    #         H_naive_spheric,
+    #         ENV_validation,
+    #         spheric_test_sun_directions,
+    #         None,
+    #         None,
+    #         "naive_spheric_"
+    #     )
 
     # plotter.test_surfaces(H_target)
     # exit()
@@ -803,16 +826,16 @@ def main(config_file_name: Optional[str] = None) -> None:
     }
 
     # Generate naive Losses before training
-    spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
-                    H,
-                    ENV,
-                    R,
-                    spheric_test_targets,
-                    spheric_test_sun_directions,
-                    test_loss_func,
-                    0,
-                    reduction=False
-                )
+    # spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
+    #                 H,
+    #                 ENV,
+    #                 R,
+    #                 spheric_test_targets,
+    #                 spheric_test_sun_directions,
+    #                 test_loss_func,
+    #                 0,
+    #                 reduction=False
+    #             )
 
     for epoch in range(epochs):
         train_objects = TrainObjects(

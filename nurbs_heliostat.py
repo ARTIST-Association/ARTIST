@@ -172,7 +172,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             if self.h_rows is None or self.h_cols is None:
                 # Higher edge factor creates more interpolated points
                 # per control point, improving approximation accuracy.
-                # This, of course, is slower and consumer more memory.
+                # This, of course, is slower and consumes more memory.
                 edge_factor = 5
                 world_points, rows, cols = utils.make_structured_points(
                     self._discrete_points,
