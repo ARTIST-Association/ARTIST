@@ -92,11 +92,7 @@ def real_heliostat(
     h_normal_vecs = th.cat(h_normal_vecs, dim=0)
     h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
-<<<<<<< HEAD
-    zs = th.cat(zs, dim=0)
-    h = h_ideal.clone()
-    h[:, -1] += zs
-=======
+
     # zs = th.cat(zs, dim=0)
     h = h_ideal.clone()
     # h[:, -1] += zs
@@ -110,7 +106,6 @@ def real_heliostat(
     # ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
     # plt.show()
     # exit()
->>>>>>> temp
 
     # print(h_ideal_vecs)
     rows = None

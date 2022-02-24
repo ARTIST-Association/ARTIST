@@ -186,8 +186,8 @@ _C.AC.RECEIVER                          = CN()
 
 _C.AC.RECEIVER.CENTER                   = [0, -10, 0]
 _C.AC.RECEIVER.PLANE_NORMAL             = [0, 1, 0] # NWU
-_C.AC.RECEIVER.PLANE_X                  = 5. # in m
-_C.AC.RECEIVER.PLANE_Y                  = 5. # in m
+_C.AC.RECEIVER.PLANE_X                  = 5 # in m
+_C.AC.RECEIVER.PLANE_Y                  = 5 # in m
 # These X and Y are height and width respectively.
 _C.AC.RECEIVER.RESOLUTION_X             = 512
 _C.AC.RECEIVER.RESOLUTION_Y             = 512
