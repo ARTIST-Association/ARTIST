@@ -466,8 +466,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return discrete_points, normals
 
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
-        self.facets[0].step(verbose)
-        for facet in self.facets[1:]:
+        facets = iter(self.facets)
+        next(facets).step(verbose)
+        for facet in facets:
             facet.step(False)
 
     @property  # type: ignore[misc]
