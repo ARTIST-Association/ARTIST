@@ -500,6 +500,7 @@ class AbstractHeliostat:
     cfg: CfgNode
 
     _discrete_points: torch.Tensor
+    _ideal_discrete_points: torch.Tensor
     _normals: torch.Tensor
 
     def __init__(self, *args, **kwargs) -> None:
