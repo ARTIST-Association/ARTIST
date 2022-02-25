@@ -177,11 +177,13 @@ def get_sun_array(*datetime: list, **observer):
     return sun_vecs, extras
 
 
-def axis_angle_rotation(axis: torch.Tensor, angle_rad: float) -> torch.Tensor:
-    angle = th.tensor(angle_rad, dtype=axis.dtype, device=axis.device)
-    cos = th.cos(angle)
+def axis_angle_rotation(
+        axis: torch.Tensor,
+        angle_rad: torch.Tensor,
+) -> torch.Tensor:
+    cos = th.cos(angle_rad)
     icos = 1 - cos
-    sin = th.sin(angle)
+    sin = th.sin(angle_rad)
     x = axis[..., 0]
     y = axis[..., 1]
     z = axis[..., 2]
@@ -426,7 +428,8 @@ def deflec_facet_zs_many(
     midway_normal = normals + normals[closest_indices]
     midway_normal /= th.linalg.norm(midway_normal, dim=-1, keepdims=True)
 
-    rot_90deg = axis_angle_rotation(ideal_normals, math.pi / 2)
+    rot_90deg = axis_angle_rotation(
+        ideal_normals, th.tensor(math.pi / 2, dtype=dtype, device=device))
 
     connector = points[closest_indices] - points
     connector_norm = th.linalg.norm(connector, dim=-1)
