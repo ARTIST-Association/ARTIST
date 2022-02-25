@@ -463,7 +463,6 @@ def calc_batch_loss(
     loss = th.tensor(0.0, device=H.device)
     if return_extras:
         num_missed = th.tensor(0.0, device=H.device)
-        ray_diff = th.tensor(0.0, device=H.device)
 
     # Batch Loop
     # ==========
@@ -494,13 +493,9 @@ def calc_batch_loss(
                     (indices.numel() - indices.count_nonzero())
                     / len(targets)
                 )
-                ray_diff += utils.calc_ray_diffs(
-                    ray_directions,
-                    H_aligned.get_ray_directions().detach(),
-                ) / len(targets)
 
     if return_extras:
-        return loss, (pred_bitmap, num_missed, ray_diff)
+        return loss, (pred_bitmap, num_missed)
     return loss
 
 
@@ -513,12 +508,12 @@ def calc_batch_grads(
 ]:
     train_objects.opt.zero_grad(set_to_none=True)
 
-    loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_loss(
+    loss, (pred_bitmap, num_missed) = calc_batch_loss(
         train_objects, return_extras=True)
 
     loss.backward()
     if return_extras:
-        return loss, (pred_bitmap, num_missed, ray_diff)
+        return loss, (pred_bitmap, num_missed)
     return loss
 
 
@@ -528,14 +523,14 @@ def train_batch(
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():
-            _, (pred_bitmap, num_missed, ray_diff) = calc_batch_loss(
+            _, (pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
         loss: torch.Tensor = opt.step(  # type: ignore[assignment]
             lambda: calc_batch_grads(  # type: ignore[arg-type,return-value]
                 train_objects, return_extras=False),
         )
     else:
-        loss, (pred_bitmap, num_missed, ray_diff) = calc_batch_grads(
+        loss, (pred_bitmap, num_missed) = calc_batch_grads(
             train_objects)
         opt.step()
 
@@ -557,7 +552,7 @@ def train_batch(
     train_objects.H.step(verbose=True)
     #     last_lr = opt.param_groups[0]["lr"]
 
-    return loss, pred_bitmap, num_missed, ray_diff
+    return loss, pred_bitmap, num_missed
 
 
 @th.no_grad()
@@ -852,13 +847,12 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
         )
 
-        loss, pred_bitmap, num_missed, ray_diff = train_batch(train_objects)
+        loss, pred_bitmap, num_missed = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
-            f'ray differences: {ray_diff.detach().cpu().item()}'
         )
         if writer:
             writer.add_scalar("train/lr", opt.param_groups[0]["lr"], epoch)

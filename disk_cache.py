@@ -94,7 +94,7 @@ def hash_args(
 
     # Hash arguments and RNG state.
     hash_val = hashlib.md5(json.dumps(
-        (hash_args, hash_kwargs, th.get_rng_state()),
+        (hash_args, hash_kwargs, th.get_rng_state(), th.cuda.get_rng_state()),
         sort_keys=True,
         cls=ExtendedEncoder,
     ).encode()).hexdigest()
@@ -128,10 +128,13 @@ def disk_cache(
         new_path = save_dir / (file_prefix + hash_val + '.pt')
 
         if new_path.is_file():
-            result = th.load(new_path)
+            result, rng_states = th.load(new_path)
 
             if on_load:
                 result = on_load(result)
+            th.set_rng_state(rng_states[0])
+            if th.cuda.is_available():
+                th.cuda.set_rng_state_all(rng_states[1])
         else:
             result = func(*args, **kwargs)
 
@@ -139,7 +142,17 @@ def disk_cache(
                 prev_hash_val, prev_path = find_disk_hash(
                     save_dir, file_prefix)
 
-            th.save(result, new_path)
+            th.save((
+                result,
+                (
+                    th.get_rng_state(),
+                    (
+                        th.cuda.get_rng_state_all()
+                        if th.cuda.is_available()
+                        else None
+                    ),
+                ),
+            ), new_path)
 
             if remove_outdated and prev_path is not None:
                 prev_path.unlink()

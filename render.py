@@ -278,7 +278,7 @@ class Renderer(object):
         # plotter.plot_normal_vectors(self.H.discrete_points, self.H._normals)
 
         if not self.redraw_random_variables:
-            self.xi, self.yi = self.ENV.sun.sample(len(self.H.discrete_points))
+            self.xi, self.yi = self.ENV.sun.sample(len(self.H))
 
     def render(
             self,
@@ -294,7 +294,7 @@ class Renderer(object):
         if heliostat is None:
             heliostat = self.H
         if self.redraw_random_variables:
-            xi, yi = self.ENV.sun.sample(len(self.H.discrete_points))
+            xi, yi = self.ENV.sun.sample(len(self.H))
         else:
             xi = self.xi
             yi = self.yi

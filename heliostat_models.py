@@ -15,12 +15,14 @@ HeliostatParams = Tuple[
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
+    torch.Tensor,
     float,
     float,
     Optional[int],
     Optional[int],
     Optional[Dict[str, Any]],
 ]
+A = TypeVar('A', bound='AbstractHeliostat')
 C = TypeVar('C', bound='Heliostat')
 
 
@@ -61,7 +63,6 @@ def real_heliostat(
         ray_struct,
     )
 
-
     h_normal_vecs = []
     h_ideal_vecs = []
     h = []
@@ -89,23 +90,23 @@ def real_heliostat(
             num_samples=4,
         ))
 
-    h_normal_vecs = th.cat(h_normal_vecs, dim=0)
-    h_ideal_vecs = th.cat(h_ideal_vecs, dim=0)
+    h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
+    h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
 
-    # zs = th.cat(zs, dim=0)
-    h = h_ideal.clone()
-    # h[:, -1] += zs
+    zs: torch.Tensor = th.cat(zs, dim=0)
+    h: torch.Tensor = h_ideal.clone()
+    h[:, -1] += zs
     
-    # import matplotlib.pyplot as plt
-    # fig = plt.figure(figsize =(14, 9))
-    # ax = plt.axes(projection ='3d') 
-    # h[:,2] = h[:,2]-h_ideal[:,2]
-    # h = h.detach().cpu()
-    # my_cmap = plt.get_cmap('hot')
-    # ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
-    # plt.show()
-    # exit()
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize =(14, 9))
+    ax = plt.axes(projection ='3d') 
+    h[:,2] = h[:,2]-h_ideal[:,2]
+    h = h.detach().cpu()
+    my_cmap = plt.get_cmap('hot')
+    ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
+    plt.show()
+    exit()
 
     # print(h_ideal_vecs)
     rows = None
@@ -154,7 +155,7 @@ def heliostat_by_function(
     Y = th.tile(Y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
 
     Y = Y.reshape(cfg.ROWS, cfg.COLS)
-    
+
     reduction: float = cfg.REDUCTION_FACTOR
     fr: float = cfg.FREQUENCY
     if cfg.NAME == "sin":
@@ -177,15 +178,15 @@ def heliostat_by_function(
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]]) 
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
                 next_row_vec = th.tensor(
-                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])  
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])
                 next_col_vec = th.tensor(
-                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]]) 
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])
             except Exception:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])  
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
                 next_row_vec = th.tensor(
-                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])  
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])
                 next_col_vec = th.tensor(
                     [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])
 
@@ -263,9 +264,9 @@ def ideal_heliostat(
     params = None
     return (
         h,
-        h, # h_ideal
+        h,  # h_ideal
         h_normal_vectors,
-        h_normal_vectors, #h_ideal_normal_vecs
+        h_normal_vectors,  # h_ideal_normal_vecs
         cfg.HEIGHT,
         cfg.WIDTH,
         cfg.ROWS,
@@ -420,6 +421,7 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
     params = {'name': name}
     return (
         vertices,
+        vertices,
         vertex_normals,
         # TODO Implement Ideal Vecs
         vertex_normals,
@@ -510,6 +512,7 @@ class AbstractHeliostat:
     cfg: CfgNode
 
     _discrete_points: torch.Tensor
+    _ideal_discrete_points: torch.Tensor
     _normals: torch.Tensor
 
     def __init__(self, *args, **kwargs) -> None:
@@ -524,7 +527,7 @@ class AbstractHeliostat:
     @property
     def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
-    
+
     @property
     def ideal_discrete_points(self) -> torch.Tensor:
         return self._ideal_discrete_points
@@ -543,6 +546,11 @@ class AbstractHeliostat:
     def to_dict(self) -> Dict[str, Any]:
         raise TypeError(
             'cannot convert ' + self.__class__.__name__ + ' to dictionary')
+
+    @classmethod
+    def from_dict(cls: Type[A], data: Dict[str, Any], *args, **kwargs) -> A:
+        raise TypeError(
+            'cannot construct ' + cls.__name__ + ' from dictionary')
 
     def align(
             self,
@@ -688,7 +696,7 @@ class Heliostat(AbstractHeliostat):
         return data
 
     @classmethod
-    def from_dict(
+    def from_dict(  # type: ignore[override]
             cls: Type[C],
             data: Dict[str, Any],
             device: th.device,

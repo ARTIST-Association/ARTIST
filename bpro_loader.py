@@ -36,9 +36,11 @@ def load_bpro(
 
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
-        positions = [[] for _ in range(nFacets)]
-        directions = [[] for _ in range(nFacets)]
-        ideal_normal_vecs = [[] for _ in range(nFacets)]
+        positions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
+        directions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
+        ideal_normal_vecs: List[List[np.ndarray]] = [
+            [] for _ in range(nFacets)
+        ]
 
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
