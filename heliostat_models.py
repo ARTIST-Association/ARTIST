@@ -95,9 +95,9 @@ def real_heliostat(
     h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
 
-    zs: torch.Tensor = th.cat(zs, dim=0)
+   # zs: torch.Tensor = th.cat(zs, dim=0)
     h: torch.Tensor = h_ideal.clone()
-    h[:, -1] += zs
+  #  h[:, -1] += zs
     
     import matplotlib.pyplot as plt
     fig = plt.figure(figsize =(14, 9))
