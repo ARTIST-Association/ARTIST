@@ -4,10 +4,10 @@ import os
 _C = CN()
 # UNIQUE EXPERIMENT IDENTIFIER
 
-_C.ID                                   = 'MakeRunableAgain'
-_C.EXPERIMENT_NAME                      = "MakeRunableAgain"
+_C.ID                                   = 'NotGiven'
+_C.EXPERIMENT_NAME                      = "NotGiven"
 _C.LOGDIR                               = 'Results'
-_C.SEED                                 = 12
+_C.SEED                                 = 42
 _C.USE_FLOAT64                          = False
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
@@ -186,8 +186,8 @@ _C.AC.RECEIVER                          = CN()
 
 _C.AC.RECEIVER.CENTER                   = [0, -10, 0]
 _C.AC.RECEIVER.PLANE_NORMAL             = [0, 1, 0] # NWU
-_C.AC.RECEIVER.PLANE_X                  = 5 # in m
-_C.AC.RECEIVER.PLANE_Y                  = 5 # in m
+_C.AC.RECEIVER.PLANE_X                  = 5. # in m
+_C.AC.RECEIVER.PLANE_Y                  = 5. # in m
 # These X and Y are height and width respectively.
 _C.AC.RECEIVER.RESOLUTION_X             = 512
 _C.AC.RECEIVER.RESOLUTION_Y             = 512
@@ -206,7 +206,7 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 _C.TRAIN                                = CN()
 _C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.SUN_DIRECTIONS                 = CN()
-_C.TRAIN.SUN_DIRECTIONS.CASE            ="vecs"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TRAIN.SUN_DIRECTIONS.CASE            ="random"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
 
 _C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
 _C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.43719268,  0.7004466,   0.564125  ],]
@@ -265,7 +265,7 @@ _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
 
 
 _C.TEST = CN()
-_C.TEST.INTERVAL                        = 15
+_C.TEST.INTERVAL                        = 100
 
 # Reduces test image array to 5, images will be generated with complete array
 
@@ -288,8 +288,9 @@ _C.TEST.SUN_DIRECTIONS.SPHERIC          = CN()
 _C.TEST.SUN_DIRECTIONS.SPHERIC.NUM_SAMPLES =10
 
 _C.TEST.PLOT                            = CN()
-_C.TEST.PLOT.SPHERIC                     =True
-_C.TEST.PLOT.GRID                       = True
+_C.TEST.PLOT.SPHERIC                     =False
+_C.TEST.PLOT.GRID                        =False
+_C.TEST.PLOT.SEASON                      =True
 
 
 

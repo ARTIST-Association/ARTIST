@@ -21,6 +21,8 @@ import plotter
 from render import Renderer
 import utils
 
+
+
 LossFn = Callable[
     [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
     torch.Tensor,
@@ -128,6 +130,7 @@ def set_up_dataset_caching(
             make_cached_generate_sun_array('test_'),
             make_cached_generate_sun_array('grid_'),
             make_cached_generate_sun_array('spheric_'),
+            make_cached_generate_sun_array('season_'),
         ),
         (
             make_cached_generate_dataset(),
@@ -136,6 +139,8 @@ def set_up_dataset_caching(
             make_cached_generate_dataset('naive_'),
             make_cached_generate_dataset('spheric_'),
             make_cached_generate_dataset('naive_spheric_'),
+            make_cached_generate_dataset('season_'),
+            make_cached_generate_dataset('naive_season_'),
         ),
     )
 
@@ -678,6 +683,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             cached_generate_test_sun_array,
             cached_generate_grid_sun_array,
             cached_generate_spheric_sun_array,
+            cached_generate_season_sun_array
         ),
         (
             cached_generate_dataset,
@@ -686,6 +692,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             cached_generate_naive_dataset,
             cached_generate_spheric_dataset,
             cached_generate_naive_spheric_dataset,
+            cached_generate_season_dataset,
+            cached_generate_naive_season_dataset,
         ),
     ) = set_up_dataset_caching(writer)
 
@@ -730,7 +738,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     # state = th.random.get_rng_state()
 
-    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True:
+    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True or cfg.TEST.PLOT.SEASON:
         H_validation = build_target_heliostat(cfg, device)
         ENV_validation = Environment(cfg.AC, device)
 
@@ -791,6 +799,35 @@ def main(config_file_name: Optional[str] = None) -> None:
             None,
             "naive_spheric_"
         )
+        
+    if cfg.TEST.PLOT.SEASON:
+        (
+            season_test_sun_directions,
+            season_test_extras,
+        ) = cached_generate_season_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="season",
+        )
+        season_test_sun_directions = season_test_sun_directions.to(device) #TODO bring to GPU in data.py
+        season_test_targets = cached_generate_season_dataset(
+            H_validation,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            None,
+            "season_"
+        )
+        H_naive_season = build_target_heliostat(cfg, device)
+        H_naive_season._normals = H_naive_season._normals_ideal
+        naive_season_test_targets = cached_generate_naive_season_dataset(
+            H_naive_season,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            None,
+            "naive_season_"
+        )
 
     # plotter.test_surfaces(H_target)
     # exit()
@@ -822,7 +859,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     }
 
     # Generate naive Losses before training
-    # spheric_naive_test_loss, spheric_test_bitmaps = test_batch(
+    # spheric_naive_test_loss, _ = test_batch(
     #                 H,
     #                 ENV,
     #                 R,
@@ -832,6 +869,18 @@ def main(config_file_name: Optional[str] = None) -> None:
     #                 0,
     #                 reduction=False
     #             )
+    
+    season_naive_test_loss, _ = test_batch(
+                    H,
+                    ENV,
+                    R,
+                    season_test_targets,
+                    season_test_sun_directions,
+                    test_loss_func,
+                    0,
+                    reduction=False
+                )
+    
 
     for epoch in range(epochs):
         train_objects = TrainObjects(
@@ -868,7 +917,27 @@ def main(config_file_name: Optional[str] = None) -> None:
                     epoch,
                     writer,
                 )
-            # if not epoch ==0:
+                # if not epoch ==0:
+                season_test_loss, season_test_bitmaps = test_batch(
+                            H,
+                            ENV,
+                            R,
+                            season_test_targets,
+                            season_test_sun_directions,
+                            test_loss_func,
+                            epoch,
+                            reduction=False
+                        )
+                
+
+                plotter.season_plot(season_test_extras, 
+                                    naive_season_test_targets, 
+                                    season_test_bitmaps, 
+                                    season_test_targets, 
+                                    season_test_loss,
+                                    season_naive_test_loss, 
+                                    logdir_enhanced_test, 
+                                    epoch)
             #     grid_test_loss, grid_test_bitmaps = test_batch(
             #                 H,
             #                 ENV,
@@ -977,6 +1046,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "Test.yaml")
     main(path_to_yaml)
     # main()

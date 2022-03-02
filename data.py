@@ -243,6 +243,102 @@ def _spheric_sun_array(
 
     return sun_directions, ae
 
+def _season_sun_array(device, 
+             stepsize_hours=1, 
+             stepsize_minutes=30,
+             longest_day=True, 
+             shortest_day=True, 
+             equinox_spring=True, 
+             measurement_day = True,
+             *measurement_date):
+    """
+    Input: 
+        -stepsize for defining the grid distances
+        -device
+        -which days to simulate
+        -args must be in descending order years,months,days...
+   Output:
+       -List of all sun positions including simualted hours (N,8) including [hour,minute,sec,day,month,year,azi,ele]
+        starting with longest day, start of autumn, shortest day, start of spring, measurment day
+       -len of differenz day simulations in shape (N,)
+       -name of simulated days
+    """
+    
+    minutes = list(range(0,60, stepsize_minutes))
+    trajectories = []
+    infos = {}
+    infos["date_time_ae"] = []
+    if measurement_day:
+        try:
+            years = measurement_date.pop(0)
+        except:
+            years =[2021]
+        try:
+            months = measurement_date.pop(1)
+        except:
+            months =[10]
+        try:
+            days = measurement_date.pop(2)
+        except:
+            days =[28]
+        try:
+            hours = measurement_date.pop(3)
+        except:
+            hours =list(range(8 ,16, stepsize_hours))
+        try:
+            minutes = measurement_date.pop(4)
+        except:
+            minutes = list(range(0,60, stepsize_minutes))
+        try:
+            secs = [measurement_date.pop(5)]
+        except:
+            secs =[0]
+            
+        sun_vecs_measurement, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        trajectories.append(sun_vecs_measurement)
+        infos["measurement"] = len(sun_vecs_measurement)
+        infos["date_time_ae"].append(extras)
+    
+    if shortest_day:
+        years = [2021]
+        months = [12]
+        days = [21]
+        hours = list(range(9 ,15, stepsize_hours))
+        secs = [0]   
+        sun_vecs_short, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        trajectories.append(sun_vecs_short)
+        infos["short"] = len(sun_vecs_short)
+        infos["date_time_ae"].append(extras)
+    
+    if equinox_spring:
+        years = [2022]
+        months = [3]
+        days = [20]
+        hours = list(range(7 ,17, stepsize_hours))
+        secs = [0]   
+        sun_vecs_autumn, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        trajectories.append(sun_vecs_autumn)
+        infos["spring"] = len(sun_vecs_autumn)
+        infos["date_time_ae"].append(extras)
+    
+    if longest_day:
+        years = [2022]
+        months = [6]
+        days = [21]
+        hours = list(range(5,19, stepsize_hours))
+        secs = [0]   
+        sun_vecs_long, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        trajectories.append(sun_vecs_long)
+        infos["long"] = len(sun_vecs_long) #TODO: Tidy up!
+        infos["date_time_ae"].append(extras)
+
+    trajectories = th.cat(trajectories).to(device)
+
+    # else:
+    #     raise ValueError("No day submitted to function")
+    return trajectories, infos
+
+
 
 def generate_sun_array(
         cfg_sun_directions: CfgNode,
@@ -257,16 +353,18 @@ def generate_sun_array(
     assert case is not None
 
     if case == "random":
-        sun_directions, ae = _random_sun_array(cfg.RAND, device)
+        sun_directions, extras = _random_sun_array(cfg.RAND, device)
     elif case == "grid":
-        sun_directions, ae = _grid_sun_array(cfg.GRID, device)
+        sun_directions, extras = _grid_sun_array(cfg.GRID, device)
     elif case == "vecs":
-        sun_directions, ae = _vec_sun_array(cfg.VECS, device)
+        sun_directions, extras = _vec_sun_array(cfg.VECS, device)
     elif case == "spheric":
-        sun_directions, ae = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
+        sun_directions, extras = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
+    elif case == "season":
+        sun_directions, extras = _season_sun_array(device)
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
-    return sun_directions, ae
+    return sun_directions, extras
 
 
 def log_dataset(
