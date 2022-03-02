@@ -97,6 +97,7 @@ def check_consistency(cfg: CfgNode) -> None:
 
 
 def set_up_dataset_caching(
+        device: th.device,
         writer: Optional[SummaryWriter],
 ) -> Tuple[
     Tuple[Callable, Callable, Callable, Callable],
@@ -105,6 +106,7 @@ def set_up_dataset_caching(
     def make_cached_generate_sun_array(prefix=''):
         return disk_cache.disk_cache(
             data.generate_sun_array,
+            device,
             'cached',
             prefix,
             ignore_argnums=[1],
@@ -118,6 +120,7 @@ def set_up_dataset_caching(
         )
         return disk_cache.disk_cache(
             data.generate_dataset,
+            device,
             'cached',
             prefix,
             on_load=log_dataset,
@@ -695,7 +698,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             cached_generate_season_dataset,
             cached_generate_naive_season_dataset,
         ),
-    ) = set_up_dataset_caching(writer)
+    ) = set_up_dataset_caching(device, writer)
 
     # Create Dataset
     # ==============
