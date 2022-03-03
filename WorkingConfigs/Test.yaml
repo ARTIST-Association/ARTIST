@@ -1,5 +1,5 @@
-ID: MoreNurbs
-EXPERIMENT_NAME: CachedDatasets
+ID: FullRun
+EXPERIMENT_NAME: 10NurbsReaplPos
 LOAD_OPTIMIZER_STATE: false
 SEED: 42
 AC:
@@ -30,8 +30,8 @@ H:
   REAL: {}
   SHAPE: real
 NURBS:
-  COLS: 6
-  ROWS: 6
+  COLS: 10
+  ROWS: 10
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:

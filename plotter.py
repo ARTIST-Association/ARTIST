@@ -621,7 +621,7 @@ def season_plot(season_extras, ideal, prediction, ground_truth, prediction_loss,
     # }
     # matplotlib.rcParams.update(pgf_with_latex)
     #To CPU
-    
+    season_extras = season_extras.copy()
     date_time_ae = season_extras.pop("date_time_ae")
     # print(len(date_time_ae))
     tmp = []
@@ -638,7 +638,7 @@ def season_plot(season_extras, ideal, prediction, ground_truth, prediction_loss,
     ground_truth_loss = ground_truth_loss.detach().cpu()
     
     image_size= prediction.shape[-1]
-    print(image_size)
+    # print(image_size)
     
     prediction_norm = th.linalg.norm(prediction, dim=(1,2))
     prediction_loss = prediction_loss/prediction_norm
@@ -698,7 +698,7 @@ def season_plot(season_extras, ideal, prediction, ground_truth, prediction_loss,
     legend = []
     seasons = [None,None,None,None]
     for key in season_extras:
-        print(key)
+        # print(key)
         if not key == "date_time_ae":
             # print(index,new_index)
             new_index = index + season_extras[key]

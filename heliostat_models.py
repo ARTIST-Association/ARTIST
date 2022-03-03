@@ -88,26 +88,30 @@ def real_heliostat(
             h[-1],
             h_normal_vecs[-1],
             h_ideal_vecs[-1],
-            num_samples=4,
+            num_samples=32,
         ))
 
     h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
     h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
-    # zs: torch.Tensor = -th.cat(zs, dim=0)
+    # zs: torch.Tensor = th.cat(zs, dim=0)
     h: torch.Tensor = h_ideal.clone()
     # h[:, -1] += zs
 
     
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))
-    # ax = plt.axes() 
+    # ax = plt.axes(projection ='3d')
     # h[:,2] = h[:,2]-h_ideal[:,2]
     # h = h.detach().cpu()
-    # im3 = ax.scatter(h[:,0],h[:,1], c=h[:,2], cmap="magma")
+    # # im3 = ax.scatter(h[:,0],h[:,1], c=h[:,2], cmap="magma")
+    # # h.detach().cpus()
     # my_cmap = plt.get_cmap('hot')
     # ax.plot_trisurf(h[:,0],h[:,1],h[:,2], cmap =my_cmap)
     # plt.show()
+    # exit()
+    # plt.savefig("test.png", dpi=fig.dpi)
+    # plt.close(fig)
     # exit()
 
     # print(h_ideal_vecs)
