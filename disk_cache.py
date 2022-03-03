@@ -135,7 +135,10 @@ def disk_cache(
                 result = on_load(result)
             th.set_rng_state(rng_states[0].cpu())
             if th.cuda.is_available() and rng_states[1] is not None:
-                th.cuda.set_rng_state_all(rng_states[1].cpu())
+                th.cuda.set_rng_state_all(list(map(
+                    lambda t: t.cpu(),
+                    rng_states[1],
+                )))
         else:
             result = func(*args, **kwargs)
 
