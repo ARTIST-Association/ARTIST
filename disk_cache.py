@@ -133,9 +133,9 @@ def disk_cache(
 
             if on_load:
                 result = on_load(result)
-            th.set_rng_state(rng_states[0])
+            th.set_rng_state(rng_states[0].cpu())
             if th.cuda.is_available() and rng_states[1] is not None:
-                th.cuda.set_rng_state_all(rng_states[1])
+                th.cuda.set_rng_state_all(rng_states[1].cpu())
         else:
             result = func(*args, **kwargs)
 
