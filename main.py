@@ -860,7 +860,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     R = Renderer(H, ENV)
 
 #pretraining 
-    pretrain_epochs = 500
+    pretrain_epochs = 1500
     steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
     opt, sched = build_optimizer_scheduler(
         cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
@@ -882,6 +882,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
             prefix
         )
+
         if writer:
             writer.add_scalar(f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
             
@@ -893,6 +894,17 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'missed: {num_missed.detach().cpu().item()}, '
         )
         if epoch % 15 ==0:
+            test_loss, _ = test_batch(
+                H,
+                ENV,
+                R,
+                test_targets,
+                test_sun_directions,
+                test_loss_func,
+                epoch,
+                writer,
+                "pretest"
+            )
             plotter.plot_surfaces_mrad(
                 H_naive_target,
                 H,

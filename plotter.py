@@ -83,9 +83,9 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     # print(th.max(pred_angles), th.mean(pred_angles))
     target = target_points 
     pred = pred_points
-    # pred = pred[pred[:,-1] <= th.max(target[:,-1])]
+    pred = pred[pred[:,-1] >= th.max(target[:,-1])]
     diff = diff_points
-    # diff = diff[diff[:,-1] <= th.max(target[:,-1])]
+    diff = diff[diff[:,-1] >= th.max(target[:,-1])]
 
 
     fig = plt.figure(figsize=(15,6))
@@ -99,7 +99,7 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     # ax_cbar = fig.add_axes([p0[0],  0.05, p1[2]-p0[0], 0.05])
     # ax_cbar1 = fig.add_axes([1.4*p2[0], 0.05, 0.02, 0.9])
     ax1 = fig.add_subplot(gs[0, 0])
-    im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2])
+    im1 = ax1.scatter(target[:,0],target[:,1], c=target[:,2], cmap="magma")
     ax1.set_xlim(th.min(target[:,0]),th.max(target[:,0]))
     ax1.set_ylim(th.min(target[:,1]),th.max(target[:,1]))
     ax1.title.set_text('Original Surface [mrad]')
@@ -108,7 +108,7 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     ax1.get_yaxis().set_ticks([])
 
     ax2 = fig.add_subplot(gs[0, 1])
-    im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2])
+    im2 = ax2.scatter(pred[:,0],pred[:,1], c=pred[:,2], cmap="magma")
     ax2.set_xlim(th.min(pred[:,0]),th.max(pred[:,0]))
     ax2.set_ylim(th.min(pred[:,1]),th.max(pred[:,1]))
     ax2.title.set_text('Predicted Surface [mrad]')

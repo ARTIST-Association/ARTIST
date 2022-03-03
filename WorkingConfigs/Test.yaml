@@ -48,8 +48,8 @@ TRAIN:
   EPOCHS: 2500
   LOSS:
     NAME: L1
-    USE_L1_WEIGHT_DECAY: false
-    WEIGHT_DECAY_FACTOR: 0.9
+    USE_L1_WEIGHT_DECAY: true
+    WEIGHT_DECAY_FACTOR: 10.
   OPTIMIZER:
     BETAS:
     - 0.9
@@ -57,7 +57,7 @@ TRAIN:
     EPS: 1.0e-08
     LR: 1.0e-04
     NAME: Adam
-    WEIGHT_DECAY: 0.8
+    WEIGHT_DECAY: 0.
   SCHEDULER:
     EXP:
       GAMMA: 0.996
