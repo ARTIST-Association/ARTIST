@@ -27,8 +27,7 @@ def calculateSunAngles(hour,minute,sec,day,month,year,observerLatitude,observerL
         sec < 0 or sec > 59 or \
         day < 1 or day > 31 or \
         month < 1 or month > 12):
-        azimuthAngle = 0.0
-        elevationAngle = 0.0
+        raise ValueError("at least one value exeeded time range in calculateSunAngles")
     else:
         import math
         observerLatitudeInt = observerLatitude / 180.0*math.pi

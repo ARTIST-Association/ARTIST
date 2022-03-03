@@ -6,6 +6,7 @@ import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
+import random
 
 from environment import Environment
 from heliostat_models import AbstractHeliostat
@@ -119,19 +120,32 @@ def _random_sun_array(
         cfg: CfgNode,
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    sun_directions = th.rand(
-        (cfg.NUM_SAMPLES, 3),
-        dtype=th.get_default_dtype(),
-        device=device,
-    )
-
-    # Allow negative x- and y-values.
-    sun_directions[:, :-1] -= 0.5
+    
+    size = cfg.NUM_SAMPLES
+    observerLatitude = cfg.LATITUDE
+    observerLongitude = cfg.LONGITUDE
+    
+    ae = []
+    for i in range(size):
+        year   = random.randint(1970,2050)
+        month  = random.randint(1,12)
+        day    = random.randint(1,29) #spare late days in month, just makes a lot of if clauses
+        hour   = random.randint(1,23)
+        minute = random.randint(1,59)
+        sec    = random.randint(1,59)
+        azi, ele = utils.calculateSunAngles(hour,minute,sec,day,month,year,observerLatitude,observerLongitude)
+        ae.append([azi,ele])
+    
+    ae = th.tensor(ae,
+                   dtype=th.get_default_dtype(),
+                   device=device,
+                   )
+    sun_directions = utils.ae_to_vec(ae[:,0], ae[:,1])
     sun_directions = (
         sun_directions
         / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-    )
-    ae = utils.vec_to_ae(sun_directions)
+        )
+    
     return sun_directions, ae
 
 

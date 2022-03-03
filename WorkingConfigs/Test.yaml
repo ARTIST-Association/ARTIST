@@ -30,8 +30,8 @@ H:
   REAL: {}
   SHAPE: real
 NURBS:
-  COLS: 10
-  ROWS: 10
+  COLS: 12
+  ROWS: 12
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:
