@@ -1,5 +1,5 @@
-ID: FullRun
-EXPERIMENT_NAME: 10NurbsReaplPos
+ID: PretrainTest
+EXPERIMENT_NAME: 12NurbsReaplPos
 LOAD_OPTIMIZER_STATE: false
 SEED: 42
 AC:
@@ -30,8 +30,8 @@ H:
   REAL: {}
   SHAPE: real
 NURBS:
-  COLS: 12
-  ROWS: 12
+  COLS: 6
+  ROWS: 6
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:
@@ -49,13 +49,13 @@ TRAIN:
   LOSS:
     NAME: L1
     USE_L1_WEIGHT_DECAY: false
-    WEIGHT_DECAY_FACTOR: 0.8
+    WEIGHT_DECAY_FACTOR: 0.9
   OPTIMIZER:
     BETAS:
     - 0.9
     - 0.999
     EPS: 1.0e-08
-    LR: 5.0e-05
+    LR: 1.0e-04
     NAME: Adam
     WEIGHT_DECAY: 0.8
   SCHEDULER:

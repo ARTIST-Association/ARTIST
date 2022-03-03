@@ -95,7 +95,7 @@ def generate_dataset(
         if save_dir:
             save_path = os.path.join(
                 save_dir,
-                f'{prefix}target_{i}.pt',
+                f'{prefix}_target_{i}.pt',
             )
 
         target_bitmap = create_target(
@@ -389,7 +389,7 @@ def log_dataset(
     if writer:
         for (i, target) in enumerate(targets):
             writer.add_image(
-                f"{prefix}target_{i}/originals",
+                f"{prefix}/target_{i}",
                 utils.colorize(target),
             )
     return targets

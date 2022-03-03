@@ -272,7 +272,7 @@ _C.TEST.INTERVAL                        = 100
 # Reduces test image array to 5, images will be generated with complete array
 
 _C.TEST.SUN_DIRECTIONS                  = CN()
-_C.TEST.SUN_DIRECTIONS.CASE             ="grid"   #SWITCH FOR SUN DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TEST.SUN_DIRECTIONS.CASE             ="random"   #SWITCH FOR SUN DIRECTION VEKTOR GENERATION: vecs, random, grid
 
 _C.TEST.SUN_DIRECTIONS.VECS             = CN()
 _C.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS  = [[-0.8662,  0.4890,  0.1026],] #Measurement Date 28.10.21 15:30
