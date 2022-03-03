@@ -133,7 +133,6 @@ def real_heliostat(
     h: torch.Tensor = h_ideal.clone()
     # h[:, -1] += zs
 
-    
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))
     # ax = plt.axes(projection ='3d')
