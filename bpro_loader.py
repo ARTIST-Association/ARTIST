@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-Vector3d = List[np.float64]
+Vector3d = List[np.floating]
 
 
 def load_bpro(
