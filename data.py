@@ -283,30 +283,36 @@ def _season_sun_array(device,
     infos = {}
     infos["date_time_ae"] = []
     if measurement_day:
-        try:
-            years = measurement_date.pop(0)
-        except:
-            years =[2021]
-        try:
+        if len(measurement_date) >= 1:
+            years = measurement_date[0]
+        else:
+            years = [2021]
+        if len(measurement_date) >= 2:
             months = measurement_date.pop(1)
-        except:
-            months =[10]
-        try:
+        else:
+            months = [10]
+        if len(measurement_date) >= 3:
             days = measurement_date.pop(2)
-        except:
-            days =[28]
-        try:
+        else:
+            days = [28]
+        if len(measurement_date) >= 4:
             hours = measurement_date.pop(3)
-        except:
-            hours =list(range(8 ,16, stepsize_hours))
-        try:
+        else:
+            hours = list(range(8, 16, stepsize_hours))
+        if len(measurement_date) >= 5:
             minutes = measurement_date.pop(4)
-        except:
-            minutes = list(range(0,60, stepsize_minutes))
-        try:
+        else:
+            minutes = list(range(0, 60, stepsize_minutes))
+        if len(measurement_date) >= 6:
             secs = [measurement_date.pop(5)]
-        except:
-            secs =[0]
+        else:
+            secs = [0]
+        if len(measurement_date) >= 7:
+            print(
+                'Measurement date includes redundant data '
+                '(everything after seconds specification '
+                '– the seventh argument – is ignored).'
+            )
             
         sun_vecs_measurement, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
         trajectories.append(sun_vecs_measurement)
