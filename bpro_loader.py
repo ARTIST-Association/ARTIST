@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-Vector3d = List[float]
+Vector3d = List[np.float64]
 
 
 def load_bpro(
@@ -14,7 +14,7 @@ def load_bpro(
 ) -> Tuple[
     List[List[Vector3d]],
     List[List[Vector3d]],
-    List[List[np.ndarray]],
+    List[List[Vector3d]],
     float,
     float,
 ]:
@@ -38,7 +38,7 @@ def load_bpro(
         # nFacets =1
         positions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
         directions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
-        ideal_normal_vecs: List[List[np.ndarray]] = [
+        ideal_normal_vecs: List[List[Vector3d]] = [
             [] for _ in range(nFacets)
         ]
 

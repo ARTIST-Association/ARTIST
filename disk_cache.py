@@ -104,6 +104,7 @@ def hash_args(
 @th.no_grad()
 def disk_cache(
         func: F,
+        device: th.device,
         save_dir: str,
         prefix: str = '',
         ignore_argnums: List = [],
@@ -128,7 +129,7 @@ def disk_cache(
         new_path = save_dir / (file_prefix + hash_val + '.pt')
 
         if new_path.is_file():
-            result, rng_states = th.load(new_path)
+            result, rng_states = th.load(new_path, map_location=device)
 
             if on_load:
                 result = on_load(result)
