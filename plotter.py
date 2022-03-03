@@ -83,9 +83,9 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
     # print(th.max(pred_angles), th.mean(pred_angles))
     target = target_points 
     pred = pred_points
-    pred = pred[pred[:,-1] >= th.max(target[:,-1])]
+    # pred = pred[pred[:,-1] >= th.max(target[:,-1])]
     diff = diff_points
-    diff = diff[diff[:,-1] >= th.max(target[:,-1])]
+    # diff = diff[diff[:,-1] >= th.max(target[:,-1])]
 
 
     fig = plt.figure(figsize=(15,6))

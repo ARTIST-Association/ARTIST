@@ -757,9 +757,9 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     # state = th.random.get_rng_state()
 
-    # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True or cfg.TEST.PLOT.SEASON:
-    #     H_validation = build_target_heliostat(cfg, device)
-    #     ENV_validation = Environment(cfg.AC, device)
+    if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True or cfg.TEST.PLOT.SEASON:
+        H_validation = build_target_heliostat(cfg, device)
+        ENV_validation = Environment(cfg.AC, device)
 
     # if cfg.TEST.PLOT.GRID:
     #     (
@@ -819,34 +819,34 @@ def main(config_file_name: Optional[str] = None) -> None:
     #         "naive_spheric_"
     #     )
         
-    # if cfg.TEST.PLOT.SEASON:
-    #     (
-    #         season_test_sun_directions,
-    #         season_test_extras,
-    #     ) = cached_generate_season_sun_array(
-    #         cfg.TEST.SUN_DIRECTIONS,
-    #         device,
-    #         case="season",
-    #     )
-    #     season_test_sun_directions = season_test_sun_directions.to(device) #TODO bring to GPU in data.py
-    #     season_test_targets = cached_generate_season_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         season_test_sun_directions,
-    #         None,
-    #         None,
-    #         "season_"
-    #     )
-        # H_naive_season = build_target_heliostat(cfg, device)
-        # H_naive_season._normals = H_naive_season._normals_ideal
-        # naive_season_test_targets = cached_generate_naive_season_dataset(
-        #     H_naive_season,
-        #     ENV_validation,
-        #     season_test_sun_directions,
-        #     None,
-        #     None,
-        #     "naive_season_"
-        # )
+    if cfg.TEST.PLOT.SEASON:
+        (
+            season_test_sun_directions,
+            season_test_extras,
+        ) = cached_generate_season_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="season",
+        )
+        season_test_sun_directions = season_test_sun_directions.to(device) #TODO bring to GPU in data.py
+        season_test_targets = cached_generate_season_dataset(
+            H_validation,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            None,
+            "season_"
+        )
+        H_naive_season = build_target_heliostat(cfg, device)
+        H_naive_season._normals = H_naive_season._normals_ideal
+        naive_season_test_targets = cached_generate_naive_season_dataset(
+            H_naive_season,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            None,
+            "naive_season_"
+        )
 
     # plotter.test_surfaces(H_target)
     # exit()
@@ -860,7 +860,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     R = Renderer(H, ENV)
 
 #pretraining 
-    pretrain_epochs = 1500
+    pretrain_epochs = 200
     steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
     opt, sched = build_optimizer_scheduler(
         cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
@@ -868,6 +868,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     epoch_shift_width = len(str(pretrain_epochs))
     best_result = th.tensor(float('inf'))
     prefix = 'pretrain'
+    plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer = None)
     for epoch in range(pretrain_epochs):
         train_objects = TrainObjects(
             opt,
@@ -894,17 +895,17 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'missed: {num_missed.detach().cpu().item()}, '
         )
         if epoch % 15 ==0:
-            test_loss, _ = test_batch(
-                H,
-                ENV,
-                R,
-                test_targets,
-                test_sun_directions,
-                test_loss_func,
-                epoch,
-                writer,
-                "pretest"
-            )
+            # test_loss, _ = test_batch(
+            #     H,
+            #     ENV,
+            #     R,
+            #     test_targets,
+            #     test_sun_directions,
+            #     test_loss_func,
+            #     epoch,
+            #     writer,
+            #     "pretest"
+            # )
             plotter.plot_surfaces_mrad(
                 H_naive_target,
                 H,
@@ -940,16 +941,16 @@ def main(config_file_name: Optional[str] = None) -> None:
     #                 reduction=False
     #             )
     
-    # season_naive_test_loss, _ = test_batch(
-    #                 H,
-    #                 ENV,
-    #                 R,
-    #                 season_test_targets,
-    #                 season_test_sun_directions,
-    #                 test_loss_func,
-    #                 0,
-    #                 reduction=False
-    #             )
+    season_naive_test_loss, _ = test_batch(
+                    H,
+                    ENV,
+                    R,
+                    season_test_targets,
+                    season_test_sun_directions,
+                    test_loss_func,
+                    0,
+                    reduction=False
+                )
     
     
     
@@ -970,7 +971,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
             prefix,
         )
-
+        if epoch == 0:
+            plotter.plot_surfaces_3D_mm(H, 100000, logdir_surfaces, writer = None)
         loss, pred_bitmap, num_missed = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -1021,7 +1023,8 @@ def main(config_file_name: Optional[str] = None) -> None:
                 #                     season_test_loss,
                 #                     season_naive_test_loss, 
                 #                     logdir_enhanced_test, 
-                #                     epoch)
+                                    # epoch)
+                plotter.plot_surfaces_3D_mm(H, epoch, logdir_surfaces, writer = None)
             #     grid_test_loss, grid_test_bitmaps = test_batch(
             #                 H,
             #                 ENV,
@@ -1124,6 +1127,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "Test.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "DeepPretrain.yaml")
     main(path_to_yaml)
     # main()

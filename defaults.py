@@ -206,7 +206,7 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 _C.TRAIN                                = CN()
 _C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.SUN_DIRECTIONS                 = CN()
-_C.TRAIN.SUN_DIRECTIONS.CASE            ="vecs"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TRAIN.SUN_DIRECTIONS.CASE            ="random"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
 
 _C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
 _C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.43719268,  0.7004466,   0.564125  ],]
