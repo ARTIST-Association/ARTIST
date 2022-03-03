@@ -130,15 +130,21 @@ def disk_cache(
 
         if new_path.is_file():
             result, rng_states = th.load(new_path, map_location=device)
+            # Place RNG states on CPU.
+            rng_states = (
+                rng_states[0].cpu(),
+                (
+                    [t.cpu() for t in rng_states[1]]
+                    if rng_states[1] is not None
+                    else None
+                ),
+            )
 
             if on_load:
                 result = on_load(result)
-            th.set_rng_state(rng_states[0].cpu())
+            th.set_rng_state(rng_states[0])
             if th.cuda.is_available() and rng_states[1] is not None:
-                th.cuda.set_rng_state_all(list(map(
-                    lambda t: t.cpu(),
-                    rng_states[1],
-                )))
+                th.cuda.set_rng_state_all(rng_states[1])
         else:
             result = func(*args, **kwargs)
 
