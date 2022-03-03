@@ -62,6 +62,41 @@ def real_heliostat(
         facetHeader_struct,
         ray_struct,
     )
+    if cfg.ZS_PATH:
+        integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
+
+        for (
+                facet_index,
+                (integrated_facet, pos_facet),
+        ) in enumerate(zip(integrated, positions)):
+            integrated_facet = iter(integrated_facet)
+            in_facet_index = 0
+            while in_facet_index < len(pos_facet):
+                curr_integrated = next(integrated_facet)
+                pos = pos_facet[in_facet_index]
+
+                # Remove positions without matching integrated.
+                rounded_pos = [round(val, 4) for val in pos[:-1]]
+                rounded_integrated = [
+                    round(val, 4)
+                    for val in curr_integrated[:-1]
+                ]
+                while not all(map(
+                        lambda tup: tup[0] == tup[1],
+                        zip(rounded_pos, rounded_integrated),
+                )):
+                    pos_facet.pop(in_facet_index)
+                    directions[facet_index].pop(in_facet_index)
+                    ideal_normal_vecs[facet_index].pop(in_facet_index)
+                    if in_facet_index >= len(pos_facet):
+                        break
+
+                    pos = pos_facet[in_facet_index]
+                    rounded_pos = [round(val, 4) for val in pos[:-1]]
+                else:
+                    pos[-1] = curr_integrated[-1]
+                    in_facet_index += 1
+        del integrated
 
     h_normal_vecs = []
     h_ideal_vecs = []
