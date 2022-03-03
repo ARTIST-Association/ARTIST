@@ -83,9 +83,10 @@ def generate_dataset(
         ENV: Environment,
         sun_directions: torch.Tensor,
         save_dir: Optional[str],
+        prefix: str,
         writer: Optional[SummaryWriter] = None,
-        prefix: str = '',
 ) -> torch.Tensor:
+    assert prefix, "prefix string cannot be empty"
 
     device = H.device
     save_path: Optional[str] = None
@@ -112,7 +113,7 @@ def generate_dataset(
             )
         targets[i] = target_bitmap
     assert targets is not None
-    log_dataset(writer, targets, prefix=prefix)
+    log_dataset(prefix, writer, targets)
     return targets
 
 
@@ -428,10 +429,11 @@ def generate_sun_array(
 
 
 def log_dataset(
+        prefix: str,
         writer: Optional[SummaryWriter],
         targets: torch.Tensor,
-        prefix: str = '',
 ) -> torch.Tensor:
+    assert prefix, "prefix string cannot be empty"
     if writer:
         for (i, target) in enumerate(targets):
             writer.add_image(
