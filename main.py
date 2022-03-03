@@ -489,13 +489,12 @@ def calc_batch_loss(
 
         with th.no_grad():
             # Plot target images to TensorBoard
-            if writer:
-                if epoch % 50 == 0:
-                    writer.add_image(
-                        f"{prefix}/prediction_{i}",
-                        utils.colorize(pred_bitmap),
-                        epoch,
-                    )
+            if writer and epoch % 50 == 0:
+                writer.add_image(
+                    f"{prefix}/prediction_{i}",
+                    utils.colorize(pred_bitmap),
+                    epoch,
+                )
 
             if return_extras:
                 # Compare metrics
@@ -610,10 +609,7 @@ def test_batch(
 
         if writer:
             writer.add_image(
-                            f"{prefix}/prediction_{i}",
-                            utils.colorize(pred_bitmap),
-                            epoch,
-                        )
+                f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
 
     if writer:
         writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
@@ -997,7 +993,7 @@ def main(config_file_name: Optional[str] = None) -> None:
                     logdir_surfaces,
                     writer,
                 )
-                # if not epoch ==0:
+                # if epoch != 0:
                 # season_test_loss, season_test_bitmaps = test_batch(
                 #     H,
                 #     ENV,
