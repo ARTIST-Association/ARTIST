@@ -88,11 +88,7 @@ def real_heliostat(
             h[-1],
             h_normal_vecs[-1],
             h_ideal_vecs[-1],
-<<<<<<< HEAD
             num_samples=32,
-=======
-            num_samples=16,
->>>>>>> 531eb3edd20b944f2a0efd3e68a29e2b70ab7566
         ))
 
     h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
