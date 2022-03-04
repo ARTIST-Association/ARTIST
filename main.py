@@ -760,16 +760,9 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     # state = th.random.get_rng_state()
 
-<<<<<<< HEAD
     # if cfg.TEST.PLOT.GRID == True or cfg.TEST.PLOT.SPHERIC == True or cfg.TEST.PLOT.SEASON:
     #     H_validation = build_target_heliostat(cfg, device)
     #     ENV_validation = Environment(cfg.AC, device)
-=======
-    if cfg.TEST.PLOT.GRID or cfg.TEST.PLOT.SPHERIC or cfg.TEST.PLOT.SEASON:
-        H_validation = build_target_heliostat(cfg, device)
-        ENV_validation = Environment(cfg.AC, device)
->>>>>>> 17e22f23a28dc67587dd6b43e0b722a83f3844a9
-
     # if cfg.TEST.PLOT.GRID:
     #     (
     #         grid_test_sun_directions,
