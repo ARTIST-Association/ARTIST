@@ -111,12 +111,16 @@ def set_up_dataset_caching(
             ignore_argnums=[1],
         )
 
-    def make_cached_generate_dataset(prefix):
-        log_dataset = functools.partial(
-            data.log_dataset,
-            prefix,
-            writer,
-        )
+    def make_cached_generate_dataset(prefix, tb_log=True):
+        if tb_log:
+            log_dataset = functools.partial(
+                data.log_dataset,
+                prefix,
+                writer,
+            )
+        else:
+            log_dataset = None
+
         return disk_cache.disk_cache(
             data.generate_dataset,
             device,
@@ -138,12 +142,12 @@ def set_up_dataset_caching(
             make_cached_generate_dataset('train'),
             make_cached_generate_dataset('pretrain'),
             make_cached_generate_dataset('test'),
-            make_cached_generate_dataset('grid'),
-            make_cached_generate_dataset('naive_grid'),
-            make_cached_generate_dataset('spheric'),
-            make_cached_generate_dataset('naive_spheric'),
-            make_cached_generate_dataset('season'),
-            make_cached_generate_dataset('naive_season'),
+            make_cached_generate_dataset('grid', False),
+            make_cached_generate_dataset('naive_grid', False),
+            make_cached_generate_dataset('spheric', False),
+            make_cached_generate_dataset('naive_spheric', False),
+            make_cached_generate_dataset('season', False),
+            make_cached_generate_dataset('naive_season', False),
         ),
     )
 
