@@ -665,7 +665,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         elif '/' in logdir:
             logdir = functools.reduce(os.path.join, logdir.split('/'))
 
-        root_logdir = os.path.join(cfg.LOGDIR, cfg.ID)
+        root_logdir = os.path.join(logdir, cfg.ID)
         logdir = os.path.join(
             root_logdir,
             cfg.EXPERIMENT_NAME + f"_{time_str}",
