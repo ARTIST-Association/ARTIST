@@ -99,8 +99,18 @@ def set_up_dataset_caching(
         device: th.device,
         writer: Optional[SummaryWriter],
 ) -> Tuple[
-    Tuple[Callable, Callable, Callable, Callable],
-    Tuple[Callable, Callable, Callable, Callable, Callable, Callable],
+    Tuple[Callable, Callable, Callable, Callable, Callable],
+    Tuple[
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+    ],
 ]:
     def make_cached_generate_sun_array(prefix=''):
         return disk_cache.disk_cache(
@@ -450,7 +460,7 @@ def calc_batch_loss(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
 ]:
     # print(epoch)
     # if epoch == 0:
@@ -515,7 +525,7 @@ def calc_batch_grads(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
 ]:
     train_objects.opt.zero_grad(set_to_none=True)
 
@@ -530,7 +540,7 @@ def calc_batch_grads(
 
 def train_batch(
         train_objects: TrainObjects,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():

@@ -137,7 +137,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             discrete_points_ideal: Optional[torch.Tensor] = None,
             normals: Optional[torch.Tensor] = None,
             normals_ideal: Optional[torch.Tensor] = None,
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    ) -> Union[
+        torch.Tensor,
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+    ]:
         dtype = position_on_field.dtype
 
         h_normal = th.tensor(

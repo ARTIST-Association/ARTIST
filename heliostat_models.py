@@ -64,15 +64,16 @@ def real_heliostat(
     )
     if cfg.ZS_PATH:
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
+        pos_type = type(positions[0][0][0])
 
         for (
                 facet_index,
                 (integrated_facet, pos_facet),
         ) in enumerate(zip(integrated, positions)):
-            integrated_facet = iter(integrated_facet)
+            integrated_facet_iter = iter(integrated_facet)
             in_facet_index = 0
             while in_facet_index < len(pos_facet):
-                curr_integrated = next(integrated_facet)
+                curr_integrated = next(integrated_facet_iter)
                 pos = pos_facet[in_facet_index]
 
                 # Remove positions without matching integrated.
@@ -94,7 +95,7 @@ def real_heliostat(
                     pos = pos_facet[in_facet_index]
                     rounded_pos = [round(val, 4) for val in pos[:-1]]
                 else:
-                    pos[-1] = curr_integrated[-1]
+                    pos[-1] = pos_type(curr_integrated[-1])
                     in_facet_index += 1
         del integrated
 
@@ -133,7 +134,7 @@ def real_heliostat(
     h_ideal = th.cat(h, dim=0)
     h: torch.Tensor = h_ideal.clone()
     if not cfg.ZS_PATH:
-        zs: torch.Tensor = th.cat(zs, dim=0)
+        zs: torch.Tensor = th.cat(zs, dim=0)  # type: ignore[no-redef]
         h[:, -1] += zs
 
     # import matplotlib.pyplot as plt

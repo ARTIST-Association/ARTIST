@@ -82,7 +82,8 @@ def hash_args(
 
     try:
         code_str = inspect.getsource(func)
-        bytecode = list(compile(code_str, '<string>', 'exec').co_code)
+        bytecode: Optional[List] = list(
+            compile(code_str, '<string>', 'exec').co_code)
     except OSError:
         bytecode = None
 
