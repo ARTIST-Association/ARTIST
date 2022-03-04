@@ -27,6 +27,7 @@
 
 # Misc
 *.pdf
+*.lnk
 
 # Experimental log data
 /Results/
