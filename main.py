@@ -656,12 +656,20 @@ def main(config_file_name: Optional[str] = None) -> None:
     if cfg.SAVE_RESULTS:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
+
+        # Normalize OS-specific paths in a non-sophisticated way.
+        logdir: Optional[str] = cfg.LOGDIR
+        assert logdir is not None
+        if '\\' in logdir:
+            logdir = functools.reduce(os.path.join, logdir.split('\\'))
+        elif '/' in logdir:
+            logdir = functools.reduce(os.path.join, logdir.split('/'))
+
         root_logdir = os.path.join(cfg.LOGDIR, cfg.ID)
-        logdir: Optional[str] = os.path.join(
+        logdir = os.path.join(
             root_logdir,
             cfg.EXPERIMENT_NAME + f"_{time_str}",
         )
-        assert logdir is not None
         logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
         assert logdir_files is not None
         logdir_images: Optional[str] = os.path.join(logdir, "Images")
