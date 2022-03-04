@@ -250,6 +250,15 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 width_ratio,
             )))
 
+        # Handle non-rectangular facet points.
+        if (
+                facet.h_rows is not None and facet.h_cols is not None
+                and facet.h_rows * facet.h_cols != len(facet._discrete_points)
+        ):
+            facet.h_rows = None
+            facet.h_cols = None
+
+
     @staticmethod
     def _facet_heliostat_config(
             heliostat_config: CfgNode,
