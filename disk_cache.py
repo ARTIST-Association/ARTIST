@@ -80,6 +80,12 @@ def hash_args(
         if name in prev_argnames
     ))
 
+    try:
+        code_str = inspect.getsource(func)
+        bytecode = list(compile(code_str, '<string>', 'exec').co_code)
+    except OSError:
+        bytecode = None
+
     # Find arguments we want to hash.
     hash_args = tuple(
         arg
@@ -94,7 +100,17 @@ def hash_args(
 
     # Hash arguments and RNG state.
     hash_val = hashlib.md5(json.dumps(
-        (hash_args, hash_kwargs, th.get_rng_state(), th.cuda.get_rng_state()),
+        (
+            hash_args,
+            hash_kwargs,
+            bytecode,
+            th.get_rng_state(),
+            (
+                th.cuda.get_rng_state_all()
+                if th.cuda.is_available()
+                else None
+            ),
+        ),
         sort_keys=True,
         cls=ExtendedEncoder,
     ).encode()).hexdigest()
