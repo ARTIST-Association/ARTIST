@@ -856,7 +856,6 @@ def main(config_file_name: Optional[str] = None) -> None:
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 
-<<<<<<< HEAD
 #pretraining 
     # pretrain_epochs = 2000
     # steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
@@ -911,62 +910,6 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     logdir_pretrain_surfaces,
     #     None
     # )
-=======
-    # Pretraining
-    pretrain_epochs = 200
-    steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
-    opt, sched = build_optimizer_scheduler(
-        cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
-    loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
-    epoch_shift_width = len(str(pretrain_epochs))
-    best_result = th.tensor(float('inf'))
-    prefix = 'pretrain'
-    plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer=None)
-    for epoch in range(pretrain_epochs):
-        train_objects = TrainObjects(
-            opt,
-            sched,
-            H,
-            ENV,
-            R,
-            naive_targets,
-            sun_directions,
-            loss_func,
-            epoch,
-            prefix,
-            writer,
-        )
-
-        if writer:
-            writer.add_scalar(f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
-
-        loss, pred_bitmap, num_missed = train_batch(train_objects)
-        print(
-            f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
-            f'loss: {loss.detach().cpu().numpy()}, '
-            f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-            f'missed: {num_missed.detach().cpu().item()}, '
-        )
-        if epoch % 15 == 0:
-            # test_loss, _ = test_batch(
-            #     H,
-            #     ENV,
-            #     R,
-            #     test_targets,
-            #     test_sun_directions,
-            #     test_loss_func,
-            #     epoch,
-            #     "pretest",
-            #     writer,
-            # )
-            plotter.plot_surfaces_mrad(
-                H_naive_target,
-                H,
-                epoch,
-                logdir_pretrain_surfaces,
-                None
-            )
->>>>>>> 17e22f23a28dc67587dd6b43e0b722a83f3844a9
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
@@ -981,7 +924,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     # Generate naive Losses before training
     # spheric_naive_test_loss, _ = test_batch(
-<<<<<<< HEAD
     #                 H,
     #                 ENV,
     #                 R,
@@ -1003,35 +945,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #                 reduction=False
     #             )
     
-    
-    
-    
-    
-=======
-    #     H,
-    #     ENV,
-    #     R,
-    #     spheric_test_targets,
-    #     spheric_test_sun_directions,
-    #     test_loss_func,
-    #     0,
-    #     'naive_spheric',
-    #     reduction=False,
-    # )
 
-    season_naive_test_loss, _ = test_batch(
-        H,
-        ENV,
-        R,
-        season_test_targets,
-        season_test_sun_directions,
-        test_loss_func,
-        0,
-        'naive_season',
-        reduction=False,
-    )
-
->>>>>>> 17e22f23a28dc67587dd6b43e0b722a83f3844a9
     prefix = "train"
     for epoch in range(epochs):
         train_objects = TrainObjects(
@@ -1047,16 +961,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             prefix,
             writer,
         )
-<<<<<<< HEAD
         # if epoch == 0:
         #     plotter.plot_surfaces_3D_mm(H, 100000, logdir_surfaces, writer = None)
-=======
-
-        if epoch == 0:
-            plotter.plot_surfaces_3D_mm(
-                H, 100000, logdir_surfaces, writer=None)
-
->>>>>>> 17e22f23a28dc67587dd6b43e0b722a83f3844a9
         loss, pred_bitmap, num_missed = train_batch(train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
