@@ -4,6 +4,7 @@
 # Deflectometry data
 *.binp
 *.bpro
+*.csv
 
 # PyTorch
 *.pt
