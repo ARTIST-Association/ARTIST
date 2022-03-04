@@ -83,9 +83,10 @@ def generate_dataset(
         ENV: Environment,
         sun_directions: torch.Tensor,
         save_dir: Optional[str],
+        prefix: str,
         writer: Optional[SummaryWriter] = None,
-        prefix: str = '',
 ) -> torch.Tensor:
+    assert prefix, "prefix string cannot be empty"
 
     device = H.device
     save_path: Optional[str] = None
@@ -112,7 +113,7 @@ def generate_dataset(
             )
         targets[i] = target_bitmap
     assert targets is not None
-    log_dataset(writer, targets, prefix=prefix)
+    log_dataset(prefix, writer, targets)
     return targets
 
 
@@ -120,32 +121,41 @@ def _random_sun_array(
         cfg: CfgNode,
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    
     size = cfg.NUM_SAMPLES
     observerLatitude = cfg.LATITUDE
     observerLongitude = cfg.LONGITUDE
-    
+
     ae = []
     for i in range(size):
-        year   = random.randint(1970,2050)
-        month  = random.randint(1,12)
-        day    = random.randint(1,29) #spare late days in month, just makes a lot of if clauses
-        hour   = random.randint(1,23)
-        minute = random.randint(1,59)
-        sec    = random.randint(1,59)
-        azi, ele = utils.calculateSunAngles(hour,minute,sec,day,month,year,observerLatitude,observerLongitude)
-        ae.append([azi,ele])
-    
-    ae = th.tensor(ae,
-                   dtype=th.get_default_dtype(),
-                   device=device,
-                   )
-    sun_directions = utils.ae_to_vec(ae[:,0], ae[:,1])
+        year = random.randint(1970, 2050)
+        month = random.randint(1, 12)
+        # Exclude late days in month, just cause a lot of if-clauses.
+        day = random.randint(1, 29)
+        hour = random.randint(1, 23)
+        minute = random.randint(1, 59)
+        sec = random.randint(1, 59)
+        azi, ele = utils.calculateSunAngles(
+            hour,
+            minute,
+            sec,
+            day,
+            month,
+            year,
+            observerLatitude,
+            observerLongitude,
+        )
+        ae.append([azi, ele])
+
+    ae = th.tensor(
+        ae,
+        dtype=th.get_default_dtype(),
+        device=device,
+    )
+    sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
     sun_directions = (
         sun_directions
         / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
-        )
-    
+    )
     return sun_directions, ae
 
 
@@ -257,101 +267,137 @@ def _spheric_sun_array(
 
     return sun_directions, ae
 
-def _season_sun_array(device, 
-             stepsize_hours=1, 
-             stepsize_minutes=30,
-             longest_day=True, 
-             shortest_day=True, 
-             equinox_spring=True, 
-             measurement_day = True,
-             *measurement_date):
-    """
-    Input: 
-        -stepsize for defining the grid distances
-        -device
-        -which days to simulate
-        -args must be in descending order years,months,days...
+
+def _season_sun_array(
+        device,
+        stepsize_hours=1,
+        stepsize_minutes=30,
+        longest_day=True,
+        shortest_day=True,
+        equinox_spring=True,
+        measurement_day=True,
+        *measurement_date,
+):
+    """Input:
+        - stepsize for defining the grid distances
+        - device
+        - which days to simulate
+        - args must be in descending order years, months, days, ...
+
    Output:
-       -List of all sun positions including simualted hours (N,8) including [hour,minute,sec,day,month,year,azi,ele]
-        starting with longest day, start of autumn, shortest day, start of spring, measurment day
-       -len of differenz day simulations in shape (N,)
-       -name of simulated days
+       - List of all sun positions including simualted hours (N, 8)
+         including [hour,minute,sec,day,month,year,azi,ele] starting
+         with longest day, start of autumn, shortest day, start of
+         spring, measurment day
+       - length of different day simulations in shape (N,)
+       - name of simulated days
     """
-    
-    minutes = list(range(0,60, stepsize_minutes))
+    minutes = list(range(0, 60, stepsize_minutes))
     trajectories = []
     infos = {}
     infos["date_time_ae"] = []
     if measurement_day:
-        try:
-            years = measurement_date.pop(0)
-        except:
-            years =[2021]
-        try:
+        if len(measurement_date) >= 1:
+            years = measurement_date[0]
+        else:
+            years = [2021]
+        if len(measurement_date) >= 2:
             months = measurement_date.pop(1)
-        except:
-            months =[10]
-        try:
+        else:
+            months = [10]
+        if len(measurement_date) >= 3:
             days = measurement_date.pop(2)
-        except:
-            days =[28]
-        try:
+        else:
+            days = [28]
+        if len(measurement_date) >= 4:
             hours = measurement_date.pop(3)
-        except:
-            hours =list(range(8 ,16, stepsize_hours))
-        try:
+        else:
+            hours = list(range(8, 16, stepsize_hours))
+        if len(measurement_date) >= 5:
             minutes = measurement_date.pop(4)
-        except:
-            minutes = list(range(0,60, stepsize_minutes))
-        try:
+        else:
+            minutes = list(range(0, 60, stepsize_minutes))
+        if len(measurement_date) >= 6:
             secs = [measurement_date.pop(5)]
-        except:
-            secs =[0]
-            
-        sun_vecs_measurement, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        else:
+            secs = [0]
+        if len(measurement_date) >= 7:
+            print(
+                'Measurement date includes redundant data '
+                '(everything after seconds specification '
+                '– the seventh argument – is ignored).'
+            )
+
+        sun_vecs_measurement, extras = utils.get_sun_array(
+            years,
+            months,
+            days,
+            hours,
+            minutes,
+            secs,
+        )
         trajectories.append(sun_vecs_measurement)
         infos["measurement"] = len(sun_vecs_measurement)
         infos["date_time_ae"].append(extras)
-    
+
     if shortest_day:
         years = [2021]
         months = [12]
         days = [21]
-        hours = list(range(9 ,15, stepsize_hours))
-        secs = [0]   
-        sun_vecs_short, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        hours = list(range(9, 15, stepsize_hours))
+        secs = [0]
+        sun_vecs_short, extras = utils.get_sun_array(
+            years,
+            months,
+            days,
+            hours,
+            minutes,
+            secs,
+        )
         trajectories.append(sun_vecs_short)
         infos["short"] = len(sun_vecs_short)
         infos["date_time_ae"].append(extras)
-    
+
     if equinox_spring:
         years = [2022]
         months = [3]
         days = [20]
-        hours = list(range(7 ,17, stepsize_hours))
-        secs = [0]   
-        sun_vecs_autumn, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        hours = list(range(7, 17, stepsize_hours))
+        secs = [0]
+        sun_vecs_autumn, extras = utils.get_sun_array(
+            years,
+            months,
+            days,
+            hours,
+            minutes,
+            secs,
+        )
         trajectories.append(sun_vecs_autumn)
         infos["spring"] = len(sun_vecs_autumn)
         infos["date_time_ae"].append(extras)
-    
+
     if longest_day:
         years = [2022]
         months = [6]
         days = [21]
-        hours = list(range(5,19, stepsize_hours))
-        secs = [0]   
-        sun_vecs_long, extras  = utils.get_sun_array(years, months, days, hours, minutes, secs)
+        hours = list(range(5, 19, stepsize_hours))
+        secs = [0]
+        sun_vecs_long, extras = utils.get_sun_array(
+            years,
+            months,
+            days,
+            hours,
+            minutes, secs,
+        )
         trajectories.append(sun_vecs_long)
-        infos["long"] = len(sun_vecs_long) #TODO: Tidy up!
+        infos["long"] = len(sun_vecs_long)  # TODO: Tidy up!
         infos["date_time_ae"].append(extras)
 
+    if len(trajectories) == 0:
+        raise ValueError("No day submitted to function")
     trajectories = th.cat(trajectories).to(device)
 
-    # else:
-    #     raise ValueError("No day submitted to function")
     return trajectories, infos
-
 
 
 def generate_sun_array(
@@ -373,7 +419,8 @@ def generate_sun_array(
     elif case == "vecs":
         sun_directions, extras = _vec_sun_array(cfg.VECS, device)
     elif case == "spheric":
-        sun_directions, extras = _spheric_sun_array(cfg.SPHERIC, device, train_vec)
+        sun_directions, extras = _spheric_sun_array(
+            cfg.SPHERIC, device, train_vec)
     elif case == "season":
         sun_directions, extras = _season_sun_array(device)
     else:
@@ -382,10 +429,11 @@ def generate_sun_array(
 
 
 def log_dataset(
+        prefix: str,
         writer: Optional[SummaryWriter],
         targets: torch.Tensor,
-        prefix: str = '',
 ) -> torch.Tensor:
+    assert prefix, "prefix string cannot be empty"
     if writer:
         for (i, target) in enumerate(targets):
             writer.add_image(

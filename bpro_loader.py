@@ -1,3 +1,4 @@
+import csv
 import struct
 from typing import List, Tuple
 
@@ -66,3 +67,29 @@ def load_bpro(
                 # powers.append(ray_data[6])
 
     return positions, directions, ideal_normal_vecs, width, height
+
+
+def load_csv(path: str, num_facets: int) -> List[List[List[float]]]:
+    facets: List[List[List[float]]] = [[] for _ in range(num_facets)]
+    # mm to m conversion factor
+    mm_to_m_factor = 0.001
+
+    with open(path, 'r', newline='') as csv_file:
+        # Skip title
+        next(csv_file)
+        # Skip empty line
+        next(csv_file)
+        csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            if row['z-integrated(mm)'] == 'NaN':
+                continue
+
+            # Convert mm to m
+            x = mm_to_m_factor * float(row['x-ideal(mm)'])
+            y = mm_to_m_factor * float(row['y-ideal(mm)'])
+            z = mm_to_m_factor * float(row['z-integrated(mm)'])
+            # Facet indices in CSV start at one.
+            facet_index = int(row['FacetIndex']) - 1
+            facets[facet_index].append([x, y, z])
+
+    return facets
