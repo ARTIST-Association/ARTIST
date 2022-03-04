@@ -556,7 +556,6 @@ class AbstractHeliostat:
     cfg: CfgNode
 
     _discrete_points: torch.Tensor
-    _ideal_discrete_points: torch.Tensor
     _normals: torch.Tensor
 
     def __init__(self, *args, **kwargs) -> None:
@@ -571,10 +570,6 @@ class AbstractHeliostat:
     @property
     def discrete_points(self) -> torch.Tensor:
         return self._discrete_points
-
-    @property
-    def ideal_discrete_points(self) -> torch.Tensor:
-        return self._ideal_discrete_points
 
     @property
     def normals(self) -> torch.Tensor:
@@ -658,7 +653,7 @@ class Heliostat(AbstractHeliostat):
             params,
         ) = heliostat_properties
         self._discrete_points = heliostat
-        self._ideal_discrete_points = heliostat_ideal
+        self._discrete_points_ideal = heliostat_ideal
         self._normals = heliostat_normals
         self._normals_ideal = heliostat_ideal_vecs
         self.params = params
