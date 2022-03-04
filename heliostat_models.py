@@ -214,24 +214,24 @@ def heliostat_by_function(
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
     Z_ideal = th.zeros_like(Z)
-    h_ideal = th.stack((X, Y, Z_ideal)).T
+    h_ideal = th.stack((X, Y, Z_ideal)).T.reshape(-1, h_ideal.shape[-1])
     h = th.stack((X, Y, Z)).T
 
     normal_vecs = th.zeros_like(h)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
             try:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]], device=device)
                 next_row_vec = th.tensor(
-                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]])
+                    [X[i, j + 1], Y[i, j + 1], Z[i, j + 1]], device=device)
                 next_col_vec = th.tensor(
-                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]])
+                    [X[i + 1, j], Y[i + 1, j], Z[i + 1, j]], device=device)
             except Exception:
-                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]])
+                origin = th.tensor([X[i, j], Y[i, j], Z[i, j]], device=device)
                 next_row_vec = th.tensor(
-                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]])
+                    [X[i, j - 1], Y[i, j - 1], Z[i, j - 1]], device=device)
                 next_col_vec = th.tensor(
-                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]])
+                    [X[i - 1, j], Y[i - 1, j], Z[i - 1, j]], device=device)
 
             vec_1 = next_row_vec - origin
 
@@ -250,12 +250,12 @@ def heliostat_by_function(
             normal_vecs[i, j] = n
             # print(normal_vecs)
             # exit()
-    h = h.reshape(X.shape[0] * X.shape[1], -1).to(device)
-    h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1).to(device)
+    h = h.reshape(X.shape[0] * X.shape[1], -1)
+    h_normal_vecs = normal_vecs.reshape(X.shape[0] * X.shape[1], -1)
     h_ideal_vecs = th.tile(
-        th.tensor([0, 0, 1]),
+        th.tensor([0, 0, 1], dtype=h.dtype, device=device),
         (h_normal_vecs.shape[0], 1),
-    ).to(device)
+    )
 
     params = None
     return (
