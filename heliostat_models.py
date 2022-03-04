@@ -101,7 +101,8 @@ def real_heliostat(
     h_normal_vecs = []
     h_ideal_vecs = []
     h = []
-    zs = []
+    if not cfg.ZS_PATH:
+        zs = []
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
         h_normal_vecs.append(th.tensor(
@@ -119,19 +120,21 @@ def real_heliostat(
             dtype=dtype,
             device=device,
         ))
-        zs.append(utils.deflec_facet_zs_many(
-            h[-1],
-            h_normal_vecs[-1],
-            h_ideal_vecs[-1],
-            num_samples=16,
-        ))
+        if not cfg.ZS_PATH:
+            zs.append(utils.deflec_facet_zs_many(
+                h[-1],
+                h_normal_vecs[-1],
+                h_ideal_vecs[-1],
+                num_samples=16,
+            ))
 
     h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
     h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h_ideal = th.cat(h, dim=0)
-    # zs: torch.Tensor = th.cat(zs, dim=0)
     h: torch.Tensor = h_ideal.clone()
-    # h[:, -1] += zs
+    if not cfg.ZS_PATH:
+        zs: torch.Tensor = th.cat(zs, dim=0)
+        h[:, -1] += zs
 
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))
