@@ -214,7 +214,8 @@ def heliostat_by_function(
         raise ValueError("Z-Function not implemented in heliostat_models.py")
 
     Z_ideal = th.zeros_like(Z)
-    h_ideal = th.stack((X, Y, Z_ideal)).T.reshape(-1, h_ideal.shape[-1])
+    h_ideal = th.stack((X, Y, Z_ideal)).T
+    h_ideal = h_ideal.reshape(-1, h_ideal.shape[-1])
     h = th.stack((X, Y, Z)).T
 
     normal_vecs = th.zeros_like(h)
@@ -256,6 +257,7 @@ def heliostat_by_function(
         th.tensor([0, 0, 1], dtype=h.dtype, device=device),
         (h_normal_vecs.shape[0], 1),
     )
+    print(h.shape)
 
     params = None
     return (

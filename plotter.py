@@ -220,7 +220,7 @@ def plot_surfaces_3D_mm(heliostat_pred, epoch, logdir, writer = None):
     
     ideal = heliostat_pred.ideal_discrete_points
     ideal = ideal.detach().cpu()
-    
+    print(pred.shape, ideal.shape)
     pred[:,2] = pred[:,2]-ideal[:,2]
     
     
