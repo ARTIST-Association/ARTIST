@@ -106,7 +106,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
-        self._orig_world_points = self._discrete_points.clone()
+        self._orig_world_points = self._ideal_discrete_points.clone()
 
         utils.initialize_spline_knots(
             self.knots_x, self.knots_y, self.degree_x, self.degree_y)
@@ -175,12 +175,12 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 # This, of course, is slower and consumes more memory.
                 edge_factor = 5
                 world_points, rows, cols = utils.make_structured_points(
-                    self._discrete_points,
+                    self._ideal_discrete_points,
                     self.rows * edge_factor,
                     self.cols * edge_factor,
                 )
             else:
-                world_points = self._discrete_points
+                world_points = self._ideal_discrete_points
                 rows = self.h_rows
                 cols = self.h_cols
 
