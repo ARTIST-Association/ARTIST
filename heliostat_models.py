@@ -162,6 +162,12 @@ def real_heliostat(
     # plt.close(fig)
     # exit()
 
+    # # Deflect data is in NWU, we use ENU.
+    # h = h[..., [1, 0, 2]]
+    # h[..., 0] *= -1
+    # h_ideal = h_ideal[..., [1, 0, 2]]
+    # h_ideal[..., 0] *= -1
+
     # print(h_ideal_vecs)
     rows = None
     cols = None
