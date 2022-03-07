@@ -749,7 +749,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
     )
     # H_naive_target = build_target_heliostat(cfg, device)
-    # H_naive_target._normals = H_naive_target._normals_ideal
+    # H_naive_target._normals = H_naive_target._ideal_normals
     # naive_targets = cached_generate_pretrain_dataset(
     #     H_naive_target,
     #     ENV,
@@ -776,89 +776,89 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     # state = th.random.get_rng_state()
 
-    # if cfg.TEST.PLOT.GRID or cfg.TEST.PLOT.SPHERIC or cfg.TEST.PLOT.SEASON:
-    #     H_validation = build_target_heliostat(cfg, device)
-    #     ENV_validation = Environment(cfg.AC, device)
-    # if cfg.TEST.PLOT.GRID:
-    #     (
-    #         grid_test_sun_directions,
-    #         grid_test_ae,
-    #     ) = cached_generate_grid_sun_array(
-    #         cfg.TEST.SUN_DIRECTIONS,
-    #         device,
-    #         case="grid",
-    #     )
-    #     grid_test_targets = cached_generate_grid_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         grid_test_sun_directions,
-    #         None,
-    #         "grid",
-    #     )
-    #     # # th.random.set_rng_state(state)
-    #     H_naive_grid = build_target_heliostat(cfg, device)
-    #     H_naive_grid._normals = H_naive_grid._normals_ideal
-    #     naive_targets = cached_generate_naive_grid_dataset(
-    #         H_naive_grid,
-    #         ENV_validation,
-    #         grid_test_sun_directions,
-    #         None,
-    #         "naive",
-    #     )
-    # if cfg.TEST.PLOT.SPHERIC:
-    #     (
-    #         spheric_test_sun_directions,
-    #         spheric_test_ae,
-    #     ) = cached_generate_spheric_sun_array(
-    #         cfg.TEST.SUN_DIRECTIONS,
-    #         device,
-    #         train_vec=sun_directions,
-    #         case="spheric",
-    #     )
-    #     spheric_test_targets = cached_generate_spheric_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         spheric_test_sun_directions,
-    #         None,
-    #         "spheric",
-    #     )
+    if cfg.TEST.PLOT.GRID or cfg.TEST.PLOT.SPHERIC or cfg.TEST.PLOT.SEASON:
+        H_validation = build_target_heliostat(cfg, device)
+        ENV_validation = Environment(cfg.AC, device)
+    if cfg.TEST.PLOT.GRID:
+        (
+            grid_test_sun_directions,
+            grid_test_ae,
+        ) = cached_generate_grid_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="grid",
+        )
+        grid_test_targets = cached_generate_grid_dataset(
+            H_validation,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            "grid",
+        )
+        # # th.random.set_rng_state(state)
+        H_naive_grid = build_target_heliostat(cfg, device)
+        H_naive_grid._normals = H_naive_grid._normals_ideal
+        naive_targets = cached_generate_naive_grid_dataset(
+            H_naive_grid,
+            ENV_validation,
+            grid_test_sun_directions,
+            None,
+            "naive",
+        )
+    if cfg.TEST.PLOT.SPHERIC:
+        (
+            spheric_test_sun_directions,
+            spheric_test_ae,
+        ) = cached_generate_spheric_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            train_vec=sun_directions,
+            case="spheric",
+        )
+        spheric_test_targets = cached_generate_spheric_dataset(
+            H_validation,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            "spheric",
+        )
 
-    #     H_naive_spheric = build_target_heliostat(cfg, device)
-    #     H_naive_spheric._normals = H_naive_spheric._normals_ideal
-    #     naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
-    #         H_naive_spheric,
-    #         ENV_validation,
-    #         spheric_test_sun_directions,
-    #         None,
-    #         "naive_spheric",
-    #     )
-    # if cfg.TEST.PLOT.SEASON:
-    #     (
-    #         season_test_sun_directions,
-    #         season_test_extras,
-    #     ) = cached_generate_season_sun_array(
-    #         cfg.TEST.SUN_DIRECTIONS,
-    #         device,
-    #         case="season",
-    #     )
-    #     # TODO bring to GPU in data.py
-    #     season_test_sun_directions = season_test_sun_directions.to(device)
-    #     season_test_targets = cached_generate_season_dataset(
-    #         H_validation,
-    #         ENV_validation,
-    #         season_test_sun_directions,
-    #         None,
-    #         "season",
-    #     )
-    #     H_naive_season = build_target_heliostat(cfg, device)
-    #     H_naive_season._normals = H_naive_season._normals_ideal
-    #     naive_season_test_targets = cached_generate_naive_season_dataset(
-    #         H_naive_season,
-    #         ENV_validation,
-    #         season_test_sun_directions,
-    #         None,
-    #         "naive_season",
-    #     )
+        H_naive_spheric = build_target_heliostat(cfg, device)
+        H_naive_spheric._normals = H_naive_spheric._normals_ideal
+        naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
+            H_naive_spheric,
+            ENV_validation,
+            spheric_test_sun_directions,
+            None,
+            "naive_spheric",
+        )
+    if cfg.TEST.PLOT.SEASON:
+        (
+            season_test_sun_directions,
+            season_test_extras,
+        ) = cached_generate_season_sun_array(
+            cfg.TEST.SUN_DIRECTIONS,
+            device,
+            case="season",
+        )
+        # TODO bring to GPU in data.py
+        season_test_sun_directions = season_test_sun_directions.to(device)
+        season_test_targets = cached_generate_season_dataset(
+            H_validation,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            "season",
+        )
+        H_naive_season = build_target_heliostat(cfg, device)
+        H_naive_season._normals = H_naive_season._normals_ideal
+        naive_season_test_targets = cached_generate_naive_season_dataset(
+            H_naive_season,
+            ENV_validation,
+            season_test_sun_directions,
+            None,
+            "naive_season",
+        )
 
     # plotter.test_surfaces(H_target)
     # exit()
@@ -874,15 +874,15 @@ def main(config_file_name: Optional[str] = None) -> None:
     # Pretraining
     # ===========
 
-    # pretrain_epochs = 2000
-    # steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
-    # opt, sched = build_optimizer_scheduler(
-    #     cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
-    # loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
-    # epoch_shift_width = len(str(pretrain_epochs))
-    # best_result = th.tensor(float('inf'))
-    # prefix = 'pretrain'
-    plotter.plot_surfaces_3D_mm(H_target, 999999, logdir_surfaces, writer=None)
+    pretrain_epochs = 2000
+    steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
+    opt, sched = build_optimizer_scheduler(
+        cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
+    loss_func, test_loss_func = build_loss_funcs(cfg.TRAIN.LOSS)
+    epoch_shift_width = len(str(pretrain_epochs))
+    best_result = th.tensor(float('inf'))
+    prefix = 'pretrain'
+    # plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer=None)
     # plotter.plot_surfaces_mrad(
     #     H_target,
     #     H,
@@ -897,7 +897,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir_surfaces,
         writer,
     )
-    exit()
+    # exit()
     # for epoch in range(pretrain_epochs):
     #     train_objects = TrainObjects(
     #         opt,
@@ -913,29 +913,37 @@ def main(config_file_name: Optional[str] = None) -> None:
     #         writer,
     #     )
 
-    #     if writer:
-    #         writer.add_scalar(
-    #             f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
+        # if writer:
+        #     writer.add_scalar(
+        #         f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
-    #     loss, pred_bitmap, num_missed = train_batch(train_objects)
-    #     print(
-    #         f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
-    #         f'loss: {loss.detach().cpu().numpy()}, '
-    #         f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-    #         f'missed: {num_missed.detach().cpu().item()}, '
-    #     )
-    #     if epoch % 15 ==0:
-    #         # test_loss, _ = test_batch(
-    #         #     H,
-    #         #     ENV,
-    #         #     R,
-    #         #     test_targets,
-    #         #     test_sun_directions,
-    #         #     test_loss_func,
-    #         #     epoch,
-    #         #     "pretest",
-    #         #     writer,
-    #         # )
+        # loss, pred_bitmap, num_missed = train_batch(train_objects)
+        # print(
+        #     f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
+        #     f'loss: {loss.detach().cpu().numpy()}, '
+        #     f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+        #     f'missed: {num_missed.detach().cpu().item()}, '
+        # )
+        # if epoch % 15 ==0:
+        #     plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer=None)
+            # plotter.plot_surfaces_mrad(
+            #     H_target,
+            #     H,
+            #     777777,
+            #     logdir_surfaces,
+            #     writer,
+            # )
+            # test_loss, _ = test_batch(
+            #     H,
+            #     ENV,
+            #     R,
+            #     test_targets,
+            #     test_sun_directions,
+            #     test_loss_func,
+            #     epoch,
+            #     "pretest",
+            #     writer,
+            # )
     # plotter.plot_surfaces_mrad(
     #     H_naive_target,
     #     H,
@@ -943,6 +951,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     logdir_pretrain_surfaces,
     #     None
     # )
+    
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
@@ -1167,6 +1176,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "600mFunction.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
     main(path_to_yaml)
     # main()

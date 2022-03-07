@@ -10,8 +10,8 @@ AC:
     - 0
     - 1
     - 0
-    PLANE_X: 5
-    PLANE_Y: 5
+    PLANE_X: 5.
+    PLANE_Y: 5.
     RESOLUTION_X: 64
     RESOLUTION_Y: 64
   SUN:
@@ -89,7 +89,6 @@ H:
   - 0
   - 0
   - 0
-  REAL: {}
   SHAPE: real
 
 LOAD_OPTIMIZER_STATE: false

@@ -51,7 +51,7 @@ def real_heliostat(
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
-        positions,
+        ideal_positions,
         directions,
         ideal_normal_vecs,
         width,
@@ -62,8 +62,10 @@ def real_heliostat(
         facetHeader_struct,
         ray_struct,
     )
+
     if cfg.ZS_PATH:
         print("Path to heliostat surface values found. Load values...")
+        positions = copy.deepcopy(ideal_positions)
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
         pos_type = type(positions[0][0][0])
 
@@ -99,10 +101,13 @@ def real_heliostat(
                     pos[-1] = pos_type(curr_integrated[-1])
                     in_facet_index += 1
         del integrated
+    else:
+        positions = ideal_positions
 
     h_normal_vecs = []
     h_ideal_vecs = []
     h = []
+    h_ideal = []
     if not cfg.ZS_PATH:
         print("No path to heliostat surface values found. Calculate values...")
         zs = []
@@ -130,14 +135,20 @@ def real_heliostat(
                 h_ideal_vecs[-1],
                 num_samples=16,
             ))
+        h_ideal.append(th.tensor(
+            ideal_positions[f][::step_size],
+            dtype=dtype,
+            device=device,
+        ))
 
     h_normal_vecs: torch.Tensor = th.cat(h_normal_vecs, dim=0)
     h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
-    h_ideal = th.cat(h, dim=0)
-    h: torch.Tensor = h_ideal.clone()
+    h: torch.Tensor = th.cat(h, dim=0)
     if not cfg.ZS_PATH:
         zs: torch.Tensor = th.cat(zs, dim=0)  # type: ignore[no-redef]
         h[:, -1] += zs
+    
+    h_ideal: torch.Tensor = th.cat(h_ideal, dim=0)
     print("Done")
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))

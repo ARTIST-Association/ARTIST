@@ -219,7 +219,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         to_xyz = position + span_y + span_x
         # We ignore the z-axis here.
         indices = _indices_between(
-            self._discrete_points[:, :-1],
+            self._discrete_points_ideal[:, :-1],
             from_xyz[:-1],
             to_xyz[:-1],
         )
@@ -249,7 +249,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         facet._discrete_points = facet_discrete_points
         facet._discrete_points_ideal = facet_discrete_points_ideal
-        facet._orig_world_points = facet._discrete_points.clone()
+        facet._orig_world_points = facet._discrete_points_ideal.clone()
         facet._normals = facet_normals
         facet._ideal_normals = facet_ideal_normals
 
@@ -328,6 +328,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> None:
         # "Load" values from parent heliostat.
         facet._discrete_points = self._discrete_points
+        facet._discrete_points_ideal = self._discrete_points_ideal
         facet._normals = self._normals
         facet._ideal_normals = self._ideal_normals
         facet.params = self.params
