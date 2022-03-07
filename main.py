@@ -99,8 +99,18 @@ def set_up_dataset_caching(
         device: th.device,
         writer: Optional[SummaryWriter],
 ) -> Tuple[
-    Tuple[Callable, Callable, Callable, Callable],
-    Tuple[Callable, Callable, Callable, Callable, Callable, Callable],
+    Tuple[Callable, Callable, Callable, Callable, Callable],
+    Tuple[
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+        Callable,
+    ],
 ]:
     def make_cached_generate_sun_array(prefix=''):
         return disk_cache.disk_cache(
@@ -255,11 +265,9 @@ def _multi_nurbs_to_standard(
     H = Heliostat(cfg.H, mnh.device)
     discrete_points, normals = mnh.discrete_points_and_normals()
     H._discrete_points = discrete_points
+    H._discrete_points_ideal = mnh._discrete_points_ideal
     H._normals = normals
-    H._normals_ideal = th.cat([
-        facet._normals_ideal
-        for facet in mnh.facets
-    ])
+    H._normals_ideal = mnh._normals_ideal
     H.params = mnh.nurbs_cfg
     H.height = mnh.height
     H.width = mnh.width
@@ -452,7 +460,7 @@ def calc_batch_loss(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
 ]:
     # print(epoch)
     # if epoch == 0:
@@ -517,7 +525,7 @@ def calc_batch_grads(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
 ]:
     train_objects.opt.zero_grad(set_to_none=True)
 
@@ -532,7 +540,7 @@ def calc_batch_grads(
 
 def train_batch(
         train_objects: TrainObjects,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():
@@ -648,12 +656,20 @@ def main(config_file_name: Optional[str] = None) -> None:
     if cfg.SAVE_RESULTS:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
-        root_logdir = os.path.join(cfg.LOGDIR, cfg.ID)
-        logdir: Optional[str] = os.path.join(
+
+        # Normalize OS-specific paths in a non-sophisticated way.
+        logdir: Optional[str] = cfg.LOGDIR
+        assert logdir is not None
+        if '\\' in logdir:
+            logdir = functools.reduce(os.path.join, logdir.split('\\'))
+        elif '/' in logdir:
+            logdir = functools.reduce(os.path.join, logdir.split('/'))
+
+        root_logdir = os.path.join(logdir, cfg.ID)
+        logdir = os.path.join(
             root_logdir,
             cfg.EXPERIMENT_NAME + f"_{time_str}",
         )
-        assert logdir is not None
         logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
         assert logdir_files is not None
         logdir_images: Optional[str] = os.path.join(logdir, "Images")

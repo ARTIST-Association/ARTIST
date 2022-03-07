@@ -62,6 +62,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.facets = self._create_facets(
             self.cfg, self.nurbs_cfg, setup_params=setup_params)
 
+        self._discrete_points_ideal = th.cat([
+            facet._discrete_points_ideal + facet.position_on_field
+            for facet in self.facets
+        ])
         self._normals_ideal = th.cat(
             [facet._normals_ideal for facet in self.facets])
 
@@ -130,9 +134,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             position_on_field: torch.Tensor,
             discrete_points: torch.Tensor,
+            discrete_points_ideal: Optional[torch.Tensor] = None,
             normals: Optional[torch.Tensor] = None,
             normals_ideal: Optional[torch.Tensor] = None,
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    ) -> Union[
+        torch.Tensor,
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+    ]:
         dtype = position_on_field.dtype
 
         h_normal = th.tensor(
@@ -176,8 +184,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         hel_rotated = look_at_receiver(discrete_points)
 
-        if normals is None:
+        if discrete_points_ideal is None:
             return hel_rotated
+
+        hel_ideal_rotated = look_at_receiver(discrete_points_ideal)
 
         normals_rotated = look_at_receiver(normals)
         normals_rotated = (
@@ -190,7 +200,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             normals_ideal_rotated
             / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
         )
-        return hel_rotated, normals_rotated, normals_ideal_rotated
+        return (
+            hel_rotated,
+            hel_ideal_rotated,
+            normals_rotated,
+            normals_ideal_rotated,
+        )
 
     def _set_facet_points(
             self,
@@ -209,6 +224,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
 
         facet_discrete_points = self._discrete_points[indices] - position
+        facet_discrete_points_ideal = \
+            self._discrete_points_ideal[indices] - position
         facet_normals = self._normals[indices]
         facet_normals_ideal = self._normals_ideal[indices]
 
@@ -218,16 +235,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ):
             (
                 facet_discrete_points,
+                facet_discrete_points_ideal,
                 facet_normals,
                 facet_normals_ideal,
             ) = self._apply_canting(
                 position,
                 facet_discrete_points,
+                facet_discrete_points_ideal,
                 facet_normals,
                 facet_normals_ideal,
             )
 
         facet._discrete_points = facet_discrete_points
+        facet._discrete_points_ideal = facet_discrete_points_ideal
         facet._orig_world_points = facet._discrete_points.clone()
         facet._normals = facet_normals
         facet._normals_ideal = facet_normals_ideal
