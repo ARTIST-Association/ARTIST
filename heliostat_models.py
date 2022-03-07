@@ -63,6 +63,7 @@ def real_heliostat(
         ray_struct,
     )
     if cfg.ZS_PATH:
+        print("Path to heliostat surface values found. Load values...")
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
         pos_type = type(positions[0][0][0])
 
@@ -103,6 +104,7 @@ def real_heliostat(
     h_ideal_vecs = []
     h = []
     if not cfg.ZS_PATH:
+        print("No path to heliostat surface values found. Calculate values...")
         zs = []
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
@@ -136,7 +138,7 @@ def real_heliostat(
     if not cfg.ZS_PATH:
         zs: torch.Tensor = th.cat(zs, dim=0)  # type: ignore[no-redef]
         h[:, -1] += zs
-
+    print("Done")
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))
     # ax = plt.axes(projection ='3d')
@@ -258,7 +260,7 @@ def heliostat_by_function(
         th.tensor([0, 0, 1], dtype=h.dtype, device=device),
         (h_normal_vecs.shape[0], 1),
     )
-    print(h.shape)
+    # print(h.shape)
 
     params = None
     return (
@@ -577,6 +579,10 @@ class AbstractHeliostat:
     def normals(self) -> torch.Tensor:
         return self._normals
 
+    @property
+    def ideal_normals(self) -> torch.Tensor:
+            return self._ideal_normals
+
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
@@ -657,7 +663,7 @@ class Heliostat(AbstractHeliostat):
         self._discrete_points = heliostat
         self._discrete_points_ideal = heliostat_ideal
         self._normals = heliostat_normals
-        self._normals_ideal = heliostat_ideal_vecs
+        self._ideal_normals = heliostat_ideal_vecs
         self.params = params
         self.height = height
         self.width = width
