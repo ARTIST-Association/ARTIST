@@ -278,7 +278,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet.h_rows = None
             facet.h_cols = None
 
-
     @staticmethod
     def _facet_heliostat_config(
             heliostat_config: CfgNode,
