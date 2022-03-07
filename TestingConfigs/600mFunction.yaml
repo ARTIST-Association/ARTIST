@@ -1,5 +1,5 @@
-ID: Best10m
-EXPERIMENT_NAME: MakeRunableAgain
+ID: 600mFunction
+EXPERIMENT_NAME: FirstTest
 AC:
   RECEIVER:
     CENTER:
@@ -20,7 +20,7 @@ AC:
     REDRAW_RANDOM_VARIABLES: false
 
 H:
-  SHAPE: function
+  SHAPE: real
   POSITION_ON_FIELD:
   - 0
   - 0
@@ -37,7 +37,10 @@ H:
 
 LOAD_OPTIMIZER_STATE: false
 NURBS:
-  COLS: 6
+  SPLINE_DEGREE: 2
+  INITIALIZE_Z_ONLY: false
+  COLS: 14
+  ROWS: 14
   FACETS:
     CANTING:
       ACTIVE: false
@@ -52,41 +55,22 @@ NURBS:
     STEP_SIZE_ROWS: 0
   HEIGHT: 4
   INITIALIZE_WITH_KNOWLEDGE: true
-  INITIALIZE_Z_ONLY: false
   OPTIMIZE_Z_ONLY: false
   RECALCULATE_EVAL_POINTS: false
-  ROWS: 6
   SET_UP_WITH_KNOWLEDGE: true
-  SPLINE_DEGREE: 3
+  SPLINE_DEGREE: 2
   WIDTH: 4
 SAVE_RESULTS: true
 SEED: 42
 TEST:
   INTERVAL: 15
   PLOT:
-    GRID: true
-    SPHERIC: true
+    GRID: false
+    SPHERIC: false
   SUN_DIRECTIONS:
-    CASE: grid
-    GRID:
-      AZI_RANGE:
-      - -90
-      - 90
-      - 7
-      ELE_RANGE:
-      - 20
-      - 80
-      - 3
-      PLOT: true
+    CASE: random
     RAND:
-      NUM_SAMPLES: 8
-    SPHERIC:
-      NUM_SAMPLES: 10
-    VECS:
-      DIRECTIONS:
-      - - -0.43719268
-        - 0.7004466
-        - 0.564125
+      NUM_SAMPLES: 5
 TRAIN:
   EPOCHS: 2500
   LOSS:

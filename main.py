@@ -882,7 +882,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # epoch_shift_width = len(str(pretrain_epochs))
     # best_result = th.tensor(float('inf'))
     # prefix = 'pretrain'
-    plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer=None)
+    plotter.plot_surfaces_3D_mm(H_target, 999999, logdir_surfaces, writer=None)
     # plotter.plot_surfaces_mrad(
     #     H_target,
     #     H,
@@ -891,7 +891,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     writer,
     # )
     plotter.plot_surfaces_mrad(
-        H,
+        H_target,
         H,
         777777,
         logdir_surfaces,
@@ -979,7 +979,13 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     'naive_season',
     #     reduction=False,
     # )
-
+    plotter.plot_surfaces_mrad(
+        H_target,
+        H,
+        9797979797,
+        logdir_surfaces,
+        writer,
+    )
     prefix = "train"
     for epoch in range(epochs):
         train_objects = TrainObjects(
