@@ -229,6 +229,7 @@ def plot_surfaces_3D_mm(heliostat_pred, epoch, logdir, writer = None):
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
+    ax.set_zlim(-3e-5,3e-5)
     surf = ax.plot_trisurf(pred[:,0], pred[:,1], pred[:,2], cmap=cm.coolwarm,
                             linewidth=0, antialiased=False)
     fig.savefig(os.path.join(logdir_mm, f"test_3D_{epoch}"))
