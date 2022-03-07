@@ -218,7 +218,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         to_xyz = position + span_y + span_x
         # We ignore the z-axis here.
         indices = _indices_between(
-            self._discrete_points[:, :-1],
+            self._discrete_points_ideal[:, :-1],
             from_xyz[:-1],
             to_xyz[:-1],
         )
