@@ -248,7 +248,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         facet._discrete_points = facet_discrete_points
         facet._discrete_points_ideal = facet_discrete_points_ideal
-        facet._orig_world_points = facet._discrete_points.clone()
+        facet._orig_world_points = facet._discrete_points_ideal.clone()
         facet._normals = facet_normals
         facet._normals_ideal = facet_normals_ideal
 
@@ -327,6 +327,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> None:
         # "Load" values from parent heliostat.
         facet._discrete_points = self._discrete_points
+        facet._discrete_points_ideal = self._discrete_points_ideal
         facet._normals = self._normals
         facet._normals_ideal = self._normals_ideal
         facet.params = self.params
