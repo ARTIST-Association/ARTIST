@@ -883,6 +883,21 @@ def main(config_file_name: Optional[str] = None) -> None:
     # best_result = th.tensor(float('inf'))
     # prefix = 'pretrain'
     plotter.plot_surfaces_3D_mm(H, 999999, logdir_surfaces, writer=None)
+    # plotter.plot_surfaces_mrad(
+    #     H_target,
+    #     H,
+    #     777777,
+    #     logdir_surfaces,
+    #     writer,
+    # )
+    plotter.plot_surfaces_mrad(
+        H,
+        H,
+        777777,
+        logdir_surfaces,
+        writer,
+    )
+    exit()
     # for epoch in range(pretrain_epochs):
     #     train_objects = TrainObjects(
     #         opt,
