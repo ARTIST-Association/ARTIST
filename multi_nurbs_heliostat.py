@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 import torch
 import torch as th
@@ -133,80 +133,47 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _apply_canting(
             self,
             position_on_field: torch.Tensor,
-            discrete_points: torch.Tensor,
-            discrete_points_ideal: Optional[torch.Tensor] = None,
-            normals: Optional[torch.Tensor] = None,
-            normals_ideal: Optional[torch.Tensor] = None,
-    ) -> Union[
-        torch.Tensor,
-        Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
-    ]:
-
+            discrete_points: List[torch.Tensor],
+            normals: List[torch.Tensor],
+            *,
+            h_normal: Optional[torch.Tensor] = None,
+            target_normal: Optional[torch.Tensor] = None,
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         dtype = position_on_field.dtype
 
-        h_normal = th.tensor(
-            self.cfg.IDEAL.NORMAL_VECS,
-            dtype=dtype,
-            device=self.device,
-        )
-        hel_to_recv = self._receiver_center - self.position_on_field
-        focus_distance = th.linalg.norm(hel_to_recv)
-        focus_point = h_normal * focus_distance
-        target_normal = focus_point - position_on_field
-        target_normal /= th.linalg.norm(target_normal)
-
-        target_y_angle = self.angle(
-            h_normal,
-            target_normal * th.tensor(
-                [1, 0, 1],
+        if h_normal is None:
+            h_normal = th.tensor(
+                self.cfg.IDEAL.NORMAL_VECS,
                 dtype=dtype,
                 device=self.device,
-            ),
-        )
-        if target_normal[0] < 0:
-            target_y_angle = -target_y_angle
-        rot_y = self.rot_y_mat(
-            target_y_angle, dtype=dtype, device=self.device)
-        rot_h_normal = rot_y @ h_normal
+            )
 
-        target_x_angle = self.angle(
-            rot_h_normal,
-            target_normal,
-        )
-        if target_normal[1] > 0:
-            target_x_angle = -target_x_angle
-        rot_x = self.rot_x_mat(
-            target_x_angle, dtype=dtype, device=self.device)
+        if target_normal is None:
+            hel_to_recv = self._receiver_center - self.position_on_field
+            focus_distance = th.linalg.norm(hel_to_recv)
+            focus_point = h_normal * focus_distance
+            target_normal = focus_point - position_on_field
+            target_normal /= th.linalg.norm(target_normal)
 
-        full_rot = rot_x @ rot_y
+        rot_angle = self.angle(h_normal, target_normal)
+        rot_axis = th.cross(target_normal, h_normal)
+        rot_axis /= th.linalg.norm(rot_axis)
+        full_rot = utils.axis_angle_rotation(rot_axis, rot_angle)
 
         def look_at_receiver(hel_points):
             return th.matmul(full_rot, hel_points.T).T
 
-        hel_rotated = look_at_receiver(discrete_points)
+        # We could also concat and after rotation de-construct here for
+        # possibly more speed.
+        hel_rotated = list(map(look_at_receiver, discrete_points))
 
-        if discrete_points_ideal is None:
-            return hel_rotated
-
-        hel_ideal_rotated = look_at_receiver(discrete_points_ideal)
-
-        normals_rotated = look_at_receiver(normals)
-        normals_rotated = (
-            normals_rotated
-            / th.linalg.norm(normals_rotated, dim=-1).unsqueeze(-1)
-        )
-
-        normals_ideal_rotated = look_at_receiver(normals_ideal)
-        normals_ideal_rotated = (
-            normals_ideal_rotated
-            / th.linalg.norm(normals_ideal_rotated, dim=-1).unsqueeze(-1)
-        )
-        return (
-            hel_rotated,
-            hel_ideal_rotated,
+        normals_rotated = map(look_at_receiver, normals)
+        normals_rotated = list(map(
+            lambda ns: ns / th.linalg.norm(ns, dim=-1).unsqueeze(-1),
             normals_rotated,
-            normals_ideal_rotated,
-        )
+        ))
+
+        return (hel_rotated, normals_rotated)
 
     def _set_facet_points(
             self,
@@ -235,16 +202,25 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
             (
-                facet_discrete_points,
-                facet_discrete_points_ideal,
-                facet_normals,
-                facet_normals_ideal,
+                (
+                    facet_discrete_points,
+                    facet_discrete_points_ideal,
+                ),
+                (
+                    facet_normals,
+                    facet_normals_ideal,
+                ),
             ) = self._apply_canting(
                 position,
-                facet_discrete_points,
-                facet_discrete_points_ideal,
-                facet_normals,
-                facet_normals_ideal,
+                [
+                    facet_discrete_points,
+                    facet_discrete_points_ideal,
+                ],
+                [
+                    facet_normals,
+                    facet_normals_ideal,
+                ],
+                h_normal=facet_normals_ideal[0],
             )
 
         facet._discrete_points = facet_discrete_points
@@ -358,8 +334,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet.set_ctrl_points(
                 self._apply_canting(  # type: ignore[union-attr]
                     position,
-                    facet.ctrl_points.reshape(-1, facet.ctrl_points.shape[-1]),
-                ).reshape(facet.ctrl_points.shape),
+                    [facet.ctrl_points.reshape(
+                        -1, facet.ctrl_points.shape[-1])],
+                    [],
+                )[0][0].reshape(facet.ctrl_points.shape),
             )
 
         facet.initialize_eval_points()
