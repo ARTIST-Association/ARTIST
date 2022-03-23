@@ -332,7 +332,7 @@ def _find_angles_in_other_slices(angles, num_slices):
 def deflec_facet_zs_many(
         points: torch.Tensor,
         normals: torch.Tensor,
-        ideal_normals: torch.Tensor,
+        normals_ideal: torch.Tensor,
         num_samples: int = 4,
         use_weighted_average: bool = False,
         eps: float = 1e-6,
@@ -428,7 +428,7 @@ def deflec_facet_zs_many(
     midway_normal /= th.linalg.norm(midway_normal, dim=-1, keepdims=True)
 
     rot_90deg = axis_angle_rotation(
-        ideal_normals, th.tensor(math.pi / 2, dtype=dtype, device=device))
+        normals_ideal, th.tensor(math.pi / 2, dtype=dtype, device=device))
 
     connector = points[closest_indices] - points
     connector_norm = th.linalg.norm(connector, dim=-1)

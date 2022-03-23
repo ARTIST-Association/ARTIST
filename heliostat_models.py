@@ -596,10 +596,6 @@ class AbstractHeliostat:
     def normals(self) -> torch.Tensor:
         return self._normals
 
-    @property
-    def ideal_normals(self) -> torch.Tensor:
-            return self._ideal_normals
-
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
@@ -680,7 +676,7 @@ class Heliostat(AbstractHeliostat):
         self._discrete_points = heliostat
         self._discrete_points_ideal = heliostat_ideal
         self._normals = heliostat_normals
-        self._ideal_normals = heliostat_ideal_vecs
+        self._normals_ideal = heliostat_ideal_vecs
         self.params = params
         self.height = height
         self.width = width

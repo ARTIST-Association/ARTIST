@@ -749,7 +749,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
     )
     H_naive_target = build_target_heliostat(cfg, device)
-    H_naive_target._normals = H_naive_target._ideal_normals
+    H_naive_target._normals = H_naive_target._normals_ideal
     naive_targets = cached_generate_pretrain_dataset(
         H_naive_target,
         ENV,
@@ -798,7 +798,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
         # # th.random.set_rng_state(state)
         H_naive_grid = build_target_heliostat(cfg, device)
-        H_naive_grid._normals = H_naive_grid._ideal_normals
+        H_naive_grid._normals = H_naive_grid._normals_ideal
         naive_targets = cached_generate_naive_grid_dataset(
             H_naive_grid,
             ENV_validation,
@@ -825,7 +825,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
 
         H_naive_spheric = build_target_heliostat(cfg, device)
-        H_naive_spheric._normals = H_naive_spheric._ideal_normals
+        H_naive_spheric._normals = H_naive_spheric._normals_ideal
         naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
             H_naive_spheric,
             ENV_validation,

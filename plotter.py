@@ -55,7 +55,7 @@ def plot_surfaces_mrad(heliostat_target, heliostat_pred, epoch, logdir_surfaces,
 
 
     target_normal_vecs = heliostat_target.normals
-    ideal_normal_vecs = heliostat_target.ideal_normals
+    ideal_normal_vecs = heliostat_target._normals_ideal
     pred_normal_vecs = heliostat_pred.normals
     
     target_angles = th.acos(th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1)).detach().cpu()
