@@ -201,6 +201,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self.nurbs_cfg.FACETS.CANTING.ENABLED
                 and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
+            facet._orig_normals_ideal = facet_normals_ideal.clone()
             (
                 (
                     facet_discrete_points,
@@ -221,6 +222,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                     facet_normals_ideal,
                 ],
                 h_normal=facet_normals_ideal[0],
+                target_normal=th.tensor(
+                    self.cfg.IDEAL.NORMAL_VECS,
+                    dtype=position.dtype,
+                    device=self.device,
+                ),
             )
 
         facet._discrete_points = facet_discrete_points
@@ -324,22 +330,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet.nurbs_cfg.freeze()
 
         facet.initialize_control_points(facet.ctrl_points)
-        # If we don't fit the control points, we instead cant them.
-        if (
-                facet.nurbs_cfg.SET_UP_WITH_KNOWLEDGE
-                and not facet.nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE
-                and self.nurbs_cfg.FACETS.CANTING.ENABLED
-                and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
-        ):
-            facet.set_ctrl_points(
-                self._apply_canting(  # type: ignore[union-attr]
-                    position,
-                    [facet.ctrl_points.reshape(
-                        -1, facet.ctrl_points.shape[-1])],
-                    [],
-                )[0][0].reshape(facet.ctrl_points.shape),
-            )
-
         facet.initialize_eval_points()
 
     def _create_facet(
@@ -456,9 +446,27 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 facet.discrete_points_and_normals()
             offset = len(curr_surface_points)
 
+            if (
+                    self.nurbs_cfg.FACETS.CANTING.ENABLED
+                    and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
+            ):
+                # We expect the position to be centered on zero for
+                # canting, so cant before repositioning.
+                (
+                    (curr_surface_points,),
+                    (curr_normals,),
+                ) = self._apply_canting(
+                    facet.position_on_field,
+                    [curr_surface_points],
+                    [curr_normals],
+                    h_normal=facet._normals_ideal[0],
+                    target_normal=facet._orig_normals_ideal[0],
+                )
+
             if reposition:
                 curr_surface_points = \
                     curr_surface_points + facet.position_on_field
+
             surface_points[i:i + offset] = curr_surface_points
             normals[i:i + offset] = curr_normals
             i += offset
