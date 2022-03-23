@@ -64,6 +64,8 @@ _C.NURBS.FACETS.SPANS_Y = [
 _C.NURBS.FACETS.CANTING = CN()
 _C.NURBS.FACETS.CANTING.ENABLED = False
 # Whether to use active canting.
+# In active canting, each facet is canted perfectly for each sun
+# position.
 _C.NURBS.FACETS.CANTING.ACTIVE = False
 
 # NURBS progressive growing
