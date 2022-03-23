@@ -883,26 +883,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     epoch_shift_width = len(str(pretrain_epochs))
     best_result = th.tensor(float('inf'))
     prefix = 'pretrain'
-    plotter.plot_surfaces_3D_mm(H, 999999, logdir_pretrain_surfaces, writer=None)
-    # plotter.plot_surfaces_mrad(
-    #     H_target,
-    #     H,
-    #     777777,
-    #     logdir_surfaces,
-    #     writer,
-    # )
-    plotter.plot_surfaces_mrad(
-        H_target,
-        H,
-        777777,
-        logdir_surfaces,
-        writer,
-    )
-    plotter.plot_surfaces_3D_mm(H, 888888, logdir_pretrain_surfaces, writer=None)
-    plotter.plot_surfaces_3D_mm(H, 0, logdir_pretrain_surfaces, writer=None)
-    plotter.plot_surfaces_3D_mm(H, 9999999, logdir_pretrain_surfaces, writer=None)
     for epoch in range(pretrain_epochs):
-        plotter.plot_surfaces_3D_mm(H, 1, logdir_pretrain_surfaces, writer=None)
+        plotter.plot_surfaces_3D_mm(H, epoch, logdir_pretrain_surfaces, writer=None)
         train_objects = TrainObjects(
             opt,
             sched,
