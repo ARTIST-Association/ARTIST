@@ -688,6 +688,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
         writer: Optional[SummaryWriter] = SummaryWriter(logdir)
+        logdir: Optional[str]
     else:
         writer = None
         logdir = None

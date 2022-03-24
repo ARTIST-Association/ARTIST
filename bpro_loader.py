@@ -14,6 +14,9 @@ def load_bpro(
         ray_struct: struct.Struct,
         verbose: bool = True,
 ) -> Tuple[
+    List[Vector3d],
+    List[Vector3d],
+    List[Vector3d],
     List[List[Vector3d]],
     List[List[Vector3d]],
     List[List[Vector3d]],
@@ -55,7 +58,7 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
-            facet_pos = facetHeader_data[1:4]
+            facet_pos = list(facetHeader_data[1:4])
             # NWU to ENU
             facet_vec_x = np.array([
                 -facetHeader_data[5],

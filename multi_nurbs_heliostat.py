@@ -154,6 +154,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             focus_point = h_normal * focus_distance
             target_normal = focus_point - position_on_field
             target_normal /= th.linalg.norm(target_normal)
+        assert target_normal is not None
 
         rot_angle = self.angle(h_normal, target_normal)
         rot_axis = th.cross(target_normal, h_normal)
