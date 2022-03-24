@@ -61,13 +61,52 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         self.facets = self._create_facets(
             self.cfg, self.nurbs_cfg, setup_params=setup_params)
+        self._init_ideal_values()
 
-        self._discrete_points_ideal = th.cat([
-            facet._discrete_points_ideal + facet.position_on_field
-            for facet in self.facets
-        ])
-        self._normals_ideal = th.cat(
-            [facet._normals_ideal for facet in self.facets])
+    def _init_ideal_values(self):
+        if (
+                self.nurbs_cfg.FACETS.CANTING.ENABLED
+                and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
+        ):
+            total_size = len(self)
+            discrete_points_ideal = th.empty(
+                (total_size, 3), device=self.device)
+            normals_ideal = th.empty((total_size, 3), device=self.device)
+
+            i = 0
+            for facet in self.facets:
+                curr_surface_points = facet._discrete_points_ideal
+                curr_normals = facet._normals_ideal
+                offset = len(curr_surface_points)
+
+                # We expect the position to be centered on zero for
+                # canting, so cant before repositioning.
+                (
+                    (curr_surface_points,),
+                    (curr_normals,),
+                ) = self._apply_canting(
+                    facet.position_on_field,
+                    [curr_surface_points],
+                    [curr_normals],
+                    h_normal=facet._normals_ideal[0],
+                    target_normal=facet._orig_normals_ideal[0],
+                )
+                curr_surface_points = (
+                    curr_surface_points + facet.position_on_field)
+
+                discrete_points_ideal[i:i + offset] = curr_surface_points
+                normals_ideal[i:i + offset] = curr_normals
+                i += offset
+        else:
+            discrete_points_ideal = th.cat([
+                facet._discrete_points_ideal + facet.position_on_field
+                for facet in self.facets
+            ])
+            normals_ideal = th.cat(
+                [facet._normals_ideal for facet in self.facets])
+
+        self._discrete_points_ideal = discrete_points_ideal
+        self._normals_ideal = normals_ideal
 
     @staticmethod
     def angle(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
