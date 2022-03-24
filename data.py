@@ -223,35 +223,37 @@ def _spheric_sun_array(
             "multiple sun vectors detected. "
             "spheric plot is only possible using 1 vector"
         )
+    dtype = th.get_default_dtype()
+
     train_vec = train_vec / th.linalg.norm(train_vec, dim=1).unsqueeze(1)
     ae = utils.vec_to_ae(train_vec).squeeze()
     ele_angles = th.linspace(
         0.1 * 180,
         0.9 * 180,
         cfg.NUM_SAMPLES,
-        dtype=th.get_default_dtype(),
+        dtype=dtype,
         device=device,
     )
     azi_angles = th.linspace(
         0,
         180,
         cfg.NUM_SAMPLES,
-        dtype=th.get_default_dtype(),
+        dtype=dtype,
         device=device,
     )
 
-    north = th.tensor([[0, 1, 0]], dtype=th.get_default_dtype(), device=device)
-    t_ele = throt.Transform3d(device=device) \
+    north = th.tensor([[0, 1, 0]], dtype=dtype, device=device)
+    t_ele = throt.Transform3d(dtype=dtype, device=device) \
                  .rotate_axis_angle(ele_angles, "X") \
                  .rotate_axis_angle(-ae[0], "Z")
     spheric_vecs_ele = t_ele.transform_normals(north).squeeze()
 
     other_direction = train_vec.clone()
-    t_azi_western = throt.Transform3d(device=device) \
+    t_azi_western = throt.Transform3d(dtype=dtype, device=device) \
                          .rotate_axis_angle(azi_angles, "Z")
     spheric_vecs_azi_west = t_azi_western.transform_normals(
         other_direction).squeeze()
-    t_azi_eastern = throt.Transform3d(device=device) \
+    t_azi_eastern = throt.Transform3d(dtype=dtype, device=device) \
                          .rotate_axis_angle(-azi_angles,  "Z")
     spheric_vecs_azi_east = t_azi_eastern.transform_normals(
         other_direction).squeeze()

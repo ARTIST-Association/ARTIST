@@ -797,7 +797,8 @@ class AlignedHeliostat(AbstractHeliostat):
             sun_direction,
             receiver_center,
         ))
-        self.align_origin = throt.Rotate(self.alignment)
+        self.align_origin = throt.Rotate(
+            self.alignment, dtype=self.alignment.dtype)
 
         if align_points:
             self._align()
