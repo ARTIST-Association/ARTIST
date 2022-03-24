@@ -12,6 +12,7 @@ def load_bpro(
         concentratorHeader_struct: struct.Struct,
         facetHeader_struct: struct.Struct,
         ray_struct: struct.Struct,
+        verbose: bool = True,
 ) -> Tuple[
     List[List[Vector3d]],
     List[List[Vector3d]],
@@ -28,7 +29,8 @@ def load_bpro(
         byte_data = file.read(concentratorHeader_struct_len)
         concentratorHeader_data = concentratorHeader_struct.unpack_from(
             byte_data)
-        print("READING bpro filename: " + filename)
+        if verbose:
+            print("READING bpro filename: " + filename)
 
         # hel_pos = concentratorHeader_data[0:3]
         width, height = concentratorHeader_data[3:5]

@@ -64,10 +64,12 @@ def real_heliostat(
         concentratorHeader_struct,
         facetHeader_struct,
         ray_struct,
+        cfg.VERBOSE,
     )
 
     if cfg.ZS_PATH:
-        print("Path to heliostat surface values found. Load values...")
+        if cfg.VERBOSE:
+            print("Path to heliostat surface values found. Load values...")
         positions = copy.deepcopy(ideal_positions)
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
         pos_type = type(positions[0][0][0])
@@ -112,7 +114,11 @@ def real_heliostat(
     h = []
     h_ideal = []
     if not cfg.ZS_PATH:
-        print("No path to heliostat surface values found. Calculate values...")
+        if cfg.VERBOSE:
+            print(
+                "No path to heliostat surface values found. "
+                "Calculate values..."
+            )
         zs = []
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
@@ -152,7 +158,8 @@ def real_heliostat(
         h[:, -1] += zs
 
     h_ideal: torch.Tensor = th.cat(h_ideal, dim=0)
-    print("Done")
+    if cfg.VERBOSE:
+        print("Done")
     # import matplotlib.pyplot as plt
     # fig = plt.figure(figsize =(14, 9))
     # ax = plt.axes(projection ='3d')
