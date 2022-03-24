@@ -37,6 +37,10 @@ def load_bpro(
 
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
+        facet_positions: List[Vector3d] = []
+        facet_spans_x: List[Vector3d] = []
+        facet_spans_y: List[Vector3d] = []
+
         positions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
         directions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
         ideal_normal_vecs: List[List[Vector3d]] = [
@@ -49,7 +53,7 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
-            # facet_pos = facetHeader_data[1:4]
+            facet_pos = facetHeader_data[1:4]
             # NWU to ENU
             facet_vec_x = np.array([
                 -facetHeader_data[5],
@@ -62,6 +66,10 @@ def load_bpro(
                 facetHeader_data[9],
             ])
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
+
+            facet_positions.append(facet_pos)
+            facet_spans_x.append(facet_vec_x.tolist())
+            facet_spans_y.append(facet_vec_y.tolist())
 
             ideal_normal = (
                 facet_vec_z
@@ -82,7 +90,16 @@ def load_bpro(
                 ideal_normal_vecs[f].append(ideal_normal)
                 # powers.append(ray_data[6])
 
-    return positions, directions, ideal_normal_vecs, width, height
+    return (
+        facet_positions,
+        facet_spans_x,
+        facet_spans_y,
+        positions,
+        directions,
+        ideal_normal_vecs,
+        width,
+        height,
+    )
 
 
 def load_csv(path: str, num_facets: int) -> List[List[List[float]]]:

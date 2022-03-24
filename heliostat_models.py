@@ -51,6 +51,9 @@ def real_heliostat(
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
+        facet_positions,
+        facet_spans_x,
+        facet_spans_y,
         ideal_positions,
         directions,
         ideal_normal_vecs,
