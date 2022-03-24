@@ -213,7 +213,7 @@ def _vec_sun_array(
 def _spheric_sun_array(
         cfg: CfgNode,
         device: th.device,
-        train_vec: Optional[th.Tensor],
+        train_vec: Optional[torch.Tensor],
 ):
     if train_vec is None:
         raise ValueError(

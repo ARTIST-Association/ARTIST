@@ -279,7 +279,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             decanted_normal = facet_normals_ideal.mean(dim=0)
             decanted_normal /= th.linalg.norm(decanted_normal)
 
-            cant_rot: Optional[th.Tensor] = \
+            cant_rot: Optional[torch.Tensor] = \
                 self._get_rot_matrix(decanted_normal, orig_normal)
         else:
             cant_rot = None
