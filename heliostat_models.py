@@ -674,22 +674,24 @@ class Heliostat(AbstractHeliostat):
         if setup_params:
             self.setup_params()
 
-    def load(self) -> None:
-
-        cfg = self.cfg
+    @staticmethod
+    def select_heliostat_builder(cfg: CfgNode) -> Tuple[
+            Callable[[CfgNode, th.device], HeliostatParams],
+            CfgNode,
+    ]:
         shape = cfg.SHAPE.lower()
         if shape == "ideal" or shape == "nurbs":
-            heliostat_properties = ideal_heliostat(cfg.IDEAL, self.device)
+            return ideal_heliostat, cfg.IDEAL
         elif shape == "real":
-            heliostat_properties = real_heliostat(
-                cfg.DEFLECT_DATA, self.device)
+            return real_heliostat, cfg.DEFLECT_DATA
         elif shape == "function":
-            heliostat_properties = heliostat_by_function(
-                cfg.FUNCTION, self.device)
+            return heliostat_by_function, cfg.FUNCTION
         elif shape == "other":
-            heliostat_properties = other_objects(cfg.OTHER, self.device)
-        else:
-            raise ValueError('unknown heliostat shape')
+            return other_objects, cfg.OTHER
+        raise ValueError('unknown heliostat shape')
+
+    def load(self) -> None:
+        builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
 
         (
             _,
@@ -704,7 +706,7 @@ class Heliostat(AbstractHeliostat):
             rows,
             cols,
             params,
-        ) = heliostat_properties
+        ) = builder_fn(h_cfg, self.device)
         self._discrete_points = heliostat
         self._discrete_points_ideal = heliostat_ideal
         self._normals = heliostat_normals
