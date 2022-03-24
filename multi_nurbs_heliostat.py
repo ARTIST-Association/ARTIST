@@ -330,8 +330,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         # Later, we need to do adjust all loaded values to be the same
         # as the parent heliostat.
         heliostat_config.SHAPE = 'ideal'
-        heliostat_config.ROWS = 2
-        heliostat_config.COLS = 2
+        heliostat_config.IDEAL.ROWS = 2
+        heliostat_config.IDEAL.COLS = 2
 
         heliostat_config.POSITION_ON_FIELD = position.tolist()
         return heliostat_config
