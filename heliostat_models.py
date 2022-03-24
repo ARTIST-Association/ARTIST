@@ -16,6 +16,9 @@ HeliostatParams = Tuple[
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
     float,
     float,
     Optional[int],
@@ -33,6 +36,19 @@ def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
 def reflect_rays(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
     return reflect_rays_(rays, normals)
+
+
+def _sole_facet(
+        height: float,
+        width: float,
+        dtype: th.dtype,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    return (
+        th.zeros((1, 3), dtype=dtype, device=device),
+        th.tensor([[0, height / 2, 0]], dtype=dtype, device=device),
+        th.tensor([[-width / 2, 0, 0]], dtype=dtype, device=device),
+    )
 
 
 # Heliostat Models
@@ -180,6 +196,9 @@ def real_heliostat(
     cols = None
     params = None
     return (
+        th.tensor(facet_positions, device=device),
+        th.tensor(facet_spans_x, device=device),
+        th.tensor(facet_spans_y, device=device),
         h,
         h_ideal,
         h_normal_vecs,
@@ -285,6 +304,7 @@ def heliostat_by_function(
 
     params = None
     return (
+        *_sole_facet(cfg.HEIGHT, cfg.WIDTH, h.dtype, device),
         h,
         h_ideal,
         h_normal_vecs,
@@ -326,12 +346,13 @@ def ideal_heliostat(
 
     normal_vector_direction = th.tensor(
         ideal_configs.NORMAL_VECS,
-        dtype=th.get_default_dtype(),
+        dtype=h.dtype,
         device=device,
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
     params = None
     return (
+        *_sole_facet(cfg.HEIGHT, cfg.WIDTH, h.dtype, device),
         h,
         h,  # h_ideal
         h_normal_vectors,
@@ -484,18 +505,22 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
     height += 2e-6
     width += 2e-6
 
+    height: float = float(height)
+    width: float = float(width)
+
     # plotter.plot_heliostat(vertices, vertex_normals)
     rows = None
     cols = None
     params = {'name': name}
     return (
+        *_sole_facet(height, width, vertices.dtype, device),
         vertices,
         vertices,
         vertex_normals,
         # TODO Implement Ideal Vecs
         vertex_normals,
-        float(height),
-        float(width),
+        height,
+        width,
         rows,
         cols,
         params,
@@ -667,6 +692,9 @@ class Heliostat(AbstractHeliostat):
             raise ValueError('unknown heliostat shape')
 
         (
+            _,
+            _,
+            _,
             heliostat,
             heliostat_ideal,
             heliostat_normals,
