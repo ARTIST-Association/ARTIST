@@ -161,8 +161,8 @@ def sample_bitmap(
 
     # The lower-valued neighboring pixels (for x this corresponds to 1
     # and 4, for y to 1 and 2).
-    x_inds_low = x_ints.long()
-    y_inds_low = y_ints.long()
+    x_inds_low = x_ints.floor().long()
+    y_inds_low = y_ints.floor().long()
     # The higher-valued neighboring pixels (for x this corresponds to 2
     # and 3, for y to 3 and 4).
     x_inds_high = x_inds_low + 1
