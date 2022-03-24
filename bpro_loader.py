@@ -52,7 +52,13 @@ def load_bpro(
             # facet_pos = facetHeader_data[1:4]
             facet_vec_x = np.array(facetHeader_data[4:7])
             facet_vec_y = np.array(facetHeader_data[7:10])
-            facet_vec_z = np.cross(facet_vec_x, facet_vec_y).tolist()
+            facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
+
+            ideal_normal = (
+                facet_vec_z
+                / np.linalg.norm(facet_vec_z)
+            ).tolist()
+
             # print("X", facet_vec_x)
             # print("Y", facet_vec_y)
             n_rays = facetHeader_data[10]
@@ -63,7 +69,7 @@ def load_bpro(
             for ray_data in ray_datas:
                 positions[f].append([ray_data[0], ray_data[1], ray_data[2]])
                 directions[f].append([ray_data[3], ray_data[4], ray_data[5]])
-                ideal_normal_vecs[f].append(facet_vec_z)
+                ideal_normal_vecs[f].append(ideal_normal)
                 # powers.append(ray_data[6])
 
     return positions, directions, ideal_normal_vecs, width, height
