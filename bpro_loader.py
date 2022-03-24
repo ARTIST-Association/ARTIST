@@ -50,16 +50,23 @@ def load_bpro(
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
             # facet_pos = facetHeader_data[1:4]
-            facet_vec_x = np.array(facetHeader_data[4:7])
-            facet_vec_y = np.array(facetHeader_data[7:10])
+            # NWU to ENU
+            facet_vec_x = np.array([
+                -facetHeader_data[5],
+                facetHeader_data[4],
+                facetHeader_data[6],
+            ])
+            facet_vec_y = np.array([
+                -facetHeader_data[8],
+                facetHeader_data[7],
+                facetHeader_data[9],
+            ])
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
 
             ideal_normal = (
                 facet_vec_z
                 / np.linalg.norm(facet_vec_z)
             ).tolist()
-            # NWU to ENU
-            ideal_normal = [-ideal_normal[1], ideal_normal[0], ideal_normal[2]]
 
             # print("X", facet_vec_x)
             # print("Y", facet_vec_y)
