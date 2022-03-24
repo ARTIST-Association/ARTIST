@@ -25,8 +25,8 @@ _C.NURBS                                = CN()
 # always be evaluated at each surface position independently of the ray
 # origins.
 _C.NURBS.SET_UP_WITH_KNOWLEDGE          = False
-# Whether to initialize the control points according to known
-# discretized values.
+# Whether to initialize the control points according to known,
+# ideal discretized values.
 _C.NURBS.INITIALIZE_WITH_KNOWLEDGE      = False
 # Only relevant when `INITIALIZE_WITH_KNOWLEDGE`.
 # Whether to only change z values in that initialization step.
