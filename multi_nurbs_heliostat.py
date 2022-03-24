@@ -182,8 +182,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_x: torch.Tensor,
             span_y: torch.Tensor,
     ) -> None:
-        from_xyz = position - span_y - span_x
-        to_xyz = position + span_y + span_x
+        from_xyz = position + span_y - span_x
+        to_xyz = position - span_y + span_x
         # We ignore the z-axis here.
         indices = _indices_between(
             self._discrete_points_ideal[:, :-1],
@@ -285,8 +285,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_x: torch.Tensor,
             span_y: torch.Tensor,
     ) -> CfgNode:
-        height = (th.linalg.norm(span_y) * 2).item()
-        width = (th.linalg.norm(span_x) * 2).item()
+        height = (th.linalg.norm(span_x) * 2).item()
+        width = (th.linalg.norm(span_y) * 2).item()
 
         nurbs_config = nurbs_config.clone()
         nurbs_config.defrost()

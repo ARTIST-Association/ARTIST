@@ -58,6 +58,8 @@ def load_bpro(
                 facet_vec_z
                 / np.linalg.norm(facet_vec_z)
             ).tolist()
+            # NWU to ENU
+            ideal_normal = [-ideal_normal[1], ideal_normal[0], ideal_normal[2]]
 
             # print("X", facet_vec_x)
             # print("Y", facet_vec_y)
@@ -67,8 +69,9 @@ def load_bpro(
             ray_datas = ray_struct.iter_unpack(byte_data)
 
             for ray_data in ray_datas:
-                positions[f].append([ray_data[0], ray_data[1], ray_data[2]])
-                directions[f].append([ray_data[3], ray_data[4], ray_data[5]])
+                # NWU to ENU
+                positions[f].append([-ray_data[1], ray_data[0], ray_data[2]])
+                directions[f].append([-ray_data[4], ray_data[3], ray_data[5]])
                 ideal_normal_vecs[f].append(ideal_normal)
                 # powers.append(ray_data[6])
 
@@ -96,6 +99,7 @@ def load_csv(path: str, num_facets: int) -> List[List[List[float]]]:
             z = mm_to_m_factor * float(row['z-integrated(mm)'])
             # Facet indices in CSV start at one.
             facet_index = int(row['FacetIndex']) - 1
-            facets[facet_index].append([x, y, z])
+            # NWU to ENU
+            facets[facet_index].append([-y, x, z])
 
     return facets

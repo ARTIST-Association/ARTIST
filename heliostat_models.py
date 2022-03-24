@@ -147,7 +147,7 @@ def real_heliostat(
     if not cfg.ZS_PATH:
         zs: torch.Tensor = th.cat(zs, dim=0)  # type: ignore[no-redef]
         h[:, -1] += zs
-    
+
     h_ideal: torch.Tensor = th.cat(h_ideal, dim=0)
     print("Done")
     # import matplotlib.pyplot as plt
@@ -164,12 +164,6 @@ def real_heliostat(
     # plt.savefig("test.png", dpi=fig.dpi)
     # plt.close(fig)
     # exit()
-
-    # # Deflect data is in NWU, we use ENU.
-    # h = h[..., [1, 0, 2]]
-    # h[..., 0] *= -1
-    # h_ideal = h_ideal[..., [1, 0, 2]]
-    # h_ideal[..., 0] *= -1
 
     # print(h_ideal_vecs)
     rows = None
