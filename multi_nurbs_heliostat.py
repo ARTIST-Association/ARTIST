@@ -17,17 +17,6 @@ import utils
 C = TypeVar('C', bound='MultiNURBSHeliostat')
 
 
-def _indices_between(
-        points: torch.Tensor,
-        from_: torch.Tensor,
-        to: torch.Tensor,
-) -> torch.Tensor:
-    indices = (
-        (from_ <= points) & (points < to)
-    ).all(dim=-1)
-    return indices
-
-
 class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def __init__(
             self,
@@ -223,24 +212,16 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _set_facet_points(
             self,
             facet: NURBSHeliostat,
+            facet_index: int,
             position: torch.Tensor,
-            span_x: torch.Tensor,
-            span_y: torch.Tensor,
     ) -> Optional[torch.Tensor]:
-        from_xyz = position + span_y - span_x
-        to_xyz = position - span_y + span_x
-        # We ignore the z-axis here.
-        indices = _indices_between(
-            self._discrete_points_ideal[:, :-1],
-            from_xyz[:-1],
-            to_xyz[:-1],
-        )
-
-        facet_discrete_points = self._discrete_points[indices] - position
+        facet_discrete_points = \
+            self._facetted_discrete_points[facet_index] - position
+        print(facet_discrete_points.shape)
         facet_discrete_points_ideal = \
-            self._discrete_points_ideal[indices] - position
-        facet_normals = self._normals[indices]
-        facet_normals_ideal = self._normals_ideal[indices]
+            self._facetted_discrete_points_ideal[facet_index] - position
+        facet_normals = self._facetted_normals[facet_index]
+        facet_normals_ideal = self._facetted_normals_ideal[facet_index]
 
         orig_normal = facet_normals_ideal.mean(dim=0)
         orig_normal /= th.linalg.norm(orig_normal)
@@ -364,6 +345,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _adjust_facet(
             self,
             facet: NURBSHeliostat,
+            facet_index: int,
             position: torch.Tensor,
             span_x: torch.Tensor,
             span_y: torch.Tensor,
@@ -383,7 +365,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet.width = nurbs_config.WIDTH
         # TODO initialize NURBS correctly
         # facet.position_on_field = self.position_on_field + position
-        cant_rot = self._set_facet_points(facet, position, span_x, span_y)
+        cant_rot = self._set_facet_points(facet, facet_index, position)
 
         facet.nurbs_cfg.defrost()
         facet.nurbs_cfg.SET_UP_WITH_KNOWLEDGE = \
@@ -398,6 +380,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     def _create_facet(
             self,
+            facet_index: int,
             position: torch.Tensor,
             span_x: torch.Tensor,
             span_y: torch.Tensor,
@@ -422,6 +405,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         )
         cant_rot = self._adjust_facet(
             facet,
+            facet_index,
             position,
             span_x,
             span_y,
@@ -440,6 +424,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> List[Tuple[NURBSHeliostat, Optional[torch.Tensor]]]:
         return [
             self._create_facet(
+                i,
                 position,
                 span_x,
                 span_y,
@@ -447,11 +432,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 nurbs_config,
                 setup_params,
             )
-            for (position, span_x, span_y) in zip(
+            for (i, (position, span_x, span_y)) in enumerate(zip(
                     self.facet_positions,
                     self.facet_spans_x,
                     self.facet_spans_y,
-            )
+            ))
         ]
 
     def __len__(self) -> int:

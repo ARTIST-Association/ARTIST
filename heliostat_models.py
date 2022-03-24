@@ -80,6 +80,28 @@ def get_facet_params(
     ))
 
 
+def _indices_between(
+        points: torch.Tensor,
+        from_: torch.Tensor,
+        to: torch.Tensor,
+) -> torch.Tensor:
+    indices = (
+        (from_ <= points) & (points < to)
+    ).all(dim=-1)
+    return indices
+
+
+def facet_point_indices(points, position, span_x, span_y):
+    from_xyz = position + span_y - span_x
+    to_xyz = position - span_y + span_x
+    # We ignore the z-axis here.
+    return _indices_between(
+        points[:, :-1],
+        from_xyz[:-1],
+        to_xyz[:-1],
+    )
+
+
 def _sole_facet(
         height: float,
         width: float,
@@ -662,8 +684,11 @@ class AbstractHeliostat:
     position_on_field: torch.Tensor
     cfg: CfgNode
 
+    _facet_offsets: torch.Tensor
     _discrete_points: torch.Tensor
     _normals: torch.Tensor
+    _discrete_points_ideal: torch.Tensor
+    _normals_ideal: torch.Tensor
 
     def __init__(self, *args, **kwargs) -> None:
         raise NotImplementedError('do not construct an abstract class')
@@ -681,6 +706,33 @@ class AbstractHeliostat:
     @property
     def normals(self) -> torch.Tensor:
         return self._normals
+
+    def _make_facetted(self, values: torch.Tensor) -> List[torch.Tensor]:
+        return th.tensor_split(values, self._facet_offsets[1:])
+
+    @property
+    def facetted_discrete_points(self) -> List[torch.Tensor]:
+        return self._make_facetted(self.discrete_points)
+
+    @property
+    def _facetted_discrete_points(self) -> List[torch.Tensor]:
+        return self._make_facetted(self._discrete_points)
+
+    @property
+    def _facetted_discrete_points_ideal(self) -> List[torch.Tensor]:
+        return self._make_facetted(self._discrete_points_ideal)
+
+    @property
+    def facetted_normals(self) -> List[torch.Tensor]:
+        return self._make_facetted(self.normals)
+
+    @property
+    def _facetted_normals(self) -> List[torch.Tensor]:
+        return self._make_facetted(self._normals)
+
+    @property
+    def _facetted_normals_ideal(self) -> List[torch.Tensor]:
+        return self._make_facetted(self._normals_ideal)
 
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
@@ -765,13 +817,37 @@ class Heliostat(AbstractHeliostat):
             params,
         ) = builder_fn(h_cfg, self.device)
 
+        facet_offsets: List[int] = []
+        offset = 0
+        facetted_discrete_points: List[torch.Tensor] = []
+        facetted_discrete_points_ideal: List[torch.Tensor] = []
+        facetted_normals: List[torch.Tensor] = []
+        facetted_normals_ideal: List[torch.Tensor] = []
+        for (position, span_x, span_y) in zip(
+                facet_positions,
+                facet_spans_x,
+                facet_spans_y,
+        ):
+            facet_offsets.append(offset)
+
+            indices = facet_point_indices(
+                heliostat_ideal, position, span_x, span_y)
+            facetted_discrete_points.append(heliostat[indices])
+            facetted_discrete_points_ideal.append(heliostat_ideal[indices])
+            facetted_normals.append(heliostat_normals[indices])
+            facetted_normals_ideal.append(heliostat_ideal_vecs[indices])
+
+            offset += len(facetted_discrete_points[-1])
+
+        self._facet_offsets = th.tensor(facet_offsets, device=self.device)
         self.facet_positions = facet_positions
         self.facet_spans_x = facet_spans_x
         self.facet_spans_y = facet_spans_y
-        self._discrete_points = heliostat
-        self._discrete_points_ideal = heliostat_ideal
-        self._normals = heliostat_normals
-        self._normals_ideal = heliostat_ideal_vecs
+        self._discrete_points = th.cat(facetted_discrete_points, dim=0)
+        self._discrete_points_ideal = th.cat(
+            facetted_discrete_points_ideal, dim=0)
+        self._normals = th.cat(facetted_normals, dim=0)
+        self._normals_ideal = th.cat(facetted_normals_ideal, dim=0)
         self.params = params
         self.height = height
         self.width = width
