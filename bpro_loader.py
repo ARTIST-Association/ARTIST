@@ -58,8 +58,9 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
-            facet_pos = list(facetHeader_data[1:4])
+            facet_pos = facetHeader_data[1:4]
             # NWU to ENU
+            facet_pos = [-facet_pos[1], facet_pos[0], facet_pos[2]]
             facet_vec_x = np.array([
                 -facetHeader_data[5],
                 facetHeader_data[4],
