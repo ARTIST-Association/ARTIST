@@ -38,31 +38,8 @@ _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # Multiple Facets
+# FIXME also put to heliostat class
 _C.NURBS.FACETS = CN()
-# Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
-# width and height of the heliostat; see STRAL deflectometry data
-# format. If a single value, it will be used for all positions.
-_C.NURBS.FACETS.POSITIONS = [
-    [-0.6424999833106995, -0.8075000047683716, 0.040198374539613724],
-    [-0.6424999833106995, 0.8075000047683716, 0.040198374539613724],
-    [0.6424999833106995, -0.8075000047683716, 0.040198374539613724],
-    [0.6424999833106995, 0.8075000047683716, 0.040198374539613724],
-]
-# Spans in the north direction.
-_C.NURBS.FACETS.SPANS_X = [
-    [0.0, 0.8024845123291016, -0.004984567407518625],
-    [0.0, 0.8024845123291016, 0.004984567407518625],
-    [0.0, 0.8024845123291016, -0.004984567407518625],
-    [0.0, 0.8024845123291016, 0.004984567407518625],
-]
-
-# Spans in the east direction.
-_C.NURBS.FACETS.SPANS_Y = [
-    [-0.6374922394752502, 1.9569215510273352e-05, 0.0031505227088928223],
-    [-0.6374922394752502, -1.9569215510273352e-05, 0.0031505227088928223],
-    [-0.6374922394752502, -1.9569215510273352e-05, -0.0031505227088928223],
-    [-0.6374922394752502, 1.9569215510273352e-05, -0.0031505227088928223],
-]
 _C.NURBS.FACETS.CANTING = CN()
 _C.NURBS.FACETS.CANTING.ENABLED = False
 # Whether to use active canting.
@@ -103,6 +80,22 @@ _C.H.IDEAL.HEIGHT                       = 4 # in m
 _C.H.IDEAL.ROWS                         = 32
 _C.H.IDEAL.COLS                         = 32
 
+_C.H.IDEAL.FACETS = CN()
+_C.H.IDEAL.FACETS.POSITIONS = [
+    [-1.0, 1.0, 0.0],
+    [1.0, 1.0, 0.0],
+    [-1.0, -1.0, 0.0],
+    [1.0, -1.0, 0.0],
+]
+# Relative to `cfg.H.IDEAL.FACETS.POSITIONS`. These also give half of the
+# width and height of the heliostat; see STRAL deflectometry data
+# format. If a single value, it will be used for all positions.
+# Spans in the north direction.
+_C.H.IDEAL.FACETS.SPANS_X = [0.0, 1.0, 0.0]
+# Spans in the east direction.
+_C.H.IDEAL.FACETS.SPANS_Y = [-1.0, 0.0, 0.0]
+
+
 _C.H.FUNCTION                           = CN()
 _C.H.FUNCTION.WIDTH                     = 4 # in m
 _C.H.FUNCTION.HEIGHT                    = 4 # in m
@@ -111,6 +104,30 @@ _C.H.FUNCTION.COLS                      = 64
 _C.H.FUNCTION.NAME                      = "sin"
 _C.H.FUNCTION.FREQUENCY                 = 2
 _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
+
+_C.H.FUNCTION.FACETS = CN()
+# See `cfg.H.IDEAL.FACETS` for documentation.
+_C.H.FUNCTION.FACETS.POSITIONS = _C.H.IDEAL.FACETS.POSITIONS.copy()
+_C.H.FUNCTION.FACETS.SPANS_X = _C.H.IDEAL.FACETS.SPANS_X.copy()
+_C.H.FUNCTION.FACETS.SPANS_Y = _C.H.IDEAL.FACETS.SPANS_Y.copy()
+# _C.H.FUNCTION.FACETS.POSITIONS = [
+#     [-0.6424999833106995, -0.8075000047683716, 0.040198374539613724],
+#     [-0.6424999833106995, 0.8075000047683716, 0.040198374539613724],
+#     [0.6424999833106995, -0.8075000047683716, 0.040198374539613724],
+#     [0.6424999833106995, 0.8075000047683716, 0.040198374539613724],
+# ]
+# _C.H.FUNCTION.FACETS.SPANS_X = [
+#     [0.0, 0.8024845123291016, -0.004984567407518625],
+#     [0.0, 0.8024845123291016, 0.004984567407518625],
+#     [0.0, 0.8024845123291016, -0.004984567407518625],
+#     [0.0, 0.8024845123291016, 0.004984567407518625],
+# ]
+# _C.H.FUNCTION.FACETS.SPANS_Y = [
+#     [-0.6374922394752502, 1.9569215510273352e-05, 0.0031505227088928223],
+#     [-0.6374922394752502, -1.9569215510273352e-05, 0.0031505227088928223],
+#     [-0.6374922394752502, -1.9569215510273352e-05, -0.0031505227088928223],
+#     [-0.6374922394752502, 1.9569215510273352e-05, -0.0031505227088928223],
+# ]
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
@@ -126,29 +143,13 @@ _C.H.NURBS = CN()
 _C.H.NURBS.MAX_ABS_NOISE = 0.01
 
 _C.H.NURBS.SPLINE_DEGREE = 3
-# Width, height, rows and cols (discretization dimensions) given by
-# `_C.H.IDEAL`.
+# Width, height, rows, cols (discretization dimensions), and facet
+# parameters given by `_C.H.IDEAL`.
 # These are again the NURBS rows/cols of the control point matrix.
 _C.H.NURBS.ROWS = 8
 _C.H.NURBS.COLS = 8
 
 _C.H.NURBS.FACETS = CN()
-# _C.H.NURBS.FACETS.POSITIONS = [
-#     [-1.0, 1.0, 0.0],
-#     [1.0, 1.0, 0.0],
-#     [-1.0, -1.0, 0.0],
-#     [1.0, -1.0, 0.0],
-# ]
-
-_C.H.NURBS.FACETS.POSITIONS = _C.NURBS.FACETS.POSITIONS.copy()
-# Relative to `cfg.NURBS.FACETS.POSITIONS`. These also give half of the
-# width and height of the heliostat; see STRAL deflectometry data
-# format. If a single value, it will be used for all positions.
-# _C.H.NURBS.FACETS.SPANS_X = [0.0, 1.0, 0.0]
-# _C.H.NURBS.FACETS.SPANS_Y = [1.0, 0.0, 0.0]
-
-_C.H.NURBS.FACETS.SPANS_X = _C.NURBS.FACETS.SPANS_X.copy()
-_C.H.NURBS.FACETS.SPANS_Y = _C.NURBS.FACETS.SPANS_Y.copy()
 _C.H.NURBS.FACETS.CANTING = CN()
 # Always non-active canting.
 _C.H.NURBS.FACETS.CANTING.ENABLED = False

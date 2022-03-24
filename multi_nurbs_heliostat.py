@@ -322,6 +322,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _facet_heliostat_config(
             heliostat_config: CfgNode,
             position: torch.Tensor,
+            span_x: torch.Tensor,
+            span_y: torch.Tensor,
     ) -> CfgNode:
         heliostat_config = heliostat_config.clone()
         heliostat_config.defrost()
@@ -333,7 +335,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.IDEAL.ROWS = 2
         heliostat_config.IDEAL.COLS = 2
 
-        heliostat_config.POSITION_ON_FIELD = position.tolist()
+        position = position.tolist()
+        heliostat_config.POSITION_ON_FIELD = position
+        heliostat_config.IDEAL.FACETS.POSITIONS = [position]
+        heliostat_config.IDEAL.FACETS.SPANS_X = [span_x.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_Y = [span_y.tolist()]
         return heliostat_config
 
     @staticmethod
@@ -401,7 +407,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> Tuple[NURBSHeliostat, Optional[torch.Tensor]]:
         orig_nurbs_config = nurbs_config
         heliostat_config = self._facet_heliostat_config(
-            heliostat_config, position)
+            heliostat_config,
+            position,
+            span_x,
+            span_y,
+        )
         nurbs_config = self._facet_nurbs_config(nurbs_config, span_x, span_y)
 
         facet = NURBSHeliostat(
@@ -422,35 +432,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet.setup_params()
         return facet, cant_rot
 
-    @staticmethod
-    def _broadcast_spans(
-            spans: List[List[float]],
-            to_length: int,
-    ) -> List[List[float]]:
-        if len(spans) == to_length:
-            return spans
-
-        assert len(spans) == 1, (
-            'will only broadcast spans of length 1. If you did not intend '
-            'to broadcast, make sure there is the same amount of facet '
-            'positions and spans.'
-        )
-        return spans * to_length
-
     def _create_facets(
             self,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             setup_params: bool,
     ) -> List[Tuple[NURBSHeliostat, Optional[torch.Tensor]]]:
-        positions = utils.with_outer_list(self.nurbs_cfg.FACETS.POSITIONS)
-        spans_x: List[List[float]] = utils.with_outer_list(
-            self.nurbs_cfg.FACETS.SPANS_X)
-        spans_x = self._broadcast_spans(spans_x, len(positions))
-        spans_y: List[List[float]] = utils.with_outer_list(
-            self.nurbs_cfg.FACETS.SPANS_Y)
-        spans_y = self._broadcast_spans(spans_y, len(positions))
-
         return [
             self._create_facet(
                 position,
@@ -460,12 +447,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 nurbs_config,
                 setup_params,
             )
-            for (position, span_x, span_y) in map(
-                    lambda tup: map(
-                        lambda vec: th.tensor(vec, device=self.device),
-                        tup,
-                    ),
-                    zip(positions, spans_x, spans_y),
+            for (position, span_x, span_y) in zip(
+                    self.facet_positions,
+                    self.facet_spans_x,
+                    self.facet_spans_y,
             )
         ]
 

@@ -1,7 +1,18 @@
 import copy
 import functools
 import struct
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import pytorch3d.transforms as throt
 import torch
@@ -36,6 +47,37 @@ def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
 def reflect_rays(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
     return reflect_rays_(rays, normals)
+
+
+def _broadcast_spans(
+        spans: List[List[float]],
+        to_length: int,
+) -> List[List[float]]:
+    if len(spans) == to_length:
+        return spans
+
+    assert len(spans) == 1, (
+        'will only broadcast spans of length 1. If you did not intend '
+        'to broadcast, make sure there is the same amount of facet '
+        'positions and spans.'
+    )
+    return spans * to_length
+
+
+def get_facet_params(
+        cfg: CfgNode,
+        dtype: th.dtype,
+        device: th.device,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    positions: List[List[float]] = utils.with_outer_list(cfg.FACETS.POSITIONS)
+    spans_x: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_X)
+    spans_x = _broadcast_spans(spans_x, len(positions))
+    spans_y: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_Y)
+    spans_y = _broadcast_spans(spans_y, len(positions))
+    return tuple(map(  # type: ignore[return-value]
+        lambda l: th.tensor(l, dtype=dtype, device=device),
+        [positions, spans_x, spans_y],
+    ))
 
 
 def _sole_facet(
@@ -302,9 +344,16 @@ def heliostat_by_function(
     )
     # print(h.shape)
 
+    (facet_positions, facet_spans_x, facet_spans_y) = get_facet_params(
+        cfg,
+        dtype=h.dtype,
+        device=device,
+    )
     params = None
     return (
-        *_sole_facet(cfg.HEIGHT, cfg.WIDTH, h.dtype, device),
+        facet_positions,
+        facet_spans_x,
+        facet_spans_y,
         h,
         h_ideal,
         h_normal_vecs,
@@ -350,9 +399,17 @@ def ideal_heliostat(
         device=device,
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
+
+    (facet_positions, facet_spans_x, facet_spans_y) = get_facet_params(
+        cfg,
+        dtype=h.dtype,
+        device=device,
+    )
     params = None
     return (
-        *_sole_facet(cfg.HEIGHT, cfg.WIDTH, h.dtype, device),
+        facet_positions,
+        facet_spans_x,
+        facet_spans_y,
         h,
         h,  # h_ideal
         h_normal_vectors,
@@ -694,9 +751,9 @@ class Heliostat(AbstractHeliostat):
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
 
         (
-            _,
-            _,
-            _,
+            facet_positions,
+            facet_spans_x,
+            facet_spans_y,
             heliostat,
             heliostat_ideal,
             heliostat_normals,
@@ -707,6 +764,10 @@ class Heliostat(AbstractHeliostat):
             cols,
             params,
         ) = builder_fn(h_cfg, self.device)
+
+        self.facet_positions = facet_positions
+        self.facet_spans_x = facet_spans_x
+        self.facet_spans_y = facet_spans_y
         self._discrete_points = heliostat
         self._discrete_points_ideal = heliostat_ideal
         self._normals = heliostat_normals

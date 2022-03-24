@@ -264,6 +264,9 @@ def _multi_nurbs_to_standard(
 ) -> Heliostat:
     H = Heliostat(cfg.H, mnh.device)
     discrete_points, normals = mnh.discrete_points_and_normals()
+    H.facet_positions = mnh.facet_positions
+    H.facet_spans_x = mnh.facet_spans_x
+    H.facet_spans_y = mnh.facet_spans_y
     H._discrete_points = discrete_points
     H._discrete_points_ideal = mnh._discrete_points_ideal
     H._normals = normals
@@ -294,18 +297,12 @@ def build_heliostat(
         H = load_heliostat(cfg, device)
     else:
         if cfg.USE_NURBS:
-            if (
-                    cfg.NURBS.FACETS.POSITIONS is not None
-                    and len(cfg.NURBS.FACETS.POSITIONS) > 1
-            ):
-                nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
-                    MultiNURBSHeliostat
-                kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
-            else:
-                nurbs_heliostat_cls = NURBSHeliostat
-                kwargs = {}
-
-            H = nurbs_heliostat_cls(cfg.H, cfg.NURBS, device, **kwargs)
+            H = MultiNURBSHeliostat(
+                cfg.H,
+                cfg.NURBS,
+                device,
+                receiver_center=cfg.AC.RECEIVER.CENTER,
+            )
         else:
             H = Heliostat(cfg.H, device)
     return H
