@@ -26,7 +26,9 @@ class ExtendedEncoder(json.JSONEncoder):
             normals = obj.normals
             return (discrete_points, normals)
         elif isinstance(obj, th.Tensor):
-            return obj.tolist()
+            return (obj.tolist(), obj.dtype)
+        elif isinstance(obj, th.dtype):
+            return repr(obj)
         elif isinstance(obj, Environment):
             attrs = vars(obj).copy()
             del attrs['cfg']
@@ -99,7 +101,7 @@ def hash_args(
         if key not in ignore_argnames
     )
 
-    # Hash arguments and RNG state.
+    # Hash arguments, RNG state, and default dtype.
     hash_val = hashlib.md5(json.dumps(
         (
             hash_args,
@@ -111,6 +113,7 @@ def hash_args(
                 if th.cuda.is_available()
                 else None
             ),
+            th.get_default_dtype(),
         ),
         sort_keys=True,
         cls=ExtendedEncoder,
