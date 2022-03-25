@@ -225,13 +225,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet_normals = self._facetted_normals[facet_index]
         facet_normals_ideal = self._facetted_normals_ideal[facet_index]
 
-        orig_normal = facet_normals_ideal.mean(dim=0)
-        orig_normal /= th.linalg.norm(orig_normal)
-
         if (
                 self.nurbs_cfg.FACETS.CANTING.ENABLED
                 and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
+            orig_normal = facet_normals_ideal.mean(dim=0)
+            orig_normal /= th.linalg.norm(orig_normal)
+
             (
                 (
                     facet_discrete_points,
