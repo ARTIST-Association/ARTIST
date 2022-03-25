@@ -74,10 +74,11 @@ def get_facet_params(
     spans_x = _broadcast_spans(spans_x, len(positions))
     spans_y: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_Y)
     spans_y = _broadcast_spans(spans_y, len(positions))
-    return tuple(map(  # type: ignore[return-value]
+    position, spans_x, spans_y = map(
         lambda l: th.tensor(l, dtype=dtype, device=device),
         [positions, spans_x, spans_y],
-    ))
+    )
+    return position, spans_x, spans_y
 
 
 def _indices_between(
