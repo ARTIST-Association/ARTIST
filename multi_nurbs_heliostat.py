@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import torch
 import torch as th
@@ -24,7 +24,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config: CfgNode,
             device: th.device,
             setup_params: bool = True,
-            receiver_center: Optional[torch.Tensor] = None,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
     ) -> None:
         super().__init__(heliostat_config, device, setup_params=False)
         self.nurbs_cfg = nurbs_config
@@ -40,11 +40,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 'must have receiver center to cant heliostat '
                 'toward when not using active canting'
             )
-            self._receiver_center: Optional[torch.Tensor] = th.tensor(
-                receiver_center,
-                dtype=self.position_on_field.dtype,
-                device=device,
-            )
+            if not isinstance(receiver_center, th.Tensor):
+                receiver_center = th.tensor(
+                    receiver_center,
+                    dtype=self.position_on_field.dtype,
+                    device=device,
+                )
+            self._receiver_center: Optional[torch.Tensor] = receiver_center
         else:
             self._receiver_center = None
 
