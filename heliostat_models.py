@@ -799,6 +799,49 @@ class Heliostat(AbstractHeliostat):
             return other_objects, cfg.OTHER
         raise ValueError('unknown heliostat shape')
 
+    def set_up_facets(
+            self,
+            facet_positions: torch.Tensor,
+            facet_spans_x: torch.Tensor,
+            facet_spans_y: torch.Tensor,
+            discrete_points: torch.Tensor,
+            discrete_points_ideal: torch.Tensor,
+            normals: torch.Tensor,
+            normals_ideal: torch.Tensor,
+    ) -> None:
+        facet_offsets: List[int] = []
+        offset = 0
+        facetted_discrete_points: List[torch.Tensor] = []
+        facetted_discrete_points_ideal: List[torch.Tensor] = []
+        facetted_normals: List[torch.Tensor] = []
+        facetted_normals_ideal: List[torch.Tensor] = []
+        for (position, span_x, span_y) in zip(
+                facet_positions,
+                facet_spans_x,
+                facet_spans_y,
+        ):
+            facet_offsets.append(offset)
+
+            indices = facet_point_indices(
+                discrete_points_ideal, position, span_x, span_y)
+            facetted_discrete_points.append(discrete_points[indices])
+            facetted_discrete_points_ideal.append(
+                discrete_points_ideal[indices])
+            facetted_normals.append(normals[indices])
+            facetted_normals_ideal.append(normals_ideal[indices])
+
+            offset += len(facetted_discrete_points[-1])
+
+        self._facet_offsets = th.tensor(facet_offsets, device=self.device)
+        self.facet_positions = facet_positions
+        self.facet_spans_x = facet_spans_x
+        self.facet_spans_y = facet_spans_y
+        self._discrete_points = th.cat(facetted_discrete_points, dim=0)
+        self._discrete_points_ideal = th.cat(
+            facetted_discrete_points_ideal, dim=0)
+        self._normals = th.cat(facetted_normals, dim=0)
+        self._normals_ideal = th.cat(facetted_normals_ideal, dim=0)
+
     def load(self) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
 
@@ -817,37 +860,15 @@ class Heliostat(AbstractHeliostat):
             params,
         ) = builder_fn(h_cfg, self.device)
 
-        facet_offsets: List[int] = []
-        offset = 0
-        facetted_discrete_points: List[torch.Tensor] = []
-        facetted_discrete_points_ideal: List[torch.Tensor] = []
-        facetted_normals: List[torch.Tensor] = []
-        facetted_normals_ideal: List[torch.Tensor] = []
-        for (position, span_x, span_y) in zip(
-                facet_positions,
-                facet_spans_x,
-                facet_spans_y,
-        ):
-            facet_offsets.append(offset)
-
-            indices = facet_point_indices(
-                heliostat_ideal, position, span_x, span_y)
-            facetted_discrete_points.append(heliostat[indices])
-            facetted_discrete_points_ideal.append(heliostat_ideal[indices])
-            facetted_normals.append(heliostat_normals[indices])
-            facetted_normals_ideal.append(heliostat_ideal_vecs[indices])
-
-            offset += len(facetted_discrete_points[-1])
-
-        self._facet_offsets = th.tensor(facet_offsets, device=self.device)
-        self.facet_positions = facet_positions
-        self.facet_spans_x = facet_spans_x
-        self.facet_spans_y = facet_spans_y
-        self._discrete_points = th.cat(facetted_discrete_points, dim=0)
-        self._discrete_points_ideal = th.cat(
-            facetted_discrete_points_ideal, dim=0)
-        self._normals = th.cat(facetted_normals, dim=0)
-        self._normals_ideal = th.cat(facetted_normals_ideal, dim=0)
+        self.set_up_facets(
+            facet_positions,
+            facet_spans_x,
+            facet_spans_y,
+            heliostat,
+            heliostat_ideal,
+            heliostat_normals,
+            heliostat_ideal_vecs,
+        )
         self.params = params
         self.height = height
         self.width = width
