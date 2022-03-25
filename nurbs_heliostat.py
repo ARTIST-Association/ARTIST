@@ -78,6 +78,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             setup_params: bool = True,
     ) -> None:
         super().__init__(heliostat_config, device, setup_params=False)
+        assert len(self.facet_positions) == 1, (
+            'cannot handle multiple facets with `NURBSHeliostat`; '
+            'please use `MultiNURBSHeliostat` instead.'
+        )
+
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
