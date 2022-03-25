@@ -823,6 +823,7 @@ class Heliostat(AbstractHeliostat):
         ):
             facet_offsets.append(offset)
 
+            # Select points on facet based on positions of ideal points.
             indices = facet_point_indices(
                 discrete_points_ideal, position, span_x, span_y)
             facetted_discrete_points.append(discrete_points[indices])
