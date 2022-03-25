@@ -78,8 +78,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 # canting, so cant before repositioning.
                 curr_surface_points = th.matmul(
                     cant_rot, curr_surface_points.T).T
-                curr_surface_points = (
-                    curr_surface_points + facet.position_on_field)
+                curr_surface_points = \
+                    curr_surface_points + facet.position_on_field
                 curr_normals = th.matmul(cant_rot, curr_normals.T).T
 
                 discrete_points_ideal[i:i + offset] = curr_surface_points
