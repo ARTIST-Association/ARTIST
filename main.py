@@ -648,6 +648,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     else:
         th.set_default_dtype(th.float32)
 
+    utils.fix_pytorch3d()
+
     # Set up Logging
     # ==============
     if cfg.SAVE_RESULTS:

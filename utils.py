@@ -10,6 +10,7 @@ import os
 from typing import Callable, List, Optional, Tuple, TypeVar, Union
 
 from matplotlib import cm
+import pytorch3d.transforms as tfs
 import torch
 import torch as th
 from yacs.config import CfgNode
@@ -1059,3 +1060,12 @@ def save_target(
         'xi': xi,
         'yi': yi,
     }, path)
+
+
+def fix_pytorch3d() -> None:
+    # Monkey patch missing dtype propagation using default dtype.
+    # Not a good solution but it handles the bug.
+    tfs.Transform3d.__init__.__defaults__ = (
+        (th.get_default_dtype(),)
+        + tfs.Transform3d.__init__.__defaults__[1:]
+    )
