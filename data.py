@@ -26,7 +26,7 @@ def create_target(
             H.position_on_field,
             th.tensor(
                 H.cfg.IDEAL.NORMAL_VECS,
-                dtype=th.get_default_dtype(),
+                dtype=sun_direction.dtype,
                 device=device,
             ),
             H.discrete_points,
@@ -108,7 +108,7 @@ def generate_dataset(
         if targets is None:
             targets = th.empty(
                 (len(sun_directions),) + target_bitmap.shape,
-                dtype=th.get_default_dtype(),
+                dtype=sun_directions.dtype,
                 device=device,
             )
         targets[i] = target_bitmap
@@ -178,7 +178,7 @@ def _grid_sun_array(
         ele[0],
         ele[1],
         int(ele[2]),
-        dtype=th.get_default_dtype(),
+        dtype=azi.dtype,
         device=device,
     )
     # all possible combinations of azi ele
@@ -223,7 +223,7 @@ def _spheric_sun_array(
             "multiple sun vectors detected. "
             "spheric plot is only possible using 1 vector"
         )
-    dtype = th.get_default_dtype()
+    dtype = train_vec.dtype
 
     train_vec = train_vec / th.linalg.norm(train_vec, dim=1).unsqueeze(1)
     ae = utils.vec_to_ae(train_vec).squeeze()
