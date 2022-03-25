@@ -6,7 +6,6 @@ import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
-import random
 
 from environment import Environment
 from heliostat_models import AbstractHeliostat
@@ -127,13 +126,15 @@ def _random_sun_array(
 
     ae = []
     for i in range(size):
-        year = random.randint(1970, 2050)
-        month = random.randint(1, 12)
+        # All interval end values + 1 due to `th.randint` handling the
+        # upper limit exclusively.
+        year = th.randint(1970, 2051, ()).item()
+        month = th.randint(1, 13, ()).item()
         # Exclude late days in month, just cause a lot of if-clauses.
-        day = random.randint(1, 29)
-        hour = random.randint(1, 23)
-        minute = random.randint(1, 59)
-        sec = random.randint(1, 59)
+        day = th.randint(1, 30, ()).item()
+        hour = th.randint(1, 24, ()).item()
+        minute = th.randint(1, 60, ()).item()
+        sec = th.randint(1, 60, ()).item()
         azi, ele = utils.calculateSunAngles(
             hour,
             minute,
