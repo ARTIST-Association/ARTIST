@@ -125,13 +125,6 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def __len__(self) -> int:
         return len(self.eval_points)
 
-    def align(  # type: ignore[override]
-            self,
-            sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
-    ) -> 'AlignedNURBSHeliostat':
-        return AlignedNURBSHeliostat(self, sun_direction, receiver_center)
-
     def get_ray_directions(
             self,
             normals: Optional[torch.Tensor] = None,
@@ -466,3 +459,6 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         if normals is None:
             normals = self.normals
         return heliostat_models.reflect_rays_(self.from_sun, normals)
+
+
+NURBSHeliostat.aligned_cls = AlignedNURBSHeliostat

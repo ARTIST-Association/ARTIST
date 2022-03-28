@@ -684,6 +684,7 @@ class AbstractHeliostat:
     device: th.device
     position_on_field: torch.Tensor
     cfg: CfgNode
+    aligned_cls: Type['AbstractHeliostat']
 
     _facet_offsets: torch.Tensor
     _discrete_points: torch.Tensor
@@ -756,7 +757,11 @@ class AbstractHeliostat:
             sun_direction: torch.Tensor,
             receiver_center: torch.Tensor,
     ) -> 'AbstractHeliostat':
-        raise NotImplementedError('please override `align`')
+        assert hasattr(self, 'aligned_cls'), (
+            'please assign the type of the aligned version of this '
+            'heliostat to `aligned_cls`'
+        )
+        return self.aligned_cls(self, sun_direction, receiver_center)
 
 
 class Heliostat(AbstractHeliostat):
@@ -880,13 +885,6 @@ class Heliostat(AbstractHeliostat):
     @property
     def shape(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.rows, self.cols)
-
-    def align(
-            self,
-            sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
-    ) -> 'AlignedHeliostat':
-        return AlignedHeliostat(self, sun_direction, receiver_center)
 
     def setup_params(self) -> None:
         self._normals.requires_grad_(True)
@@ -1018,3 +1016,6 @@ class AlignedHeliostat(AbstractHeliostat):
 
     def get_ray_directions(self) -> torch.Tensor:
         return reflect_rays_(self.from_sun, self.normals)
+
+
+Heliostat.aligned_cls = AlignedHeliostat

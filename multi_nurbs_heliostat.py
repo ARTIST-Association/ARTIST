@@ -455,13 +455,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             for param in facet.get_params()
         ]
 
-    def align(  # type: ignore[override]
-            self,
-            sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
-    ) -> 'AlignedMultiNURBSHeliostat':
-        return AlignedMultiNURBSHeliostat(self, sun_direction, receiver_center)
-
     def _calc_normals_and_surface(
             self,
             reposition: bool = True,
@@ -633,3 +626,6 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             )
 
         return hel_rotated, normal_vectors_rotated
+
+
+MultiNURBSHeliostat.aligned_cls = AlignedMultiNURBSHeliostat
