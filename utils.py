@@ -1149,3 +1149,22 @@ def fix_pytorch3d() -> None:
         (th.get_default_dtype(),)
         + tfs.Transform3d.__init__.__defaults__[1:]
     )
+    tfs.Translate.__init__.__defaults__ = (
+        tfs.Translate.__init__.__defaults__[:2]
+        + (th.get_default_dtype(),)
+        + tfs.Translate.__init__.__defaults__[3:]
+    )
+    tfs.Scale.__init__.__defaults__ = (
+        tfs.Scale.__init__.__defaults__[:2]
+        + (th.get_default_dtype(),)
+        + tfs.Scale.__init__.__defaults__[3:]
+    )
+    tfs.Rotate.__init__.__defaults__ = (
+        (th.get_default_dtype(),)
+        + tfs.Rotate.__init__.__defaults__[1:]
+    )
+    tfs.RotateAxisAngle.__init__.__defaults__ = (
+        tfs.Scale.__init__.__defaults__[:2]
+        + (th.get_default_dtype(),)
+        + tfs.Rotate.__init__.__defaults__[3:]
+    )
