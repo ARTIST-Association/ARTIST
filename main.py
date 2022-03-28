@@ -718,8 +718,8 @@ def main(config_file_name: Optional[str] = None) -> None:
                 #     season_test_targets,
                 #     season_test_loss,
                 #     season_naive_test_loss,
-                #     logdir_enhanced_test,
                 #     epoch,
+                #     logdir_enhanced_test,
                 # )
                 plotter.plot_surfaces_3D_mm(
                     H, epoch, logdir_surfaces, writer=None)

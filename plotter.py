@@ -607,7 +607,7 @@ def spherical_loss_plot(train_vec, spheric_ae, train_loss, spheric_losses, naive
     plt.close(fig)
 
 
-def season_plot(season_extras, ideal, prediction, ground_truth, prediction_loss,ground_truth_loss, logdir, epoch):
+def season_plot(season_extras, ideal, prediction, ground_truth, prediction_loss,ground_truth_loss, epoch, logdir):
     # import matplotlib as matplotlib
 
     # from matplotlib.backends.backend_pgf import FigureCanvasPgf
