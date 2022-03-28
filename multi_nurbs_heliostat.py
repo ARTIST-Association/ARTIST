@@ -96,78 +96,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self._discrete_points_ideal = discrete_points_ideal
         self._normals_ideal = normals_ideal
 
-    @staticmethod
-    def angle(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-        return th.acos(
-            th.dot(a, b)
-            / (th.linalg.norm(a) * th.linalg.norm(b))
-        )
-
-    @staticmethod
-    def rot_x_mat(
-            angle: torch.Tensor,
-            dtype: th.dtype,
-            device: th.device,
-    ) -> torch.Tensor:
-        cos_angle = th.cos(angle)
-        sin_angle = th.sin(angle)
-        return th.tensor(
-            [
-                [1, 0, 0],
-                [0, cos_angle, -sin_angle],
-                [0, sin_angle, cos_angle],
-            ],
-            dtype=dtype,
-            device=device,
-        )
-
-    @staticmethod
-    def rot_y_mat(
-            angle: torch.Tensor,
-            dtype: th.dtype,
-            device: th.device,
-    ) -> torch.Tensor:
-        cos_angle = th.cos(angle)
-        sin_angle = th.sin(angle)
-        return th.tensor(
-            [
-                [cos_angle, 0, sin_angle],
-                [0, 1, 0],
-                [-sin_angle, 0, cos_angle],
-            ],
-            dtype=dtype,
-            device=device,
-        )
-
-    @staticmethod
-    def rot_z_mat(
-            angle: torch.Tensor,
-            dtype: th.dtype,
-            device: th.device,
-    ) -> torch.Tensor:
-        cos_angle = th.cos(angle)
-        sin_angle = th.sin(angle)
-        return th.tensor(
-            [
-                [cos_angle, -sin_angle, 0],
-                [sin_angle, cos_angle, 0],
-                [0, 0, 1],
-            ],
-            dtype=dtype,
-            device=device,
-        )
-
-    @staticmethod
-    def _get_rot_matrix(
-            start: torch.Tensor,
-            target: torch.Tensor,
-    ) -> torch.Tensor:
-        rot_angle = MultiNURBSHeliostat.angle(start, target)
-        rot_axis = th.cross(target, start)
-        rot_axis /= th.linalg.norm(rot_axis)
-        full_rot = utils.axis_angle_rotation(rot_axis, rot_angle)
-        return full_rot
-
     def _apply_canting(
             self,
             position_on_field: torch.Tensor,
@@ -194,7 +122,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             target_normal /= th.linalg.norm(target_normal)
         assert target_normal is not None
 
-        full_rot = self._get_rot_matrix(h_normal, target_normal)
+        full_rot = utils.get_rot_matrix(h_normal, target_normal)
 
         def look_at_receiver(hel_points):
             return th.matmul(full_rot, hel_points.T).T
@@ -263,7 +191,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             decanted_normal /= th.linalg.norm(decanted_normal)
 
             cant_rot: Optional[torch.Tensor] = \
-                self._get_rot_matrix(decanted_normal, orig_normal)
+                utils.get_rot_matrix(decanted_normal, orig_normal)
         else:
             cant_rot = None
 

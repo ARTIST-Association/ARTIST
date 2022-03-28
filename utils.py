@@ -177,6 +177,21 @@ def get_sun_array(*datetime: list, **observer):
     return sun_vecs, extras
 
 
+def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    angles = th.acos(th.clamp(
+        (
+            batch_dot(a, b).squeeze(-1)
+            / (
+                th.linalg.norm(a, dim=-1)
+                * th.linalg.norm(b, dim=-1)
+            )
+        ),
+        -1.0,
+        1.0,
+    )).squeeze(-1)
+    return angles
+
+
 def axis_angle_rotation(
         axis: torch.Tensor,
         angle_rad: torch.Tensor,
@@ -210,6 +225,71 @@ def axis_angle_rotation(
         ]
     ]
     return th.stack(rows, dim=1)
+
+
+def get_rot_matrix(
+        start: torch.Tensor,
+        target: torch.Tensor,
+) -> torch.Tensor:
+    rot_angle = angle_between(start, target)
+    rot_axis = th.cross(target, start)
+    rot_axis /= th.linalg.norm(rot_axis)
+    full_rot = axis_angle_rotation(rot_axis, rot_angle)
+    return full_rot
+
+
+def rot_x_mat(
+        angle_rad: torch.Tensor,
+        dtype: th.dtype,
+        device: th.device,
+) -> torch.Tensor:
+    cos_angle = th.cos(angle_rad)
+    sin_angle = th.sin(angle_rad)
+    return th.tensor(
+        [
+            [1, 0, 0],
+            [0, cos_angle, -sin_angle],
+            [0, sin_angle, cos_angle],
+        ],
+        dtype=dtype,
+        device=device,
+    )
+
+
+def rot_y_mat(
+        angle_rad: torch.Tensor,
+        dtype: th.dtype,
+        device: th.device,
+) -> torch.Tensor:
+    cos_angle = th.cos(angle_rad)
+    sin_angle = th.sin(angle_rad)
+    return th.tensor(
+        [
+            [cos_angle, 0, sin_angle],
+            [0, 1, 0],
+            [-sin_angle, 0, cos_angle],
+        ],
+        dtype=dtype,
+        device=device,
+    )
+
+
+def rot_z_mat(
+        angle_rad: torch.Tensor,
+        dtype: th.dtype,
+        device: th.device,
+) -> torch.Tensor:
+    cos_angle = th.cos(angle_rad)
+    sin_angle = th.sin(angle_rad)
+    return th.tensor(
+        [
+            [cos_angle, -sin_angle, 0],
+            [sin_angle, cos_angle, 0],
+            [0, 0, 1],
+        ],
+        dtype=dtype,
+        device=device,
+    )
 
 
 def deflec_facet_zs(
