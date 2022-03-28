@@ -401,7 +401,6 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir_files,
         "pretrain",
         writer,
-        
     )
 
     test_sun_directions, test_ae = cached_generate_test_sun_array(
@@ -484,7 +483,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         ) = cached_generate_season_sun_array(
             cfg.TEST.SUN_DIRECTIONS,
             device,
-            case="season", 
+            case="season",
         )
         # TODO bring to GPU in data.py
         season_test_sun_directions = season_test_sun_directions.to(device)
@@ -528,7 +527,12 @@ def main(config_file_name: Optional[str] = None) -> None:
     best_result = th.tensor(float('inf'))
     prefix = 'pretrain'
     for epoch in range(pretrain_epochs):
-        plotter.plot_surfaces_3D_mm(H, epoch, logdir_pretrain_surfaces, writer=None)
+        plotter.plot_surfaces_3D_mm(
+            H,
+            epoch,
+            logdir_pretrain_surfaces,
+            writer=None,
+        )
         train_objects = training.TrainObjects(
             opt,
             sched,
@@ -554,8 +558,13 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
-        if epoch % 15 ==0:
-            plotter.plot_surfaces_3D_mm(H, epoch, logdir_pretrain_surfaces, writer=None)
+        if epoch % 15 == 0:
+            plotter.plot_surfaces_3D_mm(
+                H,
+                epoch,
+                logdir_pretrain_surfaces,
+                writer=None,
+            )
             # plotter.plot_surfaces_mrad(
             #     H_target,
             #     H,
@@ -581,7 +590,6 @@ def main(config_file_name: Optional[str] = None) -> None:
     #     logdir_pretrain_surfaces,
     #     None
     # )
-    
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
