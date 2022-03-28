@@ -184,7 +184,11 @@ def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
         raise ValueError(
             "Loss function name not found, change name or implement new loss")
 
-    def loss_func(pred_bitmap, target_bitmap, opt):
+    def loss_func(
+            pred_bitmap: torch.Tensor,
+            target_bitmap: torch.Tensor,
+            opt: torch.optim.Optimizer,
+    ) -> torch.Tensor:
         loss = test_loss_func(pred_bitmap, target_bitmap)
 
         if cfg.USE_L1_WEIGHT_DECAY:

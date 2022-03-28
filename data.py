@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pytorch3d.transforms as throt
 import torch
@@ -128,13 +128,13 @@ def _random_sun_array(
     for i in range(size):
         # All interval end values + 1 due to `th.randint` handling the
         # upper limit exclusively.
-        year = th.randint(1970, 2051, ()).item()
-        month = th.randint(1, 13, ()).item()
+        year = int(th.randint(1970, 2051, ()).item())
+        month = int(th.randint(1, 13, ()).item())
         # Exclude late days in month, just cause a lot of if-clauses.
-        day = th.randint(1, 30, ()).item()
-        hour = th.randint(1, 24, ()).item()
-        minute = th.randint(1, 60, ()).item()
-        sec = th.randint(1, 60, ()).item()
+        day = int(th.randint(1, 30, ()).item())
+        hour = int(th.randint(1, 24, ()).item())
+        minute = int(th.randint(1, 60, ()).item())
+        sec = int(th.randint(1, 60, ()).item())
         azi, ele = utils.calculateSunAngles(
             hour,
             minute,
@@ -215,7 +215,7 @@ def _spheric_sun_array(
         cfg: CfgNode,
         device: th.device,
         train_vec: Optional[torch.Tensor],
-):
+) -> Tuple[torch.Tensor, torch.Tensor]:
     if train_vec is None:
         raise ValueError(
             "train_vec is None. Spheric testing needs a train vector")
@@ -408,7 +408,7 @@ def generate_sun_array(
         device: th.device,
         train_vec: Optional[torch.Tensor] = None,
         case: Optional[str] = None
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]]:
     cfg = cfg_sun_directions
     if not case:
         case = cfg.CASE
@@ -416,6 +416,7 @@ def generate_sun_array(
     assert case is not None
 
     if case == "random":
+        extras: Union[torch.Tensor, Dict[str, Any]]
         sun_directions, extras = _random_sun_array(cfg.RAND, device)
     elif case == "grid":
         sun_directions, extras = _grid_sun_array(cfg.GRID, device)

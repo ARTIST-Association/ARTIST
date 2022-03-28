@@ -94,7 +94,12 @@ def _indices_between(
     return indices
 
 
-def facet_point_indices(points, position, span_n, span_e):
+def facet_point_indices(
+        points: torch.Tensor,
+        position: torch.Tensor,
+        span_n: torch.Tensor,
+        span_e: torch.Tensor,
+) -> torch.Tensor:
     from_xyz = position + span_e - span_n
     to_xyz = position - span_e + span_n
     # We ignore the z-axis here.
@@ -695,7 +700,7 @@ class AbstractHeliostat:
     _discrete_points_ideal: torch.Tensor
     _normals_ideal: torch.Tensor
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError('do not construct an abstract class')
 
     def __len__(self) -> int:
@@ -751,7 +756,12 @@ class AbstractHeliostat:
             'cannot convert ' + self.__class__.__name__ + ' to dictionary')
 
     @classmethod
-    def from_dict(cls: Type[A], data: Dict[str, Any], *args, **kwargs) -> A:
+    def from_dict(
+            cls: Type[A],
+            data: Dict[str, Any],
+            *args: Any,
+            **kwargs: Any,
+    ) -> A:
         raise TypeError(
             'cannot construct ' + cls.__name__ + ' from dictionary')
 
@@ -963,7 +973,7 @@ class Heliostat(AbstractHeliostat):
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('Heliostat has to be aligned first')
 
-    def step(self, *args, **kwargs) -> None:
+    def step(self, *args: Any, **kwargs: Any) -> None:
         pass
 
     @property  # type: ignore[misc]

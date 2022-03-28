@@ -344,7 +344,12 @@ def deflec_facet_zs(
     return zs
 
 
-def _all_angles(points, normals, closest_indices, remaining_indices):
+def _all_angles(
+        points: torch.Tensor,
+        normals: torch.Tensor,
+        closest_indices: torch.Tensor,
+        remaining_indices: torch.Tensor,
+) -> torch.Tensor:
     connector = (points[closest_indices] - points).unsqueeze(1)
     other_connectors = (
         points[remaining_indices]
@@ -386,7 +391,10 @@ def _all_angles(points, normals, closest_indices, remaining_indices):
     return angles
 
 
-def _find_angles_in_other_slices(angles, num_slices):
+def _find_angles_in_other_slices(
+        angles: torch.Tensor,
+        num_slices: int,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     dtype = angles.dtype
     device = angles.device
     # Set up uniformly sized cake/pizza slices for which to find angles.
@@ -741,7 +749,7 @@ def _cartesian_linspace_around(
         num_y: int,
         device: th.device,
         dtype: Optional[th.dtype] = None,
-):
+) -> torch.Tensor:
     if dtype is None:
         dtype = th.get_default_dtype()
     if not isinstance(minval_x, th.Tensor):
@@ -883,7 +891,7 @@ def initialize_spline_ctrl_points(
         cols: int,
         h_width: float,
         h_height: float,
-):
+) -> None:
     device = control_points.device
     origin_offsets_x = th.linspace(
         -h_width / 2, h_width / 2, rows, device=device)

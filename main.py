@@ -2,7 +2,7 @@ import copy
 from datetime import datetime
 import functools
 import os
-from typing import Callable, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import torch
 import torch as th
@@ -90,7 +90,12 @@ def set_up_dataset_caching(
         Callable,
     ],
 ]:
-    def make_cached_generate_sun_array(prefix=''):
+    def make_cached_generate_sun_array(
+            prefix: str = '',
+    ) -> Callable[
+        [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
+        Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
+    ]:
         return disk_cache.disk_cache(
             data.generate_sun_array,
             device,
@@ -99,9 +104,22 @@ def set_up_dataset_caching(
             ignore_argnums=[1],
         )
 
-    def make_cached_generate_dataset(prefix, tb_log=True):
+    def make_cached_generate_dataset(
+            prefix: str,
+            tb_log: bool = True,
+    ) -> Callable[
+        [
+            AbstractHeliostat,
+            Environment,
+            torch.Tensor,
+            Optional[str],
+            str,
+            Optional[SummaryWriter],
+        ],
+        torch.Tensor,
+    ]:
         if tb_log:
-            log_dataset = functools.partial(
+            log_dataset: Optional[disk_cache.OnLoadFn] = functools.partial(
                 data.log_dataset,
                 prefix,
                 writer,

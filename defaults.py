@@ -310,16 +310,15 @@ _C.TEST.PLOT.GRID                        =False
 _C.TEST.PLOT.SEASON                      =False
 
 
-
-def get_cfg_defaults():
+def get_cfg_defaults() -> CN:
     return _C.clone()
 
 
-def load_config_file(cfg, config_file_loc):
+def load_config_file(cfg: CN, config_file_loc: str) -> CN:
     if len(os.path.splitext(config_file_loc)[1]) == 0:
         config_file_loc += '.yaml'
     cfg.merge_from_file(config_file_loc)
-    
+
     # if experiment_name:
     #     cfg.merge_from_list(["ID", experiment_name])
 

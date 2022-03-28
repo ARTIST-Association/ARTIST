@@ -14,13 +14,15 @@ from environment import Environment, Sun_Distribution
 from heliostat_models import AbstractHeliostat
 
 R = TypeVar('R')
+A = TypeVar('A')
 F = Callable[..., R]
+OnLoadFn = Callable[[R], R]
 
 DISABLE_DISK_CACHE = False
 
 
 class ExtendedEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, th.device):
             return 0
         elif isinstance(obj, AbstractHeliostat):
@@ -130,17 +132,18 @@ def disk_cache(
         prefix: str = '',
         ignore_argnums: List = [],
         ignore_argnames: List = [],
-        on_load: Optional[Callable[[R], R]] = None,
+        on_load: Optional[OnLoadFn] = None,
         remove_outdated: bool = False,
 ) -> F:
     if DISABLE_DISK_CACHE:
         return func
 
-    save_dir = Path(save_dir)
+    save_dir: Path = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
 
     @functools.wraps(func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: Any, **kwargs: Any) -> R:
+        assert isinstance(save_dir, Path)
         file_prefix = prefix + func.__name__ + '_'
 
         hash_val = hash_args(
