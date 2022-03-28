@@ -222,8 +222,6 @@ def _build_multi_nurbs_target(
     nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE = False
     nurbs_cfg.RECALCULATE_EVAL_POINTS = False
     nurbs_cfg.GROWING.INTERVAL = 0
-    # Can't use active canting with standard heliostat model.
-    nurbs_cfg.FACETS.CANTING.ACTIVE = False
 
     # Overwrite all attributes specified via `mnh_cfg.H.NURBS`.
     node_stack = [(nurbs_cfg, mnh_cfg.H.NURBS)]
