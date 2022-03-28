@@ -1164,10 +1164,10 @@ class AlignedHeliostat(AbstractHeliostat):
             receiver_center: torch.Tensor,
             align_points: bool = True,
     ) -> None:
+        assert type(self) == heliostat.aligned_cls, \
+            'aligned heliostat class does not match'
         if not hasattr(heliostat, '_discrete_points'):
             raise ValueError('Heliostat has to be loaded first')
-        if isinstance(heliostat, AlignedHeliostat):
-            raise ValueError('Heliostat is already aligned')
 
         self._heliostat = heliostat
 
