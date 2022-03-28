@@ -41,10 +41,13 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 _C.NURBS.FACETS = CN()
 _C.NURBS.FACETS.CANTING = CN()
 _C.NURBS.FACETS.CANTING.ENABLED = True
-# Whether to use active canting.
-# In active canting, each facet is canted perfectly for each sun
-# position.
-_C.NURBS.FACETS.CANTING.ACTIVE = False
+# Canting algorithm can be 'standard' or 'active'.
+# - Standard canting calculates the canting rotation to the focus point
+#   once at the beginning. The focus point is assumed to be right above
+#   the heliostat center at the distance of the receiver.
+# - In active canting, each facet is canted perfectly for each sun
+#   position.
+_C.NURBS.FACETS.CANTING.ALGORITHM = 'standard'
 
 # NURBS progressive growing
 _C.NURBS.GROWING                        = CN()
@@ -94,12 +97,10 @@ _C.H.IDEAL.FACETS.SPANS_X = [0.0, 1.0, 0.0]
 # Spans in the east direction.
 _C.H.IDEAL.FACETS.SPANS_Y = [-1.0, 0.0, 0.0]
 
+# See `cfg.NURBS.FACETS.CANTING` for documentation.
 _C.H.IDEAL.FACETS.CANTING = CN()
 _C.H.IDEAL.FACETS.CANTING.ENABLED = False
-# Whether to use active canting.
-# In active canting, each facet is canted perfectly for each sun
-# position.
-_C.H.IDEAL.FACETS.CANTING.ACTIVE = False
+_C.H.IDEAL.FACETS.CANTING.ALGORITHM = 'standard'
 
 
 _C.H.FUNCTION                           = CN()
@@ -137,7 +138,7 @@ _C.H.FUNCTION.FACETS.SPANS_Y = _C.H.IDEAL.FACETS.SPANS_Y.copy()
 
 _C.H.FUNCTION.FACETS.CANTING = CN()
 _C.H.FUNCTION.FACETS.CANTING.ENABLED = False
-_C.H.FUNCTION.FACETS.CANTING.ACTIVE = False
+_C.H.FUNCTION.FACETS.CANTING.ALGORITHM = 'standard'
 
 _C.H.DEFLECT_DATA                       = CN()
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
@@ -154,7 +155,7 @@ _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
 _C.H.DEFLECT_DATA.FACETS.CANTING = CN()
 _C.H.DEFLECT_DATA.FACETS.CANTING.ENABLED = False
-_C.H.DEFLECT_DATA.FACETS.CANTING.ACTIVE = False
+_C.H.DEFLECT_DATA.FACETS.CANTING.ALGORITHM = 'standard'
 
 _C.H.NURBS = CN()
 _C.H.NURBS.MAX_ABS_NOISE = 0.01
@@ -177,7 +178,7 @@ _C.H.OTHER.FACETS.SPANS_X = [0.0, float('inf'), 0.0]
 _C.H.OTHER.FACETS.SPANS_Y = [-float('inf'), 0.0, 0.0]
 _C.H.OTHER.FACETS.CANTING = CN()
 _C.H.OTHER.FACETS.CANTING.ENABLED = False
-_C.H.OTHER.FACETS.CANTING.ACTIVE = False
+_C.H.OTHER.FACETS.CANTING.ALGORITHM = 'standard'
 
 # TODO add heliostat up vec ("rotation")
 

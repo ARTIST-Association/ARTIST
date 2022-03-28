@@ -86,7 +86,7 @@ H:
         - 1.9569215510273352e-05
         - -0.0031505227088928223
       CANTING:
-        ACTIVE: false
+        ALGORITHM: 'standard'
         ENABLED: false
     COLS: 32
     HEIGHT: 4
@@ -115,7 +115,7 @@ NURBS:
   COLS: 6
   FACETS:
     CANTING:
-      ACTIVE: false
+      ALGORITHM: 'standard'
       ENABLED: true
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true

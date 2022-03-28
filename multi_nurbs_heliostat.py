@@ -6,7 +6,7 @@ import torch as th
 from yacs.config import CfgNode
 
 import heliostat_models
-from heliostat_models import AlignedHeliostat, Heliostat
+from heliostat_models import AlignedHeliostat, CantingAlgorithm, Heliostat
 from nurbs_heliostat import (
     AbstractNURBSHeliostat,
     AlignedNURBSHeliostat,
@@ -323,7 +323,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
             if (
                     self._canting_cfg.ENABLED
-                    and not self._canting_cfg.ACTIVE
+                    and self._canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 # We expect the position to be centered on zero for
                 # canting, so cant before repositioning.
@@ -443,7 +443,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
 
         if (
                 self._heliostat._canting_cfg.ENABLED
-                and self._heliostat._canting_cfg.ACTIVE
+                and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             self.facets = [
                 facet.align(sun_direction, receiver_center)
@@ -454,7 +454,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if (
                 self._heliostat._canting_cfg.ENABLED
-                and self._heliostat._canting_cfg.ACTIVE
+                and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat.discrete_points_and_normals(

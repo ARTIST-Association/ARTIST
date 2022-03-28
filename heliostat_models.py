@@ -1,4 +1,5 @@
 import copy
+import enum
 import functools
 import struct
 from typing import (
@@ -38,6 +39,12 @@ HeliostatParams = Tuple[
 ]
 A = TypeVar('A', bound='AbstractHeliostat')
 C = TypeVar('C', bound='Heliostat')
+
+
+@enum.unique
+class CantingAlgorithm(enum.Enum):
+    STANDARD = 'standard'
+    ACTIVE = 'active'
 
 
 def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
@@ -923,7 +930,10 @@ class Heliostat(AbstractHeliostat):
             facet_normals = normals[indices]
             facet_normals_ideal = normals_ideal[indices]
 
-            if canting_cfg.ENABLED and not canting_cfg.ACTIVE:
+            if (
+                    canting_cfg.ENABLED
+                    and self._canting_algo is not CantingAlgorithm.ACTIVE
+            ):
                 (
                     facet_discrete_points,
                     facet_discrete_points_ideal,
@@ -957,7 +967,17 @@ class Heliostat(AbstractHeliostat):
     def load(self) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         canting_cfg: CfgNode = h_cfg.FACETS.CANTING
-        if canting_cfg.ENABLED and not canting_cfg.ACTIVE:
+
+        self._canting_algo = next(
+            (canting_cfg.ALGORITHM == algo.value for algo in CantingAlgorithm),
+            None,
+        )
+        if self._canting_algo is None:
+            raise ValueError('unknown canting algorithm')
+        if (
+                canting_cfg.ENABLED
+                and self._canting_algo is not CantingAlgorithm.ACTIVE
+        ):
             assert self._receiver_center is not None, (
                 'must have receiver center to cant facets '
                 'toward when not using active canting'
