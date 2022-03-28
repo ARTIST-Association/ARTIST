@@ -101,7 +101,7 @@ def hash_args(
         if key not in ignore_argnames
     )
 
-    # Hash arguments, RNG state, and default dtype.
+    # Hash arguments and RNG state.
     hash_val = hashlib.md5(json.dumps(
         (
             hash_args,
@@ -113,7 +113,6 @@ def hash_args(
                 if th.cuda.is_available()
                 else None
             ),
-            th.get_default_dtype(),
         ),
         sort_keys=True,
         cls=ExtendedEncoder,
