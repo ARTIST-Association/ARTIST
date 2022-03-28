@@ -43,8 +43,8 @@ def load_bpro(
         nFacets = n_xy[0] * n_xy[1]
         # nFacets =1
         facet_positions: List[Vector3d] = []
-        facet_spans_x: List[Vector3d] = []
-        facet_spans_y: List[Vector3d] = []
+        facet_spans_n: List[Vector3d] = []
+        facet_spans_e: List[Vector3d] = []
 
         positions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
         directions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
@@ -74,8 +74,8 @@ def load_bpro(
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
 
             facet_positions.append(facet_pos)
-            facet_spans_x.append(facet_vec_x.tolist())
-            facet_spans_y.append(facet_vec_y.tolist())
+            facet_spans_n.append(facet_vec_x.tolist())
+            facet_spans_e.append(facet_vec_y.tolist())
 
             ideal_normal = (
                 facet_vec_z
@@ -98,8 +98,8 @@ def load_bpro(
 
     return (
         facet_positions,
-        facet_spans_x,
-        facet_spans_y,
+        facet_spans_n,
+        facet_spans_e,
         positions,
         directions,
         ideal_normal_vecs,

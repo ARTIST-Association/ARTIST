@@ -276,8 +276,8 @@ def _multi_nurbs_to_standard(
     H = Heliostat(cfg.H, mnh.device, receiver_center=cfg.AC.RECEIVER.CENTER)
     discrete_points, normals = mnh.discrete_points_and_normals()
     H.facet_positions = mnh.facet_positions
-    H.facet_spans_x = mnh.facet_spans_x
-    H.facet_spans_y = mnh.facet_spans_y
+    H.facet_spans_n = mnh.facet_spans_n
+    H.facet_spans_e = mnh.facet_spans_e
     H._discrete_points = discrete_points
     H._discrete_points_ideal = mnh._discrete_points_ideal
     H._normals = normals

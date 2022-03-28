@@ -130,8 +130,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _facet_heliostat_config(
             heliostat_config: CfgNode,
             position: torch.Tensor,
-            span_x: torch.Tensor,
-            span_y: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
     ) -> CfgNode:
         heliostat_config = heliostat_config.clone()
         heliostat_config.defrost()
@@ -146,8 +146,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         position = position.tolist()
         heliostat_config.POSITION_ON_FIELD = position
         heliostat_config.IDEAL.FACETS.POSITIONS = [position]
-        heliostat_config.IDEAL.FACETS.SPANS_X = [span_x.tolist()]
-        heliostat_config.IDEAL.FACETS.SPANS_Y = [span_y.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
         # Do not cant facet NURBS in their constructor; we do it
         # manually.
         heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
@@ -156,11 +156,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     @staticmethod
     def _facet_nurbs_config(
             nurbs_config: CfgNode,
-            span_x: torch.Tensor,
-            span_y: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
     ) -> CfgNode:
-        height = (th.linalg.norm(span_x) * 2).item()
-        width = (th.linalg.norm(span_y) * 2).item()
+        height = (th.linalg.norm(span_n) * 2).item()
+        width = (th.linalg.norm(span_e) * 2).item()
 
         nurbs_config = nurbs_config.clone()
         nurbs_config.defrost()
@@ -177,8 +177,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet: NURBSHeliostat,
             facet_index: int,
             position: torch.Tensor,
-            span_x: torch.Tensor,
-            span_y: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
             orig_nurbs_config: CfgNode,
             nurbs_config: CfgNode,
     ) -> torch.Tensor:
@@ -212,8 +212,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             facet_index: int,
             position: torch.Tensor,
-            span_x: torch.Tensor,
-            span_y: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             setup_params: bool,
@@ -222,10 +222,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config = self._facet_heliostat_config(
             heliostat_config,
             position,
-            span_x,
-            span_y,
+            span_n,
+            span_e,
         )
-        nurbs_config = self._facet_nurbs_config(nurbs_config, span_x, span_y)
+        nurbs_config = self._facet_nurbs_config(nurbs_config, span_n, span_e)
 
         facet = NURBSHeliostat(
             heliostat_config,
@@ -237,8 +237,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet,
             facet_index,
             position,
-            span_x,
-            span_y,
+            span_n,
+            span_e,
             orig_nurbs_config,
             nurbs_config,
         )
@@ -256,16 +256,16 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self._create_facet(
                 i,
                 position,
-                span_x,
-                span_y,
+                span_n,
+                span_e,
                 heliostat_config,
                 nurbs_config,
                 setup_params,
             )
-            for (i, (position, span_x, span_y)) in enumerate(zip(
+            for (i, (position, span_n, span_e)) in enumerate(zip(
                     self.facet_positions,
-                    self.facet_spans_x,
-                    self.facet_spans_y,
+                    self.facet_spans_n,
+                    self.facet_spans_e,
             ))
         ]
 

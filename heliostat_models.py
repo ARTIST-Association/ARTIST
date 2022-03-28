@@ -72,15 +72,15 @@ def get_facet_params(
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     positions: List[List[float]] = utils.with_outer_list(cfg.FACETS.POSITIONS)
-    spans_x: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_X)
-    spans_x = _broadcast_spans(spans_x, len(positions))
-    spans_y: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_Y)
-    spans_y = _broadcast_spans(spans_y, len(positions))
-    position, spans_x, spans_y = map(
+    spans_n: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_N)
+    spans_n = _broadcast_spans(spans_n, len(positions))
+    spans_e: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_E)
+    spans_e = _broadcast_spans(spans_e, len(positions))
+    position, spans_n, spans_e = map(
         lambda l: th.tensor(l, dtype=dtype, device=device),
-        [positions, spans_x, spans_y],
+        [positions, spans_n, spans_e],
     )
-    return position, spans_x, spans_y
+    return position, spans_n, spans_e
 
 
 def _indices_between(
@@ -94,9 +94,9 @@ def _indices_between(
     return indices
 
 
-def facet_point_indices(points, position, span_x, span_y):
-    from_xyz = position + span_y - span_x
-    to_xyz = position - span_y + span_x
+def facet_point_indices(points, position, span_n, span_e):
+    from_xyz = position + span_e - span_n
+    to_xyz = position - span_e + span_n
     # We ignore the z-axis here.
     return _indices_between(
         points[:, :-1],
@@ -135,8 +135,8 @@ def real_heliostat(
 
     (
         facet_positions,
-        facet_spans_x,
-        facet_spans_y,
+        facet_spans_n,
+        facet_spans_e,
         ideal_positions,
         directions,
         ideal_normal_vecs,
@@ -264,8 +264,8 @@ def real_heliostat(
     params = None
     return (
         th.tensor(facet_positions, device=device),
-        th.tensor(facet_spans_x, device=device),
-        th.tensor(facet_spans_y, device=device),
+        th.tensor(facet_spans_n, device=device),
+        th.tensor(facet_spans_e, device=device),
         h,
         h_ideal,
         h_normal_vecs,
@@ -369,7 +369,7 @@ def heliostat_by_function(
     )
     # print(h.shape)
 
-    (facet_positions, facet_spans_x, facet_spans_y) = get_facet_params(
+    (facet_positions, facet_spans_n, facet_spans_e) = get_facet_params(
         cfg,
         dtype=h.dtype,
         device=device,
@@ -377,8 +377,8 @@ def heliostat_by_function(
     params = None
     return (
         facet_positions,
-        facet_spans_x,
-        facet_spans_y,
+        facet_spans_n,
+        facet_spans_e,
         h,
         h_ideal,
         h_normal_vecs,
@@ -425,7 +425,7 @@ def ideal_heliostat(
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
 
-    (facet_positions, facet_spans_x, facet_spans_y) = get_facet_params(
+    (facet_positions, facet_spans_n, facet_spans_e) = get_facet_params(
         cfg,
         dtype=h.dtype,
         device=device,
@@ -433,8 +433,8 @@ def ideal_heliostat(
     params = None
     return (
         facet_positions,
-        facet_spans_x,
-        facet_spans_y,
+        facet_spans_n,
+        facet_spans_e,
         h,
         h,  # h_ideal
         h_normal_vectors,
@@ -828,8 +828,8 @@ class Heliostat(AbstractHeliostat):
     def set_up_facets(
             self,
             facet_positions: torch.Tensor,
-            facet_spans_x: torch.Tensor,
-            facet_spans_y: torch.Tensor,
+            facet_spans_n: torch.Tensor,
+            facet_spans_e: torch.Tensor,
             discrete_points: torch.Tensor,
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
@@ -850,16 +850,16 @@ class Heliostat(AbstractHeliostat):
         facetted_normals: List[torch.Tensor] = []
         facetted_normals_ideal: List[torch.Tensor] = []
 
-        for (position, span_x, span_y) in zip(
+        for (position, span_n, span_e) in zip(
                 facet_positions,
-                facet_spans_x,
-                facet_spans_y,
+                facet_spans_n,
+                facet_spans_e,
         ):
             facet_offsets.append(offset)
 
             # Select points on facet based on positions of ideal points.
             indices = facet_point_indices(
-                discrete_points_ideal, position, span_x, span_y)
+                discrete_points_ideal, position, span_n, span_e)
             facet_discrete_points = discrete_points[indices]
             facet_discrete_points_ideal = discrete_points_ideal[indices]
             facet_normals = normals[indices]
@@ -894,8 +894,8 @@ class Heliostat(AbstractHeliostat):
 
         self._facet_offsets = th.tensor(facet_offsets, device=self.device)
         self.facet_positions = facet_positions
-        self.facet_spans_x = facet_spans_x
-        self.facet_spans_y = facet_spans_y
+        self.facet_spans_n = facet_spans_n
+        self.facet_spans_e = facet_spans_e
         self._discrete_points = th.cat(facetted_discrete_points, dim=0)
         self._discrete_points_ideal = th.cat(
             facetted_discrete_points_ideal, dim=0)
@@ -920,8 +920,8 @@ class Heliostat(AbstractHeliostat):
 
         (
             facet_positions,
-            facet_spans_x,
-            facet_spans_y,
+            facet_spans_n,
+            facet_spans_e,
             heliostat,
             heliostat_ideal,
             heliostat_normals,
@@ -935,8 +935,8 @@ class Heliostat(AbstractHeliostat):
 
         self.set_up_facets(
             facet_positions,
-            facet_spans_x,
-            facet_spans_y,
+            facet_spans_n,
+            facet_spans_e,
             heliostat,
             heliostat_ideal,
             heliostat_normals,
