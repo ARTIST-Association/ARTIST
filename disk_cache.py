@@ -16,6 +16,8 @@ from heliostat_models import AbstractHeliostat
 R = TypeVar('R')
 F = Callable[..., R]
 
+DISABLE_DISK_CACHE = False
+
 
 class ExtendedEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -131,6 +133,9 @@ def disk_cache(
         on_load: Optional[Callable[[R], R]] = None,
         remove_outdated: bool = False,
 ) -> F:
+    if DISABLE_DISK_CACHE:
+        return func
+
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
 
