@@ -169,19 +169,21 @@ def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
         if 'facets' in cp:
             nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
                 MultiNURBSHeliostat
-            kwargs = {'receiver_center': cfg.AC.RECEIVER.CENTER}
         else:
             nurbs_heliostat_cls = NURBSHeliostat
-            kwargs = {}
         H: AbstractHeliostat = nurbs_heliostat_cls.from_dict(
             cp,
             device,
             nurbs_config=cfg.NURBS,
             config=cfg.H,
-            **kwargs,
+            receiver_center=cfg.AC.RECEIVER.CENTER,
         )
     else:
-        H = Heliostat.from_dict(cp, device)
+        H = Heliostat.from_dict(
+            cp,
+            device,
+            receiver_center=cfg.AC.RECEIVER.CENTER,
+        )
     return H
 
 
@@ -262,7 +264,7 @@ def _multi_nurbs_to_standard(
         cfg: CfgNode,
         mnh: MultiNURBSHeliostat,
 ) -> Heliostat:
-    H = Heliostat(cfg.H, mnh.device)
+    H = Heliostat(cfg.H, mnh.device, receiver_center=cfg.AC.RECEIVER.CENTER)
     discrete_points, normals = mnh.discrete_points_and_normals()
     H.facet_positions = mnh.facet_positions
     H.facet_spans_x = mnh.facet_spans_x
@@ -285,7 +287,7 @@ def build_target_heliostat(cfg: CfgNode, device: th.device) -> Heliostat:
         mnh = _build_multi_nurbs_target(cfg, device)
         H = _multi_nurbs_to_standard(cfg, mnh)
     else:
-        H = Heliostat(cfg.H, device)
+        H = Heliostat(cfg.H, device, receiver_center=cfg.AC.RECEIVER.CENTER)
     return H
 
 
@@ -304,7 +306,11 @@ def build_heliostat(
                 receiver_center=cfg.AC.RECEIVER.CENTER,
             )
         else:
-            H = Heliostat(cfg.H, device)
+            H = Heliostat(
+                cfg.H,
+                device,
+                receiver_center=cfg.AC.RECEIVER.CENTER,
+            )
     return H
 
 

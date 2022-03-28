@@ -685,6 +685,7 @@ class AbstractHeliostat:
     position_on_field: torch.Tensor
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
+    _receiver_center: Optional[torch.Tensor]
 
     _facet_offsets: torch.Tensor
     _discrete_points: torch.Tensor
@@ -755,12 +756,16 @@ class AbstractHeliostat:
     def align(
             self,
             sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
+            receiver_center: Optional[torch.Tensor] = None,
     ) -> 'AbstractHeliostat':
         assert hasattr(self, 'aligned_cls'), (
             'please assign the type of the aligned version of this '
             'heliostat to `aligned_cls`'
         )
+        if receiver_center is None:
+            receiver_center = self._receiver_center
+            assert receiver_center is not None, \
+                'when no receiver center is stored, one must be supplied'
         return self.aligned_cls(self, sun_direction, receiver_center)
 
 
@@ -770,17 +775,30 @@ class Heliostat(AbstractHeliostat):
             heliostat_config: CfgNode,
             device: th.device,
             setup_params: bool = True,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
     ) -> None:
         self.cfg = heliostat_config
         if not self.cfg.is_frozen():
             self.cfg = self.cfg.clone()
             self.cfg.freeze()
         self.device = device
+
         self.position_on_field = th.tensor(
             self.cfg.POSITION_ON_FIELD,
             dtype=th.get_default_dtype(),
             device=self.device,
         )
+
+        if (
+                receiver_center is not None
+                and not isinstance(receiver_center, th.Tensor)
+        ):
+            receiver_center = th.tensor(
+                receiver_center,
+                dtype=self.position_on_field.dtype,
+                device=device,
+            )
+        self._receiver_center = receiver_center
 
         self._checked_dict = False
         self.params: Union[Dict[str, Any], CfgNode, None] = None
@@ -909,6 +927,8 @@ class Heliostat(AbstractHeliostat):
 
             'config',
             'params',
+
+            'receiver_center',
         }
 
     def _check_dict(self, data: Dict[str, Any]) -> None:
@@ -932,6 +952,8 @@ class Heliostat(AbstractHeliostat):
 
             'config': self.cfg,
             'params': copy.deepcopy(self.params),
+
+            'receiver_center': self._receiver_center,
         }
         return data
 
@@ -953,12 +975,21 @@ class Heliostat(AbstractHeliostat):
             data: Dict[str, Any],
             device: th.device,
             config: Optional[CfgNode] = None,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
             restore_strictly: bool = True,
             setup_params: bool = True,
     ) -> C:
         if config is None:
             config = data['config']
-        self = cls(config, device, setup_params=False)
+        if receiver_center is None:
+            receiver_center = data['receiver_center']
+
+        self = cls(
+            config,
+            device,
+            receiver_center=receiver_center,
+            setup_params=False,
+        )
         self._from_dict(data, restore_strictly)
         if setup_params:
             self.setup_params()
@@ -970,6 +1001,7 @@ class Heliostat(AbstractHeliostat):
         if restore_strictly:
             self._discrete_points = data['heliostat_points']
             self.params = data['params']
+            self._receiver_center = data['receiver_center']
 
 
 class AlignedHeliostat(AbstractHeliostat):

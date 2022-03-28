@@ -26,7 +26,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             setup_params: bool = True,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
     ) -> None:
-        super().__init__(heliostat_config, device, setup_params=False)
+        super().__init__(
+            heliostat_config,
+            device,
+            setup_params=False,
+            receiver_center=receiver_center,
+        )
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
@@ -36,19 +41,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self.nurbs_cfg.FACETS.CANTING.ENABLED
                 and not self.nurbs_cfg.FACETS.CANTING.ACTIVE
         ):
-            assert receiver_center is not None, (
+            assert self._receiver_center is not None, (
                 'must have receiver center to cant heliostat '
                 'toward when not using active canting'
             )
-            if not isinstance(receiver_center, th.Tensor):
-                receiver_center = th.tensor(
-                    receiver_center,
-                    dtype=self.position_on_field.dtype,
-                    device=device,
-                )
-            self._receiver_center: Optional[torch.Tensor] = receiver_center
-        else:
-            self._receiver_center = None
 
         facets_and_rots = self._create_facets(
             self.cfg, self.nurbs_cfg, setup_params=setup_params)
@@ -440,8 +436,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         keys = keys.union({  # type: ignore[attr-defined]
             'nurbs_config',
             'facets',
-
-            'receiver_center',
         })
         return keys
 
@@ -449,7 +443,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _fixed_dict(self) -> Dict[str, Any]:
         data = super()._fixed_dict()
         data['nurbs_config'] = self.nurbs_cfg
-        data['receiver_center'] = self._receiver_center
         return data
 
     def _to_dict(self) -> Dict[str, Any]:
@@ -467,7 +460,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device: th.device,
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
-            receiver_center: Optional[torch.Tensor] = None,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly: bool = False,
@@ -498,9 +491,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         super()._from_dict(data, restore_strictly)
-
-        if restore_strictly:
-            self._receiver_center = data['receiver_center']
 
 
 class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):

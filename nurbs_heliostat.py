@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pytorch3d.transforms import Transform3d
 import torch
@@ -75,9 +75,15 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             device: th.device,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
             setup_params: bool = True,
     ) -> None:
-        super().__init__(heliostat_config, device, setup_params=False)
+        super().__init__(
+            heliostat_config,
+            device,
+            setup_params=False,
+            receiver_center=receiver_center,
+        )
         assert len(self.facet_positions) == 1, (
             'cannot handle multiple facets with `NURBSHeliostat`; '
             'please use `MultiNURBSHeliostat` instead.'
@@ -374,6 +380,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device: th.device,
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
+            receiver_center: Union[torch.Tensor, List[float], None] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly: bool = False,
@@ -383,8 +390,16 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
+        if receiver_center is None:
+            receiver_center = data['receiver_center']
 
-        self = cls(config, nurbs_config, device, setup_params=False)
+        self = cls(
+            config,
+            nurbs_config,
+            device,
+            receiver_center=receiver_center,
+            setup_params=False,
+        )
         self._from_dict(data, restore_strictly)
         if setup_params:
             self.setup_params()
