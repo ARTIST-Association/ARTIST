@@ -272,15 +272,15 @@ def _spheric_sun_array(
 
 
 def _season_sun_array(
-        device,
-        stepsize_hours=1,
-        stepsize_minutes=30,
-        longest_day=True,
-        shortest_day=True,
-        equinox_spring=True,
-        measurement_day=True,
-        *measurement_date,
-):
+        device: th.device,
+        stepsize_hours: int = 1,
+        stepsize_minutes: int = 30,
+        longest_day: bool = True,
+        shortest_day: bool = True,
+        equinox_spring: bool = True,
+        measurement_day: bool = True,
+        *measurement_date: List[int],
+) -> Tuple[torch.Tensor, Dict[str, Any]]:
     """Input:
         - stepsize for defining the grid distances
         - device
@@ -297,7 +297,7 @@ def _season_sun_array(
     """
     minutes = list(range(0, 60, stepsize_minutes))
     trajectories = []
-    infos = {}
+    infos: Dict[str, Any] = {}
     infos["date_time_ae"] = []
     if measurement_day:
         if len(measurement_date) >= 1:
@@ -390,7 +390,8 @@ def _season_sun_array(
             months,
             days,
             hours,
-            minutes, secs,
+            minutes,
+            secs,
         )
         trajectories.append(sun_vecs_long)
         infos["long"] = len(sun_vecs_long)  # TODO: Tidy up!
