@@ -75,6 +75,9 @@ H:
       - - -0.6374922394752502
         - 1.9569215510273352e-05
         - -0.0031505227088928223
+      CANTING:
+        ACTIVE: false
+        ENABLED: false
     COLS: 32
     HEIGHT: 4
     NORMAL_VECS:
@@ -85,9 +88,6 @@ H:
     WIDTH: 4
   NURBS:
     COLS: 8
-    FACETS:
-      CANTING:
-        ENABLED: false
     MAX_ABS_NOISE: 0.01
     ROWS: 8
     SPLINE_DEGREE: 3
@@ -108,7 +108,7 @@ NURBS:
   FACETS:
     CANTING:
       ACTIVE: false
-      ENABLED: false
+      ENABLED: true
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:

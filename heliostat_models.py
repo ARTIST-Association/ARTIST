@@ -103,6 +103,20 @@ def facet_point_indices(points, position, span_x, span_y):
     )
 
 
+def calc_focus_normal(
+        receiver_center: torch.Tensor,
+        heliostat_position_on_field: torch.Tensor,
+        facet_position: torch.Tensor,
+        facet_normal: torch.Tensor,
+) -> torch.Tensor:
+    hel_to_recv = receiver_center - heliostat_position_on_field
+    focus_distance = th.linalg.norm(hel_to_recv)
+    focus_point = facet_normal * focus_distance
+    target_normal = focus_point - facet_position
+    target_normal /= th.linalg.norm(target_normal)
+    return target_normal
+
+
 def _sole_facet(
         height: float,
         width: float,
@@ -823,6 +837,59 @@ class Heliostat(AbstractHeliostat):
             return other_objects, cfg.OTHER
         raise ValueError('unknown heliostat shape')
 
+    @staticmethod
+    def apply_rotation(
+            rot_mat: torch.Tensor,
+            values: torch.Tensor,
+    ) -> torch.Tensor:
+        return th.matmul(
+            rot_mat.unsqueeze(0),
+            values.unsqueeze(-1),
+        ).squeeze(-1)
+
+    def _cant_facet(
+            self,
+            position: torch.Tensor,
+            discrete_points: torch.Tensor,
+            discrete_points_ideal: torch.Tensor,
+            normals: torch.Tensor,
+            normals_ideal: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        assert self._receiver_center is not None
+
+        orig_normal = normals_ideal.mean(dim=0)
+        orig_normal /= th.linalg.norm(orig_normal)
+
+        target_normal = calc_focus_normal(
+            self._receiver_center,
+            self.position_on_field,
+            position,
+            orig_normal,
+        )
+
+        cant_rot = utils.get_rot_matrix(orig_normal, target_normal)
+
+        (
+            discrete_points,
+            discrete_points_ideal,
+            normals,
+            normals_ideal,
+        ) = map(
+            functools.partial(self.apply_rotation, cant_rot),
+            [
+                discrete_points - position,
+                discrete_points_ideal - position,
+                normals,
+                normals_ideal,
+            ],
+        )
+        return (
+            discrete_points + position,
+            discrete_points_ideal + position,
+            normals,
+            normals_ideal,
+        )
+
     def set_up_facets(
             self,
             facet_positions: torch.Tensor,
@@ -832,6 +899,7 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
+            canting_cfg: CfgNode,
     ) -> None:
         facet_offsets: List[int] = []
         offset = 0
@@ -839,6 +907,7 @@ class Heliostat(AbstractHeliostat):
         facetted_discrete_points_ideal: List[torch.Tensor] = []
         facetted_normals: List[torch.Tensor] = []
         facetted_normals_ideal: List[torch.Tensor] = []
+
         for (position, span_x, span_y) in zip(
                 facet_positions,
                 facet_spans_x,
@@ -849,13 +918,31 @@ class Heliostat(AbstractHeliostat):
             # Select points on facet based on positions of ideal points.
             indices = facet_point_indices(
                 discrete_points_ideal, position, span_x, span_y)
-            facetted_discrete_points.append(discrete_points[indices])
-            facetted_discrete_points_ideal.append(
-                discrete_points_ideal[indices])
-            facetted_normals.append(normals[indices])
-            facetted_normals_ideal.append(normals_ideal[indices])
+            facet_discrete_points = discrete_points[indices]
+            facet_discrete_points_ideal = discrete_points_ideal[indices]
+            facet_normals = normals[indices]
+            facet_normals_ideal = normals_ideal[indices]
 
-            offset += len(facetted_discrete_points[-1])
+            if canting_cfg.ENABLED and not canting_cfg.ACTIVE:
+                (
+                    facet_discrete_points,
+                    facet_discrete_points_ideal,
+                    facet_normals,
+                    facet_normals_ideal,
+                ) = self._cant_facet(
+                    position,
+                    facet_discrete_points,
+                    facet_discrete_points_ideal,
+                    facet_normals,
+                    facet_normals_ideal,
+                )
+
+            facetted_discrete_points.append(facet_discrete_points)
+            facetted_discrete_points_ideal.append(facet_discrete_points_ideal)
+            facetted_normals.append(facet_normals)
+            facetted_normals_ideal.append(facet_normals_ideal)
+
+            offset += len(facet_discrete_points)
 
         self._facet_offsets = th.tensor(facet_offsets, device=self.device)
         self.facet_positions = facet_positions
@@ -869,6 +956,12 @@ class Heliostat(AbstractHeliostat):
 
     def load(self) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
+        canting_cfg: CfgNode = h_cfg.FACETS.CANTING
+        if canting_cfg.ENABLED and not canting_cfg.ACTIVE:
+            assert self._receiver_center is not None, (
+                'must have receiver center to cant facets '
+                'toward when not using active canting'
+            )
 
         (
             facet_positions,
@@ -893,6 +986,7 @@ class Heliostat(AbstractHeliostat):
             heliostat_ideal,
             heliostat_normals,
             heliostat_ideal_vecs,
+            canting_cfg,
         )
         self.params = params
         self.height = height
