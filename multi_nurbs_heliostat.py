@@ -5,8 +5,10 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+import canting
+from canting import CantingAlgorithm
 import heliostat_models
-from heliostat_models import AlignedHeliostat, CantingAlgorithm, Heliostat
+from heliostat_models import AlignedHeliostat, Heliostat
 from nurbs_heliostat import (
     AbstractNURBSHeliostat,
     AlignedNURBSHeliostat,
@@ -43,40 +45,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.facets = [tup[0] for tup in facets_and_rots]
         self.cant_rots = [tup[1] for tup in facets_and_rots]
 
-    def _decant_facet(  # ;)
-            self,
-            facet_position: torch.Tensor,
-            facet_normal: torch.Tensor,
-            target_normal: torch.Tensor,
-            discrete_points: torch.Tensor,
-            discrete_points_ideal: torch.Tensor,
-            normals: torch.Tensor,
-            normals_ideal: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        decant_rot = utils.get_rot_matrix(facet_normal, target_normal)
-
-        (
-            discrete_points,
-            discrete_points_ideal,
-            normals,
-            normals_ideal,
-        ) = map(
-            functools.partial(Heliostat.apply_rotation, decant_rot),
-            [
-                discrete_points,
-                discrete_points_ideal,
-                normals,
-                normals_ideal,
-            ],
-        )
-
-        return (
-            discrete_points,
-            discrete_points_ideal,
-            normals,
-            normals_ideal,
-        )
-
     def _set_facet_points(
             self,
             facet: NURBSHeliostat,
@@ -84,9 +52,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             position: torch.Tensor,
     ) -> torch.Tensor:
         facet_discrete_points = \
-            self._facetted_discrete_points[facet_index] - position
+            self._facetted_discrete_points[facet_index]
         facet_discrete_points_ideal = \
-            self._facetted_discrete_points_ideal[facet_index] - position
+            self._facetted_discrete_points_ideal[facet_index]
         facet_normals = self._facetted_normals[facet_index]
         facet_normals_ideal = self._facetted_normals_ideal[facet_index]
 
@@ -99,12 +67,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device=self.device,
         )
 
+        # De-cant so the facet is flat on z = 0.
         (
             facet_discrete_points,
             facet_discrete_points_ideal,
             facet_normals,
             facet_normals_ideal,
-        ) = self._decant_facet(
+        ) = canting.cant_facet_to_normal(
             position,
             orig_normal,
             target_normal,
@@ -113,6 +82,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet_normals,
             facet_normals_ideal,
         )
+
+        # Re-center facet around zero.
+        facet_discrete_points -= position
+        facet_discrete_points_ideal -= position
 
         decanted_normal = facet_normals_ideal.mean(dim=0)
         decanted_normal /= th.linalg.norm(decanted_normal)
@@ -325,16 +298,16 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             offset = len(curr_surface_points)
 
             if (
-                    heliostat_models.canting_enabled(self._canting_cfg)
+                    canting.canting_enabled(self._canting_cfg)
                     and self._canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 # We expect the position to be centered on zero for
                 # canting, so cant before repositioning.
                 # We could also concat and after rotation de-construct here for
                 # possibly more speed.
-                curr_surface_points = Heliostat.apply_rotation(
+                curr_surface_points = canting.apply_rotation(
                     cant_rot, curr_surface_points)
-                curr_normals = Heliostat.apply_rotation(cant_rot, curr_normals)
+                curr_normals = canting.apply_rotation(cant_rot, curr_normals)
 
             if reposition:
                 curr_surface_points = \
@@ -445,7 +418,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         )
 
         if (
-                heliostat_models.canting_enabled(self._heliostat._canting_cfg)
+                canting.canting_enabled(self._heliostat._canting_cfg)
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             self.facets = [
@@ -456,7 +429,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
 
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if (
-                heliostat_models.canting_enabled(self._heliostat._canting_cfg)
+                canting.canting_enabled(self._heliostat._canting_cfg)
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \

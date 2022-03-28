@@ -1,5 +1,4 @@
 import copy
-import enum
 import functools
 import struct
 from typing import (
@@ -21,6 +20,8 @@ import torch as th
 from yacs.config import CfgNode
 
 import bpro_loader
+import canting
+from canting import CantingAlgorithm
 import utils
 
 HeliostatParams = Tuple[
@@ -39,12 +40,6 @@ HeliostatParams = Tuple[
 ]
 A = TypeVar('A', bound='AbstractHeliostat')
 C = TypeVar('C', bound='Heliostat')
-
-
-@enum.unique
-class CantingAlgorithm(enum.Enum):
-    STANDARD = 'standard'
-    ACTIVE = 'active'
 
 
 def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
@@ -108,24 +103,6 @@ def facet_point_indices(points, position, span_x, span_y):
         from_xyz[:-1],
         to_xyz[:-1],
     )
-
-
-def canting_enabled(canting_cfg):
-    return canting_cfg.FOCUS_POINT != 0
-
-
-def calc_focus_normal(
-        receiver_center: torch.Tensor,
-        heliostat_position_on_field: torch.Tensor,
-        facet_position: torch.Tensor,
-        facet_normal: torch.Tensor,
-) -> torch.Tensor:
-    hel_to_recv = receiver_center - heliostat_position_on_field
-    focus_distance = th.linalg.norm(hel_to_recv)
-    focus_point = facet_normal * focus_distance
-    target_normal = focus_point - facet_position
-    target_normal /= th.linalg.norm(target_normal)
-    return target_normal
 
 
 def _sole_facet(
@@ -848,67 +825,6 @@ class Heliostat(AbstractHeliostat):
             return other_objects, cfg.OTHER
         raise ValueError('unknown heliostat shape')
 
-    @staticmethod
-    def apply_rotation(
-            rot_mat: torch.Tensor,
-            values: torch.Tensor,
-    ) -> torch.Tensor:
-        return th.matmul(
-            rot_mat.unsqueeze(0),
-            values.unsqueeze(-1),
-        ).squeeze(-1)
-
-    def _cant_facet(
-            self,
-            position: torch.Tensor,
-            focus_point: Optional[torch.Tensor],
-            discrete_points: torch.Tensor,
-            discrete_points_ideal: torch.Tensor,
-            normals: torch.Tensor,
-            normals_ideal: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        assert self._receiver_center is not None
-
-        orig_normal = normals_ideal.mean(dim=0)
-        orig_normal /= th.linalg.norm(orig_normal)
-
-        if focus_point is not None:
-            target_normal = calc_focus_normal(
-                focus_point,
-                self.position_on_field,
-                position,
-                orig_normal,
-            )
-        else:
-            target_normal = th.tensor(
-                self.cfg.IDEAL.NORMAL_VECS,
-                dtype=position.dtype,
-                device=self.device,
-            )
-
-        cant_rot = utils.get_rot_matrix(orig_normal, target_normal)
-
-        (
-            discrete_points,
-            discrete_points_ideal,
-            normals,
-            normals_ideal,
-        ) = map(
-            functools.partial(self.apply_rotation, cant_rot),
-            [
-                discrete_points - position,
-                discrete_points_ideal - position,
-                normals,
-                normals_ideal,
-            ],
-        )
-        return (
-            discrete_points + position,
-            discrete_points_ideal + position,
-            normals,
-            normals_ideal,
-        )
-
     def set_up_facets(
             self,
             facet_positions: torch.Tensor,
@@ -920,28 +836,12 @@ class Heliostat(AbstractHeliostat):
             normals_ideal: torch.Tensor,
             canting_cfg: CfgNode,
     ) -> None:
-        dtype = facet_positions.dtype
-        if canting_cfg.FOCUS_POINT is not None:
-            if isinstance(canting_cfg.FOCUS_POINT, list):
-                assert len(canting_cfg.FOCUS_POINT) == 3, \
-                    'focus point as a list must be of length 3'
-                focus_point: Optional[torch.Tensor] = th.tensor(
-                    canting_cfg.FOCUS_POINT,
-                    dtype=dtype,
-                    device=self.device,
-                )
-            # We explicitly don't check for the float type so that
-            # distance can be given integers as well.
-            elif canting_cfg.FOCUS_POINT != float('inf'):
-                focus_point = th.tensor(
-                    [0, 0, canting_cfg.FOCUS_POINT],
-                    dtype=dtype,
-                    device=self.device,
-                )
-            else:
-                focus_point = None
-        else:
-            focus_point = self._receiver_center
+        focus_point = canting.get_focus_point(
+            canting_cfg,
+            self._receiver_center,
+            facet_positions.dtype,
+            self.device,
+        )
 
         facet_offsets: List[int] = []
         offset = 0
@@ -966,7 +866,7 @@ class Heliostat(AbstractHeliostat):
             facet_normals_ideal = normals_ideal[indices]
 
             if (
-                    canting_enabled(canting_cfg)
+                    canting.canting_enabled(canting_cfg)
                     and self._canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 (
@@ -974,13 +874,15 @@ class Heliostat(AbstractHeliostat):
                     facet_discrete_points_ideal,
                     facet_normals,
                     facet_normals_ideal,
-                ) = self._cant_facet(
+                ) = canting.cant_facet_to_point(
+                    self.position_on_field,
                     position,
                     focus_point,
                     facet_discrete_points,
                     facet_discrete_points_ideal,
                     facet_normals,
                     facet_normals_ideal,
+                    self.cfg.IDEAL.NORMAL_VECS,
                 )
 
             facetted_discrete_points.append(facet_discrete_points)
@@ -1004,20 +906,16 @@ class Heliostat(AbstractHeliostat):
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         canting_cfg: CfgNode = h_cfg.FACETS.CANTING
 
-        self._canting_algo = next(
-            (canting_cfg.ALGORITHM == algo.value for algo in CantingAlgorithm),
-            None,
-        )
-        if self._canting_algo is None:
-            raise ValueError('unknown canting algorithm')
+        self._canting_algo = canting.get_algorithm(canting_cfg)
         if (
-                canting_enabled(canting_cfg)
+                canting.canting_enabled(canting_cfg)
                 and canting_cfg.FOCUS_POINT is None
                 and self._canting_algo is not CantingAlgorithm.ACTIVE
         ):
             assert self._receiver_center is not None, (
                 'must have receiver center to cant facets '
-                'toward when not using active canting'
+                'toward when not using active canting '
+                'and no focus point is specified'
             )
 
         (
