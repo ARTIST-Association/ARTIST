@@ -175,6 +175,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.IDEAL.FACETS.POSITIONS = [position]
         heliostat_config.IDEAL.FACETS.SPANS_X = [span_x.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_Y = [span_y.tolist()]
+        # Do not cant facet NURBS in their constructor; we do it
+        # manually.
+        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
         return heliostat_config
 
     @staticmethod
