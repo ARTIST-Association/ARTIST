@@ -322,7 +322,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             offset = len(curr_surface_points)
 
             if (
-                    self._canting_cfg.ENABLED
+                    heliostat_models.canting_enabled(self._canting_cfg)
                     and self._canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 # We expect the position to be centered on zero for
@@ -442,7 +442,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         )
 
         if (
-                self._heliostat._canting_cfg.ENABLED
+                heliostat_models.canting_enabled(self._heliostat._canting_cfg)
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             self.facets = [
@@ -453,7 +453,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
 
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if (
-                self._heliostat._canting_cfg.ENABLED
+                heliostat_models.canting_enabled(self._heliostat._canting_cfg)
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \

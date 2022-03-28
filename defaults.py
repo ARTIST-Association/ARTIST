@@ -40,7 +40,17 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 # For multi-NURBS heliostat
 _C.NURBS.FACETS = CN()
 _C.NURBS.FACETS.CANTING = CN()
-_C.NURBS.FACETS.CANTING.ENABLED = True
+# To disable canting, set this to 0. Then, the heliostat is left exactly
+# as it was loaded in, be it pre-canted or not.
+#
+# When this is `None`, use `cfg.AC.RECEIVER.CENTER` as the focus point.
+#
+# In practice, only the distance of this point to the heliostat is
+# relevant; therefore you may also give the distance of the focus point
+# as a scalar instead of a 3-D point.
+# In the same vein, you can set this to `float('inf')` to "de-cant" the
+# heliostat so it's flat on z = 0.
+_C.NURBS.FACETS.CANTING.FOCUS_POINT = None
 # Canting algorithm can be 'standard' or 'active'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
@@ -99,7 +109,7 @@ _C.H.IDEAL.FACETS.SPANS_Y = [-1.0, 0.0, 0.0]
 
 # See `cfg.NURBS.FACETS.CANTING` for documentation.
 _C.H.IDEAL.FACETS.CANTING = CN()
-_C.H.IDEAL.FACETS.CANTING.ENABLED = False
+_C.H.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
 _C.H.IDEAL.FACETS.CANTING.ALGORITHM = 'standard'
 
 
@@ -137,7 +147,7 @@ _C.H.FUNCTION.FACETS.SPANS_Y = _C.H.IDEAL.FACETS.SPANS_Y.copy()
 # ]
 
 _C.H.FUNCTION.FACETS.CANTING = CN()
-_C.H.FUNCTION.FACETS.CANTING.ENABLED = False
+_C.H.FUNCTION.FACETS.CANTING.FOCUS_POINT = 0
 _C.H.FUNCTION.FACETS.CANTING.ALGORITHM = 'standard'
 
 _C.H.DEFLECT_DATA                       = CN()
@@ -154,7 +164,7 @@ _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
 _C.H.DEFLECT_DATA.FACETS.CANTING = CN()
-_C.H.DEFLECT_DATA.FACETS.CANTING.ENABLED = False
+_C.H.DEFLECT_DATA.FACETS.CANTING.FOCUS_POINT = 0
 _C.H.DEFLECT_DATA.FACETS.CANTING.ALGORITHM = 'standard'
 
 _C.H.NURBS = CN()
@@ -177,7 +187,7 @@ _C.H.OTHER.FACETS.POSITIONS = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS.SPANS_X = [0.0, float('inf'), 0.0]
 _C.H.OTHER.FACETS.SPANS_Y = [-float('inf'), 0.0, 0.0]
 _C.H.OTHER.FACETS.CANTING = CN()
-_C.H.OTHER.FACETS.CANTING.ENABLED = False
+_C.H.OTHER.FACETS.CANTING.FOCUS_POINT = 0
 _C.H.OTHER.FACETS.CANTING.ALGORITHM = 'standard'
 
 # TODO add heliostat up vec ("rotation")

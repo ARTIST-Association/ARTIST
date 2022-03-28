@@ -77,7 +77,7 @@ H:
         - -0.0031505227088928223
       CANTING:
         ALGORITM: 'standard'
-        ENABLED: false
+        FOCUS_POINT: 0
     COLS: 32
     HEIGHT: 4
     NORMAL_VECS:
@@ -108,7 +108,7 @@ NURBS:
   FACETS:
     CANTING:
       ALGORITHM: 'standard'
-      ENABLED: true
+      FOCUS_POINT: null
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:
