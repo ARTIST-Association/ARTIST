@@ -976,6 +976,8 @@ class Heliostat(AbstractHeliostat):
             device: th.device,
             config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            # Wether to disregard what standard initialization did and
+            # load all data we have.
             restore_strictly: bool = True,
             setup_params: bool = True,
     ) -> C:
