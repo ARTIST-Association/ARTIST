@@ -479,9 +479,9 @@ def calc_batch_loss(
     assert prefix, "prefix string cannot be empty"
     # Initialize Parameters
     # =====================
-    loss = th.tensor(0.0, device=H.device)
+    loss = th.tensor(0.0, dtype=targets.dtype, device=H.device)
     if return_extras:
-        num_missed = th.tensor(0.0, device=H.device)
+        num_missed = th.tensor(0.0, dtype=targets.dtype, device=H.device)
 
     # Batch Loop
     # ==========
@@ -591,7 +591,7 @@ def test_batch(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     assert prefix, "prefix string cannot be empty"
 
-    mean_loss = th.tensor(0.0, device=heliostat.device)
+    mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
     losses = []
     bitmaps: Optional[torch.Tensor] = None
     for (i, (target, sun_direction)) in enumerate(zip(
