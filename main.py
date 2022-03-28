@@ -519,7 +519,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # Pretraining
     # ===========
 
-    pretrain_epochs = 0
+    pretrain_epochs = 50
     steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
     opt, sched = training.build_optimizer_scheduler(
         cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
@@ -806,7 +806,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    # path_to_yaml = os.path.join("TestingConfigs", "600m_Function.yaml")
-    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
+    path_to_yaml = os.path.join("TestingConfigs", "600m_Function.yaml")
     main(path_to_yaml)
     # main()
