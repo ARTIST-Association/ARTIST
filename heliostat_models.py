@@ -1012,6 +1012,7 @@ class Heliostat(AbstractHeliostat):
             raise ValueError('unknown canting algorithm')
         if (
                 canting_enabled(canting_cfg)
+                and canting_cfg.FOCUS_POINT is None
                 and self._canting_algo is not CantingAlgorithm.ACTIVE
         ):
             assert self._receiver_center is not None, (
