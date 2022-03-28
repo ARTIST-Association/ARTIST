@@ -1,8 +1,12 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Type, TypeVar, Union
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import torch
 import torch as th
+
+C = TypeVar('C', bound='NURBSCurve')
+S = TypeVar('S', bound='NURBSSurface')
 
 
 class NoConvergenceError(RuntimeError):
@@ -508,62 +512,62 @@ def calc_bspline_derivs(
     return result
 
 
-def _calc_bspline_deriv_cpts(
-        r1,
-        r2,
-        degree,
-        control_points,
-        knots,
-        nth_deriv=1,
-):
-    device = control_points.device
-    next_nth_deriv = nth_deriv + 1
-    next_degree = degree + 1
-    r = r2 - r1
-    result = th.empty(
-        (nth_deriv + 1, r + 1, control_points.shape[-1]),
-        device=device,
-    )
-    # print(result.shape)
-    # print(control_points.shape)
-    for i in range(r + 1):
-        result[0, i] = control_points[r1 + i]
-    for k in range(1, next_nth_deriv):
-        tmp = degree - k + 1
-        for i in range(r - k + 1):
-            result[k, i] = (
-                tmp * (result[k - 1, i + 1] - result[k - 1, i])
-                / (knots[r1 + i + next_degree] - knots[r1 + i + k])
-            )
-    return result
+# def _calc_bspline_deriv_cpts(
+#         r1: int,
+#         r2: int,
+#         degree: int,
+#         control_points: torch.Tensor,
+#         knots: torch.Tensor,
+#         nth_deriv: int = 1,
+# ) -> torch.Tensor:
+#     device = control_points.device
+#     next_nth_deriv = nth_deriv + 1
+#     next_degree = degree + 1
+#     r = r2 - r1
+#     result = th.empty(
+#         (nth_deriv + 1, r + 1, control_points.shape[-1]),
+#         device=device,
+#     )
+#     # print(result.shape)
+#     # print(control_points.shape)
+#     for i in range(r + 1):
+#         result[0, i] = control_points[r1 + i]
+#     for k in range(1, next_nth_deriv):
+#         tmp = degree - k + 1
+#         for i in range(r - k + 1):
+#             result[k, i] = (
+#                 tmp * (result[k - 1, i + 1] - result[k - 1, i])
+#                 / (knots[r1 + i + next_degree] - knots[r1 + i + k])
+#             )
+#     return result
 
 
-def calc_bspline_derivs_2(
-        evaluation_point,
-        degree,
-        control_points,
-        knots,
-        nth_deriv=1,
-):
-    device = control_points.device
-    next_degree = degree + 1
-    next_nth_deriv = nth_deriv + 1
-    num_control_points = len(control_points) - 1
-    du = min(nth_deriv, degree)
-    result = th.empty(
-        (next_nth_deriv, control_points.shape[-1]), device=device)
-    for k in range(next_degree, next_nth_deriv):
-        result[k] = 0
-    span = find_span(evaluation_point, degree, num_control_points, knots)
-    all_basis_values = get_all_basis(evaluation_point, span, degree, knots)
-    pk = _calc_bspline_deriv_cpts(
-        span - degree, span, degree, control_points, knots, du)
-    for k in range(du + 1):
-        result[k] = 0
-        for j in range(next_degree - k):
-            result[k] += all_basis_values[j, degree - k] * pk[k, j]
-    # the k-th derivative is at index k, 0 <= k <= nth_deriv
-    return result
+# def calc_bspline_derivs_2(
+#         evaluation_point: torch.Tensor,
+#         degree: int,
+#         control_points: torch.Tensor,
+#         knots: torch.Tensor,
+#         nth_deriv: int = 1,
+# ) -> torch.Tensor:
+#     device = control_points.device
+#     next_degree = degree + 1
+#     next_nth_deriv = nth_deriv + 1
+#     num_control_points = len(control_points) - 1
+#     du = min(nth_deriv, degree)
+#     result = th.empty(
+#         (next_nth_deriv, control_points.shape[-1]), device=device)
+#     for k in range(next_degree, next_nth_deriv):
+#         result[k] = 0
+#     span = find_span(evaluation_point, degree, num_control_points, knots)
+#     all_basis_values = get_all_basis(evaluation_point, span, degree, knots)
+#     pk = _calc_bspline_deriv_cpts(
+#         span - degree, span, degree, control_points, knots, du)
+#     for k in range(du + 1):
+#         result[k] = 0
+#         for j in range(next_degree - k):
+#             result[k] += all_basis_values[j, degree - k] * pk[k, j]
+#     # the k-th derivative is at index k, 0 <= k <= nth_deriv
+#     return result
 
 
 def calc_derivs(
@@ -727,45 +731,77 @@ def calc_derivs(
 
 
 class NURBSCurve:
-    def __init__(self, degree, control_points, control_point_weights, knots):
+    def __init__(
+            self,
+            degree: int,
+            control_points: torch.Tensor,
+            control_point_weights: torch.Tensor,
+            knots: torch.Tensor,
+    ) -> None:
         self.degree = degree
         self.control_points = control_points
         self.control_point_weights = control_point_weights
         self.knots = knots
 
     @classmethod
-    def create_empty(cls, degree, num_control_points, device):
+    def create_empty(
+            cls: Type[C],
+            degree: int,
+            num_control_points: int,
+            device: th.device,
+    ) -> C:
         control_points, control_point_weights, knots = setup_nurbs(
             degree, num_control_points, device)
         return cls(degree, control_points, control_point_weights, knots)
 
-    def find_span(self, evaluation_point, num_control_points=None):
+    def find_span(
+            self,
+            evaluation_point: torch.Tensor,
+            num_control_points: Optional[int] = None,
+    ) -> torch.Tensor:
         if num_control_points is None:
             num_control_points = len(self.control_points)
-        return self._find_span(
-            evaluation_point, self.degree, num_control_points, self.knots)
+        return find_span(
+            evaluation_point,
+            self.degree,
+            num_control_points,
+            self.knots,
+        )
 
-    def get_basis(self, evaluation_point, span=None):
+    def get_basis(
+            self,
+            evaluation_point: torch.Tensor,
+            span: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         if span is None:
             span = self.find_span(evaluation_point)
         return get_basis(evaluation_point, span, self.degree, self.knots)
 
-    def get_all_basis(self, evaluation_point, span=None):
+    def get_all_basis(
+            self,
+            evaluation_point: torch.Tensor,
+            span: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         if span is None:
             span = self.find_span(evaluation_point)
         return get_all_basis(evaluation_point, span, self.degree, self.knots)
 
-    def calc_basis_derivs(self, evaluation_point, span=None, nth_deriv=1):
+    def calc_basis_derivs(
+            self,
+            evaluation_point: torch.Tensor,
+            span: Optional[torch.Tensor] = None,
+            nth_deriv: int = 1,
+    ) -> torch.Tensor:
         if span is None:
             span = self.find_span(evaluation_point)
         return calc_basis_derivs(
             evaluation_point, span, self.degree, self.knots, nth_deriv)
 
-    def project_control_points(self):
+    def project_control_points(self) -> torch.Tensor:
         return project_control_points(
             self.control_points, self.control_point_weights)
 
-    def evaluate(self, evaluation_point):
+    def evaluate(self, evaluation_point: torch.Tensor) -> torch.Tensor:
         return evaluate_nurbs(
             evaluation_point,
             self.degree,
@@ -774,7 +810,11 @@ class NURBSCurve:
             self.knots,
         )
 
-    def calc_bspline_derivs(self, evaluation_point, nth_deriv=1):
+    def calc_bspline_derivs(
+            self,
+            evaluation_point: torch.Tensor,
+            nth_deriv: int = 1,
+    ) -> torch.Tensor:
         return calc_bspline_derivs(
             evaluation_point,
             self.degree,
@@ -783,16 +823,24 @@ class NURBSCurve:
             nth_deriv,
         )
 
-    def calc_bspline_derivs_2(self, evaluation_point, nth_deriv=1):
-        return calc_bspline_derivs_2(
-            evaluation_point,
-            self.degree,
-            self.control_points,
-            self.knots,
-            nth_deriv,
-        )
+    # def calc_bspline_derivs_2(
+    #         self,
+    #         evaluation_point: torch.Tensor,
+    #         nth_deriv: int = 1,
+    # ) -> torch.Tensor:
+    #     return calc_bspline_derivs_2(
+    #         evaluation_point,
+    #         self.degree,
+    #         self.control_points,
+    #         self.knots,
+    #         nth_deriv,
+    #     )
 
-    def calc_derivs(self, evaluation_point, nth_deriv=1):
+    def calc_derivs(
+            self,
+            evaluation_point: torch.Tensor,
+            nth_deriv: int = 1,
+    ) -> torch.Tensor:
         return calc_derivs(
             evaluation_point,
             self.degree,
@@ -1376,7 +1424,7 @@ def plot_surface(
         step_granularity_x: float = 0.02,
         step_granularity_y: float = 0.02,
         show_plot: bool = True,
-):
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
@@ -1436,7 +1484,7 @@ def plot_surface_derivs(
         nth_deriv: int = 1,
         show_plot: bool = True,
         plot_normals: Optional[bool] = None,
-):
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
     if plot_normals is None:
         plot_normals = nth_deriv == 1
     device = control_points.device
@@ -1548,7 +1596,7 @@ def plot_surface_derivs_slow(
         nth_deriv: int = 1,
         show_plot: bool = True,
         plot_normals: Optional[bool] = None,
-):
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
     if plot_normals is None:
         plot_normals = nth_deriv == 1
     device = control_points.device
@@ -1657,7 +1705,7 @@ def plot_surface_normals(
         step_granularity_x: float = 0.02,
         step_granularity_y: float = 0.02,
         show_plot: bool = True,
-):
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
@@ -1739,7 +1787,7 @@ def plot_surface_normals_slow(
         step_granularity_x: float = 0.02,
         step_granularity_y: float = 0.02,
         show_plot: bool = True,
-):
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
     device = control_points.device
     xs = th.arange(0, 1, step_granularity_x, device=device)
     ys = th.arange(0, 1, step_granularity_y, device=device)
@@ -2255,17 +2303,17 @@ def get_mesh_params_(
 
     if in_row_dir:
         if world_points.ndim == 3:
-            def wp(row, col):
+            def wp(row: int, col: int) -> torch.Tensor:
                 return world_points[row, col]
         else:
-            def wp(row, col):
+            def wp(row: int, col: int) -> torch.Tensor:
                 return world_points[row * (num_other_points + 1) + col]
     else:
         if world_points.ndim == 3:
-            def wp(row, col):
+            def wp(row: int, col: int) -> torch.Tensor:
                 return world_points[col, row]
         else:
-            def wp(row, col):
+            def wp(row: int, col: int) -> torch.Tensor:
                 return world_points[row + col * (num_points + 1)]
 
     num_nondegenerate = num_other_points + 1
@@ -2380,17 +2428,17 @@ def calc_R(
 
     if in_row_dir:
         if world_points.ndim == 3:
-            def wp(row):
+            def wp(row: Union[torch.Tensor, int]) -> torch.Tensor:
                 return world_points[row, col]
         else:
-            def wp(row):
+            def wp(row: Union[torch.Tensor, int]) -> torch.Tensor:
                 return world_points[row * (num_other_points + 1) + col]
     else:
         if world_points.ndim == 3:
-            def wp(row):
+            def wp(row: Union[torch.Tensor, int]) -> torch.Tensor:
                 return world_points[col, row]
         else:
-            def wp(row):
+            def wp(row: Union[torch.Tensor, int]) -> torch.Tensor:
                 return world_points[row + col * (num_points + 1)]
 
     selected_params = params[1:num_points]
@@ -2667,13 +2715,13 @@ def approximate_surface(
 class NURBSSurface:
     def __init__(
             self,
-            degree_x,
-            degree_y,
-            control_points,
-            control_point_weights,
-            knots_x,
-            knots_y,
-    ):
+            degree_x: int,
+            degree_y: int,
+            control_points: torch.Tensor,
+            control_point_weights: torch.Tensor,
+            knots_x: torch.Tensor,
+            knots_y: torch.Tensor,
+    ) -> None:
         self.degree_x = degree_x
         self.degree_y = degree_y
         self.control_points = control_points
@@ -2683,13 +2731,13 @@ class NURBSSurface:
 
     @classmethod
     def create_empty(
-            cls,
-            degree_x,
-            degree_y,
-            num_control_points_x,
-            num_control_points_y,
-            device,
-    ):
+            cls: Type[S],
+            degree_x: int,
+            degree_y: int,
+            num_control_points_x: int,
+            num_control_points_y: int,
+            device: th.device,
+    ) -> S:
         (
             control_points,
             control_point_weights,
@@ -2712,7 +2760,10 @@ class NURBSSurface:
         )
 
     @classmethod
-    def create_example(cls, device=th.device('cpu')):
+    def create_example(
+            cls: Type[S],
+            device: th.device = th.device('cpu'),
+    ) -> S:
         degree = 3
         num_ctrl = 6
         surf = cls.create_empty(degree, degree, num_ctrl, num_ctrl, device)
@@ -2757,7 +2808,11 @@ class NURBSSurface:
         # surf.knots_y[-degree - 2] = 1
         return surf
 
-    def evaluate(self, evaluation_point_x, evaluation_point_y):
+    def evaluate(
+            self,
+            evaluation_point_x: torch.Tensor,
+            evaluation_point_y: torch.Tensor,
+    ) -> torch.Tensor:
         return evaluate_nurbs_surface_flex(
             evaluation_point_x,
             evaluation_point_y,
@@ -2771,10 +2826,10 @@ class NURBSSurface:
 
     def calc_bspline_derivs(
             self,
-            evaluation_point_x,
-            evaluation_point_y,
-            nth_deriv=1,
-    ):
+            evaluation_point_x: torch.Tensor,
+            evaluation_point_y: torch.Tensor,
+            nth_deriv: int = 1,
+    ) -> torch.Tensor:
         return calc_bspline_derivs_surface(
                 evaluation_point_x,
                 evaluation_point_y,
@@ -2788,10 +2843,10 @@ class NURBSSurface:
 
     def calc_derivs(
             self,
-            evaluation_point_x,
-            evaluation_point_y,
-            nth_deriv=1,
-    ):
+            evaluation_point_x: torch.Tensor,
+            evaluation_point_y: torch.Tensor,
+            nth_deriv: int = 1,
+    ) -> torch.Tensor:
         return calc_derivs_surface(
             evaluation_point_x,
             evaluation_point_y,
@@ -2806,10 +2861,10 @@ class NURBSSurface:
 
     def plot(
             self,
-            step_granularity_x=0.02,
-            step_granularity_y=0.02,
-            show_plot=True,
-    ):
+            step_granularity_x: float = 0.02,
+            step_granularity_y: float = 0.02,
+            show_plot: bool = True,
+    ) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
         return plot_surface(
             self.degree_x,
             self.degree_y,
@@ -2824,12 +2879,12 @@ class NURBSSurface:
 
     def plot_derivs(
             self,
-            step_granularity_x=0.1,
-            step_granularity_y=0.1,
-            nth_deriv=1,
-            show_plot=True,
-            plot_normals=None,
-    ):
+            step_granularity_x: float = 0.1,
+            step_granularity_y: float = 0.1,
+            nth_deriv: int = 1,
+            show_plot: bool = True,
+            plot_normals: Optional[bool] = None,
+    ) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
         if plot_normals is None:
             plot_normals = nth_deriv == 1
         return plot_surface_derivs(
