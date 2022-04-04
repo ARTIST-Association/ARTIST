@@ -73,6 +73,30 @@ def calc_focus_normal(
     return target_normal
 
 
+def get_focus_normal(
+        focus_point: Optional[torch.Tensor],
+        heliostat_position_on_field: torch.Tensor,
+        facet_position: torch.Tensor,
+        facet_normal: torch.Tensor,
+        # The normal of the ideal heliostat.
+        ideal_normal: List[float],
+) -> torch.Tensor:
+    if focus_point is not None:
+        target_normal = calc_focus_normal(
+            focus_point,
+            heliostat_position_on_field,
+            facet_position,
+            facet_normal,
+        )
+    else:
+        target_normal = th.tensor(
+            ideal_normal,
+            dtype=facet_position.dtype,
+            device=facet_position.device,
+        )
+    return target_normal
+
+
 def apply_rotation(
         rot_mat: torch.Tensor,
         values: torch.Tensor,
@@ -128,26 +152,20 @@ def cant_facet_to_point(
         # The normal of the ideal heliostat.
         ideal_normal: List[float],
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    orig_normal = normals_ideal.mean(dim=0)
-    orig_normal /= th.linalg.norm(orig_normal)
+    facet_normal = normals_ideal.mean(dim=0)
+    facet_normal /= th.linalg.norm(facet_normal)
 
-    if focus_point is not None:
-        target_normal = calc_focus_normal(
-            focus_point,
-            heliostat_position_on_field,
-            facet_position,
-            orig_normal,
-        )
-    else:
-        target_normal = th.tensor(
-            ideal_normal,
-            dtype=facet_position.dtype,
-            device=facet_position.device,
-        )
+    target_normal = get_focus_normal(
+        focus_point,
+        heliostat_position_on_field,
+        facet_position,
+        facet_normal,
+        ideal_normal,
+    )
 
     return cant_facet_to_normal(
         facet_position,
-        orig_normal,
+        facet_normal,
         target_normal,
         discrete_points,
         discrete_points_ideal,
