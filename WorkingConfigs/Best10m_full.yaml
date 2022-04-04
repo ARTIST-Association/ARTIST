@@ -116,7 +116,7 @@ NURBS:
   FACETS:
     CANTING:
       ALGORITHM: 'standard'
-      FOCUS_POINT: null
+      FOCUS_POINT: 0
   FIX_SPLINE_CTRL_WEIGHTS: true
   FIX_SPLINE_KNOTS: true
   GROWING:

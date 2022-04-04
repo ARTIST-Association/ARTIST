@@ -53,7 +53,7 @@ _C.NURBS.FACETS.CANTING = CN()
 #
 # When the canting algorithm is 'active', any value other than 0 is
 # ignored and treated as if it was `None`.
-_C.NURBS.FACETS.CANTING.FOCUS_POINT = None
+_C.NURBS.FACETS.CANTING.FOCUS_POINT = 0
 # Canting algorithm can be 'standard' or 'active'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
