@@ -98,10 +98,10 @@ _C.H.IDEAL.COLS                         = 32
 
 _C.H.IDEAL.FACETS = CN()
 _C.H.IDEAL.FACETS.POSITIONS = [
-    [-1.0, 1.0, 0.0],
-    [1.0, 1.0, 0.0],
-    [-1.0, -1.0, 0.0],
     [1.0, -1.0, 0.0],
+    [-1.0, 1.0, 0.0],
+    [1.0, -1.0, 0.0],
+    [-1.0, 1.0, 0.0],
 ]
 # Relative to `cfg.H.IDEAL.FACETS.POSITIONS`. These also give half of the
 # width and height of the heliostat; see STRAL deflectometry data
