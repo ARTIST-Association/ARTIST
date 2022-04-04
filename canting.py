@@ -31,6 +31,8 @@ def canting_enabled(canting_cfg: CfgNode) -> bool:
 def get_focus_point(
         canting_cfg: CfgNode,
         receiver_center: Optional[torch.Tensor],
+        # The normal of the ideal heliostat.
+        ideal_normal: List[float],
         dtype: th.dtype,
         device: th.device,
 ) -> Optional[torch.Tensor]:
@@ -47,10 +49,10 @@ def get_focus_point(
         # distance can be given integers as well.
         elif canting_cfg.FOCUS_POINT != float('inf'):
             focus_point = th.tensor(
-                [0, 0, canting_cfg.FOCUS_POINT],
+                ideal_normal,
                 dtype=dtype,
                 device=device,
-            )
+            ) * canting_cfg.FOCUS_POINT
         else:
             focus_point = None
     else:

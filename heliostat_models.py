@@ -849,6 +849,7 @@ class Heliostat(AbstractHeliostat):
         focus_point = canting.get_focus_point(
             canting_cfg,
             self._receiver_center,
+            self.cfg.IDEAL.NORMAL_VECS,
             facet_positions.dtype,
             self.device,
         )
