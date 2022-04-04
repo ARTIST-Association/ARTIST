@@ -39,6 +39,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING
+        if canting.canting_enabled(self._canting_cfg):
+            self.focus_point = canting.get_focus_point(
+                self._canting_cfg,
+                self._receiver_center,
+                self.cfg.IDEAL.NORMAL_VECS,
+                dtype=self._discrete_points.dtype,
+                device=self.device,
+            )
 
         facets_and_rots = self._create_facets(
             self.cfg, self.nurbs_cfg, setup_params=setup_params)
@@ -91,15 +99,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         decanted_normal /= th.linalg.norm(decanted_normal)
 
         if canting.canting_enabled(self._canting_cfg):
-            focus_point = canting.get_focus_point(
-                self._canting_cfg,
-                self._receiver_center,
-                self.cfg.IDEAL.NORMAL_VECS,
-                dtype=position.dtype,
-                device=self.device,
-            )
             canted_normal = canting.get_focus_normal(
-                focus_point,
+                self.focus_point,
                 self.position_on_field,
                 position,
                 decanted_normal,

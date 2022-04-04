@@ -690,6 +690,7 @@ def heliostat_coord_system(
 class AbstractHeliostat:
     device: th.device
     position_on_field: torch.Tensor
+    focus_point: Optional[torch.Tensor]
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
     _receiver_center: Optional[torch.Tensor]
@@ -846,13 +847,16 @@ class Heliostat(AbstractHeliostat):
             normals_ideal: torch.Tensor,
             canting_cfg: CfgNode,
     ) -> None:
-        focus_point = canting.get_focus_point(
-            canting_cfg,
-            self._receiver_center,
-            self.cfg.IDEAL.NORMAL_VECS,
-            facet_positions.dtype,
-            self.device,
-        )
+        if canting.canting_enabled(canting_cfg):
+            self.focus_point = canting.get_focus_point(
+                canting_cfg,
+                self._receiver_center,
+                self.cfg.IDEAL.NORMAL_VECS,
+                facet_positions.dtype,
+                self.device,
+            )
+        else:
+            self.focus_point = None
 
         facet_offsets: List[int] = []
         offset = 0
@@ -888,7 +892,7 @@ class Heliostat(AbstractHeliostat):
                 ) = canting.cant_facet_to_point(
                     self.position_on_field,
                     position,
-                    focus_point,
+                    self.focus_point,
                     facet_discrete_points,
                     facet_discrete_points_ideal,
                     facet_normals,
