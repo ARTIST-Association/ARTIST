@@ -90,7 +90,25 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         decanted_normal = facet_normals_ideal.mean(dim=0)
         decanted_normal /= th.linalg.norm(decanted_normal)
 
-        cant_rot = utils.get_rot_matrix(decanted_normal, orig_normal)
+        if canting.canting_enabled(self._canting_cfg):
+            focus_point = canting.get_focus_point(
+                self._canting_cfg,
+                self._receiver_center,
+                self.cfg.IDEAL.NORMAL_VECS,
+                dtype=position.dtype,
+                device=self.device,
+            )
+            canted_normal = canting.get_focus_normal(
+                focus_point,
+                self.position_on_field,
+                position,
+                decanted_normal,
+                self.cfg.IDEAL.NORMAL_VECS,
+            )
+        else:
+            canted_normal = orig_normal
+
+        cant_rot = utils.get_rot_matrix(decanted_normal, canted_normal)
 
         facet._discrete_points = facet_discrete_points
         facet._discrete_points_ideal = facet_discrete_points_ideal
@@ -297,10 +315,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 facet.discrete_points_and_normals()
             offset = len(curr_surface_points)
 
-            if (
-                    canting.canting_enabled(self._canting_cfg)
-                    and self._canting_algo is not CantingAlgorithm.ACTIVE
-            ):
+            if self._canting_algo is not CantingAlgorithm.ACTIVE:
                 # We expect the position to be centered on zero for
                 # canting, so cant before repositioning.
                 # We could also concat and after rotation de-construct here for
