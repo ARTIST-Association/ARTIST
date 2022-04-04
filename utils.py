@@ -315,6 +315,11 @@ def get_rot_matrix(
         target: torch.Tensor,
 ) -> torch.Tensor:
     rot_angle = angle_between(start, target)
+    # Handle parallel start/target normals.
+    if rot_angle == 0:
+        return th.eye(3)
+    elif rot_angle == math.pi:
+        return -th.eye(3)
     rot_axis = th.cross(target, start)
     rot_axis /= th.linalg.norm(rot_axis)
     full_rot = axis_angle_rotation(rot_axis, rot_angle)
