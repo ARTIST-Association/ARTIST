@@ -50,13 +50,17 @@ _C.NURBS.FACETS.CANTING = CN()
 # as a scalar instead of a 3-D point.
 # In the same vein, you can set this to `float('inf')` to "de-cant" the
 # heliostat so it's flat on z = 0.
+#
+# When the canting algorithm is 'active', any value other than 0 is
+# ignored and treated as if it was `None`.
 _C.NURBS.FACETS.CANTING.FOCUS_POINT = None
 # Canting algorithm can be 'standard' or 'active'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
 #   the heliostat center at the distance of the receiver.
-# - In active canting, each facet is canted perfectly for each sun
-#   position.
+# - In active canting, each facet is canted perfectly onto the receiver
+#   center for each sun position. This means the focus point is always
+#   treated as if it was `None`.
 _C.NURBS.FACETS.CANTING.ALGORITHM = 'standard'
 
 # NURBS progressive growing
