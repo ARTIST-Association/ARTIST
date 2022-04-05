@@ -38,11 +38,32 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
+
+        cfg_aim_point: Union[List[float], str, None] = self.nurbs_cfg.AIM_POINT
+        if isinstance(cfg_aim_point, str):
+            if cfg_aim_point != 'inherit':
+                raise ValueError(f'unknown aim point config "{cfg_aim_point}"')
+            _, aim_point_cfg = self.select_heliostat_builder(self.cfg)
+            maybe_aim_point: Optional[torch.Tensor] = self.aim_point
+        else:
+            if (
+                    receiver_center is not None
+                    and not isinstance(receiver_center, th.Tensor)
+            ):
+                receiver_center = th.tensor(
+                    receiver_center,
+                    dtype=self.position_on_field.dtype,
+                    device=device,
+                )
+            aim_point_cfg = self.nurbs_cfg
+            maybe_aim_point = receiver_center
+        self.aim_point = self._get_aim_point(aim_point_cfg, maybe_aim_point)
+
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING
         if canting.canting_enabled(self._canting_cfg):
             self.focus_point = canting.get_focus_point(
                 self._canting_cfg,
-                self._receiver_center,
+                self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self._discrete_points.dtype,
                 device=self.device,
@@ -164,6 +185,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         position = position.tolist()
         heliostat_config.POSITION_ON_FIELD = position
+        # Give any aim point so it doesn't complain.
+        heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
         heliostat_config.IDEAL.FACETS.POSITIONS = [position]
         heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
@@ -391,8 +414,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
-        if receiver_center is None:
-            receiver_center = data['receiver_center']
 
         self = cls(
             config,
@@ -421,7 +442,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             self,
             heliostat: MultiNURBSHeliostat,
             sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
+            aim_point: torch.Tensor,
     ) -> None:
         assert isinstance(heliostat, MultiNURBSHeliostat), \
             'can only align multi-NURBS heliostat'
@@ -429,7 +450,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             self,  # type: ignore[arg-type]
             heliostat,
             sun_direction,
-            receiver_center,
+            aim_point,
             align_points=False,
         )
 
@@ -438,7 +459,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             self.facets = [
-                facet.align(sun_direction, receiver_center)
+                facet.align(sun_direction, aim_point)
                 for facet in self._heliostat.facets
             ]
             self.device = self._heliostat.device

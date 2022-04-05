@@ -391,7 +391,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     # Create Heliostat Object and Load Model defined in config file
     print("Create dataset using:")
-    print(f"Aimpoint: {cfg.AC.RECEIVER.CENTER}")
+    print(f"Receiver Center: {cfg.AC.RECEIVER.CENTER}")
     print(
         f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
         f"{cfg.AC.RECEIVER.RESOLUTION_Y}"

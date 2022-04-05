@@ -44,7 +44,7 @@ def create_target(
             ENV.sun.cov,
         )
 
-    H_aligned = H.align(sun_direction, ENV.receiver_center)
+    H_aligned = H.align(sun_direction)
     R = Renderer(H_aligned, ENV)
     if save_path:
         if R.redraw_random_variables:

@@ -690,10 +690,10 @@ def heliostat_coord_system(
 class AbstractHeliostat:
     device: th.device
     position_on_field: torch.Tensor
+    aim_point: torch.Tensor
     focus_point: Optional[torch.Tensor]
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
-    _receiver_center: Optional[torch.Tensor]
 
     _facet_offsets: torch.Tensor
     _discrete_points: torch.Tensor
@@ -769,17 +769,15 @@ class AbstractHeliostat:
     def align(
             self,
             sun_direction: torch.Tensor,
-            receiver_center: Optional[torch.Tensor] = None,
+            aim_point: Optional[torch.Tensor] = None,
     ) -> 'AbstractHeliostat':
         assert hasattr(self, 'aligned_cls'), (
             'please assign the type of the aligned version of this '
             'heliostat to `aligned_cls`'
         )
-        if receiver_center is None:
-            receiver_center = self._receiver_center
-            assert receiver_center is not None, \
-                'when no receiver center is stored, one must be supplied'
-        return self.aligned_cls(self, sun_direction, receiver_center)
+        if aim_point is None:
+            aim_point = self.aim_point
+        return self.aligned_cls(self, sun_direction, aim_point)
 
 
 class Heliostat(AbstractHeliostat):
@@ -811,12 +809,11 @@ class Heliostat(AbstractHeliostat):
                 dtype=self.position_on_field.dtype,
                 device=device,
             )
-        self._receiver_center = receiver_center
 
         self._checked_dict = False
         self.params: Union[Dict[str, Any], CfgNode, None] = None
 
-        self.load()
+        self.load(receiver_center)
         if setup_params:
             self.setup_params()
 
@@ -850,7 +847,7 @@ class Heliostat(AbstractHeliostat):
         if canting.canting_enabled(canting_cfg):
             self.focus_point = canting.get_focus_point(
                 canting_cfg,
-                self._receiver_center,
+                self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
                 facet_positions.dtype,
                 self.device,
@@ -917,21 +914,33 @@ class Heliostat(AbstractHeliostat):
         self._normals = th.cat(facetted_normals, dim=0)
         self._normals_ideal = th.cat(facetted_normals_ideal, dim=0)
 
-    def load(self) -> None:
+    def _get_aim_point(
+            self,
+            cfg: CfgNode,
+            maybe_aim_point: Optional[torch.Tensor],
+    ) -> torch.Tensor:
+        cfg_aim_point: Optional[List[float]] = cfg.AIM_POINT
+        if cfg_aim_point is not None:
+            aim_point = th.tensor(
+                cfg_aim_point,
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+        elif maybe_aim_point is not None:
+            aim_point = maybe_aim_point
+        else:
+            raise ValueError('no aim point was supplied')
+        return aim_point
+
+    def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         canting_cfg: CfgNode = h_cfg.FACETS.CANTING
 
         self._canting_algo = canting.get_algorithm(canting_cfg)
-        if (
-                canting.canting_enabled(canting_cfg)
-                and canting_cfg.FOCUS_POINT is None
-                and self._canting_algo is not CantingAlgorithm.ACTIVE
-        ):
-            assert self._receiver_center is not None, (
-                'must have receiver center to cant facets '
-                'toward when not using active canting '
-                'and no focus point is specified'
-            )
+        self.aim_point = self._get_aim_point(
+            h_cfg,
+            maybe_aim_point,
+        )
 
         (
             facet_positions,
@@ -991,8 +1000,6 @@ class Heliostat(AbstractHeliostat):
 
             'config',
             'params',
-
-            'receiver_center',
         }
 
     def _check_dict(self, data: Dict[str, Any]) -> None:
@@ -1016,8 +1023,6 @@ class Heliostat(AbstractHeliostat):
 
             'config': self.cfg,
             'params': copy.deepcopy(self.params),
-
-            'receiver_center': self._receiver_center,
         }
         return data
 
@@ -1047,8 +1052,6 @@ class Heliostat(AbstractHeliostat):
     ) -> C:
         if config is None:
             config = data['config']
-        if receiver_center is None:
-            receiver_center = data['receiver_center']
 
         self = cls(
             config,
@@ -1067,7 +1070,6 @@ class Heliostat(AbstractHeliostat):
         if restore_strictly:
             self._discrete_points = data['heliostat_points']
             self.params = data['params']
-            self._receiver_center = data['receiver_center']
 
 
 class AlignedHeliostat(AbstractHeliostat):
@@ -1075,7 +1077,7 @@ class AlignedHeliostat(AbstractHeliostat):
             self,
             heliostat: Heliostat,
             sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
+            aim_point: torch.Tensor,
             align_points: bool = True,
     ) -> None:
         assert type(self) == heliostat.aligned_cls, \
@@ -1091,7 +1093,7 @@ class AlignedHeliostat(AbstractHeliostat):
         self.alignment = th.stack(heliostat_coord_system(
             self._heliostat.position_on_field,
             sun_direction,
-            receiver_center,
+            aim_point,
         ))
         self.align_origin = throt.Rotate(
             self.alignment, dtype=self.alignment.dtype)

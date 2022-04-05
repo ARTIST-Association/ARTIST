@@ -38,12 +38,17 @@ _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # For multi-NURBS heliostat
+# Where to aim the heliostat. If `None`, automatically aim at
+# `cfg.AC.RECEIVER.CENTER`. If 'inherit', inherit the aim point from the
+# loaded heliostat.
+_C.NURBS.AIM_POINT = 'inherit'
 _C.NURBS.FACETS = CN()
 _C.NURBS.FACETS.CANTING = CN()
 # To disable canting, set this to 0. Then, the heliostat is left exactly
 # as it was loaded in, be it pre-canted or not.
 #
-# When this is `None`, use `cfg.AC.RECEIVER.CENTER` as the focus point.
+# When this is `None`, use the corresponding aim point as the focus
+# point.
 #
 # In practice, only the distance of this point to the heliostat is
 # relevant; therefore you may also give the distance of the focus point
@@ -96,6 +101,9 @@ _C.H.IDEAL.HEIGHT                       = 4 # in m
 _C.H.IDEAL.ROWS                         = 32
 _C.H.IDEAL.COLS                         = 32
 
+# Where to aim the heliostat. If `None`, automatically aim at
+# `cfg.AC.RECEIVER.CENTER`.
+_C.H.IDEAL.AIM_POINT = None
 _C.H.IDEAL.FACETS = CN()
 _C.H.IDEAL.FACETS.POSITIONS = [
     [1.0, -1.0, 0.0],
@@ -126,8 +134,9 @@ _C.H.FUNCTION.NAME                      = "sin"
 _C.H.FUNCTION.FREQUENCY                 = 2
 _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
+# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+_C.H.FUNCTION.AIM_POINT = None
 _C.H.FUNCTION.FACETS = CN()
-# See `cfg.H.IDEAL.FACETS` for documentation.
 _C.H.FUNCTION.FACETS.POSITIONS = _C.H.IDEAL.FACETS.POSITIONS.copy()
 _C.H.FUNCTION.FACETS.SPANS_N = _C.H.IDEAL.FACETS.SPANS_N.copy()
 _C.H.FUNCTION.FACETS.SPANS_E = _C.H.IDEAL.FACETS.SPANS_E.copy()
@@ -164,7 +173,8 @@ _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
-# See `cfg.H.IDEAL.FACETS` for documentation.
+# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+_C.H.DEFLECT_DATA.AIM_POINT = None
 _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
 _C.H.DEFLECT_DATA.FACETS.CANTING = CN()
@@ -185,7 +195,8 @@ _C.H.OTHER                              = CN()
 _C.H.OTHER.FILENAME                     = 'tinker.obj'
 _C.H.OTHER.USE_WEIGHTED_AVG             = True
 
-# See `cfg.H.IDEAL.FACETS` for documentation.
+# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+_C.H.OTHER.AIM_POINT = None
 _C.H.OTHER.FACETS = CN()
 _C.H.OTHER.FACETS.POSITIONS = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS.SPANS_N = [0.0, float('inf'), 0.0]

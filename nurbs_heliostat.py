@@ -390,8 +390,6 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config = data['config']
         if nurbs_config is None:
             nurbs_config = data['nurbs_config']
-        if receiver_center is None:
-            receiver_center = data['receiver_center']
 
         self = cls(
             config,
@@ -439,7 +437,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
             self,
             heliostat: NURBSHeliostat,
             sun_direction: torch.Tensor,
-            receiver_center: torch.Tensor,
+            aim_point: torch.Tensor,
     ) -> None:
         assert isinstance(heliostat, NURBSHeliostat), \
             'can only align NURBS heliostat'
@@ -447,7 +445,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
             self,  # type: ignore[arg-type]
             heliostat,
             sun_direction,
-            receiver_center,
+            aim_point,
             align_points=False,
         )
 

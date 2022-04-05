@@ -248,7 +248,7 @@ def calc_batch_loss(
             targets,
             sun_directions,
     )):
-        H_aligned = H.align(sun_direction, ENV.receiver_center)
+        H_aligned = H.align(sun_direction)
         pred_bitmap, (ray_directions, indices, _, _) = R.render(
             H_aligned, return_extras=True)
         # pred_bitmap = pred_bitmap.unsqueeze(0)
@@ -357,8 +357,7 @@ def test_batch(
             targets,
             sun_directions,
     )):
-        heliostat_aligned = heliostat.align(
-            sun_direction, env.receiver_center)
+        heliostat_aligned = heliostat.align(sun_direction)
         pred_bitmap: torch.Tensor = \
             renderer.render(heliostat_aligned)  # type: ignore[assignment]
 
