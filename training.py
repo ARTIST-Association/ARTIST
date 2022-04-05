@@ -190,6 +190,7 @@ def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
             opt: torch.optim.Optimizer,
     ) -> torch.Tensor:
         loss = test_loss_func(pred_bitmap, target_bitmap)
+        loss /= pred_bitmap.numel()
 
         if cfg.USE_L1_WEIGHT_DECAY:
             weight_decay = sum(
