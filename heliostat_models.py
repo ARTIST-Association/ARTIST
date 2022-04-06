@@ -677,11 +677,11 @@ def heliostat_coord_system(
     z = pSun + z
     z = z / th.linalg.norm(z)
 
-    x = th.tensor(
-        [-z[1], z[0], 0],
-        dtype=Position.dtype,
-        device=Position.device,
-    )
+    x = th.stack([
+        -z[1],
+        z[0],
+        th.tensor(0, dtype=z.dtype, device=z.device),
+    ])
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
     return x, y, z

@@ -333,15 +333,14 @@ def rot_x_mat(
 ) -> torch.Tensor:
     cos_angle = th.cos(angle_rad)
     sin_angle = th.sin(angle_rad)
-    return th.tensor(
-        [
-            [1, 0, 0],
-            [0, cos_angle, -sin_angle],
-            [0, sin_angle, cos_angle],
-        ],
-        dtype=dtype,
-        device=device,
-    )
+    zero = th.tensor(0, dtype=dtype, device=device)
+    one = th.tensor(1, dtype=dtype, device=device)
+
+    return th.stack([
+        th.stack([one, zero, zero]),
+        th.stack([zero, cos_angle, -sin_angle]),
+        th.stack([zero, sin_angle, cos_angle]),
+    ])
 
 
 def rot_y_mat(
@@ -351,15 +350,14 @@ def rot_y_mat(
 ) -> torch.Tensor:
     cos_angle = th.cos(angle_rad)
     sin_angle = th.sin(angle_rad)
-    return th.tensor(
-        [
-            [cos_angle, 0, sin_angle],
-            [0, 1, 0],
-            [-sin_angle, 0, cos_angle],
-        ],
-        dtype=dtype,
-        device=device,
-    )
+    zero = th.tensor(0, dtype=dtype, device=device)
+    one = th.tensor(1, dtype=dtype, device=device)
+
+    return th.stack([
+        th.stack([cos_angle, zero, sin_angle]),
+        th.stack([zero, one, zero]),
+        th.stack([-sin_angle, zero, cos_angle]),
+    ])
 
 
 def rot_z_mat(
@@ -369,15 +367,14 @@ def rot_z_mat(
 ) -> torch.Tensor:
     cos_angle = th.cos(angle_rad)
     sin_angle = th.sin(angle_rad)
-    return th.tensor(
-        [
-            [cos_angle, -sin_angle, 0],
-            [sin_angle, cos_angle, 0],
-            [0, 0, 1],
-        ],
-        dtype=dtype,
-        device=device,
-    )
+    zero = th.tensor(0, dtype=dtype, device=device)
+    one = th.tensor(1, dtype=dtype, device=device)
+
+    return th.stack([
+        th.stack([cos_angle, -sin_angle, zero]),
+        th.stack([sin_angle, cos_angle, zero]),
+        th.stack([zero, zero, one]),
+    ])
 
 
 def deflec_facet_zs(
