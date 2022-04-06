@@ -26,9 +26,11 @@ class ExtendedEncoder(json.JSONEncoder):
         if isinstance(obj, th.device):
             return 0
         elif isinstance(obj, AbstractHeliostat):
-            discrete_points = obj.discrete_points
-            normals = obj.normals
-            return (discrete_points, normals)
+            return (
+                obj.discrete_points,
+                obj.normals,
+                obj.position_on_field,
+            )
         elif isinstance(obj, th.Tensor):
             return (obj.tolist(), obj.dtype)
         elif isinstance(obj, th.dtype):
