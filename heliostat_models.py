@@ -994,14 +994,19 @@ class Heliostat(AbstractHeliostat):
 
     def setup_params(self) -> None:
         optimizables = self.optimizables()
-        for name in optimizables:
+        for name in self.cfg.TO_OPTIMIZE:
+            if name not in optimizables:
+                raise KeyError(f'{name} is not an optimizable variable')
+
             for param in optimizables[name]:
                 param.requires_grad_(True)
 
     def get_params(self) -> ParamGroups:
         opt_params = []
         optimizables = self.optimizables()
-        for name in optimizables:
+        for name in self.cfg.TO_OPTIMIZE:
+            if name not in optimizables:
+                raise KeyError(f'{name} is not an optimizable variable')
             opt_params.append({'params': optimizables[name], 'name': name})
         return opt_params
 
