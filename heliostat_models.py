@@ -1010,7 +1010,7 @@ class Heliostat(AbstractHeliostat):
         return {'surface': [self._normals]}
 
     def optimizables(self) -> Dict[str, List[torch.Tensor]]:
-        params = {}
+        params = {'rotation': [self.disturbance_angles]}
         params.update(self._optimizables())
         return params
 
@@ -1045,6 +1045,8 @@ class Heliostat(AbstractHeliostat):
         return {
             'heliostat_points',
             'heliostat_normals',
+
+            'disturbance_rotation_angles_rad',
 
             'config',
             'params',
@@ -1083,6 +1085,8 @@ class Heliostat(AbstractHeliostat):
         data = self._fixed_dict()
         data.update({
             'heliostat_normals': self._normals.clone(),
+
+            'disturbance_rotation_angles_rad': self.disturbance_angles.clone(),
         })
         return data
 
@@ -1114,6 +1118,7 @@ class Heliostat(AbstractHeliostat):
 
     def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         self._normals = data['heliostat_normals']
+        self.disturbance_angles = data['disturbance_rotation_angles_rad']
 
         if restore_strictly:
             self._discrete_points = data['heliostat_points']

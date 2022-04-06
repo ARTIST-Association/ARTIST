@@ -92,6 +92,7 @@ _C.H                                    = CN()
 _C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
 # Parameters to optimize. May be any combinations of:
 # - 'surface'
+# - 'rotation'
 _C.H.TO_OPTIMIZE = ['surface']
 
 

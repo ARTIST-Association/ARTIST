@@ -191,9 +191,15 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         position = position.tolist()
         heliostat_config.POSITION_ON_FIELD = position
+        heliostat_config.TO_OPTIMIZE = [
+            name
+            for name in heliostat_config.TO_OPTIMIZE
+            if name != 'rotation'
+        ]
         # Give any aim point so it doesn't complain.
         heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
-        # Do not disturb facets.
+        # We don't want to optimize the rotation for each facet, only
+        # for the whole heliostat. So do not disturb facets.
         heliostat_config.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
         heliostat_config.IDEAL.FACETS.POSITIONS = [position]
         heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
@@ -321,6 +327,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         optimizables: Dict[str, List[torch.Tensor]] = {}
         for facet in self.facets:
             for (name, params) in facet.optimizables().items():
+                if name == 'rotation':
+                    # This should never happen as we already filter
+                    # these out during creation.
+                    continue
                 optimizables.setdefault(name, []).extend(params)
         return optimizables
 
