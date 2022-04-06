@@ -59,6 +59,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             maybe_aim_point = receiver_center
         self.aim_point = self._get_aim_point(aim_point_cfg, maybe_aim_point)
 
+        # Radians
+        self.disturbance_angles = self._get_disturbance_angles(self.nurbs_cfg)
+
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING
         if canting.canting_enabled(self._canting_cfg):
             self.focus_point = canting.get_focus_point(
@@ -190,6 +193,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.POSITION_ON_FIELD = position
         # Give any aim point so it doesn't complain.
         heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
+        # Do not disturb facets.
+        heliostat_config.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
         heliostat_config.IDEAL.FACETS.POSITIONS = [position]
         heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]

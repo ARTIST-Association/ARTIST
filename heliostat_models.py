@@ -668,7 +668,11 @@ def heliostat_coord_system(
         Position: torch.Tensor,
         Sun: torch.Tensor,
         Aimpoint: torch.Tensor,
+        disturbance_angles: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    dtype = Position.dtype
+    device = Position.device
+
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
@@ -680,10 +684,18 @@ def heliostat_coord_system(
     z = pSun + z
     z = z / th.linalg.norm(z)
 
+    # Add heliostat rotation error/disturbance.
+    disturbance_rot = (
+        utils.rot_z_mat(disturbance_angles[2], dtype=dtype, device=device)
+        @ utils.rot_y_mat(disturbance_angles[1], dtype=dtype, device=device)
+        @ utils.rot_x_mat(disturbance_angles[0], dtype=dtype, device=device)
+    )
+    z = disturbance_rot @ z
+
     x = th.stack([
         -z[1],
         z[0],
-        th.tensor(0, dtype=z.dtype, device=z.device),
+        th.tensor(0, dtype=dtype, device=device),
     ])
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
@@ -695,6 +707,7 @@ class AbstractHeliostat:
     position_on_field: torch.Tensor
     aim_point: torch.Tensor
     focus_point: Optional[torch.Tensor]
+    disturbance_angles: torch.Tensor
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
 
@@ -939,6 +952,13 @@ class Heliostat(AbstractHeliostat):
             raise ValueError('no aim point was supplied')
         return aim_point
 
+    def _get_disturbance_angles(self, h_cfg: CfgNode) -> torch.Tensor:
+        return th.deg2rad(th.tensor(
+            h_cfg.DISTURBANCE_ROT_ANGLES,
+            dtype=self.position_on_field.dtype,
+            device=self.device,
+        ))
+
     def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         canting_cfg: CfgNode = h_cfg.FACETS.CANTING
@@ -948,6 +968,8 @@ class Heliostat(AbstractHeliostat):
             h_cfg,
             maybe_aim_point,
         )
+        # Radians
+        self.disturbance_angles = self._get_disturbance_angles(h_cfg)
 
         (
             facet_positions,
@@ -1120,6 +1142,7 @@ class AlignedHeliostat(AbstractHeliostat):
             self._heliostat.position_on_field,
             sun_direction,
             aim_point,
+            self._heliostat.disturbance_angles,
         ))
         self.align_origin = throt.Rotate(
             self.alignment, dtype=self.alignment.dtype)

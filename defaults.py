@@ -42,6 +42,8 @@ _C.NURBS.SPLINE_DEGREE                  = 3
 # `cfg.AC.RECEIVER.CENTER`. If 'inherit', inherit the aim point from the
 # loaded heliostat.
 _C.NURBS.AIM_POINT = 'inherit'
+# Rotational disturbance angles (x, y and z axes) in degrees.
+_C.NURBS.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.NURBS.FACETS = CN()
 _C.NURBS.FACETS.CANTING = CN()
 # To disable canting, set this to 0. Then, the heliostat is left exactly
@@ -107,6 +109,8 @@ _C.H.IDEAL.COLS                         = 32
 # Where to aim the heliostat. If `None`, automatically aim at
 # `cfg.AC.RECEIVER.CENTER`.
 _C.H.IDEAL.AIM_POINT = None
+# Rotational disturbance angles (x, y and z axes) in degrees.
+_C.H.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.IDEAL.FACETS = CN()
 _C.H.IDEAL.FACETS.POSITIONS = [
     [1.0, -1.0, 0.0],
@@ -137,8 +141,9 @@ _C.H.FUNCTION.NAME                      = "sin"
 _C.H.FUNCTION.FREQUENCY                 = 2
 _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
-# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+# See `cfg.H.IDEAL` for documentation.
 _C.H.FUNCTION.AIM_POINT = None
+_C.H.FUNCTION.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.FUNCTION.FACETS = CN()
 _C.H.FUNCTION.FACETS.POSITIONS = _C.H.IDEAL.FACETS.POSITIONS.copy()
 _C.H.FUNCTION.FACETS.SPANS_N = _C.H.IDEAL.FACETS.SPANS_N.copy()
@@ -176,8 +181,9 @@ _C.H.DEFLECT_DATA.CONCENTRATORHEADER_STRUCT_FMT = '=5f2I2f'
 _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
-# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+# See `cfg.H.IDEAL` for documentation.
 _C.H.DEFLECT_DATA.AIM_POINT = None
+_C.H.DEFLECT_DATA.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
 _C.H.DEFLECT_DATA.FACETS.CANTING = CN()
@@ -198,8 +204,9 @@ _C.H.OTHER                              = CN()
 _C.H.OTHER.FILENAME                     = 'tinker.obj'
 _C.H.OTHER.USE_WEIGHTED_AVG             = True
 
-# See `cfg.H.IDEAL.{AIM_POINT,FACETS}` for documentation.
+# See `cfg.H.IDEAL` for documentation.
 _C.H.OTHER.AIM_POINT = None
+_C.H.OTHER.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS = CN()
 _C.H.OTHER.FACETS.POSITIONS = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS.SPANS_N = [0.0, float('inf'), 0.0]
