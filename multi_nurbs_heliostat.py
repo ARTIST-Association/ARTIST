@@ -70,9 +70,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             )
 
         facets_and_rots = self._create_facets(
-            self.cfg, self.nurbs_cfg, setup_params=setup_params)
+            self.cfg, self.nurbs_cfg)
         self.facets = [tup[0] for tup in facets_and_rots]
         self.cant_rots = [tup[1] for tup in facets_and_rots]
+
+        if setup_params:
+            self.setup_params()
 
     def _set_facet_points(
             self,
@@ -258,7 +261,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e: torch.Tensor,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
-            setup_params: bool,
     ) -> Tuple[NURBSHeliostat, torch.Tensor]:
         orig_nurbs_config = nurbs_config
         heliostat_config = self._facet_heliostat_config(
@@ -284,15 +286,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             orig_nurbs_config,
             nurbs_config,
         )
-        if setup_params:
-            facet.setup_params()
         return facet, cant_rot
 
     def _create_facets(
             self,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
-            setup_params: bool,
     ) -> List[Tuple[NURBSHeliostat, torch.Tensor]]:
         return [
             self._create_facet(
@@ -302,7 +301,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 span_e,
                 heliostat_config,
                 nurbs_config,
-                setup_params,
             )
             for (i, (position, span_n, span_e)) in enumerate(zip(
                     self.facet_positions,
@@ -314,16 +312,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def __len__(self) -> int:
         return sum(len(facet) for facet in self.facets)
 
-    def setup_params(self) -> None:
+    def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
+        optimizables: Dict[str, List[torch.Tensor]] = {}
         for facet in self.facets:
-            facet.setup_params()
-
-    def get_params(self) -> List[torch.Tensor]:
-        return [
-            param
-            for facet in self.facets
-            for param in facet.get_params()
-        ]
+            for (name, params) in facet.optimizables().items():
+                optimizables.setdefault(name, []).extend(params)
+        return optimizables
 
     def _calc_normals_and_surface(
             self,

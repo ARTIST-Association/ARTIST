@@ -223,29 +223,18 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self._eval_points = utils.initialize_spline_eval_points(
                 self.rows, self.cols, self.device)
 
-    def setup_params(self) -> None:
-        self.ctrl_points_z.requires_grad_(True)
-        optimize_xy: bool = not self.nurbs_cfg.OPTIMIZE_Z_ONLY
-        self.ctrl_points_xy.requires_grad_(optimize_xy)
-        optimize_ctrl_weights = not self.fix_spline_ctrl_weights
-        self.ctrl_weights.requires_grad_(optimize_ctrl_weights)
-
-        optimize_knots = not self.fix_spline_knots
-        self.knots_x.requires_grad_(optimize_knots)
-        self.knots_y.requires_grad_(optimize_knots)
-
-    def get_params(self) -> List[torch.Tensor]:
-        opt_params = [self.ctrl_points_z]
+    def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
+        nurbs_optimizables = [self.ctrl_points_z]
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
-            opt_params.append(self.ctrl_points_xy)
+            nurbs_optimizables.append(self.ctrl_points_xy)
         if not self.fix_spline_ctrl_weights:
-            opt_params.append(self.ctrl_weights)
+            nurbs_optimizables.append(self.ctrl_weights)
 
         if not self.fix_spline_knots:
-            opt_params.append(self.knots_x)
-            opt_params.append(self.knots_y)
+            nurbs_optimizables.append(self.knots_x)
+            nurbs_optimizables.append(self.knots_y)
 
-        return opt_params
+        return {'surface': nurbs_optimizables}
 
     @property
     def ctrl_points(self) -> torch.Tensor:

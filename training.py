@@ -1,6 +1,6 @@
 import collections
 import os
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 import torch as th
@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
 from environment import Environment
-from heliostat_models import AbstractHeliostat
+from heliostat_models import AbstractHeliostat, ParamGroups
 from render import Renderer
 import utils
 
@@ -48,7 +48,7 @@ TrainObjects = collections.namedtuple(
 
 def _build_optimizer(
         cfg_optimizer: CfgNode,
-        params: List[torch.Tensor],
+        params: ParamGroups,
 ) -> th.optim.Optimizer:
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
@@ -160,7 +160,7 @@ def load_optimizer_state(
 def build_optimizer_scheduler(
         cfg: CfgNode,
         total_steps: int,
-        params: List[torch.Tensor],
+        params: ParamGroups,
         device: th.device,
 ) -> Tuple[th.optim.Optimizer, LRScheduler]:
     opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
@@ -205,6 +205,9 @@ def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
                 )
                 for group in opt.param_groups
                 for param in group['params']
+                # TODO enable individual weight decays per group instead
+                #      of silently ignoring others
+                if group['name'] == 'surface'
             )
             loss += cfg.WEIGHT_DECAY_FACTOR * weight_decay
         return loss

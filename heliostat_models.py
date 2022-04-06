@@ -5,6 +5,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Optional,
     Set,
@@ -23,6 +24,8 @@ import bpro_loader
 import canting
 from canting import CantingAlgorithm
 import utils
+
+ParamGroups = Iterable[Dict[str, Any]]
 
 HeliostatParams = Tuple[
     torch.Tensor,
@@ -748,7 +751,11 @@ class AbstractHeliostat:
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
 
-    def get_params(self) -> List[torch.Tensor]:
+    def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
+        raise TypeError(
+            self.__class__.__name__ + ' has no trainable parameters')
+
+    def get_params(self) -> ParamGroups:
         raise TypeError(
             self.__class__.__name__ + ' has no trainable parameters')
 
@@ -977,11 +984,25 @@ class Heliostat(AbstractHeliostat):
     def shape(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.rows, self.cols)
 
-    def setup_params(self) -> None:
-        self._normals.requires_grad_(True)
+    def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
+        return {'surface': [self._normals]}
 
-    def get_params(self) -> List[torch.Tensor]:
-        opt_params = [self._normals]
+    def optimizables(self) -> Dict[str, List[torch.Tensor]]:
+        params = {}
+        params.update(self._optimizables())
+        return params
+
+    def setup_params(self) -> None:
+        optimizables = self.optimizables()
+        for name in optimizables:
+            for param in optimizables[name]:
+                param.requires_grad_(True)
+
+    def get_params(self) -> ParamGroups:
+        opt_params = []
+        optimizables = self.optimizables()
+        for name in optimizables:
+            opt_params.append({'params': optimizables[name], 'name': name})
         return opt_params
 
     def get_ray_directions(self) -> torch.Tensor:
