@@ -173,6 +173,27 @@ def build_optimizer_scheduler(
     return opt, sched
 
 
+def l1_weight_penalty(opt: th.optim.Optimizer) -> torch.Tensor:
+    weight_penalty = sum(
+        th.linalg.norm(
+            th.linalg.norm(
+                th.linalg.norm(param, ord=1, dim=-1),
+                ord=1,
+                dim=-1,
+            ),
+            ord=1,
+            dim=-1
+        )
+        for group in opt.param_groups
+        for param in group['params']
+        # TODO enable individual weight decays per group instead
+        #      of silently ignoring others
+        if group['name'] == 'surface'
+    )
+    assert isinstance(weight_penalty, th.Tensor)
+    return weight_penalty
+
+
 def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
     cfg = cfg_loss
     name = cfg.NAME.lower()
@@ -193,23 +214,8 @@ def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
         loss /= pred_bitmap.numel()
 
         if cfg.USE_L1_WEIGHT_DECAY:
-            weight_decay = sum(
-                th.linalg.norm(
-                    th.linalg.norm(
-                        th.linalg.norm(param, ord=1, dim=-1),
-                        ord=1,
-                        dim=-1,
-                    ),
-                    ord=1,
-                    dim=-1
-                )
-                for group in opt.param_groups
-                for param in group['params']
-                # TODO enable individual weight decays per group instead
-                #      of silently ignoring others
-                if group['name'] == 'surface'
-            )
-            loss += cfg.WEIGHT_DECAY_FACTOR * weight_decay
+            weight_penalty = l1_weight_penalty(opt)
+            loss += cfg.WEIGHT_DECAY_FACTOR * weight_penalty
         return loss
 
     return loss_func, test_loss_func
