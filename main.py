@@ -225,6 +225,7 @@ def _build_multi_nurbs_target(
         nurbs_cfg,
         device,
         receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
+        setup_params=False,
     )
 
     for facet in mnh.facets:
@@ -241,7 +242,12 @@ def _multi_nurbs_to_standard(
         cfg: CfgNode,
         mnh: MultiNURBSHeliostat,
 ) -> Heliostat:
-    H = Heliostat(cfg.H, mnh.device, receiver_center=cfg.AC.RECEIVER.CENTER)
+    H = Heliostat(
+        cfg.H,
+        mnh.device,
+        receiver_center=cfg.AC.RECEIVER.CENTER,
+        setup_params=False,
+    )
     discrete_points, normals = mnh.discrete_points_and_normals()
     H.facet_positions = mnh.facet_positions
     H.facet_spans_n = mnh.facet_spans_n
@@ -264,7 +270,12 @@ def build_target_heliostat(cfg: CfgNode, device: th.device) -> Heliostat:
         mnh = _build_multi_nurbs_target(cfg, device)
         H = _multi_nurbs_to_standard(cfg, mnh)
     else:
-        H = Heliostat(cfg.H, device, receiver_center=cfg.AC.RECEIVER.CENTER)
+        H = Heliostat(
+            cfg.H,
+            device,
+            receiver_center=cfg.AC.RECEIVER.CENTER,
+            setup_params=False,
+        )
     return H
 
 
