@@ -1,5 +1,16 @@
 import functools
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import torch
 import torch as th
@@ -398,7 +409,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def dict_keys(self) -> Set[str]:
         """All keys we assume in the dictionary returned by `_to_dict`."""
         keys = super().dict_keys
-        keys = keys.union({  # type: ignore[attr-defined]
+        keys = cast(Set[str], keys).union({
             'nurbs_config',
             'facets',
         })
@@ -468,7 +479,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         assert isinstance(heliostat, MultiNURBSHeliostat), \
             'can only align multi-NURBS heliostat'
         AlignedHeliostat.__init__(
-            self,  # type: ignore[arg-type]
+            cast(AlignedHeliostat, self),
             heliostat,
             sun_direction,
             aim_point,
@@ -492,7 +503,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         ):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat.discrete_points_and_normals(
-                    self, reposition=False)  # type: ignore[arg-type]
+                    cast(MultiNURBSHeliostat, self), reposition=False)
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             hel_rotated, normal_vectors_rotated = heliostat_models.rotate(

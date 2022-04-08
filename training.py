@@ -1,6 +1,6 @@
 import collections
 import os
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, cast, List, Optional, Tuple, Union
 
 import torch
 import torch as th
@@ -344,9 +344,12 @@ def train_batch(
         with th.no_grad():
             _, (pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
-        loss: torch.Tensor = opt.step(  # type: ignore[assignment]
-            lambda: calc_batch_grads(  # type: ignore[arg-type,return-value]
-                train_objects, return_extras=False),
+        loss: torch.Tensor = cast(
+            th.Tensor,
+            opt.step(cast(
+                Callable[[], float],
+                lambda: calc_batch_grads(train_objects, return_extras=False),
+            )),
         )
     else:
         loss, (pred_bitmap, num_missed) = calc_batch_grads(
@@ -400,8 +403,8 @@ def test_batch(
             sun_directions,
     )):
         heliostat_aligned = heliostat.align(sun_direction)
-        pred_bitmap: torch.Tensor = \
-            renderer.render(heliostat_aligned)  # type: ignore[assignment]
+        pred_bitmap: torch.Tensor = cast(
+            th.Tensor, renderer.render(heliostat_aligned))
 
         if bitmaps is None:
             bitmaps = th.empty(

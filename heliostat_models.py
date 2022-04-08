@@ -226,7 +226,7 @@ def real_heliostat(
                 "No path to heliostat surface values found. "
                 "Calculate values..."
             )
-        zs = []
+        zs_list = []
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
         h_normal_vecs.append(th.tensor(
@@ -245,7 +245,7 @@ def real_heliostat(
             device=device,
         ))
         if not cfg.ZS_PATH:
-            zs.append(utils.deflec_facet_zs_many(
+            zs_list.append(utils.deflec_facet_zs_many(
                 h[-1],
                 h_normal_vecs[-1],
                 h_ideal_vecs[-1],
@@ -261,7 +261,7 @@ def real_heliostat(
     h_ideal_vecs: torch.Tensor = th.cat(h_ideal_vecs, dim=0)
     h: torch.Tensor = th.cat(h, dim=0)
     if not cfg.ZS_PATH:
-        zs: torch.Tensor = th.cat(zs, dim=0)  # type: ignore[no-redef]
+        zs = th.cat(zs_list, dim=0)
         h[:, -1] += zs
 
     h_ideal: torch.Tensor = th.cat(h_ideal, dim=0)

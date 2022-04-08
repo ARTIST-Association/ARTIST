@@ -1,5 +1,16 @@
 import functools
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from pytorch3d.transforms import Transform3d
 import torch
@@ -304,7 +315,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     @functools.lru_cache()
     def dict_keys(self) -> Set[str]:
         keys = super().dict_keys
-        keys = keys.union({  # type: ignore[attr-defined]
+        keys = cast(Set[str], keys).union({
             'degree_x',
             'degree_y',
             'control_points',
@@ -431,7 +442,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         assert isinstance(heliostat, NURBSHeliostat), \
             'can only align NURBS heliostat'
         AlignedHeliostat.__init__(
-            self,  # type: ignore[arg-type]
+            cast(AlignedHeliostat, self),
             heliostat,
             sun_direction,
             aim_point,
