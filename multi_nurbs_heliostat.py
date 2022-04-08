@@ -194,7 +194,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.TO_OPTIMIZE = [
             name
             for name in heliostat_config.TO_OPTIMIZE
-            if name != 'rotation'
+            if not name.startswith('rotation_')
         ]
         # Give any aim point so it doesn't complain.
         heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
@@ -327,7 +327,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         optimizables: Dict[str, List[torch.Tensor]] = {}
         for facet in self.facets:
             for (name, params) in facet.optimizables().items():
-                if name == 'rotation':
+                if name.startswith('rotation_'):
                     # This should never happen as we already filter
                     # these out during creation.
                     continue

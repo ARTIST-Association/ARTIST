@@ -668,7 +668,7 @@ def heliostat_coord_system(
         Position: torch.Tensor,
         Sun: torch.Tensor,
         Aimpoint: torch.Tensor,
-        disturbance_angles: torch.Tensor,
+        disturbance_angles: List[torch.Tensor],
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     dtype = Position.dtype
     device = Position.device
@@ -707,7 +707,7 @@ class AbstractHeliostat:
     position_on_field: torch.Tensor
     aim_point: torch.Tensor
     focus_point: Optional[torch.Tensor]
-    disturbance_angles: torch.Tensor
+    disturbance_angles: List[torch.Tensor]
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
 
@@ -952,12 +952,16 @@ class Heliostat(AbstractHeliostat):
             raise ValueError('no aim point was supplied')
         return aim_point
 
-    def _get_disturbance_angles(self, h_cfg: CfgNode) -> torch.Tensor:
-        return th.deg2rad(th.tensor(
-            h_cfg.DISTURBANCE_ROT_ANGLES,
-            dtype=self.position_on_field.dtype,
-            device=self.device,
-        ))
+    def _get_disturbance_angles(self, h_cfg: CfgNode) -> List[torch.Tensor]:
+        angles: List[float] = h_cfg.DISTURBANCE_ROT_ANGLES
+        return [
+            th.deg2rad(th.tensor(
+                angle,
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            ))
+            for angle in angles
+        ]
 
     def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
@@ -1010,7 +1014,11 @@ class Heliostat(AbstractHeliostat):
         return {'surface': [self._normals]}
 
     def optimizables(self) -> Dict[str, List[torch.Tensor]]:
-        params = {'rotation': [self.disturbance_angles]}
+        params = {
+            'rotation_x': [self.disturbance_angles[0]],
+            'rotation_y': [self.disturbance_angles[1]],
+            'rotation_z': [self.disturbance_angles[2]],
+        }
         params.update(self._optimizables())
         return params
 
@@ -1086,7 +1094,10 @@ class Heliostat(AbstractHeliostat):
         data.update({
             'heliostat_normals': self._normals.clone(),
 
-            'disturbance_rotation_angles_rad': self.disturbance_angles.clone(),
+            'disturbance_rotation_angles_rad': [
+                angle.clone()
+                for angle in self.disturbance_angles
+            ],
         })
         return data
 
