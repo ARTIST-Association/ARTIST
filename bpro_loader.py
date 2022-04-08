@@ -1,10 +1,15 @@
 import csv
 import struct
-from typing import List, Tuple
+from typing import cast, List, Tuple
 
 import numpy as np
 
+Tuple3d = Tuple[np.floating, np.floating, np.floating]
 Vector3d = List[np.floating]
+
+
+def nwu_to_enu(vec: Tuple3d) -> Vector3d:
+    return [-vec[1], vec[0], vec[2]]
 
 
 def load_bpro(
@@ -58,9 +63,7 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
-            facet_pos = facetHeader_data[1:4]
-            # NWU to ENU
-            facet_pos = [-facet_pos[1], facet_pos[0], facet_pos[2]]
+            facet_pos = nwu_to_enu(cast(Tuple3d, facetHeader_data[1:4]))
             facet_vec_x = np.array([
                 -facetHeader_data[5],
                 facetHeader_data[4],
@@ -90,9 +93,8 @@ def load_bpro(
             ray_datas = ray_struct.iter_unpack(byte_data)
 
             for ray_data in ray_datas:
-                # NWU to ENU
-                positions[f].append([-ray_data[1], ray_data[0], ray_data[2]])
-                directions[f].append([-ray_data[4], ray_data[3], ray_data[5]])
+                positions[f].append(nwu_to_enu(cast(Tuple3d, ray_data[:3])))
+                directions[f].append(nwu_to_enu(cast(Tuple3d, ray_data[3:6])))
                 ideal_normal_vecs[f].append(ideal_normal)
                 # powers.append(ray_data[6])
 
@@ -108,8 +110,8 @@ def load_bpro(
     )
 
 
-def load_csv(path: str, num_facets: int) -> List[List[List[float]]]:
-    facets: List[List[List[float]]] = [[] for _ in range(num_facets)]
+def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
+    facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
 
@@ -129,7 +131,6 @@ def load_csv(path: str, num_facets: int) -> List[List[List[float]]]:
             z = mm_to_m_factor * float(row['z-integrated(mm)'])
             # Facet indices in CSV start at one.
             facet_index = int(row['FacetIndex']) - 1
-            # NWU to ENU
-            facets[facet_index].append([-y, x, z])
+            facets[facet_index].append(nwu_to_enu(cast(Tuple3d, (x, y, z))))
 
     return facets
