@@ -550,7 +550,11 @@ def main(config_file_name: Optional[str] = None) -> None:
     pretrain_epochs = 50
     steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
     opt, sched = training.build_optimizer_scheduler(
-        cfg, pretrain_epochs * steps_per_epoch, H.get_params(), device)
+        cfg,
+        pretrain_epochs * steps_per_epoch,
+        H.get_params(),
+        device,
+    )
     loss_func, test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS)
     epoch_shift_width = len(str(pretrain_epochs))
     best_result = th.tensor(float('inf'))
@@ -624,7 +628,11 @@ def main(config_file_name: Optional[str] = None) -> None:
     steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
 
     opt, sched = training.build_optimizer_scheduler(
-        cfg, epochs * steps_per_epoch, H.get_params(), device)
+        cfg,
+        epochs * steps_per_epoch,
+        H.get_params(),
+        device,
+    )
     loss_func, test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS)
 
     epoch_shift_width = len(str(epochs))
