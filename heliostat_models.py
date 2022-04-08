@@ -28,18 +28,18 @@ import utils
 ParamGroups = Iterable[Dict[str, Any]]
 
 HeliostatParams = Tuple[
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    float,
-    float,
-    Optional[int],
-    Optional[int],
-    Optional[Dict[str, Any]],
+    torch.Tensor,  # facet positions
+    torch.Tensor,  # facet spans N
+    torch.Tensor,  # facet spans E
+    torch.Tensor,  # discrete points
+    torch.Tensor,  # ideal discrete points
+    torch.Tensor,  # normals
+    torch.Tensor,  # ideal normals
+    float,  # height
+    float,  # width
+    Optional[int],  # rows
+    Optional[int],  # cols
+    Optional[Dict[str, Any]],  # params
 ]
 A = TypeVar('A', bound='AbstractHeliostat')
 C = TypeVar('C', bound='Heliostat')
