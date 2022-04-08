@@ -329,13 +329,9 @@ def main(config_file_name: Optional[str] = None) -> None:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M")
 
-        # Normalize OS-specific paths in a non-sophisticated way.
         logdir: Optional[str] = cfg.LOGDIR
         assert logdir is not None
-        if '\\' in logdir:
-            logdir = functools.reduce(os.path.join, logdir.split('\\'))
-        elif '/' in logdir:
-            logdir = functools.reduce(os.path.join, logdir.split('/'))
+        utils.normalize_path(logdir)
 
         root_logdir = os.path.join(logdir, cfg.ID)
         logdir = os.path.join(

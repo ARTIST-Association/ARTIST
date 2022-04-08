@@ -5,6 +5,7 @@ Created on Mon Jul  5 12:38:11 2021
 @author: parg_ma
 """
 
+import functools
 import math
 import os
 from typing import Callable, cast, List, Optional, Tuple, TypeVar, Union
@@ -1233,6 +1234,15 @@ def save_target(
         'xi': xi,
         'yi': yi,
     }, path)
+
+
+def normalize_path(path: str) -> str:
+    # Normalize OS-specific paths in a non-sophisticated way.
+    if '\\' in path:
+        path = functools.reduce(os.path.join, path.split('\\'))
+    elif '/' in path:
+        path = functools.reduce(os.path.join, path.split('/'))
+    return path
 
 
 def fix_pytorch3d() -> None:
