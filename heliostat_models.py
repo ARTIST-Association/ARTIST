@@ -271,9 +271,9 @@ def real_heliostat(
     cols = None
     params = None
     return (
-        th.tensor(facet_positions, device=device),
-        th.tensor(facet_spans_n, device=device),
-        th.tensor(facet_spans_e, device=device),
+        th.tensor(facet_positions, dtype=dtype, device=device),
+        th.tensor(facet_spans_n, dtype=dtype, device=device),
+        th.tensor(facet_spans_e, dtype=dtype, device=device),
         h,
         h_ideal,
         h_normal_vecs,
