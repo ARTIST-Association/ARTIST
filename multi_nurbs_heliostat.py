@@ -53,7 +53,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 receiver_center = th.tensor(
                     receiver_center,
                     dtype=self.position_on_field.dtype,
-                    device=device,
+                    device=self.device,
                 )
             aim_point_cfg = self.nurbs_cfg
             maybe_aim_point = receiver_center
