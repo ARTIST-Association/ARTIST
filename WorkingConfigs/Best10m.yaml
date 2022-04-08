@@ -21,6 +21,10 @@ CP_PATH: ''
 EXPERIMENT_NAME: NotGiven
 H:
   DEFLECT_DATA:
+    POSITION_ON_FIELD:
+    - 0
+    - 0
+    - 0
     CONCENTRATORHEADER_STRUCT_FMT: =5f2I2f
     FACETHEADER_STRUCT_FMT: =i9fI
     FILENAME: Helio_AA39_Rim0_STRAL-Input_211028212814.binp
@@ -94,11 +98,6 @@ H:
   OTHER:
     FILENAME: tinker.obj
     USE_WEIGHTED_AVG: true
-  POSITION_ON_FIELD:
-  - 0
-  - 0
-  - 0
-  REAL: {}
   SHAPE: real
 ID: NotGiven
 LOAD_OPTIMIZER_STATE: false

@@ -38,6 +38,7 @@ _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # For multi-NURBS heliostat
+_C.NURBS.POSITION_ON_FIELD = [0, 0, 0]  # in m
 # Where to aim the heliostat. If `None`, automatically aim at
 # `cfg.AC.RECEIVER.CENTER`. If 'inherit', inherit the aim point from the
 # loaded heliostat.
@@ -89,7 +90,6 @@ _C.NURBS.COLS                         = 6
 
 # H = Heliostat
 _C.H                                    = CN()
-_C.H.POSITION_ON_FIELD                  = [0, 0, 0] # in m
 # Parameters to optimize. May be any combinations of:
 # - 'surface'
 # - 'rotation_x'
@@ -103,6 +103,7 @@ _C.H.TO_OPTIMIZE = [
 _C.H.SHAPE                              = "function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
 
 _C.H.IDEAL                              = CN()
+_C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m
 _C.H.IDEAL.NORMAL_VECS                  = [0, 0, 1]
 _C.H.IDEAL.WIDTH                        = 4 # in m
 _C.H.IDEAL.HEIGHT                       = 4 # in m
@@ -136,6 +137,7 @@ _C.H.IDEAL.FACETS.CANTING.ALGORITHM = 'standard'
 
 
 _C.H.FUNCTION                           = CN()
+_C.H.FUNCTION.POSITION_ON_FIELD            = [0, 0, 0]  # in m
 _C.H.FUNCTION.WIDTH                     = 4 # in m
 _C.H.FUNCTION.HEIGHT                    = 4 # in m
 _C.H.FUNCTION.ROWS                      = 64
@@ -175,6 +177,8 @@ _C.H.FUNCTION.FACETS.CANTING.FOCUS_POINT = 0
 _C.H.FUNCTION.FACETS.CANTING.ALGORITHM = 'standard'
 
 _C.H.DEFLECT_DATA                       = CN()
+# IF `None`, use position from file.
+_C.H.DEFLECT_DATA.POSITION_ON_FIELD     = [0, 0, 0]  # in m
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
 _C.H.DEFLECT_DATA.ZS_PATH               = "Helio_AA39_Rim0_LocalResults_220303111914.csv"
 _C.H.DEFLECT_DATA.VERBOSE               = True
@@ -197,7 +201,7 @@ _C.H.NURBS = CN()
 _C.H.NURBS.MAX_ABS_NOISE = 0.01
 
 _C.H.NURBS.SPLINE_DEGREE = 3
-# Width, height, rows, cols (discretization dimensions), and
+# Position, width, height, rows, cols (discretization dimensions), and
 # facet/canting parameters given by `_C.H.IDEAL`.
 # These are again the NURBS rows/cols of the control point matrix.
 _C.H.NURBS.ROWS = 8
@@ -211,6 +215,7 @@ _C.H.OTHER.USE_WEIGHTED_AVG             = True
 _C.H.OTHER.AIM_POINT = None
 _C.H.OTHER.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS = CN()
+_C.H.OTHER.POSITION_ON_FIELD = [0, 0, 0]  # in m
 _C.H.OTHER.FACETS.POSITIONS = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS.SPANS_N = [0.0, float('inf'), 0.0]
 _C.H.OTHER.FACETS.SPANS_E = [-float('inf'), 0.0, 0.0]

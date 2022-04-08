@@ -28,6 +28,7 @@ import utils
 ParamGroups = Iterable[Dict[str, Any]]
 
 HeliostatParams = Tuple[
+    torch.Tensor,  # heliostat position on field
     torch.Tensor,  # facet positions
     torch.Tensor,  # facet spans N
     torch.Tensor,  # facet spans E
@@ -67,6 +68,15 @@ def _broadcast_spans(
         'positions and spans.'
     )
     return spans * to_length
+
+
+def get_position(
+        cfg: CfgNode,
+        dtype: th.dtype,
+        device: th.device,
+) -> torch.Tensor:
+    position_on_field: List[float] = cfg.POSITION_ON_FIELD
+    return th.tensor(position_on_field, dtype=dtype, device=device)
 
 
 def get_facet_params(
@@ -142,6 +152,7 @@ def real_heliostat(
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
+        heliostat_position,
         facet_positions,
         facet_spans_n,
         facet_spans_e,
@@ -156,6 +167,11 @@ def real_heliostat(
         facetHeader_struct,
         ray_struct,
         cfg.VERBOSE,
+    )
+    heliostat_position: torch.Tensor = (
+        th.tensor(heliostat_position, dtype=dtype, device=device)
+        if cfg.POSITION_ON_FIELD is None
+        else get_position(cfg, dtype, device)
     )
 
     if cfg.ZS_PATH:
@@ -271,6 +287,7 @@ def real_heliostat(
     cols = None
     params = None
     return (
+        heliostat_position,
         th.tensor(facet_positions, dtype=dtype, device=device),
         th.tensor(facet_spans_n, dtype=dtype, device=device),
         th.tensor(facet_spans_e, dtype=dtype, device=device),
@@ -384,6 +401,7 @@ def heliostat_by_function(
     )
     params = None
     return (
+        get_position(cfg, h.dtype, device),
         facet_positions,
         facet_spans_n,
         facet_spans_e,
@@ -440,6 +458,7 @@ def ideal_heliostat(
     )
     params = None
     return (
+        get_position(cfg, h.dtype, device),
         facet_positions,
         facet_spans_n,
         facet_spans_e,
@@ -603,6 +622,7 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
     cols = None
     params = {'name': name}
     return (
+        get_position(config, vertices.dtype, device),
         *_sole_facet(height, width, vertices.dtype, device),
         vertices,
         vertices,
@@ -814,19 +834,13 @@ class Heliostat(AbstractHeliostat):
             self.cfg.freeze()
         self.device = device
 
-        self.position_on_field = th.tensor(
-            self.cfg.POSITION_ON_FIELD,
-            dtype=th.get_default_dtype(),
-            device=self.device,
-        )
-
         if (
                 receiver_center is not None
                 and not isinstance(receiver_center, th.Tensor)
         ):
             receiver_center = th.tensor(
                 receiver_center,
-                dtype=self.position_on_field.dtype,
+                dtype=th.get_default_dtype(),
                 device=device,
             )
 
@@ -943,7 +957,7 @@ class Heliostat(AbstractHeliostat):
         if cfg_aim_point is not None:
             aim_point = th.tensor(
                 cfg_aim_point,
-                dtype=self.position_on_field.dtype,
+                dtype=th.get_default_dtype(),
                 device=self.device,
             )
         elif maybe_aim_point is not None:
@@ -957,7 +971,7 @@ class Heliostat(AbstractHeliostat):
         return [
             th.deg2rad(th.tensor(
                 angle,
-                dtype=self.position_on_field.dtype,
+                dtype=self.aim_point.dtype,
                 device=self.device,
             ))
             for angle in angles
@@ -976,6 +990,7 @@ class Heliostat(AbstractHeliostat):
         self.disturbance_angles = self._get_disturbance_angles(h_cfg)
 
         (
+            heliostat_position,
             facet_positions,
             facet_spans_n,
             facet_spans_e,
@@ -990,6 +1005,7 @@ class Heliostat(AbstractHeliostat):
             params,
         ) = builder_fn(h_cfg, self.device)
 
+        self.position_on_field = heliostat_position
         self.set_up_facets(
             facet_positions,
             facet_spans_n,

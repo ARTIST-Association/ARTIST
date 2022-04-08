@@ -165,7 +165,7 @@ def main():
     # Set up config from target
     target = load_target(args.target_path, device)
     cfg.merge_from_list([
-        'H.POSITION_ON_FIELD',
+        'H.IDEAL.POSITION_ON_FIELD',
         target.heliostat_origin_center.tolist(),
         'H.IDEAL.NORMAL_VECS',
         target.heliostat_face_normal.tolist(),

@@ -58,6 +58,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             aim_point_cfg = self.nurbs_cfg
             maybe_aim_point = receiver_center
         self.aim_point = self._get_aim_point(aim_point_cfg, maybe_aim_point)
+        self.position_on_field = heliostat_models.get_position(
+            self.nurbs_cfg,
+            dtype=self.position_on_field.dtype,
+            device=self.device,
+        )
 
         # Radians
         self.disturbance_angles = self._get_disturbance_angles(self.nurbs_cfg)
@@ -190,12 +195,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.IDEAL.COLS = 2
 
         position = position.tolist()
-        heliostat_config.POSITION_ON_FIELD = position
         heliostat_config.TO_OPTIMIZE = [
             name
             for name in heliostat_config.TO_OPTIMIZE
             if not name.startswith('rotation_')
         ]
+        heliostat_config.IDEAL.POSITION_ON_FIELD = position
         # Give any aim point so it doesn't complain.
         heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
         # We don't want to optimize the rotation for each facet, only
