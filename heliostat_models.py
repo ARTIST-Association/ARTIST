@@ -1031,6 +1031,7 @@ class Heliostat(AbstractHeliostat):
 
     def optimizables(self) -> Dict[str, List[torch.Tensor]]:
         params = {
+            'position': [self.position_on_field],
             'rotation_x': [self.disturbance_angles[0]],
             'rotation_y': [self.disturbance_angles[1]],
             'rotation_z': [self.disturbance_angles[2]],
@@ -1070,6 +1071,7 @@ class Heliostat(AbstractHeliostat):
             'heliostat_points',
             'heliostat_normals',
 
+            'position_on_field',
             'disturbance_rotation_angles_rad',
 
             'config',
@@ -1110,6 +1112,7 @@ class Heliostat(AbstractHeliostat):
         data.update({
             'heliostat_normals': self._normals.clone(),
 
+            'position_on_field': self.position_on_field.clone(),
             'disturbance_rotation_angles_rad': [
                 angle.clone()
                 for angle in self.disturbance_angles
@@ -1145,6 +1148,7 @@ class Heliostat(AbstractHeliostat):
 
     def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
         self._normals = data['heliostat_normals']
+        self.position_on_field = data['position_on_field']
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
 
         if restore_strictly:

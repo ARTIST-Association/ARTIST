@@ -92,6 +92,7 @@ _C.NURBS.COLS                         = 6
 _C.H                                    = CN()
 # Parameters to optimize. May be any combinations of:
 # - 'surface'
+# - 'position'
 # - 'rotation_x'
 # - 'rotation_y'
 # - 'rotation_z'
@@ -315,6 +316,14 @@ _C.TRAIN.LOSS                           = CN()
 _C.TRAIN.LOSS.NAME                      = "L1"                                  #SWITCH FOR LOSS: L1, MSE
 _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
+
+# These values are for the position parameters.
+_C.TRAIN.OPTIMIZER.POSITION = CN()
+_C.TRAIN.OPTIMIZER.POSITION.LR = 1e-4
+_C.TRAIN.OPTIMIZER.POSITION.WEIGHT_DECAY = 0.0
+_C.TRAIN.LOSS.POSITION = CN()
+_C.TRAIN.LOSS.POSITION.USE_L1_WEIGHT_DECAY = True
+_C.TRAIN.LOSS.POSITION.WEIGHT_DECAY_FACTOR = 0.0
 
 # These values are for the rotation parameters.
 _C.TRAIN.OPTIMIZER.ROTATION_X = CN()

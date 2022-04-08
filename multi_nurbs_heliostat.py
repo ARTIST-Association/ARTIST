@@ -178,6 +178,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return cant_rot
 
     @staticmethod
+    def _is_facet_optimizable(param_group_name: str) -> bool:
+        return not any(
+            param_group_name.startswith(prefix)
+            for prefix in ['position', 'rotation_']
+        )
+
+    @staticmethod
     def _facet_heliostat_config(
             heliostat_config: CfgNode,
             position: torch.Tensor,
@@ -198,7 +205,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.TO_OPTIMIZE = [
             name
             for name in heliostat_config.TO_OPTIMIZE
-            if not name.startswith('rotation_')
+            if MultiNURBSHeliostat._is_facet_optimizable(name)
         ]
         heliostat_config.IDEAL.POSITION_ON_FIELD = position
         # Give any aim point so it doesn't complain.
@@ -332,7 +339,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         optimizables: Dict[str, List[torch.Tensor]] = {}
         for facet in self.facets:
             for (name, params) in facet.optimizables().items():
-                if name.startswith('rotation_'):
+                if not self._is_facet_optimizable(name):
                     # This should never happen as we already filter
                     # these out during creation.
                     continue
