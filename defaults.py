@@ -262,7 +262,9 @@ _C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
 
 
-
+# These scheduler settings affect all parameter groups.
+# Only some PyTorch schedulers support per-parameter-group options and
+# even then only for some keywords.
 _C.TRAIN.SCHEDULER                      = CN()
 _C.TRAIN.SCHEDULER.NAME                 = "Exponential"                      #SWITCH FOR SCHEDULER: ReduceOnPLateau, Cyclic, OneCycle
 
@@ -293,6 +295,9 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 
 _C.TRAIN.OPTIMIZER                      = CN()
 _C.TRAIN.OPTIMIZER.NAME                 = "Adam"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
+# These values are all for the surface parameters.
+# They are also defaults if other parameter groups do not contain have a
+# certain config parameter.
 _C.TRAIN.OPTIMIZER.LR                   = 1e-4
 
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
@@ -303,6 +308,14 @@ _C.TRAIN.LOSS                           = CN()
 _C.TRAIN.LOSS.NAME                      = "L1"                                  #SWITCH FOR LOSS: L1, MSE
 _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
+
+# These values are for the rotation parameters.
+_C.TRAIN.OPTIMIZER.ROTATION = CN()
+_C.TRAIN.OPTIMIZER.ROTATION.LR = 1e-4
+_C.TRAIN.OPTIMIZER.ROTATION.WEIGHT_DECAY = 0.0
+_C.TRAIN.LOSS.ROTATION = CN()
+_C.TRAIN.LOSS.ROTATION.USE_L1_WEIGHT_DECAY = True
+_C.TRAIN.LOSS.ROTATION.WEIGHT_DECAY_FACTOR = 0.0
 
 
 _C.TEST = CN()

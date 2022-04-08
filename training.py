@@ -1,6 +1,6 @@
 import collections
 import os
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 import torch as th
@@ -46,12 +46,29 @@ TrainObjects = collections.namedtuple(
 )
 
 
+def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
+    for param_group in params:
+        name = param_group['name']
+
+        if name == 'surface':
+            # These parameters are given by the defaults anyway (by
+            # definition), so we don't set them explicitly.
+            continue
+
+        group_cfg: CfgNode = getattr(cfg, name.upper())
+
+        for (key, value) in group_cfg.items():
+            param_group[key.lower()] = value
+
+
 def _build_optimizer(
         cfg_optimizer: CfgNode,
         params: ParamGroups,
 ) -> th.optim.Optimizer:
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
+
+    _insert_param_group_config(cfg, params)
 
     if name == "adam":
         opt: th.optim.Optimizer = th.optim.Adam(
@@ -173,7 +190,10 @@ def build_optimizer_scheduler(
     return opt, sched
 
 
-def l1_weight_penalty(opt: th.optim.Optimizer) -> torch.Tensor:
+def l1_weight_penalty(
+        opt: th.optim.Optimizer,
+        param_group_name: str,
+) -> torch.Tensor:
     weight_penalty = sum(
         th.linalg.norm(
             th.linalg.norm(
@@ -186,15 +206,16 @@ def l1_weight_penalty(opt: th.optim.Optimizer) -> torch.Tensor:
         )
         for group in opt.param_groups
         for param in group['params']
-        # TODO enable individual weight decays per group instead
-        #      of silently ignoring others
-        if group['name'] == 'surface'
+        if group['name'] == param_group_name
     )
     assert isinstance(weight_penalty, th.Tensor)
     return weight_penalty
 
 
-def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
+def build_loss_funcs(
+        cfg_loss: CfgNode,
+        to_optimize: List[str],
+) -> Tuple[LossFn, TestLossFn]:
     cfg = cfg_loss
     name = cfg.NAME.lower()
     if name == "mse":
@@ -213,9 +234,20 @@ def build_loss_funcs(cfg_loss: CfgNode) -> Tuple[LossFn, TestLossFn]:
         loss = test_loss_func(pred_bitmap, target_bitmap)
         loss /= pred_bitmap.numel()
 
-        if cfg.USE_L1_WEIGHT_DECAY:
-            weight_penalty = l1_weight_penalty(opt)
-            loss += cfg.WEIGHT_DECAY_FACTOR * weight_penalty
+        for name in to_optimize:
+            if name == 'surface':
+                node: CfgNode = cfg
+            else:
+                node = getattr(cfg, name.upper())
+
+            if not node.USE_L1_WEIGHT_DECAY:
+                continue
+
+            # TODO This is very inefficient as we do a N^2 loop.
+            #      However, N is super small so we shouldn't care.
+            weight_penalty = l1_weight_penalty(opt, name)
+            weight_decay_factor: float = node.WEIGHT_DECAY_FACTOR
+            loss += weight_decay_factor * weight_penalty
         return loss
 
     return loss_func, test_loss_func

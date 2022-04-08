@@ -555,7 +555,8 @@ def main(config_file_name: Optional[str] = None) -> None:
         H.get_params(),
         device,
     )
-    loss_func, test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS)
+    loss_func, test_loss_func = training.build_loss_funcs(
+        cfg.TRAIN.LOSS, cfg.H.TO_OPTIMIZE)
     epoch_shift_width = len(str(pretrain_epochs))
     best_result = th.tensor(float('inf'))
     prefix = 'pretrain'
@@ -633,7 +634,8 @@ def main(config_file_name: Optional[str] = None) -> None:
         H.get_params(),
         device,
     )
-    loss_func, test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS)
+    loss_func, test_loss_func = training.build_loss_funcs(
+        cfg.TRAIN.LOSS, cfg.H.TO_OPTIMIZE)
 
     epoch_shift_width = len(str(epochs))
 
