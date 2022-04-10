@@ -13,6 +13,7 @@ setup(
         ),
         'tensorboard>=2.0,<3.0',
         'torch>=1.8,<2.0',
+        'torchvision==0.9.1',
         'yacs==0.1.8',
     ],
 )

@@ -252,6 +252,12 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 _C.TRAIN                                = CN()
 _C.TRAIN.EPOCHS                         = 2500
+_C.TRAIN.USE_IMAGES = False
+
+_C.TRAIN.IMAGES = CN()
+# Remember to set sun directions accordingly!
+_C.TRAIN.IMAGES.PATHS = ['Transform.png']
+
 _C.TRAIN.SUN_DIRECTIONS                 = CN()
 _C.TRAIN.SUN_DIRECTIONS.CASE            ="random"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
 
@@ -350,6 +356,11 @@ _C.TRAIN.LOSS.ROTATION_Z.WEIGHT_DECAY_FACTOR = 0.0
 
 _C.TEST = CN()
 _C.TEST.INTERVAL                        = 100
+_C.TEST.USE_IMAGES = False
+
+_C.TEST.IMAGES = CN()
+# Remember to set sun directions accordingly!
+_C.TEST.IMAGES.PATHS = []
 
 # Reduces test image array to 5, images will be generated with complete array
 

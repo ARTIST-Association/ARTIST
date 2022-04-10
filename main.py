@@ -409,14 +409,28 @@ def main(config_file_name: Optional[str] = None) -> None:
     sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
 
-    targets = cached_generate_target_dataset(
-        H_target,
-        ENV,
-        sun_directions,
-        logdir_files,
-        "train",
-        writer,
-    )
+    if cfg.TRAIN.USE_IMAGES:
+        assert cfg.TRAIN.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
+            'must have known sun directions for training with images '
+            '(set `CASE` to "vec" and check the given `VECS.DIRECTIONS`)'
+        )
+        assert len(cfg.TRAIN.IMAGES.PATHS) == len(sun_directions), \
+            'number of sun directions does not match number of images'
+        targets = data.load_images(
+            cfg.TRAIN.IMAGES.PATHS,
+            cfg.AC.RECEIVER.RESOLUTION_X,
+            cfg.AC.RECEIVER.RESOLUTION_Y,
+        )
+    else:
+        targets = cached_generate_target_dataset(
+            H_target,
+            ENV,
+            sun_directions,
+            logdir_files,
+            "train",
+            writer,
+        )
+
     H_naive_target = build_target_heliostat(cfg, device)
     H_naive_target._normals = H_naive_target._normals_ideal
     naive_targets = cached_generate_pretrain_dataset(
@@ -431,14 +445,27 @@ def main(config_file_name: Optional[str] = None) -> None:
     test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
 
-    test_targets = cached_generate_test_dataset(
-        H_target,
-        ENV,
-        test_sun_directions,
-        None,
-        "test",
-        writer,
-    )
+    if cfg.TEST.USE_IMAGES:
+        assert cfg.TEST.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
+            'must have known sun directions for testing with images '
+            '(set `CASE` to "vec" and check the given `VECS.DIRECTIONS`)'
+        )
+        assert len(cfg.TEST.IMAGES.PATHS) == len(test_sun_directions), \
+            'number of sun directions does not match number of images'
+        test_targets = data.load_images(
+            cfg.TEST.IMAGES.PATHS,
+            cfg.AC.RECEIVER.RESOLUTION_X,
+            cfg.AC.RECEIVER.RESOLUTION_Y,
+        )
+    else:
+        test_targets = cached_generate_test_dataset(
+            H_target,
+            ENV,
+            test_sun_directions,
+            None,
+            "test",
+            writer,
+        )
     # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
 
     # Better Testing

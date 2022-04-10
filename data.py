@@ -5,6 +5,7 @@ import pytorch3d.transforms as throt
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
+import torchvision as thv
 from yacs.config import CfgNode
 
 from environment import Environment
@@ -446,3 +447,23 @@ def log_dataset(
                 utils.colorize(target),
             )
     return targets
+
+
+@th.no_grad()
+def load_images(
+        paths: List[str],
+        height: int,
+        width: int,
+) -> torch.Tensor:
+    target_imgs = [
+        thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY)
+        for path in paths
+    ]
+    img_transform = thv.transforms.Compose([
+        thv.transforms.Resize((height, width)),
+        # Normalize to [0, 1].
+        thv.transforms.Lambda(lambda image: image / 255),
+        # Remove single channel.
+        thv.transforms.Lambda(lambda image: image.squeeze(0)),
+    ])
+    return th.stack(list(map(img_transform, target_imgs)))
