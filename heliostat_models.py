@@ -788,6 +788,19 @@ class AbstractHeliostat:
         raise TypeError(
             self.__class__.__name__ + ' has no trainable parameters')
 
+    def get_to_optimize(self) -> List[str]:
+        raise TypeError(
+            self.__class__.__name__ + ' has no trainable parameters')
+
+    def set_to_optimize(
+            self,
+            new_to_optimize: List[str],
+            *args: Any,
+            **kwargs: Any,
+    ) -> None:
+        raise TypeError(
+            self.__class__.__name__ + ' has no trainable parameters')
+
     def get_params(self) -> ParamGroups:
         raise TypeError(
             self.__class__.__name__ + ' has no trainable parameters')
@@ -843,6 +856,7 @@ class Heliostat(AbstractHeliostat):
                 dtype=th.get_default_dtype(),
                 device=device,
             )
+        self._to_optimize: List[str] = self.cfg.TO_OPTIMIZE
 
         self._checked_dict = False
         self.params: Union[Dict[str, Any], CfgNode, None] = None
@@ -1039,9 +1053,26 @@ class Heliostat(AbstractHeliostat):
         params.update(self._optimizables())
         return params
 
+    def get_to_optimize(self) -> List[str]:
+        return self._to_optimize
+
+    def set_to_optimize(  # type: ignore[override]
+            self,
+            new_to_optimize: List[str],
+            setup_params: bool = True,
+    ) -> None:
+        # Reset old parameters.
+        for group in self.optimizables().values():
+            for param in group:
+                param.requires_grad_(False)
+
+        self._to_optimize = new_to_optimize
+        if setup_params:
+            self.setup_params()
+
     def setup_params(self) -> None:
         optimizables = self.optimizables()
-        for name in self.cfg.TO_OPTIMIZE:
+        for name in self._to_optimize:
             if name not in optimizables:
                 raise KeyError(f'{name} is not an optimizable variable')
 
@@ -1051,7 +1082,7 @@ class Heliostat(AbstractHeliostat):
     def get_params(self) -> ParamGroups:
         opt_params = []
         optimizables = self.optimizables()
-        for name in self.cfg.TO_OPTIMIZE:
+        for name in self._to_optimize:
             if name not in optimizables:
                 raise KeyError(f'{name} is not an optimizable variable')
             opt_params.append({'params': optimizables[name], 'name': name})
@@ -1076,6 +1107,7 @@ class Heliostat(AbstractHeliostat):
 
             'config',
             'params',
+            'to_optimize',
         }
 
     def _check_dict(self, data: Dict[str, Any]) -> None:
@@ -1117,6 +1149,8 @@ class Heliostat(AbstractHeliostat):
                 angle.clone()
                 for angle in self.disturbance_angles
             ],
+
+            'to_optimize': self._to_optimize.copy(),
         })
         return data
 
@@ -1154,6 +1188,7 @@ class Heliostat(AbstractHeliostat):
         if restore_strictly:
             self._discrete_points = data['heliostat_points']
             self.params = data['params']
+            self._to_optimize = data['to_optimize']
 
 
 class AlignedHeliostat(AbstractHeliostat):

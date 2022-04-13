@@ -195,8 +195,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             for prefix in ['position', 'rotation_']
         )
 
-    @staticmethod
     def _facet_heliostat_config(
+            self,
             heliostat_config: CfgNode,
             position: torch.Tensor,
             span_n: torch.Tensor,
@@ -215,7 +215,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         position = position.tolist()
         heliostat_config.TO_OPTIMIZE = [
             name
-            for name in heliostat_config.TO_OPTIMIZE
+            for name in self.get_to_optimize()
             if MultiNURBSHeliostat._is_facet_optimizable(name)
         ]
         heliostat_config.IDEAL.POSITION_ON_FIELD = position
