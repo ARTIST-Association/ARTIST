@@ -755,7 +755,7 @@ class AbstractHeliostat:
         return self._normals
 
     def _make_facetted(self, values: torch.Tensor) -> List[torch.Tensor]:
-        return list(th.tensor_split(values, self._facet_offsets[1:]))
+        return list(th.tensor_split(values, self._facet_offsets[1:].cpu()))
 
     @property
     def facetted_discrete_points(self) -> List[torch.Tensor]:
