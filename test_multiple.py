@@ -8,6 +8,7 @@ import torch as th
 
 import data
 import defaults
+import disk_cache
 from environment import Environment
 import main as main_mod
 from multi_nurbs_heliostat import MultiNURBSHeliostat
@@ -51,7 +52,16 @@ def load_heliostat(
         receiver_center: torch.Tensor,
 ) -> MultiNURBSHeliostat:
     data = th.load(path, map_location=device)
-    heliostat = MultiNURBSHeliostat.from_dict(
+
+    cached_from_dict = disk_cache.disk_cache(
+        MultiNURBSHeliostat.from_dict,
+        device,
+        'cached',
+        'test',
+        ignore_argnums=[1],
+    )
+
+    heliostat = cached_from_dict(
         data,
         device,
         receiver_center=receiver_center,
@@ -108,14 +118,35 @@ def main() -> None:
         SUN_DIRECTIONS,
     ])
 
-    target_heliostat = main_mod.build_target_heliostat(cfg, device)
+    cached_build_target_heliostat = disk_cache.disk_cache(
+        main_mod.build_target_heliostat,
+        device,
+        'cached',
+        ignore_argnums=[1],
+    )
+    target_heliostat = cached_build_target_heliostat(cfg, device)
     env = Environment(cfg.AC, device)
     renderer = Renderer(target_heliostat, env)
 
     # Create targets
-    sun_directions, ae = data.generate_sun_array(
+    cached_generate_sun_array = disk_cache.disk_cache(
+        data.generate_sun_array,
+        device,
+        'cached',
+        'test_',
+        ignore_argnums=[1],
+    )
+    cached_generate_dataset = disk_cache.disk_cache(
+        data.generate_dataset,
+        device,
+        'cached',
+        'test',
+        ignore_argnums=[3, 4, 5],
+    )
+
+    sun_directions, ae = cached_generate_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
-    targets = data.generate_dataset(
+    targets = cached_generate_dataset(
         target_heliostat,
         env,
         sun_directions,
