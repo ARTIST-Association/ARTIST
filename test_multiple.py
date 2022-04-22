@@ -1,13 +1,18 @@
 import functools
 import os
+from typing import cast
 
 import matplotlib.pyplot as plt
+import torch
 import torch as th
 
+import data
 import defaults
 from environment import Environment
+import main as main_mod
 from multi_nurbs_heliostat import MultiNURBSHeliostat
 from render import Renderer
+import training
 import utils
 
 # List of model paths that is created by joining path parts in each inner list.
@@ -19,7 +24,8 @@ MODEL_PATHS = list(map(
     ],
 ))
 
-# Use config from first model; used to create the environment.
+# Use config from first model; used to create the environment and target
+# heliostat.
 CONFIG_PATH = os.path.join(
     os.path.dirname(os.path.dirname(MODEL_PATHS[0])),
     'config.yaml',
@@ -123,22 +129,48 @@ def main():
         bitmap_height,
         'AC.RECEIVER.RESOLUTION_Y',
         bitmap_width,
+
+        'TEST.SUN_DIRECTIONS.CASE',
+        'vecs',
+
+        'TEST.SUN_DIRECTIONS.VECS.DIRECTIONS',
+        SUN_DIRECTIONS,
     ])
 
-    sun_directions = th.tensor(SUN_DIRECTIONS, device=device)
+    target_heliostat = main_mod.build_target_heliostat(cfg, device)
     env = Environment(cfg.AC, device)
+    renderer = Renderer(target_heliostat, env)
+
+    # Create targets
+    sun_directions, ae = data.generate_sun_array(
+        cfg.TEST.SUN_DIRECTIONS, device)
+    targets = data.generate_dataset(
+        target_heliostat,
+        env,
+        sun_directions,
+        None,
+        'test',
+        None,
+    )
 
     # Set up heliostats
     heliostats = load_heliostats(MODEL_PATHS, device, cfg.AC.RECEIVER.CENTER)
 
-    for sun_direction in sun_directions:
-        for heliostat in heliostats:
-            heliostat_aligned = heliostat.align(sun_direction)
-            renderer = Renderer(heliostat_aligned, env)
+    test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS, [])[-1]
 
-            bitmap = renderer.render()
-            # ...
-            print(bitmap.sum())
+    for (i, (sun_direction, target)) in enumerate(zip(
+            sun_directions,
+            targets,
+    )):
+        for (j, heliostat) in enumerate(heliostats):
+            heliostat_aligned = heliostat.align(sun_direction)
+
+            pred_bitmap: torch.Tensor = cast(
+                th.Tensor, renderer.render(heliostat_aligned))
+
+            loss = test_loss_func(pred_bitmap, target)
+
+            print('sun', i, 'h ' + str(j) + ':', loss.item())
 
 
 if __name__ == '__main__':
