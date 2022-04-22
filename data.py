@@ -449,6 +449,15 @@ def log_dataset(
     return targets
 
 
+def read_image(path: str, device: th.device) -> torch.Tensor:
+    img = thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY)
+    # We expect (channel, width, height), torchvision loads (channel,
+    # height, width).
+    img = img.transpose(1, 2)
+    img = img.to(device)
+    return img
+
+
 @th.no_grad()
 def load_images(
         paths: List[str],
@@ -458,10 +467,7 @@ def load_images(
         prefix: str,
         writer: Optional[SummaryWriter] = None,
 ) -> torch.Tensor:
-    target_imgs = [
-        thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY).to(device)
-        for path in paths
-    ]
+    target_imgs = [read_image(path, device) for path in paths]
     img_transform = thv.transforms.Compose([
         thv.transforms.Resize((height, width)),
         # Normalize to [0, 1].
