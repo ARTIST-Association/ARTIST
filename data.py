@@ -474,7 +474,7 @@ def load_images(
         thv.transforms.Lambda(lambda image: image / 255),
         # Remove single channel.
         thv.transforms.Lambda(lambda image: image.squeeze(0)),
-        # Try to remove background (i.e. make barkground dark).
+        # Try to remove background (i.e. make background dark).
         thv.transforms.Lambda(lambda image: image - image.mean()),
     ])
     targets = th.stack(list(map(img_transform, target_imgs)))
