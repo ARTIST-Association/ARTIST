@@ -123,8 +123,8 @@ def hash_args(
         if i not in ignore_argnums
     )
     hash_kwargs = tuple(
-        key
-        for key in kwargs.keys()
+        (key, value)
+        for (key, value) in kwargs.items()
         if key not in ignore_argnames
     )
 
