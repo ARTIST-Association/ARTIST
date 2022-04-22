@@ -427,6 +427,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
             device,
+            'train',
+            writer,
         )
     else:
         targets = cached_generate_target_dataset(
@@ -464,6 +466,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
             device,
+            'test',
+            writer,
         )
     else:
         test_targets = cached_generate_test_dataset(

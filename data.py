@@ -455,6 +455,8 @@ def load_images(
         height: int,
         width: int,
         device: th.device,
+        prefix: str,
+        writer: Optional[SummaryWriter] = None,
 ) -> torch.Tensor:
     target_imgs = [
         thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY).to(device)
@@ -467,4 +469,6 @@ def load_images(
         # Remove single channel.
         thv.transforms.Lambda(lambda image: image.squeeze(0)),
     ])
-    return th.stack(list(map(img_transform, target_imgs)))
+    targets = th.stack(list(map(img_transform, target_imgs)))
+    log_dataset(prefix, writer, targets)
+    return targets
