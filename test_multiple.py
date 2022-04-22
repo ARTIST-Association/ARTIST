@@ -1,6 +1,6 @@
 import functools
 import os
-from typing import cast
+from typing import cast, Callable, List
 
 import matplotlib.pyplot as plt
 import torch
@@ -15,9 +15,14 @@ from render import Renderer
 import training
 import utils
 
-# List of model paths that is created by joining path parts in each inner list.
-MODEL_PATHS = list(map(
+join_paths = cast(
+    Callable[[List[str]], str],
     functools.partial(functools.reduce, os.path.join),
+)
+
+# List of model paths that is created by joining path parts in each inner list.
+MODEL_PATHS: List[str] = list(map(
+    join_paths,
     [
         ['Results', 'Best10m', 'MakeRunableAgain_220410_1359', 'Logfiles', 'MultiNURBSHeliostat.pt'],
         ['Results', 'Best10m', 'MakeRunableAgain_220413_0947', 'Logfiles', 'MultiNURBSHeliostat.pt'],
@@ -40,43 +45,11 @@ SUN_DIRECTIONS = [
 BITMAP_DIMS = (512, 512)
 
 
-class Target:
-    __slots__ = [
-        'heliostat_origin_center',
-        'heliostat_face_normal',
-        'heliostat_points',
-        'heliostat_normals',
-        'heliostat_up_dir',
-
-        'receiver_origin_center',
-        'receiver_width',
-        'receiver_height',
-        'receiver_normal',
-        'receiver_up_dir',
-
-        'sun',
-        'num_rays',
-        'mean',
-        'cov',
-        'xi',
-        'yi',
-    ]
-
-    def __init__(self, checkpoint_dict):
-        # We iterate the slots instead of the dictionary so missing data
-        # is caught easily and redundant data is ignored.
-        for key in self.__slots__:
-            value = checkpoint_dict[key]
-            setattr(self, key, value)
-
-
-def _parse_bool(string):
-    assert string == 'False' or string == 'True', \
-        'please only use "False" or "True" as boolean arguments.'
-    return string != 'False'
-
-
-def load_heliostat(path, device, receiver_center):
+def load_heliostat(
+        path: str,
+        device: th.device,
+        receiver_center: torch.Tensor,
+) -> MultiNURBSHeliostat:
     data = th.load(path, map_location=device)
     heliostat = MultiNURBSHeliostat.from_dict(
         data,
@@ -86,7 +59,11 @@ def load_heliostat(path, device, receiver_center):
     return heliostat
 
 
-def load_heliostats(paths, device, receiver_center):
+def load_heliostats(
+        paths: List[str],
+        device: th.device,
+        receiver_center: torch.Tensor,
+) -> List[MultiNURBSHeliostat]:
     heliostats = [
         load_heliostat(path, device, receiver_center)
         for path in paths
@@ -94,14 +71,8 @@ def load_heliostats(paths, device, receiver_center):
     return heliostats
 
 
-def load_target(path, device):
-    cp = th.load(path, map_location=device)
-    target = Target(cp)
-    return target
-
-
 @th.no_grad()
-def main():
+def main() -> None:
     cfg = defaults.load_config_file(defaults.get_cfg_defaults(), CONFIG_PATH)
 
     if cfg.USE_FLOAT64:
