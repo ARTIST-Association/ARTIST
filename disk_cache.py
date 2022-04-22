@@ -66,6 +66,15 @@ def find_disk_hash(
     return hash_value, least_recent
 
 
+def _get_indentation(line: str) -> int:
+    indentation = 0
+    char = line[indentation]
+    while char == ' ':
+        indentation += 1
+        char = line[indentation]
+    return indentation
+
+
 def hash_args(
         func: Callable,
         args: Tuple,
@@ -95,6 +104,15 @@ def hash_args(
         code_str = inspect.getsource(func)
         bytecode: Optional[List] = list(
             compile(code_str, '<string>', 'exec').co_code)
+    except IndentationError:
+        # Handle functions inside a class; we just try to remove space
+        # indentation.
+        lines = code_str.split('\n')
+        indentation = _get_indentation(lines[0])
+
+        code_str = '\n'.join(map(lambda l: l[indentation:], lines))
+        bytecode = list(
+            compile(code_str.lstrip(), '<string>', 'exec').co_code)
     except OSError:
         bytecode = None
 
