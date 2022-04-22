@@ -454,9 +454,10 @@ def load_images(
         paths: List[str],
         height: int,
         width: int,
+        device: th.device,
 ) -> torch.Tensor:
     target_imgs = [
-        thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY)
+        thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY).to(device)
         for path in paths
     ]
     img_transform = thv.transforms.Compose([

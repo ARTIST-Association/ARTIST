@@ -426,6 +426,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             cfg.TRAIN.IMAGES.PATHS,
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
+            device,
         )
     else:
         targets = cached_generate_target_dataset(
@@ -462,6 +463,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             cfg.TEST.IMAGES.PATHS,
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
+            device,
         )
     else:
         test_targets = cached_generate_test_dataset(
