@@ -53,6 +53,8 @@ def load_heliostat(
 ) -> MultiNURBSHeliostat:
     data = th.load(path, map_location=device)
 
+    # Highly dangerous because we assume the same path maps to the same
+    # checkpoint each time.
     cached_from_dict = disk_cache.disk_cache(
         MultiNURBSHeliostat.from_dict,
         device,
