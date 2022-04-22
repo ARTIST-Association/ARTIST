@@ -4,11 +4,21 @@ import hashlib
 import inspect
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+)
 
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
+from yacs.config import CfgNode
 
 from environment import Environment, Sun_Distribution
 from heliostat_models import AbstractHeliostat
@@ -19,6 +29,8 @@ F = Callable[..., R]
 OnLoadFn = Callable[[R], R]
 
 DISABLE_DISK_CACHE = False
+
+_DYNAMIC_CONFIG_KEYS = ['LOGDIR']
 
 
 class ExtendedEncoder(json.JSONEncoder):
@@ -64,6 +76,30 @@ def find_disk_hash(
         return None, None
     hash_value = least_recent.name[len(file_prefix):-3]
     return hash_value, least_recent
+
+
+def _normalize_configs(
+        hash_args: Iterator[Any],
+        hash_kwargs: Iterator[Tuple[str, Any]],
+) -> Tuple[List[Any], List[Tuple[str, Any]]]:
+    # Remove changing config values.
+    new_hash_args = []
+    for arg in hash_args:
+        if isinstance(arg, CfgNode):
+            arg = arg.clone()
+            for key in _DYNAMIC_CONFIG_KEYS:
+                arg.pop(key, None)
+        new_hash_args.append(arg)
+
+    new_hash_kwargs: List[Tuple[str, Any]] = []
+    for (name, arg) in hash_kwargs:
+        if isinstance(arg, CfgNode):
+            arg = arg.clone()
+            for key in _DYNAMIC_CONFIG_KEYS:
+                arg.pop(key, None)
+        new_hash_args.append((name, arg))
+
+    return new_hash_args, new_hash_kwargs
 
 
 def _get_indentation(line: str) -> int:
@@ -117,22 +153,24 @@ def hash_args(
         bytecode = None
 
     # Find arguments we want to hash.
-    hash_args = tuple(
+    hash_args = (
         arg
         for (i, arg) in enumerate(args)
         if i not in ignore_argnums
     )
-    hash_kwargs = tuple(
+    hash_kwargs = (
         (key, value)
         for (key, value) in kwargs.items()
         if key not in ignore_argnames
     )
 
+    new_hash_args, new_hash_kwargs = _normalize_configs(hash_args, hash_kwargs)
+
     # Hash arguments and RNG state.
     hash_val = hashlib.md5(json.dumps(
         (
-            hash_args,
-            hash_kwargs,
+            new_hash_args,
+            new_hash_kwargs,
             bytecode,
             th.get_rng_state(),
             (
