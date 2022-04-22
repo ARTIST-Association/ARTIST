@@ -167,8 +167,7 @@ def main() -> None:
         for (j, heliostat) in enumerate(heliostats):
             heliostat_aligned = heliostat.align(sun_direction)
 
-            pred_bitmap: torch.Tensor = cast(
-                th.Tensor, renderer.render(heliostat_aligned))
+            pred_bitmap = cast(th.Tensor, renderer.render(heliostat_aligned))
 
             loss = test_loss_func(pred_bitmap, target)
 

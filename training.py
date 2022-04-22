@@ -355,7 +355,7 @@ def train_batch(
         with th.no_grad():
             _, (_, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
-        loss: torch.Tensor = cast(
+        loss = cast(
             th.Tensor,
             opt.step(cast(
                 Callable[[], float],
@@ -416,8 +416,7 @@ def test_batch(
             sun_directions,
     )):
         heliostat_aligned = heliostat.align(sun_direction)
-        pred_bitmap: torch.Tensor = cast(
-            th.Tensor, renderer.render(heliostat_aligned))
+        pred_bitmap = cast(th.Tensor, renderer.render(heliostat_aligned))
 
         if bitmaps is None:
             bitmaps = th.empty(
