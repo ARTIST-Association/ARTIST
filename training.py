@@ -14,7 +14,7 @@ import utils
 
 LossFn = Callable[
     [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
-    torch.Tensor,
+    Tuple[torch.Tensor, torch.Tensor],
 ]
 TestLossFn = Callable[
     [torch.Tensor, torch.Tensor],
@@ -238,8 +238,9 @@ def build_loss_funcs(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
             opt: torch.optim.Optimizer,
-    ) -> torch.Tensor:
-        loss = test_loss_func(pred_bitmap, target_bitmap)
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        raw_loss = test_loss_func(pred_bitmap, target_bitmap)
+        loss = raw_loss.clone()
 
         for name in to_optimize:
             if name == 'surface':
@@ -255,7 +256,7 @@ def build_loss_funcs(
             weight_penalty = l1_weight_penalty(opt, name)
             weight_decay_factor: float = node.WEIGHT_DECAY_FACTOR
             loss += weight_decay_factor * weight_penalty
-        return loss
+        return loss, raw_loss
 
     return loss_func, test_loss_func
 
@@ -265,7 +266,7 @@ def calc_batch_loss(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
 ]:
     # print(epoch)
     # if epoch == 0:
@@ -288,6 +289,7 @@ def calc_batch_loss(
     # Initialize Parameters
     # =====================
     loss = th.tensor(0.0, dtype=targets.dtype, device=H.device)
+    raw_loss = th.zeros_like(loss)
     if return_extras:
         num_missed = th.tensor(0.0, dtype=targets.dtype, device=H.device)
 
@@ -302,7 +304,9 @@ def calc_batch_loss(
             H_aligned, return_extras=True)
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(pred_bitmap.shape)
-        loss += loss_func(pred_bitmap, target, opt) / len(targets)
+        curr_loss, curr_raw_loss = loss_func(pred_bitmap, target, opt)
+        loss += curr_loss / len(targets)
+        raw_loss += curr_raw_loss / len(targets)
 
         with th.no_grad():
             # Plot target images to TensorBoard
@@ -321,7 +325,7 @@ def calc_batch_loss(
                 )
 
     if return_extras:
-        return loss, (pred_bitmap, num_missed)
+        return loss, (raw_loss, pred_bitmap, num_missed)
     return loss
 
 
@@ -330,26 +334,26 @@ def calc_batch_grads(
         return_extras: bool = True,
 ) -> Union[
     torch.Tensor,
-    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
+    Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
 ]:
     train_objects.opt.zero_grad(set_to_none=True)
 
-    loss, (pred_bitmap, num_missed) = calc_batch_loss(
+    loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
         train_objects, return_extras=True)
 
     loss.backward()
     if return_extras:
-        return loss, (pred_bitmap, num_missed)
+        return loss, (raw_loss, pred_bitmap, num_missed)
     return loss
 
 
 def train_batch(
         train_objects: TrainObjects,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():
-            _, (pred_bitmap, num_missed) = calc_batch_loss(
+            _, (_, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
         loss: torch.Tensor = cast(
             th.Tensor,
@@ -359,7 +363,7 @@ def train_batch(
             )),
         )
     else:
-        loss, (pred_bitmap, num_missed) = calc_batch_grads(
+        loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
             train_objects)
         opt.step()
 
@@ -371,6 +375,8 @@ def train_batch(
         if writer:
             writer.add_scalar(
                 f"{prefix}/loss", loss.item(), train_objects.epoch)
+            writer.add_scalar(
+                f"{prefix}/raw_loss", raw_loss.item(), train_objects.epoch)
 
     # Update training parameters
     # ==========================
@@ -384,7 +390,7 @@ def train_batch(
     # if opt.param_groups[0]["lr"] < last_lr:
     #     last_lr = opt.param_groups[0]["lr"]
 
-    return loss, pred_bitmap, num_missed
+    return loss, raw_loss, pred_bitmap, num_missed
 
 
 @th.no_grad()

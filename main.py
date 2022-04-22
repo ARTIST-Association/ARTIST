@@ -614,10 +614,12 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer.add_scalar(
                 f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
-        loss, pred_bitmap, num_missed = training.train_batch(train_objects)
+        loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
+            train_objects)
         print(
             f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
+            f'raw loss: {raw_loss.detach().cpu().numpy()}, '
             f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
@@ -719,10 +721,12 @@ def main(config_file_name: Optional[str] = None) -> None:
         # if epoch == 0:
         #     plotter.plot_surfaces_3D_mm(
         #         H, 100000, logdir_surfaces, writer=None)
-        loss, pred_bitmap, num_missed = training.train_batch(train_objects)
+        loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
+            train_objects)
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
+            f'raw loss: {raw_loss.detach().cpu().numpy()}, '
             f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
