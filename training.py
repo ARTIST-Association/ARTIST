@@ -219,12 +219,20 @@ def build_loss_funcs(
     cfg = cfg_loss
     name = cfg.NAME.lower()
     if name == "mse":
-        test_loss_func: TestLossFn = th.nn.MSELoss()
+        primitive_loss_func: TestLossFn = th.nn.MSELoss()
     elif name == "l1":
-        test_loss_func = th.nn.L1Loss()
+        primitive_loss_func = th.nn.L1Loss()
     else:
         raise ValueError(
             "Loss function name not found, change name or implement new loss")
+
+    def test_loss_func(
+            pred_bitmap: torch.Tensor,
+            target_bitmap: torch.Tensor,
+    ) -> torch.Tensor:
+        loss = primitive_loss_func(pred_bitmap, target_bitmap)
+        loss /= pred_bitmap.numel()
+        return loss
 
     def loss_func(
             pred_bitmap: torch.Tensor,
@@ -232,7 +240,6 @@ def build_loss_funcs(
             opt: torch.optim.Optimizer,
     ) -> torch.Tensor:
         loss = test_loss_func(pred_bitmap, target_bitmap)
-        loss /= pred_bitmap.numel()
 
         for name in to_optimize:
             if name == 'surface':
