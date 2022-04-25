@@ -1065,6 +1065,7 @@ class Heliostat(AbstractHeliostat):
         for group in self.optimizables().values():
             for param in group:
                 param.requires_grad_(False)
+                param.grad = None
 
         self._to_optimize = new_to_optimize
         if setup_params:
