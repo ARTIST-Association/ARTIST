@@ -95,8 +95,9 @@ def _build_optimizer(
             weight_decay=cfg.WEIGHT_DECAY,
         )
     elif name == "lbfgs":
+        list_params = [param for group in params for param in group['params']]
         opt = th.optim.LBFGS(
-            params,
+            list_params,
             lr=cfg.LR,
         )
     else:
@@ -192,8 +193,9 @@ def build_optimizer_scheduler(
 
 def l1_weight_penalty(
         opt: th.optim.Optimizer,
-        param_group_name: str,
+        param_group_name: Optional[str],
 ) -> torch.Tensor:
+    no_filter = param_group_name is None
     weight_penalty = sum(
         th.linalg.norm(
             th.linalg.norm(
@@ -206,7 +208,7 @@ def l1_weight_penalty(
         )
         for group in opt.param_groups
         for param in group['params']
-        if group['name'] == param_group_name
+        if no_filter or group['name'] == param_group_name
     )
     assert isinstance(weight_penalty, th.Tensor)
     return weight_penalty
@@ -242,20 +244,25 @@ def build_loss_funcs(
         raw_loss = test_loss_func(pred_bitmap, target_bitmap)
         loss = raw_loss.clone()
 
-        for name in to_optimize:
-            if name == 'surface':
-                node: CfgNode = cfg
-            else:
-                node = getattr(cfg, name.upper())
-
-            if not node.USE_L1_WEIGHT_DECAY:
-                continue
-
-            # TODO This is very inefficient as we do a N^2 loop.
-            #      However, N is super small so we shouldn't care.
-            weight_penalty = l1_weight_penalty(opt, name)
-            weight_decay_factor: float = node.WEIGHT_DECAY_FACTOR
+        if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
+            weight_penalty = l1_weight_penalty(opt, None)
+            weight_decay_factor: float = cfg.WEIGHT_DECAY_FACTOR
             loss += weight_decay_factor * weight_penalty
+        else:
+            for name in to_optimize:
+                if name == 'surface':
+                    node: CfgNode = cfg
+                else:
+                    node = getattr(cfg, name.upper())
+
+                if not node.USE_L1_WEIGHT_DECAY:
+                    continue
+
+                # TODO This is very inefficient as we do a N^2 loop.
+                #      However, N is super small so we shouldn't care.
+                weight_penalty = l1_weight_penalty(opt, name)
+                weight_decay_factor = node.WEIGHT_DECAY_FACTOR
+                loss += weight_decay_factor * weight_penalty
         return loss, raw_loss
 
     return loss_func, test_loss_func
@@ -353,7 +360,7 @@ def train_batch(
     opt = train_objects.opt
     if isinstance(opt, th.optim.LBFGS):
         with th.no_grad():
-            _, (_, pred_bitmap, num_missed) = calc_batch_loss(
+            _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
         loss = cast(
             th.Tensor,
