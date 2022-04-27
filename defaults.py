@@ -320,6 +320,7 @@ _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0.91
 
 _C.TRAIN.LOSS                           = CN()
 _C.TRAIN.LOSS.NAME                      = "L1"                                  #SWITCH FOR LOSS: L1, MSE
+_C.TRAIN.LOSS.MISS_LOSS_FACTOR          = 1e7
 _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
 

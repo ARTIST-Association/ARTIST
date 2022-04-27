@@ -12,9 +12,30 @@ from heliostat_models import AbstractHeliostat, ParamGroups
 from render import Renderer
 import utils
 
-LossFn = Callable[
-    [torch.Tensor, torch.Tensor, torch.optim.Optimizer],
-    Tuple[torch.Tensor, torch.Tensor],
+LossFn = Union[
+    Callable[
+        [
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            Environment,
+            torch.optim.Optimizer,
+            float,
+        ],
+        Tuple[torch.Tensor, torch.Tensor],
+    ],
+    Callable[
+        [
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            Environment,
+            torch.optim.Optimizer,
+        ],
+        Tuple[torch.Tensor, torch.Tensor],
+    ],
 ]
 TestLossFn = Callable[
     [torch.Tensor, torch.Tensor],
@@ -227,6 +248,7 @@ def build_loss_funcs(
     else:
         raise ValueError(
             "Loss function name not found, change name or implement new loss")
+    miss_loss_factor: float = cfg.MISS_LOSS_FACTOR
 
     def test_loss_func(
             pred_bitmap: torch.Tensor,
@@ -239,10 +261,27 @@ def build_loss_funcs(
     def loss_func(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
+            dx_ints: torch.Tensor,
+            dy_ints: torch.Tensor,
+            env: Environment,
             opt: torch.optim.Optimizer,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        raw_loss = test_loss_func(pred_bitmap, target_bitmap)
-        loss = raw_loss.clone()
+        raw_loss = test_loss_func(
+            pred_bitmap,
+            target_bitmap,
+        )
+
+        # Penalize misses
+        miss_loss = primitive_loss_func(
+            dx_ints,
+            th.clip(dx_ints, min=-1, max=env.receiver_plane_x + 1),
+        ) * miss_loss_factor
+        miss_loss += primitive_loss_func(
+            dy_ints,
+            th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
+        ) * miss_loss_factor
+
+        loss = raw_loss.clone() + miss_loss
 
         if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
             weight_penalty = l1_weight_penalty(opt, None)
@@ -307,11 +346,21 @@ def calc_batch_loss(
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)
-        pred_bitmap, (ray_directions, indices, _, _) = R.render(
-            H_aligned, return_extras=True)
+        (
+            pred_bitmap,
+            (ray_directions, dx_ints, dy_ints, indices, _, _),
+        ) = R.render(H_aligned, return_extras=True)
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(pred_bitmap.shape)
-        curr_loss, curr_raw_loss = loss_func(pred_bitmap, target, opt)
+        curr_loss, curr_raw_loss = loss_func(
+            pred_bitmap,
+            target,
+            dx_ints,
+            dy_ints,
+            ENV,
+            opt,
+        )
+
         loss += curr_loss / len(targets)
         raw_loss += curr_raw_loss / len(targets)
 
@@ -423,7 +472,10 @@ def test_batch(
             sun_directions,
     )):
         heliostat_aligned = heliostat.align(sun_direction)
-        pred_bitmap = cast(th.Tensor, renderer.render(heliostat_aligned))
+        (
+            pred_bitmap,
+            (ray_directions, dx_ints, dy_ints, _, _, _),
+        ) = renderer.render(heliostat_aligned, return_extras=True)
 
         if bitmaps is None:
             bitmaps = th.empty(

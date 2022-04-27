@@ -288,7 +288,14 @@ class Renderer(object):
         torch.Tensor,
         Tuple[
             torch.Tensor,
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+            Tuple[
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+            ],
         ],
     ]:
         if heliostat is None:
@@ -349,5 +356,15 @@ class Renderer(object):
                 'Missed for target:', target_num_missed.detach().cpu().item())
 
         if return_extras:
-            return total_bitmap, (distorted_ray_directions, indices, xi, yi)
+            return (
+                total_bitmap,
+                (
+                    distorted_ray_directions,
+                    dx_ints,
+                    dy_ints,
+                    indices,
+                    xi,
+                    yi,
+                ),
+            )
         return total_bitmap
