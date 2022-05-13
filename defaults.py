@@ -38,13 +38,16 @@ _C.NURBS.RECALCULATE_EVAL_POINTS        = False
 _C.NURBS.SPLINE_DEGREE                  = 3
 
 # For multi-NURBS heliostat
-_C.NURBS.POSITION_ON_FIELD = [0, 0, 0]  # in m
+# Where to place the heliostat. If 'inherit', inherit the position from
+# the loaded heliostat.
+_C.NURBS.POSITION_ON_FIELD = 'inherit'  # in m
 # Where to aim the heliostat. If `None`, automatically aim at
 # `cfg.AC.RECEIVER.CENTER`. If 'inherit', inherit the aim point from the
 # loaded heliostat.
 _C.NURBS.AIM_POINT = 'inherit'
-# Rotational disturbance angles (x, y and z axes) in degrees.
-_C.NURBS.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
+# Rotational disturbance angles (x, y and z axes) in degrees. If
+# 'inherit', inherit the disturbance angles from the loaded heliostat.
+_C.NURBS.DISTURBANCE_ROT_ANGLES = 'inherit'
 _C.NURBS.FACETS = CN()
 _C.NURBS.FACETS.CANTING = CN()
 # To disable canting, set this to 0. Then, the heliostat is left exactly
@@ -59,9 +62,11 @@ _C.NURBS.FACETS.CANTING = CN()
 # In the same vein, you can set this to `float('inf')` to "de-cant" the
 # heliostat so it's flat on z = 0.
 #
+# If 'inherit', use the focus point from the loaded heliostat.
+#
 # When the canting algorithm is 'active', any value other than 0 is
 # ignored and treated as if it was `None`.
-_C.NURBS.FACETS.CANTING.FOCUS_POINT = 0
+_C.NURBS.FACETS.CANTING.FOCUS_POINT = 'inherit'
 # Canting algorithm can be 'standard' or 'active'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
@@ -69,7 +74,9 @@ _C.NURBS.FACETS.CANTING.FOCUS_POINT = 0
 # - In active canting, each facet is canted perfectly onto the receiver
 #   center for each sun position. This means the focus point is always
 #   treated as if it was `None`.
-_C.NURBS.FACETS.CANTING.ALGORITHM = 'standard'
+#
+# If 'inherit', use the canting algorithm from the loaded heliostat.
+_C.NURBS.FACETS.CANTING.ALGORITHM = 'inherit'
 
 # NURBS progressive growing
 _C.NURBS.GROWING                        = CN()
@@ -82,8 +89,12 @@ _C.NURBS.GROWING.START_COLS             = 0
 _C.NURBS.GROWING.STEP_SIZE_ROWS         = 0
 _C.NURBS.GROWING.STEP_SIZE_COLS         = 0
 
-_C.NURBS.WIDTH                        = 4 # in m
-_C.NURBS.HEIGHT                       = 4 # in m
+# Width of the heliostat in meters. If 'inherit', use the width from the
+# loaded heliostat.
+_C.NURBS.WIDTH                        = 'inherit'  # in m
+# Height of the heliostat in meters. If 'inherit', use the height from the
+# loaded heliostat.
+_C.NURBS.HEIGHT                       = 'inherit'  # in m
 # Both of these are used per facet!
 _C.NURBS.ROWS                         = 6
 _C.NURBS.COLS                         = 6

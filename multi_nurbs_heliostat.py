@@ -50,6 +50,35 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
 
+        cfg_width: float = self.nurbs_cfg.WIDTH
+        if isinstance(cfg_width, str):
+            if cfg_width != 'inherit':
+                raise ValueError(f'unknown width config "{cfg_width}"')
+        else:
+            self.width = cfg_width
+
+        cfg_height: float = self.nurbs_cfg.HEIGHT
+        if isinstance(cfg_height, str):
+            if cfg_height != 'inherit':
+                raise ValueError(f'unknown height config "{cfg_height}"')
+        else:
+            self.height = cfg_height
+
+        cfg_position_on_field: Union[List[float], str] = \
+            self.nurbs_cfg.POSITION_ON_FIELD
+        if isinstance(cfg_position_on_field, str):
+            if cfg_position_on_field != 'inherit':
+                raise ValueError(
+                    f'unknown position on field config '
+                    f'"{cfg_position_on_field}"'
+                )
+        else:
+            self.position_on_field = heliostat_models.get_position(
+                self.nurbs_cfg,
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+
         cfg_aim_point: Union[List[float], str, None] = self.nurbs_cfg.AIM_POINT
         if isinstance(cfg_aim_point, str):
             if cfg_aim_point != 'inherit':
@@ -69,17 +98,32 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             aim_point_cfg = self.nurbs_cfg
             maybe_aim_point = receiver_center
         self.aim_point = self._get_aim_point(aim_point_cfg, maybe_aim_point)
-        self.position_on_field = heliostat_models.get_position(
-            self.nurbs_cfg,
-            dtype=self.position_on_field.dtype,
-            device=self.device,
-        )
 
-        # Radians
-        self.disturbance_angles = self._get_disturbance_angles(self.nurbs_cfg)
+        cfg_disturbance_angles: Union[List[float], str] = \
+            self.nurbs_cfg.DISTURBANCE_ROT_ANGLES
+        if isinstance(cfg_disturbance_angles, str):
+            if cfg_disturbance_angles != 'inherit':
+                raise ValueError(
+                    f'unknown disturbance angles config '
+                    f'"{cfg_disturbance_angles}"'
+                )
+        else:
+            # Radians
+            self.disturbance_angles = self._get_disturbance_angles(
+                self.nurbs_cfg)
 
-        self._canting_cfg = self.nurbs_cfg.FACETS.CANTING
-        if canting.canting_enabled(self._canting_cfg):
+        self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
+        cfg_canting_algo: str = self._canting_cfg.ALGORITHM
+        if cfg_canting_algo != 'inherit':
+            self._canting_algo = canting.get_algorithm(self._canting_cfg)
+
+        cfg_focus_point: Union[None, List[float], float, str] = \
+            self._canting_cfg.FOCUS_POINT
+        if isinstance(cfg_focus_point, str):
+            if cfg_focus_point != 'inherit':
+                raise ValueError(
+                    f'unknown focus point config "{cfg_focus_point}"')
+        elif canting.canting_enabled(self._canting_cfg):
             self.focus_point = canting.get_focus_point(
                 self._canting_cfg,
                 self.aim_point,
