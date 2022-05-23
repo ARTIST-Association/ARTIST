@@ -890,11 +890,10 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
-            canting_cfg: CfgNode,
     ) -> None:
-        if canting.canting_enabled(canting_cfg):
+        if self._canting_enabled:
             self.focus_point = canting.get_focus_point(
-                canting_cfg,
+                self._canting_cfg,
                 self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
                 facet_positions.dtype,
@@ -926,7 +925,7 @@ class Heliostat(AbstractHeliostat):
             facet_normals_ideal = normals_ideal[indices]
 
             if (
-                    canting.canting_enabled(canting_cfg)
+                    self._canting_enabled
                     and self._canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 (
@@ -993,9 +992,10 @@ class Heliostat(AbstractHeliostat):
 
     def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
-        canting_cfg: CfgNode = h_cfg.FACETS.CANTING
+        self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
+        self._canting_enabled = canting.canting_enabled(self._canting_cfg)
 
-        self._canting_algo = canting.get_algorithm(canting_cfg)
+        self._canting_algo = canting.get_algorithm(self._canting_cfg)
         self.aim_point = self._get_aim_point(
             h_cfg,
             maybe_aim_point,
@@ -1028,7 +1028,6 @@ class Heliostat(AbstractHeliostat):
             heliostat_ideal,
             heliostat_normals,
             heliostat_ideal_vecs,
-            canting_cfg,
         )
         self.params = params
         self.height = height

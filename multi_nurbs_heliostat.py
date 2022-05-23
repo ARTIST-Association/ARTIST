@@ -112,6 +112,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.disturbance_angles = self._get_disturbance_angles(
                 self.nurbs_cfg)
 
+        old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         cfg_canting_algo: str = self._canting_cfg.ALGORITHM
         if cfg_canting_algo != 'inherit':
@@ -123,6 +124,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             if cfg_focus_point != 'inherit':
                 raise ValueError(
                     f'unknown focus point config "{cfg_focus_point}"')
+            self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
         elif canting.canting_enabled(self._canting_cfg):
             self.focus_point = canting.get_focus_point(
                 self._canting_cfg,
@@ -131,6 +133,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 dtype=self._discrete_points.dtype,
                 device=self.device,
             )
+            self._canting_cfg.FOCUS_POINT = cfg_focus_point
+
+        self._canting_enabled = canting.canting_enabled(self._canting_cfg)
 
         facets_and_rots = self._create_facets(
             self.cfg, self.nurbs_cfg)
@@ -185,7 +190,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         decanted_normal = facet_normals_ideal.mean(dim=0)
         decanted_normal /= th.linalg.norm(decanted_normal)
 
-        if canting.canting_enabled(self._canting_cfg):
+        if self._canting_enabled:
             canted_normal = canting.get_focus_normal(
                 self.focus_point,
                 self.position_on_field,
@@ -531,7 +536,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         )
 
         if (
-                canting.canting_enabled(self._heliostat._canting_cfg)
+                self._heliostat._canting_enabled
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             self.facets = [
@@ -542,7 +547,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
 
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if (
-                canting.canting_enabled(self._heliostat._canting_cfg)
+                self._heliostat._canting_enabled
                 and self._heliostat._canting_algo is CantingAlgorithm.ACTIVE
         ):
             hel_rotated, normal_vectors_rotated = \
