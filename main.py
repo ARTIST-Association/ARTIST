@@ -61,7 +61,10 @@ def check_consistency(cfg: CfgNode) -> None:
     nurbs_focus_point = cfg.NURBS.FACETS.CANTING.FOCUS_POINT
     heliostat_cfg = Heliostat.select_heliostat_builder(cfg.H)[1]
     heliostat_focus_point = heliostat_cfg.FACETS.CANTING.FOCUS_POINT
-    if nurbs_focus_point != heliostat_focus_point:
+    if (
+            nurbs_focus_point != 'inherit'
+            and nurbs_focus_point != heliostat_focus_point
+    ):
         warnings_found = True
         print(
             "WARNING: Focus points of target and trained heliostat "
