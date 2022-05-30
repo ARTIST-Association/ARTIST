@@ -56,6 +56,7 @@ TrainObjects = collections.namedtuple(
         'ENV',
         'R',
         'targets',
+        'mean_ray_dirs',
         'sun_directions',
         'loss_func',
         'epoch',
@@ -334,6 +335,7 @@ def calc_batch_loss(
         ENV,
         R,
         targets,
+        mean_ray_dirs,
         sun_directions,
         loss_func,
         epoch,
@@ -350,8 +352,9 @@ def calc_batch_loss(
 
     # Batch Loop
     # ==========
-    for (i, (target, sun_direction)) in enumerate(zip(
+    for (i, (target, mean_ray_dir, sun_direction)) in enumerate(zip(
             targets,
+            mean_ray_dirs,
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)

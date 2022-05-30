@@ -14,6 +14,64 @@ from render import Renderer
 import utils
 
 
+def _calc_mean_argval(bitmap: torch.Tensor) -> torch.Tensor:
+    dtype = bitmap.dtype
+    device = bitmap.device
+
+    x_indices = th.arange(bitmap.shape[0], dtype=dtype, device=device)
+    y_indices = th.arange(bitmap.shape[1], dtype=dtype, device=device)
+    indices = th.cartesian_prod(x_indices, y_indices)
+
+    mean_argval = (indices * bitmap.reshape(-1, 1) / bitmap.mean()).mean(dim=0)
+    return mean_argval
+
+
+def mean_ray_direction(bitmap: torch.Tensor, env: Environment) -> torch.Tensor:
+    assert bitmap.ndim == 2
+    mean_argval_x, mean_argval_y = _calc_mean_argval(bitmap)
+
+    # If our bitmap has different values X, we assume index locations so
+    # that they are in the center of each bitmap value X in the
+    # following diagram. However, we also have values "between" the
+    # centers of each X, indicated by a dot (.):
+    #
+    # .......
+    # .X.X.X.
+    # .......
+    # .X.X.X.
+    # .......
+    #
+    # We normalize the index values accordingly in [0, 1], so that their
+    # pointed-to locations match this desired form. In practice, 0 and 1
+    # are never reached due to the locations of the X.
+    mean_argval_x *= 2
+    mean_argval_x += 1
+    mean_argval_x /= bitmap.shape[0] * 2
+    center_offset_x = (
+        env.receiver_plane_x * mean_argval_x
+        - env.receiver_plane_x / 2
+    )
+
+    mean_argval_y *= 2
+    mean_argval_y += 1
+    mean_argval_y /= bitmap.shape[1] * 2
+    center_offset_y = (
+        env.receiver_plane_y * mean_argval_y
+        - env.receiver_plane_y / 2
+    )
+
+    center_offset = th.stack([
+        center_offset_x, center_offset_y, th.zeros_like(center_offset_x)])
+    return env.receiver_center + center_offset
+
+
+def mean_ray_directions(
+        bitmaps: torch.Tensor,
+        env: Environment,
+) -> torch.Tensor:
+    return th.stack([mean_ray_direction(bitmap, env) for bitmap in bitmaps])
+
+
 def create_target(
         H: AbstractHeliostat,
         ENV: Environment,
