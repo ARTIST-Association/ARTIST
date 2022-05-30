@@ -122,7 +122,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if setup_params:
             self.setup_params()
 
-    def _inherit_canting(self):
+    def _inherit_canting(self) -> None:
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         self._canting_cfg.defrost()
