@@ -255,8 +255,9 @@ def build_loss_funcs(
 ) -> Tuple[LossFn, TestLossFn]:
     cfg = cfg_loss
     primitive_loss_func = _get_loss_func(cfg)
+    miss_primitive_loss_func = _get_loss_func(cfg.MISS)
 
-    miss_loss_factor: float = cfg.MISS_LOSS_FACTOR
+    miss_loss_factor: float = cfg.MISS.FACTOR
 
     def test_loss_func(
             pred_bitmap: torch.Tensor,
@@ -280,11 +281,11 @@ def build_loss_funcs(
         )
 
         # Penalize misses
-        miss_loss = primitive_loss_func(
+        miss_loss = miss_primitive_loss_func(
             dx_ints,
             th.clip(dx_ints, min=-1, max=env.receiver_plane_x + 1),
         ) * miss_loss_factor
-        miss_loss += primitive_loss_func(
+        miss_loss += miss_primitive_loss_func(
             dy_ints,
             th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
         ) * miss_loss_factor
