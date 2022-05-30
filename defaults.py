@@ -335,6 +335,9 @@ _C.TRAIN.LOSS.NAME                      = "L1"                                  
 _C.TRAIN.LOSS.MISS                      = CN()
 _C.TRAIN.LOSS.MISS.FACTOR               = 1e7
 _C.TRAIN.LOSS.MISS.NAME                 = "L1"
+_C.TRAIN.LOSS.ALIGNMENT                 = CN()
+_C.TRAIN.LOSS.ALIGNMENT.FACTOR          = 1.0
+_C.TRAIN.LOSS.ALIGNMENT.NAME            = "L1"
 _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
 

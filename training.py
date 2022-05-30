@@ -19,6 +19,8 @@ LossFn = Union[
             torch.Tensor,
             torch.Tensor,
             torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
             Environment,
             torch.optim.Optimizer,
             float,
@@ -27,6 +29,8 @@ LossFn = Union[
     ],
     Callable[
         [
+            torch.Tensor,
+            torch.Tensor,
             torch.Tensor,
             torch.Tensor,
             torch.Tensor,
@@ -257,9 +261,11 @@ def build_loss_funcs(
     cfg = cfg_loss
     primitive_loss_func = _get_loss_func(cfg)
     miss_primitive_loss_func = _get_loss_func(cfg.MISS)
+    alignment_primitive_loss_func = _get_loss_func(cfg.ALIGNMENT)
 
     loss_factor: float = cfg.FACTOR
     miss_loss_factor: float = cfg.MISS.FACTOR
+    alignment_loss_factor: float = cfg.ALIGNMENT.FACTOR
 
     def test_loss_func(
             pred_bitmap: torch.Tensor,
@@ -273,6 +279,8 @@ def build_loss_funcs(
     def loss_func(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
+            z_alignment: torch.Tensor,
+            target_z_alignment: torch.Tensor,
             dx_ints: torch.Tensor,
             dy_ints: torch.Tensor,
             env: Environment,
@@ -293,7 +301,13 @@ def build_loss_funcs(
             th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
         ) * miss_loss_factor
 
-        loss = raw_loss.clone() + miss_loss
+        # Penalize misalignment
+        alignment_loss = alignment_primitive_loss_func(
+            z_alignment,
+            target_z_alignment,
+        ) * alignment_loss_factor
+
+        loss = raw_loss.clone() + miss_loss + alignment_loss
 
         if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
             weight_penalty = l1_weight_penalty(opt, None)
@@ -369,6 +383,8 @@ def calc_batch_loss(
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
+            H_aligned.alignment[-1, :],
+            mean_ray_dir,
             dx_ints,
             dy_ints,
             ENV,
