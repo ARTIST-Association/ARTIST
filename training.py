@@ -258,6 +258,7 @@ def build_loss_funcs(
     primitive_loss_func = _get_loss_func(cfg)
     miss_primitive_loss_func = _get_loss_func(cfg.MISS)
 
+    loss_factor: float = cfg.FACTOR
     miss_loss_factor: float = cfg.MISS.FACTOR
 
     def test_loss_func(
@@ -266,6 +267,7 @@ def build_loss_funcs(
     ) -> torch.Tensor:
         loss = primitive_loss_func(pred_bitmap, target_bitmap)
         loss /= pred_bitmap.numel()
+        loss *= loss_factor
         return loss
 
     def loss_func(
