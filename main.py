@@ -509,7 +509,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         # # th.random.set_rng_state(state)
         H_naive_grid = cached_build_target_heliostat(cfg, device)
         H_naive_grid._normals = H_naive_grid._normals_ideal
-        naive_targets = cached_generate_naive_grid_dataset(
+        naive_grid_targets = cached_generate_naive_grid_dataset(
             H_naive_grid,
             ENV_validation,
             grid_test_sun_directions,
@@ -801,7 +801,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             #         grid_test_ae,
             #         grid_test_targets,
             #         grid_test_bitmaps,
-            #         naive_targets,
+            #         naive_grid_targets,
             #         sun_directions,
             #         epoch,
             #         logdir_enhanced_test,
