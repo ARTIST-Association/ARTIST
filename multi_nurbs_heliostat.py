@@ -112,6 +112,17 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.disturbance_angles = self._get_disturbance_angles(
                 self.nurbs_cfg)
 
+        self._inherit_canting()
+
+        facets_and_rots = self._create_facets(
+            self.cfg, self.nurbs_cfg)
+        self.facets = [tup[0] for tup in facets_and_rots]
+        self.cant_rots = [tup[1] for tup in facets_and_rots]
+
+        if setup_params:
+            self.setup_params()
+
+    def _inherit_canting(self):
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         self._canting_cfg.defrost()
@@ -138,14 +149,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         self._canting_cfg.freeze()
         self._canting_enabled = canting.canting_enabled(self._canting_cfg)
-
-        facets_and_rots = self._create_facets(
-            self.cfg, self.nurbs_cfg)
-        self.facets = [tup[0] for tup in facets_and_rots]
-        self.cant_rots = [tup[1] for tup in facets_and_rots]
-
-        if setup_params:
-            self.setup_params()
 
     def _set_facet_points(
             self,
