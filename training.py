@@ -235,12 +235,10 @@ def l1_weight_penalty(
     return weight_penalty
 
 
-def build_loss_funcs(
+def _get_loss_func(
         cfg_loss: CfgNode,
-        to_optimize: List[str],
-) -> Tuple[LossFn, TestLossFn]:
-    cfg = cfg_loss
-    name = cfg.NAME.lower()
+) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
+    name = cfg_loss.NAME.lower()
     if name == "mse":
         primitive_loss_func: TestLossFn = th.nn.MSELoss()
     elif name == "l1":
@@ -248,6 +246,16 @@ def build_loss_funcs(
     else:
         raise ValueError(
             "Loss function name not found, change name or implement new loss")
+    return primitive_loss_func
+
+
+def build_loss_funcs(
+        cfg_loss: CfgNode,
+        to_optimize: List[str],
+) -> Tuple[LossFn, TestLossFn]:
+    cfg = cfg_loss
+    primitive_loss_func = _get_loss_func(cfg)
+
     miss_loss_factor: float = cfg.MISS_LOSS_FACTOR
 
     def test_loss_func(
