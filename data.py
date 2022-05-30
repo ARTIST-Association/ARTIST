@@ -475,7 +475,10 @@ def load_images(
         # Remove single channel.
         thv.transforms.Lambda(lambda image: image.squeeze(0)),
         # Try to remove background (i.e. make background dark).
-        thv.transforms.Lambda(lambda image: image - image.mean()),
+        thv.transforms.Lambda(lambda image: th.clip(
+            image - image.mean(),
+            min=0,
+        )),
     ])
     targets = th.stack(list(map(img_transform, target_imgs)))
     log_dataset(prefix, writer, targets)
