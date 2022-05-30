@@ -114,6 +114,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
+        self._canting_cfg.defrost()
         cfg_canting_algo: str = self._canting_cfg.ALGORITHM
         if cfg_canting_algo != 'inherit':
             self._canting_algo = canting.get_algorithm(self._canting_cfg)
@@ -126,6 +127,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                     f'unknown focus point config "{cfg_focus_point}"')
             self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
         elif canting.canting_enabled(self._canting_cfg):
+            self._canting_cfg.FOCUS_POINT = cfg_focus_point
             self.focus_point = canting.get_focus_point(
                 self._canting_cfg,
                 self.aim_point,
@@ -133,8 +135,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 dtype=self._discrete_points.dtype,
                 device=self.device,
             )
-            self._canting_cfg.FOCUS_POINT = cfg_focus_point
 
+        self._canting_cfg.freeze()
         self._canting_enabled = canting.canting_enabled(self._canting_cfg)
 
         facets_and_rots = self._create_facets(
