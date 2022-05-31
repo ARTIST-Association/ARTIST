@@ -518,7 +518,7 @@ def read_image(path: str, device: th.device) -> torch.Tensor:
     # We expect (channel, width, height), torchvision loads (channel,
     # height, width).
     img = img.transpose(1, 2)
-    img = img.to(device)
+    img = img.to(dtype=th.get_default_dtype(), device=device)
     return img
 
 
@@ -534,8 +534,6 @@ def load_images(
     target_imgs = [read_image(path, device) for path in paths]
     img_transform = thv.transforms.Compose([
         thv.transforms.Resize((height, width)),
-        # Normalize to [0, 1].
-        thv.transforms.Lambda(lambda image: image / 255),
         # Remove single channel.
         thv.transforms.Lambda(lambda image: image.squeeze(0)),
         # Try to remove background (i.e. make background dark).
@@ -543,6 +541,8 @@ def load_images(
             image - image.mean(),
             min=0,
         )),
+        # Normalize to [0, 1], same as renderer.
+        thv.transforms.Lambda(lambda image: image / image.max()),
     ])
     targets = th.stack(list(map(img_transform, target_imgs)))
     log_dataset(prefix, writer, targets)
