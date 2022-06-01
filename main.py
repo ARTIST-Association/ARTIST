@@ -13,6 +13,7 @@ import data
 from defaults import get_cfg_defaults, load_config_file
 import disk_cache
 from environment import Environment
+import hausdorff_distance
 from heliostat_models import AbstractHeliostat, Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat
 from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
@@ -485,6 +486,11 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
         )
     # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
+    test_targets_contoured = hausdorff_distance.contour_images(
+        test_targets,
+        cfg.TEST.HAUSDORFF.CONTOUR_VALS,
+        cfg.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    )
 
     # Better Testing
     # ==============
@@ -748,13 +754,15 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer.add_scalar(f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
             if epoch % cfg.TEST.INTERVAL == 0:
-                test_loss, _ = training.test_batch(
+                test_loss, hausdorff_dist, _ = training.test_batch(
                     H,
                     ENV,
                     R,
                     test_targets,
+                    test_targets_contoured,
                     test_sun_directions,
                     test_loss_func,
+                    cfg,
                     epoch,
                     "test",
                     writer,
@@ -847,7 +855,8 @@ def main(config_file_name: Optional[str] = None) -> None:
 
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
-                    f'test loss: {test_loss.item()}'
+                    f'test loss: {test_loss.item()}, '
+                    f'Hausdorff distance: {hausdorff_dist.item()}'
                 )
 
             # Plotting stuff

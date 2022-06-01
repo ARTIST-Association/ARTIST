@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
 from environment import Environment
+import hausdorff_distance
 from heliostat_models import AbstractHeliostat, ParamGroups
 from render import Renderer
 import utils
@@ -485,13 +486,15 @@ def test_batch(
         env: Environment,
         renderer: Renderer,
         targets: torch.Tensor,
+        targets_contoured: torch.Tensor,
         sun_directions: torch.Tensor,
         loss_func: TestLossFn,
+        config: CfgNode,
         epoch: int,
         prefix: str,
         writer: Optional[SummaryWriter] = None,
         reduction: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     assert prefix, "prefix string cannot be empty"
 
     mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
@@ -523,11 +526,23 @@ def test_batch(
         if writer:
             writer.add_image(
                 f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
+    assert bitmaps is not None
+
+    hausdorff_dists = hausdorff_distance.hausdorff_distance_contoured(
+        hausdorff_distance.contour_images(
+            bitmaps,
+            config.TEST.HAUSDORFF.CONTOUR_VALS,
+            config.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        ),
+        targets_contoured,
+    )
+    mean_hausdorff_dist = hausdorff_dists.mean()
 
     if writer:
         writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
-    assert bitmaps is not None
+        writer.add_scalar(
+            f"{prefix}/hausdorff_distance", mean_hausdorff_dist.item(), epoch)
     if reduction:
-        return mean_loss, bitmaps
+        return mean_loss, mean_hausdorff_dist, bitmaps
     else:
-        return th.stack(losses), bitmaps
+        return th.stack(losses), hausdorff_dists, bitmaps
