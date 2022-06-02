@@ -486,7 +486,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
         )
     # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
-    test_targets_contoured = hausdorff_distance.contour_images(
+    test_target_sets = hausdorff_distance.images_to_sets(
         test_targets,
         cfg.TEST.HAUSDORFF.CONTOUR_VALS,
         cfg.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
@@ -759,7 +759,7 @@ def main(config_file_name: Optional[str] = None) -> None:
                     ENV,
                     R,
                     test_targets,
-                    test_targets_contoured,
+                    test_target_sets,
                     test_sun_directions,
                     test_loss_func,
                     cfg,

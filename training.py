@@ -486,7 +486,7 @@ def test_batch(
         env: Environment,
         renderer: Renderer,
         targets: torch.Tensor,
-        targets_contoured: torch.Tensor,
+        target_sets: List[torch.Tensor],
         sun_directions: torch.Tensor,
         loss_func: TestLossFn,
         config: CfgNode,
@@ -528,13 +528,13 @@ def test_batch(
                 f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
     assert bitmaps is not None
 
-    hausdorff_dists = hausdorff_distance.hausdorff_distance_contoured(
-        hausdorff_distance.contour_images(
+    hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
+        hausdorff_distance.images_to_sets(
             bitmaps,
             config.TEST.HAUSDORFF.CONTOUR_VALS,
             config.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
         ),
-        targets_contoured,
+        target_sets,
     )
     mean_hausdorff_dist = hausdorff_dists.mean()
 
