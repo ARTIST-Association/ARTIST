@@ -1132,6 +1132,7 @@ class Heliostat(AbstractHeliostat):
 
             'position_on_field',
             'disturbance_rotation_angles_rad',
+            'aim_point',
             'focus_point',
 
             'config',
@@ -1157,6 +1158,7 @@ class Heliostat(AbstractHeliostat):
         """The part of the heliostat's configuration that does not change."""
         data = {
             'heliostat_points': self._discrete_points,
+            'aim_point': self.aim_point,
 
             'config': self.cfg,
             'params': copy.deepcopy(self.params),
@@ -1218,6 +1220,7 @@ class Heliostat(AbstractHeliostat):
         self._normals = data['heliostat_normals']
         self.position_on_field = data['position_on_field']
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
+        self.aim_point = data['aim_point']
         focus_point = data['focus_point']
         self._set_deconstructed_focus_point(focus_point)
 
