@@ -139,13 +139,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
         elif canting.canting_enabled(self._canting_cfg):
             self._canting_cfg.FOCUS_POINT = cfg_focus_point
-            self.focus_point = canting.get_focus_point(
+            focus_point = canting.get_focus_point(
                 self._canting_cfg,
                 self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self._discrete_points.dtype,
                 device=self.device,
             )
+            self._set_deconstructed_focus_point(focus_point)
 
         self._canting_cfg.freeze()
         self._canting_enabled = canting.canting_enabled(self._canting_cfg)

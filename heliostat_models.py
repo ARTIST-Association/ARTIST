@@ -726,7 +726,8 @@ class AbstractHeliostat:
     device: th.device
     position_on_field: torch.Tensor
     aim_point: torch.Tensor
-    focus_point: Optional[torch.Tensor]
+    _focus_normal: Optional[torch.Tensor]
+    _focus_distance: Optional[torch.Tensor]
     disturbance_angles: List[torch.Tensor]
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
@@ -780,6 +781,13 @@ class AbstractHeliostat:
     @property
     def _facetted_normals_ideal(self) -> List[torch.Tensor]:
         return self._make_facetted(self._normals_ideal)
+
+    @property
+    def focus_point(self) -> Optional[torch.Tensor]:  # type: ignore[override]
+        if self._focus_normal is None:
+            return None
+        assert self._focus_distance is not None
+        return self._focus_normal * self._focus_distance
 
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
@@ -866,6 +874,25 @@ class Heliostat(AbstractHeliostat):
             self.setup_params()
 
     @staticmethod
+    def _deconstruct_focus_point(
+            focus_point: Optional[torch.Tensor],
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        if focus_point is not None:
+            focus_distance = th.linalg.norm(focus_point)
+            focus_normal = focus_point / focus_distance
+        else:
+            focus_normal = None
+            focus_distance = None
+        return focus_normal, focus_distance
+
+    def _set_deconstructed_focus_point(
+            self,
+            focus_point: Optional[torch.Tensor],
+    ) -> None:
+        self._focus_normal, self._focus_distance = \
+            self._deconstruct_focus_point(focus_point)
+
+    @staticmethod
     def select_heliostat_builder(cfg: CfgNode) -> Tuple[
             Callable[[CfgNode, th.device], HeliostatParams],
             CfgNode,
@@ -892,7 +919,7 @@ class Heliostat(AbstractHeliostat):
             normals_ideal: torch.Tensor,
     ) -> None:
         if self._canting_enabled:
-            self.focus_point = canting.get_focus_point(
+            focus_point = canting.get_focus_point(
                 self._canting_cfg,
                 self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
@@ -900,7 +927,8 @@ class Heliostat(AbstractHeliostat):
                 self.device,
             )
         else:
-            self.focus_point = None
+            focus_point = None
+        self._set_deconstructed_focus_point(focus_point)
 
         facet_offsets: List[int] = []
         offset = 0
