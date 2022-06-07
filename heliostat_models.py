@@ -1132,6 +1132,7 @@ class Heliostat(AbstractHeliostat):
 
             'position_on_field',
             'disturbance_rotation_angles_rad',
+            'focus_point',
 
             'config',
             'params',
@@ -1177,6 +1178,11 @@ class Heliostat(AbstractHeliostat):
                 angle.clone()
                 for angle in self.disturbance_angles
             ],
+            'focus_point': (
+                self.focus_point.clone()
+                if self.focus_point is not None
+                else None
+            ),
 
             'to_optimize': self._to_optimize.copy(),
         })
@@ -1212,6 +1218,8 @@ class Heliostat(AbstractHeliostat):
         self._normals = data['heliostat_normals']
         self.position_on_field = data['position_on_field']
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
+        focus_point = data['focus_point']
+        self._set_deconstructed_focus_point(focus_point)
 
         if restore_strictly:
             self._discrete_points = data['heliostat_points']
