@@ -166,22 +166,30 @@ def hash_args(
 
     new_hash_args, new_hash_kwargs = _normalize_configs(hash_args, hash_kwargs)
 
-    # Hash arguments and RNG state.
-    hash_val = hashlib.md5(json.dumps(
-        (
-            new_hash_args,
-            new_hash_kwargs,
-            bytecode,
-            th.get_rng_state(),
+    try:
+        # Hash arguments and RNG state.
+        hash_val = hashlib.md5(json.dumps(
             (
-                th.cuda.get_rng_state_all()
-                if th.cuda.is_available()
-                else None
+                new_hash_args,
+                new_hash_kwargs,
+                bytecode,
+                th.get_rng_state(),
+                (
+                    th.cuda.get_rng_state_all()
+                    if th.cuda.is_available()
+                    else None
+                ),
             ),
-        ),
-        sort_keys=True,
-        cls=ExtendedEncoder,
-    ).encode()).hexdigest()
+            sort_keys=True,
+            cls=ExtendedEncoder,
+        ).encode()).hexdigest()
+    except Exception as e:
+        print(
+            'The following error was encountered during disk cache hashing. '
+            'Please try setting `disk_cache.DISABLE_DISK_CACHE = True` or '
+            'delete your cache directory.'
+        )
+        raise e
     return hash_val
 
 
