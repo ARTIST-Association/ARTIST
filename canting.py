@@ -46,7 +46,7 @@ def get_focus_point(
                 device=device,
             )
         # We explicitly don't check for the float type so that
-        # distance can be given integers as well.
+        # distance can be given as integers as well.
         elif canting_cfg.FOCUS_POINT != float('inf'):
             focus_point = th.tensor(
                 ideal_normal,
