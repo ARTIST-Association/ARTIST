@@ -704,14 +704,6 @@ def heliostat_coord_system(
     z = pSun + z
     z = z / th.linalg.norm(z)
 
-    # Add heliostat rotation error/disturbance.
-    disturbance_rot = (
-        utils.rot_z_mat(disturbance_angles[2], dtype=dtype, device=device)
-        @ utils.rot_y_mat(disturbance_angles[1], dtype=dtype, device=device)
-        @ utils.rot_x_mat(disturbance_angles[0], dtype=dtype, device=device)
-    )
-    z = disturbance_rot @ z
-
     x = th.stack([
         -z[1],
         z[0],
@@ -719,6 +711,11 @@ def heliostat_coord_system(
     ])
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
+
+    # Add heliostat rotation error/disturbance.
+    x = utils.rot_x_mat(disturbance_angles[0], dtype=dtype, device=device) @ x
+    y = utils.rot_y_mat(disturbance_angles[1], dtype=dtype, device=device) @ y
+    z = utils.rot_z_mat(disturbance_angles[2], dtype=dtype, device=device) @ z
     return x, y, z
 
 
