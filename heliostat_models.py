@@ -717,9 +717,9 @@ def heliostat_coord_system(
     y_err_rot = utils.axis_angle_rotation(y, disturbance_angles[1])
     z_err_rot = utils.axis_angle_rotation(z, disturbance_angles[2])
 
-    x = (z_err_rot @ y_err_rot) @ x
-    y = (z_err_rot @ x_err_rot) @ y
-    z = (y_err_rot @ x_err_rot) @ z
+    x = z_err_rot @ (y_err_rot @ x)
+    y = z_err_rot @ (x_err_rot @ y)
+    z = y_err_rot @ (x_err_rot @ z)
     return x, y, z
 
 
