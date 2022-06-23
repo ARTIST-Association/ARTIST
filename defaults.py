@@ -1,5 +1,8 @@
-from yacs.config import CfgNode as CN
 import os
+from typing import Any
+
+import yacs
+from yacs.config import CfgNode as CN
 
 _C = CN()
 # UNIQUE EXPERIMENT IDENTIFIER
@@ -425,3 +428,30 @@ def load_config_file(cfg: CN, config_file_loc: str) -> CN:
     #     cfg.merge_from_list(["ID", experiment_name])
 
     return cfg
+
+
+def merge_any_types() -> None:
+    check_and_coerce_cfg_value_type = \
+        yacs.config._check_and_coerce_cfg_value_type
+
+    def dont_check_and_coerce_cfg_value_type(
+            replacement: Any,
+            original: Any,
+            key: str,
+            full_key: str,
+    ) -> Any:
+        try:
+            return check_and_coerce_cfg_value_type(
+                replacement,
+                original,
+                key,
+                full_key,
+            )
+        except ValueError:
+            return replacement
+
+    yacs.config._check_and_coerce_cfg_value_type = \
+        dont_check_and_coerce_cfg_value_type
+
+
+merge_any_types()
