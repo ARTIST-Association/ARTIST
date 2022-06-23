@@ -443,7 +443,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             "train",
             writer,
         )
-    mean_ray_dirs = data.mean_ray_directions(targets, H_target, ENV)
+    mean_ray_dirs = data.mean_ray_directions(
+        targets, H_target.position_on_field, ENV)
 
     H_naive_target = cached_build_target_heliostat(cfg, device)
     H_naive_target._normals = H_naive_target._normals_ideal
@@ -456,7 +457,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         writer,
     )
     naive_mean_ray_dirs = data.mean_ray_directions(
-        naive_targets, H_naive_target, ENV)
+        naive_targets, H_naive_target.position_on_field, ENV)
 
     test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)

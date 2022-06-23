@@ -28,7 +28,7 @@ def _calc_mean_argval(bitmap: torch.Tensor) -> torch.Tensor:
 
 def mean_ray_direction(
         bitmap: torch.Tensor,
-        heliostat: AbstractHeliostat,
+        position_on_field: torch.Tensor,
         env: Environment,
 ) -> torch.Tensor:
     assert bitmap.ndim == 2
@@ -66,16 +66,18 @@ def mean_ray_direction(
 
     center_offset = th.stack([
         center_offset_x, center_offset_y, th.zeros_like(center_offset_x)])
-    return env.receiver_center + center_offset - heliostat.position_on_field
+    return env.receiver_center + center_offset - position_on_field
 
 
 def mean_ray_directions(
         bitmaps: torch.Tensor,
-        heliostat: AbstractHeliostat,
+        position_on_field: torch.Tensor,
         env: Environment,
 ) -> torch.Tensor:
-    return th.stack(
-        [mean_ray_direction(bitmap, heliostat, env) for bitmap in bitmaps])
+    return th.stack([
+        mean_ray_direction(bitmap, position_on_field, env)
+        for bitmap in bitmaps
+    ])
 
 
 def create_target(
