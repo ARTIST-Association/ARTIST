@@ -1,4 +1,4 @@
-from typing import List
+from typing import cast, List, Tuple, Union
 
 import torch
 import torch as th
@@ -115,3 +115,98 @@ def image_hausdorff_distance(
     target_images = contour_images(
         target_images, contour_vals, contour_val_radius)
     return isoline_hausdorff_distance(pred_images, target_images, norm_p)
+
+
+def max_hausdorff_distance(
+        image_size: Union[th.Size, Tuple[int, int]],
+        device: th.device,
+        dtype: th.dtype,
+        norm_p: float = 2.0,
+) -> torch.Tensor:
+    num_pixels = th.prod(th.tensor(image_size))
+    first = th.zeros(cast(int, num_pixels), device=device, dtype=dtype)
+    first[0] = 1
+    last = th.zeros(cast(int, num_pixels), device=device, dtype=dtype)
+    last[-1] = 1
+
+    d_max = isoline_hausdorff_distance(
+        first.reshape((1,) + image_size),
+        last.reshape((1,) + image_size),
+        norm_p,
+    )
+    return d_max
+
+
+def generalized_mean(
+        vals: torch.Tensor,
+        dim: int = -1,
+        mean_p: float = -1.0,
+) -> torch.Tensor:
+    return (vals.pow(mean_p).sum(dim) / vals.shape[dim]).pow(1 / mean_p)
+
+
+def weighted_hausdorff_distance(
+        pred_images: torch.Tensor,
+        target_sets: List[torch.Tensor],
+        *,
+        epsilon: float = 1e-6,
+        norm_p: float = 2.0,
+        mean_p: float = -1.0,
+) -> torch.Tensor:
+    assert (
+        pred_images.shape[0] > 0
+        and pred_images.shape[1] > 0
+        and pred_images.shape[2] > 0
+    )
+    assert len(pred_images) == len(target_sets)
+
+    device = pred_images.device
+    dtype = pred_images.dtype
+
+    # Constant over the loop.
+    d_max = max_hausdorff_distance(pred_images[0].shape, device, dtype, norm_p)
+    pixel_indices = th.cartesian_prod(
+        th.arange(pred_images.shape[1], device=device, dtype=dtype),
+        th.arange(pred_images.shape[2], device=device, dtype=dtype),
+    )
+
+    weighted_dists = th.empty(
+        (len(pred_images), 1),
+        device=device,
+        dtype=dtype,
+    )
+    for (i, (pred_image, target_set)) in enumerate(zip(
+            pred_images,
+            target_sets,
+    )):
+        assert len(target_set) > 0, 'sets cannot be empty'
+
+        pred_image = (pred_image / pred_image.max()).reshape(-1, 1)
+        pixel_value_sum = pred_image.sum()
+
+        distance_matrix = th.cdist(
+            pixel_indices.unsqueeze(0),
+            target_set.unsqueeze(0),
+            p=norm_p,
+        ).squeeze(0)
+        min_dist_ys = distance_matrix.min(1)[0]
+
+        point_estimate_loss = (
+            (pred_image.unsqueeze(-1) * min_dist_ys).sum()
+            / (pixel_value_sum + epsilon)
+        )
+
+        contributions = (
+            pred_image * distance_matrix
+            + (1 - pred_image) * d_max
+        )
+        contribution_loss = generalized_mean(
+            contributions,
+            dim=0,
+            mean_p=mean_p,
+        ).mean()
+
+        weighted_dist = point_estimate_loss + contribution_loss
+        weighted_dists[i] = weighted_dist
+
+    return weighted_dists
