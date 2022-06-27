@@ -77,7 +77,7 @@ def set_hausdorff_distance(
     max_dist_ys = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     max_dist_xs = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     for (i, (pred_set, target_set)) in enumerate(zip(pred_sets, target_sets)):
-        distance_matrix = torch.cdist(
+        distance_matrix = th.cdist(
             pred_set.unsqueeze(0),
             target_set.unsqueeze(0),
             p=norm_p,
@@ -88,7 +88,7 @@ def set_hausdorff_distance(
         max_dist_ys[i] = max_dist_y
         max_dist_xs[i] = max_dist_x
 
-    values = torch.cat((max_dist_ys, max_dist_xs), dim=1)
+    values = th.cat((max_dist_ys, max_dist_xs), dim=1)
     return values.max(1)[0]
 
 
