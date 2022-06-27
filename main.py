@@ -434,8 +434,6 @@ def main(config_file_name: Optional[str] = None) -> None:
             'train',
             writer,
         )
-        mean_ray_dirs = data.mean_ray_directions(
-            targets, H_target.position_on_field, ENV)
     else:
         targets = cached_generate_target_dataset(
             H_target,
@@ -445,10 +443,10 @@ def main(config_file_name: Optional[str] = None) -> None:
             "train",
             writer,
         )
-        mean_ray_dirs = th.stack([
-            H_target.align(sun_dir).alignment[-1, :]
-            for sun_dir in sun_directions
-        ])
+    mean_ray_dirs = th.stack([
+        H_target.align(sun_dir).alignment[-1, :]
+        for sun_dir in sun_directions
+    ])
 
     H_naive_target = cached_build_target_heliostat(cfg, device)
     H_naive_target._normals = H_naive_target._normals_ideal
