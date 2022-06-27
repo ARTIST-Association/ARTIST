@@ -192,7 +192,7 @@ def weighted_hausdorff_distance(
         min_dist_ys = distance_matrix.min(1)[0]
 
         point_estimate_loss = (
-            (pred_image.unsqueeze(-1) * min_dist_ys).sum()
+            (pred_image.squeeze(-1) * min_dist_ys).sum()
             / (pixel_value_sum + epsilon)
         )
 
