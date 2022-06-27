@@ -142,7 +142,7 @@ def generalized_mean(
         dim: int = -1,
         mean_p: float = -1.0,
 ) -> torch.Tensor:
-    return (vals.pow(mean_p).sum(dim) / vals.shape[dim]).pow(1 / mean_p)
+    return vals.pow(mean_p).mean(dim).pow(1 / mean_p)
 
 
 def weighted_hausdorff_distance(
