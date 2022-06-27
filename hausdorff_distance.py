@@ -77,6 +77,8 @@ def set_hausdorff_distance(
     max_dist_ys = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     max_dist_xs = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     for (i, (pred_set, target_set)) in enumerate(zip(pred_sets, target_sets)):
+        assert len(pred_set) > 0 and len(target_set) > 0, \
+            'sets cannot be empty'
         distance_matrix = th.cdist(
             pred_set.unsqueeze(0),
             target_set.unsqueeze(0),
