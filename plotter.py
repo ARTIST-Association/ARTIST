@@ -87,10 +87,10 @@ def plot_surfaces_mrad(
             "test/normal_diffs", th.sum(diff_angles) / len(diff_angles), epoch)
 
     # Get discrete points
-    target_points = heliostat_target.discrete_points
+    target_points = heliostat_target.discrete_points.clone()
     target_points = target_points.detach().cpu()
 
-    pred_points = heliostat_pred.discrete_points
+    pred_points = heliostat_pred.discrete_points.clone()
     pred_points = pred_points.detach().cpu()
     diff_points = pred_points.clone()
 
