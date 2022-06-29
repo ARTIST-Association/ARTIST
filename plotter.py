@@ -168,7 +168,7 @@ def plot_surfaces_mm(
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
 
-    target = heliostat_target.discrete_points
+    target = heliostat_target.discrete_points.clone()
     ideal = heliostat_target._discrete_points_ideal
     target = target.detach().cpu()
     ideal = ideal.detach().cpu()
@@ -179,7 +179,7 @@ def plot_surfaces_mm(
 
     # target[:, 2] = target[:, 2]  # / 1e-3
 
-    pred = heliostat_pred.discrete_points
+    pred = heliostat_pred.discrete_points.clone()
     pred = pred.detach().cpu()
     pred[:, -1] = pred[:, -1] - ideal[:, -1]
 
@@ -242,7 +242,7 @@ def plot_surfaces_3D_mm(
     os.makedirs(logdir, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
 
-    pred = heliostat_pred.discrete_points
+    pred = heliostat_pred.discrete_points.clone()
     pred = pred.detach().cpu()
 
     ideal = heliostat_pred._discrete_points_ideal
