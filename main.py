@@ -335,7 +335,7 @@ def main(config_file_name: Optional[str] = None) -> None:
 
         logdir: Optional[str] = cfg.LOGDIR
         assert logdir is not None
-        utils.normalize_path(logdir)
+        logdir = utils.normalize_path(logdir)
 
         root_logdir = os.path.join(logdir, cfg.ID)
         logdir = os.path.join(
