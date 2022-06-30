@@ -371,7 +371,7 @@ def calc_batch_loss(
     # ==========
     for (i, (target, target_z_alignment, sun_direction)) in enumerate(zip(
             targets,
-            target_z_alignment,
+            target_z_alignments,
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)
