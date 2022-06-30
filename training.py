@@ -61,7 +61,7 @@ TrainObjects = collections.namedtuple(
         'ENV',
         'R',
         'targets',
-        'mean_ray_dirs',
+        'target_z_alignments',
         'sun_directions',
         'loss_func',
         'epoch',
@@ -352,7 +352,7 @@ def calc_batch_loss(
         ENV,
         R,
         targets,
-        mean_ray_dirs,
+        target_z_alignments,
         sun_directions,
         loss_func,
         epoch,
@@ -369,9 +369,9 @@ def calc_batch_loss(
 
     # Batch Loop
     # ==========
-    for (i, (target, mean_ray_dir, sun_direction)) in enumerate(zip(
+    for (i, (target, target_z_alignment, sun_direction)) in enumerate(zip(
             targets,
-            mean_ray_dirs,
+            target_z_alignment,
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)
@@ -385,7 +385,7 @@ def calc_batch_loss(
             pred_bitmap,
             target,
             H_aligned.alignment[-1, :],
-            mean_ray_dir,
+            target_z_alignment,
             dx_ints,
             dy_ints,
             ENV,

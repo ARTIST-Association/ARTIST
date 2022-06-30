@@ -443,7 +443,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             "train",
             writer,
         )
-    mean_ray_dirs = th.stack([
+    target_z_alignments = th.stack([
         H_target.align(sun_dir).alignment[-1, :]
         for sun_dir in sun_directions
     ])
@@ -458,7 +458,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         "pretrain",
         writer,
     )
-    naive_mean_ray_dirs = th.stack([
+    naive_target_z_alignments = th.stack([
         H_naive_target.align(sun_dir).alignment[-1, :]
         for sun_dir in sun_directions
     ])
@@ -626,7 +626,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             ENV,
             R,
             naive_targets,
-            naive_mean_ray_dirs,
+            naive_target_z_alignments,
             sun_directions,
             loss_func,
             epoch,
@@ -736,7 +736,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             ENV,
             R,
             targets,
-            mean_ray_dirs,
+            target_z_alignments,
             sun_directions,
             loss_func,
             epoch,
