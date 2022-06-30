@@ -265,6 +265,7 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 
 _C.TRAIN                                = CN()
+_C.TRAIN.PRETRAIN_EPOCHS                = 0
 _C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.USE_IMAGES = False
 
