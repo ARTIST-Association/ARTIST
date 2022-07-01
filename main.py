@@ -447,6 +447,11 @@ def main(config_file_name: Optional[str] = None) -> None:
         H_target.align(sun_dir).alignment[-1, :]
         for sun_dir in sun_directions
     ])
+    target_sets = hausdorff_distance.images_to_sets(
+        targets,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    )
 
     H_naive_target = cached_build_target_heliostat(cfg, device)
     H_naive_target._normals = H_naive_target._normals_ideal
@@ -462,6 +467,11 @@ def main(config_file_name: Optional[str] = None) -> None:
         H_naive_target.align(sun_dir).alignment[-1, :]
         for sun_dir in sun_directions
     ])
+    naive_target_sets = hausdorff_distance.images_to_sets(
+        naive_targets,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    )
 
     test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
@@ -493,8 +503,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     # plotter.plot_surfaces_mm(H_target, H_target, 1, logdir)
     test_target_sets = hausdorff_distance.images_to_sets(
         test_targets,
-        cfg.TEST.HAUSDORFF.CONTOUR_VALS,
-        cfg.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
     )
 
     # Better Testing
@@ -627,6 +637,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             R,
             naive_targets,
             naive_target_z_alignments,
+            naive_target_sets,
             sun_directions,
             loss_func,
             epoch,
@@ -737,6 +748,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             R,
             targets,
             target_z_alignments,
+            target_sets,
             sun_directions,
             loss_func,
             epoch,

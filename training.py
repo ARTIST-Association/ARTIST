@@ -22,6 +22,7 @@ LossFn = Union[
             torch.Tensor,
             torch.Tensor,
             torch.Tensor,
+            torch.Tensor,
             Environment,
             torch.optim.Optimizer,
             float,
@@ -30,6 +31,7 @@ LossFn = Union[
     ],
     Callable[
         [
+            torch.Tensor,
             torch.Tensor,
             torch.Tensor,
             torch.Tensor,
@@ -62,6 +64,7 @@ TrainObjects = collections.namedtuple(
         'R',
         'targets',
         'target_z_alignments',
+        'target_sets',
         'sun_directions',
         'loss_func',
         'epoch',
@@ -267,6 +270,7 @@ def build_loss_funcs(
     loss_factor: float = cfg.FACTOR
     miss_loss_factor: float = cfg.MISS.FACTOR
     alignment_loss_factor: float = cfg.ALIGNMENT.FACTOR
+    hausdorff_loss_factor: float = cfg.HAUSDORFF.FACTOR
 
     def test_loss_func(
             pred_bitmap: torch.Tensor,
@@ -282,6 +286,7 @@ def build_loss_funcs(
             target_bitmap: torch.Tensor,
             z_alignment: torch.Tensor,
             target_z_alignment: torch.Tensor,
+            target_set: torch.Tensor,
             dx_ints: torch.Tensor,
             dy_ints: torch.Tensor,
             env: Environment,
@@ -308,7 +313,27 @@ def build_loss_funcs(
             target_z_alignment,
         ) * alignment_loss_factor
 
-        loss = raw_loss.clone() + miss_loss + alignment_loss
+        # Weighted Hausdorff loss
+        weighted_hausdorff_dists = \
+            hausdorff_distance.weighted_hausdorff_distance(
+                pred_bitmap.unsqueeze(0),
+                [target_set],
+                norm_p=cfg.HAUSDORFF.NORM_P,
+                mean_p=cfg.HAUSDORFF.MEAN_P,
+            )
+        weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
+            10 * hausdorff_distance.max_hausdorff_distance(
+                pred_bitmap.shape,
+                pred_bitmap.device,
+                pred_bitmap.dtype,
+                norm_p=cfg.HAUSDORFF.NORM_P,
+            )
+        hausdorff_loss = (
+            weighted_hausdorff_dists.mean()
+            * hausdorff_loss_factor
+        )
+
+        loss = raw_loss.clone() + miss_loss + alignment_loss + hausdorff_loss
 
         if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
             weight_penalty = l1_weight_penalty(opt, None)
@@ -353,6 +378,7 @@ def calc_batch_loss(
         R,
         targets,
         target_z_alignments,
+        target_sets,
         sun_directions,
         loss_func,
         epoch,
@@ -369,9 +395,15 @@ def calc_batch_loss(
 
     # Batch Loop
     # ==========
-    for (i, (target, target_z_alignment, sun_direction)) in enumerate(zip(
+    for (i, (
+            target,
+            target_z_alignment,
+            target_set,
+            sun_direction,
+    )) in enumerate(zip(
             targets,
             target_z_alignments,
+            target_sets,
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)
@@ -386,6 +418,7 @@ def calc_batch_loss(
             target,
             H_aligned.alignment[-1, :],
             target_z_alignment,
+            target_set,
             dx_ints,
             dy_ints,
             ENV,
@@ -531,8 +564,8 @@ def test_batch(
     hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
         hausdorff_distance.images_to_sets(
             bitmaps,
-            config.TEST.HAUSDORFF.CONTOUR_VALS,
-            config.TEST.HAUSDORFF.CONTOUR_VAL_RADIUS,
+            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
         ),
         target_sets,
     )
