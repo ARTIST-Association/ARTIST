@@ -77,16 +77,22 @@ def set_hausdorff_distance(
     max_dist_ys = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     max_dist_xs = th.empty((len(pred_sets), 1), device=device, dtype=dtype)
     for (i, (pred_set, target_set)) in enumerate(zip(pred_sets, target_sets)):
-        assert len(pred_set) > 0 and len(target_set) > 0, \
-            'sets cannot be empty'
-        distance_matrix = th.cdist(
-            pred_set.unsqueeze(0),
-            target_set.unsqueeze(0),
-            p=norm_p,
-        )
+        if len(pred_set) == 0 or len(target_set) == 0:
+            print(
+                'Warning: Hausdorff sets cannot be empty; '
+                'assigning Hausdorff distance as infinity...'
+            )
+            max_dist_y = th.tensor(float('inf'))
+            max_dist_x = th.tensor(float('inf'))
+        else:
+            distance_matrix = th.cdist(
+                pred_set.unsqueeze(0),
+                target_set.unsqueeze(0),
+                p=norm_p,
+            )
 
-        max_dist_y = distance_matrix.min(2)[0].max(1, keepdim=True)[0]
-        max_dist_x = distance_matrix.min(1)[0].max(1, keepdim=True)[0]
+            max_dist_y = distance_matrix.min(2)[0].max(1, keepdim=True)[0]
+            max_dist_x = distance_matrix.min(1)[0].max(1, keepdim=True)[0]
         max_dist_ys[i] = max_dist_y
         max_dist_xs[i] = max_dist_x
 
@@ -180,35 +186,39 @@ def weighted_hausdorff_distance(
             target_sets,
     )):
         pred_image_max = pred_image.max()
-        assert pred_image_max > 0 and len(target_set) > 0, \
-            'sets cannot be empty'
+        if pred_image_max == 0 or len(target_set) == 0:
+            print(
+                'Warning: weighted Hausdorff sets cannot be empty; '
+                'assigning weighted Hausdorff distance as infinity...'
+            )
+            weighted_dist = th.tensor(float('inf'))
+        else:
+            pred_image = (pred_image / pred_image_max).reshape(-1, 1)
+            pixel_value_sum = pred_image.sum()
 
-        pred_image = (pred_image / pred_image_max).reshape(-1, 1)
-        pixel_value_sum = pred_image.sum()
+            distance_matrix = th.cdist(
+                pixel_indices.unsqueeze(0),
+                target_set.unsqueeze(0),
+                p=norm_p,
+            ).squeeze(0)
+            min_dist_ys = distance_matrix.min(1)[0]
 
-        distance_matrix = th.cdist(
-            pixel_indices.unsqueeze(0),
-            target_set.unsqueeze(0),
-            p=norm_p,
-        ).squeeze(0)
-        min_dist_ys = distance_matrix.min(1)[0]
+            point_estimate_loss = (
+                (pred_image.squeeze(-1) * min_dist_ys).sum()
+                / (pixel_value_sum + epsilon)
+            )
 
-        point_estimate_loss = (
-            (pred_image.squeeze(-1) * min_dist_ys).sum()
-            / (pixel_value_sum + epsilon)
-        )
+            contributions = (
+                pred_image * distance_matrix
+                + (1 - pred_image) * d_max
+            )
+            contribution_loss = generalized_mean(
+                contributions,
+                dim=0,
+                mean_p=mean_p,
+            ).mean()
 
-        contributions = (
-            pred_image * distance_matrix
-            + (1 - pred_image) * d_max
-        )
-        contribution_loss = generalized_mean(
-            contributions,
-            dim=0,
-            mean_p=mean_p,
-        ).mean()
-
-        weighted_dist = point_estimate_loss + contribution_loss
+            weighted_dist = point_estimate_loss + contribution_loss
         weighted_dists[i] = weighted_dist
 
     return weighted_dists
