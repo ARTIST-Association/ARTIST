@@ -179,9 +179,11 @@ def weighted_hausdorff_distance(
             pred_images,
             target_sets,
     )):
-        assert len(target_set) > 0, 'sets cannot be empty'
+        pred_image_max = pred_image.max()
+        assert pred_image_max > 0 and len(target_set) > 0, \
+            'sets cannot be empty'
 
-        pred_image = (pred_image / pred_image.max()).reshape(-1, 1)
+        pred_image = (pred_image / pred_image_max).reshape(-1, 1)
         pixel_value_sum = pred_image.sum()
 
         distance_matrix = th.cdist(
