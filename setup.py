@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name='diff_stral',
@@ -16,4 +16,8 @@ setup(
         'torchvision==0.9.1',
         'yacs==0.1.8',
     ],
+    packages=find_packages(
+        where='.',
+        exclude=['TestConfigs', 'WorkingConfigs'],
+    ),
 )
