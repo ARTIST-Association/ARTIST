@@ -736,7 +736,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         H,
         9797979797,
         logdir_surfaces,
-        writer,
+        writer=None,
     )
     prefix = "train"
     for epoch in range(epochs):
