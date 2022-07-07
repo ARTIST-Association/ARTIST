@@ -30,6 +30,10 @@ OnLoadFn = Callable[[R], R]
 
 DISABLE_DISK_CACHE = False
 
+# This magic number should be updated to invalidate out-of-date caches
+# due to breaking changes.
+_CACHE_VERSION = 0
+
 _DYNAMIC_CONFIG_KEYS = ['LOGDIR']
 
 
@@ -173,6 +177,7 @@ def hash_args(
                 new_hash_args,
                 new_hash_kwargs,
                 bytecode,
+                _CACHE_VERSION,
                 th.get_rng_state(),
                 (
                     th.cuda.get_rng_state_all()
