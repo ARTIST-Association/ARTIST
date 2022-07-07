@@ -38,7 +38,7 @@ class Sun_Distribution(object):
         if self.dist_type == "Normal":
             xi, yi = self.distribution.sample(
                 (self.num_rays, num_rays_on_hel),
-            ).transpose(0, 1).T
+            ).transpose(0, 1).permute(2, 1, 0)
             return xi, yi
         else:
             raise ValueError('unknown sun distribution type')
