@@ -9,6 +9,7 @@ import torchvision as thv
 from yacs.config import CfgNode
 
 from environment import Environment
+import hausdorff_distance
 from heliostat_models import AbstractHeliostat
 from render import Renderer
 import utils
@@ -498,6 +499,28 @@ def generate_sun_array(
     else:
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, extras
+
+
+def log_contoured(
+        prefix: str,
+        writer: Optional[SummaryWriter],
+        targets: torch.Tensor,
+        contour_vals: List[float],
+        contour_val_radius: float,
+) -> torch.Tensor:
+    assert prefix, "prefix string cannot be empty"
+    if writer:
+        contoured_targets = hausdorff_distance.contour_images(
+            targets,
+            contour_vals,
+            contour_val_radius,
+        )
+        for (i, contoured) in enumerate(contoured_targets):
+            writer.add_image(
+                f"{prefix}/target_{i}_contoured",
+                contoured.unsqueeze(0),
+            )
+    return contoured_targets
 
 
 def log_dataset(

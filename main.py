@@ -447,6 +447,13 @@ def main(config_file_name: Optional[str] = None) -> None:
         H_target.align(sun_dir).alignment[-1, :]
         for sun_dir in sun_directions
     ])
+    data.log_contoured(
+        'train',
+        writer,
+        targets,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    )
     target_sets = hausdorff_distance.images_to_sets(
         targets,
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
