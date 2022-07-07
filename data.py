@@ -517,9 +517,6 @@ def log_dataset(
 
 def read_image(path: str, device: th.device) -> torch.Tensor:
     img = thv.io.read_image(path, thv.io.image.ImageReadMode.GRAY)
-    # We expect (channel, width, height), torchvision loads (channel,
-    # height, width).
-    img = img.transpose(1, 2)
     img = img.to(dtype=th.get_default_dtype(), device=device)
     return img
 

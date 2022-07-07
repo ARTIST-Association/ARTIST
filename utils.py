@@ -755,7 +755,7 @@ def colorize(
     prediction_image = image_tensor.squeeze().detach().cpu().numpy()
 
     color_map = cm.get_cmap('jet')
-    mapped_image = th.tensor(color_map(prediction_image)).permute(2, 1, 0)
+    mapped_image = th.tensor(color_map(prediction_image)).permute(2, 0, 1)
     # mapped_image8 = (255*mapped_image).astype('uint8')
     # print(colored_prediction_image.shape)
 
