@@ -240,9 +240,9 @@ def sample_bitmap(
     # prevent out-of-bounds access).
     indices = (
         (0 <= x_inds)
-        & (x_inds < bitmap_width)
+        & (x_inds < bitmap_height)
         & (0 <= y_inds)
-        & (y_inds < bitmap_height)
+        & (y_inds < bitmap_width)
     )
 
     # Flux density map for heliostat field
