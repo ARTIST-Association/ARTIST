@@ -666,6 +666,17 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
 #     return h_rotated.squeeze(-1)
 
 
+def _rotate(
+        discrete_points: torch.Tensor,
+        normals: torch.Tensor,
+        align_origin: throt.Transform3d,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    rotated_points: torch.Tensor = align_origin.transform_points(
+        discrete_points)
+    rotated_normals: torch.Tensor = align_origin.transform_normals(normals)
+    return rotated_points, rotated_normals
+
+
 def rotate(
         h: 'AbstractHeliostat',
         align_origin: throt.Transform3d,
@@ -678,10 +689,7 @@ def rotate(
         discrete_points = h.discrete_points
         normals = h.normals
 
-    rotated_points: torch.Tensor = align_origin.transform_points(
-        discrete_points)
-    rotated_normals: torch.Tensor = align_origin.transform_normals(normals)
-    return rotated_points, rotated_normals
+    return _rotate(discrete_points, normals, align_origin)
 
 
 def heliostat_coord_system(
