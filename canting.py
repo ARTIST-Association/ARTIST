@@ -16,7 +16,11 @@ class CantingAlgorithm(enum.Enum):
 
 def get_algorithm(canting_cfg: CfgNode) -> CantingAlgorithm:
     canting_algo = next(
-        (canting_cfg.ALGORITHM == algo.value for algo in CantingAlgorithm),
+        (
+            algo
+            for algo in CantingAlgorithm
+            if canting_cfg.ALGORITHM == algo.value
+        ),
         None,
     )
     if canting_algo is None:
