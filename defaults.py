@@ -107,6 +107,7 @@ _C.H                                    = CN()
 # Parameters to optimize. May be any combinations of:
 # - 'surface'
 # - 'position'
+# - 'facet_positions'
 # - 'rotation_x'
 # - 'rotation_y'
 # - 'rotation_z'
@@ -359,6 +360,13 @@ _C.TRAIN.OPTIMIZER.POSITION.WEIGHT_DECAY = 0.0
 _C.TRAIN.LOSS.POSITION = CN()
 _C.TRAIN.LOSS.POSITION.USE_L1_WEIGHT_DECAY = True
 _C.TRAIN.LOSS.POSITION.WEIGHT_DECAY_FACTOR = 0.0
+
+_C.TRAIN.OPTIMIZER.FACET_POSITIONS = CN()
+_C.TRAIN.OPTIMIZER.FACET_POSITIONS.LR = 1e-2
+_C.TRAIN.OPTIMIZER.FACET_POSITIONS.WEIGHT_DECAY = 0.0
+_C.TRAIN.LOSS.FACET_POSITIONS = CN()
+_C.TRAIN.LOSS.FACET_POSITIONS.USE_L1_WEIGHT_DECAY = True
+_C.TRAIN.LOSS.FACET_POSITIONS.WEIGHT_DECAY_FACTOR = 0.0
 
 # These values are for the rotation parameters.
 _C.TRAIN.OPTIMIZER.ROTATION_X = CN()

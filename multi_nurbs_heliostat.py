@@ -31,6 +31,14 @@ C = TypeVar('C', bound='MultiNURBSHeliostat')
 
 
 class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
+    # Map from optimizable name to per-facet optimizable name so that
+    # individual facet optimizables combine to the complete named
+    # optimizable.
+    _FACET_OPTIMIZABLES = {
+        'surface': 'surface',
+        'facet_positions': 'position',
+    }
+
     def __init__(
             self,
             heliostat_config: CfgNode,
@@ -244,10 +252,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return cant_rot
 
     @staticmethod
-    def _is_facet_optimizable(param_group_name: str) -> bool:
-        return not any(
-            param_group_name.startswith(prefix)
-            for prefix in ['position', 'rotation_']
+    def _facet_optimizable_to_optimizable(
+            facet_optimizable: str,
+    ) -> Optional[str]:
+        return next(
+            (
+                optimizable
+                for (
+                        optimizable,
+                        comp_facet_optimizable,
+                ) in MultiNURBSHeliostat._FACET_OPTIMIZABLES.items()
+                if comp_facet_optimizable == facet_optimizable
+            ),
+            None,
         )
 
     def _facet_heliostat_config(
@@ -269,9 +286,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         position = position.tolist()
         heliostat_config.TO_OPTIMIZE = [
-            name
+            self._FACET_OPTIMIZABLES[name]
             for name in self.get_to_optimize()
-            if MultiNURBSHeliostat._is_facet_optimizable(name)
+            if name in self._FACET_OPTIMIZABLES
         ]
         heliostat_config.IDEAL.POSITION_ON_FIELD = position
         # Give any aim point so it doesn't complain.
@@ -404,8 +421,9 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
         optimizables: Dict[str, List[torch.Tensor]] = {}
         for facet in self.facets:
-            for (name, params) in facet.optimizables().items():
-                if not self._is_facet_optimizable(name):
+            for (facet_name, params) in facet.optimizables().items():
+                name = self._facet_optimizable_to_optimizable(facet_name)
+                if name is None:
                     # This should never happen as we already filter
                     # these out during creation.
                     continue
