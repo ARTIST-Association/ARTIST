@@ -1233,6 +1233,9 @@ def save_target(
         'cov': cov,
         'xi': xi,
         'yi': yi,
+
+        'ray_directions': target_ray_directions,
+        'ray_points': target_ray_points,
     }, path)
 
 
