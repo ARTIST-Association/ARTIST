@@ -179,7 +179,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet_discrete_points_ideal,
             facet_normals,
             facet_normals_ideal,
-        ) = canting.cant_facet_to_normal(
+        ) = canting.cant_facet_to_normal_with_ideal(
             position,
             orig_normal,
             target_normal,

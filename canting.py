@@ -113,7 +113,35 @@ def apply_rotation(
     ).squeeze(-1)
 
 
+def _cant_facet_to_normal(
+        facet_position: torch.Tensor,
+        cant_rot: torch.Tensor,
+        discrete_points: torch.Tensor,
+        normals: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    discrete_points = apply_rotation(
+        cant_rot, discrete_points - facet_position)
+    normals = apply_rotation(cant_rot, normals)
+    return (discrete_points + facet_position, normals)
+
+
 def cant_facet_to_normal(
+        facet_position: torch.Tensor,
+        start_normal: torch.Tensor,
+        target_normal: torch.Tensor,
+        discrete_points: torch.Tensor,
+        normals: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    cant_rot = utils.get_rot_matrix(start_normal, target_normal)
+    return _cant_facet_to_normal(
+        facet_position,
+        cant_rot,
+        discrete_points,
+        normals,
+    )
+
+
+def cant_facet_to_normal_with_ideal(
         facet_position: torch.Tensor,
         start_normal: torch.Tensor,
         target_normal: torch.Tensor,
@@ -124,24 +152,21 @@ def cant_facet_to_normal(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     cant_rot = utils.get_rot_matrix(start_normal, target_normal)
 
-    (
+    discrete_points, normals = _cant_facet_to_normal(
+        facet_position,
+        cant_rot,
+        discrete_points,
+        normals,
+    )
+    discrete_points_ideal, normals_ideal = _cant_facet_to_normal(
+        facet_position,
+        cant_rot,
+        discrete_points_ideal,
+        normals_ideal,
+    )
+    return (
         discrete_points,
         discrete_points_ideal,
-        normals,
-        normals_ideal,
-    ) = map(
-        lambda t: apply_rotation(cant_rot, t),
-        [
-            discrete_points - facet_position,
-            discrete_points_ideal - facet_position,
-            normals,
-            normals_ideal,
-        ],
-    )
-
-    return (
-        discrete_points + facet_position,
-        discrete_points_ideal + facet_position,
         normals,
         normals_ideal,
     )
@@ -169,7 +194,7 @@ def cant_facet_to_point(
         ideal_normal,
     )
 
-    return cant_facet_to_normal(
+    return cant_facet_to_normal_with_ideal(
         facet_position,
         facet_normal,
         target_normal,
