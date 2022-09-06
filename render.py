@@ -301,7 +301,7 @@ class Renderer(object):
         if heliostat is None:
             heliostat = self.H
         if self.redraw_random_variables:
-            xi, yi = self.ENV.sun.sample(len(self.H))
+            xi, yi = self.ENV.sun.sample(len(heliostat))
         else:
             xi = self.xi
             yi = self.yi
