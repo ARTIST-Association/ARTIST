@@ -25,7 +25,6 @@ from nurbs_heliostat import (
     AlignedNURBSHeliostat,
     NURBSHeliostat,
 )
-import utils
 
 C = TypeVar('C', bound='MultiNURBSHeliostat')
 
@@ -171,50 +170,36 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet_normals = self._facetted_normals[facet_index]
         facet_normals_ideal = self._facetted_normals_ideal[facet_index]
 
-        orig_normal = facet_normals_ideal.mean(dim=0)
-        orig_normal /= th.linalg.norm(orig_normal)
+        if (
+                self.canting_enabled
+                and self.canting_algo is not CantingAlgorithm.ACTIVE
+        ):
+            canting_params: Optional[Tuple[
+                Optional[torch.Tensor],
+                torch.Tensor,
+            ]] = (self.focus_point, self.position_on_field)
+        else:
+            canting_params = None
 
-        target_normal = th.tensor(
-            self.cfg.IDEAL.NORMAL_VECS,
-            dtype=position.dtype,
-            device=self.device,
-        )
-
-        # De-cant so the facet is flat on z = 0.
         (
             facet_discrete_points,
             facet_discrete_points_ideal,
             facet_normals,
             facet_normals_ideal,
-        ) = canting.cant_facet_to_normal_with_ideal(
+            cant_rot,
+        ) = canting.decant_facet(
             position,
-            orig_normal,
-            target_normal,
             facet_discrete_points,
             facet_discrete_points_ideal,
             facet_normals,
             facet_normals_ideal,
+            self.cfg.IDEAL.NORMAL_VECS,
+            canting_params,
         )
 
         # Re-center facet around zero.
         facet_discrete_points -= position
         facet_discrete_points_ideal -= position
-
-        decanted_normal = facet_normals_ideal.mean(dim=0)
-        decanted_normal /= th.linalg.norm(decanted_normal)
-
-        if self.canting_enabled:
-            canted_normal = canting.get_focus_normal(
-                self.focus_point,
-                self.position_on_field,
-                position,
-                decanted_normal,
-                self.cfg.IDEAL.NORMAL_VECS,
-            )
-        else:
-            canted_normal = orig_normal
-
-        cant_rot = utils.get_rot_matrix(decanted_normal, canted_normal)
 
         facet._discrete_points = facet_discrete_points
         facet._discrete_points_ideal = facet_discrete_points_ideal

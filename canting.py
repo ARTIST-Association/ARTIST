@@ -206,3 +206,69 @@ def cant_facet_to_point(
         normals,
         normals_ideal,
     )
+
+
+def decant_facet(
+        facet_position: torch.Tensor,
+        facet_discrete_points: torch.Tensor,
+        facet_discrete_points_ideal: torch.Tensor,
+        facet_normals: torch.Tensor,
+        facet_normals_ideal: torch.Tensor,
+        # The normal of the ideal heliostat.
+        ideal_normal: List[float],
+        canting_params: Optional[Tuple[Optional[torch.Tensor], torch.Tensor]],
+) -> Tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+]:
+    orig_normal = facet_normals_ideal.mean(dim=0)
+    orig_normal /= th.linalg.norm(orig_normal)
+
+    target_normal = th.tensor(
+        ideal_normal,
+        dtype=facet_position.dtype,
+        device=facet_position.device,
+    )
+
+    # De-cant so the facet is flat on z = 0.
+    (
+        facet_discrete_points,
+        facet_discrete_points_ideal,
+        facet_normals,
+        facet_normals_ideal,
+    ) = cant_facet_to_normal_with_ideal(
+        facet_position,
+        orig_normal,
+        target_normal,
+        facet_discrete_points,
+        facet_discrete_points_ideal,
+        facet_normals,
+        facet_normals_ideal,
+    )
+
+    decanted_normal = facet_normals_ideal.mean(dim=0)
+    decanted_normal /= th.linalg.norm(decanted_normal)
+
+    if canting_params is not None:
+        focus_point, position_on_field = canting_params
+        canted_normal = get_focus_normal(
+            focus_point,
+            position_on_field,
+            facet_position,
+            decanted_normal,
+            ideal_normal,
+        )
+    else:
+        canted_normal = orig_normal
+
+    cant_rot = utils.get_rot_matrix(decanted_normal, canted_normal)
+    return (
+        facet_discrete_points,
+        facet_discrete_points_ideal,
+        facet_normals,
+        facet_normals_ideal,
+        cant_rot,
+    )
