@@ -8,7 +8,16 @@ Created on Mon Jul  5 12:38:11 2021
 import functools
 import math
 import os
-from typing import Callable, cast, List, Optional, Tuple, TypeVar, Union
+from typing import (
+    Callable,
+    cast,
+    List,
+    Optional,
+    Tuple,
+    TYPE_CHECKING,
+    TypeVar,
+    Union,
+)
 
 from matplotlib import cm
 import pytorch3d.transforms as tfs
@@ -16,6 +25,8 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+if TYPE_CHECKING:
+    from heliostat_models import AlignedHeliostat, Heliostat
 import nurbs
 
 # We would like to say that T can be everything but a list.
@@ -375,6 +386,19 @@ def rot_z_mat(
         th.stack([cos_angle, -sin_angle, zero]),
         th.stack([sin_angle, cos_angle, zero]),
         th.stack([zero, zero, one]),
+    ])
+
+
+def get_z_alignments(
+        heliostat: 'Heliostat',
+        sun_directions: torch.Tensor,
+) -> torch.Tensor:
+    return th.stack([
+        cast(
+            'AlignedHeliostat',
+            heliostat.align(sun_dir),
+        ).alignment[..., -1, :]
+        for sun_dir in sun_directions
     ])
 
 

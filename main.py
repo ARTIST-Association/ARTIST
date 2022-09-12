@@ -450,10 +450,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             "train",
             writer,
         )
-    target_z_alignments = th.stack([
-        H_target.align(sun_dir).alignment[-1, :]
-        for sun_dir in sun_directions
-    ])
+    target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
     data.log_contoured(
         'train',
         writer,
@@ -477,10 +474,8 @@ def main(config_file_name: Optional[str] = None) -> None:
         "pretrain",
         writer,
     )
-    naive_target_z_alignments = th.stack([
-        H_naive_target.align(sun_dir).alignment[-1, :]
-        for sun_dir in sun_directions
-    ])
+    naive_target_z_alignments = utils.get_z_alignments(
+        H_naive_target, sun_directions)
     naive_target_sets = hausdorff_distance.images_to_sets(
         naive_targets,
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
