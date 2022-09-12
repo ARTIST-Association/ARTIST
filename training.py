@@ -15,15 +15,15 @@ import utils
 
 LossFn = Callable[
     [
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        Environment,
-        torch.optim.Optimizer,
+        torch.Tensor,  # pred_bitmap
+        torch.Tensor,  # target_bitmap
+        torch.Tensor,  # z_alignment
+        torch.Tensor,  # target_z_alignment
+        torch.Tensor,  # target_set
+        torch.Tensor,  # dx_ints
+        torch.Tensor,  # dy_ints
+        Environment,  # env
+        torch.optim.Optimizer,  # opt
     ],
     Tuple[torch.Tensor, torch.Tensor],
 ]
