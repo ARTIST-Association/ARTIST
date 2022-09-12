@@ -3,7 +3,7 @@ import copy
 from datetime import datetime
 import functools
 import os
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, cast, Dict, Optional, Tuple, Type, Union
 
 import torch
 import torch as th
@@ -401,11 +401,14 @@ def main(config_file_name: Optional[str] = None) -> None:
             cached_generate_naive_season_dataset,
         ),
     ) = set_up_dataset_caching(device, writer)
-    cached_build_target_heliostat = disk_cache.disk_cache(
-        build_target_heliostat,
-        device,
-        'cached',
-        ignore_argnums=[1],
+    cached_build_target_heliostat = cast(
+        Callable[[CfgNode, th.device], Heliostat],
+        disk_cache.disk_cache(
+            build_target_heliostat,
+            device,
+            'cached',
+            ignore_argnums=[1],
+        ),
     )
 
     # Create Dataset
