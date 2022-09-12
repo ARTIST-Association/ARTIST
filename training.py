@@ -347,6 +347,7 @@ def build_loss_funcs(
         miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
 
         # Penalize misalignment
+        # TODO Does this even make sense when using active canting?
         alignment_loss = alignment_primitive_loss_func(
             z_alignment,
             target_z_alignment,
