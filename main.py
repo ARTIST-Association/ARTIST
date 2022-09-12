@@ -383,7 +383,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             cached_generate_test_sun_array,
             cached_generate_grid_sun_array,
             cached_generate_spheric_sun_array,
-            cached_generate_season_sun_array
+            cached_generate_season_sun_array,
         ),
         (
             cached_generate_target_dataset,
