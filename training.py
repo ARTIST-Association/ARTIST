@@ -13,36 +13,19 @@ from heliostat_models import AbstractHeliostat, ParamGroups
 from render import Renderer
 import utils
 
-LossFn = Union[
-    Callable[
-        [
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            Environment,
-            torch.optim.Optimizer,
-            float,
-        ],
-        Tuple[torch.Tensor, torch.Tensor],
+LossFn = Callable[
+    [
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        Environment,
+        torch.optim.Optimizer,
     ],
-    Callable[
-        [
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            Environment,
-            torch.optim.Optimizer,
-        ],
-        Tuple[torch.Tensor, torch.Tensor],
-    ],
+    Tuple[torch.Tensor, torch.Tensor],
 ]
 TestLossFn = Callable[
     [torch.Tensor, torch.Tensor],
