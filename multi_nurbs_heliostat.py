@@ -134,9 +134,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         self._canting_cfg.defrost()
-        cfg_canting_algo: str = self._canting_cfg.ALGORITHM
-        if cfg_canting_algo != 'inherit':
-            self.canting_algo = canting.get_algorithm(self._canting_cfg)
 
         cfg_focus_point: Union[None, List[float], float, str] = \
             self._canting_cfg.FOCUS_POINT
@@ -145,16 +142,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 raise ValueError(
                     f'unknown focus point config "{cfg_focus_point}"')
             self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
-        elif canting.canting_enabled(self._canting_cfg):
-            self._canting_cfg.FOCUS_POINT = cfg_focus_point
-            focus_point = canting.get_focus_point(
-                self._canting_cfg,
-                self.aim_point,
-                self.cfg.IDEAL.NORMAL_VECS,
-                dtype=self.position_on_field.dtype,
-                device=self.device,
-            )
-            self._set_deconstructed_focus_point(focus_point)
+        focus_point = canting.get_focus_point(
+            self._canting_cfg,
+            self.aim_point,
+            self.cfg.IDEAL.NORMAL_VECS,
+            dtype=self.position_on_field.dtype,
+            device=self.device,
+        )
+        self._set_deconstructed_focus_point(focus_point)
+
+        cfg_canting_algo: str = self._canting_cfg.ALGORITHM
+        if cfg_canting_algo == 'inherit':
+            self._canting_cfg.ALGORITHM = old_canting_cfg.ALGORITHM
+        self.canting_algo = canting.get_algorithm(self._canting_cfg)
 
         self._canting_cfg.freeze()
 
