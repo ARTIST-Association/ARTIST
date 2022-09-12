@@ -1,3 +1,4 @@
+import atexit
 import copy
 from datetime import datetime
 import functools
@@ -366,6 +367,9 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir = None
         logdir_files = None
         logdir_images = None
+
+    if isinstance(writer, SummaryWriter):
+        atexit.register(lambda: cast(SummaryWriter, writer).close())
 
     check_consistency(cfg)
     # Set system params
