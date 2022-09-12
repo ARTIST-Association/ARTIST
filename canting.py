@@ -14,7 +14,7 @@ class CantingAlgorithm(enum.Enum):
     ACTIVE = 'active'
 
 
-def get_algorithm(canting_cfg: CfgNode) -> CantingAlgorithm:
+def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
     canting_algo = next(
         (
             algo
@@ -25,6 +25,9 @@ def get_algorithm(canting_cfg: CfgNode) -> CantingAlgorithm:
     )
     if canting_algo is None:
         raise ValueError('unknown canting algorithm')
+
+    if not canting_enabled(canting_cfg):
+        return None
     return canting_algo
 
 

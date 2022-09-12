@@ -747,6 +747,7 @@ class AbstractHeliostat:
     _normals: torch.Tensor
     _discrete_points_ideal: torch.Tensor
     _normals_ideal: torch.Tensor
+    canting_algo: Optional[CantingAlgorithm]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError('do not construct an abstract class')
@@ -798,6 +799,10 @@ class AbstractHeliostat:
             return None
         assert self._focus_distance is not None
         return self._focus_normal * self._focus_distance
+
+    @property
+    def canting_enabled(self) -> bool:
+        return self.canting_algo is not None
 
     def get_ray_directions(self) -> torch.Tensor:
         raise NotImplementedError('please override `get_ray_directions`')
@@ -928,7 +933,7 @@ class Heliostat(AbstractHeliostat):
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
     ) -> None:
-        if self._canting_enabled:
+        if self.canting_enabled:
             focus_point = canting.get_focus_point(
                 self._canting_cfg,
                 self.aim_point,
@@ -963,8 +968,8 @@ class Heliostat(AbstractHeliostat):
             facet_normals_ideal = normals_ideal[indices]
 
             if (
-                    self._canting_enabled
-                    and self._canting_algo is not CantingAlgorithm.ACTIVE
+                    self.canting_enabled
+                    and self.canting_algo is not CantingAlgorithm.ACTIVE
             ):
                 (
                     facet_discrete_points,
@@ -1031,9 +1036,9 @@ class Heliostat(AbstractHeliostat):
     def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
-        self._canting_enabled = canting.canting_enabled(self._canting_cfg)
 
-        self._canting_algo = canting.get_algorithm(self._canting_cfg)
+        self.canting_algo = canting.get_algorithm(self._canting_cfg)
+
         self.aim_point = self._get_aim_point(
             h_cfg,
             maybe_aim_point,
