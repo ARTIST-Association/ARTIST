@@ -696,6 +696,7 @@ def heliostat_coord_system(
         Position: torch.Tensor,
         Sun: torch.Tensor,
         Aimpoint: torch.Tensor,
+        ideal_normal: torch.Tensor,
         disturbance_angles: List[torch.Tensor],
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     dtype = Position.dtype
@@ -712,11 +713,14 @@ def heliostat_coord_system(
     z = pSun + z
     z = z / th.linalg.norm(z)
 
-    x = th.stack([
-        -z[1],
-        z[0],
-        th.tensor(0, dtype=dtype, device=device),
-    ])
+    if (z == ideal_normal).all():
+        x = th.tensor([1, 0, 0], dtype=dtype, device=device)
+    else:
+        x = th.stack([
+            -z[1],
+            z[0],
+            th.tensor(0, dtype=dtype, device=device),
+        ])
     x = x / th.linalg.norm(x)
     y = th.cross(z, x)
 
@@ -1262,11 +1266,17 @@ class AlignedHeliostat(AbstractHeliostat):
 
         from_sun = -sun_direction
         self.from_sun = from_sun.unsqueeze(0)
+        ideal_normal = th.tensor(
+            self._heliostat.cfg.IDEAL.NORMAL_VECS,
+            dtype=from_sun.dtype,
+            device=from_sun.device,
+        )
 
         self.alignment = th.stack(heliostat_coord_system(
             self._heliostat.position_on_field,
             sun_direction,
             aim_point,
+            ideal_normal,
             self._heliostat.disturbance_angles,
         ))
         self.align_origin = throt.Rotate(
