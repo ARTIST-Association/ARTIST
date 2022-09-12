@@ -3,7 +3,17 @@ import copy
 from datetime import datetime
 import functools
 import os
-from typing import Any, Callable, cast, Dict, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
 import torch
 import torch as th
@@ -451,18 +461,23 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer,
         )
     target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
-    data.log_contoured(
-        'train',
-        writer,
-        targets,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-    )
-    target_sets = hausdorff_distance.images_to_sets(
-        targets,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-    )
+    if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
+        data.log_contoured(
+            'train',
+            writer,
+            targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )
+        target_sets: Optional[
+            List[torch.Tensor],
+        ] = hausdorff_distance.images_to_sets(
+            targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )
+    else:
+        target_sets = None
 
     H_naive_target = cached_build_target_heliostat(cfg, device)
     H_naive_target._normals = H_naive_target._normals_ideal
@@ -476,11 +491,16 @@ def main(config_file_name: Optional[str] = None) -> None:
     )
     naive_target_z_alignments = utils.get_z_alignments(
         H_naive_target, sun_directions)
-    naive_target_sets = hausdorff_distance.images_to_sets(
-        naive_targets,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-    )
+    if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
+        naive_target_sets: Optional[
+            List[torch.Tensor],
+        ] = hausdorff_distance.images_to_sets(
+            naive_targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )
+    else:
+        naive_target_sets = None
 
     test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)

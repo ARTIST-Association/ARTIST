@@ -1,4 +1,5 @@
 import collections
+import itertools
 import os
 from typing import Callable, cast, List, Optional, Tuple, Union
 
@@ -19,7 +20,7 @@ LossFn = Callable[
         torch.Tensor,  # target_bitmap
         torch.Tensor,  # z_alignment
         torch.Tensor,  # target_z_alignment
-        torch.Tensor,  # target_set
+        Optional[torch.Tensor],  # target_set
         torch.Tensor,  # dx_ints
         torch.Tensor,  # dy_ints
         Environment,  # env
@@ -283,9 +284,10 @@ def build_loss_funcs(
 
     def hausdorff_loss_func(
             pred_bitmap: torch.Tensor,
-            target_set: torch.Tensor,
+            target_set: Optional[torch.Tensor],
     ) -> torch.Tensor:
         if hausdorff_loss_factor != 0:
+            assert target_set is not None
             weighted_hausdorff_dists = \
                 hausdorff_distance.weighted_hausdorff_distance(
                     pred_bitmap.unsqueeze(0),
@@ -315,7 +317,7 @@ def build_loss_funcs(
             target_bitmap: torch.Tensor,
             z_alignment: torch.Tensor,
             target_z_alignment: torch.Tensor,
-            target_set: torch.Tensor,
+            target_set: Optional[torch.Tensor],
             dx_ints: torch.Tensor,
             dy_ints: torch.Tensor,
             env: Environment,
@@ -409,7 +411,7 @@ def calc_batch_loss(
     )) in enumerate(zip(
             targets,
             target_z_alignments,
-            target_sets,
+            target_sets if target_sets is not None else itertools.repeat(None),
             sun_directions,
     )):
         H_aligned = H.align(sun_direction)
