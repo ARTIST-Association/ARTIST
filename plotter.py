@@ -55,6 +55,7 @@ def test_surfaces(H: AbstractHeliostat) -> None:
     exit()
 
 
+@th.no_grad()
 def plot_surfaces_mrad(
         heliostat_target: AbstractHeliostat,
         heliostat_pred: AbstractHeliostat,
@@ -157,6 +158,7 @@ def plot_surfaces_mrad(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_mm(
         heliostat_target: AbstractHeliostat,
         heliostat_pred: AbstractHeliostat,
@@ -232,6 +234,7 @@ def plot_surfaces_mm(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_3D_mm(
         heliostat_pred: AbstractHeliostat,
         epoch: int,
@@ -265,6 +268,7 @@ def plot_surfaces_3D_mm(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_3D_mrad(
         heliostat_target: AbstractHeliostat,
         heliostat_pred: AbstractHeliostat,
