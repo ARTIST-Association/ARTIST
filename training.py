@@ -281,6 +281,52 @@ def build_loss_funcs(
         loss *= loss_factor
         return loss
 
+    def miss_loss_func(
+            pred_bitmap: torch.Tensor,
+            dx_ints: torch.Tensor,
+            dy_ints: torch.Tensor,
+            env: Environment,
+    ) -> torch.Tensor:
+        miss_loss = miss_primitive_loss_func(
+            dx_ints,
+            th.clip(dx_ints, min=-1, max=env.receiver_plane_x + 1),
+        ) * miss_loss_factor
+        miss_loss += miss_primitive_loss_func(
+            dy_ints,
+            th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
+        ) * miss_loss_factor
+        miss_loss /= pred_bitmap.numel()
+        return miss_loss
+
+    def hausdorff_loss_func(
+            pred_bitmap: torch.Tensor,
+            target_set: torch.Tensor,
+    ) -> torch.Tensor:
+        if hausdorff_loss_factor != 0:
+            weighted_hausdorff_dists = \
+                hausdorff_distance.weighted_hausdorff_distance(
+                    pred_bitmap.unsqueeze(0),
+                    [target_set],
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                    mean_p=cfg.HAUSDORFF.MEAN_P,
+                )
+            weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
+                10 * hausdorff_distance.max_hausdorff_distance(
+                    pred_bitmap.shape,
+                    pred_bitmap.device,
+                    pred_bitmap.dtype,
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                )
+            hausdorff_loss = (
+                weighted_hausdorff_dists.mean()
+                * hausdorff_loss_factor
+                / pred_bitmap.numel()
+            )
+        else:
+            hausdorff_loss = th.tensor(
+                0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
+        return hausdorff_loss
+
     def loss_func(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
@@ -298,15 +344,7 @@ def build_loss_funcs(
         )
 
         # Penalize misses
-        miss_loss = miss_primitive_loss_func(
-            dx_ints,
-            th.clip(dx_ints, min=-1, max=env.receiver_plane_x + 1),
-        ) * miss_loss_factor
-        miss_loss += miss_primitive_loss_func(
-            dy_ints,
-            th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
-        ) * miss_loss_factor
-        miss_loss /= pred_bitmap.numel()
+        miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
 
         # Penalize misalignment
         alignment_loss = alignment_primitive_loss_func(
@@ -315,25 +353,7 @@ def build_loss_funcs(
         ) * alignment_loss_factor
 
         # Weighted Hausdorff loss
-        weighted_hausdorff_dists = \
-            hausdorff_distance.weighted_hausdorff_distance(
-                pred_bitmap.unsqueeze(0),
-                [target_set],
-                norm_p=cfg.HAUSDORFF.NORM_P,
-                mean_p=cfg.HAUSDORFF.MEAN_P,
-            )
-        weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
-            10 * hausdorff_distance.max_hausdorff_distance(
-                pred_bitmap.shape,
-                pred_bitmap.device,
-                pred_bitmap.dtype,
-                norm_p=cfg.HAUSDORFF.NORM_P,
-            )
-        hausdorff_loss = (
-            weighted_hausdorff_dists.mean()
-            * hausdorff_loss_factor
-            / pred_bitmap.numel()
-        )
+        hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
 
         loss = raw_loss.clone() + miss_loss + alignment_loss + hausdorff_loss
 
