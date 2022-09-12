@@ -151,7 +151,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self._canting_cfg,
                 self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
-                dtype=self._discrete_points.dtype,
+                dtype=self.position_on_field.dtype,
                 device=self.device,
             )
             self._set_deconstructed_focus_point(focus_point)
