@@ -76,7 +76,11 @@ def calc_focus_normal(
 ) -> torch.Tensor:
     hel_to_recv = aim_point - heliostat_position_on_field
     focus_distance = th.linalg.norm(hel_to_recv)
-    focus_point = facet_normal * focus_distance
+    facet_to_recv_distance = th.sqrt(
+        focus_distance**2
+        + (facet_position - heliostat_position_on_field)**2
+    )
+    focus_point = facet_normal * facet_to_recv_distance
     target_normal = focus_point - facet_position
     target_normal /= th.linalg.norm(target_normal)
     return target_normal
