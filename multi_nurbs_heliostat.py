@@ -43,7 +43,8 @@ class NURBSFacets(facets.AbstractFacets):
         self.spans_n = heliostat.facets.spans_n
         self.spans_e = heliostat.facets.spans_e
 
-        self.offsets = self._make_offsets(self._facets)
+        self.offsets = self._make_offsets(
+            self._facets)  # type: ignore[arg-type]
         self._canting_algo = heliostat.canting_algo
         self.cant_rots = cant_rots
 

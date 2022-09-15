@@ -988,7 +988,7 @@ class Heliostat(AbstractHeliostat):
     def optimizables(self) -> Dict[str, List[torch.Tensor]]:
         params = {
             'position': [self.position_on_field],
-            'facet_positions': [self.facets._positions],
+            'facet_positions': [self.facets.positions],
             'rotation_x': [self.disturbance_angles[0]],
             'rotation_y': [self.disturbance_angles[1]],
             'rotation_z': [self.disturbance_angles[2]],
