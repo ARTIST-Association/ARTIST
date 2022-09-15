@@ -8,6 +8,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    TYPE_CHECKING,
     Type,
     TypeVar,
     Union,
@@ -22,6 +23,8 @@ from canting import CantingAlgorithm
 import facets
 import heliostat_models
 from heliostat_models import AlignedHeliostat, Heliostat
+if TYPE_CHECKING:
+    from heliostat_models import AbstractHeliostat
 from nurbs_heliostat import (
     AbstractNURBSHeliostat,
     AlignedNURBSHeliostat,
@@ -44,7 +47,7 @@ class NURBSFacets(facets.AbstractFacets):
         self.spans_e = heliostat.facets.spans_e
 
         self.offsets = self._make_offsets(
-            self._facets)  # type: ignore[arg-type]
+            cast(List['AbstractHeliostat'], self._facets))
         self._canting_algo = heliostat.canting_algo
         self.cant_rots = cant_rots
 
