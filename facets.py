@@ -167,6 +167,27 @@ class AbstractFacets:
             for facet_discrete_points in self._discrete_points
         )
 
+    def _make_offsets(
+            self,
+            discrete_points: Union[
+                List[torch.Tensor],
+                List['AbstractHeliostat'],
+            ],
+    ) -> torch.Tensor:
+        return torch.tensor(
+            list(itertools.accumulate(
+                (
+                    [0]
+                    + [
+                        len(facet_discrete_points)
+                        for facet_discrete_points in discrete_points[:-1]
+                    ]
+                ),
+            )),
+            dtype=th.long,
+            device=self.positions.device,
+        )
+
     @property
     def raw_discrete_points(self) -> List[torch.Tensor]:
         return self._discrete_points
@@ -253,27 +274,6 @@ class Facets(AbstractFacets):
         self._normals = normals
         self._normals_ideal = normals_ideal
         self.cant_rots = cant_rots
-
-    def _make_offsets(
-            self,
-            discrete_points: Union[
-                List[torch.Tensor],
-                List['AbstractHeliostat'],
-            ],
-    ) -> torch.Tensor:
-        return torch.tensor(
-            list(itertools.accumulate(
-                (
-                    [0]
-                    + [
-                        len(facet_discrete_points)
-                        for facet_discrete_points in discrete_points[:-1]
-                    ]
-                ),
-            )),
-            dtype=th.long,
-            device=self.positions.device,
-        )
 
     @classmethod
     def find_facets(
