@@ -95,7 +95,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             setup_params=False,
             receiver_center=receiver_center,
         )
-        assert len(self.facet_positions) == 1, (
+        assert len(self.facets.positions) == 1, (
             'cannot handle multiple facets with `NURBSHeliostat`; '
             'please use `MultiNURBSHeliostat` instead.'
         )
@@ -430,7 +430,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
 class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     _heliostat: NURBSHeliostat
-    align_origin: Transform3d
+    align_origin: List[Transform3d]
     from_sun: torch.Tensor
 
     def __init__(
@@ -454,7 +454,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
 
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
-            self._heliostat, self.align_origin)
+            self._heliostat, self.align_origin[0])
         # TODO Remove if translation is added to `rotate` function.
         # Place in field
         hel_rotated = hel_rotated + self._heliostat.position_on_field

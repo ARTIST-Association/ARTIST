@@ -24,9 +24,10 @@ import data
 from defaults import get_cfg_defaults, load_config_file
 import disk_cache
 from environment import Environment
+import facets
 import hausdorff_distance
 from heliostat_models import AbstractHeliostat, Heliostat
-from multi_nurbs_heliostat import MultiNURBSHeliostat
+from multi_nurbs_heliostat import MultiNURBSHeliostat, NURBSFacets
 from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
 import plotter
 from render import Renderer
@@ -243,7 +244,9 @@ def _build_multi_nurbs_target(
         setup_params=False,
     )
 
+    assert isinstance(mnh.facets, NURBSFacets)
     for facet in mnh.facets:
+        assert isinstance(facet, NURBSHeliostat)
         facet.set_ctrl_points(
             facet.ctrl_points
             + th.rand_like(facet.ctrl_points)
@@ -264,13 +267,18 @@ def _multi_nurbs_to_standard(
         setup_params=False,
     )
     discrete_points, normals = mnh.discrete_points_and_normals()
-    H.facet_positions = mnh.facet_positions
-    H.facet_spans_n = mnh.facet_spans_n
-    H.facet_spans_e = mnh.facet_spans_e
-    H._discrete_points = discrete_points
-    H._discrete_points_ideal = mnh._discrete_points_ideal
-    H._normals = normals
-    H._normals_ideal = mnh._normals_ideal
+
+    H.facets = facets.Facets(
+        H,
+        mnh.facets.positions,
+        mnh.facets.spans_n,
+        mnh.facets.spans_e,
+        mnh.facets.raw_discrete_points,
+        mnh.facets.raw_discrete_points_ideal,
+        mnh.facets.raw_normals,
+        mnh.facets.raw_normals_ideal,
+        mnh.facets.cant_rots,
+    )
     H.params = mnh.nurbs_cfg
     H.height = mnh.height
     H.width = mnh.width
@@ -480,7 +488,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         target_sets = None
 
     H_naive_target = cached_build_target_heliostat(cfg, device)
-    H_naive_target._normals = H_naive_target._normals_ideal
+    H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
     naive_targets = cached_generate_pretrain_dataset(
         H_naive_target,
         ENV,
@@ -561,7 +569,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
         # # th.random.set_rng_state(state)
         H_naive_grid = cached_build_target_heliostat(cfg, device)
-        H_naive_grid._normals = H_naive_grid._normals_ideal
+        H_naive_grid._normals = H_naive_grid.get_raw_normals_ideal()
         naive_grid_targets = cached_generate_naive_grid_dataset(
             H_naive_grid,
             ENV_validation,
@@ -588,7 +596,7 @@ def main(config_file_name: Optional[str] = None) -> None:
         )
 
         H_naive_spheric = cached_build_target_heliostat(cfg, device)
-        H_naive_spheric._normals = H_naive_spheric._normals_ideal
+        H_naive_spheric._normals = H_naive_spheric.get_raw_normals_ideal()
         naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
             H_naive_spheric,
             ENV_validation,
@@ -615,7 +623,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             "season",
         )
         H_naive_season = cached_build_target_heliostat(cfg, device)
-        H_naive_season._normals = H_naive_season._normals_ideal
+        H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
         naive_season_test_targets = cached_generate_naive_season_dataset(
             H_naive_season,
             ENV_validation,

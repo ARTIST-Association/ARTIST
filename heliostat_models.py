@@ -23,6 +23,8 @@ from yacs.config import CfgNode
 import bpro_loader
 import canting
 from canting import CantingAlgorithm
+import facets
+from facets import AbstractFacets, AlignedFacets, Facets
 import utils
 
 ParamGroups = Iterable[Dict[str, Any]]
@@ -55,21 +57,6 @@ def reflect_rays(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
     return reflect_rays_(rays, normals)
 
 
-def _broadcast_spans(
-        spans: List[List[float]],
-        to_length: int,
-) -> List[List[float]]:
-    if len(spans) == to_length:
-        return spans
-
-    assert len(spans) == 1, (
-        'will only broadcast spans of length 1. If you did not intend '
-        'to broadcast, make sure there is the same amount of facet '
-        'positions and spans.'
-    )
-    return spans * to_length
-
-
 def get_position(
         cfg: CfgNode,
         dtype: th.dtype,
@@ -77,63 +64,6 @@ def get_position(
 ) -> torch.Tensor:
     position_on_field: List[float] = cfg.POSITION_ON_FIELD
     return th.tensor(position_on_field, dtype=dtype, device=device)
-
-
-def get_facet_params(
-        cfg: CfgNode,
-        dtype: th.dtype,
-        device: th.device,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    positions: List[List[float]] = utils.with_outer_list(cfg.FACETS.POSITIONS)
-    spans_n: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_N)
-    spans_n = _broadcast_spans(spans_n, len(positions))
-    spans_e: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_E)
-    spans_e = _broadcast_spans(spans_e, len(positions))
-    position, spans_n, spans_e = map(
-        lambda l: th.tensor(l, dtype=dtype, device=device),
-        [positions, spans_n, spans_e],
-    )
-    return position, spans_n, spans_e
-
-
-def _indices_between(
-        points: torch.Tensor,
-        from_: torch.Tensor,
-        to: torch.Tensor,
-) -> torch.Tensor:
-    indices = (
-        (from_ <= points) & (points < to)
-    ).all(dim=-1)
-    return indices
-
-
-def facet_point_indices(
-        points: torch.Tensor,
-        position: torch.Tensor,
-        span_n: torch.Tensor,
-        span_e: torch.Tensor,
-) -> torch.Tensor:
-    from_xyz = position + span_e - span_n
-    to_xyz = position - span_e + span_n
-    # We ignore the z-axis here.
-    return _indices_between(
-        points[:, :-1],
-        from_xyz[:-1],
-        to_xyz[:-1],
-    )
-
-
-def _sole_facet(
-        height: float,
-        width: float,
-        dtype: th.dtype,
-        device: th.device,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    return (
-        th.zeros((1, 3), dtype=dtype, device=device),
-        th.tensor([[0, height / 2, 0]], dtype=dtype, device=device),
-        th.tensor([[-width / 2, 0, 0]], dtype=dtype, device=device),
-    )
 
 
 # Heliostat Models
@@ -394,7 +324,7 @@ def heliostat_by_function(
     )
     # print(h.shape)
 
-    (facet_positions, facet_spans_n, facet_spans_e) = get_facet_params(
+    (facet_positions, facet_spans_n, facet_spans_e) = facets.get_facet_params(
         cfg,
         dtype=h.dtype,
         device=device,
@@ -451,7 +381,7 @@ def ideal_heliostat(
     )
     h_normal_vectors = th.tile(normal_vector_direction, (len(h), 1))
 
-    (facet_positions, facet_spans_n, facet_spans_e) = get_facet_params(
+    (facet_positions, facet_spans_n, facet_spans_e) = facets.get_facet_params(
         cfg,
         dtype=h.dtype,
         device=device,
@@ -623,7 +553,7 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
     params = {'name': name}
     return (
         get_position(config, vertices.dtype, device),
-        *_sole_facet(height, width, vertices.dtype, device),
+        *facets.sole_facet(height, width, vertices.dtype, device),
         vertices,
         vertices,
         vertex_normals,
@@ -746,56 +676,70 @@ class AbstractHeliostat:
     cfg: CfgNode
     aligned_cls: Type['AbstractHeliostat']
 
-    _facet_offsets: torch.Tensor
-    _discrete_points: torch.Tensor
-    _normals: torch.Tensor
-    _discrete_points_ideal: torch.Tensor
-    _normals_ideal: torch.Tensor
+    facets: AbstractFacets
     canting_algo: Optional[CantingAlgorithm]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError('do not construct an abstract class')
 
     def __len__(self) -> int:
-        return len(self._discrete_points)
+        return len(self.facets)
 
     def __call__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         return (self.discrete_points, self.get_ray_directions())
 
     @property
+    def _discrete_points(self) -> List[torch.Tensor]:
+        return self.facets.raw_discrete_points
+
+    @_discrete_points.setter
+    def _discrete_points(
+            self,
+            new_discrete_points: List[torch.Tensor],
+    ) -> None:
+        self.facets.raw_discrete_points = new_discrete_points
+
+    @property
     def discrete_points(self) -> torch.Tensor:
-        return self._discrete_points
+        return self.facets.align_discrete_points()
+
+    @property
+    def _discrete_points_ideal(self) -> torch.Tensor:
+        return self.facets.align_discrete_points_ideal()
+
+    def get_raw_discrete_points_ideal(self) -> List[torch.Tensor]:
+        return self.facets.raw_discrete_points_ideal
+
+    def set_raw_discrete_points_ideal(
+            self,
+            new_discrete_points_ideal: List[torch.Tensor],
+    ) -> None:
+        self.facets.raw_discrete_points_ideal = new_discrete_points_ideal
+
+    @property
+    def _normals(self) -> List[torch.Tensor]:
+        return self.facets.raw_normals
+
+    @_normals.setter
+    def _normals(self, new_normals: List[torch.Tensor]) -> None:
+        self.facets.raw_normals = new_normals
 
     @property
     def normals(self) -> torch.Tensor:
-        return self._normals
-
-    def _make_facetted(self, values: torch.Tensor) -> List[torch.Tensor]:
-        return list(th.tensor_split(values, self._facet_offsets[1:].cpu()))
+        return self.facets.align_normals()
 
     @property
-    def facetted_discrete_points(self) -> List[torch.Tensor]:
-        return self._make_facetted(self.discrete_points)
+    def _normals_ideal(self) -> torch.Tensor:
+        return self.facets.align_normals_ideal()
 
-    @property
-    def _facetted_discrete_points(self) -> List[torch.Tensor]:
-        return self._make_facetted(self._discrete_points)
+    def get_raw_normals_ideal(self) -> List[torch.Tensor]:
+        return self.facets.raw_normals_ideal
 
-    @property
-    def _facetted_discrete_points_ideal(self) -> List[torch.Tensor]:
-        return self._make_facetted(self._discrete_points_ideal)
-
-    @property
-    def facetted_normals(self) -> List[torch.Tensor]:
-        return self._make_facetted(self.normals)
-
-    @property
-    def _facetted_normals(self) -> List[torch.Tensor]:
-        return self._make_facetted(self._normals)
-
-    @property
-    def _facetted_normals_ideal(self) -> List[torch.Tensor]:
-        return self._make_facetted(self._normals_ideal)
+    def set_raw_normals_ideal(
+            self,
+            new_normals_ideal: List[torch.Tensor],
+    ) -> None:
+        self.facets.raw_normals_ideal = new_normals_ideal
 
     @property
     def focus_point(self) -> Optional[torch.Tensor]:  # type: ignore[override]
@@ -949,64 +893,16 @@ class Heliostat(AbstractHeliostat):
             focus_point = None
         self._set_deconstructed_focus_point(focus_point)
 
-        facet_offsets: List[int] = []
-        offset = 0
-        facetted_discrete_points: List[torch.Tensor] = []
-        facetted_discrete_points_ideal: List[torch.Tensor] = []
-        facetted_normals: List[torch.Tensor] = []
-        facetted_normals_ideal: List[torch.Tensor] = []
-
-        for (position, span_n, span_e) in zip(
-                facet_positions,
-                facet_spans_n,
-                facet_spans_e,
-        ):
-            facet_offsets.append(offset)
-
-            # Select points on facet based on positions of ideal points.
-            indices = facet_point_indices(
-                discrete_points_ideal, position, span_n, span_e)
-            facet_discrete_points = discrete_points[indices]
-            facet_discrete_points_ideal = discrete_points_ideal[indices]
-            facet_normals = normals[indices]
-            facet_normals_ideal = normals_ideal[indices]
-
-            if (
-                    self.canting_enabled
-                    and self.canting_algo is not CantingAlgorithm.ACTIVE
-            ):
-                (
-                    facet_discrete_points,
-                    facet_discrete_points_ideal,
-                    facet_normals,
-                    facet_normals_ideal,
-                ) = canting.cant_facet_to_point(
-                    self.position_on_field,
-                    position,
-                    self.focus_point,
-                    facet_discrete_points,
-                    facet_discrete_points_ideal,
-                    facet_normals,
-                    facet_normals_ideal,
-                    self.cfg.IDEAL.NORMAL_VECS,
-                )
-
-            facetted_discrete_points.append(facet_discrete_points)
-            facetted_discrete_points_ideal.append(facet_discrete_points_ideal)
-            facetted_normals.append(facet_normals)
-            facetted_normals_ideal.append(facet_normals_ideal)
-
-            offset += len(facet_discrete_points)
-
-        self._facet_offsets = th.tensor(facet_offsets, device=self.device)
-        self.facet_positions = facet_positions
-        self.facet_spans_n = facet_spans_n
-        self.facet_spans_e = facet_spans_e
-        self._discrete_points = th.cat(facetted_discrete_points, dim=0)
-        self._discrete_points_ideal = th.cat(
-            facetted_discrete_points_ideal, dim=0)
-        self._normals = th.cat(facetted_normals, dim=0)
-        self._normals_ideal = th.cat(facetted_normals_ideal, dim=0)
+        self.facets = Facets.find_facets(
+            self,
+            facet_positions,
+            facet_spans_n,
+            facet_spans_e,
+            discrete_points,
+            discrete_points_ideal,
+            normals,
+            normals_ideal,
+        )
 
     def _get_aim_point(
             self,
@@ -1087,11 +983,12 @@ class Heliostat(AbstractHeliostat):
         return (self.rows, self.cols)
 
     def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
-        return {'surface': [self._normals]}
+        return {'surface': self._normals}
 
     def optimizables(self) -> Dict[str, List[torch.Tensor]]:
         params = {
             'position': [self.position_on_field],
+            'facet_positions': [self.facets._positions],
             'rotation_x': [self.disturbance_angles[0]],
             'rotation_y': [self.disturbance_angles[1]],
             'rotation_z': [self.disturbance_angles[2]],
@@ -1192,7 +1089,7 @@ class Heliostat(AbstractHeliostat):
     def _to_dict(self) -> Dict[str, Any]:
         data = self._fixed_dict()
         data.update({
-            'heliostat_normals': self._normals.clone(),
+            'heliostat_normals': copy.deepcopy(self._normals),
 
             'position_on_field': self.position_on_field.clone(),
             'disturbance_rotation_angles_rad': [
@@ -1259,7 +1156,7 @@ class AlignedHeliostat(AbstractHeliostat):
     ) -> None:
         assert type(self) == heliostat.aligned_cls, \
             'aligned heliostat class does not match'
-        if not hasattr(heliostat, '_discrete_points'):
+        if not hasattr(heliostat, 'facets'):
             raise ValueError('Heliostat has to be loaded first')
 
         self._heliostat = heliostat
@@ -1272,31 +1169,99 @@ class AlignedHeliostat(AbstractHeliostat):
             device=from_sun.device,
         )
 
-        self.alignment = th.stack(heliostat_coord_system(
-            self._heliostat.position_on_field,
-            sun_direction,
-            aim_point,
-            ideal_normal,
-            self._heliostat.disturbance_angles,
-        ))
-        self.align_origin = throt.Rotate(
-            self.alignment, dtype=self.alignment.dtype)
+        self.facets = self._heliostat.facets
+        if (
+                self._heliostat.canting_enabled
+                and self._heliostat.canting_algo is CantingAlgorithm.ACTIVE
+        ):
+            self.alignment = th.stack([
+                th.stack(heliostat_coord_system(
+                    position,
+                    sun_direction,
+                    aim_point,
+                    ideal_normal,
+                    self._heliostat.disturbance_angles,
+                ))
+                for position in self.facets.positions
+            ])
+            self.align_origin = [
+                throt.Rotate(alignment, dtype=self.alignment.dtype)
+                for alignment in self.alignment
+            ]
+        else:
+            self.alignment = th.stack(heliostat_coord_system(
+                self._heliostat.position_on_field,
+                sun_direction,
+                aim_point,
+                ideal_normal,
+                self._heliostat.disturbance_angles,
+            ))
+            self.align_origin = [
+                throt.Rotate(self.alignment, dtype=self.alignment.dtype)]
 
         if align_points:
             self._align()
 
-    def _align(self) -> None:
-        hel_rotated, normal_vectors_rotated = rotate(
-            self._heliostat, self.align_origin)
-        # TODO Add Translation in rotate function
-        hel_rotated_in_field = hel_rotated + self._heliostat.position_on_field
+    def _align_facets(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        total_size = len(self.facets)
+        dtype = self._heliostat.position_on_field.dtype
+        device = self._heliostat.device
+
+        hel_rotated = torch.empty(
+            (total_size, 3), dtype=dtype, device=device)
+        normal_vectors_rotated = torch.empty(
+            (total_size, 3), dtype=dtype, device=device)
+
+        i = 0
+        for (position, discrete_points, normals, align_origin) in zip(
+            self.facets.positions,
+            self.facets.raw_discrete_points,
+            self.facets.raw_normals,
+            self.align_origin,
+        ):
+            offset = len(discrete_points)
+
+            discrete_points_rotated, normals_rotated = _rotate(
+                discrete_points,
+                normals,
+                align_origin,
+            )
+            discrete_points_rotated = discrete_points_rotated + position
+
+            hel_rotated[i:i + offset] = discrete_points_rotated
+            normal_vectors_rotated[i:i + offset] = normals_rotated
+            i += offset
+
         normal_vectors_rotated = (
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
+        return hel_rotated, normal_vectors_rotated
 
-        self._discrete_points = hel_rotated_in_field
-        self._normals = normal_vectors_rotated
+    def _align(self) -> None:
+        if (
+                self._heliostat.canting_enabled
+                and self._heliostat.canting_algo is CantingAlgorithm.ACTIVE
+        ):
+            hel_rotated, normal_vectors_rotated = self._align_facets()
+            hel_rotated_in_field = (
+                hel_rotated + self._heliostat.position_on_field)
+        else:
+            hel_rotated, normal_vectors_rotated = rotate(
+                self._heliostat, self.align_origin[0])
+            # TODO Add Translation in rotate function
+            hel_rotated_in_field = (
+                hel_rotated + self._heliostat.position_on_field)
+            normal_vectors_rotated = (
+                normal_vectors_rotated
+                / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+            )
+
+        self.facets = AlignedFacets(
+            hel_rotated_in_field,
+            normal_vectors_rotated,
+            self._heliostat.facets.offsets,
+        )
 
     def get_ray_directions(self) -> torch.Tensor:
         return reflect_rays_(self.from_sun, self.normals)

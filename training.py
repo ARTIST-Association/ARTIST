@@ -334,8 +334,16 @@ def build_loss_funcs(
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
         alignment_loss = alignment_primitive_loss_func(
-            z_alignment,
-            target_z_alignment,
+            (
+                z_alignment.mean(dim=0)
+                if z_alignment.ndim > 1 and target_z_alignment.ndim == 1
+                else z_alignment
+            ),
+            (
+                target_z_alignment.mean(dim=0)
+                if target_z_alignment.ndim > 1 and z_alignment.ndim == 1
+                else target_z_alignment
+            ),
         ) * alignment_loss_factor
 
         # Weighted Hausdorff loss
@@ -424,7 +432,7 @@ def calc_batch_loss(
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
-            H_aligned.alignment[-1, :],
+            H_aligned.alignment[..., -1, :],
             target_z_alignment,
             target_set,
             dx_ints,
