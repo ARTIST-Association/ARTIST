@@ -451,8 +451,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             reposition: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        discrete_points, normals = self._calc_normals_and_surface(
-            reposition=reposition)
+        # We do this awkward call so that `AlignedMultiNURBSHeliostat`
+        # can call this method but avoid using its own
+        # `_calc_normals_and_surface` method.
+        discrete_points, normals = \
+            MultiNURBSHeliostat._calc_normals_and_surface(
+                self, reposition=reposition)
         return discrete_points, normals
 
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
