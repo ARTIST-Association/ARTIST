@@ -32,7 +32,7 @@ DISABLE_DISK_CACHE = False
 
 # This magic number should be updated to invalidate out-of-date caches
 # due to breaking changes.
-_CACHE_VERSION = 1
+_CACHE_VERSION = 2
 
 _DYNAMIC_CONFIG_KEYS = ['LOGDIR']
 
