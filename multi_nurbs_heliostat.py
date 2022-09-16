@@ -19,7 +19,7 @@ import torch as th
 from yacs.config import CfgNode
 
 import canting
-from canting import ActiveCantingAlgorithm
+from canting import ActiveCanting
 import facets
 import heliostat_models
 from heliostat_models import AlignedHeliostat, Heliostat
@@ -679,11 +679,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             align_points=False,
         )
 
-        if (
-                self._heliostat.canting_enabled
-                and isinstance(
-                    self._heliostat.canting_algo, ActiveCantingAlgorithm)
-        ):
+        if isinstance(self._heliostat.canting_algo, ActiveCanting):
             assert isinstance(self._heliostat.facets, NURBSFacets)
             self.facets = NURBSFacets(
                 self._heliostat,
@@ -699,10 +695,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             self.device = self._heliostat.device
 
     def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        if (
-                self._heliostat.canting_enabled
-                and canting.is_like_active(self._heliostat.canting_algo)
-        ):
+        if canting.is_like_active(self._heliostat.canting_algo):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat.discrete_points_and_normals(
                     cast(MultiNURBSHeliostat, self),

@@ -22,7 +22,7 @@ from yacs.config import CfgNode
 
 import bpro_loader
 import canting
-from canting import ActiveCantingAlgorithm, CantingAlgorithm
+from canting import ActiveCanting, CantingAlgorithm
 import facets
 from facets import AbstractFacets, AlignedFacets, Facets
 import utils
@@ -1211,11 +1211,7 @@ class AlignedHeliostat(AbstractHeliostat):
         )
 
         self.facets = self._heliostat.facets
-        if (
-                self._heliostat.canting_enabled
-                and isinstance(
-                    self._heliostat.canting_algo, ActiveCantingAlgorithm)
-        ):
+        if isinstance(self._heliostat.canting_algo, ActiveCanting):
             self.alignment = th.stack([
                 th.stack(heliostat_coord_system(
                     position,
@@ -1281,11 +1277,7 @@ class AlignedHeliostat(AbstractHeliostat):
         return hel_rotated, normal_vectors_rotated
 
     def _align(self) -> None:
-        if (
-                self._heliostat.canting_enabled
-                and isinstance(
-                    self._heliostat.canting_algo, ActiveCantingAlgorithm)
-        ):
+        if canting.is_like_active(self._heliostat.canting_algo):
             hel_rotated, normal_vectors_rotated = self._align_facets()
             hel_rotated_in_field = (
                 hel_rotated + self._heliostat.position_on_field)

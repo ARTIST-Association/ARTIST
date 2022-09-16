@@ -91,8 +91,7 @@ def get_canting_params(
         sun_direction: Optional[torch.Tensor],
 ) -> Optional[CantingParams]:
     if (
-            heliostat.canting_enabled
-            and isinstance(heliostat.canting_algo, FirstSunCanting)
+            isinstance(heliostat.canting_algo, FirstSunCanting)
     ):
         assert sun_direction is not None, \
             'need sun direction to cant towards'
