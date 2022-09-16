@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 import utils
 
 S = TypeVar('S')
-C = TypeVar('C', bound=S)
 
 
 class CantingAlgorithm:
@@ -51,7 +50,7 @@ class FirstSunCantingParams(CantingParams):
     disturbance_angles: List[torch.Tensor]
 
 
-def _subclass_tree(supertype: Type[S]) -> Set[Type[C]]:
+def _subclass_tree(supertype: Type[S]) -> Set[Type[S]]:
     children = supertype.__subclasses__()
     # Avoid for-loop because we're growing the list in the loop.
     i = 0
