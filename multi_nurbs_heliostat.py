@@ -708,7 +708,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                     cast(MultiNURBSHeliostat, self),
                     reposition=isinstance(
                         self._heliostat.canting_algo,
-                        canting.FirstSunCantingAlgorithm,
+                        canting.FirstSunCanting,
                     ),
                 )
             hel_rotated = hel_rotated + self._heliostat.position_on_field
