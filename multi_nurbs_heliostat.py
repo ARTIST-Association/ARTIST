@@ -288,17 +288,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet_normals_ideal = self.facets.align_normals_ideal(
             force_canting=True)[facet_slice]
 
-        if (
-                self.canting_enabled
-                and self.canting_algo is not CantingAlgorithm.ACTIVE
-        ):
-            canting_params: Optional[Tuple[
-                Optional[torch.Tensor],
-                torch.Tensor,
-            ]] = (self.focus_point, self.position_on_field)
-        else:
-            canting_params = None
-
+        canting_params = canting.get_canting_params(self)
         (
             facet_discrete_points,
             facet_discrete_points_ideal,

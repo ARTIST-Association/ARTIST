@@ -297,6 +297,8 @@ class Facets(AbstractFacets):
             device=positions.device,
         )
 
+        canting_params = canting.get_canting_params(heliostat)
+
         for (i, (position, span_n, span_e)) in enumerate(zip(
                 positions,
                 spans_n,
@@ -309,20 +311,6 @@ class Facets(AbstractFacets):
             facet_discrete_points_ideal = discrete_points_ideal[indices]
             facet_normals = normals[indices]
             facet_normals_ideal = normals_ideal[indices]
-
-            if (
-                    heliostat.canting_enabled
-                    and heliostat.canting_algo is not CantingAlgorithm.ACTIVE
-            ):
-                canting_params: Optional[Tuple[
-                    Optional[torch.Tensor],
-                    torch.Tensor,
-                ]] = (
-                    heliostat.focus_point,
-                    heliostat.position_on_field,
-                )
-            else:
-                canting_params = None
 
             (
                 facet_discrete_points,

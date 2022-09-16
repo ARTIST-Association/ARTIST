@@ -1,10 +1,13 @@
+from dataclasses import dataclass
 import enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import torch
 import torch as th
 from yacs.config import CfgNode
 
+if TYPE_CHECKING:
+    from heliostat_models import AbstractHeliostat
 import utils
 
 
@@ -12,6 +15,16 @@ import utils
 class CantingAlgorithm(enum.Enum):
     STANDARD = 'standard'
     ACTIVE = 'active'
+
+
+class CantingParams:
+    pass
+
+
+@dataclass
+class StandardCantingParams(CantingParams):
+    focus_point: Optional[torch.Tensor]
+    position_on_field: torch.Tensor
 
 
 def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
@@ -33,6 +46,22 @@ def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
 
 def canting_enabled(canting_cfg: CfgNode) -> bool:
     return canting_cfg.FOCUS_POINT != 0
+
+
+def get_canting_params(
+        heliostat: 'AbstractHeliostat',
+) -> Optional[CantingParams]:
+    if (
+            heliostat.canting_enabled
+            and not heliostat.canting_algo is CantingAlgorithm.ACTIVE
+    ):
+        canting_params: Optional[CantingParams] = StandardCantingParams(
+            heliostat.focus_point,
+            heliostat.position_on_field,
+        )
+    else:
+        canting_params = None
+    return canting_params
 
 
 def get_focus_point(
@@ -220,7 +249,7 @@ def decant_facet(
         facet_normals_ideal: torch.Tensor,
         # The normal of the ideal heliostat.
         ideal_normal: List[float],
-        canting_params: Optional[Tuple[Optional[torch.Tensor], torch.Tensor]],
+        canting_params: Optional[CantingParams],
 ) -> Tuple[
     torch.Tensor,
     torch.Tensor,
@@ -257,10 +286,9 @@ def decant_facet(
     decanted_normal /= th.linalg.norm(decanted_normal)
 
     if canting_params is not None:
-        focus_point, position_on_field = canting_params
         canted_normal = get_focus_normal(
-            focus_point,
-            position_on_field,
+            canting_params.focus_point,
+            canting_params.position_on_field,
             facet_position,
             decanted_normal,
             ideal_normal,
