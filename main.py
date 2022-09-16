@@ -174,7 +174,11 @@ def set_up_dataset_caching(
     )
 
 
-def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
+def load_heliostat(
+        cfg: CfgNode,
+        sun_directions: torch.Tensor,
+        device: th.device,
+) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
     cp = th.load(cp_path, map_location=device)
     if cfg.USE_NURBS:
@@ -189,18 +193,21 @@ def load_heliostat(cfg: CfgNode, device: th.device) -> AbstractHeliostat:
             nurbs_config=cfg.NURBS,
             config=cfg.H,
             receiver_center=cfg.AC.RECEIVER.CENTER,
+            sun_directions=sun_directions,
         )
     else:
         H = Heliostat.from_dict(
             cp,
             device,
             receiver_center=cfg.AC.RECEIVER.CENTER,
+            sun_directions=sun_directions,
         )
     return H
 
 
 def _build_multi_nurbs_target(
         cfg: CfgNode,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> MultiNURBSHeliostat:
     mnh_cfg = cfg.clone()
@@ -241,6 +248,7 @@ def _build_multi_nurbs_target(
         nurbs_cfg,
         device,
         receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
+        sun_directions=sun_directions,
         setup_params=False,
     )
 
@@ -258,12 +266,14 @@ def _build_multi_nurbs_target(
 
 def _multi_nurbs_to_standard(
         cfg: CfgNode,
+        sun_directions: torch.Tensor,
         mnh: MultiNURBSHeliostat,
 ) -> Heliostat:
     H = Heliostat(
         cfg.H,
         mnh.device,
         receiver_center=cfg.AC.RECEIVER.CENTER,
+        sun_directions=sun_directions,
         setup_params=False,
     )
     discrete_points, normals = mnh.discrete_points_and_normals()
@@ -288,15 +298,20 @@ def _multi_nurbs_to_standard(
     return H
 
 
-def build_target_heliostat(cfg: CfgNode, device: th.device) -> Heliostat:
+def build_target_heliostat(
+        cfg: CfgNode,
+        sun_directions: torch.Tensor,
+        device: th.device,
+) -> Heliostat:
     if cfg.H.SHAPE.lower() == 'nurbs':
-        mnh = _build_multi_nurbs_target(cfg, device)
-        H = _multi_nurbs_to_standard(cfg, mnh)
+        mnh = _build_multi_nurbs_target(cfg, sun_directions, device)
+        H = _multi_nurbs_to_standard(cfg, sun_directions, mnh)
     else:
         H = Heliostat(
             cfg.H,
             device,
             receiver_center=cfg.AC.RECEIVER.CENTER,
+            sun_directions=sun_directions,
             setup_params=False,
         )
     return H
@@ -304,10 +319,11 @@ def build_target_heliostat(cfg: CfgNode, device: th.device) -> Heliostat:
 
 def build_heliostat(
         cfg: CfgNode,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> AbstractHeliostat:
     if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
-        H = load_heliostat(cfg, device)
+        H = load_heliostat(cfg, sun_directions, device)
     else:
         if cfg.USE_NURBS:
             H = MultiNURBSHeliostat(
@@ -315,12 +331,14 @@ def build_heliostat(
                 cfg.NURBS,
                 device,
                 receiver_center=cfg.AC.RECEIVER.CENTER,
+                sun_directions=sun_directions,
             )
         else:
             H = Heliostat(
                 cfg.H,
                 device,
                 receiver_center=cfg.AC.RECEIVER.CENTER,
+                sun_directions=sun_directions,
             )
     return H
 
@@ -420,12 +438,12 @@ def main(config_file_name: Optional[str] = None) -> None:
         ),
     ) = set_up_dataset_caching(device, writer)
     cached_build_target_heliostat = cast(
-        Callable[[CfgNode, th.device], Heliostat],
+        Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
         disk_cache.disk_cache(
             build_target_heliostat,
             device,
             'cached',
-            ignore_argnums=[1],
+            ignore_argnums=[2],
         ),
     )
 
@@ -439,10 +457,10 @@ def main(config_file_name: Optional[str] = None) -> None:
         f"{cfg.AC.RECEIVER.RESOLUTION_Y}"
     )
     print("=============================")
-    H_target = cached_build_target_heliostat(cfg, device)
-    ENV = Environment(cfg.AC, device)
     sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
+    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    ENV = Environment(cfg.AC, device)
 
     if cfg.TRAIN.USE_IMAGES:
         assert cfg.TRAIN.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
@@ -487,7 +505,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     else:
         target_sets = None
 
-    H_naive_target = cached_build_target_heliostat(cfg, device)
+    H_naive_target = cached_build_target_heliostat(cfg, sun_directions, device)
     H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
     naive_targets = cached_generate_pretrain_dataset(
         H_naive_target,
@@ -549,7 +567,8 @@ def main(config_file_name: Optional[str] = None) -> None:
     # state = th.random.get_rng_state()
 
     if cfg.TEST.PLOT.GRID or cfg.TEST.PLOT.SPHERIC or cfg.TEST.PLOT.SEASON:
-        H_validation = cached_build_target_heliostat(cfg, device)
+        H_validation = cached_build_target_heliostat(
+            cfg, sun_directions, device)
         ENV_validation = Environment(cfg.AC, device)
     if cfg.TEST.PLOT.GRID:
         (
@@ -568,7 +587,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             "grid",
         )
         # # th.random.set_rng_state(state)
-        H_naive_grid = cached_build_target_heliostat(cfg, device)
+        H_naive_grid = cached_build_target_heliostat(
+            cfg, sun_directions, device)
         H_naive_grid._normals = H_naive_grid.get_raw_normals_ideal()
         naive_grid_targets = cached_generate_naive_grid_dataset(
             H_naive_grid,
@@ -595,7 +615,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             "spheric",
         )
 
-        H_naive_spheric = cached_build_target_heliostat(cfg, device)
+        H_naive_spheric = cached_build_target_heliostat(
+            cfg, sun_directions, device)
         H_naive_spheric._normals = H_naive_spheric.get_raw_normals_ideal()
         naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
             H_naive_spheric,
@@ -622,7 +643,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             None,
             "season",
         )
-        H_naive_season = cached_build_target_heliostat(cfg, device)
+        H_naive_season = cached_build_target_heliostat(
+            cfg, sun_directions, device)
         H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
         naive_season_test_targets = cached_generate_naive_season_dataset(
             H_naive_season,
@@ -639,7 +661,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     print("Initialize Diff Raytracing")
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
-    H = build_heliostat(cfg, device)
+    H = build_heliostat(cfg, sun_directions, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
 

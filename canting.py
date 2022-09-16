@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple, Type, TYPE_CHECKING, TypeVar
 
+import pytorch3d.transforms as throt
 import torch
 import torch as th
 from yacs.config import CfgNode
@@ -43,6 +44,13 @@ class StandardCantingParams(CantingParams):
     position_on_field: torch.Tensor
 
 
+@dataclass
+class FirstSunCantingParams(CantingParams):
+    sun_direction: torch.Tensor
+    focus_point: torch.Tensor
+    disturbance_angles: List[torch.Tensor]
+
+
 def _subclass_tree(supertype: Type[S]) -> Set[Type[C]]:
     children = supertype.__subclasses__()
     # Avoid for-loop because we're growing the list in the loop.
@@ -81,12 +89,28 @@ def is_like_active(algo: Optional[CantingAlgorithm]) -> bool:
 
 def get_canting_params(
         heliostat: 'AbstractHeliostat',
+        sun_direction: Optional[torch.Tensor],
 ) -> Optional[CantingParams]:
     if (
             heliostat.canting_enabled
-            and not heliostat.canting_algo is CantingAlgorithm.ACTIVE
+            and isinstance(heliostat.canting_algo, FirstSunCanting)
     ):
-        canting_params: Optional[CantingParams] = StandardCantingParams(
+        assert sun_direction is not None, \
+            'need sun direction to cant towards'
+        assert heliostat.focus_point is not None, (
+            'need focus point for perfectly canting towards the '
+            'first sun'
+        )
+        canting_params: Optional[CantingParams] = FirstSunCantingParams(
+            sun_direction,
+            heliostat.focus_point,
+            heliostat.disturbance_angles,
+        )
+    elif (
+            heliostat.canting_enabled
+            and not is_like_active(heliostat.canting_algo)
+    ):
+        canting_params = StandardCantingParams(
             heliostat.focus_point,
             heliostat.position_on_field,
         )
@@ -316,7 +340,9 @@ def decant_facet(
     decanted_normal = facet_normals_ideal.mean(dim=0)
     decanted_normal /= th.linalg.norm(decanted_normal)
 
-    if canting_params is not None:
+    if canting_params is None:
+        canted_normal = orig_normal
+    elif isinstance(canting_params, StandardCantingParams):
         canted_normal = get_focus_normal(
             canting_params.focus_point,
             canting_params.position_on_field,
@@ -324,8 +350,21 @@ def decant_facet(
             decanted_normal,
             ideal_normal,
         )
+    elif isinstance(canting_params, FirstSunCantingParams):
+        from heliostat_models import heliostat_coord_system, _rotate
+        alignment = th.stack(heliostat_coord_system(
+            facet_position,
+            canting_params.sun_direction,
+            canting_params.focus_point,
+            target_normal,
+            canting_params.disturbance_angles,
+        ))
+        align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
+        _, facet_normals_ideal_rot = _rotate(
+            facet_discrete_points_ideal, facet_normals_ideal, align_origin)
+        canted_normal = facet_normals_ideal_rot.mean(dim=0)
     else:
-        canted_normal = orig_normal
+        raise ValueError('encountered unhandled canting parameters')
 
     cant_rot = utils.get_rot_matrix(decanted_normal, canted_normal)
     return (

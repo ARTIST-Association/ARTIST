@@ -87,6 +87,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config: CfgNode,
             device: th.device,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
             setup_params: bool = True,
     ) -> None:
         super().__init__(
@@ -94,6 +99,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device,
             setup_params=False,
             receiver_center=receiver_center,
+            sun_directions=sun_directions,
         )
         assert len(self.facets.positions) == 1, (
             'cannot handle multiple facets with `NURBSHeliostat`; '
@@ -381,6 +387,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly: bool = False,
@@ -396,6 +407,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             device,
             receiver_center=receiver_center,
+            sun_directions=sun_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)

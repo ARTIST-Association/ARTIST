@@ -570,6 +570,25 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
 # Heliostat-specific functions
 # ============================
 
+def to_sun_direction(
+        sun_directions: Union[torch.Tensor, List[List[float]], None],
+        device: th.device,
+) -> Optional[torch.Tensor]:
+    if (
+            sun_directions is not None
+            and not isinstance(sun_directions, th.Tensor)
+    ):
+        sun_directions = th.tensor(
+            sun_directions,
+            dtype=th.get_default_dtype(),
+            device=device,
+        )
+    if sun_directions is not None:
+        sun_direction = sun_directions[0]
+        assert sun_direction.shape == (3,)
+    return sun_direction
+
+
 # def rotate(h, hel_coordsystem, clockwise: bool):
 #     r = rot_from_matrix(hel_coordsystem)
 #     euler = rot_as_euler(r, 'xyx', degrees=True)
@@ -811,6 +830,11 @@ class Heliostat(AbstractHeliostat):
             device: th.device,
             setup_params: bool = True,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
     ) -> None:
         self.cfg = heliostat_config
         if not self.cfg.is_frozen():
@@ -827,12 +851,14 @@ class Heliostat(AbstractHeliostat):
                 dtype=th.get_default_dtype(),
                 device=device,
             )
+        maybe_sun_direction = to_sun_direction(sun_directions, self.device)
+
         self._to_optimize: List[str] = self.cfg.TO_OPTIMIZE
 
         self._checked_dict = False
         self.params: Union[Dict[str, Any], CfgNode, None] = None
 
-        self.load(receiver_center)
+        self.load(receiver_center, maybe_sun_direction)
         if setup_params:
             self.setup_params()
 
@@ -880,6 +906,7 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
+            maybe_sun_direction: Optional[torch.Tensor],
     ) -> None:
         if self.canting_enabled:
             focus_point = canting.get_focus_point(
@@ -902,6 +929,7 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal,
             normals,
             normals_ideal,
+            maybe_sun_direction,
         )
 
     def _get_aim_point(
@@ -933,7 +961,11 @@ class Heliostat(AbstractHeliostat):
             for angle in angles
         ]
 
-    def load(self, maybe_aim_point: Optional[torch.Tensor]) -> None:
+    def load(
+            self,
+            maybe_aim_point: Optional[torch.Tensor],
+            maybe_sun_direction: Optional[torch.Tensor],
+    ) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
 
@@ -971,6 +1003,7 @@ class Heliostat(AbstractHeliostat):
             heliostat_ideal,
             heliostat_normals,
             heliostat_ideal_vecs,
+            maybe_sun_direction,
         )
         self.params = params
         self.height = height
@@ -1113,6 +1146,11 @@ class Heliostat(AbstractHeliostat):
             device: th.device,
             config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly: bool = True,
@@ -1125,6 +1163,7 @@ class Heliostat(AbstractHeliostat):
             config,
             device,
             receiver_center=receiver_center,
+            sun_directions=sun_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)

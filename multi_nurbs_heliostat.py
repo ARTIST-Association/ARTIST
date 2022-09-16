@@ -145,13 +145,22 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device: th.device,
             setup_params: bool = True,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
     ) -> None:
         super().__init__(
             heliostat_config,
             device,
             setup_params=False,
             receiver_center=receiver_center,
+            sun_directions=sun_directions,
         )
+        maybe_sun_direction = heliostat_models.to_sun_direction(
+            sun_directions, self.device)
+
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
@@ -222,7 +231,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self._inherit_canting()
 
         facets_and_rots = self._create_facets(
-            self.cfg, self.nurbs_cfg)
+            self.cfg,
+            self.nurbs_cfg,
+            maybe_sun_direction,
+        )
         self.facets = NURBSFacets(
             self,
             [tup[0] for tup in facets_and_rots],
@@ -265,6 +277,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet: NURBSHeliostat,
             facet_index: int,
             position: torch.Tensor,
+            sun_direction: Optional[torch.Tensor],
     ) -> torch.Tensor:
         assert not isinstance(self.facets, NURBSFacets)
         # We calculate everything anew again here because the canting
@@ -288,7 +301,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet_normals_ideal = self.facets.align_normals_ideal(
             force_canting=True)[facet_slice]
 
-        canting_params = canting.get_canting_params(self)
+        canting_params = canting.get_canting_params(self, sun_direction)
         (
             facet_discrete_points,
             facet_discrete_points_ideal,
@@ -439,6 +452,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e: torch.Tensor,
             orig_nurbs_config: CfgNode,
             nurbs_config: CfgNode,
+            sun_direction: Optional[torch.Tensor],
     ) -> torch.Tensor:
         # "Load" values from parent heliostat.
         facet._discrete_points = self._discrete_points
@@ -454,7 +468,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facet.width = nurbs_config.WIDTH
         # TODO initialize NURBS correctly
         # facet.position_on_field = self.position_on_field + position
-        cant_rot = self._set_facet_points(facet, facet_index, position)
+        cant_rot = self._set_facet_points(
+            facet,
+            facet_index,
+            position,
+            sun_direction,
+        )
 
         facet.nurbs_cfg.defrost()
         facet.nurbs_cfg.SET_UP_WITH_KNOWLEDGE = \
@@ -475,6 +494,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e: torch.Tensor,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
+            sun_direction: Optional[torch.Tensor],
     ) -> Tuple[NURBSHeliostat, torch.Tensor]:
         orig_nurbs_config = nurbs_config
         heliostat_config = self._facet_heliostat_config(
@@ -499,6 +519,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e,
             orig_nurbs_config,
             nurbs_config,
+            sun_direction,
         )
         return facet, cant_rot
 
@@ -506,6 +527,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
+            sun_direction: Optional[torch.Tensor],
     ) -> List[Tuple[NURBSHeliostat, torch.Tensor]]:
         return [
             self._create_facet(
@@ -515,6 +537,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 span_e,
                 heliostat_config,
                 nurbs_config,
+                sun_direction,
             )
             for (i, (position, span_n, span_e)) in enumerate(zip(
                     self.facets.positions,
@@ -600,6 +623,11 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
+            sun_directions: Union[
+                torch.Tensor,
+                List[List[float]],
+                None,
+            ] = None,
             # Wether to disregard what standard initialization did and
             # load all data we have.
             restore_strictly: bool = False,
@@ -615,6 +643,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             device,
             receiver_center=receiver_center,
+            sun_directions=sun_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)
@@ -676,7 +705,12 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         ):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat.discrete_points_and_normals(
-                    cast(MultiNURBSHeliostat, self), reposition=False)
+                    cast(MultiNURBSHeliostat, self),
+                    reposition=isinstance(
+                        self._heliostat.canting_algo,
+                        canting.FirstSunCantingAlgorithm,
+                    ),
+                )
             hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             hel_rotated, normal_vectors_rotated = \

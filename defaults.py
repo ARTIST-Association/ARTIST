@@ -70,13 +70,16 @@ _C.NURBS.FACETS.CANTING = CN()
 # When the canting algorithm is 'active', any value other than 0 is
 # ignored and treated as if it was `None`.
 _C.NURBS.FACETS.CANTING.FOCUS_POINT = 'inherit'
-# Canting algorithm can be 'standard' or 'active'.
+# Canting algorithm can be 'standard', 'active', or 'first_sun'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
 #   the heliostat center at the distance of the receiver.
 # - In active canting, each facet is canted perfectly onto the receiver
 #   center for each sun position. This means the focus point is always
 #   treated as if it was `None`.
+# - First sun specifies a mix of the two. The heliostat is canted
+#   perfectly (i.e. actively) for the first sun position. This canting
+#   only happens once at the start, not for each alignment.
 #
 # If 'inherit', use the canting algorithm from the loaded heliostat.
 _C.NURBS.FACETS.CANTING.ALGORITHM = 'inherit'
