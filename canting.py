@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-import enum
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Set, Tuple, Type, TYPE_CHECKING, TypeVar
 
 import torch
 import torch as th
@@ -10,11 +9,28 @@ if TYPE_CHECKING:
     from heliostat_models import AbstractHeliostat
 import utils
 
+S = TypeVar('S')
+C = TypeVar('C', bound=S)
 
-@enum.unique
-class CantingAlgorithm(enum.Enum):
-    STANDARD = 'standard'
-    ACTIVE = 'active'
+
+class CantingAlgorithm:
+    name: str
+
+
+class ActiveCantingAlgorithm(CantingAlgorithm):
+    pass
+
+
+class StandardCanting(CantingAlgorithm):
+    name = 'standard'
+
+
+class ActiveCanting(ActiveCantingAlgorithm):
+    name = 'active'
+
+
+class FirstSunCanting(ActiveCantingAlgorithm):
+    name = 'first_sun'
 
 
 class CantingParams:
@@ -27,12 +43,23 @@ class StandardCantingParams(CantingParams):
     position_on_field: torch.Tensor
 
 
+def _subclass_tree(supertype: Type[S]) -> Set[Type[C]]:
+    children = supertype.__subclasses__()
+    # Avoid for-loop because we're growing the list in the loop.
+    i = 0
+    while i < len(children):
+        child = children[i]
+        children.extend(child.__subclasses__())
+        i += 1
+    return set(children)
+
+
 def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
     canting_algo = next(
         (
-            algo
-            for algo in CantingAlgorithm
-            if canting_cfg.ALGORITHM == algo.value
+            algo()
+            for algo in _subclass_tree(CantingAlgorithm)
+            if hasattr(algo, 'name') and canting_cfg.ALGORITHM == algo.name
         ),
         None,
     )
@@ -46,6 +73,10 @@ def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
 
 def canting_enabled(canting_cfg: CfgNode) -> bool:
     return canting_cfg.FOCUS_POINT != 0
+
+
+def is_like_active(algo: Optional[CantingAlgorithm]) -> bool:
+    return isinstance(algo, ActiveCantingAlgorithm)
 
 
 def get_canting_params(

@@ -101,7 +101,7 @@ def cant_and_merge_facet_vectors(
         device=facetted_vectors[0].device,
     )
     do_canting = (
-        facets._canting_algo is not CantingAlgorithm.ACTIVE
+        not canting.is_like_active(facets._canting_algo)
         or force_canting
     )
 
