@@ -583,7 +583,9 @@ def to_sun_direction(
             dtype=th.get_default_dtype(),
             device=device,
         )
-    if sun_directions is not None:
+    if sun_directions is None:
+        sun_direction = None
+    else:
         sun_direction = sun_directions[0]
         assert sun_direction.shape == (3,)
     return sun_direction
