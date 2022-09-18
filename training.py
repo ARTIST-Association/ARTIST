@@ -288,24 +288,27 @@ def build_loss_funcs(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
     ) -> torch.Tensor:
-        pred_threshold = pred_bitmap.mean()
         target_threshold = target_bitmap.mean()
 
-        pred_positions = (
-            th.nonzero(pred_bitmap >= pred_threshold)
-            / pred_bitmap.numel()
-        )
+        device = pred_bitmap.device
+        dtype = pred_bitmap.dtype
+        pixel_indices = th.cartesian_prod(
+            th.arange(pred_bitmap.shape[0], device=device, dtype=dtype),
+            th.arange(pred_bitmap.shape[1], device=device, dtype=dtype),
+        ) / pred_bitmap.numel()
+
         target_positions = (
             th.nonzero(target_bitmap >= target_threshold)
             / target_bitmap.numel()
         )
 
         pixel_distances = th.cdist(
-            pred_positions,
+            pixel_indices,
             target_positions,
             p=cfg.HAUSDORFF.NORM_P,
         )
         closest_distances = pixel_distances.min(dim=-1)[0]
+        closest_distances *= pred_bitmap.ravel()
 
         pixel_closeness_loss = (
             closest_distances.mean()
