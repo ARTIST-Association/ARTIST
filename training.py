@@ -253,6 +253,7 @@ def build_loss_funcs(
 
     loss_factor: float = cfg.FACTOR
     miss_loss_factor: float = cfg.MISS.FACTOR
+    pixel_closeness_loss_factor: float = cfg.PIXEL_CLOSENESS.FACTOR
     alignment_loss_factor: float = cfg.ALIGNMENT.FACTOR
     hausdorff_loss_factor: float = cfg.HAUSDORFF.FACTOR
 
@@ -281,6 +282,35 @@ def build_loss_funcs(
         ) * miss_loss_factor
         miss_loss /= pred_bitmap.numel()
         return miss_loss
+
+    def pixel_closeness_loss_func(
+            pred_bitmap: torch.Tensor,
+            target_bitmap: torch.Tensor,
+    ) -> torch.Tensor:
+        pred_threshold = pred_bitmap.mean()
+        target_threshold = target_bitmap.mean()
+
+        pred_positions = (
+            th.nonzero(pred_bitmap >= pred_threshold)
+            / pred_bitmap.numel()
+        )
+        target_positions = (
+            th.nonzero(target_bitmap >= target_threshold)
+            / target_bitmap.numel()
+        )
+
+        pixel_distances = th.cdist(
+            pred_positions,
+            target_positions,
+            p=cfg.HAUSDORFF.NORM_P,
+        )
+        closest_distances = pixel_distances.min(dim=-1)[0]
+
+        pixel_closeness_loss = (
+            closest_distances.mean()
+            * pixel_closeness_loss_factor
+        )
+        return pixel_closeness_loss
 
     def hausdorff_loss_func(
             pred_bitmap: torch.Tensor,
@@ -332,6 +362,11 @@ def build_loss_funcs(
         # Penalize misses
         miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
         loss += miss_loss
+
+        # Make pred pixels move to target pixels
+        pixel_closeness_loss = pixel_closeness_loss_func(
+            pred_bitmap, target_bitmap)
+        loss += pixel_closeness_loss
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
