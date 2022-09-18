@@ -102,6 +102,7 @@ def cant_and_merge_facet_vectors(
     )
     do_canting = (
         not canting.is_like_active(facets._canting_algo)
+        or isinstance(facets._canting_algo, canting.FirstSunCanting)
         or force_canting
     )
 
