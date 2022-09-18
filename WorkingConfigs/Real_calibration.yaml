@@ -168,6 +168,7 @@ TEST:
         - 0.7004466
         - 0.564125
 TRAIN:
+  IMG_INTERVAL: 15
   EPOCHS: 2500
   USE_IMAGES: true
   LOSS:

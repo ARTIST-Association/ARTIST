@@ -251,6 +251,7 @@ TEST:
         - 0.564125
   USE_IMAGES: false
 TRAIN:
+  IMG_INTERVAL: 15
   EPOCHS: 2500
   IMAGES:
     PATHS:

@@ -51,6 +51,7 @@ TrainObjects = collections.namedtuple(
         'target_sets',
         'sun_directions',
         'loss_func',
+        'config',
         'epoch',
         'prefix',
         'writer',
@@ -434,6 +435,7 @@ def calc_batch_loss(
         target_sets,
         sun_directions,
         loss_func,
+        config,
         epoch,
         prefix,
         writer,
@@ -483,7 +485,7 @@ def calc_batch_loss(
 
         with th.no_grad():
             # Plot target images to TensorBoard
-            if writer and epoch % 50 == 0:
+            if writer and epoch % config.TRAIN.IMG_INTERVAL == 0:
                 writer.add_image(
                     f"{prefix}/prediction_{i}",
                     utils.colorize(pred_bitmap),
