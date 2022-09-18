@@ -358,6 +358,8 @@ def decant_facet(
         align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
         facet_normals_ideal_rot = align_origin.transform_normals(
             facet_normals_ideal)
+        # FIXME The canting here is different from active canting. It
+        #       shouldn't be.
         canted_normal = facet_normals_ideal_rot.mean(dim=0)
     else:
         raise ValueError('encountered unhandled canting parameters')
