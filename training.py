@@ -327,9 +327,11 @@ def build_loss_funcs(
             pred_bitmap,
             target_bitmap,
         )
+        loss = raw_loss.clone()
 
         # Penalize misses
         miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
+        loss += miss_loss
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
@@ -345,11 +347,11 @@ def build_loss_funcs(
                 else target_z_alignment
             ),
         ) * alignment_loss_factor
+        loss += alignment_loss
 
         # Weighted Hausdorff loss
         hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
-
-        loss = raw_loss.clone() + miss_loss + alignment_loss + hausdorff_loss
+        loss += hausdorff_loss
 
         if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
             weight_penalty = l1_weight_penalty(opt, None)
