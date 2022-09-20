@@ -26,7 +26,7 @@ AC:
       - 0
     REDRAW_RANDOM_VARIABLES: false
 CP_PATH: ''
-EXPERIMENT_NAME: MakeRunableAgain
+EXPERIMENT_NAME: Focused
 H:
   DEFLECT_DATA:
     AIM_POINT: null
@@ -188,7 +188,7 @@ H:
   SHAPE: real
   TO_OPTIMIZE:
   - facet_positions
-ID: Best10m
+ID: FieldOpt
 LOAD_OPTIMIZER_STATE: false
 NURBS:
   AIM_POINT: inherit
