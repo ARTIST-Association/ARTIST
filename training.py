@@ -305,7 +305,7 @@ def build_loss_funcs(
         pixel_distances = th.cdist(
             pixel_indices,
             target_positions,
-            p=cfg.HAUSDORFF.NORM_P,
+            p=cfg.PIXEL_CLOSENESS.NORM_P,
         )
         closest_distances = pixel_distances.min(dim=-1)[0]
         closest_distances *= pred_bitmap.ravel()
