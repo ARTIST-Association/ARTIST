@@ -147,7 +147,13 @@ def generalized_mean(
         vals: torch.Tensor,
         dim: int = -1,
         mean_p: float = -1.0,
+        epsilon: float = 1e-6
 ) -> torch.Tensor:
+    vals = th.where(
+        vals == 0,
+        epsilon,
+        vals,
+    )
     return vals.pow(mean_p).mean(dim).pow(1 / mean_p)
 
 
@@ -216,6 +222,7 @@ def weighted_hausdorff_distance(
                 contributions,
                 dim=0,
                 mean_p=mean_p,
+                epsilon=epsilon,
             ).mean()
 
             weighted_dist = point_estimate_loss + contribution_loss
