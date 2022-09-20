@@ -328,7 +328,7 @@ TRAIN:
       MODE: triangular2
       STEP_SIZE_UP: 100
     EXP:
-      GAMMA: 0.99
+      GAMMA: 0.999
     NAME: Exponential
     ONE_CYCLE:
       FINAL_LR: 1.0e-08
