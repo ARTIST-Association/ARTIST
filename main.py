@@ -368,7 +368,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ==============
     if cfg.SAVE_RESULTS:
         now = datetime.now()
-        time_str = now.strftime("%y%m%d_%H%M")
+        time_str = now.strftime("%y%m%d_%H%M%S")
 
         logdir: Optional[str] = cfg.LOGDIR
         assert logdir is not None
