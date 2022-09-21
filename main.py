@@ -669,7 +669,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # ===========
 
     pretrain_epochs: int = cfg.TRAIN.PRETRAIN_EPOCHS
-    steps_per_epoch = int(th.ceil(th.tensor(pretrain_epochs / len(targets))))
+    steps_per_epoch = 1
     opt, sched = training.build_optimizer_scheduler(
         cfg,
         pretrain_epochs * steps_per_epoch,
@@ -752,7 +752,7 @@ def main(config_file_name: Optional[str] = None) -> None:
     # )
 
     epochs: int = cfg.TRAIN.EPOCHS
-    steps_per_epoch = int(th.ceil(th.tensor(epochs / len(targets))))
+    steps_per_epoch = 1
 
     opt, sched = training.build_optimizer_scheduler(
         cfg,
