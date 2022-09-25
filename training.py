@@ -155,7 +155,8 @@ def _build_scheduler(
         cfg = cfg_scheduler.ONE_CYCLE
         sched = th.optim.lr_scheduler.OneCycleLR(  # type: ignore[attr-defined]
             opt,
-            total_steps=total_steps,
+            # Handle zero steps (e.g. for no pretraining).
+            total_steps=max(total_steps, 1),
             max_lr=cfg.MAX_LR,
             pct_start=cfg.PCT_START,
             div_factor=cfg.MAX_LR / cfg.START_LR,
