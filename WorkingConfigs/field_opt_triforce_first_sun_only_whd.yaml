@@ -26,7 +26,7 @@ AC:
       - 0
     REDRAW_RANDOM_VARIABLES: false
 CP_PATH: ''
-EXPERIMENT_NAME: SquaresOnlyWHD
+EXPERIMENT_NAME: TriforceOnlyWHD
 H:
   DEFLECT_DATA:
     AIM_POINT: null
@@ -254,7 +254,7 @@ TRAIN:
   EPOCHS: 500
   IMAGES:
     PATHS:
-    - target_squares.png
+    - Triforce.png
   IMG_INTERVAL: 15
   LOSS:
     ALIGNMENT:

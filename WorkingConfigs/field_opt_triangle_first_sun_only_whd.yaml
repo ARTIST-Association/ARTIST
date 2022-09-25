@@ -26,7 +26,7 @@ AC:
       - 0
     REDRAW_RANDOM_VARIABLES: false
 CP_PATH: ''
-EXPERIMENT_NAME: SquaresOnlyWHD
+EXPERIMENT_NAME: TriangleOnlyWHD
 H:
   DEFLECT_DATA:
     AIM_POINT: null
@@ -254,7 +254,7 @@ TRAIN:
   EPOCHS: 500
   IMAGES:
     PATHS:
-    - target_squares.png
+    - target_triangle.png
   IMG_INTERVAL: 15
   LOSS:
     ALIGNMENT:
@@ -266,9 +266,9 @@ TRAIN:
     FACTOR: 6.0e+05
     HAUSDORFF:
       CONTOUR_VALS:
-      - 0.0009
+      - 0.0021
       - 1.0
-      CONTOUR_VAL_RADIUS: 0.0001
+      CONTOUR_VAL_RADIUS: 0.001
       FACTOR: 1.0
       MEAN_P: -1.0
       NORM_P: 2.0
@@ -295,11 +295,11 @@ TRAIN:
     WEIGHT_DECAY_FACTOR: 0.0
   OPTIMIZER:
     BETAS:
-    - 0.8
-    - 0.888
+    - 0.4
+    - 0.444
     EPS: 1.0e-08
     FACET_POSITIONS:
-      LR: 0.15
+      LR: 0.2
       WEIGHT_DECAY: 0.0
     LR: 0.0001
     NAME: Adam
