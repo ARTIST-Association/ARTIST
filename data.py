@@ -563,8 +563,10 @@ def load_images(
             image - image.mean(),
             min=0,
         )),
-        # Normalize to [0, 1], same as renderer.
-        thv.transforms.Lambda(lambda image: image / image.max()),
+        # # Normalize to [0, 1].
+        # thv.transforms.Lambda(lambda image: image / image.max()),
+        # Normalize intensities, same as renderer.
+        thv.transforms.Lambda(lambda image: image / image.sum()),
     ])
     targets = th.stack(list(map(img_transform, target_imgs)))
     log_dataset(prefix, writer, targets)

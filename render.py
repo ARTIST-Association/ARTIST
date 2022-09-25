@@ -349,6 +349,7 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
+        total_bitmap = total_bitmap / total_bitmap.sum()
         target_num_missed = indices.numel() - indices.count_nonzero()
 
         if target_num_missed > 0:
