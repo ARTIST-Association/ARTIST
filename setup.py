@@ -13,6 +13,16 @@ pip install -r requirements.txt
 
 import os
 from setuptools import find_packages, setup
+import subprocess
+import sys
+
+TORCH_REQUIREMENT = 'torch>=1.8,<2.0'
+
+# Install PyTorch 'manually' because it has to be installed for
+# PyTorch3D. `pip` dependency resolution cannot fix this.
+# This is the officially recommended way to use `pip` in scripts.
+subprocess.check_call(
+    [sys.executable, '-m', 'pip', 'install', TORCH_REQUIREMENT])
 
 os.environ['PYTORCH3D_NO_EXTENSION'] = '1'
 
@@ -28,7 +38,7 @@ setup(
             '@ git+https://github.com/facebookresearch/pytorch3d.git@stable'
         ),
         'tensorboard>=2.0,<3.0',
-        'torch>=1.8,<2.0',
+        TORCH_REQUIREMENT,
         'torchvision==0.9.1',
         'yacs==0.1.8',
     ],
