@@ -11,7 +11,10 @@ pip install -r requirements.txt
 ```
 """
 
+import os
 from setuptools import find_packages, setup
+
+os.environ['PYTORCH3D_NO_EXTENSION'] = '1'
 
 setup(
     name='diff_stral',
