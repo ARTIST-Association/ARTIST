@@ -1,4 +1,12 @@
 """
+Pure Python-based installation instructions (Linux):
+
+```
+python -m venv ./env
+source ./env/bin/activate
+python -m pip install .
+```
+
 Conda-based installation instructions (Linux):
 
 ```
