@@ -1,13 +1,10 @@
 """
-Conda-based installation instructions:
+Conda-based installation instructions (Linux):
 
 ```
 conda create -p ./env python=3.8
 conda activate ./env
-conda install pytorch torchvision cudatoolkit=11.6 -c pytorch -c conda-forge
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath
-conda install -c bottler nvidiacub
-pip install -r requirements.txt
+pip install .
 ```
 """
 
