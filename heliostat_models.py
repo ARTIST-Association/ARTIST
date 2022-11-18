@@ -1124,7 +1124,8 @@ class Heliostat(AbstractHeliostat):
     def _to_dict(self) -> Dict[str, Any]:
         data = self._fixed_dict()
         data.update({
-            'heliostat_normals': copy.deepcopy(self._normals),
+            # Cannot deepcopy, so do it manually.
+            'heliostat_normals': [normal.clone() for normal in self._normals],
 
             'position_on_field': self.position_on_field.clone(),
             'disturbance_rotation_angles_rad': [
