@@ -11,9 +11,11 @@ from yacs.config import CfgNode
 from environment import Environment
 import hausdorff_distance
 from heliostat_models import AbstractHeliostat, ParamGroups
+from pytorch_minimize.optim import BasinHoppingWrapper
 from render import Renderer
 import utils
 
+from matplotlib import pyplot as plt
 LossFn = Callable[
     [
         torch.Tensor,  # pred_bitmap
@@ -264,10 +266,10 @@ def build_loss_funcs(
             target_bitmap: torch.Tensor,
     ) -> torch.Tensor:
         loss = primitive_loss_func(pred_bitmap, target_bitmap)
-        loss /= pred_bitmap.numel()
+        # loss /= pred_bitmap.numel()
         loss *= loss_factor
         return loss
-
+    
     def miss_loss_func(
             pred_bitmap: torch.Tensor,
             dx_ints: torch.Tensor,
@@ -317,6 +319,7 @@ def build_loss_funcs(
         )
         return pixel_closeness_loss
 
+    
     def hausdorff_loss_func(
             pred_bitmap: torch.Tensor,
             target_set: Optional[torch.Tensor],
@@ -363,15 +366,10 @@ def build_loss_funcs(
             target_bitmap,
         )
         loss = raw_loss.clone()
-
+        
         # Penalize misses
         miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
         loss += miss_loss
-
-        # Make pred pixels move to target pixels
-        pixel_closeness_loss = pixel_closeness_loss_func(
-            pred_bitmap, target_bitmap)
-        loss += pixel_closeness_loss
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
@@ -392,6 +390,13 @@ def build_loss_funcs(
         # Weighted Hausdorff loss
         hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
         loss += hausdorff_loss
+        
+        # Make pred pixels move to target pixels
+        pixel_closeness_loss = pixel_closeness_loss_func(
+            pred_bitmap, target_bitmap)
+        loss += pixel_closeness_loss
+        
+
 
         if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
             weight_penalty = l1_weight_penalty(opt, None)
@@ -489,7 +494,7 @@ def calc_batch_loss(
 
         with th.no_grad():
             # Plot target images to TensorBoard
-            if writer and epoch % config.TRAIN.IMG_INTERVAL == 0:
+            if writer: # and epoch % config.TRAIN.IMG_INTERVAL == 0
                 writer.add_image(
                     f"{prefix}/prediction_{i}",
                     utils.colorize(pred_bitmap),

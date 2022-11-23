@@ -401,7 +401,6 @@ def get_z_alignments(
         for sun_dir in sun_directions
     ])
 
-
 def deflec_facet_zs(
         points: torch.Tensor,
         normals: torch.Tensor,
@@ -757,6 +756,48 @@ def ae_to_vec(
     return rot_vec
 
 
+def ae_to_vec(
+        az: torch.Tensor,
+        el: torch.Tensor,
+        srange: float = 1.0,
+        deg: bool = True,
+) -> torch.Tensor:
+    """
+    Azimuth, Elevation, Slant range to target to East, North, Up
+
+    Parameters
+    ----------
+    azimuth : float
+            azimuth clockwise from north (degrees)
+    elevation : float
+        elevation angle above horizon, neglecting aberrations (degrees)
+    srange : float
+        slant range [meters]
+    deg : bool, optional
+        degrees input/output  (False: radians in/out)
+
+    Returns
+    --------
+    e : float
+        East ENU coordinate (meters)
+    n : float
+        North ENU coordinate (meters)
+    u : float
+        Up ENU coordinate (meters)
+    """
+    if deg:
+        el = th.deg2rad(el)
+        az = th.deg2rad(az)
+
+    r = srange * th.cos(el)
+
+    rot_vec = th.stack(
+        [r * th.sin(az), r * th.cos(az), srange * th.sin(el)],
+        dim=1,
+    )
+    return rot_vec
+
+
 def colorize(
         image_tensor: torch.Tensor,
         colormap: str = 'jet',
@@ -784,7 +825,6 @@ def colorize(
     # print(colored_prediction_image.shape)
 
     return mapped_image
-
 
 def load_config_file(
         cfg: CfgNode,
@@ -1203,15 +1243,6 @@ def calc_reflection_normals(
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
-
-
-# def reflect_rays_(rays, normals):
-#     return rays - 2 * batch_dot(rays, normals) * normals
-
-
-# def reflect_rays(rays, normals):
-#     normals = normals / th.linalg.norm(normals, dim=-1).unsqueeze(-1)
-#     return reflect_rays_(rays, normals)
 
 
 def save_target(
