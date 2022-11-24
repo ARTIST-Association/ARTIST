@@ -42,6 +42,10 @@ setup(
             'pytorch3d '
             '@ git+https://github.com/facebookresearch/pytorch3d.git@stable'
         ),
+        (
+            'pytorch_minimize '
+            '@ git+https://github.com/janEbert/pytorch-minimize.git'
+        ),
         'tensorboard>=2.0,<3.0',
         TORCH_REQUIREMENT,
         'torchvision==0.9.1',
