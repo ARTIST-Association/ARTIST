@@ -323,7 +323,7 @@ class Renderer(object):
             distorted_ray_directions,
             surface_points,
         )
-        
+
         dx_ints = (  # TODO Make dependent on receiver plane
             intersections[:, :, 0]
             + self.ENV.receiver_plane_x / 2
@@ -349,7 +349,9 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
-        # total_bitmap = total_bitmap / total_bitmap.sum()
+        total_intensity = total_bitmap.sum()
+        if total_intensity:
+            total_bitmap = total_bitmap / total_intensity
         target_num_missed = indices.numel() - indices.count_nonzero()
 
         if target_num_missed > 0:

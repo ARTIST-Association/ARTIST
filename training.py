@@ -12,11 +12,9 @@ from yacs.config import CfgNode
 from environment import Environment
 import hausdorff_distance
 from heliostat_models import AbstractHeliostat, ParamGroups
-from pytorch_minimize.optim import BasinHoppingWrapper
 from render import Renderer
 import utils
 
-from matplotlib import pyplot as plt
 LossFn = Callable[
     [
         torch.Tensor,  # pred_bitmap
@@ -328,9 +326,9 @@ def build_loss_funcs(
     ) -> torch.Tensor:
         loss = primitive_loss_func(pred_bitmap, target_bitmap)
         loss *= loss_factor
-        # loss /= pred_bitmap.numel()
+        loss /= pred_bitmap.numel()
         return loss
-    
+
     def miss_loss_func(
             pred_bitmap: torch.Tensor,
             dx_ints: torch.Tensor,
@@ -347,6 +345,36 @@ def build_loss_funcs(
         ) * miss_loss_factor
         miss_loss /= pred_bitmap.numel()
         return miss_loss
+
+    def hausdorff_loss_func(
+            pred_bitmap: torch.Tensor,
+            target_set: Optional[torch.Tensor],
+    ) -> torch.Tensor:
+        if hausdorff_loss_factor != 0:
+            assert target_set is not None
+            weighted_hausdorff_dists = \
+                hausdorff_distance.weighted_hausdorff_distance(
+                    pred_bitmap.unsqueeze(0),
+                    [target_set],
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                    mean_p=cfg.HAUSDORFF.MEAN_P,
+                )
+            weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
+                10 * hausdorff_distance.max_hausdorff_distance(
+                    pred_bitmap.shape,
+                    pred_bitmap.device,
+                    pred_bitmap.dtype,
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                )
+            hausdorff_loss = (
+                weighted_hausdorff_dists.mean()
+                * hausdorff_loss_factor
+                / pred_bitmap.numel()
+            )
+        else:
+            hausdorff_loss = th.tensor(
+                0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
+        return hausdorff_loss
 
     def pixel_closeness_loss_func(
             pred_bitmap: torch.Tensor,
@@ -380,37 +408,6 @@ def build_loss_funcs(
         )
         return pixel_closeness_loss
 
-    
-    def hausdorff_loss_func(
-            pred_bitmap: torch.Tensor,
-            target_set: Optional[torch.Tensor],
-    ) -> torch.Tensor:
-        if hausdorff_loss_factor != 0:
-            assert target_set is not None
-            weighted_hausdorff_dists = \
-                hausdorff_distance.weighted_hausdorff_distance(
-                    pred_bitmap.unsqueeze(0),
-                    [target_set],
-                    norm_p=cfg.HAUSDORFF.NORM_P,
-                    mean_p=cfg.HAUSDORFF.MEAN_P,
-                )
-            weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
-                10 * hausdorff_distance.max_hausdorff_distance(
-                    pred_bitmap.shape,
-                    pred_bitmap.device,
-                    pred_bitmap.dtype,
-                    norm_p=cfg.HAUSDORFF.NORM_P,
-                )
-            hausdorff_loss = (
-                weighted_hausdorff_dists.mean()
-                * hausdorff_loss_factor
-                / pred_bitmap.numel()
-            )
-        else:
-            hausdorff_loss = th.tensor(
-                0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
-        return hausdorff_loss
-
     def loss_func(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
@@ -427,7 +424,7 @@ def build_loss_funcs(
             target_bitmap,
         )
         loss = raw_loss.clone()
-        
+
         # Penalize misses
         miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
         loss += miss_loss
@@ -451,13 +448,11 @@ def build_loss_funcs(
         # Weighted Hausdorff loss
         hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
         loss += hausdorff_loss
-        
+
         # Make pred pixels move to target pixels
         pixel_closeness_loss = pixel_closeness_loss_func(
             pred_bitmap, target_bitmap)
         loss += pixel_closeness_loss
-        
-
 
         if (
                 isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper))
@@ -558,7 +553,7 @@ def calc_batch_loss(
 
         with th.no_grad():
             # Plot target images to TensorBoard
-            if writer: # and epoch % config.TRAIN.IMG_INTERVAL == 0
+            if writer and epoch % config.TRAIN.IMG_INTERVAL == 0:
                 writer.add_image(
                     f"{prefix}/prediction_{i}",
                     utils.colorize(pred_bitmap),

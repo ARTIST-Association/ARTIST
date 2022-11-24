@@ -2,6 +2,7 @@ import datetime
 import os
 import time as to_time
 from typing import Any, Dict, List, Optional, Union
+
 import matplotlib
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -15,7 +16,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from heliostat_models import AbstractHeliostat
 import utils
-
 
 
 def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
@@ -53,6 +53,7 @@ def test_surfaces(H: AbstractHeliostat) -> None:
     plt.show()
     exit()
 
+
 @th.no_grad()
 def plot_surfaces_mrad(
         heliostat_target: AbstractHeliostat,
@@ -83,7 +84,10 @@ def plot_surfaces_mrad(
 
     # if writer:
     #     writer.add_scalar(
-    #         "test/normal_diffs", th.sum(diff_angles) / len(diff_angles), epoch)
+    #         "test/normal_diffs",
+    #         th.sum(diff_angles) / len(diff_angles),
+    #         epoch,
+    #     )
 
     # Get discrete points
     target_points = heliostat_target.discrete_points
@@ -102,9 +106,7 @@ def plot_surfaces_mrad(
     # pred = pred[pred[:, -1] >= th.max(target[:, -1])]
     diff = diff_points
 
-
     fig = plt.figure(figsize=(15, 6))
-
 
     gs = GridSpec(2, 3, width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
 
@@ -147,6 +149,7 @@ def plot_surfaces_mrad(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_mm(
         heliostat_target: AbstractHeliostat,
         heliostat_pred: AbstractHeliostat,
@@ -222,6 +225,7 @@ def plot_surfaces_mm(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_3D_mm(
         heliostat_pred: AbstractHeliostat,
         epoch: int,
@@ -255,6 +259,7 @@ def plot_surfaces_3D_mm(
     plt.close(fig)
 
 
+@th.no_grad()
 def plot_surfaces_3D_mrad(
         heliostat_target: AbstractHeliostat,
         heliostat_pred: AbstractHeliostat,
@@ -864,7 +869,8 @@ def spherical_loss_plot(
     plt.savefig(os.path.join(logdir, f"spheric_test_{epoch}"))
     plt.close(fig)
 
-def season_plot(
+
+def season_plot_other(
         season_extras: Dict[str, Any],
         ideal: torch.Tensor,
         prediction: torch.Tensor,
@@ -877,8 +883,8 @@ def season_plot(
     colormap = "hot"
     faktor = 1.3
     fig = plt.figure(figsize=(27, 8))
-    width_ratios = [1,1,1,0.1,1,1,1,0.1,1,1,1,0.1,1,1,1]
-    
+    width_ratios = [1, 1, 1, 0.1, 1, 1, 1, 0.1, 1, 1, 1, 0.1, 1, 1, 1]
+
     # fig = plt.figure(constrained_layout=True, figsize=(27, 10))
 
     gs = GridSpec(
@@ -891,8 +897,8 @@ def season_plot(
     )
 
     # fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
-    font_pred=[]
-    font_gt=[]
+    font_pred = []
+    font_gt = []
     for i in range(len(prediction_loss)):
         if prediction_loss[i] < ground_truth_loss[i]:
             font_pred.append("bold")
@@ -900,235 +906,437 @@ def season_plot(
         else:
             font_gt.append("bold")
             font_pred.append("normal")
-    
-    
-    # gs = GridSpec(3, 16, width_ratios, figure=fig)#width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
+
+    # gs = GridSpec(3, 16, width_ratios, figure=fig)
+    # width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
+
     # plt.subplots_adjust(wspace=0)
-    #9,12,15,18
+    # 9,12,15,18
     ax00 = fig.add_subplot(gs[0, 0])
     ax00.imshow(ground_truth[0]**faktor, cmap=colormap)
     ax00.axis('off')
     ax00.set_title("Ground Truth", size=18)
     string = 'Shortest Day'
-    ax00.text(-0.12, 0.5, string, horizontalalignment='center',
-         verticalalignment='center', rotation=90, size=18, transform=ax00.transAxes)
-    
+    ax00.text(
+        -0.12,
+        0.5,
+        string,
+        horizontalalignment='center',
+        verticalalignment='center',
+        rotation=90,
+        size=18,
+        transform=ax00.transAxes,
+    )
+
     ax01 = fig.add_subplot(gs[0, 1])
     ax01.imshow(ideal[0]**faktor, cmap=colormap)
     ax01.axis('off')
     ax01.set_title("Ideal", size=18)
-    ax01.text(0.5,-0.10, f"L1: {ground_truth_loss[0].item():.4f}", size=18, ha="center", 
-      transform=ax01.transAxes,fontweight=font_gt[0])
-    ax01.text(0.5,1.2, "9:00 a.m.", size=18, ha="center", 
-      transform=ax01.transAxes)
-    
+    ax01.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[0].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax01.transAxes,
+        fontweight=font_gt[0],
+    )
+    ax01.text(
+        0.5,
+        1.2,
+        "9:00 a.m.",
+        size=18,
+        ha="center",
+        transform=ax01.transAxes,
+    )
+
     ax02 = fig.add_subplot(gs[0, 2])
     ax02.imshow(prediction[0]**faktor, cmap=colormap)
     ax02.axis('off')
     ax02.set_title("Prediction", size=18)
-    ax02.text(0.5,-0.10, f"L1: {prediction_loss[0].item():.4f}", size=18, ha="center", 
-      transform=ax02.transAxes, fontweight=font_pred[0])
-    
+    ax02.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[0].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax02.transAxes,
+        fontweight=font_pred[0],
+    )
+
     ax04 = fig.add_subplot(gs[0, 4])
     ax04.imshow(ground_truth[1]**faktor, cmap=colormap)
     ax04.axis('off')
     ax04.set_title("Ground Truth", size=18)
-    
+
     ax05 = fig.add_subplot(gs[0, 5])
     ax05.imshow(ideal[1]**faktor, cmap=colormap)
     ax05.axis('off')
     ax05.set_title("Ideal", size=18)
-    ax05.text(0.5,-0.10, f"L1: {ground_truth_loss[1].item():.4f}", size=18, ha="center", 
-      transform=ax05.transAxes)
-    ax05.text(0.5,1.2, "12:00 p.m.", size=18, ha="center", 
-      transform=ax05.transAxes,fontweight=font_gt[1])
-    
+    ax05.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[1].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax05.transAxes,
+    )
+    ax05.text(
+        0.5,
+        1.2,
+        "12:00 p.m.",
+        size=18,
+        ha="center",
+        transform=ax05.transAxes,
+        fontweight=font_gt[1],
+    )
+
     ax06 = fig.add_subplot(gs[0, 6])
     ax06.imshow(prediction[1]**faktor, cmap=colormap)
     ax06.axis('off')
     ax06.set_title("Prediction", size=18)
-    ax06.text(0.5,-0.10, f"L1: {prediction_loss[1].item():.4f}", size=18, ha="center", 
-      transform=ax06.transAxes, fontweight=font_pred[1])
-    
+    ax06.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[1].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax06.transAxes, fontweight=font_pred[1],
+    )
+
     ax08 = fig.add_subplot(gs[0, 8])
     ax08.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax08.axis('off')
     ax08.set_title("Ground Truth", size=18)
-    
+
     ax09 = fig.add_subplot(gs[0, 9])
     ax09.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax09.axis('off')
     ax09.set_title("Ideal", size=18)
-    ax09.text(0.5,1.2, "03:00 p.m.", size=18, ha="center", 
-      transform=ax09.transAxes)
-    
+    ax09.text(
+        0.5,
+        1.2,
+        "03:00 p.m.",
+        size=18,
+        ha="center",
+        transform=ax09.transAxes,
+    )
+
     ax010 = fig.add_subplot(gs[0, 10])
     ax010.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax010.axis('off')
     ax010.set_title("Prediction", size=18)
-    
+
     ax012 = fig.add_subplot(gs[0, 12])
     ax012.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax012.axis('off')
     ax012.set_title("Ground Truth", size=18)
-    
+
     ax013 = fig.add_subplot(gs[0, 13])
     ax013.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax013.axis('off')
     ax013.set_title("Ideal", size=18)
-    ax013.text(0.5,1.2, "6:00 p.m.", size=18, ha="center", 
-      transform=ax013.transAxes)
-    
+    ax013.text(
+        0.5,
+        1.2,
+        "6:00 p.m.",
+        size=18,
+        ha="center",
+        transform=ax013.transAxes,
+    )
+
     ax014 = fig.add_subplot(gs[0, 14])
     ax014.imshow(th.zeros_like(prediction[1]), cmap="Greys")
     ax014.axis('off')
-    ax014.set_title("Prediction", size=18)   
-    
+    ax014.set_title("Prediction", size=18)
+
     ax10 = fig.add_subplot(gs[1, 0])
     ax10.imshow(ground_truth[2]**faktor, cmap=colormap)
     string = 'Equinox'
-    ax10.text(-0.15, 0.5, string, horizontalalignment='center',
-         verticalalignment='center', rotation=90, size=18, transform=ax10.transAxes)
+    ax10.text(
+        -0.15,
+        0.5,
+        string,
+        horizontalalignment='center',
+        verticalalignment='center',
+        rotation=90,
+        size=18,
+        transform=ax10.transAxes,
+    )
     ax10.axis('off')
-    
+
     ax11 = fig.add_subplot(gs[1, 1])
     ax11.imshow(ideal[2]**faktor, cmap=colormap)
     ax11.axis('off')
-    ax11.text(0.5,-0.10, f"L1: {ground_truth_loss[2].item():.4f}", size=18, ha="center", 
-      transform=ax11.transAxes,fontweight=font_gt[2])
-    
+    ax11.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[2].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax11.transAxes,
+        fontweight=font_gt[2],
+    )
+
     ax12 = fig.add_subplot(gs[1, 2])
     ax12.imshow(prediction[2]**faktor, cmap=colormap)
     ax12.axis('off')
-    ax12.text(0.5,-0.10, f"L1: {prediction_loss[2].item():.4f}", size=18, ha="center", 
-      transform=ax12.transAxes, fontweight=font_pred[2])
-    
+    ax12.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[2].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax12.transAxes, fontweight=font_pred[2],
+    )
+
     ax14 = fig.add_subplot(gs[1, 4])
     ax14.imshow(ground_truth[3]**faktor, cmap=colormap)
     ax14.axis('off')
-    
+
     ax15 = fig.add_subplot(gs[1, 5])
     ax15.imshow(ideal[3]**faktor, cmap=colormap)
     ax15.axis('off')
-    ax15.text(0.5,-0.10, f"L1: {ground_truth_loss[3].item():.4f}", size=18, ha="center", 
-      transform=ax15.transAxes,fontweight=font_gt[3])
-    
+    ax15.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[3].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax15.transAxes,
+        fontweight=font_gt[3],
+    )
+
     ax16 = fig.add_subplot(gs[1, 6])
     ax16.imshow(prediction[3]**faktor, cmap=colormap)
     ax16.axis('off')
-    ax16.text(0.5,-0.10, f"L1: {prediction_loss[3].item():.4f}", size=18, ha="center", 
-      transform=ax16.transAxes, fontweight=font_pred[3])
-    
+    ax16.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[3].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax16.transAxes, fontweight=font_pred[3],
+    )
+
     ax18 = fig.add_subplot(gs[1, 8])
     ax18.imshow(ground_truth[4]**faktor, cmap=colormap)
     ax18.axis('off')
-    
+
     ax19 = fig.add_subplot(gs[1, 9])
     ax19.imshow(ideal[4]**faktor, cmap=colormap)
     ax19.axis('off')
-    ax19.text(0.5,-0.10, f"L1: {ground_truth_loss[4].item():.4f}", size=18, ha="center", 
-      transform=ax19.transAxes,fontweight=font_gt[4])
-    
+    ax19.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[4].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax19.transAxes,
+        fontweight=font_gt[4],
+    )
+
     ax110 = fig.add_subplot(gs[1, 10])
     ax110.imshow(prediction[4]**faktor, cmap=colormap)
     ax110.axis('off')
-    ax110.text(0.5,-0.10, f"L1: {prediction_loss[4].item():.4f}", size=18, ha="center", 
-      transform=ax110.transAxes, fontweight=font_pred[4])
-    
+    ax110.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[4].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax110.transAxes,
+        fontweight=font_pred[4],
+    )
+
     ax20 = fig.add_subplot(gs[2, 0])
     ax20.imshow(ground_truth[5]**faktor, cmap=colormap)
     string = 'Longest Day'
-    ax20.text(-0.15, 0.5, string, horizontalalignment='center',
-         verticalalignment='center', rotation=90, size=18, transform=ax20.transAxes)
+    ax20.text(
+        -0.15,
+        0.5,
+        string,
+        horizontalalignment='center',
+        verticalalignment='center',
+        rotation=90,
+        size=18,
+        transform=ax20.transAxes,
+    )
     ax20.axis('off')
-    
+
     ax21 = fig.add_subplot(gs[2, 1])
     ax21.imshow(ideal[5]**faktor, cmap=colormap)
     ax21.axis('off')
-    ax21.text(0.5,-0.10, f"L1: {ground_truth_loss[5].item():.4f}", size=18, ha="center", 
-      transform=ax21.transAxes,fontweight=font_gt[5])
-    
+    ax21.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[5].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax21.transAxes,
+        fontweight=font_gt[5],
+    )
+
     ax22 = fig.add_subplot(gs[2, 2])
     ax22.imshow(prediction[5]**faktor, cmap=colormap)
     ax22.axis('off')
-    ax22.text(0.5,-0.10, f"L1: {prediction_loss[5].item():.4f}", size=18, ha="center", 
-      transform=ax22.transAxes, fontweight=font_pred[5])
-    
+    ax22.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[5].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax22.transAxes,
+        fontweight=font_pred[5],
+    )
+
     ax24 = fig.add_subplot(gs[2, 4])
     ax24.imshow(ground_truth[6]**faktor, cmap=colormap)
     ax24.axis('off')
-    
+
     ax25 = fig.add_subplot(gs[2, 5])
     ax25.imshow(ideal[6]**faktor, cmap=colormap)
     ax25.axis('off')
-    ax25.text(0.5,-0.10, f"L1: {ground_truth_loss[6].item():.4f}", size=18, ha="center", 
-      transform=ax25.transAxes,fontweight=font_gt[6])
-    
+    ax25.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[6].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax25.transAxes,
+        fontweight=font_gt[6],
+    )
+
     ax26 = fig.add_subplot(gs[2, 6])
     ax26.imshow(prediction[6]**faktor, cmap=colormap)
     ax26.axis('off')
-    ax26.text(0.5,-0.10, f"L1: {prediction_loss[6].item():.4f}", size=18, ha="center", 
-      transform=ax26.transAxes, fontweight=font_pred[6])
-    
+    ax26.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[6].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax26.transAxes,
+        fontweight=font_pred[6],
+    )
+
     ax28 = fig.add_subplot(gs[2, 8])
     ax28.imshow(ground_truth[7]**faktor, cmap=colormap)
     ax28.axis('off')
-    
+
     ax29 = fig.add_subplot(gs[2, 9])
     ax29.imshow(ideal[7]**faktor, cmap=colormap)
     ax29.axis('off')
-    ax29.text(0.5,-0.10, f"L1: {ground_truth_loss[7].item():.4f}", size=18, ha="center", 
-      transform=ax29.transAxes,fontweight=font_gt[7])
-    
+    ax29.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[7].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax29.transAxes,
+        fontweight=font_gt[7],
+    )
+
     ax210 = fig.add_subplot(gs[2, 10])
     ax210.imshow(prediction[7]**faktor, cmap=colormap)
     ax210.axis('off')
-    ax210.text(0.5,-0.10, f"L1: {prediction_loss[7].item():.4f}", size=18, ha="center", 
-      transform=ax210.transAxes, fontweight=font_pred[7])
-    
+    ax210.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[7].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax210.transAxes,
+        fontweight=font_pred[7],
+    )
+
     ax212 = fig.add_subplot(gs[2, 12])
     ax212.imshow(ground_truth[8]**faktor, cmap=colormap)
     ax212.axis('off')
-    
+
     ax213 = fig.add_subplot(gs[2, 13])
     ax213.imshow(ideal[8]**faktor, cmap=colormap)
     ax213.axis('off')
-    ax213.text(0.5,-0.10, f"L1: {ground_truth_loss[8].item():.4f}", size=18, ha="center", 
-      transform=ax213.transAxes,fontweight=font_gt[8])
-    
+    ax213.text(
+        0.5,
+        -0.10,
+        f"L1: {ground_truth_loss[8].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax213.transAxes,
+        fontweight=font_gt[8],
+    )
+
     ax214 = fig.add_subplot(gs[2, 14])
     ax214.imshow(prediction[8]**faktor, cmap=colormap)
     ax214.axis('off')
-    ax214.text(0.5,-0.10, f"L1: {prediction_loss[8].item():.4f}", size=18, ha="center", 
-      transform=ax214.transAxes, fontweight=font_pred[8])
-    
+    ax214.text(
+        0.5,
+        -0.10,
+        f"L1: {prediction_loss[8].item():.4f}",
+        size=18,
+        ha="center",
+        transform=ax214.transAxes,
+        fontweight=font_pred[8],
+    )
+
     # plt.show()
-    # if i==1:
+    # if i == 1:
     #     string = 'Equinox'+'\n'+' 12:00 a.m.'
-    #     ax.text(-0.15, 0.5, string, horizontalalignment='center',
-    #          verticalalignment='center', rotation=90, size=18, transform=ax.transAxes)
-    # if i==2:
+    #     ax.text(
+    #         -0.15,
+    #         0.5,
+    #         string,
+    #         horizontalalignment='center',
+    #         verticalalignment='center',
+    #         rotation=90,
+    #         size=18,
+    #         transform=ax.transAxes,
+    #     )
+    # if i == 2:
     #     string = 'Longest Day'+'\n'+' 18:00 a.m.'
-    #     ax.text(-0.15, 0.5, string, horizontalalignment='center',
-    #          verticalalignment='center', rotation=90, size=18, transform=ax.transAxes)
+    #     ax.text(
+    #         -0.15,
+    #         0.5,
+    #         string,
+    #         horizontalalignment='center',
+    #         verticalalignment='center',
+    #         rotation=90,
+    #         size=18,
+    #         transform=ax.transAxes,
+    #     )
     # ax = fig.add_subplot(gs[i, 1])
     # ax.imshow(ideal[i]**1.3, cmap=colormap)
     # ax.axis('off')
-    # ax.text(0.5,-0.10, f"L1: {ground_truth_loss[i].item():.4f}", size=18, ha="center", 
-    #  transform=ax.transAxes)
+    # ax.text(
+    #     0.5,
+    #     -0.10,
+    #     f"L1: {ground_truth_loss[i].item():.4f}",
+    #     size=18,
+    #     ha="center",
+    #     transform=ax.transAxes,
+    # )
     # if i == 0:
     #     ax.set_title("Ideal", size=18)
     # ax = fig.add_subplot(gs[i, 2])
     # ax.imshow(prediction[i]**1.3, cmap=colormap)
     # ax.axis('off')
-    # ax.text(0.5,-0.10, f"L1: {prediction_loss[i].item():.4f}", size=18, ha="center", 
-    #  transform=ax.transAxes, fontweight="bold")
+    # ax.text(
+    #     0.5,
+    #     -0.10,
+    #     f"L1: {prediction_loss[i].item():.4f}",
+    #     size=18,
+    #     ha="center",
+    #     transform=ax.transAxes,
+    #     fontweight="bold",
+    # )
     # if i == 0:
     #     ax.set_title("Prediction", size=18)
     plt.tight_layout()
     # # plt.show()
     plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
     plt.close(fig)
+
 
 def season_plot(
         season_extras: Dict[str, Any],
@@ -1142,47 +1350,83 @@ def season_plot(
 ) -> None:
     colormap = "hot"
     fig = plt.figure(figsize=(7.6, 8))
-    gs = GridSpec(3, 3)#width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
+    gs = GridSpec(3, 3)  # width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
     plt.subplots_adjust(wspace=0.0001)
-    for i, img in enumerate(ground_truth):
+    for (i, img) in enumerate(ground_truth):
         ax = fig.add_subplot(gs[i, 0])
         ax.imshow(ground_truth[i]**1.3, cmap=colormap)
         ax.axis('off')
         if i == 0:
             ax.set_title("Ground Truth", size=18)
             string = 'Shortest Day'+'\n'+' 9:00 a.m.'
-            ax.text(-0.15, 0.5, string, horizontalalignment='center',
-                 verticalalignment='center', rotation=90, size=18, transform=ax.transAxes)
-        if i==1:
+            ax.text(
+                -0.15,
+                0.5,
+                string,
+                horizontalalignment='center',
+                verticalalignment='center',
+                rotation=90,
+                size=18,
+                transform=ax.transAxes,
+            )
+        if i == 1:
             string = 'Equinox'+'\n'+' 12:00 a.m.'
-            ax.text(-0.15, 0.5, string, horizontalalignment='center',
-                 verticalalignment='center', rotation=90, size=18, transform=ax.transAxes)
-        if i==2:
+            ax.text(
+                -0.15,
+                0.5,
+                string,
+                horizontalalignment='center',
+                verticalalignment='center',
+                rotation=90,
+                size=18,
+                transform=ax.transAxes,
+            )
+        if i == 2:
             string = 'Longest Day'+'\n'+' 18:00 a.m.'
-            ax.text(-0.15, 0.5, string, horizontalalignment='center',
-                 verticalalignment='center', rotation=90, size=18, transform=ax.transAxes)
-    for i, img in enumerate(ideal):
+            ax.text(
+                -0.15,
+                0.5,
+                string,
+                horizontalalignment='center',
+                verticalalignment='center',
+                rotation=90,
+                size=18,
+                transform=ax.transAxes,
+            )
+    for (i, img) in enumerate(ideal):
         ax = fig.add_subplot(gs[i, 1])
         ax.imshow(ideal[i]**1.3, cmap=colormap)
         ax.axis('off')
-        ax.text(0.5,-0.10, f"L1: {ground_truth_loss[i].item():.4f}", size=18, ha="center", 
-         transform=ax.transAxes)
+        ax.text(
+            0.5,
+            -0.10,
+            f"L1: {ground_truth_loss[i].item():.4f}",
+            size=18,
+            ha="center",
+            transform=ax.transAxes,
+        )
         if i == 0:
             ax.set_title("Ideal", size=18)
-    for i, img in enumerate(prediction):
+    for (i, img) in enumerate(prediction):
         ax = fig.add_subplot(gs[i, 2])
         ax.imshow(prediction[i]**1.3, cmap=colormap)
         ax.axis('off')
-        ax.text(0.5,-0.10, f"L1: {prediction_loss[i].item():.4f}", size=18, ha="center", 
-         transform=ax.transAxes, fontweight="bold")
+        ax.text(
+            0.5,
+            -0.10,
+            f"L1: {prediction_loss[i].item():.4f}",
+            size=18,
+            ha="center",
+            transform=ax.transAxes,
+            fontweight="bold",
+        )
         if i == 0:
             ax.set_title("Prediction", size=18)
     plt.tight_layout()
     # plt.show()
     plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
     plt.close(fig)
-    
-    
+
 
 def season_plot_old(
         season_extras: Dict[str, Any],
@@ -1469,7 +1713,7 @@ def season_plot_old(
     value_list = ax_polar.get_xticks().tolist()
     ax_polar.xaxis.set_ticks(value_list)
     ax_polar.set_xticklabels(tick_labels)
-    # #Axis Labels
+    # Axis Labels
     ax_polar.set_xlabel(r'Azimuth $\theta^{a}$ [°]')
     label_position = ax_polar.get_rlabel_position()
     ax_polar.text(
@@ -1659,7 +1903,8 @@ def season_plot_old(
     # stepwidth = unixtime[1] - unixtime[0]
     # sorted_prediction_loss = th.tensor(
     #     [x for (_, x) in sorted(zip(d, prediction_loss))])
-    # # sorted_prediction = th.tensor([x for _, x in sorted(zip(d, prediction))])
+    # # sorted_prediction = th.tensor(
+    # #     [x for _, x in sorted(zip(d, prediction))])
     # # print(th.linalg.norm(sorted_prediction))
     # sorted_d = sorted(d)
     # # print(len(sorted_d), sorted_prediction.shape)
@@ -1723,7 +1968,8 @@ def season_plot_old(
     #         plt.tick_params(left=False)
     #         kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
 
-    #         kwargs.update(transform=ax.transAxes)  # switch to the bottom axes
+    #         # switch to the bottom axes
+    #         kwargs.update(transform=ax.transAxes)
     #         ax.plot((-line, +line), (1 - line, 1 + line), **kwargs)
     #         ax.plot((-line, +line), (-line, +line), **kwargs)
 
@@ -1736,7 +1982,8 @@ def season_plot_old(
     #         ax.plot((1 - line, 1 + line), (-line, +line), **kwargs)
     #         ax.plot((1 - line, 1 + line), (1 - line, 1 + line), **kwargs)
 
-    #         kwargs.update(transform=ax.transAxes)  # switch to the bottom axes
+    #         # switch to the bottom axes
+    #         kwargs.update(transform=ax.transAxes)
     #         ax.plot((-line, +line), (1 - line, 1 + line), **kwargs)
     #         ax.plot((-line, +line), (-line, +line), **kwargs)
     #         ax.axes.yaxis.set_ticklabels([])

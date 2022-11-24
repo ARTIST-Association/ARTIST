@@ -338,80 +338,6 @@ def _spheric_sun_array(
 
     return sun_directions, ae
 
-def _season_sun_array_old(
-        device: th.device,
-        stepsize_hours: int = 1,
-        stepsize_minutes: int = 30,
-        longest_day: bool = True,
-        shortest_day: bool = True,
-        equinox_spring: bool = True,
-        measurement_day: bool = False,
-        *measurement_date: List[int],
-) -> Tuple[torch.Tensor, Dict[str, Any]]:
-    """Input:
-        - stepsize for defining the grid distances
-        - device
-        - which days to simulate
-        - args must be in descending order years, months, days, ...
-
-   Output:
-       - List of all sun positions including simualted hours (N, 8)
-         including [hour,minute,sec,day,month,year,azi,ele] starting
-         with longest day, start of autumn, shortest day, start of
-         spring, measurment day
-       - length of different day simulations in shape (N,)
-       - name of simulated days
-    """
-    
-    trajectories = []
-    secs = [0]
-    minutes = [0]
-    years = [2022]
-    
-#Shortes Day
-    months = [12]
-    days = [21]
-    hours = [9,12]
-    sun_vecs_short, extras = utils.get_sun_array(
-        years,
-        months,
-        days,
-        hours,
-        minutes,
-        secs,
-    )
-    trajectories.append(sun_vecs_short)
-
-#Equinox
-    months = [3]
-    days = [20]
-    hours = [9,12,15]
-    sun_vecs_autumn, extras = utils.get_sun_array(
-        years,
-        months,
-        days,
-        hours,
-        minutes,
-        secs,
-    )
-    trajectories.append(sun_vecs_autumn)
-#Longest Day
-    months = [6]
-    days = [21]
-    hours = [9,12,15,18]
-    sun_vecs_long, extras = utils.get_sun_array(
-        years,
-        months,
-        days,
-        hours,
-        minutes,
-        secs,
-    )
-    trajectories.append(sun_vecs_long)
-
-    trajectories = th.cat(trajectories).to(device)
-    infos = None
-    return trajectories, infos
 
 def _season_sun_array(
         device: th.device,
@@ -422,6 +348,7 @@ def _season_sun_array(
         equinox_spring: bool = True,
         measurement_day: bool = False,
         *measurement_date: List[int],
+        use_old_version: bool = False,
 ) -> Tuple[torch.Tensor, Dict[str, Any]]:
     """Input:
         - stepsize for defining the grid distances
@@ -437,16 +364,19 @@ def _season_sun_array(
        - length of different day simulations in shape (N,)
        - name of simulated days
     """
-    
+
     trajectories = []
     secs = [0]
     minutes = [0]
     years = [2022]
-    
-#Shortes Day
+
+    # Shortes Day
     months = [12]
     days = [21]
-    hours = [9]
+    if use_old_version:
+        hours = [9, 12]
+    else:
+        hours = [9]
     sun_vecs_short, extras = utils.get_sun_array(
         years,
         months,
@@ -457,10 +387,13 @@ def _season_sun_array(
     )
     trajectories.append(sun_vecs_short)
 
-#Equinox
+    # Equinox
     months = [3]
     days = [20]
-    hours = [12]
+    if use_old_version:
+        hours = [9, 12, 15]
+    else:
+        hours = [12]
     sun_vecs_autumn, extras = utils.get_sun_array(
         years,
         months,
@@ -470,10 +403,13 @@ def _season_sun_array(
         secs,
     )
     trajectories.append(sun_vecs_autumn)
-#Longest Day
+    # Longest Day
     months = [6]
     days = [21]
-    hours = [18]
+    if use_old_version:
+        hours = [9, 12, 15, 18]
+    else:
+        hours = [18]
     sun_vecs_long, extras = utils.get_sun_array(
         years,
         months,
@@ -517,6 +453,7 @@ def generate_sun_array(
         raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
     return sun_directions, extras
 
+
 def log_contoured(
         prefix: str,
         writer: Optional[SummaryWriter],
@@ -537,6 +474,7 @@ def log_contoured(
                 contoured.unsqueeze(0),
             )
     return contoured_targets
+
 
 def log_dataset(
         prefix: str,
