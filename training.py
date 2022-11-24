@@ -3,6 +3,7 @@ import itertools
 import os
 from typing import Callable, cast, List, Optional, Tuple, Union
 
+from pytorch_minimize.optim import BasinHoppingWrapper, torch_optimizer
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
@@ -117,6 +118,57 @@ def _build_optimizer(
             list_params,
             lr=cfg.LR,
         )
+    elif name == 'basinhopping':
+        list_params = [param for group in params for param in group['params']]
+
+        minimizer_config = {'jac': True}
+
+        use_torch_optim = False
+        if use_torch_optim:
+            optim_cls = th.optim.Adam
+            optim_kwargs = dict(
+                lr=cfg.LR,
+                betas=(cfg.BETAS[0], cfg.BETAS[1]),
+                eps=cfg.EPS,
+                weight_decay=cfg.WEIGHT_DECAY,
+            )
+
+            use_sched = False
+            sched_cls = th.optim.lr_scheduler.ReduceLROnPlateau
+            sched_kwargs = dict(
+                factor=cfg.FACTOR,
+                min_lr=cfg.MIN_LR,
+                patience=cfg.PATIENCE,
+                cooldown=cfg.COOLDOWN,
+                verbose=cfg.VERBOSE,
+            )
+
+            minimizer_config['method'] = torch_optimizer
+            minimizer_config['options'] = {
+                'optim_cls': optim_cls,
+                'optim_kwargs': optim_kwargs,
+                'disp': True,
+                'niter': 20,
+            }
+            if use_sched:
+                minimizer_config['options']['sched_cls'] = sched_cls
+                minimizer_config['options']['sched_kwargs'] = sched_kwargs
+        else:
+            minimizer_config['method'] = 'CG'
+            minimizer_config['options'] = {
+                'disp': True,
+                'maxiter': 20,
+            }
+
+        basinhopping_config = {
+            'niter': 100,
+            'stepsize': 0.01,
+        }
+        opt: th.optim.Optimizer = BasinHoppingWrapper(
+            list_params,
+            minimizer_config,
+            basinhopping_config,
+        )
     else:
         raise ValueError(
             "Optimizer name not found, change name or implement new optimizer")
@@ -130,7 +182,16 @@ def _build_scheduler(
         total_steps: int,
 ) -> LRScheduler:
     name = cfg_scheduler.NAME.lower()
-    if name == "reduceonplateau":
+    if isinstance(opt, BasinHoppingWrapper):
+        class DummySched(th.optim.lr_scheduler._LRScheduler):
+            def __init__(self):
+                pass
+
+            def step(self):
+                pass
+
+        sched = DummySched()
+    elif name == "reduceonplateau":
         cfg: CfgNode = cfg_scheduler.ROP
         sched: LRScheduler = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
@@ -398,7 +459,10 @@ def build_loss_funcs(
         
 
 
-        if isinstance(opt, th.optim.LBFGS) and cfg.USE_L1_WEIGHT_DECAY:
+        if (
+                isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper))
+                and cfg.USE_L1_WEIGHT_DECAY
+        ):
             weight_penalty = l1_weight_penalty(opt, None)
             weight_decay_factor: float = cfg.WEIGHT_DECAY_FACTOR
             loss += weight_decay_factor * weight_penalty
@@ -535,7 +599,7 @@ def train_batch(
         train_objects: TrainObjects,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
-    if isinstance(opt, th.optim.LBFGS):
+    if isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper)):
         with th.no_grad():
             _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
