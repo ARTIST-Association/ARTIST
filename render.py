@@ -39,22 +39,19 @@ def Rz(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     return th.matmul(rots, mat)
 
 
-def LinePlaneCollision(
+def line_plane_intersections(
         planeNormal: torch.Tensor,
         planePoint: torch.Tensor,
         rayDirections: torch.Tensor,
         rayPoints: torch.Tensor,
         epsilon: float = 1e-6,
 ) -> torch.Tensor:
-
     ndotu = rayDirections.matmul(planeNormal)
     if (th.abs(ndotu) < epsilon).any():
         raise RuntimeError("no intersection or line is within plane")
+    ds = (planePoint - rayPoints).matmul(planeNormal) / ndotu
 
-    ws = rayPoints - planePoint
-    sis = -ws.matmul(planeNormal) / ndotu
-    Psis = ws + sis.unsqueeze(-1) * rayDirections + planePoint
-    return Psis
+    return rayPoints + rayDirections * ds.unsqueeze(-1)
 
 
 def compute_ray_directions(
@@ -65,12 +62,12 @@ def compute_ray_directions(
         xi: torch.Tensor,
         yi: torch.Tensor,
 ) -> torch.Tensor:
-    intersections = LinePlaneCollision(
+    intersections = line_plane_intersections(
         planeNormal, planePoint, ray_directions, hel_in_field)
     as_ = intersections
     has = as_ - hel_in_field
     # TODO Wieder der Vektor von vorher?
-    #      Evtl. ist diese LinePlaneCollision unnötig
+    #      Evtl. ist dieser Aufruf von `line_plane_intersections` unnötig
     has = has / th.linalg.norm(has, dim=1).unsqueeze(-1)
 
     # rotate: Calculate 3D rotationmatrix in heliostat system.
@@ -127,7 +124,7 @@ def compute_receiver_intersections(
         hel_in_field: torch.Tensor,
 ) -> torch.Tensor:
     # Execute the kernel
-    intersections = LinePlaneCollision(
+    intersections = line_plane_intersections(
         planeNormal, planePoint, ray_directions, hel_in_field, epsilon=1e-6)
     # print(intersections)
     return intersections
