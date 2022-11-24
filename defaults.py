@@ -310,7 +310,13 @@ _C.TRAIN.SCHEDULER.ONE_CYCLE.THREE_PHASE= True
 
 
 _C.TRAIN.OPTIMIZER                      = CN()
-_C.TRAIN.OPTIMIZER.NAME                 = "Adam"                              #SWITCH FOR OPTIMIZER: Adam, Adamax, AdamW
+# Valid optimizer names:
+# - Adam
+# - Adamax
+# - AdamW
+# - LBFGS
+# - BasinHopping
+_C.TRAIN.OPTIMIZER.NAME                 = "Adam"
 # These values are all for the surface parameters.
 # They are also defaults if other parameter groups do not contain have a
 # certain config parameter.
