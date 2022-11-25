@@ -266,11 +266,7 @@ def normalize_bitmap(
     num_pixels = bitmap_height * bitmap_width
     plane_area_per_pixel = plane_area / num_pixels
 
-    normalization_factor = num_rays * plane_area_per_pixel
-    if normalization_factor:
-        return bitmap / normalization_factor
-    else:
-        return bitmap
+    return bitmap / (num_rays * plane_area_per_pixel)
 
 
 class Renderer(object):
