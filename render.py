@@ -343,6 +343,7 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
+        # Normalize total intensity.
         total_intensity = total_bitmap.sum()
         if total_intensity:
             total_bitmap = total_bitmap / total_intensity
