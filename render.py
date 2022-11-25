@@ -254,6 +254,25 @@ def sample_bitmap(
     return total_bitmap
 
 
+def normalize_bitmap(
+        bitmap: torch.Tensor,
+        num_rays: int,
+        planex: float,
+        planey: float,
+        bitmap_height: int,
+        bitmap_width: int,
+) -> torch.Tensor:
+    plane_area = planex * planey
+    num_pixels = bitmap_height * bitmap_width
+    plane_area_per_pixel = plane_area / num_pixels
+
+    normalization_factor = num_rays * plane_area_per_pixel
+    if normalization_factor:
+        return bitmap / normalization_factor
+    else:
+        return bitmap
+
+
 class Renderer(object):
     def __init__(
             self,
@@ -343,10 +362,16 @@ class Renderer(object):
             self.ENV.receiver_resolution_x,
             self.ENV.receiver_resolution_y,
         )
-        # Normalize total intensity.
-        total_intensity = total_bitmap.sum()
-        if total_intensity:
-            total_bitmap = total_bitmap / total_intensity
+
+        total_bitmap = normalize_bitmap(
+            total_bitmap,
+            xi.numel(),
+            self.ENV.receiver_plane_x,
+            self.ENV.receiver_plane_y,
+            self.ENV.receiver_resolution_x,
+            self.ENV.receiver_resolution_y,
+        )
+
         target_num_missed = indices.numel() - indices.count_nonzero()
 
         if target_num_missed > 0:
