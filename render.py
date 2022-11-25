@@ -227,9 +227,6 @@ def sample_bitmap(
     del ints_2
     del ints_3
     del ints_4
-    # Normalize
-    if len(ints) > 0:
-        ints = ints / th.max(ints)
 
     # For distribution, we regard even those neighboring pixels that are
     # _not_ part of the image. That is why here, we set up a mask to
