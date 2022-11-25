@@ -11,6 +11,7 @@ from yacs.config import CfgNode
 from environment import Environment
 import hausdorff_distance
 from heliostat_models import AbstractHeliostat
+import render
 from render import Renderer
 import utils
 
@@ -500,15 +501,29 @@ def read_image(path: str, device: th.device) -> torch.Tensor:
 @th.no_grad()
 def load_images(
         paths: List[str],
-        height: int,
-        width: int,
+        receiver_height: float,
+        receiver_width: float,
+        image_height: int,
+        image_width: int,
         device: th.device,
         prefix: str,
         writer: Optional[SummaryWriter] = None,
 ) -> torch.Tensor:
+    def normalize_image(image: torch.Tensor) -> torch.Tensor:
+        # We assume that all rays have hit in the image.
+        num_rays = image.sum()
+        return render.normalize_bitmap(
+            image,
+            num_rays,
+            receiver_height,
+            receiver_width,
+            image_height,
+            image_width,
+        )
+
     target_imgs = [read_image(path, device) for path in paths]
     img_transform = thv.transforms.Compose([
-        thv.transforms.Resize((height, width)),
+        thv.transforms.Resize((image_height, image_width)),
         # Remove single channel.
         thv.transforms.Lambda(lambda image: image.squeeze(0)),
         # Try to remove background (i.e. make background dark).
@@ -516,10 +531,8 @@ def load_images(
             image - image.mean(),
             min=0,
         )),
-        # # Normalize to [0, 1].
-        # thv.transforms.Lambda(lambda image: image / image.max()),
-        # Normalize intensities, same as renderer.
-        thv.transforms.Lambda(lambda image: image / image.sum()),
+        # Normalize, same as renderer.
+        thv.transforms.Lambda(normalize_image),
     ])
     targets = th.stack(list(map(img_transform, target_imgs)))
     log_dataset(prefix, writer, targets)

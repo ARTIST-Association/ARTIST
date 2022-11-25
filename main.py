@@ -471,6 +471,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             'number of sun directions does not match number of images'
         targets = data.load_images(
             cfg.TRAIN.IMAGES.PATHS,
+            cfg.AC.RECEIVER.PLANE_X,
+            cfg.AC.RECEIVER.PLANE_Y,
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
             device,
@@ -542,6 +544,8 @@ def main(config_file_name: Optional[str] = None) -> None:
             'number of sun directions does not match number of images'
         test_targets = data.load_images(
             cfg.TEST.IMAGES.PATHS,
+            cfg.AC.RECEIVER.PLANE_X,
+            cfg.AC.RECEIVER.PLANE_Y,
             cfg.AC.RECEIVER.RESOLUTION_X,
             cfg.AC.RECEIVER.RESOLUTION_Y,
             device,

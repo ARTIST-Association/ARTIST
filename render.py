@@ -256,7 +256,7 @@ def sample_bitmap(
 
 def normalize_bitmap(
         bitmap: torch.Tensor,
-        num_rays: int,
+        num_rays: Union[int, torch.Tensor],
         planex: float,
         planey: float,
         bitmap_height: int,
