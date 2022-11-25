@@ -814,6 +814,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "RealPosNew_NURBSx15.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
     main(path_to_yaml)
     # main()
