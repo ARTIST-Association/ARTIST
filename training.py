@@ -1,7 +1,7 @@
 import collections
 import itertools
 import os
-from typing import Callable, cast, List, Optional, Tuple, Union
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 
 from pytorch_minimize.optim import BasinHoppingWrapper, torch_optimizer
 import torch
@@ -119,7 +119,7 @@ def _build_optimizer(
     elif name == 'basinhopping':
         list_params = [param for group in params for param in group['params']]
 
-        minimizer_config = {'jac': True}
+        minimizer_config: Dict[str, Any] = {'jac': True}
 
         use_torch_optim = False
         if use_torch_optim:
@@ -162,7 +162,7 @@ def _build_optimizer(
             'niter': 100,
             'stepsize': 0.01,
         }
-        opt: th.optim.Optimizer = BasinHoppingWrapper(
+        opt = BasinHoppingWrapper(
             list_params,
             minimizer_config,
             basinhopping_config,
@@ -182,16 +182,16 @@ def _build_scheduler(
     name = cfg_scheduler.NAME.lower()
     if isinstance(opt, BasinHoppingWrapper):
         class DummySched(th.optim.lr_scheduler._LRScheduler):
-            def __init__(self):
+            def __init__(self) -> None:
                 pass
 
-            def step(self):
+            def step(self, epoch: Optional[int] = None) -> None:
                 pass
 
-        sched = DummySched()
+        sched: LRScheduler = DummySched()
     elif name == "reduceonplateau":
         cfg: CfgNode = cfg_scheduler.ROP
-        sched: LRScheduler = th.optim.lr_scheduler.ReduceLROnPlateau(
+        sched = th.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=cfg.FACTOR,
             min_lr=cfg.MIN_LR,

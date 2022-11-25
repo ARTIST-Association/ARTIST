@@ -421,7 +421,7 @@ def _season_sun_array(
     trajectories.append(sun_vecs_long)
 
     trajectories = th.cat(trajectories).to(device)
-    infos = None
+    infos: Dict[str, Any] = {}
     return trajectories, infos
 
 
