@@ -517,8 +517,6 @@ def load_images(
             total_intensity,
             receiver_height,
             receiver_width,
-            image_height,
-            image_width,
         )
 
     target_imgs = [read_image(path, device) for path in paths]

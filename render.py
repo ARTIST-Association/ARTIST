@@ -259,9 +259,10 @@ def normalize_bitmap(
         total_intensity: Union[float, torch.Tensor],
         planex: float,
         planey: float,
-        bitmap_height: int,
-        bitmap_width: int,
 ) -> torch.Tensor:
+    bitmap_height = bitmap.shape[0]
+    bitmap_width = bitmap.shape[1]
+
     plane_area = planex * planey
     num_pixels = bitmap_height * bitmap_width
     plane_area_per_pixel = plane_area / num_pixels
@@ -364,8 +365,6 @@ class Renderer(object):
             xi.numel(),
             self.ENV.receiver_plane_x,
             self.ENV.receiver_plane_y,
-            self.ENV.receiver_resolution_x,
-            self.ENV.receiver_resolution_y,
         )
 
         target_num_missed = indices.numel() - indices.count_nonzero()
