@@ -1175,7 +1175,18 @@ class Heliostat(AbstractHeliostat):
         return self
 
     def _from_dict(self, data: Dict[str, Any], restore_strictly: bool) -> None:
-        self._normals = data['heliostat_normals']
+        try:
+            self._normals = data['heliostat_normals']
+        # TODO create an extra error type
+        except ValueError:
+            if not hasattr(self.facets, '_facets'):
+                raise
+            # Assume that we weren't able to set NURBS facets.
+            for (facet, normals) in zip(
+                    self.facets._facets,
+                    data['heliostat_normals'],
+            ):
+                facet._normals = normals
         self.position_on_field = data['position_on_field']
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
         self.aim_point = data['aim_point']
