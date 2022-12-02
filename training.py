@@ -305,6 +305,19 @@ def _get_loss_func(
     return primitive_loss_func
 
 
+def if_else_zero(
+        condition: bool,
+        closure: Callable[[], torch.Tensor],
+        dtype: th.dtype,
+        device: th.device,
+) -> torch.Tensor:
+    if condition:
+        result = closure()
+    else:
+        result = th.tensor(0.0, dtype=dtype, device=device)
+    return result
+
+
 def build_loss_funcs(
         cfg_loss: CfgNode,
         to_optimize: List[str],
@@ -348,30 +361,26 @@ def build_loss_funcs(
             pred_bitmap: torch.Tensor,
             target_set: Optional[torch.Tensor],
     ) -> torch.Tensor:
-        if hausdorff_loss_factor != 0:
-            assert target_set is not None
-            weighted_hausdorff_dists = \
-                hausdorff_distance.weighted_hausdorff_distance(
-                    pred_bitmap.unsqueeze(0),
-                    [target_set],
-                    norm_p=cfg.HAUSDORFF.NORM_P,
-                    mean_p=cfg.HAUSDORFF.MEAN_P,
-                )
-            weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
-                10 * hausdorff_distance.max_hausdorff_distance(
-                    pred_bitmap.shape,
-                    pred_bitmap.device,
-                    pred_bitmap.dtype,
-                    norm_p=cfg.HAUSDORFF.NORM_P,
-                )
-            hausdorff_loss = (
-                weighted_hausdorff_dists.mean()
-                * hausdorff_loss_factor
-                / pred_bitmap.numel()
+        assert target_set is not None
+        weighted_hausdorff_dists = \
+            hausdorff_distance.weighted_hausdorff_distance(
+                pred_bitmap.unsqueeze(0),
+                [target_set],
+                norm_p=cfg.HAUSDORFF.NORM_P,
+                mean_p=cfg.HAUSDORFF.MEAN_P,
             )
-        else:
-            hausdorff_loss = th.tensor(
-                0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
+        weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
+            10 * hausdorff_distance.max_hausdorff_distance(
+                pred_bitmap.shape,
+                pred_bitmap.device,
+                pred_bitmap.dtype,
+                norm_p=cfg.HAUSDORFF.NORM_P,
+            )
+        hausdorff_loss = (
+            weighted_hausdorff_dists.mean()
+            * hausdorff_loss_factor
+            / pred_bitmap.numel()
+        )
         return hausdorff_loss
 
     def loss_func(
@@ -385,34 +394,57 @@ def build_loss_funcs(
             env: Environment,
             opt: torch.optim.Optimizer,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        raw_loss = test_loss_func(
-            pred_bitmap,
-            target_bitmap,
+        dtype = pred_bitmap.dtype
+        device = pred_bitmap.device
+
+        raw_loss = if_else_zero(
+            loss_factor != 0,
+            lambda: test_loss_func(
+                pred_bitmap,
+                target_bitmap,
+            ),
+            dtype,
+            device,
         )
         loss = raw_loss.clone()
 
         # Penalize misses
-        miss_loss = miss_loss_func(pred_bitmap, dx_ints, dy_ints, env)
+        miss_loss = if_else_zero(
+            miss_loss_factor != 0,
+            lambda: miss_loss_func(pred_bitmap, dx_ints, dy_ints, env),
+            dtype,
+            device,
+        )
         loss += miss_loss
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
-        alignment_loss = alignment_primitive_loss_func(
-            (
-                z_alignment.mean(dim=0)
-                if z_alignment.ndim > 1 and target_z_alignment.ndim == 1
-                else z_alignment
-            ),
-            (
-                target_z_alignment.mean(dim=0)
-                if target_z_alignment.ndim > 1 and z_alignment.ndim == 1
-                else target_z_alignment
-            ),
-        ) * alignment_loss_factor
+        alignment_loss = if_else_zero(
+            alignment_loss_factor != 0,
+            lambda: alignment_primitive_loss_func(
+                (
+                    z_alignment.mean(dim=0)
+                    if z_alignment.ndim > 1 and target_z_alignment.ndim == 1
+                    else z_alignment
+                ),
+                (
+                    target_z_alignment.mean(dim=0)
+                    if target_z_alignment.ndim > 1 and z_alignment.ndim == 1
+                    else target_z_alignment
+                ),
+            ) * alignment_loss_factor,
+            dtype,
+            device,
+        )
         loss += alignment_loss
 
         # Weighted Hausdorff loss
-        hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
+        hausdorff_loss = if_else_zero(
+            hausdorff_loss_factor != 0,
+            lambda: hausdorff_loss_func(pred_bitmap, target_set),
+            dtype,
+            device,
+        )
         loss += hausdorff_loss
 
         if (
