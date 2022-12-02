@@ -354,7 +354,7 @@ def build_loss_funcs(
             dy_ints,
             th.clip(dy_ints, min=-1, max=env.receiver_plane_y + 1),
         ) * miss_loss_factor
-        miss_loss /= pred_bitmap.numel()
+        miss_loss /= len(dx_ints) * len(dy_ints)
         return miss_loss
 
     def hausdorff_loss_func(
@@ -379,7 +379,6 @@ def build_loss_funcs(
         hausdorff_loss = (
             weighted_hausdorff_dists.mean()
             * hausdorff_loss_factor
-            / pred_bitmap.numel()
         )
         return hausdorff_loss
 
