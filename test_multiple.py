@@ -5,12 +5,14 @@ from typing import cast, Callable, List
 import matplotlib.pyplot as plt
 import torch
 import torch as th
+from yacs.config import CfgNode
 
 import data
 import defaults
 import disk_cache
 from environment import Environment
 import main as main_mod
+from heliostat_models import Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat
 from render import Renderer
 import training
@@ -120,16 +122,6 @@ def main() -> None:
         SUN_DIRECTIONS,
     ])
 
-    cached_build_target_heliostat = disk_cache.disk_cache(
-        main_mod.build_target_heliostat,
-        device,
-        'cached',
-        ignore_argnums=[1],
-    )
-    target_heliostat = cached_build_target_heliostat(cfg, device)
-    env = Environment(cfg.AC, device)
-    renderer = Renderer(target_heliostat, env)
-
     # Create targets
     cached_generate_sun_array = disk_cache.disk_cache(
         data.generate_sun_array,
@@ -146,8 +138,23 @@ def main() -> None:
         ignore_argnums=[3, 4, 5],
     )
 
+    cached_build_target_heliostat = cast(
+        Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
+        disk_cache.disk_cache(
+            main_mod.build_target_heliostat,
+            device,
+            'cached',
+            ignore_argnums=[2],
+        ),
+    )
+
     sun_directions, ae = cached_generate_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
+    target_heliostat = cached_build_target_heliostat(
+        cfg, sun_directions, device)
+    env = Environment(cfg.AC, device)
+    renderer = Renderer(target_heliostat, env)
+
     targets = cached_generate_dataset(
         target_heliostat,
         env,
