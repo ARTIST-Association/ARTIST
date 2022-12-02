@@ -256,7 +256,7 @@ def sample_bitmap(
 
 def normalize_bitmap(
         bitmap: torch.Tensor,
-        num_rays: Union[int, torch.Tensor],
+        total_intensity: Union[float, torch.Tensor],
         planex: float,
         planey: float,
         bitmap_height: int,
@@ -266,7 +266,7 @@ def normalize_bitmap(
     num_pixels = bitmap_height * bitmap_width
     plane_area_per_pixel = plane_area / num_pixels
 
-    return bitmap / (num_rays * plane_area_per_pixel)
+    return bitmap / (total_intensity * plane_area_per_pixel)
 
 
 class Renderer(object):

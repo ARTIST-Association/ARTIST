@@ -511,10 +511,10 @@ def load_images(
 ) -> torch.Tensor:
     def normalize_image(image: torch.Tensor) -> torch.Tensor:
         # We assume that all rays have hit in the image.
-        num_rays = image.sum()
+        total_intensity = image.sum()
         return render.normalize_bitmap(
             image,
-            num_rays,
+            total_intensity,
             receiver_height,
             receiver_width,
             image_height,
