@@ -316,7 +316,6 @@ def build_loss_funcs(
 
     loss_factor: float = cfg.FACTOR
     miss_loss_factor: float = cfg.MISS.FACTOR
-    pixel_closeness_loss_factor: float = cfg.PIXEL_CLOSENESS.FACTOR
     alignment_loss_factor: float = cfg.ALIGNMENT.FACTOR
     hausdorff_loss_factor: float = cfg.HAUSDORFF.FACTOR
 
@@ -375,38 +374,6 @@ def build_loss_funcs(
                 0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
         return hausdorff_loss
 
-    def pixel_closeness_loss_func(
-            pred_bitmap: torch.Tensor,
-            target_bitmap: torch.Tensor,
-    ) -> torch.Tensor:
-        target_threshold = target_bitmap.mean()
-
-        device = pred_bitmap.device
-        dtype = pred_bitmap.dtype
-        pixel_indices = th.cartesian_prod(
-            th.arange(pred_bitmap.shape[0], device=device, dtype=dtype),
-            th.arange(pred_bitmap.shape[1], device=device, dtype=dtype),
-        ) / pred_bitmap.numel()
-
-        target_positions = (
-            th.nonzero(target_bitmap >= target_threshold)
-            / target_bitmap.numel()
-        )
-
-        pixel_distances = th.cdist(
-            pixel_indices,
-            target_positions,
-            p=cfg.PIXEL_CLOSENESS.NORM_P,
-        )
-        closest_distances = pixel_distances.min(dim=-1)[0]
-        closest_distances *= pred_bitmap.ravel()
-
-        pixel_closeness_loss = (
-            closest_distances.mean()
-            * pixel_closeness_loss_factor
-        )
-        return pixel_closeness_loss
-
     def loss_func(
             pred_bitmap: torch.Tensor,
             target_bitmap: torch.Tensor,
@@ -447,11 +414,6 @@ def build_loss_funcs(
         # Weighted Hausdorff loss
         hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
         loss += hausdorff_loss
-
-        # Make pred pixels move to target pixels
-        pixel_closeness_loss = pixel_closeness_loss_func(
-            pred_bitmap, target_bitmap)
-        loss += pixel_closeness_loss
 
         if (
                 isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper))
