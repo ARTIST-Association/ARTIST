@@ -48,7 +48,7 @@ setup(
         ),
         'tensorboard>=2.0,<3.0',
         TORCH_REQUIREMENT,
-        'torchvision==0.9.1',
+        'torchvision>=0.9,<0.15',
         'yacs==0.1.8',
     ],
     packages=find_packages(
