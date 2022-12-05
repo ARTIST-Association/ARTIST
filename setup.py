@@ -21,7 +21,7 @@ from setuptools import find_packages, setup
 import subprocess
 import sys
 
-TORCH_REQUIREMENT = 'torch>=1.8,<2.0'
+TORCH_REQUIREMENT = 'torch>=1.8,<3.0'
 
 # Install PyTorch 'manually' because it has to be installed for
 # PyTorch3D. `pip` dependency resolution cannot fix this.
