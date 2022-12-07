@@ -2,7 +2,7 @@ import datetime
 import os
 import time as to_time
 from typing import Any, Dict, List, Optional, Union
-
+import dataset_cache
 import matplotlib
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -13,11 +13,140 @@ import numpy as np
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
-
+from environment import Environment
 from heliostat_models import AbstractHeliostat
 import utils
 
+class Plotter():
+    def __init__(self, cfg, cached_build_target_heliostat, sun_directions, device):
+        self.plot_grid = cfg.GRID
+        self.plot_season = cfg.SEASON
+        self.plot_spheric = cfg.SPHERIC
+        
+        self.grid_test_sun_directions = None
+        self.grid_test_ae = None
+        self.grid_test_targets = None
+        self.grid_naive_targets = None
+        
+        self.spheric_test_sun_directions = None
+        self.spheric_test_ae = None
+        self.spheric_test_targets = None
+        self.spheric_naive_targets = None
+        
+        self.season_test_sun_directions = None
+        self.season_test_ae = None
+        self.season_test_targets = None
+        self.season_naive_targets = None
+        
+        (
+            (
+                cached_generate_grid_sun_array,
+                cached_generate_spheric_sun_array,
+                cached_generate_season_sun_array,
+            ),
+            (
+                cached_generate_grid_dataset,
+                cached_generate_naive_grid_dataset,
+                cached_generate_spheric_dataset,
+                cached_generate_naive_spheric_dataset,
+                cached_generate_season_dataset,
+                cached_generate_naive_season_dataset
+                
+            ),
+        ) = dataset_cache.set_up_test_dataset_caching(device, None)
+        
+        H_validation = cached_build_target_heliostat(
+        cfg, sun_directions, device)
+        ENV_validation = Environment(cfg.AC, device)
+        
+        if cfg.TEST.PLOT.GRID:
+            (
+                self.grid_test_sun_directions,
+                self.grid_test_ae,
+            ) = cached_generate_grid_sun_array(
+                cfg.TEST.SUN_DIRECTIONS,
+                device,
+                case="grid",
+            )
+            self.grid_test_targets = cached_generate_grid_dataset(
+                H_validation,
+                ENV_validation,
+                self.grid_test_sun_directions,
+                None,
+                "grid",
+            )
+            # # th.random.set_rng_state(state)
+            H_naive_grid = cached_build_target_heliostat(
+                cfg, sun_directions, device)
+            H_naive_grid._normals = H_naive_grid.get_raw_normals_ideal()
+            self.grid_naive_targets = cached_generate_naive_grid_dataset(
+                H_naive_grid,
+                ENV_validation,
+                self.grid_test_sun_directions,
+                None,
+                "naive",
+            )
+        if cfg.TEST.PLOT.SPHERIC:
+            (
+                self.spheric_test_sun_directions,
+                self.spheric_test_ae,
+            ) = cached_generate_spheric_sun_array(
+                cfg.TEST.SUN_DIRECTIONS,
+                device,
+                train_vec=sun_directions,
+                case="spheric",
+            )
+            self.spheric_test_targets = cached_generate_spheric_dataset(
+                H_validation,
+                ENV_validation,
+                self.spheric_test_sun_directions,
+                None,
+                "spheric",
+            )
 
+            H_naive_spheric = cached_build_target_heliostat(
+                cfg, sun_directions, device)
+            H_naive_spheric._normals = H_naive_spheric.get_raw_normals_ideal()
+            self.spheric_naive_test_targets = cached_generate_naive_spheric_dataset(
+                H_naive_spheric,
+                ENV_validation,
+                self.spheric_test_sun_directions,
+                None,
+                "naive_spheric",
+            )
+        if cfg.TEST.PLOT.SEASON:
+            (
+                self.season_test_sun_directions,
+                self.season_test_extras,
+            ) = cached_generate_season_sun_array(
+                cfg.TEST.SUN_DIRECTIONS,
+                device,
+                case="season",
+            )
+            # TODO bring to GPU in data.py
+            self.season_test_sun_directions = self.season_test_sun_directions.to(device)
+            self.season_test_targets = cached_generate_season_dataset(
+                H_validation,
+                ENV_validation,
+                self.season_test_sun_directions,
+                None,
+                "season",
+            )
+            H_naive_season = cached_build_target_heliostat(
+                cfg, sun_directions, device)
+            H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
+            self.season_naive_test_targets = cached_generate_naive_season_dataset(
+                H_naive_season,
+                ENV_validation,
+                self.season_test_sun_directions,
+                None,
+                "naive_season",
+            )
+        
+        
+        
+        
+        
 def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
     last_axes = plt.gca()
     ax = mappable.axes
@@ -27,31 +156,6 @@ def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
     cbar = fig.colorbar(mappable, cax=cax)
     plt.sca(last_axes)
     return cbar
-
-
-def test_surfaces(H: AbstractHeliostat) -> None:
-    points_on_hel = H.discrete_points.detach().cpu()
-    ideal_vecs = H._normals_ideal.detach().cpu()
-    normal_vecs = H.normals.detach().cpu()
-
-    fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(
-        ncols=7, figsize=(49, 7))
-    im1 = ax1.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=points_on_hel[:, 2])
-    im2 = ax2.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=ideal_vecs[:, 0])
-    im3 = ax3.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=ideal_vecs[:, 1])
-    im4 = ax4.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=ideal_vecs[:, 2])
-    im5 = ax5.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=normal_vecs[:, 0])
-    im6 = ax6.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=normal_vecs[:, 1])
-    im7 = ax7.scatter(
-        points_on_hel[:, 0], points_on_hel[:, 1], c=normal_vecs[:, 2])
-    plt.show()
-    exit()
 
 
 @th.no_grad()
@@ -217,322 +321,12 @@ def plot_surfaces_mm(
     plt.colorbar(im1, cax=ax_cbar, orientation='horizontal', format='%.0e')
     plt.colorbar(im3, cax=ax_cbar1, orientation='horizontal', format='%.0e')
 
-    # colorbar(im3)
-    # plt.show()
-    # exit()
-
     fig.savefig(os.path.join(logdir_mm, f"test_{epoch}"))
     plt.close(fig)
 
 
-@th.no_grad()
-def plot_surfaces_3D_mm(
-        heliostat_pred: AbstractHeliostat,
-        epoch: int,
-        logdir: str,
-        writer: SummaryWriter = None,
-) -> None:
-    logdir_mm = os.path.join(logdir, "mm")
-    os.makedirs(logdir, exist_ok=True)
-    os.makedirs(logdir_mm, exist_ok=True)
-
-    pred = heliostat_pred.discrete_points
-    pred = pred.detach().cpu()
-
-    ideal = heliostat_pred._discrete_points_ideal
-    ideal = ideal.detach().cpu()
-    # print(pred.shape, ideal.shape)
-    pred[:, 2] = pred[:, 2] - ideal[:, 2]
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.set_zlim(-3e-5, 3e-5)
-    surf = ax.plot_trisurf(
-        pred[:, 0],
-        pred[:, 1],
-        pred[:, 2],
-        cmap=cm.coolwarm,
-        linewidth=0,
-        antialiased=False,
-    )
-    fig.savefig(os.path.join(logdir_mm, f"test_3D_{epoch}"))
-    plt.close(fig)
 
 
-@th.no_grad()
-def plot_surfaces_3D_mrad(
-        heliostat_target: AbstractHeliostat,
-        heliostat_pred: AbstractHeliostat,
-        epoch: int,
-        logdir: str,
-        writer: Optional[SummaryWriter] = None,
-) -> None:
-    logdir_mrad = os.path.join(logdir, "mrad")
-    os.makedirs(logdir, exist_ok=True)
-    os.makedirs(logdir_mrad, exist_ok=True)
-
-    points = heliostat_target.discrete_points.detach().cpu()
-
-    pred = heliostat_pred.normals
-    pred = pred.detach().cpu()
-
-    ideal = heliostat_pred._normals_ideal
-    ideal = ideal.detach().cpu()
-
-    diff = th.sum(pred * ideal, dim=-1) - 0.5115
-
-    # pred[:, 2] = pred[:, 2] - ideal[:, 2]
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.set_zlim(0.00005, 0.00015)
-    surf = ax.plot_trisurf(
-        points[:, 0],
-        points[:, 1],
-        diff,
-        cmap=cm.coolwarm,
-        linewidth=0,
-        antialiased=False,
-    )
-
-    # if epoch > 30:
-    #     plt.show()
-    #     exit()
-    # else:
-    fig.savefig(os.path.join(logdir_mrad, f"test_3D_{epoch}"))
-    plt.close(fig)
-
-
-def plot_diffs(
-        hel_origin: torch.Tensor,
-        ideal_normal_vecs: torch.Tensor,
-        target_normal_vecs: torch.Tensor,
-        pred_normal_vecs: torch.Tensor,
-        epoch: int,
-        logdir: str,
-) -> None:
-    # matplotlib.use('Agg')
-    differences_target = th.sum(
-        ideal_normal_vecs * target_normal_vecs, dim=-1,
-    ).detach().cpu()
-    differences_pred = th.sum(
-        ideal_normal_vecs * pred_normal_vecs, dim=-1,
-    ).detach().cpu()
-
-    x = hel_origin[:, 0].detach().cpu()
-    y = hel_origin[:, 1].detach().cpu()
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    # ax.set_zlim3d(1, 1.00001)
-    surf = ax.plot_trisurf(
-        x,
-        y,
-        abs(differences_target) - abs(differences_pred),
-        cmap=cm.coolwarm,
-        linewidth=0,
-        antialiased=False,
-    )
-
-    fig.savefig(os.path.join(logdir, f"test_{epoch}"))
-    plt.close(fig)
-
-
-def plot_normal_vectors(
-        points_on_hel: torch.Tensor,
-        normal_vectors: torch.Tensor,
-) -> None:
-    """
-
-    Parameters
-    ----------
-    points_on_hel : (N,3) Tensor
-        all points on heliostat.
-    normal_vectors : (N,3) Tensor
-        direction vector of the corresponding points
-
-    Returns
-    -------
-    None
-    """
-    matplotlib.use('QT5Agg')
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.set_xlim3d(-4, 4)
-    ax.set_ylim3d(-4, 4)
-    ax.set_zlim3d(0.03, 0.06)
-    to = points_on_hel.detach().cpu()
-    tv = normal_vectors.detach().cpu()
-    # plt.scatter(tv[:,0], tv[:,1], tv[:,2])
-    ax.quiver(
-        to[:, 0],
-        to[:, 1],
-        to[:, 2],
-        tv[:, 0],
-        tv[:, 1],
-        tv[:, 2],
-        length=0.01,
-        normalize=False,
-        color="b",
-    )
-    plt.show()
-    exit()
-
-
-def plot_raytracer(
-        h_rotated: torch.Tensor,
-        h_matrix: torch.Tensor,
-        position_on_field: torch.Tensor,
-        aimpoint: torch.Tensor,
-        aimpoints: torch.Tensor,
-        sun: torch.Tensor,
-) -> None:
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-
-    # aimpoints = aimpoints - position_on_field
-    # aimpoint = aimpoint - position_on_field
-    print(aimpoints.shape)
-    ax.scatter(h_rotated[:, 0], h_rotated[:, 1], h_rotated[:, 2])  # Heliostat
-    ax.scatter(aimpoint[0], aimpoint[1], aimpoint[2])  # Aimpoint
-    ax.scatter(aimpoints[0, :, 0], aimpoints[0, :, 1], aimpoints[0, :, 2])
-    ax.scatter(sun[0] * 50, sun[1] * 50, sun[2] * 50)  # Sun
-
-    ax.set_xlim3d(-50, 50)
-    ax.set_ylim3d(-50, 50)
-    ax.set_zlim3d(0, 50)
-
-    # Heliostat Coordsystem
-    # ax.quiver(
-    #     position_on_field[0],
-    #     position_on_field[1],
-    #     position_on_field[2],
-    #     h_matrix[0][0],
-    #     h_matrix[0][1],
-    #     h_matrix[0][2],
-    #     length=10,
-    #     normalize=True,
-    #     color="b",
-    # )
-    # ax.quiver(
-    #     position_on_field[0],
-    #     position_on_field[1],
-    #     position_on_field[2],
-    #     h_matrix[1][0],
-    #     h_matrix[1][1],
-    #     h_matrix[1][2],
-    #     length=10,
-    #     normalize=True,
-    #     color="g",
-    # )
-    # ax.quiver(
-    #     position_on_field[0],
-    #     position_on_field[1],
-    #     position_on_field[2],
-    #     h_matrix[2][0],
-    #     h_matrix[2][1],
-    #     h_matrix[2][2],
-    #     length=10,
-    #     normalize=True,
-    #     color="r",
-    # )
-    ax.quiver(
-        0,
-        0,
-        0,
-        h_matrix[0][0],
-        h_matrix[0][1],
-        h_matrix[0][2],
-        length=10,
-        normalize=True,
-        color="b",
-    )
-    ax.quiver(
-        0,
-        0,
-        0,
-        h_matrix[1][0],
-        h_matrix[1][1],
-        h_matrix[1][2],
-        length=10,
-        normalize=True,
-        color="g",
-    )
-    ax.quiver(
-        0,
-        0,
-        0,
-        h_matrix[2][0],
-        h_matrix[2][1],
-        h_matrix[2][2],
-        length=10,
-        normalize=True,
-        color="r",
-    )
-    plt.show()
-    exit()
-
-
-def plot_heliostat(
-        h_rotated: Union[np.ndarray, torch.Tensor],
-        ray_directions: Union[np.ndarray, torch.Tensor, None],
-) -> None:
-    if not isinstance(h_rotated, np.ndarray):
-        h_rotated = h_rotated.detach().cpu().numpy()
-    if (
-            ray_directions is not None
-            and not isinstance(ray_directions, np.ndarray)
-    ):
-        ray_directions = ray_directions.detach().cpu().numpy()
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-
-    if h_rotated.ndim == 3:
-        h_rotated = h_rotated.reshape(-1, h_rotated.shape[-1])
-    # aimpoints = aimpoints - position_on_field
-    # aimpoint = aimpoint - position_on_field
-
-    ax.scatter(h_rotated[:, 0], h_rotated[:, 1], h_rotated[:, 2])  # Heliostat
-
-    ax.set_xlim3d(-50, 0)
-    ax.set_ylim3d(-10, 10)
-    ax.set_zlim3d(0, 5)
-    if ray_directions is not None:
-        ax.quiver(
-            h_rotated[:, 0],
-            h_rotated[:, 1],
-            h_rotated[:, 2],
-            ray_directions[:, 0],
-            ray_directions[:, 1],
-            ray_directions[:, 2],
-            length=50,
-            normalize=True,
-            color="b",
-        )
-        # ax.quiver(
-        #     h_rotated[:, 0],
-        #     h_rotated[:, 1],
-        #     h_rotated[:, 2],
-        #     ray_directions[1][0],
-        #     ray_directions[1][1],
-        #     ray_directions[1][2],
-        #     length=1,
-        #     normalize=True,
-        #     color="g",
-        # )
-        # ax.quiver(
-        #     h_rotated[:, 0],
-        #     h_rotated[:, 1],
-        #     h_rotated[:, 2],
-        #     ray_directions[2][0],
-        #     ray_directions[2][1],
-        #     ray_directions[2][2],
-        #     length=1,
-        #     normalize=True,
-        #     color="r",
-        # )
-    plt.show()
-    exit()
 
 
 def target_image_comparision_pred_orig_naive(
@@ -870,7 +664,7 @@ def spherical_loss_plot(
     plt.close(fig)
 
 
-def season_plot_other(
+def season_plot_nature(
         season_extras: Dict[str, Any],
         ideal: torch.Tensor,
         prediction: torch.Tensor,
@@ -1424,586 +1218,5 @@ def season_plot(
             ax.set_title("Prediction", size=18)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
-    plt.close(fig)
-
-
-def season_plot_old(
-        season_extras: Dict[str, Any],
-        ideal: torch.Tensor,
-        prediction: torch.Tensor,
-        ground_truth: torch.Tensor,
-        prediction_loss: torch.Tensor,
-        ground_truth_loss: torch.Tensor,
-        epoch: int,
-        logdir: str,
-) -> None:
-    # from matplotlib.backends.backend_pgf import FigureCanvasPgf
-    # matplotlib.backend_bases.register_backend('png', FigureCanvasPgf)
-    # matplotlib.use('pgf')
-    # plt.rcParams.update({
-    #     'pgf.texsystem': 'pdflatex',
-    #     'pgf.preamble': r'''
-    #         \usepackage[utf8]{inputenc}
-    #         \usepackage{color}
-    #         \usepackage{dashrule}
-    #         \usepackage{amssymb}
-    #         \usepackage{stackengine}
-    #         \usepackage{scalerel}
-    #         \usepackage{xcolor}
-    #         \usepackage{graphicx}
-    #     ''',
-    #     'text.usetex': True,
-    #     'text.latex.preamble':  r'\usepackage{color}\usepackage{dashrule}',
-    # })
-    # pgf_with_latex = {
-    #     "text.usetex": True,            # use LaTeX to write all text
-    #     "pgf.rcfonts": False,           # Ignore Matplotlibrc
-    #     "pgf.preamble": [
-    #         r'\usepackage{color}'     # xcolor for colours
-    #     ]
-    # }
-    # matplotlib.rcParams.update(pgf_with_latex)
-
-    # To CPU
-    season_extras = season_extras.copy()
-    date_time_ae = season_extras.pop("date_time_ae")
-    # print(len(date_time_ae))
-    tmp = []
-    for i in range(len(date_time_ae)):
-        tmp.append(th.tensor(date_time_ae[i]))
-    date_time_ae = th.cat(tmp).squeeze()
-    # season_extras.pop('date_time_ae', None)
-    # print(date_time_ae)
-    # date_time_ae = date_time_ae.detach().cpu()
-    ideal = ideal.detach().cpu()
-    prediction = prediction.detach().cpu()
-    ground_truth = ground_truth.detach().cpu()
-    prediction_loss = prediction_loss.detach().cpu()
-    ground_truth_loss = ground_truth_loss.detach().cpu()
-
-    image_size = prediction.shape[-1]
-    # print(image_size)
-
-    prediction_norm = th.linalg.norm(prediction, dim=(1, 2))
-    prediction_loss = prediction_loss / prediction_norm
-
-    # exit()
-
-    dt = date_time_ae[:, 0:6]
-    # print(len(dt))
-    # exit()
-
-    d = [
-        datetime.datetime(
-            int(dt[x, 0]),
-            int(dt[x, 1]),
-            int(dt[x, 2]),
-            int(dt[x, 3]),
-            int(dt[x, 4]),
-            int(dt[x, 5])
-        )
-        for x in range(len(dt))
-    ]
-    # print(len(d))
-    unixtime = th.tensor([
-        to_time.mktime(d[x].timetuple())
-        for x in range(len(d))
-    ])
-    ae = date_time_ae[:, 6:8]
-    # print(ae[0,0:2])
-
-    # Setup Figure
-    # ============
-    # height_ratios = [1.0, 0.3]
-    grid_width = 24
-    grid_height = 6
-
-    small_width = [0.2] * grid_width
-    mid_width = [0.4] * grid_width
-    width_ratios = [1.0] * grid_width
-    width_ratios[3::4] = small_width[3::4]
-    width_ratios[2] = 0.1
-    width_ratios[19:] = mid_width[19:]
-
-    height_ratios = [1.0] * grid_height
-    height_ratios[0] = 0.0001
-    # height_ratios[-1] = 0.0001
-
-    fig = plt.figure(constrained_layout=True, figsize=(27, 10))
-
-    gs = GridSpec(
-        grid_height,
-        grid_width,
-        figure=fig,
-        width_ratios=width_ratios,
-        height_ratios=height_ratios,
-        wspace=0,
-    )
-
-    fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
-
-    # Headlines
-    # =========
-    ax = fig.add_subplot(gs[1, 0:3])
-    ax.xaxis.set_label_position('top')
-    ax.set_xlabel(" ")
-    ax.set_title("Seasonal Trajectories")
-    ax.axis('off')
-
-    # Fill First Plot
-    # ===============
-
-    # ####XXXXXXXXXXXXXX
-    ax_polar = fig.add_subplot(gs[1:4, 0:3], projection='polar')
-    ax_polar.set_theta_zero_location("N")
-
-    index = 0
-    legend = []
-    seasons: List[Optional[List[torch.Tensor]]] = [None, None, None, None]
-    for key in season_extras:
-        # print(key)
-        if not key == "date_time_ae":
-            # print(index,new_index)
-            new_index = index + season_extras[key]
-
-            ae_season = ae[index:new_index]
-            dt_season = dt[index:new_index]
-            unix_season = unixtime[index:new_index]
-            prediction_season = prediction[index:new_index]
-            ground_truth_season = ground_truth[index:new_index]
-            ideal_season = ideal[index:new_index]
-
-            all_infos = [
-                prediction_season,
-                ground_truth_season,
-                ideal_season,
-                ae_season,
-                dt_season,
-                unix_season,
-            ]
-
-            highlighted_6 = ae_season[th.logical_and(
-                dt_season[:, 3] == 6.0,
-                dt_season[:, 4] == 0.0,
-            )]
-            highlighted_9 = ae_season[th.logical_and(
-                dt_season[:, 3] == 9.0,
-                dt_season[:, 4] == 0.0,
-            )]
-            highlighted_12 = ae_season[th.logical_and(
-                dt_season[:, 3] == 12.0,
-                dt_season[:, 4] == 0.0,
-            )]
-            highlighted_15 = ae_season[th.logical_and(
-                dt_season[:, 3] == 15.0,
-                dt_season[:, 4] == 0.0,
-            )]
-
-            unicode = '\\bigstar'
-            if key == "measurement":
-                label = "Day of measurement 28.10.2021"
-
-                color = "orange"
-                # short_label = \
-                #     fr'$\textcolor{{{color}}}{{{unicode}}}$ Measurement'
-                short_label = "Measurement"
-                seasons[0] = all_infos
-                ax = fig.add_subplot(gs[1, 3])
-                ver_pos = 0.2
-
-            if key == "short":
-                label = "Solstice (shortest day) 21.12.2021"
-                color = "blue"
-                # short_label = \
-                #     fr'$\textcolor{{{color}}}{{{unicode}}}$ Shortest day'
-                short_label = "Shortest day"
-
-                seasons[1] = all_infos
-
-                ax = fig.add_subplot(gs[2, 3])
-                ver_pos = 0.2
-
-            if key == "spring":
-                label = "Equinox 20.03.2022"
-                color = "green"
-                # short_label = \
-                #     fr'$\textcolor{{{color}}}{{{unicode}}}$ Equinox'
-                short_label = "Equinox"
-
-                seasons[2] = all_infos
-
-                ax = fig.add_subplot(gs[3, 3])
-                ver_pos = 0.3
-
-            if key == "long":
-                label = "Solstice (longest day) 21.06.2022"
-                color = "red"
-                unicode = '\\bigstar'
-                # short_label = \
-                #     fr'$\textcolor{{{color}}}{{{unicode}}}$ Longest day'
-                short_label = "Longest day"
-
-                seasons[3] = all_infos
-                ax = fig.add_subplot(gs[4, 3])
-                ver_pos = 0.2
-
-            ax.text(0.5, ver_pos, short_label, rotation=90)
-            ax.set_axis_off()
-
-            sc = ax_polar.scatter(
-                -th.deg2rad(180 - ae_season[:, 0]),
-                -ae_season[:, 1],
-                marker='.',
-                s=40,
-                color=color,
-                label=label,
-            )
-            ax_polar.scatter(
-                -th.deg2rad(180 - highlighted_6[:, 0]),
-                -highlighted_6[:, 1],
-                marker='*',
-                s=40,
-                color=color,
-                label=label,
-            )
-            ax_polar.scatter(
-                -th.deg2rad(180 - highlighted_9[:, 0]),
-                -highlighted_9[:, 1],
-                marker='*',
-                s=40,
-                color=color,
-                label=label,
-            )
-            ax_polar.scatter(
-                -th.deg2rad(180 - highlighted_12[:, 0]),
-                -highlighted_12[:, 1],
-                marker='*',
-                s=40,
-                color=color,
-                label=label,
-            )
-            ax_polar.scatter(
-                -th.deg2rad(180 - highlighted_15[:, 0]),
-                -highlighted_15[:, 1],
-                marker='*',
-                s=40,
-                color=color,
-                label=label,
-            )
-            legend.append(sc)
-            index = new_index
-
-    l_star = Line2D(
-        [0],
-        [0],
-        marker='*',
-        label='Selected images',
-        markersize=7,
-        linewidth=0,
-        color="black",
-    )
-    legend.append(l_star)
-    # Axis Ticks
-    # ==========
-    ax_polar.set_yticks(th.arange(-90, -0, 15))
-    ax_polar.set_yticklabels(abs(ax_polar.get_yticks()))
-    ax_polar.set_rlabel_position(0)
-    tick_labels = ["0", "45", "90", "135", "$\\pm$ 180", "-135", "-90", "-45"]
-    value_list = ax_polar.get_xticks().tolist()
-    ax_polar.xaxis.set_ticks(value_list)
-    ax_polar.set_xticklabels(tick_labels)
-    # Axis Labels
-    ax_polar.set_xlabel(r'Azimuth $\theta^{a}$ [°]')
-    label_position = ax_polar.get_rlabel_position()
-    ax_polar.text(
-        np.deg2rad(label_position + 7),
-        -45,
-        r'Elevation $\theta^{e}$[°]',
-        rotation=91,
-        ha='center',
-        va='center',
-    )
-
-    # Calculations For Second Plot
-    # ============================
-    i = 1
-    j = 0
-    loss_fn = th.nn.L1Loss()
-    for season in seasons:
-        if season:
-            prediction = season[0]
-            ground_truth = season[1]
-            ideal = season[2]
-            time_season = season[4]
-
-            prediction_list = []
-            prediction_list.append(prediction[th.logical_and(
-                time_season[:, 3] == 15.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            prediction_list.append(prediction[th.logical_and(
-                time_season[:, 3] == 12.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            prediction_list.append(prediction[th.logical_and(
-                time_season[:, 3] == 9.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            prediction_list.append(prediction[th.logical_and(
-                time_season[:, 3] == 6.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-
-            ground_truth_list = []
-            ground_truth_list.append(ground_truth[th.logical_and(
-                time_season[:, 3] == 15.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ground_truth_list.append(ground_truth[th.logical_and(
-                time_season[:, 3] == 12.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ground_truth_list.append(ground_truth[th.logical_and(
-                time_season[:, 3] == 9.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ground_truth_list.append(ground_truth[th.logical_and(
-                time_season[:, 3] == 6.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-
-            ideal_list = []
-            ideal_list.append(ideal[th.logical_and(
-                time_season[:, 3] == 15.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ideal_list.append(ideal[th.logical_and(
-                time_season[:, 3] == 12.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ideal_list.append(ideal[th.logical_and(
-                time_season[:, 3] == 9.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-            ideal_list.append(ideal[th.logical_and(
-                time_season[:, 3] == 6.0,
-                time_season[:, 4] == 0.0,
-            )].squeeze())
-
-            output_pred = loss_fn(prediction[j], ground_truth[j])
-            output_naive = loss_fn(ideal[j], ground_truth[j])
-
-    # Fill Second Plot
-    # ================
-
-            for k in range(0, 16):
-                if i == 1 and j == 3:
-                    ax_title = fig.add_subplot(gs[i, k + 4])
-
-                    ax_title.xaxis.set_label_position('top')
-                    if k % 4 == 0:
-                        ax_title.set_xlabel('Ground Truth')
-                    elif k % 4 == 1:
-                        ax_title.set_title('6:00 a.m.')
-                        ax_title.set_xlabel("Ideal")
-                    elif k % 4 == 2:
-                        ax_title.set_xlabel("Prediction")
-                    ax_title.spines['left'].set_visible(False)
-                    ax_title.spines['right'].set_visible(False)
-                    ax_title.spines['bottom'].set_visible(False)
-                    ax_title.spines['top'].set_visible(False)
-                    ax_title.axes.yaxis.set_ticklabels([])
-                    ax_title.axes.xaxis.set_ticklabels([])
-                    plt.tick_params(
-                        left=False, right=False, top=False, bottom=False)
-
-                    # ax_title.axis('off')
-                    # ax_title.get_xaxis().set_visible(False)
-                    # ax_title.get_yaxis().set_visible(False)
-                # print(i, j, k)
-
-                pred = prediction_list[j]
-
-                gt = ground_truth_list[j]
-                ide = ideal_list[j]
-
-                if k % 4 == 0:
-                    if not len(pred) == 0:
-                        ax = fig.add_subplot(gs[i, k + 4])
-                        ax.imshow(gt, cmap="coolwarm")
-                        if i == 1 and j != 3:
-                            ax.xaxis.set_label_position('top')
-                            ax.set_xlabel('Ground Truth')
-
-                elif k % 4 == 1:
-                    if not len(gt) == 0:
-                        ax = fig.add_subplot(gs[i, k + 4])
-                        ax.imshow(ide, cmap="coolwarm")
-
-                        if output_naive < output_pred:
-                            font = "bold"
-                        else:
-                            font = "normal"
-                        ax.text(
-                            0,
-                            image_size + 0.1 * image_size,
-                            "L1: " + f"{output_naive.item():.4f}",
-                            fontweight=font,
-                            va="bottom",
-                            size="medium",
-                        )
-
-                        if i == 1:
-                            ax.xaxis.set_label_position('top')
-                            ax.set_xlabel('Ideal')
-
-                elif k % 4 == 2:
-                    if not len(ide) == 0:
-                        ax = fig.add_subplot(gs[i, k + 4])
-                        ax.imshow(pred, cmap="coolwarm")
-
-                        if output_pred < output_naive:
-                            font = "bold"
-                        else:
-                            font = "normal"
-
-                        ax.text(
-                            0,
-                            image_size + 0.1 * image_size,
-                            "L1: " + f"{output_pred.item():.4f}",
-                            fontweight=font,
-                            va="bottom",
-                            size="medium",
-                        )
-
-                        if i == 1:
-                            ax.xaxis.set_label_position('top')
-                            ax.set_xlabel('Prediction')
-
-                ax.set_aspect('equal')
-                ax.get_xaxis().set_ticks([])
-                ax.get_yaxis().set_ticks([])
-
-                if k % 4 == 1 and i == 1:
-                    if j == 0:
-                        ax.set_title('03:00 p.m.')
-                    elif j == 1:
-                        ax.set_title('12:00 p.m.')
-                    elif j == 2:
-                        ax.set_title('9:00 a.m.')
-
-                if k % 4 == 3:
-                    j += 1
-            i += 1
-        j = 0
-
-    # Calculations third plot
-    # =======================
-    # stepwidth = unixtime[1] - unixtime[0]
-    # sorted_prediction_loss = th.tensor(
-    #     [x for (_, x) in sorted(zip(d, prediction_loss))])
-    # # sorted_prediction = th.tensor(
-    # #     [x for _, x in sorted(zip(d, prediction))])
-    # # print(th.linalg.norm(sorted_prediction))
-    # sorted_d = sorted(d)
-    # # print(len(sorted_d), sorted_prediction.shape)
-    # sorted_unix = [x for (_, x) in sorted(zip(d, unixtime))]
-
-    # new_axis_index = [
-    #     i
-    #     for i in range(len(sorted_unix) - 1)
-    #     if sorted_unix[i + 1] - sorted_unix[i] > (1.2 * stepwidth)
-    # ]
-    # new_axis_index.append(len(sorted_prediction_loss))
-
-    # old_split = 0
-    # position_start = 19
-    # position_end = 20
-
-    # # Fill third plot
-    # # ===============
-    # for i in range(len(new_axis_index)):
-    #     split = new_axis_index[i] + 1
-    #     # print(start,end)
-    #     ax = fig.add_subplot(gs[1:5, position_start:position_end])
-    #     # here you can format your datetick labels as desired
-    #     myFmt = mdates.DateFormatter('%y-%m-%d %H')
-    #     plt.gca().xaxis.set_major_formatter(myFmt)
-
-    #     position_start += 1
-    #     position_end += 1
-
-    #     ax.plot_date(sorted_d, sorted_prediction_loss)
-
-    #     min_tick = min(sorted_d[old_split:split])
-    #     # min_value -= datetime.timedelta(hours=1)
-    #     max_tick = max(sorted_d[old_split:split])
-    #     ax.set_xticks([min_tick, max_tick])
-
-    #     min_value = min_tick - datetime.timedelta(hours=1)
-    #     max_value = max_tick + datetime.timedelta(hours=1)
-    #     # print(min_value,max_value)
-    #     old_split = split
-    #     ax.set_xlim(min_value, max_value)  # outliers only
-
-    #     plt.xticks(rotation=75, ha="right")
-    #     line = .01  # how big to make the diagonal lines in axes coordinates
-    #     if i == 0:
-    #         ax.spines['right'].set_visible(False)
-
-    #         kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
-    #         ax.plot((1 - line, 1 + line), (-line, +line), **kwargs)
-    #         ax.plot((1 - line, 1 + line), (1 - line, 1 + line), **kwargs)
-    #         ax.set_ylabel(
-    #             r"Image-wise normed loss $ \frac{L1}{||P||_{Frobenius}}$",
-    #             size="large",
-    #         )
-    #         # switch to the bottom axes
-    #         # kwargs.update(transform=ax.transAxes)
-
-    #     elif i == len(new_axis_index) - 1:
-    #         ax.spines['left'].set_visible(False)
-    #         ax.axes.yaxis.set_ticklabels([])
-    #         plt.tick_params(left=False)
-    #         kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
-
-    #         # switch to the bottom axes
-    #         kwargs.update(transform=ax.transAxes)
-    #         ax.plot((-line, +line), (1 - line, 1 + line), **kwargs)
-    #         ax.plot((-line, +line), (-line, +line), **kwargs)
-
-    #     else:
-    #         ax.spines['left'].set_visible(False)
-    #         ax.spines['right'].set_visible(False)
-    #         plt.tick_params(left=False, right=False)
-
-    #         kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
-    #         ax.plot((1 - line, 1 + line), (-line, +line), **kwargs)
-    #         ax.plot((1 - line, 1 + line), (1 - line, 1 + line), **kwargs)
-
-    #         # switch to the bottom axes
-    #         kwargs.update(transform=ax.transAxes)
-    #         ax.plot((-line, +line), (1 - line, 1 + line), **kwargs)
-    #         ax.plot((-line, +line), (-line, +line), **kwargs)
-    #         ax.axes.yaxis.set_ticklabels([])
-
-    # ax = fig.add_subplot(gs[4, 19:23])
-    # ax.text(0.5, -0.85, "Time [h]", ha="center")
-    # # ax.get_xaxis().set_visible(False)
-    # # ax.get_yaxis().set_visible(False)
-    # ax.axis('off')
-
-    # ax = fig.add_subplot(gs[1, 19:23])
-    # ax.xaxis.set_label_position('top')
-    # ax.set_xlabel(' ')
-    # ax.set_title('Time Evolution')
-    # ax.axis('off')
-
-    # # Legend
-    # ax_l = fig.add_subplot(gs[4, 0:2])
-    # ax_l.axis('off')
-    # ax_l.legend(handles=legend, loc="right")
-
     plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
     plt.close(fig)
