@@ -1,11 +1,6 @@
 # Python
 *.pyc
 
-# Deflectometry data
-*.binp
-*.bpro
-*.csv
-
 # PyTorch
 *.pt
 *.pth
