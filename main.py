@@ -316,7 +316,6 @@ def build_target_heliostat(
         )
     return H
 
-
 def build_heliostat(
         cfg: CfgNode,
         sun_directions: torch.Tensor,
@@ -711,7 +710,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'raw loss: {raw_loss.detach().cpu().numpy()}, '
-            f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+            # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
 
@@ -772,7 +771,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'raw loss: {raw_loss.detach().cpu().numpy()}, '
-            f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+            # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
         if writer:
@@ -819,8 +818,6 @@ def main(config_file_name: Optional[str] = None) -> None:
             best_result = test_loss.detach().cpu()
 
     # Diff Raytracing >
-
-
 if __name__ == '__main__':
     path_to_yaml = os.path.join("WorkingConfigs", "TestedWithSteffan.yaml")
     main(path_to_yaml)
