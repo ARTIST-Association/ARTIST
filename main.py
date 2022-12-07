@@ -733,6 +733,21 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     prefix = "train"
     for epoch in range(epochs):
+        test_objects = training.TestObjects(
+            H,
+            ENV,
+            R,
+            test_targets,
+            test_target_sets,
+            test_sun_directions,
+            test_loss_func,
+            cfg,
+            epoch,
+            "test",
+            writer,
+            H_target,
+            logdir_surfaces
+            )
         train_objects = training.TrainObjects(
             opt,
             sched,
@@ -748,6 +763,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             epoch,
             prefix,
             writer,
+            test_objects
         )
 
         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
@@ -763,19 +779,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             writer.add_scalar(f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
             if epoch % cfg.TEST.INTERVAL == 0:
-                test_loss, hausdorff_dist, _ = training.test_batch(
-                    H,
-                    ENV,
-                    R,
-                    test_targets,
-                    test_target_sets,
-                    test_sun_directions,
-                    test_loss_func,
-                    cfg,
-                    epoch,
-                    "test",
-                    writer,
-                )
+                test_loss, hausdorff_dist, _ = training.test_batch(test_objects)
 
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
@@ -818,6 +822,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "Best10m_full.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "TestedWithSteffan.yaml")
     main(path_to_yaml)
     # main()

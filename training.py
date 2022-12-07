@@ -56,8 +56,29 @@ TrainObjects = collections.namedtuple(
         'epoch',
         'prefix',
         'writer',
+        'test_objects'
     ],
     # 'writer' is None by default
+    defaults=[None],
+)
+
+TestObjects = collections.namedtuple(
+    'TrainObjects',
+    [
+         'H',
+         'ENV',
+         'R',
+         'test_targets',
+         'test_target_sets',
+         'test_sun_directions',
+         'test_loss_func',
+         'cfg',
+         'epoch',
+         'prefix',
+         'writer',
+         'H_target',
+         'logdir'
+    ],
     defaults=[None],
 )
 
@@ -523,6 +544,7 @@ def calc_batch_loss(
         epoch,
         prefix,
         writer,
+        test_objects
     ) = train_objects
     assert prefix, "prefix string cannot be empty"
     # Initialize Parameters
