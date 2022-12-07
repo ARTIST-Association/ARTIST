@@ -1,7 +1,7 @@
 import csv
 import struct
 from typing import cast, List, Tuple
-
+import os
 import numpy as np
 
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
@@ -34,7 +34,8 @@ def load_bpro(
     ray_struct_len = ray_struct.size
 
     # powers = []
-    with open(filename, "rb") as file:
+    binp_loc = os.path.join("MeasurementData", filename)
+    with open(binp_loc, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
         concentratorHeader_data = concentratorHeader_struct.unpack_from(
             byte_data)
@@ -116,7 +117,7 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
-
+    path = os.path.join("MeasurementData", path)
     with open(path, 'r', newline='') as csv_file:
         # Skip title
         next(csv_file)
