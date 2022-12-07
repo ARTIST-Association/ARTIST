@@ -23,6 +23,7 @@ from yacs.config import CfgNode
 import data
 from defaults import get_cfg_defaults, load_config_file
 import disk_cache
+import dataset_cache
 from environment import Environment
 import facets
 import hausdorff_distance
@@ -89,89 +90,7 @@ def check_consistency(cfg: CfgNode) -> None:
         print("=============================")
 
 
-def set_up_dataset_caching(
-        device: th.device,
-        writer: Optional[SummaryWriter],
-) -> Tuple[
-    Tuple[Callable, Callable, Callable, Callable, Callable],
-    Tuple[
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-        Callable,
-    ],
-]:
-    def make_cached_generate_sun_array(
-            prefix: str = '',
-    ) -> Callable[
-        [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
-        Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
-    ]:
-        return disk_cache.disk_cache(
-            data.generate_sun_array,
-            device,
-            'cached',
-            prefix,
-            ignore_argnums=[1],
-        )
 
-    def make_cached_generate_dataset(
-            prefix: str,
-            tb_log: bool = True,
-    ) -> Callable[
-        [
-            AbstractHeliostat,
-            Environment,
-            torch.Tensor,
-            Optional[str],
-            str,
-            Optional[SummaryWriter],
-        ],
-        torch.Tensor,
-    ]:
-        if tb_log:
-            log_dataset: Optional[disk_cache.OnLoadFn] = functools.partial(
-                data.log_dataset,
-                prefix,
-                writer,
-            )
-        else:
-            log_dataset = None
-
-        return disk_cache.disk_cache(
-            data.generate_dataset,
-            device,
-            'cached',
-            prefix,
-            on_load=log_dataset,
-            ignore_argnums=[3, 4, 5],
-        )
-
-    return (
-        (
-            make_cached_generate_sun_array('target_'),
-            make_cached_generate_sun_array('test_'),
-            make_cached_generate_sun_array('grid_'),
-            make_cached_generate_sun_array('spheric_'),
-            make_cached_generate_sun_array('season_'),
-        ),
-        (
-            make_cached_generate_dataset('train'),
-            make_cached_generate_dataset('pretrain'),
-            make_cached_generate_dataset('test'),
-            make_cached_generate_dataset('grid', False),
-            make_cached_generate_dataset('naive_grid', False),
-            make_cached_generate_dataset('spheric', False),
-            make_cached_generate_dataset('naive_spheric', False),
-            make_cached_generate_dataset('season', False),
-            make_cached_generate_dataset('naive_season', False),
-        ),
-    )
 
 
 def load_heliostat(
@@ -384,7 +303,6 @@ def main(config_file_name: Optional[str] = None) -> None:
         assert logdir_images is not None
         logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
-        logdir_pretrain_surfaces = os.path.join(logdir_images, "PreSurfaces")
         cfg.merge_from_list(["LOGDIR", logdir])
         os.makedirs(root_logdir, exist_ok=True)
         os.makedirs(logdir, exist_ok=True)
@@ -420,22 +338,13 @@ def main(config_file_name: Optional[str] = None) -> None:
         (
             cached_generate_sun_array,
             cached_generate_test_sun_array,
-            cached_generate_grid_sun_array,
-            cached_generate_spheric_sun_array,
-            cached_generate_season_sun_array,
         ),
         (
             cached_generate_target_dataset,
             cached_generate_pretrain_dataset,
             cached_generate_test_dataset,
-            cached_generate_grid_dataset,
-            cached_generate_naive_grid_dataset,
-            cached_generate_spheric_dataset,
-            cached_generate_naive_spheric_dataset,
-            cached_generate_season_dataset,
-            cached_generate_naive_season_dataset,
         ),
-    ) = set_up_dataset_caching(device, writer)
+    ) = dataset_cache.set_up_dataset_caching(device, writer)
     cached_build_target_heliostat = cast(
         Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
         disk_cache.disk_cache(
@@ -568,94 +477,6 @@ def main(config_file_name: Optional[str] = None) -> None:
 
     # Better Testing
     # ==============
-
-    if cfg.TEST.PLOT.GRID or cfg.TEST.PLOT.SPHERIC or cfg.TEST.PLOT.SEASON:
-        H_validation = cached_build_target_heliostat(
-            cfg, sun_directions, device)
-        ENV_validation = Environment(cfg.AC, device)
-    if cfg.TEST.PLOT.GRID:
-        (
-            grid_test_sun_directions,
-            grid_test_ae,
-        ) = cached_generate_grid_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            case="grid",
-        )
-        grid_test_targets = cached_generate_grid_dataset(
-            H_validation,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            "grid",
-        )
-        # # th.random.set_rng_state(state)
-        H_naive_grid = cached_build_target_heliostat(
-            cfg, sun_directions, device)
-        H_naive_grid._normals = H_naive_grid.get_raw_normals_ideal()
-        naive_grid_targets = cached_generate_naive_grid_dataset(
-            H_naive_grid,
-            ENV_validation,
-            grid_test_sun_directions,
-            None,
-            "naive",
-        )
-    if cfg.TEST.PLOT.SPHERIC:
-        (
-            spheric_test_sun_directions,
-            spheric_test_ae,
-        ) = cached_generate_spheric_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            train_vec=sun_directions,
-            case="spheric",
-        )
-        spheric_test_targets = cached_generate_spheric_dataset(
-            H_validation,
-            ENV_validation,
-            spheric_test_sun_directions,
-            None,
-            "spheric",
-        )
-
-        H_naive_spheric = cached_build_target_heliostat(
-            cfg, sun_directions, device)
-        H_naive_spheric._normals = H_naive_spheric.get_raw_normals_ideal()
-        naive_spheric_test_targets = cached_generate_naive_spheric_dataset(
-            H_naive_spheric,
-            ENV_validation,
-            spheric_test_sun_directions,
-            None,
-            "naive_spheric",
-        )
-    if cfg.TEST.PLOT.SEASON:
-        (
-            season_test_sun_directions,
-            season_test_extras,
-        ) = cached_generate_season_sun_array(
-            cfg.TEST.SUN_DIRECTIONS,
-            device,
-            case="season",
-        )
-        # TODO bring to GPU in data.py
-        season_test_sun_directions = season_test_sun_directions.to(device)
-        season_test_targets = cached_generate_season_dataset(
-            H_validation,
-            ENV_validation,
-            season_test_sun_directions,
-            None,
-            "season",
-        )
-        H_naive_season = cached_build_target_heliostat(
-            cfg, sun_directions, device)
-        H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
-        naive_season_test_targets = cached_generate_naive_season_dataset(
-            H_naive_season,
-            ENV_validation,
-            season_test_sun_directions,
-            None,
-            "naive_season",
-        )
 
     # Start Diff Raytracing
     # =====================
