@@ -8,7 +8,7 @@ import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
-
+from matplotlib import pyplot as plt
 import plotter
 from environment import Environment
 import hausdorff_distance
@@ -160,12 +160,13 @@ def _build_optimizer(
             lr=cfg.LR,
         )
     elif name == 'basinhopping':
+        cfg_global = cfg.GLOBAL
         list_params = [param for group in params for param in group['params']]
 
         minimizer_config: Dict[str, Any] = {'jac': True}
 
-        use_torch_optim = True
-        if use_torch_optim:
+        minimizer_name = cfg_global.USE_MINIMIZER.lower()
+        if minimizer_name == "adam":
             optim_cls = th.optim.Adam
             optim_kwargs = dict(
                 lr=cfg.LR,
@@ -174,50 +175,40 @@ def _build_optimizer(
                 weight_decay=cfg.WEIGHT_DECAY,
             )
 
-            use_sched = False
-            # sched_cls = th.optim.lr_scheduler.ReduceLROnPlateau
-            # sched_kwargs = dict(
-            #     factor=cfg.FACTOR,
-            #     min_lr=cfg.MIN_LR,
-            #     patience=cfg.PATIENCE,
-            #     cooldown=cfg.COOLDOWN,
-            #     verbose=cfg.VERBOSE,
-            # )
+            use_sched = cfg_global.USE_SCHEDULER
             sched_cls = th.optim.lr_scheduler.ReduceLROnPlateau
             sched_kwargs = dict(
-                factor=0.1,
-                min_lr=1e-8,
-                patience=0,
-                cooldown=0,
-                verbose=True,
+                factor=cfg.FACTOR,
+                min_lr=cfg.MIN_LR,
+                patience=cfg.PATIENCE,
+                cooldown=cfg.COOLDOWN,
+                verbose=cfg.VERBOSE,
             )
-
             minimizer_config['method'] = torch_optimizer
             minimizer_config['options'] = {
                 'optim_cls': optim_cls,
                 'optim_kwargs': optim_kwargs,
                 'disp': True,
-                'niter': 90,
-                # 'gtol': 10,
+                'niter': cfg_global.NUM_MIN_ITER,
             }
             if use_sched:
                 minimizer_config['options']['sched_cls'] = sched_cls
                 minimizer_config['options']['sched_kwargs'] = sched_kwargs
         else:
-            minimizer_config['method'] = 'CG'
+            minimizer_config['method'] = minimizer_name
             minimizer_config['options'] = {
                 'disp': True,
-                'niter': 100,
-                'maxiter': 100,
+                'niter': cfg_global.NUM_MIN_ITER,
+                'maxiter': cfg_global.NUM_MIN_ITER,
                 # 'gtol': 1e-4,
                 
             }
 
         basinhopping_config = {
             'disp':True,
-            'niter': 100,
-            'T': 0.005,
-            'stepsize': 0.001,
+            'niter': cfg_global.NUM_BASIN_ITER,
+            'T': cfg_global.TEMP,
+            'stepsize': cfg_global.STEP_SIZE,
         }
         opt = BasinHoppingWrapper(
             list_params,
@@ -436,7 +427,6 @@ def build_loss_funcs(
             hausdorff_loss = (
                 weighted_hausdorff_dists.mean()
                 * hausdorff_loss_factor
-                / pred_bitmap.numel()
             )
         else:
             hausdorff_loss = th.tensor(
@@ -611,6 +601,9 @@ def calc_batch_loss(
         with th.no_grad():
             # Plot target images to TensorBoard
             if writer and epoch % config.TRAIN.IMG_INTERVAL == 0:
+                # plt.imshow(pred_bitmap.cpu().detach(), cmap='jet')
+                # plt.show()
+                # exit()
                 writer.add_image(
                     f"{prefix}/prediction_{i}",
                     utils.colorize(pred_bitmap),
@@ -725,7 +718,7 @@ def train_batch(
         train_objects: TrainObjects,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
-    epoch_minimizer = None
+    # epoch_minimizer = None
     if isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper)):
         with th.no_grad():
             _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
@@ -778,6 +771,7 @@ def train_batch(
         assert prefix, "prefix string cannot be empty"
         writer = train_objects.writer
         if writer:
+            # print(writer, prefix, loss.item(),train_objects.epoch)
             writer.add_scalar(
                 f"{prefix}/loss", loss.item(), train_objects.epoch)
             writer.add_scalar(
