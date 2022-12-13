@@ -21,7 +21,7 @@ def load_config(config_file_name):
 
 initial_filename = "ForNextPaper.yaml"
 initial_folder = "TestingConfigs"
-result_folder = "NextPaperSweep"
+result_folder = "Results"
 sweep_name = "test"
 
 wd_array = [0.1,0.01,0.001]
@@ -30,7 +30,7 @@ sd_array = [2,3,4]
 n_array  = [5,6,8,10,12]
 
 initial_path =  os.path.join(initial_folder, initial_filename)
-result_path = os.path.join(initial_folder, result_folder)
+result_path = os.path.join(result_folder,sweep_name)
 os.makedirs(result_path, exist_ok=True)
 
 cfg = load_config(initial_path)
@@ -68,8 +68,10 @@ for wd in wd_array:
                 new_cfg.merge_from_list([long_name, lr])
                 name_string_final = name_string_n+short_name+"_"+str(lr) #no underline in last for loop
                 
-                with open(os.path.join(result_path, name_string_final+".yaml"), "w") as f:
+                sweep_path = os.path.join(result_path, name_string_final)
+                print(sweep_path)
+                os.makedirs(sweep_path, exist_ok=True)
+                with open(os.path.join(sweep_path, "config.yaml"), "w") as f:
                     f.write(new_cfg.dump())  # cfg, f, default_flow_style=False)
-        
-
-wd = []
+                with open(os.path.join(sweep_path, "do.tmp"), "w") as f:
+                        f.write("")  # cfg, f, default_flow_style=False)
