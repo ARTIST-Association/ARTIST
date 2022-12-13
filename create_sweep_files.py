@@ -73,5 +73,3 @@ for wd in wd_array:
                 os.makedirs(sweep_path, exist_ok=True)
                 with open(os.path.join(sweep_path, "config.yaml"), "w") as f:
                     f.write(new_cfg.dump())  # cfg, f, default_flow_style=False)
-                with open(os.path.join(sweep_path, "do.tmp"), "w") as f:
-                        f.write("")  # cfg, f, default_flow_style=False)
