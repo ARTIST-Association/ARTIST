@@ -24,8 +24,13 @@
 *.pdf
 *.lnk
 
+#configs/
+.yaml
+
 # Experimental log data
 /Results/
 /OldResults/
 /results/
 /configs/
+/TestingConfigs/
+/WorkingConfigs/

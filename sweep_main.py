@@ -20,19 +20,26 @@ def getListOfFiles(dirName):
     return allFiles
 
 
+def get_untrained_folders(config_folder, force=False):
+    folders = next(os.walk(config_folder))[1]
+    todo_index = [re.search("_*", folder).end() for folder in folders]
+    todo_folders = [folder for i, folder in enumerate(folders) if todo_index[i] == 0]
+    if force==True:
+        return folders
+    else:
+        return todo_folders
 
 config_folder = "Results\\test\\"
-folders = next(os.walk(config_folder))[1]
-
-todo_index = [re.search("_*", folder).end() for folder in folders]
-todo_folders = [folder for i, folder in enumerate(folders) if todo_index[i] == 0]
 # todo_folders = [r"_*" in folder for folder in folders]
 # for folder in folders:
 #     todo_folders.append(re.finditer("_*",folder))
-print(todo_folders)
+folders = get_untrained_folders(config_folder)
 # experiment_names = getListOfFiles(config_folder)
 # print(experiment_names)
 
-# for experiment_name in experiment_names:
-#     main.main(experiment_name)
+for experiment_name in folders:
+    path = os.path.join(config_folder, experiment_name, "config.yaml")
+    print(f"Now doing {path}")
+    main.main(path, sweep=True)
+print("Sweep Done")
     

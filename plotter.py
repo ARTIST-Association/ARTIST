@@ -186,12 +186,12 @@ def plot_surfaces_mrad(
 
     diff_angles = abs(target_angles - pred_angles)
 
-    # if writer:
-    #     writer.add_scalar(
-    #         "test/normal_diffs",
-    #         th.sum(diff_angles) / len(diff_angles),
-    #         epoch,
-    #     )
+    if writer:
+        writer.add_scalar(
+            "test/normal_diffs",
+            th.sum(diff_angles) / len(diff_angles),
+            epoch,
+        )
 
     # Get discrete points
     target_points = heliostat_target.discrete_points

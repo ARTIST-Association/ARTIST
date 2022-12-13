@@ -133,7 +133,7 @@ def _build_multi_nurbs_target(
     mnh_cfg.defrost()
     mnh_cfg.H.SHAPE = 'Ideal'
     mnh_cfg.freeze()
-
+    
     nurbs_cfg = mnh_cfg.NURBS.clone()
     nurbs_cfg.defrost()
 
@@ -261,7 +261,7 @@ def build_heliostat(
     return H
 
 
-def main(config_file_name: Optional[str] = None) -> None:
+def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) -> None:
     # Load Defaults
     # =============
     # config_file_name = None
@@ -279,39 +279,45 @@ def main(config_file_name: Optional[str] = None) -> None:
         th.set_default_dtype(th.float64)
     else:
         th.set_default_dtype(th.float32)
-
+        
     utils.fix_pytorch3d()
 
     # Set up Logging
     # ==============
     if cfg.SAVE_RESULTS:
-        now = datetime.now()
-        time_str = now.strftime("%y%m%d_%H%M%S")
-
-        logdir: Optional[str] = cfg.LOGDIR
-        assert logdir is not None
-        logdir = utils.normalize_path(logdir)
-
-        root_logdir = os.path.join(logdir, cfg.ID)
-        logdir = os.path.join(
-            root_logdir,
-            cfg.EXPERIMENT_NAME + f"_{time_str}",
-        )
+        if sweep == True:
+            logdir = os.path.split(config_file_name)[0]
+        else:
+            now = datetime.now()
+            time_str = now.strftime("%y%m%d_%H%M%S")
+    
+            logdir: Optional[str] = cfg.LOGDIR
+            assert logdir is not None
+            logdir = utils.normalize_path(logdir)
+    
+            root_logdir = os.path.join(logdir, cfg.ID)
+            os.makedirs(root_logdir, exist_ok=True)
+            
+            logdir = os.path.join(
+                root_logdir,
+                cfg.EXPERIMENT_NAME + f"_{time_str}",
+            )
+            os.makedirs(logdir, exist_ok=True)
+            with open(os.path.join(logdir, "config.yaml"), "w") as f:
+                f.write(cfg.dump())
+                
         logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
         assert logdir_files is not None
         logdir_images: Optional[str] = os.path.join(logdir, "Images")
         assert logdir_images is not None
         logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
-        cfg.merge_from_list(["LOGDIR", logdir])
-        os.makedirs(root_logdir, exist_ok=True)
-        os.makedirs(logdir, exist_ok=True)
+            
+        
+        
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
         os.makedirs(logdir_enhanced_test, exist_ok=True)
-
-        with open(os.path.join(logdir, "config.yaml"), "w") as f:
-            f.write(cfg.dump())  # cfg, f, default_flow_style=False)
 
         writer: Optional[SummaryWriter] = SummaryWriter(logdir)
         logdir: Optional[str]
@@ -320,7 +326,6 @@ def main(config_file_name: Optional[str] = None) -> None:
         logdir = None
         logdir_files = None
         logdir_images = None
-
     if isinstance(writer, SummaryWriter):
         atexit.register(lambda: cast(SummaryWriter, writer).close())
 
@@ -592,7 +597,7 @@ def main(config_file_name: Optional[str] = None) -> None:
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
             f'raw loss: {raw_loss.detach().cpu().numpy()}, '
-            # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+            f'lr: {opt.param_groups[0]["lr"]:.2e}, '
             f'missed: {num_missed.detach().cpu().item()}, '
         )
         if writer:
@@ -639,7 +644,17 @@ def main(config_file_name: Optional[str] = None) -> None:
             best_result = test_loss.detach().cpu()
 
     # Diff Raytracing >
+    if sweep == True:
+        new_name ="_"+os.path.split(logdir)[-1]
+        new_dir = os.path.join(os.path.split(logdir)[0], new_name)
+        os.rename(logdir,
+            new_dir)
+        print("Sweep Instance finished")
+
+        
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "TestedWithSteffan.yaml")
+    path_to_yaml = os.path.join("TestingConfigs", "ForNextPaper.yaml")
+
+    # print(path)
     main(path_to_yaml)
     # main()

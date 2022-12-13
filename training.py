@@ -107,7 +107,7 @@ def _build_optimizer(
     name = cfg.NAME.lower()
 
     _insert_param_group_config(cfg, params)
-
+    
     if name == "adam":
         opt: th.optim.Optimizer = th.optim.Adam(
             params,
