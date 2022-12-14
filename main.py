@@ -377,8 +377,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     loss_func, test_loss_func = training.build_loss_funcs(
         cfg.TRAIN.LOSS, H.get_to_optimize())
     # Better Testing
-    # ==============
-    plot = plotter.Plotter(cfg, ENV, R, sun_directions, test_loss_func, device)
+    # =============
+    plot = plotter.Plotter(cfg, R, sun_directions, test_loss_func, logdir, device)
     
     epoch_shift_width = len(str(epochs))
 
@@ -399,7 +399,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "test",
             writer,
             H_target,
-            logdir_surfaces
+            logdir_surfaces,
+            True
             )
         train_objects = training.TrainObjects(
             opt,
@@ -452,7 +453,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                 )
         # Save Section
         #Advanced Plotting
-        plot.create_plots(H, prediction, loss, epoch)
+        plot.create_plots(H, epoch, logdir_enhanced_test)
             
 
 

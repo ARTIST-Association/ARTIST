@@ -56,7 +56,7 @@ H:
 LOAD_OPTIMIZER_STATE: false
 NURBS:
   AIM_POINT: inherit
-  COLS: 5
+  COLS: 11
   DISTURBANCE_ROT_ANGLES:
   - 0.0
   - 0.0
@@ -79,9 +79,9 @@ NURBS:
   OPTIMIZE_Z_ONLY: true
   POSITION_ON_FIELD: inherit
   RECALCULATE_EVAL_POINTS: false
-  ROWS: 5
+  ROWS: 11
   SET_UP_WITH_KNOWLEDGE: true
-  SPLINE_DEGREE: 4
+  SPLINE_DEGREE: 2
   WIDTH: 4
 SAVE_RESULTS: true
 SEED: 42
@@ -137,14 +137,14 @@ TRAIN:
       USE_L1_WEIGHT_DECAY: true
       WEIGHT_DECAY_FACTOR: 0.0
     USE_L1_WEIGHT_DECAY: true
-    WEIGHT_DECAY_FACTOR: 0.1
+    WEIGHT_DECAY_FACTOR: 0.0
   OPTIMIZER:
     BETAS:
     - 0.9
     - 0.999
     EPS: 1.0e-08
     LR: 1e-04
-    NAME: BasinHopping
+    NAME: Adam
     POSITION:
       LR: 0.0001
       WEIGHT_DECAY: 0.0
@@ -167,7 +167,7 @@ TRAIN:
       STEP_SIZE_UP: 100
     EXP:
       GAMMA: 0.99
-    NAME: ReduceOnPlateau
+    NAME: Exponential
     ONE_CYCLE:
       FINAL_LR: 1.0e-08
       MAX_LR: 6.0e-05
@@ -181,7 +181,7 @@ TRAIN:
       PATIENCE: 200
       VERBOSE: true
   SUN_DIRECTIONS:
-    CASE: vecs
+    CASE: random
     GRID:
       AZI_RANGE:
       - -90
@@ -194,7 +194,7 @@ TRAIN:
     RAND:
       LATITUDE: 50.92
       LONGITUDE: 6.36
-      NUM_SAMPLES: 2
+      NUM_SAMPLES: 8
     VECS:
       DIRECTIONS:
       - - -0.7004466

@@ -148,7 +148,6 @@ def build_target_heliostat(
         sun_directions: th.Tensor,
         device: th.device,
 ) -> Heliostat:
-    print(cfg)
     if cfg.H.SHAPE.lower() == 'nurbs':
         mnh = _build_multi_nurbs_target(cfg, sun_directions, device)
         H = _multi_nurbs_to_standard(cfg, sun_directions, mnh)
