@@ -25,15 +25,14 @@ from defaults import get_cfg_defaults, load_config_file
 import disk_cache
 import dataset_cache
 from environment import Environment
-import facets
 import hausdorff_distance
-from heliostat_models import AbstractHeliostat, Heliostat
-from multi_nurbs_heliostat import MultiNURBSHeliostat, NURBSFacets
-from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
-import plotter
+from heliostat_models import Heliostat
 from render import Renderer
 import training
 import utils
+from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
+import plotter
+
 
 
 def check_consistency(cfg: CfgNode) -> None:
@@ -88,177 +87,6 @@ def check_consistency(cfg: CfgNode) -> None:
     if not warnings_found:
         print("No warnings found. Good Luck!")
         print("=============================")
-
-
-
-
-
-def load_heliostat(
-        cfg: CfgNode,
-        sun_directions: torch.Tensor,
-        device: th.device,
-) -> AbstractHeliostat:
-    cp_path = os.path.expanduser(cfg.CP_PATH)
-    cp = th.load(cp_path, map_location=device)
-    if cfg.USE_NURBS:
-        if 'facets' in cp:
-            nurbs_heliostat_cls: Type[AbstractNURBSHeliostat] = \
-                MultiNURBSHeliostat
-        else:
-            nurbs_heliostat_cls = NURBSHeliostat
-        H: AbstractHeliostat = nurbs_heliostat_cls.from_dict(
-            cp,
-            device,
-            nurbs_config=cfg.NURBS,
-            config=cfg.H,
-            receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
-        )
-    else:
-        H = Heliostat.from_dict(
-            cp,
-            device,
-            receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
-        )
-    return H
-
-
-def _build_multi_nurbs_target(
-        cfg: CfgNode,
-        sun_directions: torch.Tensor,
-        device: th.device,
-) -> MultiNURBSHeliostat:
-    mnh_cfg = cfg.clone()
-    mnh_cfg.defrost()
-    mnh_cfg.H.SHAPE = 'Ideal'
-    mnh_cfg.freeze()
-    
-    nurbs_cfg = mnh_cfg.NURBS.clone()
-    nurbs_cfg.defrost()
-
-    # We need this to get correct shapes.
-    nurbs_cfg.SET_UP_WITH_KNOWLEDGE = True
-    # Deactivate good-for-training options.
-    nurbs_cfg.INITIALIZE_WITH_KNOWLEDGE = False
-    nurbs_cfg.RECALCULATE_EVAL_POINTS = False
-    nurbs_cfg.GROWING.INTERVAL = 0
-
-    # Overwrite all attributes specified via `mnh_cfg.H.NURBS`.
-    node_stack = [(nurbs_cfg, mnh_cfg.H.NURBS)]
-    while node_stack:
-        node, h_node = node_stack.pop()
-
-        for attr in node.keys():
-            if not hasattr(h_node, attr):
-                continue
-
-            if isinstance(getattr(node, attr), CfgNode):
-                node_stack.append((
-                    getattr(node, attr),
-                    getattr(h_node, attr),
-                ))
-            else:
-                setattr(node, attr, getattr(h_node, attr))
-
-    nurbs_cfg.freeze()
-    mnh = MultiNURBSHeliostat(
-        mnh_cfg.H,
-        nurbs_cfg,
-        device,
-        receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
-        sun_directions=sun_directions,
-        setup_params=False,
-    )
-
-    assert isinstance(mnh.facets, NURBSFacets)
-    for facet in mnh.facets:
-        assert isinstance(facet, NURBSHeliostat)
-        facet.set_ctrl_points(
-            facet.ctrl_points
-            + th.rand_like(facet.ctrl_points)
-            * mnh_cfg.H.NURBS.MAX_ABS_NOISE
-        )
-
-    return mnh
-
-
-def _multi_nurbs_to_standard(
-        cfg: CfgNode,
-        sun_directions: torch.Tensor,
-        mnh: MultiNURBSHeliostat,
-) -> Heliostat:
-    H = Heliostat(
-        cfg.H,
-        mnh.device,
-        receiver_center=cfg.AC.RECEIVER.CENTER,
-        sun_directions=sun_directions,
-        setup_params=False,
-    )
-    discrete_points, normals = mnh.discrete_points_and_normals()
-
-    H.facets = facets.Facets(
-        H,
-        mnh.facets.positions,
-        mnh.facets.spans_n,
-        mnh.facets.spans_e,
-        mnh.facets.raw_discrete_points,
-        mnh.facets.raw_discrete_points_ideal,
-        mnh.facets.raw_normals,
-        mnh.facets.raw_normals_ideal,
-        mnh.facets.cant_rots,
-    )
-    H.params = mnh.nurbs_cfg
-    H.height = mnh.height
-    H.width = mnh.width
-    H.rows = mnh.rows
-    H.cols = mnh.cols
-
-    return H
-
-
-def build_target_heliostat(
-        cfg: CfgNode,
-        sun_directions: torch.Tensor,
-        device: th.device,
-) -> Heliostat:
-    if cfg.H.SHAPE.lower() == 'nurbs':
-        mnh = _build_multi_nurbs_target(cfg, sun_directions, device)
-        H = _multi_nurbs_to_standard(cfg, sun_directions, mnh)
-    else:
-        H = Heliostat(
-            cfg.H,
-            device,
-            receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
-            setup_params=False,
-        )
-    return H
-
-def build_heliostat(
-        cfg: CfgNode,
-        sun_directions: torch.Tensor,
-        device: th.device,
-) -> AbstractHeliostat:
-    if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
-        H = load_heliostat(cfg, sun_directions, device)
-    else:
-        if cfg.USE_NURBS:
-            H = MultiNURBSHeliostat(
-                cfg.H,
-                cfg.NURBS,
-                device,
-                receiver_center=cfg.AC.RECEIVER.CENTER,
-                sun_directions=sun_directions,
-            )
-        else:
-            H = Heliostat(
-                cfg.H,
-                device,
-                receiver_center=cfg.AC.RECEIVER.CENTER,
-                sun_directions=sun_directions,
-            )
-    return H
 
 
 def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) -> None:
@@ -479,10 +307,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
     )
-
-    # Better Testing
-    # ==============
-
+    
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
@@ -551,7 +376,10 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     )
     loss_func, test_loss_func = training.build_loss_funcs(
         cfg.TRAIN.LOSS, H.get_to_optimize())
-
+    # Better Testing
+    # ==============
+    plot = plotter.Plotter(cfg, ENV, R, sun_directions, test_loss_func, device)
+    
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
@@ -593,6 +421,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
             train_objects)
+        
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
@@ -622,6 +451,21 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                     writer,
                 )
         # Save Section
+        #Advanced Plotting
+        plot.create_plots(H, prediction, loss, epoch)
+            
+
+
+            # plotter.season_plot(
+            #     season_test_extras,
+            #     naive_season_test_targets,
+            #     season_test_bitmaps,
+            #     season_test_targets,
+            #     season_test_loss,
+            #     season_naive_test_loss,
+            #     epoch,
+            #     logdir_enhanced_test,
+            # )
 
         if test_loss.detach().cpu() < best_result:
             if cfg.SAVE_RESULTS:
@@ -653,8 +497,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "ForNextPaper.yaml")
-
+    path_to_yaml = os.path.join("TestingConfigs", "PlottingOnly.yaml")
     # print(path)
     main(path_to_yaml)
     # main()
