@@ -79,7 +79,8 @@ TestObjects = collections.namedtuple(
          'prefix',
          'writer',
          'H_target',
-         'logdir'
+         'logdir',
+         'reduction'
     ],
     defaults=[None],
 )
@@ -658,7 +659,8 @@ def test_batch(
     prefix,
     writer,
     H_target,
-    logdir
+    logdir,
+    reduction
     ) = test_objects
     if minimizer_epoch:
         epoch = minimizer_epoch
@@ -682,9 +684,7 @@ def test_batch(
                 (len(targets),) + pred_bitmap.shape,
                 dtype=pred_bitmap.dtype,
             )
-            
         loss = loss_func(pred_bitmap, target)
-        reduction = True
         if reduction: #TODO
             mean_loss += loss / len(targets)
         else:
@@ -694,7 +694,7 @@ def test_batch(
             writer.add_image(
                 f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
     assert bitmaps is not None
-
+    
     hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
         hausdorff_distance.images_to_sets(
             bitmaps,

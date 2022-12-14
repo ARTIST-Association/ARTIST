@@ -280,12 +280,6 @@ class Renderer(object):
         self.ENV = environment
         self.redraw_random_variables: bool = \
             self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
-        # plotter.plot_raytracer(
-        #     self.H.discrete_points,
-        #     self.ENV.receiver_center,
-        #     self.ENV.sun_direction,
-        # )
-        # plotter.plot_normal_vectors(self.H.discrete_points, self.H._normals)
 
         if not self.redraw_random_variables:
             self.xi, self.yi = self.ENV.sun.sample(len(self.H))

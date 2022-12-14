@@ -25,6 +25,7 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+
 if TYPE_CHECKING:
     from heliostat_models import AlignedHeliostat, Heliostat
 import nurbs
@@ -1289,3 +1290,6 @@ def fix_pytorch3d() -> None:
         + (th.get_default_dtype(),)
         + tfs.Rotate.__init__.__defaults__[3:]
     )
+
+
+

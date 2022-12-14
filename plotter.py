@@ -17,27 +17,43 @@ from environment import Environment
 from heliostat_models import AbstractHeliostat
 import utils
 
+from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
+import hausdorff_distance
+
+import disk_cache
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
+import training
+from heliostat_models import Heliostat
+from yacs.config import CfgNode
+
+def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
+    last_axes = plt.gca()
+    ax = mappable.axes
+    fig = ax.figure
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = fig.colorbar(mappable, cax=cax)
+    plt.sca(last_axes)
+    return cbar
+
+@torch.no_grad()
 class Plotter():
-    def __init__(self, cfg, cached_build_target_heliostat, sun_directions, device):
-        self.plot_grid = cfg.GRID
-        self.plot_season = cfg.SEASON
-        self.plot_spheric = cfg.SPHERIC
-        
-        self.grid_test_sun_directions = None
-        self.grid_test_ae = None
-        self.grid_test_targets = None
-        self.grid_naive_targets = None
-        
-        self.spheric_test_sun_directions = None
-        self.spheric_test_ae = None
-        self.spheric_test_targets = None
-        self.spheric_naive_targets = None
-        
-        self.season_test_sun_directions = None
-        self.season_test_ae = None
-        self.season_test_targets = None
-        self.season_naive_targets = None
-        
+    def __init__(self, cfg, R,sun_directions, loss_func, logdir, device):
+        cfg_test = cfg.TEST
+        self.plot_grid = cfg_test.PLOT.GRID
+        self.plot_season = cfg_test.PLOT.SEASON
+        self.plot_spheric = cfg_test.PLOT.SPHERIC
+                
         (
             (
                 cached_generate_grid_sun_array,
@@ -55,11 +71,22 @@ class Plotter():
             ),
         ) = dataset_cache.set_up_test_dataset_caching(device, None)
         
+        cached_build_target_heliostat = cast(
+            Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
+            disk_cache.disk_cache(
+                build_target_heliostat,
+                device,
+                'cached',
+                ignore_argnums=[2],
+            ),
+        )
+        
         H_validation = cached_build_target_heliostat(
         cfg, sun_directions, device)
         ENV_validation = Environment(cfg.AC, device)
         
         if cfg.TEST.PLOT.GRID:
+            print("Create Dataset for Grid Plot")
             (
                 self.grid_test_sun_directions,
                 self.grid_test_ae,
@@ -87,6 +114,7 @@ class Plotter():
                 "naive",
             )
         if cfg.TEST.PLOT.SPHERIC:
+            print("Create Dataset for Spheric Plot")
             (
                 self.spheric_test_sun_directions,
                 self.spheric_test_ae,
@@ -115,47 +143,159 @@ class Plotter():
                 "naive_spheric",
             )
         if cfg.TEST.PLOT.SEASON:
+            print("Create Dataset for Season Plot")
             (
-                self.season_test_sun_directions,
-                self.season_test_extras,
+                season_test_sun_directions,
+                season_test_extras,
             ) = cached_generate_season_sun_array(
                 cfg.TEST.SUN_DIRECTIONS,
                 device,
                 case="season",
             )
             # TODO bring to GPU in data.py
-            self.season_test_sun_directions = self.season_test_sun_directions.to(device)
-            self.season_test_targets = cached_generate_season_dataset(
+            season_test_sun_directions = season_test_sun_directions.to(device)
+            season_test_targets = cached_generate_season_dataset(
                 H_validation,
                 ENV_validation,
-                self.season_test_sun_directions,
+                season_test_sun_directions,
                 None,
                 "season",
             )
             H_naive_season = cached_build_target_heliostat(
                 cfg, sun_directions, device)
             H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
-            self.season_naive_test_targets = cached_generate_naive_season_dataset(
-                H_naive_season,
-                ENV_validation,
-                self.season_test_sun_directions,
-                None,
-                "naive_season",
+            
+            season_test_target_sets = hausdorff_distance.images_to_sets(
+                season_test_targets,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
             )
+            
+            self.season_test_objects = training.TestObjects(
+                None,
+                ENV_validation,
+                R,
+                season_test_targets,
+                season_test_target_sets,
+                season_test_sun_directions,
+                loss_func,
+                cfg,
+                None,#epoch
+                "season_test",
+                None, #writer
+                H_validation,
+                None,
+                False # Reduction
+                )
+            
+            season_test_objects = self.season_test_objects._replace(H=H_naive_season)
+            self.season_naive_test_loss, self.season_naive_hd, self.season_naive_test_targets = training.test_batch(season_test_objects)
+            
+
+            
+    def season_plot(
+            self,
+            H,
+            epoch,
+            logdir
+    ) -> None:
+        so = self.season_test_objects._replace(H=H, epoch=epoch)
+        season_test_loss, season_test_hd, season_test_bitmaps = training.test_batch(
+            so
+        )
+        print(season_test_loss)
+    
         
+        ground_truth = so.test_targets
         
+        ideal = self.season_naive_test_targets
+        ideal_loss = self.season_naive_test_loss
         
+        prediction = season_test_bitmaps
+        prediction_loss = season_test_loss
         
-        
-def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
-    last_axes = plt.gca()
-    ax = mappable.axes
-    fig = ax.figure
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    cbar = fig.colorbar(mappable, cax=cax)
-    plt.sca(last_axes)
-    return cbar
+        colormap = "afmhot"
+        fig = plt.figure(figsize=(7.6, 8))
+        gs = GridSpec(3, 3)  # width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
+        plt.subplots_adjust(wspace=0.0001)
+        for (i, img) in enumerate(ground_truth):
+            ax = fig.add_subplot(gs[i, 0])
+            ax.imshow(ground_truth[i]**1.3, cmap=colormap)
+            ax.axis('off')
+            if i == 0:
+                ax.set_title("Ground Truth", size=18)
+                string = 'Shortest Day'+'\n'+' 9:00 a.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+            if i == 1:
+                string = 'Equinox'+'\n'+' 12:00 a.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+            if i == 2:
+                string = 'Longest Day'+'\n'+' 18:00 a.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+        for (i, img) in enumerate(ideal):
+            ax = fig.add_subplot(gs[i, 1])
+            ax.imshow(ideal[i]**1.3, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {ideal_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+            )
+            if i == 0:
+                ax.set_title("Ideal", size=18)
+        for (i, img) in enumerate(prediction):
+            ax = fig.add_subplot(gs[i, 2])
+            ax.imshow(prediction[i]**1.3, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {prediction_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+                fontweight="bold",
+            )
+            if i == 0:
+                ax.set_title("Prediction", size=18)
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
+        plt.close(fig)
+    
+    def create_plots(self, prediction, loss, epoch):
+        if self.plot_season:
+            self.season_plot(prediction, loss, epoch)
 
 
 @th.no_grad()
@@ -323,10 +463,6 @@ def plot_surfaces_mm(
 
     fig.savefig(os.path.join(logdir_mm, f"test_{epoch}"))
     plt.close(fig)
-
-
-
-
 
 
 def target_image_comparision_pred_orig_naive(
@@ -1132,91 +1268,6 @@ def season_plot_nature(
     plt.close(fig)
 
 
-def season_plot(
-        season_extras: Dict[str, Any],
-        ideal: torch.Tensor,
-        prediction: torch.Tensor,
-        ground_truth: torch.Tensor,
-        prediction_loss: torch.Tensor,
-        ground_truth_loss: torch.Tensor,
-        epoch: int,
-        logdir: str,
-) -> None:
-    colormap = "hot"
-    fig = plt.figure(figsize=(7.6, 8))
-    gs = GridSpec(3, 3)  # width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
-    plt.subplots_adjust(wspace=0.0001)
-    for (i, img) in enumerate(ground_truth):
-        ax = fig.add_subplot(gs[i, 0])
-        ax.imshow(ground_truth[i]**1.3, cmap=colormap)
-        ax.axis('off')
-        if i == 0:
-            ax.set_title("Ground Truth", size=18)
-            string = 'Shortest Day'+'\n'+' 9:00 a.m.'
-            ax.text(
-                -0.15,
-                0.5,
-                string,
-                horizontalalignment='center',
-                verticalalignment='center',
-                rotation=90,
-                size=18,
-                transform=ax.transAxes,
-            )
-        if i == 1:
-            string = 'Equinox'+'\n'+' 12:00 a.m.'
-            ax.text(
-                -0.15,
-                0.5,
-                string,
-                horizontalalignment='center',
-                verticalalignment='center',
-                rotation=90,
-                size=18,
-                transform=ax.transAxes,
-            )
-        if i == 2:
-            string = 'Longest Day'+'\n'+' 18:00 a.m.'
-            ax.text(
-                -0.15,
-                0.5,
-                string,
-                horizontalalignment='center',
-                verticalalignment='center',
-                rotation=90,
-                size=18,
-                transform=ax.transAxes,
-            )
-    for (i, img) in enumerate(ideal):
-        ax = fig.add_subplot(gs[i, 1])
-        ax.imshow(ideal[i]**1.3, cmap=colormap)
-        ax.axis('off')
-        ax.text(
-            0.5,
-            -0.10,
-            f"L1: {ground_truth_loss[i].item():.4f}",
-            size=18,
-            ha="center",
-            transform=ax.transAxes,
-        )
-        if i == 0:
-            ax.set_title("Ideal", size=18)
-    for (i, img) in enumerate(prediction):
-        ax = fig.add_subplot(gs[i, 2])
-        ax.imshow(prediction[i]**1.3, cmap=colormap)
-        ax.axis('off')
-        ax.text(
-            0.5,
-            -0.10,
-            f"L1: {prediction_loss[i].item():.4f}",
-            size=18,
-            ha="center",
-            transform=ax.transAxes,
-            fontweight="bold",
-        )
-        if i == 0:
-            ax.set_title("Prediction", size=18)
-    plt.tight_layout()
-    # plt.show()
-    plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
-    plt.close(fig)
+
+    
+    

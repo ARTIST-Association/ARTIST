@@ -29,14 +29,14 @@ def get_untrained_folders(config_folder, force=False):
     else:
         return todo_folders
 
-config_folder = "Results\\test\\"
+config_folder = "Results\\NatureRuns\\"
 # todo_folders = [r"_*" in folder for folder in folders]
 # for folder in folders:
 #     todo_folders.append(re.finditer("_*",folder))
 folders = get_untrained_folders(config_folder)
 # experiment_names = getListOfFiles(config_folder)
 # print(experiment_names)
-
+print(folders)
 for experiment_name in folders:
     path = os.path.join(config_folder, experiment_name, "config.yaml")
     print(f"Now doing {path}")
