@@ -700,6 +700,9 @@ class AbstractHeliostat:
     facets: AbstractFacets
     canting_algo: Optional[CantingAlgorithm]
 
+    OPTIMIZABLE_NAMES: List[str]
+    _OPTIMIZABLE_NAMES: List[str]
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError('do not construct an abstract class')
 
@@ -826,6 +829,15 @@ class AbstractHeliostat:
 
 
 class Heliostat(AbstractHeliostat):
+    OPTIMIZABLE_NAMES = [
+        'position',
+        'facet_positions',
+        'rotation_x',
+        'rotation_y',
+        'rotation_z',
+    ]
+    _OPTIMIZABLE_NAMES = ['surface']
+
     def __init__(
             self,
             heliostat_config: CfgNode,
@@ -1029,10 +1041,27 @@ class Heliostat(AbstractHeliostat):
             'rotation_z': [self.disturbance_angles[2]],
         }
         params.update(self._optimizables())
+        for name in self.OPTIMIZABLE_NAMES + self._OPTIMIZABLE_NAMES:
+            assert name in params, f'{name} is an unknown optimizable name'
         return params
 
     def get_to_optimize(self) -> List[str]:
-        return self._to_optimize
+        names = []
+        optimizables = self.OPTIMIZABLE_NAMES + self._OPTIMIZABLE_NAMES
+        for name in self._to_optimize:
+            if name + '_0' in optimizables:
+                name = name + '_{}'
+                i = 0
+                subname = name.format(i)
+                while subname in optimizables:
+                    names.append(subname)
+                    i += 1
+                    subname = name.format(i)
+            elif name not in optimizables:
+                raise KeyError(f'{name} is not an optimizable variable')
+            else:
+                names.append(subname)
+        return names
 
     def set_to_optimize(  # type: ignore[override]
             self,
@@ -1051,7 +1080,7 @@ class Heliostat(AbstractHeliostat):
 
     def setup_params(self) -> None:
         optimizables = self.optimizables()
-        for name in self._to_optimize:
+        for name in self.get_to_optimize():
             if name not in optimizables:
                 raise KeyError(f'{name} is not an optimizable variable')
 
@@ -1061,7 +1090,7 @@ class Heliostat(AbstractHeliostat):
     def get_params(self) -> ParamGroups:
         opt_params = []
         optimizables = self.optimizables()
-        for name in self._to_optimize:
+        for name in self.get_to_optimize():
             if name not in optimizables:
                 raise KeyError(f'{name} is not an optimizable variable')
             opt_params.append({'params': optimizables[name], 'name': name})

@@ -62,16 +62,27 @@ TrainObjects = collections.namedtuple(
 )
 
 
+def normalize_param_group_name(name: str) -> Tuple[str, str]:
+    if not name[-1].isdigit():
+        return name, ''
+    underscore_index = name.rfind('_')
+    if underscore_index > 0 and name[underscore_index + 1:].isdigit():
+        return name[:underscore_index], name[:underscore_index]
+    else:
+        return name, ''
+
+
 def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
     for param_group in params:
         name = param_group['name']
+        normalized_name, _ = normalize_param_group_name(name)
 
         if name == 'surface':
             # These parameters are given by the defaults anyway (by
             # definition), so we don't set them explicitly.
             continue
 
-        group_cfg: CfgNode = getattr(cfg, name.upper())
+        group_cfg: CfgNode = getattr(cfg, normalized_name.upper())
 
         for (key, value) in group_cfg.items():
             param_group[key.lower()] = value
@@ -455,10 +466,12 @@ def build_loss_funcs(
             loss += weight_decay_factor * weight_penalty
         else:
             for name in to_optimize:
-                if name == 'surface':
+                normalized_name, _ = normalize_param_group_name(name)
+
+                if normalized_name == 'surface':
                     node: CfgNode = cfg
                 else:
-                    node = getattr(cfg, name.upper())
+                    node = getattr(cfg, normalized_name.upper())
 
                 if not node.USE_L1_WEIGHT_DECAY:
                     continue
