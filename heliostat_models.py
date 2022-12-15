@@ -1183,7 +1183,7 @@ class Heliostat(AbstractHeliostat):
                 raise
             # Assume that we weren't able to set NURBS facets.
             for (facet, normals) in zip(
-                    self.facets._facets,
+                    self.facets._facets,  # type: ignore[attr-defined]
                     data['heliostat_normals'],
             ):
                 facet._normals = normals
