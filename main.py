@@ -498,7 +498,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "PlottingOnly.yaml")
+    path_to_yaml = os.path.join("WorkingConfigs", "TestedWithSteffan.yaml")
     # print(path)
     main(path_to_yaml)
     # main()
