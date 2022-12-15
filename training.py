@@ -81,6 +81,15 @@ def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
             # These parameters are given by the defaults anyway (by
             # definition), so we don't set them explicitly.
             continue
+        elif normalized_name == 'surface':
+            # Assume we use a NURBS surface.
+            # Set LR lower for less influential parameters.
+            base_lr = cfg.LR
+            # TODO Do we also need to take spline degree into account?
+            param_group['surface_0'] = base_lr
+            param_group['surface_1'] = base_lr * 0.75
+            param_group['surface_2'] = base_lr * 0.5
+            continue
 
         group_cfg: CfgNode = getattr(cfg, normalized_name.upper())
 
