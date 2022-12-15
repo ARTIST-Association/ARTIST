@@ -81,6 +81,8 @@ class AbstractNURBSHeliostat(AbstractHeliostat):
 
 
 class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
+    _OPTIMIZABLE_NAMES = ['surface_0', 'surface_1', 'surface_2']
+
     def __init__(
             self,
             heliostat_config: CfgNode,
@@ -128,19 +130,20 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         (
             ctrl_points,
-            self.ctrl_weights,
-            self.knots_x,
-            self.knots_y,
+            ctrl_weights,
+            knots_x,
+            knots_y,
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
         self._orig_world_points = self._discrete_points_ideal.clone()
 
         utils.initialize_spline_knots(
-            self.knots_x, self.knots_y, self.degree_x, self.degree_y)
-        self.ctrl_weights[:] = 1
+            knots_x, knots_y, self.degree_x, self.degree_y)
+        ctrl_weights[:] = 1
 
         self.initialize_control_points(ctrl_points)
+        self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
         self.initialize_eval_points()
         if setup_params:
             self.setup_params()
@@ -218,8 +221,6 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 True,
             )
 
-        self.set_ctrl_points(ctrl_points)
-
     def initialize_eval_points(self) -> None:
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
             if not self.recalc_eval_points:
@@ -241,36 +242,314 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self.rows, self.cols, self.device)
 
     def _optimizables(self) -> Dict[str, List[torch.Tensor]]:
-        nurbs_optimizables = [self.ctrl_points_z]
+        ctrl_points_inner = self.ctrl_points_inner
+        ctrl_points_edges = self.ctrl_points_edges
+        ctrl_points_corners = self.ctrl_points_corners
+
+        nurbs_optimizables_inner = ctrl_points_inner[2::3]
+        nurbs_optimizables_edges = ctrl_points_edges[2::3]
+        nurbs_optimizables_corners = ctrl_points_corners[2::3]
+
         if not self.nurbs_cfg.OPTIMIZE_Z_ONLY:
-            nurbs_optimizables.append(self.ctrl_points_xy)
+            nurbs_optimizables_inner.extend([
+                tensor
+                for tensors in zip(
+                    ctrl_points_inner[::3],
+                    ctrl_points_inner[1::3],
+                )
+                for tensor in tensors
+            ])
+            nurbs_optimizables_edges.extend([
+                tensor
+                for tensors in zip(
+                    ctrl_points_edges[::3],
+                    ctrl_points_edges[1::3],
+                )
+                for tensor in tensors
+            ])
+            nurbs_optimizables_corners.extend([
+                tensor
+                for tensors in zip(
+                    ctrl_points_corners[::3],
+                    ctrl_points_corners[1::3],
+                )
+                for tensor in tensors
+            ])
         if not self.fix_spline_ctrl_weights:
-            nurbs_optimizables.append(self.ctrl_weights)
+            nurbs_optimizables_inner.extend(self.ctrl_weights_inner)
+            nurbs_optimizables_edges.extend(self.ctrl_weights_edges)
+            nurbs_optimizables_corners.extend(self.ctrl_weights_corners)
 
         if not self.fix_spline_knots:
-            nurbs_optimizables.append(self.knots_x)
-            nurbs_optimizables.append(self.knots_y)
+            nurbs_optimizables_inner.extend(self.knots_x_inner)
+            nurbs_optimizables_edges.extend(self.knots_x_edges)
+            nurbs_optimizables_inner.extend(self.knots_y_inner)
+            nurbs_optimizables_edges.extend(self.knots_y_edges)
 
-        return {'surface': nurbs_optimizables}
+        return {
+            'surface_0': nurbs_optimizables_inner,
+            'surface_1': nurbs_optimizables_edges,
+            'surface_2': nurbs_optimizables_corners,
+        }
+
+    @property
+    def ctrl_points_xy(self) -> List[torch.Tensor]:
+        first_row = [
+            row_slice
+            for row_slices in self._ctrl_points_splits[0]
+            for row_slice in row_slices[:-1]
+        ]
+        inner_rows = [
+            rows_slice
+            for rows_slices in self._ctrl_points_splits[1]
+            for rows_slice in rows_slices[:-1]
+        ]
+        last_row = [
+            row_slice
+            for row_slices in self._ctrl_points_splits[2]
+            for row_slice in row_slices[:-1]
+        ]
+
+        return first_row + inner_rows + last_row
+
+    @property
+    def ctrl_points_z(self) -> List[torch.Tensor]:
+        first_row = [
+            row_slice[-1:]
+            for rows_slices in self._ctrl_points_splits[0]
+            for row_slice in rows_slices
+        ]
+        inner_rows = [
+            row_slice[-1:]
+            for rows_slices in self._ctrl_points_splits[1]
+            for row_slice in rows_slices
+        ]
+        last_row = [
+            row_slice[-1:]
+            for rows_slices in self._ctrl_points_splits[2]
+            for row_slice in rows_slices
+        ]
+
+        return first_row + inner_rows + last_row
+
+    @property
+    def ctrl_points_inner(self) -> List[torch.Tensor]:
+        return self._ctrl_points_splits[1][1]
+
+    @property
+    def ctrl_points_edges(self) -> List[torch.Tensor]:
+        first_row_edge = self._ctrl_points_splits[0][1]
+        inner_rows_edges = [
+            row_slice
+            for row_slices in self._ctrl_points_splits[1][::2]
+            for row_slice in row_slices
+        ]
+        last_row_edge = self._ctrl_points_splits[2][1]
+
+        return first_row_edge + inner_rows_edges + last_row_edge
+
+    @property
+    def ctrl_points_corners(self) -> List[torch.Tensor]:
+        first_corners = [
+            row_slice
+            for row_slices in self._ctrl_points_splits[0][::2]
+            for row_slice in row_slices
+        ]
+        last_corners = [
+            row_slice
+            for row_slices in self._ctrl_points_splits[2][::2]
+            for row_slice in row_slices
+        ]
+        return first_corners + last_corners
 
     @property
     def ctrl_points(self) -> torch.Tensor:
-        return th.cat([
-            self.ctrl_points_xy,
-            self.ctrl_points_z,
-        ], dim=-1)
+        # self._ctrl_points_splits[0][0] per-dim
+        # self._ctrl_points_splits[0] per-column
+        # self._ctrl_points_splits per-row
+        first_row = th.cat([
+            th.cat(row_slice, dim=-1)
+            for row_slice in self._ctrl_points_splits[0]
+        ], dim=1)
+        inner_rows = th.cat([
+            th.cat(rows_slice, dim=-1)
+            for rows_slice in self._ctrl_points_splits[1]
+        ], dim=1)
+        last_row = th.cat([
+            th.cat(row_slice, dim=-1)
+            for row_slice in self._ctrl_points_splits[2]
+        ], dim=1)
+
+        return th.cat([first_row, inner_rows, last_row], dim=0)
 
     @ctrl_points.setter
     def ctrl_points(self) -> None:
         raise AttributeError(
-            'ctrl_points is not a writable attribute; '
+            '`ctrl_points` is not a writable attribute; '
             'use `set_ctrl_points` instead'
         )
 
+    @property
+    def ctrl_weights_inner(self) -> List[torch.Tensor]:
+        return [self._ctrl_weights_splits[1][1]]
+
+    @property
+    def ctrl_weights_edges(self) -> List[torch.Tensor]:
+        first_row_edge = [self._ctrl_weights_splits[0][1]]
+        inner_rows_edges = [
+            row_slice
+            for row_slices in self._ctrl_weights_splits[1][::2]
+            for row_slice in row_slices
+        ]
+        last_row_edge = [self._ctrl_weights_splits[2][1]]
+
+        return first_row_edge + inner_rows_edges + last_row_edge
+
+    @property
+    def ctrl_weights_corners(self) -> List[torch.Tensor]:
+        first_corners = [
+            row_slice
+            for row_slice in self._ctrl_weights_splits[0][::2]
+        ]
+        last_corners = [
+            row_slice
+            for row_slice in self._ctrl_weights_splits[2][::2]
+        ]
+        return first_corners + last_corners
+
+    @property
+    def ctrl_weights(self) -> torch.Tensor:
+        first_row = th.cat(self._ctrl_weights_splits[0], dim=1)
+        inner_rows = th.cat(self._ctrl_weights_splits[1], dim=1)
+        last_row = th.cat(self._ctrl_weights_splits[2], dim=1)
+        return th.cat([first_row, inner_rows, last_row], dim=0)
+
+    @ctrl_weights.setter
+    def ctrl_weights(self) -> None:
+        raise AttributeError(
+            '`ctrl_weights` is not a writable attribute; '
+            'use `set_ctrl_weights` instead'
+        )
+
+    @property
+    def knots_x_inner(self) -> List[torch.Tensor]:
+        return self._knots_x_splits[1:2]
+
+    @property
+    def knots_x_edges(self) -> List[torch.Tensor]:
+        return self._knots_x_splits[::2]
+
+    @property
+    def knots_x(self) -> torch.Tensor:
+        return th.cat(self._knots_x_splits)
+
+    @knots_x.setter
+    def knots_x(self) -> None:
+        raise AttributeError(
+            '`knots_x` is not a writable attribute; '
+            'use `set_knots_x` instead'
+        )
+
+    @property
+    def knots_y_inner(self) -> List[torch.Tensor]:
+        return self._knots_y_splits[1:2]
+
+    @property
+    def knots_y_edges(self) -> List[torch.Tensor]:
+        return self._knots_y_splits[::2]
+
+    @property
+    def knots_y(self) -> torch.Tensor:
+        return th.cat(self._knots_y_splits)
+
+    @knots_y.setter
+    def knots_y(self) -> None:
+        raise AttributeError(
+            '`knots_y` is not a writable attribute; '
+            'use `set_knots_y` instead'
+        )
+
+    def split_nurbs_params(
+            self,
+            ctrl_points: torch.Tensor,
+            ctrl_weights: torch.Tensor,
+            knots_x: torch.Tensor,
+            knots_y: torch.Tensor,
+    ) -> None:
+        with th.no_grad():
+            self.set_ctrl_points(ctrl_points)
+            self.set_ctrl_weights(ctrl_weights)
+            self.set_knots_x(knots_x)
+            self.set_knots_y(knots_y)
+
     def set_ctrl_points(self, ctrl_points: torch.Tensor) -> None:
         with th.no_grad():
-            self.ctrl_points_xy = ctrl_points[:, :, :-1]
-            self.ctrl_points_z = ctrl_points[:, :, -1:]
+            # Split in last dimension, then column dimension, then row
+            # dimension.
+            first_row = [
+                [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for row_slice in [
+                        ctrl_points[:1, :1],
+                        ctrl_points[:1, 1:-1],
+                        ctrl_points[:1, -1:],
+                ]
+            ]
+            inner_rows = [
+                [rows_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for rows_slice in [
+                        ctrl_points[1:-1, :1],
+                        ctrl_points[1:-1, 1:-1],
+                        ctrl_points[1:-1, -1:],
+                ]
+            ]
+            last_row = [
+                [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for row_slice in [
+                        ctrl_points[-1:, :1],
+                        ctrl_points[-1:, 1:-1],
+                        ctrl_points[-1:, -1:],
+                ]
+            ]
+
+            self._ctrl_points_splits = [first_row, inner_rows, last_row]
+            assert (self.ctrl_points == ctrl_points).all()
+
+    def set_ctrl_weights(self, ctrl_weights: torch.Tensor) -> None:
+        with th.no_grad():
+            # Split in column dimension, then row dimension.
+            first_row = [
+                ctrl_weights[:1, :1],
+                ctrl_weights[:1, 1:-1],
+                ctrl_weights[:1, -1:],
+            ]
+            inner_rows = [
+                ctrl_weights[1:-1, :1],
+                ctrl_weights[1:-1, 1:-1],
+                ctrl_weights[1:-1, -1:],
+            ]
+            last_row = [
+                ctrl_weights[-1:, :1],
+                ctrl_weights[-1:, 1:-1],
+                ctrl_weights[-1:, -1:],
+            ]
+
+            self._ctrl_weights_splits = [first_row, inner_rows, last_row]
+            assert (self.ctrl_weights == ctrl_weights).all()
+
+    def set_knots_x(self, knots_x: torch.Tensor) -> None:
+        with th.no_grad():
+            self._knots_x_splits = self._split_knots(knots_x)
+            assert (self.knots_x == knots_x).all()
+
+    def set_knots_y(self, knots_y: torch.Tensor) -> None:
+        with th.no_grad():
+            self._knots_y_splits = self._split_knots(knots_y)
+            assert (self.knots_y == knots_y).all()
+
+    @staticmethod
+    def _split_knots(knots: torch.Tensor) -> List[torch.Tensor]:
+        with th.no_grad():
+            return [knots[:1], knots[1:-1], knots[-1:]]
 
     def _invert_world_points(self) -> torch.Tensor:
         return utils.initialize_spline_eval_points_perfectly(

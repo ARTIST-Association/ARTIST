@@ -135,8 +135,12 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     # individual facet optimizables combine to the complete named
     # optimizable.
     _FACET_OPTIMIZABLES = {
-        'surface': 'surface',
+        'surface_0': 'surface_0',
+        'surface_1': 'surface_1',
+        'surface_2': 'surface_2',
     }
+
+    _OPTIMIZABLE_NAMES = ['surface_0', 'surface_1', 'surface_2']
 
     def __init__(
             self,

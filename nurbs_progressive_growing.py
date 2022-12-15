@@ -211,8 +211,10 @@ class ProgressiveGrowing:
                 self.heliostat.ctrl_points[new_row_indices, :])
 
             if not self.heliostat.nurbs_cfg.OPTIMIZE_Z_ONLY:
+                raise NotImplementedError('did not update unused code')
                 self.heliostat.ctrl_points_xy[new_row_indices, :] = \
                     new_row_control_points[..., :-1]
+            raise NotImplementedError('did not update unused code')
             self.heliostat.ctrl_points_z[new_row_indices, :] = \
                 new_row_control_points[..., -1:]
 
@@ -229,8 +231,10 @@ class ProgressiveGrowing:
                 self.heliostat.ctrl_points[:, new_col_indices])
 
             if not self.heliostat.nurbs_cfg.OPTIMIZE_Z_ONLY:
+                raise NotImplementedError('did not update unused code')
                 self.heliostat.ctrl_points_xy[:, new_col_indices] = \
                     new_col_control_points[..., :-1]
+            raise NotImplementedError('did not update unused code')
             self.heliostat.ctrl_points_z[:, new_col_indices] = \
                 new_col_control_points[..., -1:]
 
