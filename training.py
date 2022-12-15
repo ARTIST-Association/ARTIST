@@ -86,9 +86,9 @@ def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
             # Set LR lower for less influential parameters.
             base_lr = cfg.LR
             # TODO Do we also need to take spline degree into account?
-            param_group['surface_0'] = base_lr
-            param_group['surface_1'] = base_lr * 0.75
-            param_group['surface_2'] = base_lr * 0.5
+            param_group['lr'] = base_lr
+            param_group['lr'] = base_lr * 0.75
+            param_group['lr'] = base_lr * 0.5
             continue
 
         group_cfg: CfgNode = getattr(cfg, normalized_name.upper())
