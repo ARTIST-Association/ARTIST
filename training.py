@@ -9,10 +9,12 @@ import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
+import plotter
 from environment import Environment
 import hausdorff_distance
 from heliostat_models import AbstractHeliostat, ParamGroups
 from render import Renderer
+from matplotlib import pyplot as plt
 import utils
 
 LossFn = Callable[
@@ -82,7 +84,6 @@ TestObjects = collections.namedtuple(
     defaults=[None],
 )
 
-
 def normalize_param_group_name(name: str) -> Tuple[str, str]:
     if not name[-1].isdigit():
         return name, ''
@@ -91,7 +92,6 @@ def normalize_param_group_name(name: str) -> Tuple[str, str]:
         return name[:underscore_index], name[:underscore_index]
     else:
         return name, ''
-
 
 def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
     for param_group in params:
@@ -164,7 +164,7 @@ def _build_optimizer(
 
         minimizer_config: Dict[str, Any] = {'jac': True}
 
-        use_torch_optim = False
+        use_torch_optim = True
         if use_torch_optim:
             optim_cls = th.optim.Adam
             optim_kwargs = dict(
@@ -175,13 +175,21 @@ def _build_optimizer(
             )
 
             use_sched = False
+            # sched_cls = th.optim.lr_scheduler.ReduceLROnPlateau
+            # sched_kwargs = dict(
+            #     factor=cfg.FACTOR,
+            #     min_lr=cfg.MIN_LR,
+            #     patience=cfg.PATIENCE,
+            #     cooldown=cfg.COOLDOWN,
+            #     verbose=cfg.VERBOSE,
+            # )
             sched_cls = th.optim.lr_scheduler.ReduceLROnPlateau
             sched_kwargs = dict(
-                factor=cfg.FACTOR,
-                min_lr=cfg.MIN_LR,
-                patience=cfg.PATIENCE,
-                cooldown=cfg.COOLDOWN,
-                verbose=cfg.VERBOSE,
+                factor=0.1,
+                min_lr=1e-8,
+                patience=0,
+                cooldown=0,
+                verbose=True,
             )
 
             minimizer_config['method'] = torch_optimizer
@@ -189,7 +197,8 @@ def _build_optimizer(
                 'optim_cls': optim_cls,
                 'optim_kwargs': optim_kwargs,
                 'disp': True,
-                'niter': 20,
+                'niter': 90,
+                # 'gtol': 10,
             }
             if use_sched:
                 minimizer_config['options']['sched_cls'] = sched_cls
@@ -198,12 +207,17 @@ def _build_optimizer(
             minimizer_config['method'] = 'CG'
             minimizer_config['options'] = {
                 'disp': True,
-                'maxiter': 20,
+                'niter': 100,
+                'maxiter': 100,
+                # 'gtol': 1e-4,
+                
             }
 
         basinhopping_config = {
+            'disp':True,
             'niter': 100,
-            'stepsize': 0.01,
+            'T': 0.005,
+            'stepsize': 0.001,
         }
         opt = BasinHoppingWrapper(
             list_params,
@@ -360,7 +374,6 @@ def if_else_zero(
         result = th.tensor(0.0, dtype=dtype, device=device)
     return result
 
-
 def build_loss_funcs(
         cfg_loss: CfgNode,
         to_optimize: List[str],
@@ -404,25 +417,30 @@ def build_loss_funcs(
             pred_bitmap: torch.Tensor,
             target_set: Optional[torch.Tensor],
     ) -> torch.Tensor:
-        assert target_set is not None
-        weighted_hausdorff_dists = \
-            hausdorff_distance.weighted_hausdorff_distance(
-                pred_bitmap.unsqueeze(0),
-                [target_set],
-                norm_p=cfg.HAUSDORFF.NORM_P,
-                mean_p=cfg.HAUSDORFF.MEAN_P,
+        if hausdorff_loss_factor != 0:
+            assert target_set is not None
+            weighted_hausdorff_dists = \
+                hausdorff_distance.weighted_hausdorff_distance(
+                    pred_bitmap.unsqueeze(0),
+                    [target_set],
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                    mean_p=cfg.HAUSDORFF.MEAN_P,
+                )
+            weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
+                10 * hausdorff_distance.max_hausdorff_distance(
+                    pred_bitmap.shape,
+                    pred_bitmap.device,
+                    pred_bitmap.dtype,
+                    norm_p=cfg.HAUSDORFF.NORM_P,
+                )
+            hausdorff_loss = (
+                weighted_hausdorff_dists.mean()
+                * hausdorff_loss_factor
+                / pred_bitmap.numel()
             )
-        weighted_hausdorff_dists[th.isposinf(weighted_hausdorff_dists)] = \
-            10 * hausdorff_distance.max_hausdorff_distance(
-                pred_bitmap.shape,
-                pred_bitmap.device,
-                pred_bitmap.dtype,
-                norm_p=cfg.HAUSDORFF.NORM_P,
-            )
-        hausdorff_loss = (
-            weighted_hausdorff_dists.mean()
-            * hausdorff_loss_factor
-        )
+        else:
+            hausdorff_loss = th.tensor(
+                0.0, dtype=pred_bitmap.dtype, device=pred_bitmap.device)
         return hausdorff_loss
 
     def loss_func(
@@ -481,6 +499,7 @@ def build_loss_funcs(
         loss += alignment_loss
 
         # Weighted Hausdorff loss
+        hausdorff_loss = hausdorff_loss_func(pred_bitmap, target_set)
         hausdorff_loss = if_else_zero(
             hausdorff_loss_factor != 0,
             lambda: hausdorff_loss_func(pred_bitmap, target_set),
@@ -521,13 +540,11 @@ def build_loss_funcs(
 def calc_batch_loss(
         train_objects: TrainObjects,
         return_extras: bool = True,
+        minimizer_epoch= None
 ) -> Union[
     torch.Tensor,
     Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
 ]:
-    # print(epoch)
-    # if epoch == 0:
-    #     last_lr = opt.param_groups[0]["lr"]
     (
         opt,
         # Don't need scheduler.
@@ -546,6 +563,8 @@ def calc_batch_loss(
         writer,
         test_objects
     ) = train_objects
+    if minimizer_epoch:
+        epoch= minimizer_epoch
     assert prefix, "prefix string cannot be empty"
     # Initialize Parameters
     # =====================
@@ -604,15 +623,15 @@ def calc_batch_loss(
                     (indices.numel() - indices.count_nonzero())
                     / len(targets)
                 )
-
+                
     if return_extras:
         return loss, (raw_loss, pred_bitmap, num_missed)
     return loss
 
-
 def calc_batch_grads(
         train_objects: TrainObjects,
         return_extras: bool = True,
+        minimizer_epoch = None
 ) -> Union[
     torch.Tensor,
     Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
@@ -620,7 +639,7 @@ def calc_batch_grads(
     train_objects.opt.zero_grad(set_to_none=True)
 
     loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
-        train_objects, return_extras=True)
+        train_objects, return_extras=True, minimizer_epoch=minimizer_epoch)
 
     loss.backward()
     if return_extras:
@@ -628,21 +647,126 @@ def calc_batch_grads(
     return loss
 
 
+@th.no_grad()
+def test_batch(
+        test_objects: TrainObjects,
+        minimizer_epoch = None
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    (
+    heliostat,
+    ENV,
+    renderer,
+    targets,
+    target_sets,
+    sun_directions,
+    loss_func,
+    config,
+    epoch,
+    prefix,
+    writer,
+    H_target,
+    logdir
+    ) = test_objects
+    if minimizer_epoch:
+        epoch = minimizer_epoch
+    assert prefix, "prefix string cannot be empty"
+    
+    mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
+    losses = []
+    bitmaps: Optional[torch.Tensor] = None
+    for (i, (target, sun_direction)) in enumerate(zip(
+            targets,
+            sun_directions,
+    )):
+        heliostat_aligned = heliostat.align(sun_direction)
+        (
+            pred_bitmap,
+            (ray_directions, dx_ints, dy_ints, _, _, _),
+        ) = renderer.render(heliostat_aligned, return_extras=True)
+
+        if bitmaps is None:
+            bitmaps = th.empty(
+                (len(targets),) + pred_bitmap.shape,
+                dtype=pred_bitmap.dtype,
+            )
+            
+        loss = loss_func(pred_bitmap, target)
+        reduction = True
+        if reduction: #TODO
+            mean_loss += loss / len(targets)
+        else:
+            losses.append(loss)
+        bitmaps[i] = pred_bitmap.detach().cpu()
+        if writer:
+            writer.add_image(
+                f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
+    assert bitmaps is not None
+
+    hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
+        hausdorff_distance.images_to_sets(
+            bitmaps,
+            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        ),
+        target_sets,
+    )
+    mean_hausdorff_dist = hausdorff_dists.mean()
+
+    if writer:
+        writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
+        writer.add_scalar(
+            f"{prefix}/hausdorff_distance", mean_hausdorff_dist.item(), epoch)
+    if reduction:
+        return mean_loss, mean_hausdorff_dist, bitmaps
+    else:
+        return th.stack(losses), hausdorff_dists, bitmaps
+    
 def train_batch(
         train_objects: TrainObjects,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     opt = train_objects.opt
+    epoch_minimizer = None
     if isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper)):
         with th.no_grad():
             _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
+        epoch_minimizer=[0]
+        best_result = [th.tensor(float('inf'))]
+        def global_opt():
+            loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(train_objects, return_extras=True, minimizer_epoch=epoch_minimizer[0])   
+            writer = train_objects.writer
+            if writer:
+                writer.add_scalar(
+                    "minimizer/loss", raw_loss.item(), epoch_minimizer[0])
+            print(f"Minimizer epoch {epoch_minimizer}. Loss={raw_loss.item()}")
+            
+            cfg = train_objects.config
+            test_objects = train_objects.test_objects
+            if epoch_minimizer[0] % cfg.TEST.INTERVAL == 0:
+                test_loss, hausdorff_dist, _ = test_batch(test_objects, epoch_minimizer[0])
+                plotter.plot_surfaces_mrad(
+                    test_objects.H_target,
+                    test_objects.H,
+                    epoch_minimizer[0],
+                    test_objects.logdir,
+                    writer,
+                )
+                print(f"Minimizer epoch {epoch_minimizer}. Test loss={test_loss.item()}")
+                if test_loss.detach().cpu() < best_result[0] and cfg.SAVE_RESULTS:
+                    print(f"New best test loss found. Value: {test_loss.detach().cpu()}. Old Value:{best_result[0]}")
+
+                    best_result[0]=test_loss.detach().cpu()
+            epoch_minimizer[0]+=1
+            
+            return loss
         loss = cast(
             th.Tensor,
             opt.step(cast(
                 Callable[[], float],
-                lambda: calc_batch_grads(train_objects, return_extras=False),
+                global_opt,
             )),
         )
+        # loss = calc_batch_grads(train_objects, return_extras=False)
     else:
         loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
             train_objects)
@@ -672,71 +796,3 @@ def train_batch(
     #     last_lr = opt.param_groups[0]["lr"]
 
     return loss, raw_loss, pred_bitmap, num_missed
-
-
-@th.no_grad()
-def test_batch(
-        heliostat: AbstractHeliostat,
-        env: Environment,
-        renderer: Renderer,
-        targets: torch.Tensor,
-        target_sets: List[torch.Tensor],
-        sun_directions: torch.Tensor,
-        loss_func: TestLossFn,
-        config: CfgNode,
-        epoch: int,
-        prefix: str,
-        writer: Optional[SummaryWriter] = None,
-        reduction: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    assert prefix, "prefix string cannot be empty"
-
-    mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
-    losses = []
-    bitmaps: Optional[torch.Tensor] = None
-    for (i, (target, sun_direction)) in enumerate(zip(
-            targets,
-            sun_directions,
-    )):
-        heliostat_aligned = heliostat.align(sun_direction)
-        (
-            pred_bitmap,
-            (ray_directions, dx_ints, dy_ints, _, _, _),
-        ) = renderer.render(heliostat_aligned, return_extras=True)
-
-        if bitmaps is None:
-            bitmaps = th.empty(
-                (len(targets),) + pred_bitmap.shape,
-                dtype=pred_bitmap.dtype,
-            )
-
-        loss = loss_func(pred_bitmap, target)
-        if reduction:
-            mean_loss += loss / len(targets)
-        else:
-            losses.append(loss)
-        bitmaps[i] = pred_bitmap.detach().cpu()
-
-        if writer:
-            writer.add_image(
-                f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
-    assert bitmaps is not None
-
-    hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
-        hausdorff_distance.images_to_sets(
-            bitmaps,
-            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-            config.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-        ),
-        target_sets,
-    )
-    mean_hausdorff_dist = hausdorff_dists.mean()
-
-    if writer:
-        writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
-        writer.add_scalar(
-            f"{prefix}/hausdorff_distance", mean_hausdorff_dist.item(), epoch)
-    if reduction:
-        return mean_loss, mean_hausdorff_dist, bitmaps
-    else:
-        return th.stack(losses), hausdorff_dists, bitmaps
