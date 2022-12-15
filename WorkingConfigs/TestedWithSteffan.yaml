@@ -56,11 +56,7 @@ H:
 LOAD_OPTIMIZER_STATE: false
 NURBS:
   AIM_POINT: inherit
-<<<<<<< HEAD
   COLS: 7
-=======
-  COLS: 11
->>>>>>> c36090d (-added new sweep mechanics)
   DISTURBANCE_ROT_ANGLES:
   - 0.0
   - 0.0
@@ -83,11 +79,7 @@ NURBS:
   OPTIMIZE_Z_ONLY: true
   POSITION_ON_FIELD: inherit
   RECALCULATE_EVAL_POINTS: false
-<<<<<<< HEAD
   ROWS: 7
-=======
-  ROWS: 11
->>>>>>> c36090d (-added new sweep mechanics)
   SET_UP_WITH_KNOWLEDGE: true
   SPLINE_DEGREE: 2
   WIDTH: 4
