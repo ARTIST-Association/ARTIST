@@ -84,6 +84,7 @@ TestObjects = collections.namedtuple(
     ],
     defaults=[None],
 )
+<<<<<<< HEAD
 
 def normalize_param_group_name(name: str) -> Tuple[str, str]:
     if not name[-1].isdigit():
@@ -93,6 +94,8 @@ def normalize_param_group_name(name: str) -> Tuple[str, str]:
         return name[:underscore_index], name[:underscore_index]
     else:
         return name, ''
+=======
+>>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
 
 def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
     for param_group in params:

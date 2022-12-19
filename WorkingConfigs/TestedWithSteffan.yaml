@@ -12,8 +12,13 @@ AC:
     - 0
     PLANE_X: 7.0
     PLANE_Y: 7.0
+<<<<<<< HEAD
     RESOLUTION_X: 64
     RESOLUTION_Y: 64
+=======
+    RESOLUTION_X: 32
+    RESOLUTION_Y: 32
+>>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
   SUN:
     DISTRIBUTION: Normal
     GENERATE_N_RAYS: 150
@@ -56,7 +61,11 @@ H:
 LOAD_OPTIMIZER_STATE: false
 NURBS:
   AIM_POINT: inherit
+<<<<<<< HEAD
   COLS: 7
+=======
+  COLS: 11
+>>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
   DISTURBANCE_ROT_ANGLES:
   - 0.0
   - 0.0
@@ -79,7 +88,11 @@ NURBS:
   OPTIMIZE_Z_ONLY: true
   POSITION_ON_FIELD: inherit
   RECALCULATE_EVAL_POINTS: false
+<<<<<<< HEAD
   ROWS: 7
+=======
+  ROWS: 11
+>>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
   SET_UP_WITH_KNOWLEDGE: true
   SPLINE_DEGREE: 2
   WIDTH: 4
@@ -200,7 +213,11 @@ TRAIN:
       - - -0.7004466
         - -0.43719268
         - 0.564125
+<<<<<<< HEAD
   USE_IMAGES: true
+=======
+  USE_IMAGES: false
+>>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
 USE_CURL: false
 USE_FLOAT64: true
 USE_GPU: false
