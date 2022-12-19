@@ -200,7 +200,7 @@ TRAIN:
       - - -0.7004466
         - -0.43719268
         - 0.564125
-  USE_IMAGES: false
+  USE_IMAGES: true
 USE_CURL: false
 USE_FLOAT64: true
 USE_GPU: false
