@@ -332,8 +332,6 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     # Pretraining
     # ===========
     H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
-    print(H.get_params())
-    exit()
     pretrain_epochs: int = cfg.TRAIN.PRETRAIN_EPOCHS
     steps_per_epoch = 1
     opt, sched = training.build_optimizer_scheduler(
@@ -512,11 +510,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-<<<<<<< HEAD
     path_to_yaml = os.path.join("TestingConfigs", "ForRealData.yaml")
-=======
-    path_to_yaml = os.path.join("TestingConfigs", "PlottingOnly.yaml")
->>>>>>> c36090d964a9775126c7a2d6a1b33b32383ec6c3
     # print(path)
     main(path_to_yaml)
     # main()
