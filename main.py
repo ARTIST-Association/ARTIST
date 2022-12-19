@@ -229,6 +229,18 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "train",
             writer,
         )
+    #     from matplotlib import pyplot as plt
+    #     plt.imshow(targets.squeeze(), cmap="gray")
+    #     plt.gca().set_axis_off()
+    #     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+    #                 hspace = 0, wspace = 0)
+    #     plt.margins(0,0)
+    #     plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    #     plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    #     # plt.show()
+    #     plt.savefig(str(sun_directions.squeeze())+".png", bbox_inches = 'tight',
+    # pad_inches = 0)
+    #     exit()
     target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
 
     if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
@@ -319,7 +331,9 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
     # Pretraining
     # ===========
-
+    H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
+    print(H.get_params())
+    exit()
     pretrain_epochs: int = cfg.TRAIN.PRETRAIN_EPOCHS
     steps_per_epoch = 1
     opt, sched = training.build_optimizer_scheduler(
@@ -498,7 +512,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "TestedWithSteffan.yaml")
+    path_to_yaml = os.path.join("TestingConfigs", "ForRealData.yaml")
     # print(path)
     main(path_to_yaml)
     # main()
