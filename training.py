@@ -110,8 +110,8 @@ def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
             # TODO Do we also need to take spline degree into account?
             param_group['lr'] = base_lr * {
                 'surface_0': 1.0,
-                'surface_1': 0.75,
-                'surface_2': 0.5,
+                'surface_1': 1.0,
+                'surface_2': 1.0,
             }[name]
             continue
 
