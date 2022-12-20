@@ -47,6 +47,7 @@ class StandardCantingParams(CantingParams):
 class FirstSunCantingParams(CantingParams):
     sun_direction: torch.Tensor
     focus_point: torch.Tensor
+    position_on_field: torch.Tensor
     disturbance_angles: List[torch.Tensor]
     rotation_offset: torch.Tensor
 
@@ -101,6 +102,7 @@ def get_canting_params(
         canting_params: Optional[CantingParams] = FirstSunCantingParams(
             sun_direction,
             heliostat.focus_point,
+            heliostat.position_on_field,
             heliostat.disturbance_angles,
             heliostat.rotation_offset,
         )
@@ -352,7 +354,7 @@ def decant_facet(
     elif isinstance(canting_params, FirstSunCantingParams):
         from heliostat_models import heliostat_coord_system
         alignment = th.stack(heliostat_coord_system(
-            facet_position,
+            facet_position + canting_params.position_on_field,
             canting_params.sun_direction,
             canting_params.focus_point,
             target_normal,
