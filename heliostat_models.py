@@ -1248,7 +1248,7 @@ class AlignedHeliostat(AbstractHeliostat):
         if isinstance(self._heliostat.canting_algo, ActiveCanting):
             self.alignment = th.stack([
                 th.stack(heliostat_coord_system(
-                    position,
+                    position + self._heliostat.position_on_field,
                     sun_direction,
                     aim_point,
                     ideal_normal,
