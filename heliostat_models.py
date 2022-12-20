@@ -1310,7 +1310,6 @@ class AlignedHeliostat(AbstractHeliostat):
                     canting.FirstSunCanting,
             ):
                 discrete_points_rotated = discrete_points_rotated + position
-            print(f'{normals_rotated.mean(dim=0) = }')
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated
