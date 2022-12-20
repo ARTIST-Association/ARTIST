@@ -724,7 +724,6 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                         canting.FirstSunCanting,
                     ),
                 )
-            hel_rotated = hel_rotated + self._heliostat.position_on_field
         else:
             hel_rotated, normal_vectors_rotated = \
                 super()._calc_normals_and_surface()
