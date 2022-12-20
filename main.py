@@ -203,7 +203,7 @@ def main(
         assert len(cfg.TRAIN.IMAGES.PATHS) == len(sun_directions), \
             'number of sun directions does not match number of images'
         targets = data.load_images(
-            cfg.TRAIN.IMAGES.PATHS,
+            list(map(utils.normalize_path, cfg.TRAIN.IMAGES.PATHS)),
             cfg.AC.RECEIVER.PLANE_X,
             cfg.AC.RECEIVER.PLANE_Y,
             cfg.AC.RECEIVER.RESOLUTION_X,
@@ -292,7 +292,7 @@ def main(
         assert len(cfg.TEST.IMAGES.PATHS) == len(test_sun_directions), \
             'number of sun directions does not match number of images'
         test_targets = data.load_images(
-            cfg.TEST.IMAGES.PATHS,
+            list(map(utils.normalize_path, cfg.TEST.IMAGES.PATHS)),
             cfg.AC.RECEIVER.PLANE_X,
             cfg.AC.RECEIVER.PLANE_Y,
             cfg.AC.RECEIVER.RESOLUTION_X,
