@@ -1305,8 +1305,12 @@ class AlignedHeliostat(AbstractHeliostat):
                 normals,
                 align_origin,
             )
-            # TODO Maybe we must not reposition when canting algo is first sun.
-            discrete_points_rotated = discrete_points_rotated + position
+            if not isinstance(
+                    self._heliostat.canting_algo,
+                    canting.FirstSunCanting,
+            ):
+                discrete_points_rotated = discrete_points_rotated + position
+            print(f'{normals_rotated.mean(dim=0) = }')
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated
