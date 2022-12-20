@@ -1286,12 +1286,17 @@ class AlignedHeliostat(AbstractHeliostat):
         normal_vectors_rotated = torch.empty(
             (total_size, 3), dtype=dtype, device=device)
 
+        align_origin = self.align_origin
+        if len(align_origin) < len(self.facets.positions):
+            align_origin = align_origin * len(self.facets.positions)
+        assert len(align_origin) == len(self.facets.positions)
+
         i = 0
         for (position, discrete_points, normals, align_origin) in zip(
             self.facets.positions,
             self.facets.raw_discrete_points,
             self.facets.raw_normals,
-            self.align_origin,
+            align_origin,
         ):
             offset = len(discrete_points)
 
