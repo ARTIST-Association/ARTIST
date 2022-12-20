@@ -48,6 +48,7 @@ class ExtendedEncoder(json.JSONEncoder):
                 obj.position_on_field,
                 obj.aim_point,
                 obj.focus_point,
+                obj.canting_algo,
                 obj.disturbance_angles,
             )
         elif isinstance(obj, th.Tensor):
