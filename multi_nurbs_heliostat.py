@@ -276,8 +276,8 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                     f'unknown focus point config "{cfg_focus_point}"')
             self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
         focus_point = canting.get_focus_point(
-            self.position_on_field,
             self._canting_cfg,
+            self.position_on_field,
             self.aim_point,
             self.cfg.IDEAL.NORMAL_VECS,
             dtype=self.position_on_field.dtype,

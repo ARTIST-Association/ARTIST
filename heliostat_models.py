@@ -904,8 +904,8 @@ class Heliostat(AbstractHeliostat):
     ) -> None:
         if self.canting_enabled:
             focus_point = canting.get_focus_point(
-                self.position_on_field,
                 self._canting_cfg,
+                self.position_on_field,
                 self.aim_point,
                 self.cfg.IDEAL.NORMAL_VECS,
                 facet_positions.dtype,
