@@ -321,6 +321,7 @@ _C.TRAIN.OPTIMIZER                      = CN()
 # - AdamW
 # - LBFGS
 # - BasinHopping
+# - VeLO
 _C.TRAIN.OPTIMIZER.NAME                 = "Adam"
 # These values are all for the surface parameters.
 # They are also defaults if other parameter groups do not contain have a

@@ -125,6 +125,7 @@ def _insert_param_group_config(cfg: CfgNode, params: ParamGroups) -> None:
 def _build_optimizer(
         cfg_optimizer: CfgNode,
         params: ParamGroups,
+        total_steps: Optional[int] = None,
 ) -> th.optim.Optimizer:
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
@@ -222,6 +223,22 @@ def _build_optimizer(
             minimizer_config,
             basinhopping_config,
         )
+    elif name == 'velo':
+        assert total_steps is not None, \
+            'VeLO optimizer needs a number of training steps'
+        try:
+            from pytorch_velo import VeLO
+        except ImportError:
+            raise ImportError(
+                'to use the VeLO optimizer, please execute '
+                '`python3 -m pip install '
+                'git+https://github.com/janEbert/PyTorch-VeLO.git`'
+            )
+        opt = VeLO(
+            params,
+            num_training_steps=total_steps,
+            weight_decay=cfg.WEIGHT_DECAY,
+        )
     else:
         raise ValueError(
             "Optimizer name not found, change name or implement new optimizer")
@@ -313,7 +330,7 @@ def build_optimizer_scheduler(
         params: ParamGroups,
         device: th.device,
 ) -> Tuple[th.optim.Optimizer, LRScheduler]:
-    opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params)
+    opt = _build_optimizer(cfg.TRAIN.OPTIMIZER, params, total_steps)
     # Load optimizer state.
     if cfg.LOAD_OPTIMIZER_STATE:
         opt_cp_path = get_opt_cp_path(cfg.CP_PATH)
