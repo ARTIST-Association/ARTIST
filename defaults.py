@@ -321,6 +321,7 @@ _C.TRAIN.OPTIMIZER                      = CN()
 # - AdamW
 # - LBFGS
 # - BasinHopping
+# - Adan
 # - VeLO
 _C.TRAIN.OPTIMIZER.NAME                 = "Adam"
 # These values are all for the surface parameters.
@@ -328,7 +329,7 @@ _C.TRAIN.OPTIMIZER.NAME                 = "Adam"
 # certain config parameter.
 _C.TRAIN.OPTIMIZER.LR                   = 1e-4
 
-_C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999]
+_C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999, 0.99]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
 _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0.91
 

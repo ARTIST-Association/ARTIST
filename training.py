@@ -223,6 +223,24 @@ def _build_optimizer(
             minimizer_config,
             basinhopping_config,
         )
+    elif name == 'adan':
+        try:
+            from adan import Adan
+        except ImportError:
+            raise ImportError(
+                'to use the Adan optimizer, please execute '
+                '`python3 -m pip install '
+                'git+https://github.com/janEbert/Adan.git`'
+            )
+        beta_3 = cfg.BETAS[2] if len(cfg.BETAS) > 2 else 0.99
+        opt = Adan(
+            params,
+            lr=cfg.LR,
+            betas=(cfg.BETAS[0], cfg.BETAS[1], beta_3),
+            eps=cfg.EPS,
+            weight_decay=cfg.WEIGHT_DECAY,
+            foreach=True,
+        )
     elif name == 'velo':
         assert total_steps is not None, \
             'VeLO optimizer needs a number of training steps'
