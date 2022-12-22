@@ -200,9 +200,6 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     print("=============================")
     sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
-    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
-    ENV = Environment(cfg.AC, device)
-
     if cfg.TRAIN.USE_IMAGES:
         assert cfg.TRAIN.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
             'must have known sun directions for training with images '
@@ -220,7 +217,19 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             'train',
             writer,
         )
+        pretrain_targets = data.load_images(
+            cfg.TRAIN.IMAGES.PATHS,
+            cfg.AC.RECEIVER.PLANE_X,
+            cfg.AC.RECEIVER.PLANE_Y,
+            cfg.AC.RECEIVER.RESOLUTION_X,
+            cfg.AC.RECEIVER.RESOLUTION_Y,
+            device,
+            'pretrain',
+            writer,
+        )
     else:
+        H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+        ENV = Environment(cfg.AC, device)
         targets = cached_generate_target_dataset(
             H_target,
             ENV,
@@ -229,7 +238,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "train",
             writer,
         )
-    #     from matplotlib import pyplot as plt
+    
+    #     from matplotlib import pyplot as plt #TODO Remove for release
     #     plt.imshow(targets.squeeze(), cmap="gray")
     #     plt.gca().set_axis_off()
     #     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
@@ -241,7 +251,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     #     plt.savefig(str(sun_directions.squeeze())+".png", bbox_inches = 'tight',
     # pad_inches = 0)
     #     exit()
-    target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
+    
 
     if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
         data.log_contoured(
@@ -260,30 +270,29 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
         )
     else:
         target_sets = None
+    # H_naive_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    # H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
+    # naive_targets = cached_generate_pretrain_dataset(
+    #     H_naive_target,
+    #     ENV,
+    #     sun_directions,
+    #     logdir_files,
+    #     "pretrain",
+    #     writer,
+    # )
+    # naive_target_z_alignments = utils.get_z_alignments(
+    #     H_naive_target, sun_directions)
 
-    H_naive_target = cached_build_target_heliostat(cfg, sun_directions, device)
-    H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
-    naive_targets = cached_generate_pretrain_dataset(
-        H_naive_target,
-        ENV,
-        sun_directions,
-        logdir_files,
-        "pretrain",
-        writer,
-    )
-    naive_target_z_alignments = utils.get_z_alignments(
-        H_naive_target, sun_directions)
-
-    if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
-        naive_target_sets: Optional[
-            List[torch.Tensor],
-        ] = hausdorff_distance.images_to_sets(
-            naive_targets,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-        )
-    else:
-        naive_target_sets = None
+    # if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
+    #     naive_target_sets: Optional[
+    #         List[torch.Tensor],
+    #     ] = hausdorff_distance.images_to_sets(
+    #         naive_targets,
+    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    #     )
+    # else:
+    #     naive_target_sets = None
 
     test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
@@ -314,68 +323,96 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "test",
             writer,
         )
-    test_target_sets = hausdorff_distance.images_to_sets(
-        test_targets,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-    )
-    
+    if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
+        test_target_sets = hausdorff_distance.images_to_sets(
+            test_targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )
+        
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
-    H = build_heliostat(cfg, sun_directions, device)
-    ENV = Environment(cfg.AC, device)
-    R = Renderer(H, ENV)
+    
+
 
     # Pretraining
     # ===========
-    H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
     pretrain_epochs: int = cfg.TRAIN.PRETRAIN_EPOCHS
     steps_per_epoch = 1
-    opt, sched = training.build_optimizer_scheduler(
-        cfg,
-        pretrain_epochs * steps_per_epoch,
-        H.get_params(),
-        device,
-    )
-    loss_func, test_loss_func = training.build_loss_funcs(
-        cfg.TRAIN.LOSS, H.get_to_optimize())
+    
+
     epoch_shift_width = len(str(pretrain_epochs))
-    best_result = th.tensor(float('inf'))
+    
     prefix = 'pretrain'
-    for epoch in range(pretrain_epochs):
-        train_objects = training.TrainObjects(
-            opt,
-            sched,
-            H,
-            ENV,
-            R,
-            naive_targets,
-            naive_target_z_alignments,
-            naive_target_sets,
-            sun_directions,
-            loss_func,
+    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    target_z_alignments = utils.get_z_alignments(H_target, sun_directions) #TODO Needs new function for real images
+    
+    # for (facet, normals) in zip(
+    #         H.facets._facets,
+    #         H_target._normals,
+    # ):
+    #     facet._normals = normals
+    alignment_params = []
+    for i, sun in enumerate(sun_directions):
+        H = build_heliostat(cfg, sun.unsqueeze(0), device)
+        ENV = Environment(cfg.AC, device)
+        R = Renderer(H, ENV)
+        H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
+        loss_func, test_loss_func = training.build_loss_funcs(
+            cfg.TRAIN.LOSS, H.get_to_optimize())
+        best_pretrain_loss = th.tensor(float('inf'))
+        opt, sched = training.build_optimizer_scheduler(
             cfg,
-            epoch,
-            prefix,
-            writer,
+            pretrain_epochs * steps_per_epoch,
+            H.get_params(),
+            device,
         )
+        H._normals = H_target._normals
+        for epoch in range(pretrain_epochs):
+            train_objects = training.TrainObjects(
+                opt,
+                sched,
+                H,
+                ENV,
+                R,
+                targets[i].unsqueeze(0),
+                target_z_alignments[i].unsqueeze(0),
+                target_sets,
+                sun.unsqueeze(0),
+                loss_func,
+                cfg,
+                epoch,
+                prefix,
+                writer,
+                None,
+                i,
+            )
+            loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
+                train_objects)
+            if raw_loss < best_pretrain_loss:
+                print("found new best alignment")
+                best_angles = H.disturbance_angles
+                best_pretrain_loss = raw_loss
+            if writer:
+                writer.add_scalar(
+                    f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
+            print(
+                f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
+                f'loss: {loss.detach().cpu().numpy()}, '
+                f'raw loss: {raw_loss.detach().cpu().numpy()}, '
+                # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+                f'missed: {num_missed.detach().cpu().item()}, '
+            )
+            
+        alignment_params.append(best_angles)
+    print(alignment_params)
+    exit()
 
-        if writer:
-            writer.add_scalar(
-                f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
-        loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
-            train_objects)
-        print(
-            f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
-            f'loss: {loss.detach().cpu().numpy()}, '
-            f'raw loss: {raw_loss.detach().cpu().numpy()}, '
-            # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-            f'missed: {num_missed.detach().cpu().item()}, '
-        )
+
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
@@ -429,7 +466,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             epoch,
             prefix,
             writer,
-            test_objects
+            test_objects,
+            None
         )
 
         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
