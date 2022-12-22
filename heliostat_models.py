@@ -649,6 +649,7 @@ def heliostat_coord_system(
         Aimpoint: torch.Tensor,
         ideal_normal: torch.Tensor,
         disturbance_angles: List[torch.Tensor],
+        rotation_offset: torch.Tensor
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     dtype = Position.dtype
     device = Position.device
@@ -678,7 +679,9 @@ def heliostat_coord_system(
     # Add heliostat rotation error/disturbance.
     x_err_rot = utils.axis_angle_rotation(x, disturbance_angles[0])
     y_err_rot = utils.axis_angle_rotation(y, disturbance_angles[1])
-    z_err_rot = utils.axis_angle_rotation(z, disturbance_angles[2])
+    z_err_rot = utils.axis_angle_rotation(z, disturbance_angles[2]+rotation_offset)
+    # print(Position)
+    # print(disturbance_angles)
     full_rot = z_err_rot @ y_err_rot @ x_err_rot
 
     x = full_rot @ x
@@ -825,7 +828,7 @@ class AbstractHeliostat:
         )
         if aim_point is None:
             aim_point = self.aim_point
-        return self.aligned_cls(self, sun_direction, aim_point)
+        return self.aligned_cls(self, self.cfg, sun_direction, aim_point)
 
 
 class Heliostat(AbstractHeliostat):
@@ -1060,7 +1063,7 @@ class Heliostat(AbstractHeliostat):
             elif name not in optimizables:
                 raise KeyError(f'{name} is not an optimizable variable')
             else:
-                names.append(subname)
+                names.append(name)
         return names
 
     def set_to_optimize(  # type: ignore[override]
@@ -1232,6 +1235,7 @@ class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
             heliostat: Heliostat,
+            heliostat_config: CfgNode,
             sun_direction: torch.Tensor,
             aim_point: torch.Tensor,
             align_points: bool = True,
@@ -1240,7 +1244,7 @@ class AlignedHeliostat(AbstractHeliostat):
             'aligned heliostat class does not match'
         if not hasattr(heliostat, 'facets'):
             raise ValueError('Heliostat has to be loaded first')
-
+        self.cfg = heliostat_config
         self._heliostat = heliostat
 
         from_sun = -sun_direction
@@ -1260,6 +1264,7 @@ class AlignedHeliostat(AbstractHeliostat):
                     aim_point,
                     ideal_normal,
                     self._heliostat.disturbance_angles,
+                    th.tensor(self.cfg.ROATION_OFFSET)
                 ))
                 for position in self.facets.positions
             ])
@@ -1274,6 +1279,7 @@ class AlignedHeliostat(AbstractHeliostat):
                 aim_point,
                 ideal_normal,
                 self._heliostat.disturbance_angles,
+                th.tensor(self.cfg.ROTATION_OFFSET)
             ))
             self.align_origin = [
                 throt.Rotate(self.alignment, dtype=self.alignment.dtype)]
