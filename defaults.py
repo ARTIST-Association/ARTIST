@@ -120,6 +120,7 @@ _C.H.TO_OPTIMIZE = [
 
 
 _C.H.SHAPE                              = "function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
+_C.H.ROTATION_OFFSET                    = 0
 
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m
@@ -191,7 +192,7 @@ _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
 # See `cfg.H.IDEAL` for documentation.
 _C.H.DEFLECT_DATA.AIM_POINT = None
-_C.H.DEFLECT_DATA.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
+_C.H.DEFLECT_DATA.DISTURBANCE_ROT_ANGLES        = [0.0, 0.0, 0.0]
 _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
 _C.H.DEFLECT_DATA.FACETS.CANTING = CN()
