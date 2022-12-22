@@ -43,6 +43,10 @@ class StandardCantingParams(CantingParams):
     position_on_field: torch.Tensor
 
 
+class LikeActiveCantingParams(CantingParams):
+    pass
+
+
 @dataclass
 class FirstSunCantingParams(CantingParams):
     sun_direction: torch.Tensor
@@ -106,6 +110,8 @@ def get_canting_params(
             heliostat.disturbance_angles,
             heliostat.rotation_offset,
         )
+    elif is_like_active(heliostat.canting_algo):
+        canting_params = LikeActiveCantingParams()
     elif (
             heliostat.canting_enabled
             and not is_like_active(heliostat.canting_algo)
@@ -343,6 +349,8 @@ def decant_facet(
 
     if canting_params is None:
         canted_normal = orig_normal
+    elif isinstance(canting_params, LikeActiveCantingParams):
+        canted_normal = decanted_normal
     elif isinstance(canting_params, StandardCantingParams):
         canted_normal = get_focus_normal(
             canting_params.focus_point,
