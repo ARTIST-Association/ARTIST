@@ -1293,24 +1293,33 @@ class AlignedHeliostat(AbstractHeliostat):
         assert len(align_origin) == len(self.facets.positions)
 
         i = 0
-        for (position, discrete_points, normals, align_origin) in zip(
+        for (
+                position,
+                discrete_points,
+                normals,
+                cant_rot,
+                align_origin,
+        ) in zip(
             self.facets.positions,
             self.facets.raw_discrete_points,
             self.facets.raw_normals,
+            self.facets.cant_rots,
             align_origin,
         ):
             offset = len(discrete_points)
 
+            # Canting
+            discrete_points_rotated = canting.apply_rotation(
+                cant_rot, discrete_points)
+            normals_rotated = canting.apply_rotation(cant_rot, normals)
+
+            # Alignment
             discrete_points_rotated, normals_rotated = _rotate(
-                discrete_points,
-                normals,
+                discrete_points_rotated,
+                normals_rotated,
                 align_origin,
             )
-            if not isinstance(
-                    self._heliostat.canting_algo,
-                    canting.FirstSunCanting,
-            ):
-                discrete_points_rotated = discrete_points_rotated + position
+            discrete_points_rotated = discrete_points_rotated + position
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated

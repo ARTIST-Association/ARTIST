@@ -353,7 +353,7 @@ def decant_facet(
         )
     elif isinstance(canting_params, FirstSunCantingParams):
         from heliostat_models import heliostat_coord_system
-        alignment = th.stack(heliostat_coord_system(
+        facet_alignment = th.stack(heliostat_coord_system(
             facet_position + canting_params.position_on_field,
             canting_params.sun_direction,
             canting_params.focus_point,
@@ -361,9 +361,25 @@ def decant_facet(
             canting_params.disturbance_angles,
             canting_params.rotation_offset,
         ))
-        align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
-        facet_normals_ideal_rot = align_origin.transform_normals(
+        align_origin = throt.Rotate(
+            facet_alignment, dtype=facet_alignment.dtype)
+        facet_normals_ideal_aligned = align_origin.transform_normals(
             facet_normals_ideal)
+
+        alignment = th.stack(heliostat_coord_system(
+            canting_params.position_on_field,
+            canting_params.sun_direction,
+            canting_params.focus_point,
+            target_normal,
+            canting_params.disturbance_angles,
+        ))
+        rev_align_origin = throt.Rotate(
+            alignment,
+            dtype=alignment.dtype,
+        ).inverse()
+        facet_normals_ideal_rot = rev_align_origin.transform_normals(
+            facet_normals_ideal_aligned)
+
         canted_normal = facet_normals_ideal_rot.mean(dim=0)
     else:
         raise ValueError('encountered unhandled canting parameters')

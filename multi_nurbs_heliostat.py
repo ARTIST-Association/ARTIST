@@ -719,10 +719,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             hel_rotated, normal_vectors_rotated = \
                 MultiNURBSHeliostat.discrete_points_and_normals(
                     cast(MultiNURBSHeliostat, self),
-                    reposition=isinstance(
-                        self._heliostat.canting_algo,
-                        canting.FirstSunCanting,
-                    ),
+                    reposition=False,
                 )
         else:
             hel_rotated, normal_vectors_rotated = \
