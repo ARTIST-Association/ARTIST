@@ -727,6 +727,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     def __init__(
             self,
             heliostat: NURBSHeliostat,
+            heliostat_config: CfgNode,
             sun_direction: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
@@ -735,6 +736,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
+            heliostat_config,
             sun_direction,
             aim_point,
             align_points=False,
