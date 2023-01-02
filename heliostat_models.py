@@ -653,7 +653,7 @@ def heliostat_coord_system(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     dtype = Position.dtype
     device = Position.device
-
+    rotation_offset = th.deg2rad(rotation_offset)
     pSun = Sun
     pPosition = Position
     pAimpoint = Aimpoint
