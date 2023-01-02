@@ -2,14 +2,14 @@ AC:
   RECEIVER:
     CENTER:
     - 0
-    - -3.23
-    - 35.89
+    - -3.25
+    - 35.5
     PLANE_NORMAL:
     - 0
     - 1
     - 0
-    PLANE_X: 4.6
-    PLANE_Y: 4.6
+    PLANE_X: 8.629666667
+    PLANE_Y: 7.0
     RESOLUTION_X: 256
     RESOLUTION_Y: 256
   SUN:
@@ -26,7 +26,8 @@ AC:
       - 0
     REDRAW_RANDOM_VARIABLES: false
 CP_PATH: 'C:\\Python\\NowRunnable\\Results\\NatureRuns\\_I32\\Logfiles\\MultiNURBSHeliostat.pt'
-EXPERIMENT_NAME: TestTest123
+EXPERIMENT_NAME: SimulationResults
+ID: NatureFinal
 H:
   DEFLECT_DATA:
     AIM_POINT: null
@@ -46,7 +47,7 @@ H:
     - 25.0
     - 1.795
     RAY_STRUCT_FMT: =7f
-    TAKE_N_VECTORS: 80000
+    TAKE_N_VECTORS: 80
     VERBOSE: true
     ZS_PATH: Helio_AA39_Rim0_LocalResults_220303111914.csv
   FUNCTION:
@@ -166,7 +167,6 @@ H:
   SHAPE: real
   TO_OPTIMIZE:
   - surface
-ID: MakeRunnable
 LOAD_OPTIMIZER_STATE: false
 LOGDIR: Results
 NURBS:
