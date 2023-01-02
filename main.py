@@ -314,6 +314,11 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             'test',
             writer,
         )
+        test_target_sets = hausdorff_distance.images_to_sets(
+            test_targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )#TODO test_targets have to be removed for other workaround
     else:
         test_targets = cached_generate_test_dataset(
             H_target,
@@ -323,12 +328,14 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "test",
             writer,
         )
-    if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
-        test_target_sets = hausdorff_distance.images_to_sets(
-            test_targets,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-        )
+    # if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
+    #     test_target_sets = hausdorff_distance.images_to_sets(
+    #         test_targets,
+    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    #     )
+    # else:
+    #     test_target_sets = None
         
     # Start Diff Raytracing
     # =====================
@@ -356,6 +363,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     # ):
     #     facet._normals = normals
     alignment_params = []
+    found_something=False
     for i, sun in enumerate(sun_directions):
         H = build_heliostat(cfg, sun.unsqueeze(0), device)
         ENV = Environment(cfg.AC, device)
@@ -370,7 +378,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             H.get_params(),
             device,
         )
-        H._normals = H_target._normals
+        # H._normals = H_target._normals
         for epoch in range(pretrain_epochs):
             train_objects = training.TrainObjects(
                 opt,
@@ -393,12 +401,12 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
                 train_objects)
             if raw_loss < best_pretrain_loss:
+                found_something = True
                 print("found new best alignment")
                 best_angles = H.disturbance_angles
                 best_pretrain_loss = raw_loss
-            if writer:
-                writer.add_scalar(
-                    f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
+                utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=cfg.TRAIN.IMG_INTERVAL, index=i)
+
             print(
                 f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
                 f'loss: {loss.detach().cpu().numpy()}, '
@@ -407,16 +415,24 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                 f'missed: {num_missed.detach().cpu().item()}, '
             )
             
-        alignment_params.append(best_angles)
-    print(alignment_params)
-    exit()
-
-
-
-
+            utils.to_tensorboard(writer, prefix, epoch, 
+                                 lr=opt.param_groups[0]["lr"],
+                                 loss=loss,
+                                 raw_loss=raw_loss,
+                                 index=i
+                                 )
+        if found_something:  
+            alignment_params.append(best_angles)
+    # print(alignment_params)
+    # exit()
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
-
+    del H
+    del ENV
+    del R
+    H = build_heliostat(cfg, sun_directions, device)
+    ENV = Environment(cfg.AC, device)
+    R = Renderer(H, ENV)
     opt, sched = training.build_optimizer_scheduler(
         cfg,
         epochs * steps_per_epoch,
@@ -434,6 +450,16 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     best_result = th.tensor(float('inf'))
 
     prefix = "train"
+    prealignment = [ #prealigment is not saved anywhere. its hardcoded here for faster tests with prealigment. Remove later
+        [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
+        [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
+        [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
+        [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)]
+                ]
+    test_prealignment = [
+        [th.tensor(-0.0101), th.tensor(-0.0070), th.tensor(-0.6749)]
+        ]
+        
     for epoch in range(epochs):
         test_objects = training.TestObjects(
             H,
@@ -449,7 +475,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             writer,
             H_target,
             logdir_surfaces,
-            True
+            True,
+            test_prealignment
             )
         train_objects = training.TrainObjects(
             opt,
@@ -467,7 +494,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             prefix,
             writer,
             test_objects,
-            None
+            None,
+            prealignment
         )
 
         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
@@ -501,22 +529,17 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                     logdir_surfaces,
                     writer,
                 )
+                # for i, image in enumerate(pred_bitmap):
+                    
+            utils.to_tensorboard(writer, prefix, epoch, 
+                                 lr=opt.param_groups[0]["lr"],
+                                 loss=loss,
+                                 raw_loss=raw_loss,
+                                 )
         # Save Section
         #Advanced Plotting
         plot.create_plots(H, epoch, logdir_enhanced_test)
             
-
-
-            # plotter.season_plot(
-            #     season_test_extras,
-            #     naive_season_test_targets,
-            #     season_test_bitmaps,
-            #     season_test_targets,
-            #     season_test_loss,
-            #     season_naive_test_loss,
-            #     epoch,
-            #     logdir_enhanced_test,
-            # )
 
         if test_loss.detach().cpu() < best_result:
             if cfg.SAVE_RESULTS:
@@ -548,7 +571,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "ForRealData.yaml")
+    path_to_yaml = os.path.join("TestingConfigs", "PlottingOnly.yaml")
     # print(path)
     main(path_to_yaml)
     # main()
