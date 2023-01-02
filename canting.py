@@ -158,7 +158,7 @@ def calc_focus_normal(
     focus_distance = th.linalg.norm(hel_to_recv)
     facet_to_recv_distance = th.sqrt(
         focus_distance**2
-        + (facet_position - heliostat_position_on_field)**2
+        + (th.norm(facet_position))**2
     )
     focus_point = facet_normal * facet_to_recv_distance
     target_normal = focus_point - facet_position
