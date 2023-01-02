@@ -5,6 +5,7 @@ from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 
 from pytorch_minimize.optim import BasinHoppingWrapper, torch_optimizer
 import torch
+from torch import nn
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
@@ -58,7 +59,9 @@ TrainObjects = collections.namedtuple(
         'epoch',
         'prefix',
         'writer',
-        'test_objects'
+        'test_objects',
+        'index',
+        'prealignment'
     ],
     # 'writer' is None by default
     defaults=[None],
@@ -80,7 +83,8 @@ TestObjects = collections.namedtuple(
          'writer',
          'H_target',
          'logdir',
-         'reduction'
+         'reduction',
+         'prealignment'
     ],
     defaults=[None],
 )
@@ -551,13 +555,17 @@ def calc_batch_loss(
         epoch,
         prefix,
         writer,
-        test_objects
+        test_objects,
+        index,
+        prealignments
     ) = train_objects
+    # print(index)
     if minimizer_epoch:
         epoch= minimizer_epoch
     assert prefix, "prefix string cannot be empty"
     # Initialize Parameters
     # =====================
+    # print(targets.shape,target_z_alignments.shape,sun_directions.shape)
     loss = th.tensor(0.0, dtype=targets.dtype, device=H.device)
     raw_loss = th.zeros_like(loss)
     if return_extras:
@@ -569,20 +577,26 @@ def calc_batch_loss(
             target,
             target_z_alignment,
             target_set,
+            prealignment,
             sun_direction,
     )) in enumerate(zip(
             targets,
             target_z_alignments,
             target_sets if target_sets is not None else itertools.repeat(None),
+            prealignments if prealignments is not None else itertools.repeat(None),
             sun_directions,
     )):
+        if index == None:
+            index = i
+        if prealignment:    
+            H.disturbance_angles = prealignment
         H_aligned = H.align(sun_direction)
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, indices, _, _),
         ) = R.render(H_aligned, return_extras=True)
         # pred_bitmap = pred_bitmap.unsqueeze(0)
-        # print(pred_bitmap.shape)
+        # print(th.sum(pred_bitmap),th.sum(target))
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
@@ -594,29 +608,19 @@ def calc_batch_loss(
             ENV,
             opt,
         )
+        utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=15, index= i)
 
         loss += curr_loss / len(targets)
         raw_loss += curr_raw_loss / len(targets)
+            
 
-        with th.no_grad():
-            # Plot target images to TensorBoard
-            if writer and epoch % config.TRAIN.IMG_INTERVAL == 0:
-                # plt.imshow(pred_bitmap.cpu().detach(), cmap='jet')
-                # plt.show()
-                # exit()
-                writer.add_image(
-                    f"{prefix}/prediction_{i}",
-                    utils.colorize(pred_bitmap),
-                    epoch,
-                )
-
-            if return_extras:
-                # Compare metrics
-                num_missed += (
-                    (indices.numel() - indices.count_nonzero())
-                    / len(targets)
-                )
-                
+        if return_extras:
+            # Compare metrics
+            num_missed += (
+                (indices.numel() - indices.count_nonzero())
+                / len(targets)
+            )
+    # exit()
     if return_extras:
         return loss, (raw_loss, pred_bitmap, num_missed)
     return loss
@@ -634,6 +638,26 @@ def calc_batch_grads(
     loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
         train_objects, return_extras=True, minimizer_epoch=minimizer_epoch)
 
+
+    # m = nn.Threshold(0.05,0)
+    # pred_bitmap = m(pred_bitmap)
+    # plt.imshow(abs(pred_bitmap-train_objects.targets.squeeze()), cmap="jet")
+    # plt.show()
+    # fig, (ax1,ax2) = plt.subplots(1, 2) #TODO ENTFERNEN vor Releas
+    # ax1.imshow(pred_bitmap.detach().numpy(), cmap="jet")
+    # ax1.xaxis.set_major_locator(plt.NullLocator())
+    # ax1.yaxis.set_major_locator(plt.NullLocator())
+    # ax2.imshow(train_objects.targets.squeeze(), cmap="jet")
+    # ax2.set_axis_off()
+    # plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+    #             hspace = 0, wspace = 0)
+    # plt.margins(0,0)
+    # plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    # plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    # plt.show()
+    # print(raw_loss)
+    # # plt.savefig("ours.png", bbox_inches = 'tight', pad_inches = 0)
+    # exit()
     loss.backward()
     if return_extras:
         return loss, (raw_loss, pred_bitmap, num_missed)
@@ -659,7 +683,8 @@ def test_batch(
     writer,
     H_target,
     logdir,
-    reduction
+    reduction,
+    prealignments
     ) = test_objects
     if minimizer_epoch:
         epoch = minimizer_epoch
@@ -668,10 +693,13 @@ def test_batch(
     mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
     losses = []
     bitmaps: Optional[torch.Tensor] = None
-    for (i, (target, sun_direction)) in enumerate(zip(
+    for (i, (target, sun_direction, prealignment)) in enumerate(zip(
             targets,
             sun_directions,
+            prealignments if prealignments is not None else itertools.repeat(None),
     )):
+        if prealignment:    
+            heliostat.disturbance_angles = prealignment
         heliostat_aligned = heliostat.align(sun_direction)
         (
             pred_bitmap,
@@ -689,9 +717,11 @@ def test_batch(
         else:
             losses.append(loss)
         bitmaps[i] = pred_bitmap.detach().cpu()
+        
         if writer:
-            writer.add_image(
-                f"{prefix}/prediction_{i}", utils.colorize(pred_bitmap), epoch)
+            utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=15, index= i)
+        #     writer.add_image(
+        #         f"{prefix}/prediction_{i}", pred_bitmap, epoch)
     assert bitmaps is not None
     
     hausdorff_dists = hausdorff_distance.set_hausdorff_distance(
@@ -705,7 +735,7 @@ def test_batch(
     mean_hausdorff_dist = hausdorff_dists.mean()
 
     if writer:
-        writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
+    #     writer.add_scalar(f"{prefix}/loss", mean_loss.item(), epoch)
         writer.add_scalar(
             f"{prefix}/hausdorff_distance", mean_hausdorff_dist.item(), epoch)
     if reduction:
@@ -765,16 +795,16 @@ def train_batch(
         opt.step()
 
     # Plot loss to Tensorboard
-    with th.no_grad():
-        prefix = train_objects.prefix
-        assert prefix, "prefix string cannot be empty"
-        writer = train_objects.writer
-        if writer:
-            # print(writer, prefix, loss.item(),train_objects.epoch)
-            writer.add_scalar(
-                f"{prefix}/loss", loss.item(), train_objects.epoch)
-            writer.add_scalar(
-                f"{prefix}/raw_loss", raw_loss.item(), train_objects.epoch)
+    # with th.no_grad():
+        # prefix = train_objects.prefix
+        # assert prefix, "prefix string cannot be empty"
+        # writer = train_objects.writer
+        # if writer:
+        #     # print(writer, prefix, loss.item(),train_objects.epoch)
+        #     writer.add_scalar(
+        #         f"{prefix}/loss", loss.item(), train_objects.epoch)
+        #     writer.add_scalar(
+        #         f"{prefix}/raw_loss", raw_loss.item(), train_objects.epoch)
 
     # Update training parameters
     # ==========================
