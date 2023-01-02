@@ -33,6 +33,33 @@ import nurbs
 # We would like to say that T can be everything but a list.
 T = TypeVar('T')
 
+def to_tensorboard(writer, prefix, epoch, lr=None, loss=None, raw_loss=None, image=None, plot_interval=None, index=None):
+    with th.no_grad():
+        # Plot loss to Tensorboard
+        if not index == None:
+            iteration_str = f"_{index}"
+        else:
+            iteration_str = ""
+        if writer:
+            assert prefix, "prefix string cannot be empty"
+            if lr:
+                writer.add_scalar(
+                    f"{prefix}/lr"+iteration_str, lr, epoch)
+            if loss:
+                writer.add_scalar(
+                    f"{prefix}/loss"+iteration_str, loss.item(), epoch)
+            if raw_loss:
+                writer.add_scalar(
+                    f"{prefix}/raw_loss"+iteration_str, raw_loss.item(), epoch)
+                # Plot target images to TensorBoard
+            if not image== None:
+                assert plot_interval, "If image is given, plot interval must be defined"
+                writer.add_image(
+                    f"{prefix}/prediction"+iteration_str,
+                    colorize(image),
+                    epoch,
+                )
+
 
 def calculateSunAngles(
         hour: int,
@@ -1292,4 +1319,19 @@ def fix_pytorch3d() -> None:
     )
 
 
-
+if __name__ == '__main__':
+    az = th.tensor(-72.7963244129237).unsqueeze(0)#TODO Remove for Release
+    el = th.tensor(15.550407244910172).unsqueeze(0)
+    vec = ae_to_vec(az, el)
+    print(vec)
+    new_vec = calculateSunAngles(
+            16,
+            9,
+            00,
+            24,
+            3,
+            2022,
+            50.92,
+            6.36,
+    )
+    print(new_vec)
