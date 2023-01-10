@@ -12,6 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import torch
 import torch as th
+import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from environment import Environment
 from heliostat_models import AbstractHeliostat
@@ -19,6 +20,7 @@ import utils
 
 from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
 import hausdorff_distance
+import data
 
 import disk_cache
 from typing import (
@@ -48,11 +50,13 @@ def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
 
 @torch.no_grad()
 class Plotter():
-    def __init__(self, cfg, R,sun_directions, loss_func, logdir, device):
+    @torch.no_grad()
+    def __init__(self, cfg, R,sun_directions, loss_func, logdir, device, train_prealignment= None, test_prealignment=None):
         cfg_test = cfg.TEST
         self.plot_grid = cfg_test.PLOT.GRID
         self.plot_season = cfg_test.PLOT.SEASON
         self.plot_spheric = cfg_test.PLOT.SPHERIC
+        self.plot_real_data = cfg_test.PLOT.REAL_DATA
                 
         (
             (
@@ -190,8 +194,91 @@ class Plotter():
             
             season_test_objects = self.season_test_objects._replace(H=H_naive_season)
             self.season_naive_test_loss, self.season_naive_hd, self.season_naive_test_targets = training.test_batch(season_test_objects)
+        if cfg.TEST.PLOT.REAL_DATA:
+            assert cfg.TEST.SUN_DIRECTIONS.CASE == "vecs", \
+                'to plot real data, sun directions must be given by CASE "vecs".'
+            print("Initialize Real Data Plot")
+ 
+            train_sundirections = th.tensor(cfg.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS)
+            H_naive_trainset = build_target_heliostat(cfg, train_sundirections , device)
+            H_naive_trainset._normals = H_naive_trainset.get_raw_normals_ideal()
+            train_targets = data.load_images(
+                cfg.TRAIN.IMAGES.PATHS,
+                cfg.AC.RECEIVER.PLANE_X,
+                cfg.AC.RECEIVER.PLANE_Y,
+                cfg.AC.RECEIVER.RESOLUTION_X,
+                cfg.AC.RECEIVER.RESOLUTION_Y,
+                device,
+                'train',
+                None,
+            )
+            train_target_sets = hausdorff_distance.images_to_sets(
+                train_targets,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+            )
+            self.trainset_objects = training.TestObjects(
+                None,
+                ENV_validation,
+                R,
+                train_targets,
+                train_target_sets,
+                train_sundirections,
+                loss_func,
+                cfg,
+                None,#epoch
+                "test_trainset",
+                None, #writer
+                H_naive_trainset,
+                None,
+                False,#Reduction
+                train_prealignment if train_prealignment is not None else None
+                )
             
-
+            naive_train_objects = self.trainset_objects._replace(H=H_naive_trainset)
+            self.naive_train_loss, self.naive_hd_train, self.naive_train_targets = training.test_batch(naive_train_objects)
+            # plt.imshow(self.naive_train_targets[2])
+            # plt.show()
+            # exit()
+            
+            test_sundirections = th.tensor(cfg.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS)
+            H_naive_testset = build_target_heliostat(cfg, test_sundirections , device)
+            H_naive_testset._normals = H_naive_testset.get_raw_normals_ideal()
+            test_targets = data.load_images(
+                cfg.TEST.IMAGES.PATHS,
+                cfg.AC.RECEIVER.PLANE_X,
+                cfg.AC.RECEIVER.PLANE_Y,
+                cfg.AC.RECEIVER.RESOLUTION_X,
+                cfg.AC.RECEIVER.RESOLUTION_Y,
+                device,
+                'test',
+                None,
+            )
+            test_target_sets = hausdorff_distance.images_to_sets(
+                test_targets,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+                cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+            )
+            self.testset_objects = training.TestObjects(
+                None,
+                ENV_validation,
+                R,
+                test_targets,
+                test_target_sets,
+                test_sundirections,
+                loss_func,
+                cfg,
+                None,#epoch
+                "test_testset",
+                None, #writer
+                H_naive_testset,
+                None,
+                False,#Reduction
+                test_prealignment if test_prealignment is not None else None
+                )
+            
+            naive_test_objects = self.testset_objects._replace(H=H_naive_testset)
+            self.naive_test_loss, self.naive_hd_test, self.naive_test_targets = training.test_batch(naive_test_objects)
             
     def season_plot(
             self,
@@ -203,24 +290,27 @@ class Plotter():
         season_test_loss, season_test_hd, season_test_bitmaps = training.test_batch(
             so
         )
-        print(season_test_loss)
-    
+        transform = torchvision.transforms.CenterCrop(140)
         
-        ground_truth = so.test_targets
+        ground_truth = transform(so.test_targets)
         
-        ideal = self.season_naive_test_targets
+
+        ideal = transform(self.season_naive_test_targets)
         ideal_loss = self.season_naive_test_loss
         
-        prediction = season_test_bitmaps
+        prediction = transform(season_test_bitmaps)
         prediction_loss = season_test_loss
         
         colormap = "afmhot"
+        hg_l = 1.5 #high lighting 
         fig = plt.figure(figsize=(7.6, 8))
         gs = GridSpec(3, 3)  # width_ratios=[1, 1, 1], height_ratios=[1.0, 0.05])
         plt.subplots_adjust(wspace=0.0001)
         for (i, img) in enumerate(ground_truth):
             ax = fig.add_subplot(gs[i, 0])
-            ax.imshow(ground_truth[i]**1.3, cmap=colormap)
+            v_max = th.max(th.stack((ground_truth[i]**hg_l,ideal[i]**hg_l, prediction[i]**hg_l)))
+            print(th.max(ground_truth[i]**hg_l),th.max(ideal[i]**hg_l), th.max(prediction[i]**hg_l))
+            ax.imshow(ground_truth[i]**hg_l, cmap=colormap, vmax=v_max)
             ax.axis('off')
             if i == 0:
                 ax.set_title("Ground Truth", size=18)
@@ -259,9 +349,9 @@ class Plotter():
                     size=18,
                     transform=ax.transAxes,
                 )
-        for (i, img) in enumerate(ideal):
+        #ideal
             ax = fig.add_subplot(gs[i, 1])
-            ax.imshow(ideal[i]**1.3, cmap=colormap)
+            ax.imshow(ideal[i]**hg_l, cmap=colormap, vmax=v_max)
             ax.axis('off')
             ax.text(
                 0.5,
@@ -273,9 +363,9 @@ class Plotter():
             )
             if i == 0:
                 ax.set_title("Ideal", size=18)
-        for (i, img) in enumerate(prediction):
+        #prediction
             ax = fig.add_subplot(gs[i, 2])
-            ax.imshow(prediction[i]**1.3, cmap=colormap)
+            ax.imshow(prediction[i]**hg_l, cmap=colormap, vmax=v_max)
             ax.axis('off')
             ax.text(
                 0.5,
@@ -293,9 +383,235 @@ class Plotter():
         plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
         plt.close(fig)
     
-    def create_plots(self, prediction, loss, epoch):
+    def real_data_plot(
+            self,
+            H,
+            epoch,
+            logdir,
+            H_target = None
+    ) -> None:
+        O_train = self.trainset_objects._replace(H=H, epoch=epoch)
+        train_loss, train_hd, train_bitmaps = training.test_batch(
+            O_train
+            )
+        O_test  = self.testset_objects._replace(H=H, epoch=epoch)
+        test_loss, test_hd, test_bitmaps = training.test_batch(
+            O_test
+            )
+        
+        
+        H._normals = H_target._normals
+        O_train_deflec = self.trainset_objects._replace(H=H, epoch=epoch)
+        train_loss_deflec, train_hd_deflec, train_bitmaps_deflec = training.test_batch(
+            O_train
+            )
+        O_test_deflec = self.testset_objects._replace(H=H, epoch=epoch)
+        test_loss_deflec, test_hd_deflec, test_bitmaps_deflec = training.test_batch(
+            O_test
+            )
+            
+
+        
+        ground_truth_train = O_train.test_targets
+        ground_truth_test  = O_test.test_targets
+
+        ideal_train = self.naive_train_targets
+        ideal_train_loss = self.naive_train_loss
+        
+        ideal_test = self.naive_test_targets
+        ideal_test_loss = self.naive_test_loss
+        
+        deflec_train = train_bitmaps_deflec
+        deflec_train_loss = train_loss_deflec
+        
+        deflec_test = test_bitmaps_deflec
+        deflec_test_loss = test_loss_deflec
+        
+        prediction_train = train_bitmaps
+        prediction_train_loss = train_loss
+        
+        prediction_test = test_bitmaps
+        prediction_test_loss = test_loss
+        
+        colormap = "afmhot"
+        hg_l = 1.5 #high lighting 
+        fig = plt.figure(figsize=(12, 12))
+        gs = GridSpec(4, 4)  # TODO len(train+test)
+        plt.subplots_adjust(wspace=0.0001)
+        for (i, img) in enumerate(ground_truth_train):
+            ax = fig.add_subplot(gs[i, 0])
+            # v_max = th.max(th.stack((ground_truth_train[i]**hg_l,ideal_train[i]**hg_l, prediction_train[i]**hg_l)))
+            ax.imshow(ground_truth_train[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            if i == 0:
+                ax.set_title("Ground Truth", size=18)
+                ax.text(
+                    -0.15,
+                    1.1,
+                    "Train",
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    fontweight="bold",
+                    size=18,
+                    transform=ax.transAxes,
+                )
+                string = '24.03.22'+'\n'+' 10:09 a.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+            if i == 1:
+                string = '24.03.22'+'\n'+' 04:09 p.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+        #ideal
+            ax = fig.add_subplot(gs[i, 1])
+            ax.imshow(ideal_train[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {ideal_train_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+            )
+            if i == 0:
+                ax.set_title("Ideal", size=18)
+        #deflectometry
+            ax = fig.add_subplot(gs[i, 2])
+            ax.imshow(deflec_train[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {deflec_train_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+            )
+            if i == 0:
+                ax.set_title("Deflectometry", size=18)        
+        #prediction
+            ax = fig.add_subplot(gs[i, 3])
+            ax.imshow(prediction_train[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {prediction_train_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+                fontweight="bold",
+            )
+            if i == 0:
+                ax.set_title("Prediction", size=18)
+                
+        for (i, img) in enumerate(ground_truth_test):
+            tl = len(ground_truth_train) #trainset length
+            ax = fig.add_subplot(gs[i+tl, 0])
+            # v_max = th.max(th.stack((ground_truth_test[i]**hg_l,ideal_test[i]**hg_l, prediction_test[i]**hg_l)))
+            ax.imshow(ground_truth_test[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            if i == 0:
+                string = '08.11.22'+'\n'+' 03:16 p.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+                ax.text(
+                    -0.15,
+                    1.1,
+                    "Test",
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    fontweight="bold",
+                    size=18,
+                    transform=ax.transAxes,
+                )
+            if i == 1:
+                string = '08.11.22'+'\n'+' 02:09 p.m.'
+                ax.text(
+                    -0.15,
+                    0.5,
+                    string,
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    rotation=90,
+                    size=18,
+                    transform=ax.transAxes,
+                )
+        #ideal
+            ax = fig.add_subplot(gs[i+tl, 1])
+            ax.imshow(ideal_test[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {ideal_test_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+            )
+        #deflectometry
+            ax = fig.add_subplot(gs[i+tl, 2])
+            ax.imshow(deflec_test[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {deflec_test_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+            )
+        #prediction
+            ax = fig.add_subplot(gs[i+tl, 3])
+            ax.imshow(prediction_test[i]**hg_l, cmap=colormap)
+            ax.axis('off')
+            ax.text(
+                0.5,
+                -0.10,
+                f"L1: {prediction_test_loss[i].item():.2e}",
+                size=18,
+                ha="center",
+                transform=ax.transAxes,
+                fontweight="bold",
+            )
+        
+        
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(os.path.join(logdir, f"real_data_{epoch}"), dpi=fig.dpi)
+        plt.close(fig)
+    
+    
+    def create_plots(self, H, epoch, logdir, H_target=None):
         if self.plot_season:
-            self.season_plot(prediction, loss, epoch)
+            self.season_plot(H, epoch, logdir)
+        if self.plot_real_data:
+            self.real_data_plot(H, epoch, logdir, H_target)
 
 
 @th.no_grad()
