@@ -383,7 +383,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat([first_row, inner_rows, last_row], dim=0)
 
     @ctrl_points.setter
-    def ctrl_points(self) -> None:
+    def ctrl_points(self, new_ctrl_points) -> None:
         raise AttributeError(
             '`ctrl_points` is not a writable attribute; '
             'use `set_ctrl_points` instead'
@@ -425,7 +425,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat([first_row, inner_rows, last_row], dim=0)
 
     @ctrl_weights.setter
-    def ctrl_weights(self) -> None:
+    def ctrl_weights(self, new_ctrl_weights) -> None:
         raise AttributeError(
             '`ctrl_weights` is not a writable attribute; '
             'use `set_ctrl_weights` instead'
@@ -444,7 +444,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat(self._knots_x_splits)
 
     @knots_x.setter
-    def knots_x(self) -> None:
+    def knots_x(self, new_knots_x) -> None:
         raise AttributeError(
             '`knots_x` is not a writable attribute; '
             'use `set_knots_x` instead'
@@ -463,7 +463,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat(self._knots_y_splits)
 
     @knots_y.setter
-    def knots_y(self) -> None:
+    def knots_y(self, new_knots_y) -> None:
         raise AttributeError(
             '`knots_y` is not a writable attribute; '
             'use `set_knots_y` instead'
@@ -705,9 +705,15 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ctrl_points = data['control_points']
         ctrl_points.requires_grad_(False)
         self.set_ctrl_points(ctrl_points)
-        self.ctrl_weights = data['control_point_weights']
-        self.knots_x = data['knots_x']
-        self.knots_y = data['knots_y']
+        ctrl_weights = data['control_point_weights']
+        ctrl_weights.requires_grad_(False)
+        self.set_ctrl_weights(ctrl_weights)
+        knots_x = data['knots_x']
+        knots_x.requires_grad_(False)
+        self.set_knots_x(knots_x)
+        knots_y = data['knots_y']
+        knots_y.requires_grad_(False)
+        self.set_knots_y(knots_y)
 
         self._progressive_growing.set_step(data['_progressive_growing_step'])
 
@@ -727,7 +733,6 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     def __init__(
             self,
             heliostat: NURBSHeliostat,
-            heliostat_config: CfgNode,
             sun_direction: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
@@ -736,7 +741,6 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
-            heliostat_config,
             sun_direction,
             aim_point,
             align_points=False,
