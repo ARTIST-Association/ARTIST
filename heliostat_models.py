@@ -591,31 +591,6 @@ def to_sun_direction(
     return sun_direction
 
 
-# def rotate(h, hel_coordsystem, clockwise: bool):
-#     r = rot_from_matrix(hel_coordsystem)
-#     euler = rot_as_euler(r, 'xyx', degrees=True)
-#     ele_degrees = 270-euler[2]
-
-#     ele_radians = th.deg2rad(ele_degrees)
-#     ele_axis = th.tensor([0, 1, 0], dtype=h.dtype, device=h.device)
-#     ele_vector = ele_radians * ele_axis
-#     if not clockwise:
-#         ele_vector = -ele_vector
-#     ele = rot_from_rotvec(ele_vector)
-
-#     # TODO Max: re-add ax-offsets
-#     azi_degrees = euler[1]-90
-#     azi_radians = th.deg2rad(azi_degrees)
-#     azi_axis = th.tensor([0, 0, 1], dtype=h.dtype, device=h.device)
-#     azi_vector = azi_radians * azi_axis
-#     if not clockwise:
-#         azi_vector = -azi_vector
-#     azi = rot_from_rotvec(azi_vector)
-
-#     # darray with all heliostats (#heliostats, 3 coords)
-#     h_rotated = rot_apply(azi, rot_apply(ele, h.unsqueeze(-1)))
-#     return h_rotated.squeeze(-1)
-
 
 def _rotate(
         discrete_points: torch.Tensor,
