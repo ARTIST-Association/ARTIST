@@ -328,6 +328,11 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "test",
             writer,
         )
+        test_target_sets = hausdorff_distance.images_to_sets(
+            test_targets,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+        )#TODO test_targets have to be removed for other workaround
     # if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
     #     test_target_sets = hausdorff_distance.images_to_sets(
     #         test_targets,
@@ -422,9 +427,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                                  index=i
                                  )
         if found_something:  
+            # print(best_angles)
             alignment_params.append(best_angles)
-    # print(alignment_params)
-    # exit()
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
     del H
@@ -441,25 +445,40 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     )
     loss_func, test_loss_func = training.build_loss_funcs(
         cfg.TRAIN.LOSS, H.get_to_optimize())
-    # Better Testing
-    # =============
-    plot = plotter.Plotter(cfg, R, sun_directions, test_loss_func, logdir, device)
+   
     
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
 
     prefix = "train"
-    prealignment = [ #prealigment is not saved anywhere. its hardcoded here for faster tests with prealigment. Remove later
-        [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
-        [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
-        [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
-        [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)]
-                ]
-    test_prealignment = [
-        [th.tensor(-0.0101), th.tensor(-0.0070), th.tensor(-0.6749)]
-        ]
-        
+    #real_data.yaml
+    # prealignment = [ #converged prealigment from pretraining. its hardcoded here for faster tests with prealigment. Remove later
+    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
+    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
+    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
+    #     [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)]
+    #             ]
+    # test_prealignment = [
+    #     [th.tensor(-0.0112), th.tensor(-0.0050), th.tensor(-0.8203)]
+    #     ]
+    
+    #real_data_2.yaml
+    # prealignment = [ #converged prealigment from pretraining. its hardcoded here for faster tests with prealigment. Remove later
+    #     [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)],
+    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
+    #             ]
+    # test_prealignment = [
+    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
+    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
+    #     ]
+    prealignment = None
+    test_prealignment = None
+    
+    # Better Testing
+    # =============
+    plot = plotter.Plotter(cfg, R, sun_directions, test_loss_func, logdir, device,train_prealignment= prealignment, test_prealignment=test_prealignment)
+    
     for epoch in range(epochs):
         test_objects = training.TestObjects(
             H,
@@ -513,7 +532,9 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
             if epoch % cfg.TEST.INTERVAL == 0:
                 test_loss, hausdorff_dist, _ = training.test_batch(test_objects)
-
+                utils.to_tensorboard(writer, 'test', epoch, 
+                                     loss=test_loss,
+                                     )
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                     f'test loss: {test_loss.item()}, '
@@ -536,10 +557,10 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                                  loss=loss,
                                  raw_loss=raw_loss,
                                  )
+
         # Save Section
         #Advanced Plotting
-        plot.create_plots(H, epoch, logdir_enhanced_test)
-            
+        plot.create_plots(H, epoch, logdir_enhanced_test, H_target = H_target)
 
         if test_loss.detach().cpu() < best_result:
             if cfg.SAVE_RESULTS:
@@ -571,7 +592,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "PlottingOnly.yaml")
+    path_to_yaml = os.path.join("TestingConfigs", "I3N7.yaml")
     # print(path)
     main(path_to_yaml)
     # main()
