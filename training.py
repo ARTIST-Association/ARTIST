@@ -84,7 +84,7 @@ TestObjects = collections.namedtuple(
          'H_target',
          'logdir',
          'reduction',
-         'prealignment'
+         'prealignment',
     ],
     defaults=[None],
 )
@@ -684,12 +684,12 @@ def test_batch(
     H_target,
     logdir,
     reduction,
-    prealignments
+    prealignments,
     ) = test_objects
     if minimizer_epoch:
         epoch = minimizer_epoch
     assert prefix, "prefix string cannot be empty"
-    
+    # print(prealignments)
     mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
     losses = []
     bitmaps: Optional[torch.Tensor] = None
@@ -698,7 +698,8 @@ def test_batch(
             sun_directions,
             prealignments if prealignments is not None else itertools.repeat(None),
     )):
-        if prealignment:    
+        if prealignment:
+            # print(prealignment)
             heliostat.disturbance_angles = prealignment
         heliostat_aligned = heliostat.align(sun_direction)
         (
@@ -712,7 +713,7 @@ def test_batch(
                 dtype=pred_bitmap.dtype,
             )
         loss = loss_func(pred_bitmap, target)
-        if reduction: #TODO
+        if reduction:
             mean_loss += loss / len(targets)
         else:
             losses.append(loss)
