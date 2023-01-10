@@ -418,6 +418,7 @@ _C.TEST.PLOT                            = CN()
 _C.TEST.PLOT.SPHERIC                     =False
 _C.TEST.PLOT.GRID                        =False
 _C.TEST.PLOT.SEASON                      =False
+_C.TEST.PLOT.REAL_DATA                   =False
 
 
 def get_cfg_defaults() -> CN:
