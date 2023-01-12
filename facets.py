@@ -124,7 +124,7 @@ def cant_and_merge_facet_vectors(
             # (If we handled discrete points and normals at once, we
             # could also concat and after rotation de-construct here for
             # possibly more speed.)
-            facet_vectors = canting.apply_rotation(cant_rot, facet_vectors)
+            facet_vectors = canting.apply_rotation(cant_rot.float(), facet_vectors.float())#TODO float() is a stupid bugfix
 
         if reposition:
             facet_vectors = facet_vectors + facet_position
