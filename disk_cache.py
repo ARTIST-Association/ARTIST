@@ -20,6 +20,7 @@ import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
+from canting import CantingAlgorithm
 from environment import Environment, Sun_Distribution
 from heliostat_models import AbstractHeliostat
 
@@ -61,6 +62,8 @@ class ExtendedEncoder(json.JSONEncoder):
             return attrs
         elif isinstance(obj, Sun_Distribution):
             return (obj.cfg, obj.num_rays)
+        elif isinstance(obj, CantingAlgorithm):
+            return obj.name
         elif isinstance(obj, SummaryWriter):
             return None
 
