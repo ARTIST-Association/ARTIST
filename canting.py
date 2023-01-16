@@ -96,14 +96,16 @@ def get_canting_params(
         heliostat: 'AbstractHeliostat',
         sun_direction: Optional[torch.Tensor],
 ) -> Optional[CantingParams]:
-    if isinstance(heliostat.canting_algo, FirstSunCanting):
+    if not heliostat.canting_enabled:
+        canting_params: Optional[CantingParams] = None
+    elif isinstance(heliostat.canting_algo, FirstSunCanting):
         assert sun_direction is not None, \
             'need sun direction to cant towards'
         assert heliostat.focus_point is not None, (
             'need focus point for perfectly canting towards the '
             'first sun'
         )
-        canting_params: Optional[CantingParams] = FirstSunCantingParams(
+        canting_params = FirstSunCantingParams(
             sun_direction,
             heliostat.focus_point,
             heliostat.position_on_field,
@@ -112,16 +114,16 @@ def get_canting_params(
         )
     elif is_like_active(heliostat.canting_algo):
         canting_params = LikeActiveCantingParams()
-    elif (
-            heliostat.canting_enabled
-            and not is_like_active(heliostat.canting_algo)
-    ):
+    else:
+        assert False, (
+            'standard canting should be replaced by "first sun" canting with '
+            'a sun direction of [0, 0, -1] before initialization'
+        )
         canting_params = StandardCantingParams(
             heliostat.focus_point,
             heliostat.position_on_field,
         )
-    else:
-        canting_params = None
+
     return canting_params
 
 

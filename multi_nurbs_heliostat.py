@@ -39,7 +39,6 @@ class NURBSFacets(facets.AbstractFacets):
             self,
             heliostat: 'MultiNURBSHeliostat',
             nurbs_heliostats: List[AbstractNURBSHeliostat],
-            cant_rots: torch.Tensor,
     ):
         self._facets = nurbs_heliostats
         self.positions = heliostat.facets.positions
@@ -49,7 +48,10 @@ class NURBSFacets(facets.AbstractFacets):
         self.offsets = self._make_offsets(
             cast(List['AbstractHeliostat'], self._facets))
         self._canting_algo = heliostat.canting_algo
-        self.cant_rots = cant_rots
+        self.cant_rots = th.stack([
+            th.eye(3, dtype=self.spans_n.dtype, device=self.spans_n.device)
+            for _ in range(len(self._facets))
+        ])
 
     def __len__(self) -> int:
         return sum(len(facet) for facet in self._facets)
@@ -107,6 +109,7 @@ class NURBSFacets(facets.AbstractFacets):
             reposition: bool = True,
             force_canting: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        assert not reposition, 'must not reposition `NURBSFacets`'
         discrete_points_and_normals = [
             facet.discrete_points_and_normals()
             for facet in self._facets
@@ -128,6 +131,17 @@ class NURBSFacets(facets.AbstractFacets):
             force_canting=force_canting,
         )
         return merged_discrete_points, merged_normals
+
+    def raw_discrete_points_and_normals(
+            self,
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+        discrete_points_and_normals = [
+            facet.raw_discrete_points_and_normals()
+            for facet in self._facets
+        ]
+        discrete_points = [tup[0] for tup in discrete_points_and_normals]
+        normals = [tup[1] for tup in discrete_points_and_normals]
+        return discrete_points, normals
 
 
 class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
@@ -247,23 +261,22 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         #     self.rotation_offset = self._get_rotation_offset(
         #         self.nurbs_cfg)
 
-        self._inherit_canting()
+        maybe_new_sun_direction = self._inherit_canting()
+        if maybe_new_sun_direction is not None:
+            maybe_sun_direction = maybe_new_sun_direction
 
-        facets_and_rots = self._create_facets(
+        facets = self._create_facets(
             self.cfg,
             self.nurbs_cfg,
             maybe_sun_direction,
         )
         self.facets = NURBSFacets(
-            self,
-            [tup[0] for tup in facets_and_rots],
-            th.stack([tup[1] for tup in facets_and_rots]),
-        )
+            self, cast(List[AbstractNURBSHeliostat], facets))
 
         if setup_params:
             self.setup_params()
 
-    def _inherit_canting(self) -> None:
+    def _inherit_canting(self) -> Optional[torch.Tensor]:
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         self._canting_cfg.defrost()
@@ -289,8 +302,18 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if cfg_canting_algo == 'inherit':
             self._canting_cfg.ALGORITHM = old_canting_cfg.ALGORITHM
         self.canting_algo = canting.get_algorithm(self._canting_cfg)
+        if isinstance(self.canting_algo, canting.StandardCanting):
+            self.canting_algo = canting.FirstSunCanting()
+            maybe_sun_direction: Optional[torch.Tensor] = th.tensor(
+                [0, 0, -1],
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+        else:
+            maybe_sun_direction = None
 
         self._canting_cfg.freeze()
+        return maybe_sun_direction
 
     def _set_facet_points(
             self,
@@ -298,62 +321,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             facet_index: int,
             position: torch.Tensor,
             sun_direction: Optional[torch.Tensor],
-    ) -> torch.Tensor:
+    ) -> None:
         assert not isinstance(self.facets, NURBSFacets)
-        # We calculate everything anew again here because the canting
-        # settings may have changed.
-        # TODO Could probably be done smarter with less work. Because we
-        #      already have most of this.
-        facet_slice = slice(
-            self.facets.offsets[facet_index],
-            (
-                self.facets.offsets[facet_index + 1]
-                if facet_index + 1 < len(self.facets.offsets)
-                else None
-            ),
-        )
-        facet_discrete_points = self.facets.align_discrete_points(
-            force_canting=True)[facet_slice]
-        facet_discrete_points_ideal = self.facets.align_discrete_points_ideal(
-            force_canting=True)[facet_slice]
-        facet_normals = self.facets.align_normals(
-            force_canting=True)[facet_slice]
-        facet_normals_ideal = self.facets.align_normals_ideal(
-            force_canting=True)[facet_slice]
-
-        canting_params = canting.get_canting_params(self, sun_direction)
-        (
-            facet_discrete_points,
-            facet_discrete_points_ideal,
-            facet_normals,
-            facet_normals_ideal,
-            cant_rot,
-        ) = canting.decant_facet(
-            position,
-            facet_discrete_points,
-            facet_discrete_points_ideal,
-            facet_normals,
-            facet_normals_ideal,
-            self.cfg.IDEAL.NORMAL_VECS,
-            canting_params,
-        )
-
-        # Re-center facet around zero.
-        facet_discrete_points -= position
-        facet_discrete_points_ideal -= position
-
-        facet.facets = facets.Facets(
-            facet,
-            th.zeros_like(position).unsqueeze(0),
-            facet.facets.spans_n,
-            facet.facets.spans_e,
-            [facet_discrete_points],
-            [facet_discrete_points_ideal],
-            [facet_normals],
-            [facet_normals_ideal],
-            th.eye(3).unsqueeze(0),
-        )
-        facet._orig_world_points = facet._discrete_points_ideal.clone()
+        facet._orig_world_points = \
+            facet.facets.raw_discrete_points_ideal[0].clone()
 
         added_dims = facet.height + facet.width
         height_ratio = facet.height / added_dims
@@ -384,8 +355,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ):
             facet.h_rows = None
             facet.h_cols = None
-
-        return cant_rot
 
     @staticmethod
     def _facet_optimizable_to_optimizable(
@@ -425,23 +394,27 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             for name in self.get_to_optimize()
             if name in self._FACET_OPTIMIZABLES
         ]
-        # We use `self.facets.positions` to position the heliostat's
-        # values.
-        heliostat_config.IDEAL.POSITION_ON_FIELD = [0.0, 0.0, 0.0]
+        heliostat_config.IDEAL.POSITION_ON_FIELD = \
+            self.position_on_field.tolist()
         # Give any aim point so it doesn't complain.
         heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
         # We don't want to optimize the rotation for each facet, only
         # for the whole heliostat. So do not disturb facets.
         heliostat_config.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
-        # Even though we use `self.facets.positions` to position the
-        # heliostat's values, we need this for correct initialization of
-        # the single NURBS heliostat facet.
         heliostat_config.IDEAL.FACETS.POSITIONS = [position.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
-        # Do not cant facet NURBS in their constructor; we do it
-        # manually.
-        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
+
+        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = (
+            self.focus_point.tolist()
+            if isinstance(self.focus_point, th.Tensor)
+            else self.focus_point
+        )
+        heliostat_config.IDEAL.FACETS.CANTING.ALGORITHM = (
+            self.canting_algo.name
+            if self.canting_algo is not None
+            else 'standard'
+        )
         return heliostat_config
 
     @staticmethod
@@ -473,22 +446,24 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             orig_nurbs_config: CfgNode,
             nurbs_config: CfgNode,
             sun_direction: Optional[torch.Tensor],
-    ) -> torch.Tensor:
+    ) -> None:
         # "Load" values from parent heliostat.
-        facet._discrete_points = self._discrete_points
+        facet._discrete_points = [self._discrete_points[facet_index]]
         facet.set_raw_discrete_points_ideal(
-            self.get_raw_discrete_points_ideal())
-        facet._normals = self._normals
-        facet.set_raw_normals_ideal(self.get_raw_normals_ideal())
+            [self.get_raw_discrete_points_ideal()[facet_index]])
+        facet._normals = [self._normals[facet_index]]
+        facet.set_raw_normals_ideal(
+            [self.get_raw_normals_ideal()[facet_index]])
+        facet.facets.cant_rots = self.facets.cant_rots[
+            facet_index].unsqueeze(0)
+
         facet.params = self.params
         facet.h_rows = self.rows
         facet.h_cols = self.cols
 
         facet.height = nurbs_config.HEIGHT
         facet.width = nurbs_config.WIDTH
-        # TODO initialize NURBS correctly
-        # facet.position_on_field = self.position_on_field + position
-        cant_rot = self._set_facet_points(
+        self._set_facet_points(
             facet,
             facet_index,
             position,
@@ -504,7 +479,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
         facet.initialize_control_points(facet.ctrl_points)
         facet.initialize_eval_points()
-        return cant_rot
 
     def _create_facet(
             self,
@@ -515,7 +489,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             sun_direction: Optional[torch.Tensor],
-    ) -> Tuple[NURBSHeliostat, torch.Tensor]:
+    ) -> NURBSHeliostat:
         orig_nurbs_config = nurbs_config
         heliostat_config = self._facet_heliostat_config(
             heliostat_config,
@@ -530,8 +504,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             self.device,
             setup_params=False,
+            sun_directions=sun_direction,
         )
-        cant_rot = self._adjust_facet(
+
+        self._adjust_facet(
             facet,
             facet_index,
             position,
@@ -541,14 +517,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             sun_direction,
         )
-        return facet, cant_rot
+        return facet
 
     def _create_facets(
             self,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             sun_direction: Optional[torch.Tensor],
-    ) -> List[Tuple[NURBSHeliostat, torch.Tensor]]:
+    ) -> List[NURBSHeliostat]:
         return [
             self._create_facet(
                 i,
@@ -584,22 +560,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     def _calc_normals_and_surface(
             self,
-            reposition: bool = True,
+            do_canting: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         assert isinstance(self.facets, NURBSFacets)
-        return self.facets.align_discrete_points_and_normals(
-            reposition=reposition)
+        return self.facets.align_discrete_points_and_normals(reposition=False)
 
     def discrete_points_and_normals(
             self,
-            reposition: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # We do this awkward call so that `AlignedMultiNURBSHeliostat`
         # can call this method but avoid using its own
         # `_calc_normals_and_surface` method.
         discrete_points, normals = \
-            MultiNURBSHeliostat._calc_normals_and_surface(
-                self, reposition=reposition)
+            MultiNURBSHeliostat._calc_normals_and_surface(self)
         return discrete_points, normals
 
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
@@ -710,21 +683,39 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                     )
                     for facet in self._heliostat.facets
                 ],
-                self._heliostat.facets.cant_rots,
             )
             self.device = self._heliostat.device
 
-    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        if canting.is_like_active(self._heliostat.canting_algo):
-            hel_rotated, normal_vectors_rotated = \
+    def _calc_normals_and_surface(
+            self,
+            do_canting: bool = True,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        if isinstance(self._heliostat.canting_algo, ActiveCanting):
+            hel_rotated, normal_vectors_rotated = (
                 MultiNURBSHeliostat.discrete_points_and_normals(
                     cast(MultiNURBSHeliostat, self),
-                    reposition=False,
                 )
+            )
+        elif canting.is_like_active(self._heliostat.canting_algo):
+            hel_rotated, normal_vectors_rotated = (
+                AlignedHeliostat.align_facets(
+                    cast(AlignedHeliostat, self),
+                    not isinstance(
+                        self._heliostat.canting_algo,
+                        canting.ActiveCanting,
+                    )
+                )
+            )
         else:
-            hel_rotated, normal_vectors_rotated = \
-                super()._calc_normals_and_surface()
+            hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
+                self._heliostat, self.align_origin[0])
 
+        if not isinstance(self._heliostat.canting_algo, ActiveCanting):
+            hel_rotated = hel_rotated + self._heliostat.position_on_field
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        )
         return hel_rotated, normal_vectors_rotated
 
 

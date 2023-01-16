@@ -17,6 +17,7 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
+import canting
 import heliostat_models
 from heliostat_models import AbstractHeliostat, AlignedHeliostat, Heliostat
 import nurbs
@@ -51,7 +52,10 @@ class AbstractNURBSHeliostat(AbstractHeliostat):
     def __len__(self) -> int:
         raise NotImplementedError('please override `__len__`')
 
-    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _calc_normals_and_surface(
+            self,
+            do_canting: bool = True,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError(
             'please override `_calc_normals_and_surface`')
 
@@ -61,6 +65,13 @@ class AbstractNURBSHeliostat(AbstractHeliostat):
 
     def discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
         discrete_points, normals = self._calc_normals_and_surface()
+        return discrete_points, normals
+
+    def raw_discrete_points_and_normals(
+            self,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        discrete_points, normals = self._calc_normals_and_surface(
+            do_canting=False)
         return discrete_points, normals
 
     @property
@@ -383,7 +394,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat([first_row, inner_rows, last_row], dim=0)
 
     @ctrl_points.setter
-    def ctrl_points(self, new_ctrl_points) -> None:
+    def ctrl_points(self, new_ctrl_points: torch.Tensor) -> None:
         raise AttributeError(
             '`ctrl_points` is not a writable attribute; '
             'use `set_ctrl_points` instead'
@@ -425,7 +436,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat([first_row, inner_rows, last_row], dim=0)
 
     @ctrl_weights.setter
-    def ctrl_weights(self, new_ctrl_weights) -> None:
+    def ctrl_weights(self, new_ctrl_weights: torch.Tensor) -> None:
         raise AttributeError(
             '`ctrl_weights` is not a writable attribute; '
             'use `set_ctrl_weights` instead'
@@ -444,7 +455,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat(self._knots_x_splits)
 
     @knots_x.setter
-    def knots_x(self, new_knots_x) -> None:
+    def knots_x(self, new_knots_x: torch.Tensor) -> None:
         raise AttributeError(
             '`knots_x` is not a writable attribute; '
             'use `set_knots_x` instead'
@@ -463,7 +474,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         return th.cat(self._knots_y_splits)
 
     @knots_y.setter
-    def knots_y(self, new_knots_y) -> None:
+    def knots_y(self, new_knots_y: torch.Tensor) -> None:
         raise AttributeError(
             '`knots_y` is not a writable attribute; '
             'use `set_knots_y` instead'
@@ -574,7 +585,10 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def shape(self) -> Tuple[int, int]:
         return self._progressive_growing.get_shape()
 
-    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _calc_normals_and_surface(
+            self,
+            do_canting: bool = True,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         eval_points = self.eval_points
         ctrl_points, ctrl_weights, knots_x, knots_y = \
             self._progressive_growing.select()
@@ -590,7 +604,22 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             knots_y,
         )
 
+        if do_canting:
+            position = self.facets.positions[0]
+            surface_points = surface_points - position
+            surface_points = canting.apply_rotation(
+                self.facets.cant_rots[0], surface_points)
+            normals = canting.apply_rotation(self.facets.cant_rots[0], normals)
+            surface_points = surface_points + position
+
         return surface_points, normals
+
+    def raw_discrete_points_and_normals(
+            self,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        discrete_points, normals = self._calc_normals_and_surface(
+            do_canting=False)
+        return discrete_points, normals
 
     @th.no_grad()
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
@@ -749,9 +778,17 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     def __len__(self) -> int:
         return len(self._heliostat)
 
-    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
-            self._heliostat, self.align_origin[0])
+    def _calc_normals_and_surface(
+            self,
+            do_canting: bool = True,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # print('calcing normals and surface')
+        if canting.is_like_active(self._heliostat.canting_algo):
+            hel_rotated, normal_vectors_rotated = \
+                AlignedHeliostat.align_facets(cast(AlignedHeliostat, self))
+        else:
+            hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
+                self._heliostat, self.align_origin[0])
         # TODO Remove if translation is added to `rotate` function.
         # Place in field
         hel_rotated = hel_rotated + self._heliostat.position_on_field
@@ -759,7 +796,6 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
             normal_vectors_rotated
             / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
         )
-
         return hel_rotated, normal_vectors_rotated
 
     def get_ray_directions(

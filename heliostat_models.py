@@ -588,7 +588,10 @@ def to_sun_direction(
     if sun_directions is None:
         sun_direction = None
     else:
-        sun_direction = sun_directions[0]
+        if sun_directions.ndim > 1:
+            sun_direction = sun_directions[0]
+        else:
+            sun_direction = sun_directions
         assert sun_direction.shape == (3,)
     return sun_direction
 
@@ -972,8 +975,6 @@ class Heliostat(AbstractHeliostat):
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
 
-        self.canting_algo = canting.get_algorithm(self._canting_cfg)
-
         self.aim_point = self._get_aim_point(
             h_cfg,
             maybe_aim_point,
@@ -999,6 +1000,16 @@ class Heliostat(AbstractHeliostat):
         ) = builder_fn(h_cfg, self.device)
 
         self.position_on_field = heliostat_position
+
+        self.canting_algo = canting.get_algorithm(self._canting_cfg)
+        if isinstance(self.canting_algo, canting.StandardCanting):
+            self.canting_algo = canting.FirstSunCanting()
+            maybe_sun_direction = th.tensor(
+                [0, 0, -1],
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+
         self.set_up_facets(
             facet_positions,
             facet_spans_n,
@@ -1277,7 +1288,10 @@ class AlignedHeliostat(AbstractHeliostat):
         if align_points:
             self._align()
 
-    def _align_facets(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def align_facets(
+            self,
+            reposition: bool = True,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         total_size = len(self.facets)
         dtype = self._heliostat.position_on_field.dtype
         device = self._heliostat.device
@@ -1287,10 +1301,27 @@ class AlignedHeliostat(AbstractHeliostat):
         normal_vectors_rotated = torch.empty(
             (total_size, 3), dtype=dtype, device=device)
 
-        align_origin = self.align_origin
-        if len(align_origin) < len(self.facets.positions):
-            align_origin = align_origin * len(self.facets.positions)
-        assert len(align_origin) == len(self.facets.positions)
+        align_origins = self.align_origin
+        if (
+                len(align_origins) == 1
+                and len(align_origins) < len(self.facets.positions)
+        ):
+            align_origins = align_origins * len(self.facets.positions)
+        assert len(align_origins) == len(self.facets.positions)
+
+        if hasattr(self.facets, 'raw_discrete_points_and_normals'):
+            raw_discrete_points, raw_normals = (
+                self.facets   # type: ignore[attr-defined]
+                .raw_discrete_points_and_normals()
+            )
+        elif hasattr(self._heliostat, 'raw_discrete_points_and_normals'):
+            raw_discrete_points, raw_normals = (
+                self._heliostat  # type: ignore[attr-defined]
+                .raw_discrete_points_and_normals()
+            )
+        else:
+            raw_discrete_points = self.facets.raw_discrete_points
+            raw_normals = self.facets.raw_normals
 
         i = 0
         for (
@@ -1301,10 +1332,10 @@ class AlignedHeliostat(AbstractHeliostat):
                 align_origin,
         ) in zip(
             self.facets.positions,
-            self.facets.raw_discrete_points,
-            self.facets.raw_normals,
+            raw_discrete_points,
+            raw_normals,
             self.facets.cant_rots,
-            align_origin,
+            align_origins,
         ):
             offset = len(discrete_points)
 
@@ -1319,33 +1350,28 @@ class AlignedHeliostat(AbstractHeliostat):
                 normals_rotated,
                 align_origin,
             )
-            discrete_points_rotated = discrete_points_rotated + position
+            if reposition:
+                discrete_points_rotated = discrete_points_rotated + position
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated
             i += offset
 
-        normal_vectors_rotated = (
-            normal_vectors_rotated
-            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-        )
         return hel_rotated, normal_vectors_rotated
 
     def _align(self) -> None:
         if canting.is_like_active(self._heliostat.canting_algo):
-            hel_rotated, normal_vectors_rotated = self._align_facets()
-            hel_rotated_in_field = (
-                hel_rotated + self._heliostat.position_on_field)
+            hel_rotated, normal_vectors_rotated = self.align_facets()
         else:
             hel_rotated, normal_vectors_rotated = rotate(
                 self._heliostat, self.align_origin[0])
-            # TODO Add Translation in rotate function
-            hel_rotated_in_field = (
-                hel_rotated + self._heliostat.position_on_field)
-            normal_vectors_rotated = (
-                normal_vectors_rotated
-                / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
-            )
+        # TODO Add Translation in rotate function
+        hel_rotated_in_field = (
+            hel_rotated + self._heliostat.position_on_field)
+        normal_vectors_rotated = (
+            normal_vectors_rotated
+            / th.linalg.norm(normal_vectors_rotated, dim=-1).unsqueeze(-1)
+        )
 
         self.facets = AlignedFacets(
             hel_rotated_in_field,
