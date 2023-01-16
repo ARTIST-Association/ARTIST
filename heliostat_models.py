@@ -1319,6 +1319,8 @@ class AlignedHeliostat(AbstractHeliostat):
                 self._heliostat  # type: ignore[attr-defined]
                 .raw_discrete_points_and_normals()
             )
+            raw_discrete_points = [raw_discrete_points]
+            raw_normals = [raw_normals]
         else:
             raw_discrete_points = self.facets.raw_discrete_points
             raw_normals = self.facets.raw_normals
