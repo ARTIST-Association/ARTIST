@@ -703,7 +703,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                     isinstance(
                         self._heliostat.canting_algo,
                         canting.ActiveCanting,
-                    )
+                    ),
                 )
             )
         else:
