@@ -19,57 +19,45 @@ def load_config(config_file_name):
     cfg.freeze()
     return cfg
 
-initial_filename = "ForNextPaper.yaml"
+initial_filename = "Nature_Distance_Sweep.yaml"
 initial_folder = "TestingConfigs"
 result_folder = "Results"
-sweep_name = "test"
+sweep_name = "Distance_Nature_Sweep"
 
-wd_array = [0.1,0.01,0.001]
-lr_array = [1e-4,1e-5]
-sd_array = [2,3,4]
-n_array  = [5,6,8,10,12]
+num_images_array = [2,4,8]
+distance_array = [400]
 
 initial_path =  os.path.join(initial_folder, initial_filename)
 result_path = os.path.join(result_folder,sweep_name)
 os.makedirs(result_path, exist_ok=True)
 
 cfg = load_config(initial_path)
-print(cfg)
+# print(cfg)
 
-for wd in wd_array:
+
+            
+            
+for distance in distance_array:
     #initialize cfg and namespace
     new_cfg = copy.deepcopy(cfg)
     name_string =f"{sweep_name}_"
     #start loop
-    
-    short_name = "wd"
-    long_name = "TRAIN.OPTIMIZER.WEIGHT_DECAY"
-    new_cfg.merge_from_list([long_name, wd])
-    name_string = name_string+short_name+"_"+str(wd)+"_" 
-    
-    for sd in sd_array:
-        short_name = "sd"
-        long_name = "NURBS.SPLINE_DEGREE"
-        
-        new_cfg.merge_from_list([long_name, sd])
-        name_string_sd = name_string+short_name+"_"+str(sd)+"_" 
-        for n in n_array:
-            short_name = "N"
-            long_name_1 = "NURBS.ROWS"
-            long_name_2 = "NURBS.COLS"
-            
-            new_cfg.merge_from_list([long_name_1, n])
-            new_cfg.merge_from_list([long_name_2, n])
-            name_string_n = name_string_sd+short_name+"_"+str(n)+"_" 
-            for lr in lr_array:
-                short_name = "lr"
-                long_name = "TRAIN.OPTIMIZER.LR"       
-                
-                new_cfg.merge_from_list([long_name, lr])
-                name_string_final = name_string_n+short_name+"_"+str(lr) #no underline in last for loop
-                
-                sweep_path = os.path.join(result_path, name_string_final)
-                print(sweep_path)
-                os.makedirs(sweep_path, exist_ok=True)
-                with open(os.path.join(sweep_path, "config.yaml"), "w") as f:
-                    f.write(new_cfg.dump())  # cfg, f, default_flow_style=False)
+    short_name = "D"
+    long_name = "H.DEFLECT_DATA.POSITION_ON_FIELD"
+    cor_distance = distance
+    if distance == 400:
+        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_X",new_cfg.AC.RECEIVER.PLANE_X*3])
+        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_Y",new_cfg.AC.RECEIVER.PLANE_Y*3])
+    new_cfg.merge_from_list([long_name, [13.2, distance, 1.795]])
+    name_string = name_string+short_name+"_"+str(distance)+"_" 
+    for num_images in num_images_array:
+        short_name = "I"
+        long_name = "TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES"
+        new_cfg.merge_from_list([long_name, num_images])
+        name_string_final = name_string+short_name+"_"+str(num_images)+"_" 
+        #Save to File
+        sweep_path = os.path.join(result_path, name_string_final)
+        print(sweep_path)
+        os.makedirs(sweep_path, exist_ok=True)
+        with open(os.path.join(sweep_path, "config.yaml"), "w") as f:
+            f.write(new_cfg.dump())  # cfg, f, default_flow_style=False)
