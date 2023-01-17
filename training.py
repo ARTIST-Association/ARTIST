@@ -677,6 +677,96 @@ def calc_batch_grads(
     return loss
 
 
+def train_batch(
+        train_objects: TrainObjects,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    opt = train_objects.opt
+    if isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper)):
+        with th.no_grad():
+            _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
+                train_objects)
+        epoch_minimizer = [0]
+        best_result = [th.tensor(float('inf'))]
+
+        def global_opt():
+            loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
+                train_objects, minimizer_epoch=epoch_minimizer[0])
+            writer = train_objects.writer
+            if writer:
+                writer.add_scalar(
+                    "minimizer/loss", raw_loss.item(), epoch_minimizer[0])
+            print(f"Minimizer epoch {epoch_minimizer}. Loss={raw_loss.item()}")
+
+            cfg = train_objects.config
+            test_objects = train_objects.test_objects
+            if epoch_minimizer[0] % cfg.TEST.INTERVAL == 0:
+                test_loss, hausdorff_dist, _ = test_batch(
+                    test_objects, epoch_minimizer[0])
+                plotter.plot_surfaces_mrad(
+                    test_objects.H_target,
+                    test_objects.H,
+                    epoch_minimizer[0],
+                    test_objects.logdir,
+                    writer,
+                )
+                print(
+                    f"Minimizer epoch {epoch_minimizer}. "
+                    f"Test loss={test_loss.item()}"
+                )
+                if (
+                        test_loss.detach().cpu() < best_result[0]
+                        and cfg.SAVE_RESULTS
+                ):
+                    print(
+                        f"New best test loss found. "
+                        f"Value: {test_loss.detach().cpu()}. "
+                        f"Old Value:{best_result[0]}"
+                    )
+
+                    best_result[0] = test_loss.detach().cpu()
+            epoch_minimizer[0] += 1
+
+            return loss
+
+        loss = cast(
+            th.Tensor,
+            opt.step(cast(
+                Callable[[], float],
+                global_opt,
+            )),
+        )
+    else:
+        loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
+            train_objects)
+        opt.step()
+
+    # Plot loss to Tensorboard
+    # with th.no_grad():
+        # prefix = train_objects.prefix
+        # assert prefix, "prefix string cannot be empty"
+        # writer = train_objects.writer
+        # if writer:
+        #     # print(writer, prefix, loss.item(),train_objects.epoch)
+        #     writer.add_scalar(
+        #         f"{prefix}/loss", loss.item(), train_objects.epoch)
+        #     writer.add_scalar(
+        #         f"{prefix}/raw_loss", raw_loss.item(), train_objects.epoch)
+
+    # Update training parameters
+    # ==========================
+    sched = train_objects.sched
+    if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
+        sched.step(loss)
+    else:
+        sched.step()
+
+    train_objects.H.step(verbose=True)
+    # if opt.param_groups[0]["lr"] < last_lr:
+    #     last_lr = opt.param_groups[0]["lr"]
+
+    return loss, raw_loss, pred_bitmap, num_missed
+
+
 @th.no_grad()
 def test_batch(
         test_objects: TrainObjects,
@@ -770,93 +860,3 @@ def test_batch(
         return mean_loss, mean_hausdorff_dist, bitmaps
     else:
         return th.stack(losses), hausdorff_dists, bitmaps
-
-
-def train_batch(
-        train_objects: TrainObjects,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    opt = train_objects.opt
-    if isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper)):
-        with th.no_grad():
-            _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
-                train_objects)
-        epoch_minimizer = [0]
-        best_result = [th.tensor(float('inf'))]
-
-        def global_opt():
-            loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
-                train_objects, minimizer_epoch=epoch_minimizer[0])
-            writer = train_objects.writer
-            if writer:
-                writer.add_scalar(
-                    "minimizer/loss", raw_loss.item(), epoch_minimizer[0])
-            print(f"Minimizer epoch {epoch_minimizer}. Loss={raw_loss.item()}")
-
-            cfg = train_objects.config
-            test_objects = train_objects.test_objects
-            if epoch_minimizer[0] % cfg.TEST.INTERVAL == 0:
-                test_loss, hausdorff_dist, _ = test_batch(
-                    test_objects, epoch_minimizer[0])
-                plotter.plot_surfaces_mrad(
-                    test_objects.H_target,
-                    test_objects.H,
-                    epoch_minimizer[0],
-                    test_objects.logdir,
-                    writer,
-                )
-                print(
-                    f"Minimizer epoch {epoch_minimizer}. "
-                    f"Test loss={test_loss.item()}"
-                )
-                if (
-                        test_loss.detach().cpu() < best_result[0]
-                        and cfg.SAVE_RESULTS
-                ):
-                    print(
-                        f"New best test loss found. "
-                        f"Value: {test_loss.detach().cpu()}. "
-                        f"Old Value:{best_result[0]}"
-                    )
-
-                    best_result[0] = test_loss.detach().cpu()
-            epoch_minimizer[0] += 1
-
-            return loss
-
-        loss = cast(
-            th.Tensor,
-            opt.step(cast(
-                Callable[[], float],
-                global_opt,
-            )),
-        )
-    else:
-        loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
-            train_objects)
-        opt.step()
-
-    # Plot loss to Tensorboard
-    # with th.no_grad():
-        # prefix = train_objects.prefix
-        # assert prefix, "prefix string cannot be empty"
-        # writer = train_objects.writer
-        # if writer:
-        #     # print(writer, prefix, loss.item(),train_objects.epoch)
-        #     writer.add_scalar(
-        #         f"{prefix}/loss", loss.item(), train_objects.epoch)
-        #     writer.add_scalar(
-        #         f"{prefix}/raw_loss", raw_loss.item(), train_objects.epoch)
-
-    # Update training parameters
-    # ==========================
-    sched = train_objects.sched
-    if isinstance(sched, th.optim.lr_scheduler.ReduceLROnPlateau):
-        sched.step(loss)
-    else:
-        sched.step()
-
-    train_objects.H.step(verbose=True)
-    # if opt.param_groups[0]["lr"] < last_lr:
-    #     last_lr = opt.param_groups[0]["lr"]
-
-    return loss, raw_loss, pred_bitmap, num_missed
