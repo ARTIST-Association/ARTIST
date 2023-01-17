@@ -288,15 +288,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 raise ValueError(
                     f'unknown focus point config "{cfg_focus_point}"')
             self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
-        focus_point = canting.get_focus_point(
-            self._canting_cfg,
-            self.position_on_field,
-            self.aim_point,
-            self.cfg.IDEAL.NORMAL_VECS,
-            dtype=self.position_on_field.dtype,
-            device=self.device,
-        )
-        self._set_deconstructed_focus_point(focus_point)
 
         cfg_canting_algo: str = self._canting_cfg.ALGORITHM
         if cfg_canting_algo == 'inherit':
@@ -311,6 +302,19 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             )
         else:
             maybe_sun_direction = None
+
+        if self.canting_enabled:
+            focus_point = canting.get_focus_point(
+                self._canting_cfg,
+                self.position_on_field,
+                self.aim_point,
+                self.cfg.IDEAL.NORMAL_VECS,
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+        else:
+            focus_point = None
+        self._set_deconstructed_focus_point(focus_point)
 
         self._canting_cfg.freeze()
         return maybe_sun_direction
@@ -405,11 +409,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
         heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
 
-        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = (
-            self.focus_point.tolist()
-            if isinstance(self.focus_point, th.Tensor)
-            else self.focus_point
-        )
+        if not self.canting_enabled:
+            focus_point = 0
+        elif isinstance(self.focus_point, th.Tensor):
+            focus_point = self.focus_point.tolist()
+        else:
+            focus_point = self.focus_point
+        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = focus_point
         heliostat_config.IDEAL.FACETS.CANTING.ALGORITHM = (
             self.canting_algo.name
             if self.canting_algo is not None

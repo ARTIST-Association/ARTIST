@@ -148,6 +148,8 @@ def get_focus_point(
         # We explicitly don't check for the float type so that
         # distance can be given as integers as well.
         elif canting_cfg.FOCUS_POINT != float('inf'):
+            assert canting_cfg.FOCUS_POINT > 0, \
+                'please do not call `get_focus_point` with disabled canting'
             focus_point = heliostat_position_on_field + th.tensor(
                 ideal_normal,
                 dtype=dtype,
