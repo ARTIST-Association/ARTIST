@@ -382,6 +382,7 @@ def decant_facet(
             canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,
+            canting_params.rotation_offset,
         ))
         rev_align_origin = throt.Rotate(
             alignment,
