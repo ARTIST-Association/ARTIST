@@ -360,7 +360,7 @@ class Renderer(object):
             self.ENV.receiver_plane_x,
             self.ENV.receiver_plane_y,
         )
-        
+
         total_bitmap = total_bitmap.T
 
         target_num_missed = indices.numel() - indices.count_nonzero()
