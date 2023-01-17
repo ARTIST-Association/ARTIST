@@ -688,7 +688,7 @@ def train_batch(
         epoch_minimizer = [0]
         best_result = [th.tensor(float('inf'))]
 
-        def global_opt():
+        def global_opt() -> torch.Tensor:
             loss, (raw_loss, pred_bitmap, num_missed) = calc_batch_grads(
                 train_objects, minimizer_epoch=epoch_minimizer[0])
             writer = train_objects.writer
@@ -769,7 +769,7 @@ def train_batch(
 
 @th.no_grad()
 def test_batch(
-        test_objects: TrainObjects,
+        test_objects: TestObjects,
         minimizer_epoch: Optional[int] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     (

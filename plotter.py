@@ -21,6 +21,7 @@ import utils
 from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
 import hausdorff_distance
 import data
+from render import Renderer
 
 import disk_cache
 from typing import (
@@ -48,10 +49,23 @@ def colorbar(mappable: cm.ScalarMappable) -> matplotlib.colorbar.Colorbar:
     plt.sca(last_axes)
     return cbar
 
+
 @torch.no_grad()
-class Plotter():
+class Plotter:
     @torch.no_grad()
-    def __init__(self, cfg, R,sun_directions, loss_func, logdir, device, train_prealignment= None, test_prealignment=None):
+    def __init__(
+            self,
+            cfg: CfgNode,
+            R: Renderer,
+            sun_directions: torch.Tensor,
+            loss_func: Callable[
+                [torch.Tensor, torch.Tensor],
+                torch.Tensor,
+            ],
+            device: th.device,
+            train_prealignment: Optional[List[List[torch.Tensor]]] = None,
+            test_prealignment: Optional[List[List[torch.Tensor]]] = None,
+    ) -> None:
         cfg_test = cfg.TEST
         self.plot_grid = cfg_test.PLOT.GRID
         self.plot_season = cfg_test.PLOT.SEASON
@@ -184,13 +198,14 @@ class Plotter():
                 season_test_sun_directions,
                 loss_func,
                 cfg,
-                None,#epoch
+                None,  # epoch
                 "season_test",
-                None, #writer
+                None,  # writer
                 H_validation,
                 None,
-                False # Reduction
-                )
+                False,  # Reduction
+                None,
+            )
             
             season_test_objects = self.season_test_objects._replace(H=H_naive_season)
             self.season_naive_test_loss, self.season_naive_hd, self.season_naive_test_targets = training.test_batch(season_test_objects)
@@ -279,12 +294,13 @@ class Plotter():
             
             naive_test_objects = self.testset_objects._replace(H=H_naive_testset)
             self.naive_test_loss, self.naive_hd_test, self.naive_test_targets = training.test_batch(naive_test_objects)
-            
+
+    @torch.no_grad()
     def season_plot(
             self,
-            H,
-            epoch,
-            logdir
+            H: AbstractHeliostat,
+            epoch: int,
+            logdir: str,
     ) -> None:
         so = self.season_test_objects._replace(H=H, epoch=epoch)
         season_test_loss, season_test_hd, season_test_bitmaps = training.test_batch(
@@ -382,13 +398,14 @@ class Plotter():
         # plt.show()
         plt.savefig(os.path.join(logdir, f"season_test_{epoch}"), dpi=fig.dpi)
         plt.close(fig)
-    
+
+    @torch.no_grad()
     def real_data_plot(
             self,
-            H,
-            epoch,
-            logdir,
-            H_target = None
+            H: AbstractHeliostat,
+            epoch: int,
+            logdir: str,
+            H_target: AbstractHeliostat,
     ) -> None:
         O_train = self.trainset_objects._replace(H=H, epoch=epoch)
         train_loss, train_hd, train_bitmaps = training.test_batch(
@@ -605,9 +622,15 @@ class Plotter():
         # plt.show()
         plt.savefig(os.path.join(logdir, f"real_data_{epoch}"), dpi=fig.dpi)
         plt.close(fig)
-    
-    
-    def create_plots(self, H, epoch, logdir, H_target=None):
+
+    @torch.no_grad()
+    def create_plots(
+            self,
+            H: AbstractHeliostat,
+            epoch: int,
+            logdir: str,
+            H_target: AbstractHeliostat,
+    ) -> None:
         if self.plot_season:
             self.season_plot(H, epoch, logdir)
         if self.plot_real_data:

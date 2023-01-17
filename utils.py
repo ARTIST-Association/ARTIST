@@ -23,6 +23,7 @@ from matplotlib import cm
 import pytorch3d.transforms as tfs
 import torch
 import torch as th
+from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
 if TYPE_CHECKING:
@@ -34,16 +35,16 @@ T = TypeVar('T')
 
 
 def to_tensorboard(
-        writer,
-        prefix,
-        epoch,
-        lr=None,
-        loss=None,
-        raw_loss=None,
-        image=None,
-        plot_interval=None,
-        index=None,
-):
+        writer: Optional[SummaryWriter],
+        prefix: str,
+        epoch: int,
+        lr: Optional[torch.Tensor] = None,
+        loss: Optional[torch.Tensor] = None,
+        raw_loss: Optional[torch.Tensor] = None,
+        image: Optional[torch.Tensor] = None,
+        plot_interval: Optional[int] = None,
+        index: Optional[int] = None,
+) -> None:
     with th.no_grad():
         # Plot loss to Tensorboard
         if index is not None:

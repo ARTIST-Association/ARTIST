@@ -104,8 +104,10 @@ def main(
     # Set up Logging
     # ==============
     if cfg.SAVE_RESULTS:
+        logdir: Optional[str]
         if sweep:
-            logdir: Optional[str] = os.path.split(config_file_name)[0]
+            assert config_file_name is not None
+            logdir = os.path.split(config_file_name)[0]
         else:
             now = datetime.now()
             time_str = now.strftime("%y%m%d_%H%M%S")
@@ -124,6 +126,7 @@ def main(
             with open(os.path.join(logdir, "config.yaml"), "w") as f:
                 f.write(cfg.dump())
 
+        assert logdir is not None
         logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
         assert logdir_files is not None
         logdir_images: Optional[str] = os.path.join(logdir, "Images")
@@ -137,7 +140,6 @@ def main(
         os.makedirs(logdir_enhanced_test, exist_ok=True)
 
         writer: Optional[SummaryWriter] = SummaryWriter(logdir)
-        logdir: Optional[str]
     else:
         writer = None
         logdir = None
@@ -458,7 +460,6 @@ def main(
         R,
         sun_directions,
         test_loss_func,
-        logdir,
         device,
         train_prealignment=prealignment,
         test_prealignment=test_prealignment,
