@@ -232,6 +232,21 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self.disturbance_angles = self._get_disturbance_angles(
                 self.nurbs_cfg)
 
+        # TODO Shouldn't rotation offset be part of the individual
+        #      heliostat config?
+        # cfg_rotation_offset: Union[float, str] = \
+        #     self.nurbs_cfg.ROTATION_OFFSET_ANGLE
+        # if isinstance(cfg_rotation_offset, str):
+        #     if cfg_rotation_offset != 'inherit':
+        #         raise ValueError(
+        #             f'unknown rotation offset angle config '
+        #             f'"{cfg_rotation_offset}"'
+        #         )
+        # else:
+        #     # Radians
+        #     self.rotation_offset = self._get_rotation_offset(
+        #         self.nurbs_cfg)
+
         self._inherit_canting()
 
         facets_and_rots = self._create_facets(
@@ -669,7 +684,6 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
     def __init__(
             self,
             heliostat: MultiNURBSHeliostat,
-            heliostat_config: CfgNode,
             sun_direction: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
@@ -678,7 +692,6 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
-            heliostat_config,
             sun_direction,
             aim_point,
             align_points=False,

@@ -120,7 +120,10 @@ _C.H.TO_OPTIMIZE = [
 
 
 _C.H.SHAPE                              = "function"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
-_C.H.ROTATION_OFFSET                    = 0
+# TODO Shouldn't rotation offset be part of the individual
+#      heliostat config?
+# z-axis rotation offset in degrees.
+_C.H.ROTATION_OFFSET_ANGLE = 0
 
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m
