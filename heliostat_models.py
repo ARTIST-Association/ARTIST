@@ -1207,14 +1207,15 @@ class Heliostat(AbstractHeliostat):
                     data['heliostat_normals'],
             ):
                 facet._normals = normals
-        self.position_on_field = data['position_on_field']
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
         self.rotation_offset = data['rotation_offset_angle_rad']
-        self.aim_point = data['aim_point']
-        focus_point = data['focus_point']
-        self._set_deconstructed_focus_point(focus_point)
 
         if restore_strictly:
+            self.position_on_field = data['position_on_field']
+            self.aim_point = data['aim_point']
+            focus_point = data['focus_point']
+            self._set_deconstructed_focus_point(focus_point)
+
             self._discrete_points = data['heliostat_points']
             self.params = data['params']
             self._to_optimize = data['to_optimize']
