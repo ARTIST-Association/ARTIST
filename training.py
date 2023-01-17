@@ -685,6 +685,9 @@ def train_batch(
         with th.no_grad():
             _, (raw_loss, pred_bitmap, num_missed) = calc_batch_loss(
                 train_objects)
+        # TODO Minimizer epoch is broken. It will add temporally
+        #      non-sensical values in TensorBoard. This needs to be
+        #      adjusted according to the global epoch.
         epoch_minimizer = [0]
         best_result = [th.tensor(float('inf'))]
 
