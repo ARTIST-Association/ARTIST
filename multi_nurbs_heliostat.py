@@ -523,6 +523,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e,
         )
         nurbs_config = self._facet_nurbs_config(nurbs_config, span_n, span_e)
+
         facet = NURBSHeliostat(
             heliostat_config,
             nurbs_config,
