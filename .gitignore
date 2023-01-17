@@ -24,6 +24,11 @@
 *.pdf
 *.lnk
 
+# Deflectometry data
+*.binp
+*.bpro
+*.csv
+
 #configs/
 .yaml
 
