@@ -25,7 +25,6 @@ import torch
 import torch as th
 from yacs.config import CfgNode
 
-
 if TYPE_CHECKING:
     from heliostat_models import AlignedHeliostat, Heliostat
 import nurbs
@@ -33,10 +32,21 @@ import nurbs
 # We would like to say that T can be everything but a list.
 T = TypeVar('T')
 
-def to_tensorboard(writer, prefix, epoch, lr=None, loss=None, raw_loss=None, image=None, plot_interval=None, index=None):
+
+def to_tensorboard(
+        writer,
+        prefix,
+        epoch,
+        lr=None,
+        loss=None,
+        raw_loss=None,
+        image=None,
+        plot_interval=None,
+        index=None,
+):
     with th.no_grad():
         # Plot loss to Tensorboard
-        if not index == None:
+        if index is not None:
             iteration_str = f"_{index}"
         else:
             iteration_str = ""
@@ -44,18 +54,23 @@ def to_tensorboard(writer, prefix, epoch, lr=None, loss=None, raw_loss=None, ima
             assert prefix, "prefix string cannot be empty"
             if lr:
                 writer.add_scalar(
-                    f"{prefix}/lr"+iteration_str, lr, epoch)
+                    f"{prefix}/lr{iteration_str}", lr, epoch)
             if loss:
                 writer.add_scalar(
-                    f"{prefix}/loss"+iteration_str, loss.item(), epoch)
+                    f"{prefix}/loss{iteration_str}", loss.item(), epoch)
             if raw_loss:
                 writer.add_scalar(
-                    f"{prefix}/raw_loss"+iteration_str, raw_loss.item(), epoch)
-                # Plot target images to TensorBoard
-            if not image== None:
-                assert plot_interval, "If image is given, plot interval must be defined"
+                    f"{prefix}/raw_loss{iteration_str}",
+                    raw_loss.item(),
+                    epoch,
+                )
+
+            # Plot target images to TensorBoard
+            if image is not None:
+                assert plot_interval, \
+                    "If image is given, plot interval must be defined"
                 writer.add_image(
-                    f"{prefix}/prediction"+iteration_str,
+                    f"{prefix}/prediction{iteration_str}",
                     colorize(image),
                     epoch,
                 )
@@ -808,7 +823,7 @@ def colorize(
 
     color_map = cm.get_cmap('jet')
     mapped_image = th.tensor(color_map(prediction_image)).permute(2, 0, 1)
-    # mapped_image8 = (255*mapped_image).astype('uint8')
+    # mapped_image8 = (255 * mapped_image).astype('uint8')
     # print(colored_prediction_image.shape)
 
     return mapped_image
@@ -1320,7 +1335,7 @@ def fix_pytorch3d() -> None:
 
 
 if __name__ == '__main__':
-    az = th.tensor(-72.7963244129237).unsqueeze(0)#TODO Remove for Release
+    az = th.tensor(-72.7963244129237).unsqueeze(0)  # TODO Remove for Release
     el = th.tensor(15.550407244910172).unsqueeze(0)
     vec = ae_to_vec(az, el)
     print(vec)
