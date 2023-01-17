@@ -1,27 +1,19 @@
-import torch as th
 import os
+from typing import Type
 
-from typing import (
-    Any,
-    Callable,
-    cast,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
-
+import torch
+import torch as th
 from yacs.config import CfgNode
+
+import facets
 from heliostat_models import AbstractHeliostat, Heliostat
 from multi_nurbs_heliostat import MultiNURBSHeliostat, NURBSFacets
 from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
-import facets
+
 
 def load_heliostat(
         cfg: CfgNode,
-        sun_directions: th.Tensor,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
@@ -52,14 +44,14 @@ def load_heliostat(
 
 def _build_multi_nurbs_target(
         cfg: CfgNode,
-        sun_directions: th.Tensor,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> MultiNURBSHeliostat:
     mnh_cfg = cfg.clone()
     mnh_cfg.defrost()
     mnh_cfg.H.SHAPE = 'Ideal'
     mnh_cfg.freeze()
-    
+
     nurbs_cfg = mnh_cfg.NURBS.clone()
     nurbs_cfg.defrost()
 
@@ -111,7 +103,7 @@ def _build_multi_nurbs_target(
 
 def _multi_nurbs_to_standard(
         cfg: CfgNode,
-        sun_directions: th.Tensor,
+        sun_directions: torch.Tensor,
         mnh: MultiNURBSHeliostat,
 ) -> Heliostat:
     H = Heliostat(
@@ -145,7 +137,7 @@ def _multi_nurbs_to_standard(
 
 def build_target_heliostat(
         cfg: CfgNode,
-        sun_directions: th.Tensor,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> Heliostat:
     if cfg.H.SHAPE.lower() == 'nurbs':
@@ -161,9 +153,10 @@ def build_target_heliostat(
         )
     return H
 
+
 def build_heliostat(
         cfg: CfgNode,
-        sun_directions: th.Tensor,
+        sun_directions: torch.Tensor,
         device: th.device,
 ) -> AbstractHeliostat:
     if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
