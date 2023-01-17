@@ -123,6 +123,7 @@ def main(
                 root_logdir,
                 cfg.EXPERIMENT_NAME + f"_{time_str}",
             )
+            os.makedirs(logdir, exist_ok=True)
             with open(os.path.join(logdir, "config.yaml"), "w") as f:
                 f.write(cfg.dump())
 
