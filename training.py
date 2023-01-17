@@ -618,7 +618,7 @@ def calc_batch_loss(
             prefix,
             epoch,
             image=pred_bitmap,
-            plot_interval=15,
+            plot_interval=config.TRAIN.IMG_INTERVAL,
             index=i,
         )
 
@@ -793,6 +793,9 @@ def test_batch(
 
     if minimizer_epoch:
         epoch = minimizer_epoch
+        plot_interval: int = config.TEST.INNER_IMG_INTERVAL
+    else:
+        plot_interval = config.TEST.IMG_INTERVAL
     # print(prealignments)
 
     mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
@@ -835,7 +838,7 @@ def test_batch(
                 prefix,
                 epoch,
                 image=pred_bitmap,
-                plot_interval=15,
+                plot_interval=plot_interval,
                 index=i,
             )
             # writer.add_image(

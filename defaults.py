@@ -256,7 +256,7 @@ _C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 
 _C.TRAIN                                = CN()
-_C.TRAIN.IMG_INTERVAL                   = 50
+_C.TRAIN.IMG_INTERVAL                   = 15
 _C.TRAIN.PRETRAIN_EPOCHS                = 0
 _C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.USE_IMAGES                     = False
@@ -390,6 +390,9 @@ _C.TRAIN.LOSS.ROTATION_Z.WEIGHT_DECAY_FACTOR = 0.0
 
 _C.TEST = CN()
 _C.TEST.INTERVAL                        = 100
+_C.TEST.IMG_INTERVAL = 1
+# Only relevant for the inner loop in global optimization.
+_C.TEST.INNER_IMG_INTERVAL = 15
 _C.TEST.USE_IMAGES = False
 
 _C.TEST.IMAGES = CN()

@@ -69,11 +69,12 @@ def to_tensorboard(
             if image is not None:
                 assert plot_interval, \
                     "If image is given, plot interval must be defined"
-                writer.add_image(
-                    f"{prefix}/prediction{iteration_str}",
-                    colorize(image),
-                    epoch,
-                )
+                if epoch % plot_interval == 0:
+                    writer.add_image(
+                        f"{prefix}/prediction{iteration_str}",
+                        colorize(image),
+                        epoch,
+                    )
 
 
 def calculateSunAngles(
