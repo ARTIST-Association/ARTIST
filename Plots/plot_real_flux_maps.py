@@ -27,7 +27,7 @@ import data
 from yacs.config import CfgNode
 from defaults import get_cfg_defaults, load_config_file
 
-
+import data
 from data import generate_sun_array
 from environment import Environment
 import hausdorff_distance
@@ -589,7 +589,6 @@ def main(path, use_prealignment):
 
 
 if __name__ == '__main__':
-    path = ['..','Results', 'ForRealData', '3I7N']
-    resolution = 256
+    path = ['..','Results', 'ForRealData', '2I11N']
     use_prealignment = True
     main(path, use_prealignment)
