@@ -48,6 +48,7 @@ class FirstSunCantingParams(CantingParams):
     sun_direction: torch.Tensor
     focus_point: torch.Tensor
     disturbance_angles: List[torch.Tensor]
+    rotation_offset: torch.Tensor
 
 
 def _subclass_tree(supertype: Type[S]) -> Set[Type[S]]:
@@ -101,6 +102,7 @@ def get_canting_params(
             sun_direction,
             heliostat.focus_point,
             heliostat.disturbance_angles,
+            heliostat.rotation_offset,
         )
     elif (
             heliostat.canting_enabled
@@ -354,6 +356,7 @@ def decant_facet(
             canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,
+            canting_params.rotation_offset,
         ))
         align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
         facet_normals_ideal_rot = align_origin.transform_normals(
