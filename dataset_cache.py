@@ -29,7 +29,7 @@ def make_cached_generate_sun_array_factory(
     ],
 ]:
     def make_cached_generate_sun_array(
-            prefix: str = '',
+            prefix: str,
     ) -> Callable[
         [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
         Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
@@ -48,39 +48,23 @@ def make_cached_generate_sun_array_factory(
 def make_cached_generate_dataset_factory(
         device: th.device,
         writer: Optional[SummaryWriter],
-) -> Union[
+        tb_log: bool = True,
+) -> Callable[
+    [str],
     Callable[
-        [str],
-        Callable[
-            [
-                AbstractHeliostat,
-                Environment,
-                torch.Tensor,
-                Optional[str],
-                str,
-                Optional[SummaryWriter],
-            ],
+        [
+            AbstractHeliostat,
+            Environment,
             torch.Tensor,
+            Optional[str],
+            str,
+            Optional[SummaryWriter],
         ],
-    ],
-    Callable[
-        [str, bool],
-        Callable[
-            [
-                AbstractHeliostat,
-                Environment,
-                torch.Tensor,
-                Optional[str],
-                str,
-                Optional[SummaryWriter],
-            ],
-            torch.Tensor,
-        ],
+        torch.Tensor,
     ],
 ]:
     def make_cached_generate_dataset(
             prefix: str,
-            tb_log: bool = True,
     ) -> Callable[
         [
             AbstractHeliostat,
@@ -159,7 +143,7 @@ def set_up_test_dataset_caching(
     make_cached_generate_sun_array = make_cached_generate_sun_array_factory(
         device)
     make_cached_generate_dataset = make_cached_generate_dataset_factory(
-        device, writer)
+        device, writer, False)
 
     return (
         (
@@ -168,11 +152,11 @@ def set_up_test_dataset_caching(
             make_cached_generate_sun_array('season_'),
         ),
         (
-            make_cached_generate_dataset('grid', False),
-            make_cached_generate_dataset('naive_grid', False),
-            make_cached_generate_dataset('spheric', False),
-            make_cached_generate_dataset('naive_spheric', False),
-            make_cached_generate_dataset('season', False),
-            make_cached_generate_dataset('naive_season', False),
+            make_cached_generate_dataset('grid'),
+            make_cached_generate_dataset('naive_grid'),
+            make_cached_generate_dataset('spheric'),
+            make_cached_generate_dataset('naive_spheric'),
+            make_cached_generate_dataset('season'),
+            make_cached_generate_dataset('naive_season'),
         ),
     )
