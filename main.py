@@ -1,38 +1,26 @@
 import atexit
 import copy
 from datetime import datetime
-import functools
 import os
-from typing import (
-    Any,
-    Callable,
-    cast,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Callable, cast, List, Optional
 
 import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
+from build_heliostat_model import build_heliostat, build_target_heliostat
 import data
+import dataset_cache
 from defaults import get_cfg_defaults, load_config_file
 import disk_cache
-import dataset_cache
 from environment import Environment
 import hausdorff_distance
 from heliostat_models import Heliostat
+import plotter
 from render import Renderer
 import training
 import utils
-from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
-import plotter
-
 
 
 def check_consistency(cfg: CfgNode) -> None:
@@ -89,7 +77,10 @@ def check_consistency(cfg: CfgNode) -> None:
         print("=============================")
 
 
-def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) -> None:
+def main(
+        config_file_name: Optional[str] = None,
+        sweep: Optional[bool] = False,
+) -> None:
     # Load Defaults
     # =============
     # config_file_name = None
@@ -107,42 +98,40 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
         th.set_default_dtype(th.float64)
     else:
         th.set_default_dtype(th.float32)
-        
+
     utils.fix_pytorch3d()
 
     # Set up Logging
     # ==============
     if cfg.SAVE_RESULTS:
-        if sweep == True:
-            logdir = os.path.split(config_file_name)[0]
+        if sweep:
+            logdir: Optional[str] = os.path.split(config_file_name)[0]
         else:
             now = datetime.now()
             time_str = now.strftime("%y%m%d_%H%M%S")
-    
-            logdir: Optional[str] = cfg.LOGDIR
+
+            logdir = cfg.LOGDIR
             assert logdir is not None
             logdir = utils.normalize_path(logdir)
-    
+
             root_logdir = os.path.join(logdir, cfg.ID)
             os.makedirs(root_logdir, exist_ok=True)
-            
+
             logdir = os.path.join(
                 root_logdir,
                 cfg.EXPERIMENT_NAME + f"_{time_str}",
             )
-            os.makedirs(logdir, exist_ok=True)
             with open(os.path.join(logdir, "config.yaml"), "w") as f:
                 f.write(cfg.dump())
-                
+
         logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
         assert logdir_files is not None
         logdir_images: Optional[str] = os.path.join(logdir, "Images")
         assert logdir_images is not None
         logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
         logdir_surfaces = os.path.join(logdir_images, "Surfaces")
-            
-        
-        
+
+        os.makedirs(logdir, exist_ok=True)
         os.makedirs(logdir_files, exist_ok=True)
         os.makedirs(logdir_images, exist_ok=True)
         os.makedirs(logdir_enhanced_test, exist_ok=True)
@@ -154,6 +143,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
         logdir = None
         logdir_files = None
         logdir_images = None
+
     if isinstance(writer, SummaryWriter):
         atexit.register(lambda: cast(SummaryWriter, writer).close())
 
@@ -200,6 +190,9 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     print("=============================")
     sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
+    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    ENV = Environment(cfg.AC, device)
+
     if cfg.TRAIN.USE_IMAGES:
         assert cfg.TRAIN.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
             'must have known sun directions for training with images '
@@ -217,19 +210,7 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             'train',
             writer,
         )
-        pretrain_targets = data.load_images(
-            cfg.TRAIN.IMAGES.PATHS,
-            cfg.AC.RECEIVER.PLANE_X,
-            cfg.AC.RECEIVER.PLANE_Y,
-            cfg.AC.RECEIVER.RESOLUTION_X,
-            cfg.AC.RECEIVER.RESOLUTION_Y,
-            device,
-            'pretrain',
-            writer,
-        )
     else:
-        H_target = cached_build_target_heliostat(cfg, sun_directions, device)
-        ENV = Environment(cfg.AC, device)
         targets = cached_generate_target_dataset(
             H_target,
             ENV,
@@ -238,20 +219,23 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "train",
             writer,
         )
-    
+    target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
+
     #     from matplotlib import pyplot as plt #TODO Remove for release
     #     plt.imshow(targets.squeeze(), cmap="gray")
     #     plt.gca().set_axis_off()
-    #     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+    #     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
     #                 hspace = 0, wspace = 0)
     #     plt.margins(0,0)
     #     plt.gca().xaxis.set_major_locator(plt.NullLocator())
     #     plt.gca().yaxis.set_major_locator(plt.NullLocator())
     #     # plt.show()
-    #     plt.savefig(str(sun_directions.squeeze())+".png", bbox_inches = 'tight',
-    # pad_inches = 0)
+    #     plt.savefig(
+    #         str(sun_directions.squeeze()) + ".png",
+    #         bbox_inches='tight',
+    #         pad_inches=0,
+    #     )
     #     exit()
-    
 
     if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
         data.log_contoured(
@@ -270,7 +254,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
         )
     else:
         target_sets = None
-    # H_naive_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    # H_naive_target = cached_build_target_heliostat(
+    #     cfg, sun_directions, device)
     # H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
     # naive_targets = cached_generate_pretrain_dataset(
     #     H_naive_target,
@@ -314,11 +299,6 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             'test',
             writer,
         )
-        test_target_sets = hausdorff_distance.images_to_sets(
-            test_targets,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-        )#TODO test_targets have to be removed for other workaround
     else:
         test_targets = cached_generate_test_dataset(
             H_target,
@@ -328,47 +308,32 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             "test",
             writer,
         )
-        test_target_sets = hausdorff_distance.images_to_sets(
-            test_targets,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-            cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-        )#TODO test_targets have to be removed for other workaround
-    # if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
-    #     test_target_sets = hausdorff_distance.images_to_sets(
-    #         test_targets,
-    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
-    #         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
-    #     )
-    # else:
-    #     test_target_sets = None
-        
+    test_target_sets = hausdorff_distance.images_to_sets(
+        test_targets,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
+        cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
+    )
+
     # Start Diff Raytracing
     # =====================
     print("Initialize Diff Raytracing")
     print(f"Use {cfg.NURBS.ROWS}x{cfg.NURBS.COLS} NURBS")
     print("=============================")
-    
-
 
     # Pretraining
     # ===========
     pretrain_epochs: int = cfg.TRAIN.PRETRAIN_EPOCHS
     steps_per_epoch = 1
-    
-
     epoch_shift_width = len(str(pretrain_epochs))
-    
     prefix = 'pretrain'
-    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
-    target_z_alignments = utils.get_z_alignments(H_target, sun_directions) #TODO Needs new function for real images
-    
+
     # for (facet, normals) in zip(
     #         H.facets._facets,
     #         H_target._normals,
     # ):
     #     facet._normals = normals
-    alignment_params = []
-    found_something=False
+    # alignment_params = []
+    # found_something = False
     # for i, sun in enumerate(sun_directions):
     #     H = build_heliostat(cfg, sun.unsqueeze(0), device)
     #     ENV = Environment(cfg.AC, device)
@@ -411,32 +376,37 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     #             print("found new best alignment")
     #             best_angles = H.disturbance_angles
     #             best_pretrain_loss = raw_loss
-    #             utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=cfg.TRAIN.IMG_INTERVAL, index=i)
+    #             utils.to_tensorboard(
+    #                 writer,
+    #                 prefix,
+    #                 epoch,
+    #                 image=pred_bitmap,
+    #                 plot_interval=cfg.TRAIN.IMG_INTERVAL,
+    #                 index=i,
+    #             )
 
     #         print(
-    #             f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
+    #             f'Pretraining '
+    #             f'[{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
     #             f'loss: {loss.detach().cpu().numpy()}, '
     #             f'raw loss: {raw_loss.detach().cpu().numpy()}, '
     #             # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
     #             f'missed: {num_missed.detach().cpu().item()}, '
     #         )
-            
-    #         utils.to_tensorboard(writer, prefix, epoch, 
+
+    #         utils.to_tensorboard(writer, prefix, epoch,
     #                              lr=opt.param_groups[0]["lr"],
     #                              loss=loss,
     #                              raw_loss=raw_loss,
     #                              index=i
     #                              )
-    #     if found_something:  
+    #     if found_something:
     #         print(best_angles)
     #         alignment_params.append(best_angles)
     # print(alignment_params)
+
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
-    # del H
-    # del ENV
-    # del R
-    print(device)
     H = build_heliostat(cfg, sun_directions, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
@@ -448,40 +418,52 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     )
     loss_func, test_loss_func = training.build_loss_funcs(
         cfg.TRAIN.LOSS, H.get_to_optimize())
-   
-    
+
     epoch_shift_width = len(str(epochs))
 
     best_result = th.tensor(float('inf'))
 
     prefix = "train"
-    #real_data.yaml
-    # prealignment = [ #converged prealigment from pretraining. its hardcoded here for faster tests with prealigment. Remove later
-    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
-    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
-    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
+    # real_data.yaml
+    # Converged pre-aligment from pretraining. It is hardcoded here for
+    # faster tests with pre-aligment. TODO Remove later.
+    # prealignment = [
+    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)],
+    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)],
+    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)],
     #     [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)]
     #             ]
     # test_prealignment = [
     #     [th.tensor(-0.0112), th.tensor(-0.0050), th.tensor(-0.8203)]
     #     ]
-    
-    #real_data_2.yaml
-    # prealignment = [ #converged prealigment from pretraining. its hardcoded here for faster tests with prealigment. Remove later
+
+    # real_data_2.yaml
+    # Converged pre-aligment from pretraining. It is hardcoded here for
+    # faster tests with pre-aligment. TODO Remove later.
+    # prealignment = [
     #     [th.tensor(-0.0140), th.tensor(0.0085), th.tensor(-0.7635)],
-    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)], 
+    #     [th.tensor(0.0127), th.tensor(0.0108), th.tensor(0.0631)],
     #             ]
     # test_prealignment = [
-    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)], 
-    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)], 
+    #     [th.tensor(0.0038), th.tensor(0.0010), th.tensor(-0.7040)],
+    #     [th.tensor(-0.0243), th.tensor(-0.0014), th.tensor(-0.6096)],
     #     ]
     prealignment = None
     test_prealignment = None
-    
+
     # Better Testing
     # =============
-    plot = plotter.Plotter(cfg, R, sun_directions, test_loss_func, logdir, device,train_prealignment= prealignment, test_prealignment=test_prealignment)
-    
+    plot = plotter.Plotter(
+        cfg,
+        R,
+        sun_directions,
+        test_loss_func,
+        logdir,
+        device,
+        train_prealignment=prealignment,
+        test_prealignment=test_prealignment,
+    )
+
     for epoch in range(epochs):
         test_objects = training.TestObjects(
             H,
@@ -498,8 +480,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             H_target,
             logdir_surfaces,
             True,
-            test_prealignment
-            )
+            test_prealignment,
+        )
         train_objects = training.TrainObjects(
             opt,
             sched,
@@ -517,12 +499,12 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             writer,
             test_objects,
             None,
-            prealignment
+            prealignment,
         )
 
         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
             train_objects)
-        
+
         print(
             f'[{epoch:>{epoch_shift_width}}/{epochs}] '
             f'loss: {loss.detach().cpu().numpy()}, '
@@ -534,10 +516,9 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             writer.add_scalar(f"{prefix}/lr", opt.param_groups[0]["lr"], epoch)
 
             if epoch % cfg.TEST.INTERVAL == 0:
-                test_loss, hausdorff_dist, _ = training.test_batch(test_objects)
-                utils.to_tensorboard(writer, 'test', epoch, 
-                                     loss=test_loss,
-                                     )
+                test_loss, hausdorff_dist, _ = training.test_batch(
+                    test_objects)
+                utils.to_tensorboard(writer, 'test', epoch, loss=test_loss)
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                     f'test loss: {test_loss.item()}, '
@@ -555,16 +536,19 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                     writer,
                 )
                 # for i, image in enumerate(pred_bitmap):
-                    
-            utils.to_tensorboard(writer, prefix, epoch, 
-                                 lr=opt.param_groups[0]["lr"],
-                                 loss=loss,
-                                 raw_loss=raw_loss,
-                                 )
+
+            utils.to_tensorboard(
+                writer,
+                prefix,
+                epoch,
+                lr=opt.param_groups[0]["lr"],
+                loss=loss,
+                raw_loss=raw_loss,
+            )
 
         # Save Section
-        #Advanced Plotting
-        plot.create_plots(H, epoch, logdir_enhanced_test, H_target = H_target)
+        # Advanced Plotting
+        plot.create_plots(H, epoch, logdir_enhanced_test, H_target=H_target)
 
         if test_loss.detach().cpu() < best_result:
             if cfg.SAVE_RESULTS:
@@ -587,15 +571,15 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
             best_result = test_loss.detach().cpu()
 
     # Diff Raytracing >
-    if sweep == True:
-        # new_name ="_"+os.path.split(logdir)[-1]
+    if sweep:
+        # new_name = "_" + os.path.split(logdir)[-1]
         # new_dir = os.path.join(os.path.split(logdir)[0], new_name)
-        # os.rename(logdir,
-        #     new_dir)
+        # os.rename(logdir, new_dir)
         print("Sweep Instance finished")
 
-        
+
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("WorkingConfigs", "PlottingOnly_ForSimResults.yaml")
+    path_to_yaml = os.path.join(
+        "WorkingConfigs", "PlottingOnly_ForSimResults.yaml")
     main(path_to_yaml)
     # main()
