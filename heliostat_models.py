@@ -1112,6 +1112,7 @@ class Heliostat(AbstractHeliostat):
             'heliostat_normals',
 
             'position_on_field',
+            'rotation_offset_angle_rad',
             'disturbance_rotation_angles_rad',
             'aim_point',
             'focus_point',
