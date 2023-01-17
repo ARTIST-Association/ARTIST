@@ -13,7 +13,7 @@ def nwu_to_enu(vec: Tuple3d) -> Vector3d:
 
 
 def load_bpro(
-        filename: str,
+        path: str,
         concentratorHeader_struct: struct.Struct,
         facetHeader_struct: struct.Struct,
         ray_struct: struct.Struct,
@@ -34,13 +34,12 @@ def load_bpro(
     ray_struct_len = ray_struct.size
 
     # powers = []
-    binp_loc = os.path.join(os.path.dirname(__file__),"MeasurementData", filename)
-    with open(binp_loc, "rb") as file:
+    with open(path, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
         concentratorHeader_data = concentratorHeader_struct.unpack_from(
             byte_data)
         if verbose:
-            print("READING bpro filename: " + filename)
+            print("READING bpro filename: " + os.path.basename(path))
 
         hel_pos = nwu_to_enu(cast(Tuple3d, concentratorHeader_data[0:3]))
         width, height = concentratorHeader_data[3:5]
@@ -117,7 +116,7 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
-    path = os.path.join(os.path.dirname(__file__),"MeasurementData", path)
+
     with open(path, 'r', newline='') as csv_file:
         # Skip title
         next(csv_file)

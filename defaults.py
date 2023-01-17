@@ -181,6 +181,7 @@ _C.H.FUNCTION.FACETS.CANTING.ALGORITHM = 'standard'
 _C.H.DEFLECT_DATA                       = CN()
 # IF `None`, use position from file.
 _C.H.DEFLECT_DATA.POSITION_ON_FIELD     = [0, 0, 0]  # in m
+_C.H.DEFLECT_DATA.DIRECTORY = 'MeasurementData'
 _C.H.DEFLECT_DATA.FILENAME              = "Helio_AA39_Rim0_STRAL-Input_211028212814.binp"
 _C.H.DEFLECT_DATA.ZS_PATH               = "Helio_AA39_Rim0_LocalResults_220303111914.csv"
 _C.H.DEFLECT_DATA.VERBOSE               = True

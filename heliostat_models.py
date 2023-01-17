@@ -1,5 +1,6 @@
 import copy
 import functools
+import os
 import struct
 from typing import (
     Any,
@@ -92,7 +93,7 @@ def real_heliostat(
         width,
         height,
     ) = bpro_loader.load_bpro(
-        cfg.FILENAME,
+        os.path.join(cfg.DIRECTORY, cfg.FILENAME),
         concentratorHeader_struct,
         facetHeader_struct,
         ray_struct,
@@ -108,7 +109,8 @@ def real_heliostat(
         if cfg.VERBOSE:
             print("Path to heliostat surface values found. Load values...")
         positions = copy.deepcopy(ideal_positions)
-        integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
+        integrated = bpro_loader.load_csv(
+            os.path.join(cfg.DIRECTORY, cfg.ZS_PATH), len(positions))
         pos_type = type(positions[0][0][0])
 
         for (
