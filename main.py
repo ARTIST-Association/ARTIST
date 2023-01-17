@@ -369,71 +369,74 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
     #     facet._normals = normals
     alignment_params = []
     found_something=False
-    for i, sun in enumerate(sun_directions):
-        H = build_heliostat(cfg, sun.unsqueeze(0), device)
-        ENV = Environment(cfg.AC, device)
-        R = Renderer(H, ENV)
-        H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
-        loss_func, test_loss_func = training.build_loss_funcs(
-            cfg.TRAIN.LOSS, H.get_to_optimize())
-        best_pretrain_loss = th.tensor(float('inf'))
-        opt, sched = training.build_optimizer_scheduler(
-            cfg,
-            pretrain_epochs * steps_per_epoch,
-            H.get_params(),
-            device,
-        )
-        # H._normals = H_target._normals
-        for epoch in range(pretrain_epochs):
-            train_objects = training.TrainObjects(
-                opt,
-                sched,
-                H,
-                ENV,
-                R,
-                targets[i].unsqueeze(0),
-                target_z_alignments[i].unsqueeze(0),
-                target_sets,
-                sun.unsqueeze(0),
-                loss_func,
-                cfg,
-                epoch,
-                prefix,
-                writer,
-                None,
-                i,
-            )
-            loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
-                train_objects)
-            if raw_loss < best_pretrain_loss:
-                found_something = True
-                print("found new best alignment")
-                best_angles = H.disturbance_angles
-                best_pretrain_loss = raw_loss
-                utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=cfg.TRAIN.IMG_INTERVAL, index=i)
+    # for i, sun in enumerate(sun_directions):
+    #     H = build_heliostat(cfg, sun.unsqueeze(0), device)
+    #     ENV = Environment(cfg.AC, device)
+    #     R = Renderer(H, ENV)
+    #     H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
+    #     loss_func, test_loss_func = training.build_loss_funcs(
+    #         cfg.TRAIN.LOSS, H.get_to_optimize())
+    #     best_pretrain_loss = th.tensor(float('inf'))
+    #     opt, sched = training.build_optimizer_scheduler(
+    #         cfg,
+    #         pretrain_epochs * steps_per_epoch,
+    #         H.get_params(),
+    #         device,
+    #     )
+    #     # H._normals = H_target._normals
 
-            print(
-                f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
-                f'loss: {loss.detach().cpu().numpy()}, '
-                f'raw loss: {raw_loss.detach().cpu().numpy()}, '
-                # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
-                f'missed: {num_missed.detach().cpu().item()}, '
-            )
+    #     for epoch in range(pretrain_epochs):
+    #         train_objects = training.TrainObjects(
+    #             opt,
+    #             sched,
+    #             H,
+    #             ENV,
+    #             R,
+    #             targets[i].unsqueeze(0),
+    #             target_z_alignments[i].unsqueeze(0),
+    #             target_sets,
+    #             sun.unsqueeze(0),
+    #             loss_func,
+    #             cfg,
+    #             epoch,
+    #             prefix,
+    #             writer,
+    #             None,
+    #             i,
+    #         )
+    #         loss, raw_loss, pred_bitmap, num_missed = training.train_batch(
+    #             train_objects)
+    #         if raw_loss < best_pretrain_loss:
+    #             found_something = True
+    #             print("found new best alignment")
+    #             best_angles = H.disturbance_angles
+    #             best_pretrain_loss = raw_loss
+    #             utils.to_tensorboard(writer, prefix, epoch, image=pred_bitmap, plot_interval=cfg.TRAIN.IMG_INTERVAL, index=i)
+
+    #         print(
+    #             f'Pretraining [{epoch:>{epoch_shift_width}}/{pretrain_epochs}] '
+    #             f'loss: {loss.detach().cpu().numpy()}, '
+    #             f'raw loss: {raw_loss.detach().cpu().numpy()}, '
+    #             # f'lr: {opt.param_groups[0]["lr"]:.2e}, '
+    #             f'missed: {num_missed.detach().cpu().item()}, '
+    #         )
             
-            utils.to_tensorboard(writer, prefix, epoch, 
-                                 lr=opt.param_groups[0]["lr"],
-                                 loss=loss,
-                                 raw_loss=raw_loss,
-                                 index=i
-                                 )
-        if found_something:  
-            # print(best_angles)
-            alignment_params.append(best_angles)
+    #         utils.to_tensorboard(writer, prefix, epoch, 
+    #                              lr=opt.param_groups[0]["lr"],
+    #                              loss=loss,
+    #                              raw_loss=raw_loss,
+    #                              index=i
+    #                              )
+    #     if found_something:  
+    #         print(best_angles)
+    #         alignment_params.append(best_angles)
+    # print(alignment_params)
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
-    del H
-    del ENV
-    del R
+    # del H
+    # del ENV
+    # del R
+    print(device)
     H = build_heliostat(cfg, sun_directions, device)
     ENV = Environment(cfg.AC, device)
     R = Renderer(H, ENV)
@@ -542,7 +545,8 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
                 )
 
             # Plotting stuff
-            if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
+            # if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
+            if epoch % cfg.TEST.INTERVAL == 0:
                 plotter.plot_surfaces_mrad(
                     H_target,
                     H,
@@ -584,15 +588,14 @@ def main(config_file_name: Optional[str] = None, sweep: Optional[bool]=False) ->
 
     # Diff Raytracing >
     if sweep == True:
-        new_name ="_"+os.path.split(logdir)[-1]
-        new_dir = os.path.join(os.path.split(logdir)[0], new_name)
-        os.rename(logdir,
-            new_dir)
+        # new_name ="_"+os.path.split(logdir)[-1]
+        # new_dir = os.path.join(os.path.split(logdir)[0], new_name)
+        # os.rename(logdir,
+        #     new_dir)
         print("Sweep Instance finished")
 
         
 if __name__ == '__main__':
-    path_to_yaml = os.path.join("TestingConfigs", "I3N7.yaml")
-    # print(path)
+    path_to_yaml = os.path.join("WorkingConfigs", "PlottingOnly_ForSimResults.yaml")
     main(path_to_yaml)
     # main()
