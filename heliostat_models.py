@@ -641,7 +641,10 @@ def heliostat_coord_system(
     z = pAimpoint - pPosition
     z = z / th.linalg.norm(z)
     z = pSun + z
-    z = z / th.linalg.norm(z)
+    if (z == 0).all():
+        z = ideal_normal
+    else:
+        z = z / th.linalg.norm(z)
 
     if (z == ideal_normal).all():
         x = th.tensor([1, 0, 0], dtype=dtype, device=device)
@@ -904,6 +907,7 @@ class Heliostat(AbstractHeliostat):
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
             maybe_sun_direction: Optional[torch.Tensor],
+            need_up_focus_point: bool,
     ) -> None:
         if self.canting_enabled:
             focus_point = canting.get_focus_point(
@@ -918,6 +922,14 @@ class Heliostat(AbstractHeliostat):
             focus_point = None
         self._set_deconstructed_focus_point(focus_point)
 
+        if need_up_focus_point:
+            assert focus_point is not None
+            focus_point = th.tensor(
+                [0, 0, th.linalg.norm(focus_point)],
+                dtype=focus_point.dtype,
+                device=self.device,
+            )
+
         self.facets = Facets.find_facets(
             self,
             facet_positions,
@@ -928,6 +940,7 @@ class Heliostat(AbstractHeliostat):
             normals,
             normals_ideal,
             maybe_sun_direction,
+            focus_point,
         )
 
     def _get_aim_point(
@@ -1005,10 +1018,13 @@ class Heliostat(AbstractHeliostat):
         if isinstance(self.canting_algo, canting.StandardCanting):
             self.canting_algo = canting.FirstSunCanting()
             maybe_sun_direction = th.tensor(
-                [0, 0, -1],
+                self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self.position_on_field.dtype,
                 device=self.device,
             )
+            need_up_focus_point = True
+        else:
+            need_up_focus_point = False
 
         self.set_up_facets(
             facet_positions,
@@ -1019,6 +1035,7 @@ class Heliostat(AbstractHeliostat):
             heliostat_normals,
             heliostat_ideal_vecs,
             maybe_sun_direction,
+            need_up_focus_point,
         )
         self.params = params
         self.height = height

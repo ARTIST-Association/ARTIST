@@ -295,7 +295,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if isinstance(self.canting_algo, canting.StandardCanting):
             self.canting_algo = canting.FirstSunCanting()
             maybe_sun_direction: Optional[torch.Tensor] = th.tensor(
-                [0, 0, -1],
+                self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self.position_on_field.dtype,
                 device=self.device,
             )
