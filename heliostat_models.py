@@ -639,6 +639,8 @@ def heliostat_coord_system(
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
+    assert not (z == 0).all(), \
+        'same aimpoint as heliostat position not handled yet'
     z = z / th.linalg.norm(z)
     z = pSun + z
     if (z == 0).all():
@@ -648,6 +650,7 @@ def heliostat_coord_system(
 
     if (z == ideal_normal).all():
         x = th.tensor([1, 0, 0], dtype=dtype, device=device)
+        # TODO add sanity 90° angle check between x and z
     else:
         x = th.stack([
             -z[1],
