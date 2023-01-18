@@ -212,6 +212,15 @@ def real_heliostat(
     rows = None
     cols = None
     params = None
+
+    # Overwrite facet parameters if we **really** want to.
+    if hasattr(cfg.FACETS, '_POSITIONS'):
+        facet_positions = cfg.FACETS._POSITIONS
+    if hasattr(cfg.FACETS, '_SPANS_N'):
+        facet_spans_n = cfg.FACETS._SPANS_N
+    if hasattr(cfg.FACETS, '_SPANS_E'):
+        facet_spans_e = cfg.FACETS._SPANS_E
+
     return (
         heliostat_position,
         th.tensor(facet_positions, dtype=dtype, device=device),
