@@ -879,20 +879,29 @@ class Heliostat(AbstractHeliostat):
             self._deconstruct_focus_point(focus_point)
 
     @staticmethod
+    def _select_heliostat_builder(cfg: CfgNode) -> Tuple[
+            Callable[[CfgNode, th.device], HeliostatParams],
+            str,
+    ]:
+        shape = cfg.SHAPE.lower()
+        if shape == 'ideal' or shape == 'nurbs':
+            return ideal_heliostat, 'IDEAL'
+        elif shape == 'real':
+            return real_heliostat, 'DEFLECT_DATA'
+        elif shape == 'function':
+            return heliostat_by_function, 'FUNCTION'
+        elif shape == 'other':
+            return other_objects, 'OTHER'
+        raise ValueError('unknown heliostat shape')
+
+    @staticmethod
     def select_heliostat_builder(cfg: CfgNode) -> Tuple[
             Callable[[CfgNode, th.device], HeliostatParams],
             CfgNode,
     ]:
-        shape = cfg.SHAPE.lower()
-        if shape == "ideal" or shape == "nurbs":
-            return ideal_heliostat, cfg.IDEAL
-        elif shape == "real":
-            return real_heliostat, cfg.DEFLECT_DATA
-        elif shape == "function":
-            return heliostat_by_function, cfg.FUNCTION
-        elif shape == "other":
-            return other_objects, cfg.OTHER
-        raise ValueError('unknown heliostat shape')
+        builder_fn, cfg_key = Heliostat._select_heliostat_builder(cfg)
+        h_cfg = getattr(cfg, cfg_key)
+        return builder_fn, h_cfg
 
     def set_up_facets(
             self,
