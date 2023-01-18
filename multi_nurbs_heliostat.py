@@ -717,10 +717,6 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             hel_rotated, normal_vectors_rotated = (
                 AlignedHeliostat.align_facets(
                     cast(AlignedHeliostat, self),
-                    isinstance(
-                        self._heliostat.canting_algo,
-                        canting.ActiveCanting,
-                    ),
                 )
             )
         else:
