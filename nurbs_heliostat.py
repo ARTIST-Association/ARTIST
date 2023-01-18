@@ -153,8 +153,10 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             knots_x, knots_y, self.degree_x, self.degree_y)
         ctrl_weights[:] = 1
 
+        self.split_nurbs_params(ctrl_weights, knots_x, knots_y)
         self.initialize_control_points(ctrl_points)
-        self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
+        with th.no_grad():
+            self.set_ctrl_points(ctrl_points)
         self.initialize_eval_points()
         if setup_params:
             self.setup_params()
@@ -482,13 +484,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     def split_nurbs_params(
             self,
-            ctrl_points: torch.Tensor,
             ctrl_weights: torch.Tensor,
             knots_x: torch.Tensor,
             knots_y: torch.Tensor,
     ) -> None:
         with th.no_grad():
-            self.set_ctrl_points(ctrl_points)
             self.set_ctrl_weights(ctrl_weights)
             self.set_knots_x(knots_x)
             self.set_knots_y(knots_y)
