@@ -785,7 +785,13 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         # print('calcing normals and surface')
         if canting.is_like_active(self._heliostat.canting_algo):
             hel_rotated, normal_vectors_rotated = \
-                AlignedHeliostat.align_facets(cast(AlignedHeliostat, self))
+                AlignedHeliostat.align_facets(
+                    cast(AlignedHeliostat, self),
+                    not isinstance(
+                        self._heliostat.canting_algo,
+                        canting.ActiveCanting,
+                    ),
+                )
         else:
             hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
                 self._heliostat, self.align_origin[0])
