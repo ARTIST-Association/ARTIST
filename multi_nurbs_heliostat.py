@@ -620,6 +620,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             hel_rotated, normal_vectors_rotated = (
                 AlignedHeliostat.align_facets(
                     cast(AlignedHeliostat, self),
+                    reposition=False,
                 )
             )
         else:
