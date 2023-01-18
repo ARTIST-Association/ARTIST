@@ -109,7 +109,6 @@ class NURBSFacets(facets.AbstractFacets):
             reposition: bool = True,
             force_canting: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        assert not reposition, 'must not reposition `NURBSFacets`'
         discrete_points_and_normals = [
             facet.discrete_points_and_normals()
             for facet in self._facets
@@ -567,18 +566,22 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     def _calc_normals_and_surface(
             self,
             do_canting: bool = True,
+            reposition: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         assert isinstance(self.facets, NURBSFacets)
-        return self.facets.align_discrete_points_and_normals(reposition=False)
+        return self.facets.align_discrete_points_and_normals(
+            reposition=reposition)
 
     def discrete_points_and_normals(
             self,
+            reposition: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # We do this awkward call so that `AlignedMultiNURBSHeliostat`
         # can call this method but avoid using its own
         # `_calc_normals_and_surface` method.
         discrete_points, normals = \
-            MultiNURBSHeliostat._calc_normals_and_surface(self)
+            MultiNURBSHeliostat._calc_normals_and_surface(
+                self, reposition=reposition)
         return discrete_points, normals
 
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
@@ -700,6 +703,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             hel_rotated, normal_vectors_rotated = (
                 MultiNURBSHeliostat.discrete_points_and_normals(
                     cast(MultiNURBSHeliostat, self),
+                    reposition=False,
                 )
             )
         elif canting.is_like_active(self._heliostat.canting_algo):
