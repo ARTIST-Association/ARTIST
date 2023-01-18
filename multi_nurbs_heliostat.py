@@ -409,7 +409,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
 
         if not self.canting_enabled:
-            focus_point = 0
+            focus_point: Union[int, float, List[float], None] = 0
         elif isinstance(self.focus_point, th.Tensor):
             focus_point = self.focus_point.tolist()
         else:
