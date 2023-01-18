@@ -584,6 +584,13 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 self, reposition=reposition)
         return discrete_points, normals
 
+    def raw_discrete_points_and_normals(
+            self,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        discrete_points, normals = self._calc_normals_and_surface(
+            do_canting=False, reposition=False)
+        return discrete_points, normals
+
     def step(self, verbose: bool = False) -> None:  # type: ignore[override]
         assert isinstance(self.facets, NURBSFacets)
         facets = iter(self.facets)
