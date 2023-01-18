@@ -9,6 +9,7 @@ import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
 
+import bpro_loader
 from build_heliostat_model import build_heliostat, build_target_heliostat
 import data
 import dataset_cache
@@ -465,6 +466,10 @@ def main(
         train_prealignment=prealignment,
         test_prealignment=test_prealignment,
     )
+
+    # Clear caches
+    bpro_loader.load_bpro.cache_clear()
+    bpro_loader.load_csv.cache_clear()
 
     for epoch in range(epochs):
         test_objects = training.TestObjects(

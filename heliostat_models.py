@@ -1,7 +1,6 @@
 import copy
 import functools
 import os
-import struct
 from typing import (
     Any,
     Callable,
@@ -77,11 +76,6 @@ def real_heliostat(
     cfg = real_configs
     dtype = th.get_default_dtype()
 
-    concentratorHeader_struct = struct.Struct(
-        cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
-    ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
-
     (
         heliostat_position,
         facet_positions,
@@ -94,9 +88,9 @@ def real_heliostat(
         height,
     ) = bpro_loader.load_bpro(
         os.path.join(cfg.DIRECTORY, cfg.FILENAME),
-        concentratorHeader_struct,
-        facetHeader_struct,
-        ray_struct,
+        cfg.CONCENTRATORHEADER_STRUCT_FMT,
+        cfg.FACETHEADER_STRUCT_FMT,
+        cfg.RAY_STRUCT_FMT,
         cfg.VERBOSE,
     )
     heliostat_position: torch.Tensor = (

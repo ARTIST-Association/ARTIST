@@ -1,7 +1,9 @@
 import csv
+import functools
+import os
 import struct
 from typing import cast, List, Tuple
-import os
+
 import numpy as np
 
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
@@ -12,7 +14,39 @@ def nwu_to_enu(vec: Tuple3d) -> Vector3d:
     return [-vec[1], vec[0], vec[2]]
 
 
+# Use size two so the `verbose` parameter can be True or False.
+@functools.lru_cache(2)
 def load_bpro(
+        path: str,
+        concentratorHeader_struct_fmt: str,
+        facetHeader_struct_fmt: str,
+        ray_struct_fmt: str,
+        verbose: bool = True,
+) -> Tuple[
+    Vector3d,
+    List[Vector3d],
+    List[Vector3d],
+    List[Vector3d],
+    List[List[Vector3d]],
+    List[List[Vector3d]],
+    List[List[Vector3d]],
+    float,
+    float,
+]:
+    concentratorHeader_struct = struct.Struct(
+        concentratorHeader_struct_fmt)
+    facetHeader_struct = struct.Struct(facetHeader_struct_fmt)
+    ray_struct = struct.Struct(ray_struct_fmt)
+    return _load_bpro(
+        path,
+        concentratorHeader_struct,
+        facetHeader_struct,
+        ray_struct,
+        verbose,
+    )
+
+
+def _load_bpro(
         path: str,
         concentratorHeader_struct: struct.Struct,
         facetHeader_struct: struct.Struct,
@@ -112,6 +146,7 @@ def load_bpro(
     )
 
 
+@functools.lru_cache(1)
 def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
