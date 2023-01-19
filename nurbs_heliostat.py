@@ -18,6 +18,7 @@ import torch as th
 from yacs.config import CfgNode
 
 import canting
+import facets
 import heliostat_models
 from heliostat_models import AbstractHeliostat, AlignedHeliostat, Heliostat
 import nurbs
@@ -147,7 +148,10 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
-        self._orig_world_points = self._discrete_points_ideal.clone()
+        self._orig_world_points = (
+            facets.make_unfacetted(self.get_raw_discrete_points_ideal())
+            + self.facets.positions[0]
+        )
 
         utils.initialize_spline_knots(
             knots_x, knots_y, self.degree_x, self.degree_y)
@@ -212,12 +216,12 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 # This, of course, is slower and consumes more memory.
                 edge_factor = 5
                 world_points, rows, cols = utils.make_structured_points(
-                    self._discrete_points_ideal,
+                    self._orig_world_points,
                     self.rows * edge_factor,
                     self.cols * edge_factor,
                 )
             else:
-                world_points = self._discrete_points_ideal
+                world_points = self._orig_world_points
                 rows = self.h_rows
                 cols = self.h_cols
 
