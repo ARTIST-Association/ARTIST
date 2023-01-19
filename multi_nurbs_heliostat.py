@@ -260,9 +260,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         #     self.rotation_offset = self._get_rotation_offset(
         #         self.nurbs_cfg)
 
-        maybe_new_sun_direction = self._inherit_canting()
-        if maybe_new_sun_direction is not None:
-            maybe_sun_direction = maybe_new_sun_direction
+        self._inherit_canting()
 
         facets = self._create_facets(
             self.cfg,
@@ -272,10 +270,14 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self.facets = NURBSFacets(
             self, cast(List[AbstractNURBSHeliostat], facets))
 
+        # Fix up canting algo for querying later.
+        if isinstance(self.canting_algo, canting.StandardCanting):
+            self.canting_algo = canting.FirstSunCanting()
+
         if setup_params:
             self.setup_params()
 
-    def _inherit_canting(self) -> Optional[torch.Tensor]:
+    def _inherit_canting(self) -> None:
         old_canting_cfg = self._canting_cfg
         self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
         self._canting_cfg.defrost()
@@ -292,15 +294,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         if cfg_canting_algo == 'inherit':
             self._canting_cfg.ALGORITHM = old_canting_cfg.ALGORITHM
         self.canting_algo = canting.get_algorithm(self._canting_cfg)
-        if isinstance(self.canting_algo, canting.StandardCanting):
-            self.canting_algo = canting.FirstSunCanting()
-            maybe_sun_direction: Optional[torch.Tensor] = th.tensor(
-                self.cfg.IDEAL.NORMAL_VECS,
-                dtype=self.position_on_field.dtype,
-                device=self.device,
-            )
-        else:
-            maybe_sun_direction = None
 
         if self.canting_enabled:
             focus_point = canting.get_focus_point(
@@ -316,7 +309,6 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         self._set_deconstructed_focus_point(focus_point)
 
         self._canting_cfg.freeze()
-        return maybe_sun_direction
 
     @staticmethod
     def _facet_optimizable_to_optimizable(
