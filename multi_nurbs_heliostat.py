@@ -48,7 +48,10 @@ class NURBSFacets(facets.AbstractFacets):
         self.offsets = self._make_offsets(
             cast(List['AbstractHeliostat'], self._facets))
         self._canting_algo = heliostat.canting_algo
-        if isinstance(self._canting_algo, ActiveCanting):
+        if (
+                self._canting_algo is None
+                or isinstance(self._canting_algo, ActiveCanting)
+        ):
             self.cant_rots = th.stack([
                 th.eye(3, dtype=self.spans_n.dtype, device=self.spans_n.device)
                 for _ in range(len(self._facets))
