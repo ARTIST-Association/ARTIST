@@ -955,11 +955,14 @@ class Heliostat(AbstractHeliostat):
 
         if need_up_focus_point:
             assert focus_point is not None
-            focus_point = th.tensor(
-                [0, 0, th.linalg.norm(focus_point)],
-                dtype=focus_point.dtype,
-                device=self.device,
-            ) + self.position_on_field
+            focus_point = (
+                th.tensor(
+                    self.cfg.IDEAL.NORMAL_VECS,
+                    dtype=focus_point.dtype,
+                    device=self.device,
+                ) * th.linalg.norm(focus_point)
+                + self.position_on_field
+            )
 
         self.facets = Facets.find_facets(
             self,
