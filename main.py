@@ -194,6 +194,7 @@ def main(
     sun_directions, ae = cached_generate_sun_array(
         cfg.TRAIN.SUN_DIRECTIONS, device)
     H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+    print(f"Heliostat position on field: {H_target.position_on_field}")
     ENV = Environment(cfg.AC, device)
 
     if cfg.TRAIN.USE_IMAGES:
@@ -520,7 +521,7 @@ def main(
             if epoch % cfg.TEST.INTERVAL == 0:
                 test_loss, hausdorff_dist, _ = training.test_batch(
                     test_objects)
-                utils.to_tensorboard(writer, 'test', epoch, loss=test_loss)
+                utils.to_tensorboard(writer, 'test', epoch, loss=test_loss, cfg=cfg)
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                     f'test loss: {test_loss.item()}, '
@@ -546,6 +547,7 @@ def main(
                 lr=opt.param_groups[0]["lr"],
                 loss=loss,
                 raw_loss=raw_loss,
+                cfg = cfg
             )
 
         # Save Section
@@ -582,6 +584,6 @@ def main(
 
 if __name__ == '__main__':
     path_to_yaml = os.path.join(
-        "WorkingConfigs", "Best10m_full.yaml")
+        "TestingConfigs", "AC24Test.yaml")
     main(path_to_yaml)
     # main()
