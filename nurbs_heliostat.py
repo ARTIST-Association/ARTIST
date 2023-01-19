@@ -623,6 +623,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         discrete_points, normals = self._calc_normals_and_surface(
             do_canting=False)
+        discrete_points = discrete_points - self.facets.positions[0]
         return discrete_points, normals
 
     @th.no_grad()
