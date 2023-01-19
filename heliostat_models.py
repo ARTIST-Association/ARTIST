@@ -1,7 +1,6 @@
 import copy
 import functools
 import os
-import struct
 from typing import (
     Any,
     Callable,
@@ -87,11 +86,6 @@ def real_heliostat(
     cfg = real_configs
     dtype = th.get_default_dtype()
 
-    concentratorHeader_struct = struct.Struct(
-        cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
-    ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
-
     (
         heliostat_position,
         facet_positions,
@@ -104,9 +98,9 @@ def real_heliostat(
         height,
     ) = bpro_loader.load_bpro(
         os.path.join(cfg.DIRECTORY, cfg.FILENAME),
-        concentratorHeader_struct,
-        facetHeader_struct,
-        ray_struct,
+        cfg.CONCENTRATORHEADER_STRUCT_FMT,
+        cfg.FACETHEADER_STRUCT_FMT,
+        cfg.RAY_STRUCT_FMT,
         cfg.VERBOSE,
     )
     heliostat_position: torch.Tensor = (
@@ -234,6 +228,15 @@ def real_heliostat(
     rows = None
     cols = None
     params = None
+
+    # Overwrite facet parameters if we **really** want to.
+    if hasattr(cfg.FACETS, '_POSITIONS'):
+        facet_positions = cfg.FACETS._POSITIONS
+    if hasattr(cfg.FACETS, '_SPANS_N'):
+        facet_spans_n = cfg.FACETS._SPANS_N
+    if hasattr(cfg.FACETS, '_SPANS_E'):
+        facet_spans_e = cfg.FACETS._SPANS_E
+
     return (
         th.tensor(heliostat_position, dtype=dtype, device=device),
         th.tensor(facet_positions, dtype=dtype, device=device),
@@ -655,12 +658,18 @@ def heliostat_coord_system(
     # Berechnung Idealer Heliostat
     # 0. Iteration
     z = pAimpoint - pPosition
+    assert not (z == 0).all(), \
+        'same aimpoint as heliostat position not handled yet'
     z = z / th.linalg.norm(z)
     z = pSun + z
-    z = z / th.linalg.norm(z)
+    if (z == 0).all():
+        z = ideal_normal
+    else:
+        z = z / th.linalg.norm(z)
 
     if (z == ideal_normal).all():
         x = th.tensor([1, 0, 0], dtype=dtype, device=device)
+        # TODO add sanity 90° angle check between x and z
     else:
         x = th.stack([
             -z[1],
@@ -895,20 +904,29 @@ class Heliostat(AbstractHeliostat):
             self._deconstruct_focus_point(focus_point)
 
     @staticmethod
+    def _select_heliostat_builder(cfg: CfgNode) -> Tuple[
+            Callable[[CfgNode, th.device], HeliostatParams],
+            str,
+    ]:
+        shape = cfg.SHAPE.lower()
+        if shape == 'ideal' or shape == 'nurbs':
+            return ideal_heliostat, 'IDEAL'
+        elif shape == 'real':
+            return real_heliostat, 'DEFLECT_DATA'
+        elif shape == 'function':
+            return heliostat_by_function, 'FUNCTION'
+        elif shape == 'other':
+            return other_objects, 'OTHER'
+        raise ValueError('unknown heliostat shape')
+
+    @staticmethod
     def select_heliostat_builder(cfg: CfgNode) -> Tuple[
             Callable[[CfgNode, th.device], HeliostatParams],
             CfgNode,
     ]:
-        shape = cfg.SHAPE.lower()
-        if shape == "ideal" or shape == "nurbs":
-            return ideal_heliostat, cfg.IDEAL
-        elif shape == "real":
-            return real_heliostat, cfg.DEFLECT_DATA
-        elif shape == "function":
-            return heliostat_by_function, cfg.FUNCTION
-        elif shape == "other":
-            return other_objects, cfg.OTHER
-        raise ValueError('unknown heliostat shape')
+        builder_fn, cfg_key = Heliostat._select_heliostat_builder(cfg)
+        h_cfg = getattr(cfg, cfg_key)
+        return builder_fn, h_cfg
 
     def set_up_facets(
             self,
@@ -920,6 +938,7 @@ class Heliostat(AbstractHeliostat):
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
             maybe_sun_direction: Optional[torch.Tensor],
+            need_up_focus_point: bool,
     ) -> None:
         if self.canting_enabled:
             focus_point = canting.get_focus_point(
@@ -934,6 +953,14 @@ class Heliostat(AbstractHeliostat):
             focus_point = None
         self._set_deconstructed_focus_point(focus_point)
 
+        if need_up_focus_point:
+            assert focus_point is not None
+            focus_point = th.tensor(
+                [0, 0, th.linalg.norm(focus_point)],
+                dtype=focus_point.dtype,
+                device=self.device,
+            )
+
         self.facets = Facets.find_facets(
             self,
             facet_positions,
@@ -944,6 +971,7 @@ class Heliostat(AbstractHeliostat):
             normals,
             normals_ideal,
             maybe_sun_direction,
+            focus_point,
         )
 
     def _get_aim_point(
@@ -1021,10 +1049,13 @@ class Heliostat(AbstractHeliostat):
         if isinstance(self.canting_algo, canting.StandardCanting):
             self.canting_algo = canting.FirstSunCanting()
             maybe_sun_direction = th.tensor(
-                [0, 0, -1],
+                self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self.position_on_field.dtype,
                 device=self.device,
             )
+            need_up_focus_point = True
+        else:
+            need_up_focus_point = False
 
         self.set_up_facets(
             facet_positions,
@@ -1035,6 +1066,7 @@ class Heliostat(AbstractHeliostat):
             heliostat_normals,
             heliostat_ideal_vecs,
             maybe_sun_direction,
+            need_up_focus_point,
         )
         self.params = params
         self.height = height
@@ -1363,14 +1395,16 @@ class AlignedHeliostat(AbstractHeliostat):
                 cant_rot, discrete_points)
             normals_rotated = canting.apply_rotation(cant_rot, normals)
 
+            # Facet repositioning
+            if reposition:
+                discrete_points_rotated = discrete_points_rotated + position
+
             # Alignment
             discrete_points_rotated, normals_rotated = _rotate(
                 discrete_points_rotated,
                 normals_rotated,
                 align_origin,
             )
-            if reposition:
-                discrete_points_rotated = discrete_points_rotated + position
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated
