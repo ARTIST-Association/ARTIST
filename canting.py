@@ -366,12 +366,10 @@ def decant_facet(
         )
     elif isinstance(canting_params, FirstSunCantingParams):
         from heliostat_models import heliostat_coord_system
-        focus_point = \
-            canting_params.focus_point + canting_params.position_on_field
         facet_alignment = th.stack(heliostat_coord_system(
             facet_position + canting_params.position_on_field,
             canting_params.sun_direction,
-            focus_point,
+            canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,
             canting_params.rotation_offset,
@@ -384,7 +382,7 @@ def decant_facet(
         alignment = th.stack(heliostat_coord_system(
             canting_params.position_on_field,
             canting_params.sun_direction,
-            focus_point,
+            canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,
             canting_params.rotation_offset,

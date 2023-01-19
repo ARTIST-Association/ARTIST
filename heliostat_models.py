@@ -959,7 +959,7 @@ class Heliostat(AbstractHeliostat):
                 [0, 0, th.linalg.norm(focus_point)],
                 dtype=focus_point.dtype,
                 device=self.device,
-            )
+            ) + self.position_on_field
 
         self.facets = Facets.find_facets(
             self,
