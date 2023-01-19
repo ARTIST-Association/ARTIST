@@ -81,6 +81,8 @@ def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
 
     if not canting_enabled(canting_cfg):
         return None
+    if isinstance(canting_algo, FirstSunCanting):
+        raise ValueError('first sun canting currently broken')
     return canting_algo
 
 
