@@ -964,12 +964,13 @@ class Heliostat(AbstractHeliostat):
 
         if need_up_focus_point:
             assert focus_point is not None
+            heliostat_to_focus_point = focus_point - self.position_on_field
             focus_point = (
                 th.tensor(
                     self.cfg.IDEAL.NORMAL_VECS,
                     dtype=focus_point.dtype,
                     device=self.device,
-                ) * th.linalg.norm(focus_point)
+                ) * th.linalg.norm(heliostat_to_focus_point)
                 + self.position_on_field
             )
 
