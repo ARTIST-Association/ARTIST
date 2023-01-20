@@ -67,7 +67,15 @@ def get_position(
     return th.tensor(position_on_field, dtype=dtype, device=device)
 
 
-def load_heliostat_position_file(json_file_path: str, heliostat_name: str):
+def load_heliostat_position_file(
+        json_file_path: str,
+        heliostat_name: str,
+) -> Tuple[
+    List[float],
+    List[List[float]],
+    List[List[float]],
+    List[List[float]],
+]:
     df = pd.read_json(json_file_path, orient="table")
     values = df.loc[df['Name'] == heliostat_name]
     name = values["Name"]
@@ -90,6 +98,10 @@ def real_heliostat(
     cfg = real_configs
     dtype = th.get_default_dtype()
 
+    heliostat_position: Union[bpro_loader.Vector3d, List[float]]
+    facet_positions: Union[List[bpro_loader.Vector3d], List[List[float]]]
+    facet_spans_n: Union[List[bpro_loader.Vector3d], List[List[float]]]
+    facet_spans_e: Union[List[bpro_loader.Vector3d], List[List[float]]]
     (
         heliostat_position,
         facet_positions,
@@ -120,14 +132,16 @@ def real_heliostat(
             os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME),
             cfg.OTHER_HELIOSTAT_NAME,
         )
-        heliostat_position: torch.Tensor = th.tensor(
+        heliostat_position_new = th.tensor(
             heliostat_position, dtype=dtype, device=device)
     else:
-        heliostat_position = (
+        heliostat_position_new = (
             th.tensor(heliostat_position, dtype=dtype, device=device)
             if cfg.POSITION_ON_FIELD is None
             else get_position(cfg, dtype, device)
         )
+    heliostat_position: torch.Tensor = heliostat_position_new
+    del heliostat_position_new
 
 >>>>>>> 0bec3ae527fe237b2ce2cc26d08143c7631dd017
     if cfg.ZS_PATH:
