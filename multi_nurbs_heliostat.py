@@ -59,6 +59,9 @@ class NURBSFacets(facets.AbstractFacets):
         else:
             self.cant_rots = th.stack(
                 [facet.facets.cant_rots[0] for facet in self._facets])
+            for facet in self._facets:
+                facet.facets.cant_rots[0] = th.eye(
+                    3, dtype=self.spans_n.dtype, device=self.spans_n.device)
 
     def __len__(self) -> int:
         return sum(len(facet) for facet in self._facets)
