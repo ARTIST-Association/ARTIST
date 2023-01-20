@@ -18,6 +18,7 @@ import torch as th
 from yacs.config import CfgNode
 
 import canting
+import facets
 import heliostat_models
 from heliostat_models import AbstractHeliostat, AlignedHeliostat, Heliostat
 import nurbs
@@ -147,14 +148,19 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         ) = nurbs.setup_nurbs_surface(
             self.degree_x, self.degree_y, self.rows, self.cols, self.device)
 
-        self._orig_world_points = self._discrete_points_ideal.clone()
+        self._orig_world_points = (
+            facets.make_unfacetted(self.get_raw_discrete_points_ideal())
+            + self.facets.positions[0]
+        )
 
         utils.initialize_spline_knots(
             knots_x, knots_y, self.degree_x, self.degree_y)
         ctrl_weights[:] = 1
 
+        self.split_nurbs_params(ctrl_weights, knots_x, knots_y)
         self.initialize_control_points(ctrl_points)
-        self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
+        with th.no_grad():
+            self.set_ctrl_points(ctrl_points)
         self.initialize_eval_points()
         if setup_params:
             self.setup_params()
@@ -210,12 +216,12 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 # This, of course, is slower and consumes more memory.
                 edge_factor = 5
                 world_points, rows, cols = utils.make_structured_points(
-                    self._discrete_points_ideal,
+                    self._orig_world_points,
                     self.rows * edge_factor,
                     self.cols * edge_factor,
                 )
             else:
-                world_points = self._discrete_points_ideal
+                world_points = self._orig_world_points
                 rows = self.h_rows
                 cols = self.h_cols
 
@@ -482,13 +488,11 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 
     def split_nurbs_params(
             self,
-            ctrl_points: torch.Tensor,
             ctrl_weights: torch.Tensor,
             knots_x: torch.Tensor,
             knots_y: torch.Tensor,
     ) -> None:
         with th.no_grad():
-            self.set_ctrl_points(ctrl_points)
             self.set_ctrl_weights(ctrl_weights)
             self.set_knots_x(knots_x)
             self.set_knots_y(knots_y)
@@ -619,6 +623,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         discrete_points, normals = self._calc_normals_and_surface(
             do_canting=False)
+        discrete_points = discrete_points - self.facets.positions[0]
         return discrete_points, normals
 
     @th.no_grad()
@@ -785,7 +790,13 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         # print('calcing normals and surface')
         if canting.is_like_active(self._heliostat.canting_algo):
             hel_rotated, normal_vectors_rotated = \
-                AlignedHeliostat.align_facets(cast(AlignedHeliostat, self))
+                AlignedHeliostat.align_facets(
+                    cast(AlignedHeliostat, self),
+                    reposition=isinstance(
+                        self._heliostat.canting_algo,
+                        canting.ActiveCanting,
+                    ),
+                )
         else:
             hel_rotated, normal_vectors_rotated = heliostat_models.rotate(
                 self._heliostat, self.align_origin[0])

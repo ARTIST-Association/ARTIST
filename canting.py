@@ -81,6 +81,8 @@ def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
 
     if not canting_enabled(canting_cfg):
         return None
+    if isinstance(canting_algo, FirstSunCanting):
+        raise ValueError('first sun canting currently broken')
     return canting_algo
 
 
@@ -95,19 +97,20 @@ def is_like_active(algo: Optional[CantingAlgorithm]) -> bool:
 def get_canting_params(
         heliostat: 'AbstractHeliostat',
         sun_direction: Optional[torch.Tensor],
+        focus_point: Optional[torch.Tensor],
 ) -> Optional[CantingParams]:
     if not heliostat.canting_enabled:
         canting_params: Optional[CantingParams] = None
     elif isinstance(heliostat.canting_algo, FirstSunCanting):
         assert sun_direction is not None, \
             'need sun direction to cant towards'
-        assert heliostat.focus_point is not None, (
+        assert focus_point is not None, (
             'need focus point for perfectly canting towards the '
             'first sun'
         )
         canting_params = FirstSunCantingParams(
             sun_direction,
-            heliostat.focus_point,
+            focus_point,
             heliostat.position_on_field,
             heliostat.disturbance_angles,
             heliostat.rotation_offset,
@@ -394,6 +397,7 @@ def decant_facet(
             facet_normals_ideal_aligned)
 
         canted_normal = facet_normals_ideal_rot.mean(dim=0)
+        canted_normal /= th.linalg.norm(canted_normal)
     else:
         raise ValueError('encountered unhandled canting parameters')
 
