@@ -15,11 +15,12 @@ from typing import (
     Union,
 )
 
+import pandas as pd
 import pytorch3d.transforms as throt
 import torch
 import torch as th
 from yacs.config import CfgNode
-import pandas as pd
+
 import bpro_loader
 import canting
 from canting import ActiveCanting, CantingAlgorithm
@@ -65,7 +66,8 @@ def get_position(
     position_on_field: List[float] = cfg.POSITION_ON_FIELD
     return th.tensor(position_on_field, dtype=dtype, device=device)
 
-def load_heliostat_position_file(json_file_path, heliostat_name):
+
+def load_heliostat_position_file(json_file_path: str, heliostat_name: str):
     df = pd.read_json(json_file_path, orient="table")
     values = df.loc[df['Name'] == heliostat_name]
     name = values["Name"]
@@ -103,17 +105,24 @@ def real_heliostat(
         cfg.RAY_STRUCT_FMT,
         cfg.VERBOSE,
     )
-    heliostat_position: torch.Tensor = (
-        th.tensor(heliostat_position, dtype=dtype, device=device)
-        if cfg.POSITION_ON_FIELD is None
-        else get_position(cfg, dtype, device)
-    )
     if cfg.LOAD_OTHER_HELIOSTAT_PROPS:
         (
             heliostat_position,
             facet_positions,
             facet_spans_n,
-            facet_spans_e) = load_heliostat_position_file(os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME), cfg.OTHER_HELIOSTAT_NAME)
+            facet_spans_e,
+        ) = load_heliostat_position_file(
+            os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME),
+            cfg.OTHER_HELIOSTAT_NAME,
+        )
+        heliostat_position: torch.Tensor = th.tensor(
+            heliostat_position, dtype=dtype, device=device),
+    else:
+        heliostat_position = (
+            th.tensor(heliostat_position, dtype=dtype, device=device)
+            if cfg.POSITION_ON_FIELD is None
+            else get_position(cfg, dtype, device)
+        )
 
     if cfg.ZS_PATH:
         if cfg.VERBOSE:
@@ -238,7 +247,7 @@ def real_heliostat(
         facet_spans_e = cfg.FACETS._SPANS_E
 
     return (
-        th.tensor(heliostat_position, dtype=dtype, device=device),
+        heliostat_position,
         th.tensor(facet_positions, dtype=dtype, device=device),
         th.tensor(facet_spans_n, dtype=dtype, device=device),
         th.tensor(facet_spans_e, dtype=dtype, device=device),
