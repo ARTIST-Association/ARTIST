@@ -116,7 +116,7 @@ def real_heliostat(
             cfg.OTHER_HELIOSTAT_NAME,
         )
         heliostat_position: torch.Tensor = th.tensor(
-            heliostat_position, dtype=dtype, device=device),
+            heliostat_position, dtype=dtype, device=device)
     else:
         heliostat_position = (
             th.tensor(heliostat_position, dtype=dtype, device=device)
