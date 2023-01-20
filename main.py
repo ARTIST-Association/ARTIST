@@ -526,7 +526,13 @@ def main(
             if epoch % cfg.TEST.INTERVAL == 0:
                 test_loss, hausdorff_dist, _ = training.test_batch(
                     test_objects)
-                utils.to_tensorboard(writer, 'test', epoch, loss=test_loss, cfg=cfg)
+                utils.to_tensorboard(
+                    writer,
+                    'test',
+                    epoch,
+                    loss=test_loss,
+                    cfg=cfg,
+                )
                 print(
                     f'[{epoch:>{epoch_shift_width}}/{epochs}] '
                     f'test loss: {test_loss.item()}, '
@@ -552,7 +558,7 @@ def main(
                 lr=opt.param_groups[0]["lr"],
                 loss=loss,
                 raw_loss=raw_loss,
-                cfg = cfg
+                cfg=cfg,
             )
 
         # Save Section

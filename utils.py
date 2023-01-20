@@ -44,7 +44,7 @@ def to_tensorboard(
         image: Optional[torch.Tensor] = None,
         plot_interval: Optional[int] = None,
         index: Optional[int] = None,
-        cfg: Optional[CfgNode] = None
+        cfg: Optional[CfgNode] = None,
 ) -> None:
     with th.no_grad():
         # Plot loss to Tensorboard
@@ -60,8 +60,16 @@ def to_tensorboard(
             if loss:
                 writer.add_scalar(
                     f"{prefix}/loss{iteration_str}", loss.item(), epoch)
+                assert cfg is not None
                 writer.add_scalar(
-                    f"{prefix}/loss_scaled{iteration_str}", loss.item()*cfg.AC.RECEIVER.PLANE_X*cfg.AC.RECEIVER.PLANE_Y, epoch)
+                    f"{prefix}/loss_scaled{iteration_str}",
+                    (
+                        loss.item()
+                        * cfg.AC.RECEIVER.PLANE_X
+                        * cfg.AC.RECEIVER.PLANE_Y
+                    ),
+                    epoch,
+                )
             if raw_loss:
                 writer.add_scalar(
                     f"{prefix}/raw_loss{iteration_str}",
