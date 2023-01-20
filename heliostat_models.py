@@ -74,6 +74,8 @@ def load_heliostat_position_file(json_file_path, heliostat_name):
     facet_positions = values["FacetPositions"].item()
     facet_spans_n = values["FacetSpansN"].item()
     facet_spans_e = values["FacetSpansE"].item()
+    # print(position, facet_positions, facet_spans_n, facet_spans_e)
+    # exit()
     return position, facet_positions, facet_spans_n, facet_spans_e
 
 
@@ -120,7 +122,6 @@ def real_heliostat(
             facet_positions,
             facet_spans_n,
             facet_spans_e) = load_heliostat_position_file(os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME), cfg.OTHER_HELIOSTAT_NAME)
-
     if cfg.ZS_PATH:
         if cfg.VERBOSE:
             print("Path to heliostat surface values found. Load values...")
