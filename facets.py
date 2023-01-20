@@ -118,6 +118,18 @@ def cant_and_merge_facet_vectors(
     ):
         offset = len(facet_vectors)
 
+        debug = True
+        if (
+                reposition
+                and canting.is_like_active(facets._canting_algo)
+                and not isinstance(
+                    facets._canting_algo,
+                    canting.ActiveCanting,
+                )
+        ):
+            facet_vectors = facet_vectors + facet_position
+            print('bla')
+
         if do_canting:
             # We expect the position to be centered on zero for
             # canting, so cant before repositioning.
@@ -126,7 +138,16 @@ def cant_and_merge_facet_vectors(
             # possibly more speed.)
             facet_vectors = canting.apply_rotation(cant_rot, facet_vectors)
 
-        if reposition:
+        if (
+                reposition
+                and (
+                    not canting.is_like_active(facets._canting_algo)
+                    or isinstance(
+                        facets._canting_algo,
+                        canting.ActiveCanting,
+                    )
+                )
+        ):
             facet_vectors = facet_vectors + facet_position
 
         merged_vectors[i:i + offset] = facet_vectors
