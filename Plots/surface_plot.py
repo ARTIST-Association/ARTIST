@@ -95,12 +95,12 @@ def plot_surfaces_mrad(
        H_image,
        H_distance,
 ) -> None:
-    fig = plt.figure(figsize=(6, 15))
-    gs = GridSpec(7, 4, height_ratios=[1,1,1,1,1,1,0.1])
+    fig = plt.figure(figsize=(6, 10))
+    gs = GridSpec(5, 4, height_ratios=[1,1,1,1,0.1])
     colormap="magma"
     for j in range(2):
         if j==0: # left column    
-            title = ["","1","2","4","8","16","32"]
+            title = ["","2","4","8","16","32"]
             H = H_image
             position_x = -0.1
             position_y = 0.5
@@ -110,11 +110,11 @@ def plot_surfaces_mrad(
             start = 0
             end = 2
         if j==1: # right column
-            title = ["","25","50","100","200","400"]
+            title = ["","50m","100m","200m","400m"]
             H = H_distance
             position_x = 1.1
             position_y = 0.5
-            sub_title = "Distance [m] \nto tower \nat 8 images"
+            sub_title = "Distance\nto tower\nat 16 images"
             sub_alignment = 0.5
             alignment = "left"
             start = 2
@@ -162,17 +162,21 @@ def create_heliostats(paths):
     H_trained_array = []
     H_target_array = []
     for path in paths:
+        print(path)
+
         path_to_config = path.copy()
         path_to_model = path.copy()
         path_to_model.extend(['Logfiles', 'MultiNURBSHeliostat.pt'])
         path_to_config.extend(['config.yaml'])
         MODEL_PATH = os.path.join(*path_to_model)
+        print(MODEL_PATH)
         CONFIG_PATH = os.path.join(*path_to_config)
-        
+        exit()       
         cfg_default = get_cfg_defaults()
         print(f"load: {CONFIG_PATH}")
         cfg = load_config_file(cfg_default, CONFIG_PATH)
         cfg.merge_from_list(['CP_PATH', MODEL_PATH])
+        cfg.merge_from_list(['H.DEFLECT_DATA.DIRECTORY', os.path.join("..", cfg.H.DEFLECT_DATA.DIRECTORY)])
         # cfg.merge_from_list(['USE_NURBS', False])
         # cfg.merge_from_list(['H.DEFLECT_DATA.TAKE_N_VECTORS', 800])
         cfg.freeze()
@@ -203,18 +207,14 @@ def main(paths_image, paths_distance):
             )
 if __name__ == '__main__':
     paths_num_im = [
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_1_N_7_SD_3' ],
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_2_N_7_SD_3' ],
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_4_N_7_SD_3' ],
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_8_N_7_SD_3' ],
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_16_N_7_SD_3' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_25_I_2_' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_25_I_4_' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_25_I_8_' ],
         ]
     paths_distance = [
-        ['..','Results', 'Full_Nature_Sweep', '_Full_Nature_Sweep_SCH_Cyclic_I_8_N_7_SD_3' ],
-        ['..','Results', 'Distance_Nature_Sweep', '_Distance_Nature_Sweep_D_50_I_8_' ],
-        ['..','Results', 'Distance_Nature_Sweep', '_Distance_Nature_Sweep_D_100_I_8_' ],
-        ['..','Results', 'Distance_Nature_Sweep', '_Distance_Nature_Sweep_D_200_I_8_' ],
-        ['..','Results', 'Distance_Nature_Sweep', '_Distance_Nature_Sweep_D_400_I_8_' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_50_I_16_' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_100_I_16_' ],
+        ['..','Results', 'DistanceWithFocus', '_DistanceWithFocusN7S3_D_200_I_16_' ],
         ]
 
     main(paths_num_im, paths_distance)

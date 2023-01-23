@@ -124,9 +124,6 @@ def real_heliostat(
             heliostat_position,
             facet_positions,
             facet_spans_n,
-<<<<<<< HEAD
-            facet_spans_e) = load_heliostat_position_file(os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME), cfg.OTHER_HELIOSTAT_NAME)
-=======
             facet_spans_e,
         ) = load_heliostat_position_file(
             os.path.join(cfg.DIRECTORY, cfg.JSON_FILE_NAME),
@@ -142,8 +139,6 @@ def real_heliostat(
         )
     heliostat_position: torch.Tensor = heliostat_position_new
     del heliostat_position_new
-
->>>>>>> 0bec3ae527fe237b2ce2cc26d08143c7631dd017
     if cfg.ZS_PATH:
         if cfg.VERBOSE:
             print("Path to heliostat surface values found. Load values...")

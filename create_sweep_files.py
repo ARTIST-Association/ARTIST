@@ -19,13 +19,13 @@ def load_config(config_file_name):
     cfg.freeze()
     return cfg
 
-initial_filename = "Nature_Distance_Sweep.yaml"
+initial_filename = "SweepThisN7S3.yaml"
 initial_folder = "TestingConfigs"
 result_folder = "Results"
-sweep_name = "Distance_Nature_Sweep"
+sweep_name = "DistanceWithFocusN7S3"
 
-num_images_array = [2,4,8]
-distance_array = [400]
+num_images_array = [16]
+distance_array = [25,50,100,200,400]
 
 initial_path =  os.path.join(initial_folder, initial_filename)
 result_path = os.path.join(result_folder,sweep_name)
@@ -46,8 +46,8 @@ for distance in distance_array:
     long_name = "H.DEFLECT_DATA.POSITION_ON_FIELD"
     cor_distance = distance
     if distance == 400:
-        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_X",new_cfg.AC.RECEIVER.PLANE_X*3])
-        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_Y",new_cfg.AC.RECEIVER.PLANE_Y*3])
+        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_X",new_cfg.AC.RECEIVER.PLANE_X*2])
+        new_cfg.merge_from_list(["AC.RECEIVER.PLANE_Y",new_cfg.AC.RECEIVER.PLANE_Y*2])
     new_cfg.merge_from_list([long_name, [13.2, distance, 1.795]])
     name_string = name_string+short_name+"_"+str(distance)+"_" 
     for num_images in num_images_array:

@@ -29,7 +29,7 @@ def get_untrained_folders(config_folder, force=False):
     else:
         return todo_folders
 
-config_folder = "Results\\Distance_Nature_Sweep\\"
+config_folder = "Results\\DistanceWithFocus\\"
 # todo_folders = [r"_*" in folder for folder in folders]
 # for folder in folders:
 #     todo_folders.append(re.finditer("_*",folder))

@@ -595,6 +595,6 @@ def main(
 
 if __name__ == '__main__':
     path_to_yaml = os.path.join(
-        "TestingConfigs", "BJ25.yaml")
+        "TestingConfigs", "BestSurfaceReconstructionRealPosition.yaml")
     main(path_to_yaml)
     # main()

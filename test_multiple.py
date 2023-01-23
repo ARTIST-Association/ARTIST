@@ -41,7 +41,6 @@ CONFIG_PATH = os.path.join(
 
 SUN_DIRECTIONS = [
     [-0.43719268, 0.7004466, 0.564125],
-    [-0.8662,  0.4890,  0.1026],
 ]
 
 # height and width
