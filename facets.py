@@ -118,7 +118,6 @@ def cant_and_merge_facet_vectors(
     ):
         offset = len(facet_vectors)
 
-        debug = True
         if (
                 reposition
                 and canting.is_like_active(facets._canting_algo)
@@ -128,7 +127,6 @@ def cant_and_merge_facet_vectors(
                 )
         ):
             facet_vectors = facet_vectors + facet_position
-            print('bla')
 
         if do_canting:
             # We expect the position to be centered on zero for

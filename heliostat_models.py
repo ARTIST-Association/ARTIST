@@ -78,7 +78,7 @@ def load_heliostat_position_file(
 ]:
     df = pd.read_json(json_file_path, orient="table")
     values = df.loc[df['Name'] == heliostat_name]
-    name = values["Name"]
+    # name = values["Name"]
     position = values["Position"].item()
     facet_positions = values["FacetPositions"].item()
     facet_spans_n = values["FacetSpansN"].item()
@@ -1419,7 +1419,13 @@ class AlignedHeliostat(AbstractHeliostat):
             offset = len(discrete_points)
 
             # Facet repositioning (not active)
-            if reposition and not isinstance(self._heliostat.canting_algo, ActiveCanting):
+            if (
+                    reposition
+                    and not isinstance(
+                        self._heliostat.canting_algo,
+                        ActiveCanting,
+                    )
+            ):
                 discrete_points = discrete_points + position
 
             # Canting
@@ -1434,9 +1440,11 @@ class AlignedHeliostat(AbstractHeliostat):
                 align_origin,
             )
             # Facet repositioning (active)
-            if reposition and isinstance(self._heliostat.canting_algo, ActiveCanting):
+            if (
+                    reposition
+                    and isinstance(self._heliostat.canting_algo, ActiveCanting)
+            ):
                 discrete_points_rotated = discrete_points_rotated + position
-
 
             hel_rotated[i:i + offset] = discrete_points_rotated
             normal_vectors_rotated[i:i + offset] = normals_rotated
