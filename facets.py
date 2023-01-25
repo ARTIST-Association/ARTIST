@@ -86,6 +86,53 @@ def facet_point_indices(
     )
 
 
+def cant_facet_vectors(
+        facet_position: torch.Tensor,
+        facet_vectors: torch.Tensor,
+        cant_rot: torch.Tensor,
+        canting_algo: CantingAlgorithm,
+        reposition: bool,
+        force_canting: bool = False,
+) -> torch.Tensor:
+    do_canting = (
+        not canting.is_like_active(canting_algo)
+        or isinstance(canting_algo, canting.FirstSunCanting)
+        or force_canting
+    )
+
+    if (
+            reposition
+            and canting.is_like_active(canting_algo)
+            and not isinstance(
+                canting_algo,
+                canting.ActiveCanting,
+            )
+    ):
+        facet_vectors = facet_vectors + facet_position
+
+    if do_canting:
+        # We expect the position to be centered on zero for
+        # canting, so cant before repositioning.
+        # (If we handled discrete points and normals at once, we
+        # could also concat and after rotation de-construct here for
+        # possibly more speed.)
+        facet_vectors = canting.apply_rotation(cant_rot, facet_vectors)
+
+    if (
+            reposition
+            and (
+                not canting.is_like_active(canting_algo)
+                or isinstance(
+                    canting_algo,
+                    canting.ActiveCanting,
+                )
+            )
+    ):
+        facet_vectors = facet_vectors + facet_position
+
+    return facet_vectors
+
+
 def cant_and_merge_facet_vectors(
         facets: 'AbstractFacets',
         facetted_vectors: List[torch.Tensor],
@@ -100,11 +147,6 @@ def cant_and_merge_facet_vectors(
         dtype=facetted_vectors[0].dtype,
         device=facetted_vectors[0].device,
     )
-    do_canting = (
-        not canting.is_like_active(facets._canting_algo)
-        or isinstance(facets._canting_algo, canting.FirstSunCanting)
-        or force_canting
-    )
 
     i = 0
     for (
@@ -118,35 +160,14 @@ def cant_and_merge_facet_vectors(
     ):
         offset = len(facet_vectors)
 
-        if (
-                reposition
-                and canting.is_like_active(facets._canting_algo)
-                and not isinstance(
-                    facets._canting_algo,
-                    canting.ActiveCanting,
-                )
-        ):
-            facet_vectors = facet_vectors + facet_position
-
-        if do_canting:
-            # We expect the position to be centered on zero for
-            # canting, so cant before repositioning.
-            # (If we handled discrete points and normals at once, we
-            # could also concat and after rotation de-construct here for
-            # possibly more speed.)
-            facet_vectors = canting.apply_rotation(cant_rot, facet_vectors)
-
-        if (
-                reposition
-                and (
-                    not canting.is_like_active(facets._canting_algo)
-                    or isinstance(
-                        facets._canting_algo,
-                        canting.ActiveCanting,
-                    )
-                )
-        ):
-            facet_vectors = facet_vectors + facet_position
+        facet_vectors = cant_facet_vectors(
+            facet_position,
+            facet_vectors,
+            cant_rot,
+            facets._canting_algo,
+            reposition=reposition,
+            force_canting=force_canting,
+        )
 
         merged_vectors[i:i + offset] = facet_vectors
         i += offset

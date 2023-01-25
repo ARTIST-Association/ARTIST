@@ -1417,20 +1417,20 @@ class AlignedHeliostat(AbstractHeliostat):
         ):
             offset = len(discrete_points)
 
-            # Facet repositioning (not active)
-            if (
-                    reposition
-                    and not isinstance(
-                        self._heliostat.canting_algo,
-                        ActiveCanting,
-                    )
-            ):
-                discrete_points = discrete_points + position
-
-            # Canting
-            discrete_points_rotated = canting.apply_rotation(
-                cant_rot, discrete_points)
-            normals_rotated = canting.apply_rotation(cant_rot, normals)
+            discrete_points_rotated = facets.cant_facet_vectors(
+                position,
+                discrete_points,
+                cant_rot,
+                self._heliostat.canting_algo,
+                reposition=reposition,
+            )
+            normals_rotated = facets.cant_facet_vectors(
+                position,
+                normals,
+                cant_rot,
+                self._heliostat.canting_algo,
+                reposition=False,
+            )
 
             # Alignment
             discrete_points_rotated, normals_rotated = _rotate(
