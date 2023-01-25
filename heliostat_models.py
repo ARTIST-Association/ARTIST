@@ -1431,6 +1431,12 @@ class AlignedHeliostat(AbstractHeliostat):
                 self._heliostat.canting_algo,
                 reposition=False,
             )
+            # Reposition facet to zero (active)
+            if (
+                    reposition
+                    and isinstance(self._heliostat.canting_algo, ActiveCanting)
+            ):
+                discrete_points_rotated = discrete_points_rotated - position
 
             # Alignment
             discrete_points_rotated, normals_rotated = _rotate(

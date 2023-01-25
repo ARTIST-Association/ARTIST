@@ -100,16 +100,6 @@ def cant_facet_vectors(
         or force_canting
     )
 
-    if (
-            reposition
-            and canting.is_like_active(canting_algo)
-            and not isinstance(
-                canting_algo,
-                canting.ActiveCanting,
-            )
-    ):
-        facet_vectors = facet_vectors + facet_position
-
     if do_canting:
         # We expect the position to be centered on zero for
         # canting, so cant before repositioning.
@@ -118,16 +108,7 @@ def cant_facet_vectors(
         # possibly more speed.)
         facet_vectors = canting.apply_rotation(cant_rot, facet_vectors)
 
-    if (
-            reposition
-            and (
-                not canting.is_like_active(canting_algo)
-                or isinstance(
-                    canting_algo,
-                    canting.ActiveCanting,
-                )
-            )
-    ):
+    if reposition:
         facet_vectors = facet_vectors + facet_position
 
     return facet_vectors
