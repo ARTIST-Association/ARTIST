@@ -334,6 +334,7 @@ _C.TRAIN.OPTIMIZER.LR                   = 1e-4
 
 _C.TRAIN.OPTIMIZER.BETAS                = [0.9, 0.999, 0.99]
 _C.TRAIN.OPTIMIZER.EPS                  = 1e-8
+# FIXME Need to group NURBS xy and z separately for this to make sense.
 _C.TRAIN.OPTIMIZER.WEIGHT_DECAY         = 0.91
 
 _C.TRAIN.LOSS                           = CN()
@@ -345,6 +346,7 @@ _C.TRAIN.LOSS.MISS.NAME                 = "L1"
 _C.TRAIN.LOSS.ALIGNMENT                 = CN()
 _C.TRAIN.LOSS.ALIGNMENT.FACTOR          = 1.0
 _C.TRAIN.LOSS.ALIGNMENT.NAME            = "L1"
+# FIXME Need to group NURBS xy and z separately for this to make sense.
 _C.TRAIN.LOSS.USE_L1_WEIGHT_DECAY       = True
 _C.TRAIN.LOSS.WEIGHT_DECAY_FACTOR       = 0.2
 

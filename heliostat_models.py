@@ -1,5 +1,6 @@
 import copy
 import functools
+import json
 import os
 from typing import (
     Any,
@@ -15,7 +16,6 @@ from typing import (
     Union,
 )
 
-import pandas as pd
 import pytorch3d.transforms as throt
 import torch
 import torch as th
@@ -76,15 +76,16 @@ def load_heliostat_position_file(
     List[List[float]],
     List[List[float]],
 ]:
-    df = pd.read_json(json_file_path, orient="table")
-    values = df.loc[df['Name'] == heliostat_name]
+    with open(json_file_path, 'r') as f:
+        data = json.load(f)['data']
+    values = next(filter(lambda x: x['Name'] == heliostat_name, data), None)
+    assert values is not None, \
+        f'heliostat {heliostat_name} not found in {json_file_path}'
     # name = values["Name"]
     position = values["Position"].item()
     facet_positions = values["FacetPositions"].item()
     facet_spans_n = values["FacetSpansN"].item()
     facet_spans_e = values["FacetSpansE"].item()
-    # print(position, facet_positions, facet_spans_n, facet_spans_e)
-    # exit()
     return position, facet_positions, facet_spans_n, facet_spans_e
 
 
@@ -1418,20 +1419,26 @@ class AlignedHeliostat(AbstractHeliostat):
         ):
             offset = len(discrete_points)
 
-            # Facet repositioning (not active)
+            discrete_points_rotated = facets.cant_facet_vectors(
+                position,
+                discrete_points,
+                cant_rot,
+                self._heliostat.canting_algo,
+                reposition=reposition,
+            )
+            normals_rotated = facets.cant_facet_vectors(
+                position,
+                normals,
+                cant_rot,
+                self._heliostat.canting_algo,
+                reposition=False,
+            )
+            # Reposition facet to zero (active)
             if (
                     reposition
-                    and not isinstance(
-                        self._heliostat.canting_algo,
-                        ActiveCanting,
-                    )
+                    and isinstance(self._heliostat.canting_algo, ActiveCanting)
             ):
-                discrete_points = discrete_points + position
-
-            # Canting
-            discrete_points_rotated = canting.apply_rotation(
-                cant_rot, discrete_points)
-            normals_rotated = canting.apply_rotation(cant_rot, normals)
+                discrete_points_rotated = discrete_points_rotated - position
 
             # Alignment
             discrete_points_rotated, normals_rotated = _rotate(
