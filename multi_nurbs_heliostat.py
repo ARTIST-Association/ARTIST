@@ -575,7 +575,9 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
     def __init__(
             self,
             heliostat: MultiNURBSHeliostat,
-            sun_direction: torch.Tensor,
+            #sun_direction: torch.Tensor,
+            alignment: torch.Tensor,
+            align_origin: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
         assert isinstance(heliostat, MultiNURBSHeliostat), \
@@ -583,7 +585,9 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
-            sun_direction,
+            #sun_direction,
+            alignment,
+            align_origin,
             aim_point,
             align_points=False,
         )
@@ -595,7 +599,9 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 [
                     cast(
                         AlignedNURBSHeliostat,
-                        facet.align(sun_direction, aim_point),
+                        #facet.align(sun_direction, aim_point),
+                        facet.align(alignment, align_origin, aim_point),
+
                     )
                     for facet in self._heliostat.facets
                 ],

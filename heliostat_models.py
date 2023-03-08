@@ -864,9 +864,12 @@ class AbstractHeliostat:
     def align2(
             self,
             sun_direction: torch.Tensor,
+            aim_point: Optional[torch.Tensor] = None,
         ) -> torch.Tensor:
             
-            aim_point = self.aim_point
+            if aim_point is None:
+                aim_point = self.aim_point
+                
             ideal_normal = th.tensor(
                 self.cfg.IDEAL.NORMAL_VECS,
                 dtype=sun_direction.dtype,
