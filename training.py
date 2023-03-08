@@ -631,10 +631,16 @@ def calc_batch_loss(
         if prealignment:
             H.disturbance_angles = prealignment
         H_aligned = H.align(sun_direction)
+        #---- new
+        surface_points = H_aligned.discrete_points
+        surface_normals = H_aligned.normals
+        from_sun = -sun_direction
+        rays = from_sun.unsqueeze(0)
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, indices, _, _),
-        ) = R.render(H_aligned, return_extras=True)
+        ) = R.render(surface_points, surface_normals, rays, return_extras=True)
+        #------
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(th.sum(pred_bitmap), th.sum(target))
         curr_loss, curr_raw_loss = loss_func(
@@ -852,10 +858,18 @@ def test_batch(
             # print(prealignment)
             heliostat.disturbance_angles = prealignment
         heliostat_aligned = heliostat.align(sun_direction)
+
+        surface_points = heliostat_aligned.discrete_points
+        surface_normals = heliostat_aligned.normals
+        from_sun = -sun_direction
+        rays = from_sun.unsqueeze(0)
+    
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, _, _, _),
-        ) = renderer.render(heliostat_aligned, return_extras=True)
+        ) = renderer.render(surface_points, surface_normals, rays, return_extras=True)
+
+
 
         if bitmaps is None:
             bitmaps = th.empty(

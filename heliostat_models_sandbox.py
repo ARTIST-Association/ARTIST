@@ -718,6 +718,7 @@ def heliostat_coord_system(
     z = full_rot @ z
     return x, y, z
 
+#==============================================================================
 
 class AbstractHeliostat:
     device: th.device

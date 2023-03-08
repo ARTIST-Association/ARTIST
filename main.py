@@ -414,7 +414,9 @@ def main(
     steps_per_epoch = 1
     H = build_heliostat(cfg, sun_directions, device)
     ENV = Environment(cfg.AC, device)
-    R = Renderer(H, ENV)
+    R = Renderer(
+        #H,
+        ENV)
     opt, sched = training.build_optimizer_scheduler(
         cfg,
         epochs * steps_per_epoch,
@@ -595,6 +597,6 @@ def main(
 
 if __name__ == '__main__':
     path_to_yaml = os.path.join(
-        "TestingConfigs", "BestSurfaceReconstructionRealPosition.yaml")
+        "TestingConfigs", "AlexTest.yaml")
     main(path_to_yaml)
     # main()
