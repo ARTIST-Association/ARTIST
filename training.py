@@ -630,7 +630,9 @@ def calc_batch_loss(
             index = i
         if prealignment:
             H.disturbance_angles = prealignment
-        H_aligned = H.align(sun_direction)
+        
+        alignment, align_origin = H.align2(sun_direction)
+        H_aligned = H.align(alignment, align_origin)
         #---- new
         surface_points = H_aligned.discrete_points
         surface_normals = H_aligned.normals
@@ -857,7 +859,10 @@ def test_batch(
         if prealignment:
             # print(prealignment)
             heliostat.disturbance_angles = prealignment
-        heliostat_aligned = heliostat.align(sun_direction)
+            
+        alignment, align_origin = heliostat.align2(sun_direction)
+        heliostat_aligned = heliostat.align(alignment, align_origin)
+        #heliostat_aligned = heliostat.align(sun_direction)
 
         surface_points = heliostat_aligned.discrete_points
         surface_normals = heliostat_aligned.normals
