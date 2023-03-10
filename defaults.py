@@ -125,6 +125,9 @@ _C.H.SHAPE                              = "function"                            
 # z-axis rotation offset in degrees.
 _C.H.ROTATION_OFFSET_ANGLE = 0
 
+#_C.H.TARGET_ALIGNMENT_FILE = None
+#_C.H.ALIGNMENT_FILE = None
+
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m
 _C.H.IDEAL.NORMAL_VECS                  = [0, 0, 1]

@@ -203,6 +203,9 @@ def main(
     #     #H,
     #     ENV)
     #new=================================================
+    # amb = AlignmentModelBuilder()
+    # target_alignment_model_dict = json.load(cfg.H.TARGET_ALIGNMENT_FILE)
+    # target_alignment_model = amb.alignmentModelFromDict(alignment_model_dict=target_alignment_model_dict)
     heliostat_model_target = HeliostatModel(H_target, H_target)
     training_data_points = {}
     training_renderer = {}
@@ -243,7 +246,7 @@ def main(
         )
     elif True:
         targets = []
-        for datapoint,R in zip(training_data_points.values(), training_renderer.values()):
+        for i, (datapoint,R) in enumerate(zip(training_data_points.values(), training_renderer.values())):
             alignment, align_origin = heliostat_model_target.align(datapoint)
             # H_aligned = H_target.align(alignment, align_origin)
             surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
@@ -255,6 +258,16 @@ def main(
                 (ray_directions, dx_ints, dy_ints, indices, _, _),
             ) = R.render(surface_points, surface_normals, rays, return_extras=True)
             targets.append(pred_bitmap)
+            
+            prefix = 'train/target_' + str(i)
+            utils.to_tensorboard(
+                writer,
+                prefix,
+                0,
+                image=pred_bitmap,
+                plot_interval=cfg.TRAIN.IMG_INTERVAL,
+                index=i,
+            )
     else:
         targets = cached_generate_target_dataset(
             H_target,
@@ -307,7 +320,7 @@ def main(
     #     cfg, sun_directions, device)
     # H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
     # naive_targets = cached_generate_pretrain_dataset(
-    #     H_naive_target,
+    #     H_naive_target,heliostat_model_target
     #     ENV,
     #     sun_directions,
     #     logdir_files,
@@ -328,8 +341,27 @@ def main(
     # else:
     #     naive_target_sets = None
 
-    test_sun_directions, test_atest_targetse = cached_generate_test_sun_array(
+    test_sun_directions, test_ae = cached_generate_test_sun_array(
         cfg.TEST.SUN_DIRECTIONS, device)
+    
+    #new=================================================
+    test_renderer = {}
+    test_data_points = {}
+    for i,sun_directions_test in enumerate(test_sun_directions):
+
+        
+        test_data_points[i] = DataPoint(point_id = i, 
+                                            desired_image = None, 
+                                            desired_concentrator_normal = None,
+                                            sun_directions = sun_directions_test)
+    
+        R = Renderer(
+        #H,
+        ENV)
+    
+        test_renderer[i] = R
+    
+    #===================================================
 
     if cfg.TEST.USE_IMAGES:
         assert cfg.TEST.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
@@ -348,6 +380,41 @@ def main(
             'test',
             writer,
         )
+    elif True:
+        test_targets_list = []
+        test_targets = None
+        for i, (datapoint,R) in enumerate(zip(test_data_points.values(), test_renderer.values())):
+            alignment, align_origin = heliostat_model_target.align(datapoint)
+            # H_aligned = H_target.align(alignment, align_origin)
+            surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
+            #surface_normals = H_aligned.normals
+            from_sun = -datapoint.sun_directions
+            rays = from_sun.unsqueeze(0)
+            (
+                pred_bitmap,
+                (ray_directions, dx_ints, dy_ints, indices, _, _),
+            ) = R.render(surface_points, surface_normals, rays, return_extras=True)
+            
+            if test_targets is None:
+                test_targets = th.empty(
+                    (len(test_data_points),) + pred_bitmap.shape,
+                    dtype=alignment.dtype,
+                    device=device,
+                )
+            test_targets[i] = pred_bitmap
+            
+            prefix = 'test/target_' + str(i)
+            utils.to_tensorboard(
+                writer,
+                prefix,
+                0,
+                image=pred_bitmap,
+                plot_interval=cfg.TRAIN.IMG_INTERVAL,
+                index=i,
+            )
+            # test_targets.append(pred_bitmap)
+            
+            # test_targets.append(pred_bitmap)
     else:
         test_targets = cached_generate_test_dataset(
             H_target,
@@ -357,32 +424,18 @@ def main(
             "test",
             writer,
         )
+    
+    for i,key in enumerate(test_data_points.keys()):
+        test_data_points[key].desired_image = test_targets[i]
+    
+    
     test_target_sets = hausdorff_distance.images_to_sets(
         test_targets,
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VALS,
         cfg.TRAIN.LOSS.HAUSDORFF.CONTOUR_VAL_RADIUS,
     )
 
-    #new=================================================
-    test_renderer = {}
-    test_data_points = {}
-    for i,(desired_image_test, 
-           sun_directions_test) in enumerate(zip(test_targets,
-                                                 test_sun_directions)):
-
-        
-        test_data_points[i] = DataPoint(point_id = i, 
-                                            desired_image = desired_image_test, 
-                                            desired_concentrator_normal = None,
-                                            sun_directions = sun_directions_test)
     
-        R = Renderer(
-        #H,
-        ENV)
-    
-        test_renderer[i] = R
-    
-    #===================================================
 
     # Start Diff Raytracing
     # =====================
@@ -482,6 +535,8 @@ def main(
     # R = Renderer(
     #     #H,
     #     ENV)
+    # alignment_model_dict = json.load(cfg.H.ALIGNMENT_FILE)
+    # alignment_model = amb.alignmentModelFromDict(alignment_model_dict=alignment_model_dict)
     heliostat_model = HeliostatModel(H, H)
     opt, sched = training.build_optimizer_scheduler(
         cfg,
@@ -617,7 +672,7 @@ def main(
             # Plotting stuff
             # if test_loss.detach().cpu() < best_result and cfg.SAVE_RESULTS:
             if epoch % cfg.TEST.INTERVAL == 0:
-                plotter.plot_surfaces_mrad(         #check all plot funs
+                plotter.plot_surfaces_mrad(#check all plot funs
                     H_target,
                     #heliostat_model_target,
                     H,
