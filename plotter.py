@@ -16,6 +16,7 @@ import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from environment import Environment
 from heliostat_models import AbstractHeliostat
+from heliostat_model import HeliostatModel
 import utils
 
 from build_heliostat_model import build_target_heliostat, build_heliostat, load_heliostat
@@ -638,9 +639,11 @@ class Plotter:
 
 
 @th.no_grad()
-def plot_surfaces_mrad(
-        heliostat_target: AbstractHeliostat,
-        heliostat_pred: AbstractHeliostat,
+def plot_surfaces_mrad( #check
+        #heliostat_target: AbstractHeliostat,
+        heliostat_model_target: HeliostatModel,
+        #heliostat_pred: AbstractHeliostat,
+        heliostat_model: HeliostatModel,
         epoch: int,
         logdir_surfaces: str,
         writer: Optional[SummaryWriter] = None,
@@ -648,10 +651,13 @@ def plot_surfaces_mrad(
     logdir_mrad = os.path.join(logdir_surfaces, "mrad")
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mrad, exist_ok=True)
+    
+    
 
-    target_normal_vecs = heliostat_target.normals
-    ideal_normal_vecs = heliostat_target._normals_ideal
-    pred_normal_vecs = heliostat_pred.normals
+    target_normal_vecs = heliostat_model_target.normals
+    ideal_normal_vecs = heliostat_model_target._normals_ideal
+    pred_normal_vecs = heliostat_model.normals
+    #pred_normal_vecs = heliostat_model.surface_normals #check
 
     target_angles = th.acos(
         th.clip(th.sum(ideal_normal_vecs * target_normal_vecs, dim=-1), -1, 1),
@@ -673,10 +679,11 @@ def plot_surfaces_mrad(
         )
 
     # Get discrete points
-    target_points = heliostat_target.discrete_points
+    target_points = heliostat_model_target.discrete_points
     target_points = target_points.detach().cpu()
-
-    pred_points = heliostat_pred.discrete_points
+    
+    pred_points = heliostat_model.discrete_points
+    #pred_points = heliostat_model.surface_points
     pred_points = pred_points.detach().cpu()
     diff_points = pred_points.clone()
 
@@ -733,9 +740,11 @@ def plot_surfaces_mrad(
 
 
 @th.no_grad()
-def plot_surfaces_mm(
+def plot_surfaces_mm( # check
         heliostat_target: AbstractHeliostat,
+        #heliostat_model_target: HeliostatModel,
         heliostat_pred: AbstractHeliostat,
+        #heliostat_model: HeliostatModel,
         epoch: int,
         logdir_surfaces: str,
         writer: Optional[SummaryWriter] = None,
@@ -744,6 +753,7 @@ def plot_surfaces_mm(
     os.makedirs(logdir_surfaces, exist_ok=True)
     os.makedirs(logdir_mm, exist_ok=True)
 
+    
     target = heliostat_target.discrete_points
     ideal = heliostat_target._discrete_points_ideal
     target = target.detach().cpu()
