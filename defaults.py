@@ -125,8 +125,8 @@ _C.H.SHAPE                              = "function"                            
 # z-axis rotation offset in degrees.
 _C.H.ROTATION_OFFSET_ANGLE = 0
 
-#_C.H.TARGET_ALIGNMENT_FILE = None
-#_C.H.ALIGNMENT_FILE = None
+_C.H.TARGET_ALIGNMENT_FILE = "TestingModels/alignment_model_aj23_gm_target.json"
+_C.H.ALIGNMENT_FILE = "TestingModels/alignment_model_aj23_gm_untrained.json"
 
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m

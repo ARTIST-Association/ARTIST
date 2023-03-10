@@ -28,3 +28,5 @@ class DataPoint(object):
     
     def sun_directions(self):
         return self.sun_directions
+    
+    

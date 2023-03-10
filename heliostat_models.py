@@ -851,6 +851,7 @@ class AbstractHeliostat:
             self,
             alignment: torch.Tensor,
             align_origin: torch.Tensor,
+            pivot_point: torch.Tensor,
             aim_point: Optional[torch.Tensor] = None,
     ) -> 'AbstractHeliostat':
         assert hasattr(self, 'aligned_cls'), (
@@ -859,7 +860,7 @@ class AbstractHeliostat:
         )
         if aim_point is None:
             aim_point = self.aim_point
-        return self.aligned_cls(self, alignment,align_origin, aim_point)
+        return self.aligned_cls(self, alignment,align_origin, pivot_point, aim_point)
     
     def align2(
             self,
@@ -1210,6 +1211,7 @@ class Heliostat(AbstractHeliostat):
     def step(self, *args: Any, **kwargs: Any) -> None:
         pass
 
+
     @property  # type: ignore[misc]
     @functools.lru_cache()
     def dict_keys(self) -> Set[str]:
@@ -1348,6 +1350,7 @@ class AlignedHeliostat(AbstractHeliostat):
             #sun_direction: torch.Tensor,
             alignment: torch.Tensor,
             align_origin: torch.Tensor,
+            pivot_point: torch.Tensor,
             aim_point: torch.Tensor,
             align_points: bool = True,
     ) -> None:
@@ -1357,6 +1360,7 @@ class AlignedHeliostat(AbstractHeliostat):
             raise ValueError('Heliostat has to be loaded first')
 
         self._heliostat = heliostat
+        self._heliostat.position_on_field = pivot_point
 
         #from_sun = -sun_direction
         #self.from_sun = from_sun.unsqueeze(0)

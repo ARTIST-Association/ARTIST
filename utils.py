@@ -446,12 +446,12 @@ def rot_z_mat(
 
 
 def get_z_alignments(
-        heliostat: 'Heliostat',
-        sun_directions: torch.Tensor,
+        heliostat,
+        datapoints,
 ) -> torch.Tensor:
     return th.stack([
-        heliostat.align2(sun_dir)[0][..., -1, :]
-        for sun_dir in sun_directions
+        heliostat.align(dp)[0][..., -1, :]
+        for dp in datapoints.values()
     ])
 
 

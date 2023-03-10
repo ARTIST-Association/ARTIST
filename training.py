@@ -138,7 +138,7 @@ def _build_optimizer(
     cfg = cfg_optimizer
     name = cfg.NAME.lower()
 
-    _insert_param_group_config(cfg, params)
+    # _insert_param_group_config(cfg, params)
 
     if name == "adam":
         opt: th.optim.Optimizer = th.optim.Adam(
@@ -557,6 +557,7 @@ def build_loss_funcs(
                 if normalized_name == 'surface':
                     node: CfgNode = cfg
                 else:
+                    continue
                     node = getattr(cfg, normalized_name.upper())
 
                 if not node.USE_L1_WEIGHT_DECAY:
@@ -641,8 +642,8 @@ def calc_batch_loss(
     )):
             
         target = datapoints.desired_image
-        target_z_alignment = datapoints.desired_concentrator_normal
-        sun_direction = datapoints.sun_directions
+        target_z_alignment = datapoints.desired_concentrator_normal()
+        sun_direction = datapoints.sun_directions()
         
         
         
@@ -672,11 +673,13 @@ def calc_batch_loss(
         
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(th.sum(pred_bitmap), th.sum(target))
+        # print('target: ' + str(target_z_alignment))
+        # print('current: ' + str(alignment[..., -1, :]))
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
             #H_aligned.alignment[..., -1, :], #check
-            alignment[..., -1, :], #ok?
+            alignment[..., -1, :],
             target_z_alignment,
             target_set,
             dx_ints,
@@ -742,7 +745,7 @@ def calc_batch_grads(
     # print(raw_loss)
     # # plt.savefig("ours.png", bbox_inches='tight', pad_inches=0)
     # exit()
-    loss.backward()
+    loss.backward(retain_graph=True) # TODO Fix Moritz's Code 
     if return_extras:
         return loss, (raw_loss, pred_bitmap, num_missed)
     return loss
@@ -891,7 +894,7 @@ def test_batch(
             ),
     )):
         target = datapoints_test.desired_image
-        sun_direction = datapoints_test.sun_directions
+        sun_direction = datapoints_test.sun_directions()
         
         if prealignment:
             # print(prealignment)

@@ -8,6 +8,7 @@ import torch
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from yacs.config import CfgNode
+import json
 
 import bpro_loader
 from build_heliostat_model import build_heliostat, build_target_heliostat
@@ -24,6 +25,10 @@ import training
 import utils
 from datapoint import DataPoint
 from heliostat_model import HeliostatModel
+from lib.HeliostatKinematicLib.AlignmentModelBuilder import AlignmendModelBuilder
+from lib.HeliostatKinematicLib.AlignmentModel import AbstractAlignmentModelWithDisturbanceModel
+from lib.HeliostatTrainingLib.HeliostatDatapoint import HeliostatDataPoint
+
 
 def check_consistency(cfg: CfgNode) -> None:
     print("Loaded Switches:")
@@ -198,33 +203,39 @@ def main(
     H_target = cached_build_target_heliostat(cfg, sun_directions, device)
     print(f"Heliostat position on field: {H_target.position_on_field}")
     ENV = Environment(cfg.AC, device)
-    target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
+    
     # R = Renderer(
     #     #H,
     #     ENV)
     #new=================================================
-    # amb = AlignmentModelBuilder()
-    # target_alignment_model_dict = json.load(cfg.H.TARGET_ALIGNMENT_FILE)
-    # target_alignment_model = amb.alignmentModelFromDict(alignment_model_dict=target_alignment_model_dict)
-    heliostat_model_target = HeliostatModel(H_target, H_target)
+    amb = AlignmendModelBuilder(dtype=sun_directions.dtype, device=device)
+    with open(cfg.H.TARGET_ALIGNMENT_FILE) as json_data:
+        target_alignment_model_dict = json.load(json_data)
+    target_alignment_model = amb.alignmentModelFromDict(alignment_model_dict=target_alignment_model_dict)
+    heliostat_model_target = HeliostatModel(target_alignment_model, H_target)
+
+    aimpoint = H_target.aim_point
     training_data_points = {}
     training_renderer = {}
-    for i,(#desired_image,
-           desired_concentrator_normal, sun_directions) in enumerate(zip(#targets,
-                                                                         target_z_alignments,
-                                                                         sun_directions)):
+    for i, sun_direction in enumerate(sun_directions):
 
-        
-        training_data_points[ i] = DataPoint(i, 
-                                            None, 
-                                            desired_concentrator_normal,
-                                            sun_directions)
+        # print('sun_direction')
+        # print(sun_direction)
+        training_data_points[i] = HeliostatDataPoint(id = i, 
+                                            aimpoint = aimpoint,
+                                            created_at=datetime.now(),
+                                            #None, 
+                                            normal = None,
+                                            to_source = sun_direction)
         R = Renderer(
             #H,
             ENV)
         
         training_renderer[i] = R
     
+    target_z_alignments = utils.get_z_alignments(heliostat_model_target, training_data_points)
+    for i, desired_concentrator_normal in enumerate(target_z_alignments):
+        training_data_points[i].normal = desired_concentrator_normal
     #===================================================
     
     if cfg.TRAIN.USE_IMAGES:
@@ -249,9 +260,12 @@ def main(
         for i, (datapoint,R) in enumerate(zip(training_data_points.values(), training_renderer.values())):
             alignment, align_origin = heliostat_model_target.align(datapoint)
             # H_aligned = H_target.align(alignment, align_origin)
+            # print('xxx')
+            # print(datapoint.to_source)
+            # print(alignment)
             surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
             #surface_normals = H_aligned.normals
-            from_sun = -datapoint.sun_directions
+            from_sun = -datapoint.sun_directions()
             rays = from_sun.unsqueeze(0)
             (
                 pred_bitmap,
@@ -350,10 +364,12 @@ def main(
     for i,sun_directions_test in enumerate(test_sun_directions):
 
         
-        test_data_points[i] = DataPoint(point_id = i, 
-                                            desired_image = None, 
-                                            desired_concentrator_normal = None,
-                                            sun_directions = sun_directions_test)
+        test_data_points[i] = HeliostatDataPoint(id = i, 
+                                            created_at=datetime.now(),
+                                            aimpoint = aimpoint,
+                                            #desired_image=None
+                                            normal = None,
+                                            to_source = sun_directions_test)
     
         R = Renderer(
         #H,
@@ -388,7 +404,7 @@ def main(
             # H_aligned = H_target.align(alignment, align_origin)
             surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
             #surface_normals = H_aligned.normals
-            from_sun = -datapoint.sun_directions
+            from_sun = -datapoint.sun_directions()
             rays = from_sun.unsqueeze(0)
             (
                 pred_bitmap,
@@ -535,9 +551,12 @@ def main(
     # R = Renderer(
     #     #H,
     #     ENV)
-    # alignment_model_dict = json.load(cfg.H.ALIGNMENT_FILE)
-    # alignment_model = amb.alignmentModelFromDict(alignment_model_dict=alignment_model_dict)
-    heliostat_model = HeliostatModel(H, H)
+    
+    with open(cfg.H.ALIGNMENT_FILE) as json_data:
+        alignment_model_dict = json.load(json_data)
+    
+    alignment_model = amb.alignmentModelFromDict(alignment_model_dict=alignment_model_dict)
+    heliostat_model = HeliostatModel(alignment_model, H)
     opt, sched = training.build_optimizer_scheduler(
         cfg,
         epochs * steps_per_epoch,
