@@ -642,7 +642,7 @@ def calc_batch_loss(
     )):
             
         target = datapoints.desired_image
-        target_z_alignment = datapoints.desired_concentrator_normal()
+        #target_z_alignment = datapoints.desired_concentrator_normal()
         sun_direction = datapoints.sun_directions()
         
         
@@ -655,7 +655,7 @@ def calc_batch_loss(
         
         
         #alignment, align_origin = H.align2(sun_direction)#datapoint.sun_direction
-        alignment, align_origin = heliostat_model.align(datapoints)
+        alignment, align_origin, target_z_alignment = heliostat_model.align(datapoints)
 
         #H_aligned = H.align(alignment, align_origin)
         surface_points, surface_normals = heliostat_model.surface_points(alignment, align_origin)
@@ -673,8 +673,12 @@ def calc_batch_loss(
         
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(th.sum(pred_bitmap), th.sum(target))
-        # print('target: ' + str(target_z_alignment))
-        # print('current: ' + str(alignment[..., -1, :]))
+        # if i == 0:
+        #     # print('target: ' + str(target_z_alignment))
+        #     # print('current: ' + str(alignment[..., -1, :]))
+        #     print(heliostat_model.get_params())
+        # else: 
+        #     continue
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
@@ -696,8 +700,8 @@ def calc_batch_loss(
             index=i,
         )
 
-        loss += curr_loss / len(training_data_points)#len(targets) ok?
-        raw_loss += curr_raw_loss / len(training_data_points)#len(targets) ok?
+        loss += curr_loss / len(training_data_points)
+        raw_loss += curr_raw_loss / len(training_data_points)
 
         with torch.no_grad():
             if return_extras:
@@ -879,7 +883,7 @@ def test_batch(
         plot_interval = config.TEST.IMG_INTERVAL
     # print(prealignments)
 
-    mean_loss = th.tensor(0.0, dtype=test_data_points[0].desired_image.dtype, device=heliostat_model.device)
+    mean_loss = th.tensor(0.0, dtype=list(test_data_points.values())[0].desired_image.dtype, device=heliostat_model.device)
     losses = []
     bitmaps: Optional[torch.Tensor] = None
     for (i, (R, datapoints_test, prealignment)) in enumerate(zip(
@@ -900,7 +904,7 @@ def test_batch(
             # print(prealignment)
             heliostat_model.disturbance_angles = prealignment
             
-        alignment, align_origin = heliostat_model.align(datapoints_test)
+        alignment, align_origin, target_z_alignment = heliostat_model.align(datapoints_test)
         #heliostat_aligned = heliostat_model.align(alignment, align_origin)
         #heliostat_aligned = heliostat.align(sun_direction)
 

@@ -36,7 +36,7 @@ class HeliostatModel:
         alignment_dict = self.alignment_model.alignFromDataPoint(datapoint)
         alignment = torch.stack([alignment_dict['side_up'], alignment_dict['side_east'], alignment_dict['normal']])
         pivot_point = alignment_dict['pivoting_point']
-        return alignment, pivot_point
+        return alignment, pivot_point, alignment_dict["normal_target"]
     
     def surface_points(self, alignment, pivot_point):
         align_origin = [

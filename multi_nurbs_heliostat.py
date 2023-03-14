@@ -578,6 +578,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             #sun_direction: torch.Tensor,
             alignment: torch.Tensor,
             align_origin: torch.Tensor,
+            pivot_point: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
         assert isinstance(heliostat, MultiNURBSHeliostat), \
@@ -588,6 +589,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
             #sun_direction,
             alignment,
             align_origin,
+            pivot_point,
             aim_point,
             align_points=False,
         )

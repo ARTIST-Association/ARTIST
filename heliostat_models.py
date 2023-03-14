@@ -666,57 +666,57 @@ def rotate(
     return _rotate(discrete_points, normals, align_origin)
 
 
-def heliostat_coord_system(
-        Position: torch.Tensor,
-        Sun: torch.Tensor,
-        Aimpoint: torch.Tensor,
-        ideal_normal: torch.Tensor,
-        disturbance_angles: List[torch.Tensor],
-        rotation_offset: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    dtype = Position.dtype
-    device = Position.device
-    pSun = Sun
-    pPosition = Position
-    pAimpoint = Aimpoint
-    # print(pSun,pPosition,pAimpoint)
-    # Berechnung Idealer Heliostat
-    # 0. Iteration
-    z = pAimpoint - pPosition
-    assert not (z == 0).all(), \
-        'same aimpoint as heliostat position not handled yet'
-    z = z / th.linalg.norm(z)
-    z = pSun + z
-    if (z == 0).all():
-        z = ideal_normal
-    else:
-        z = z / th.linalg.norm(z)
+# def heliostat_coord_system(
+#         Position: torch.Tensor,
+#         Sun: torch.Tensor,
+#         Aimpoint: torch.Tensor,
+#         ideal_normal: torch.Tensor,
+#         disturbance_angles: List[torch.Tensor],
+#         rotation_offset: torch.Tensor
+# ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+#     dtype = Position.dtype
+#     device = Position.device
+#     pSun = Sun
+#     pPosition = Position
+#     pAimpoint = Aimpoint
+#     # print(pSun,pPosition,pAimpoint)
+#     # Berechnung Idealer Heliostat
+#     # 0. Iteration
+#     z = pAimpoint - pPosition
+#     assert not (z == 0).all(), \
+#         'same aimpoint as heliostat position not handled yet'
+#     z = z / th.linalg.norm(z)
+#     z = pSun + z
+#     if (z == 0).all():
+#         z = ideal_normal
+#     else:
+#         z = z / th.linalg.norm(z)
 
-    if (z == ideal_normal).all():
-        x = th.tensor([1, 0, 0], dtype=dtype, device=device)
-        # TODO add sanity 90° angle check between x and z
-    else:
-        x = th.stack([
-            -z[1],
-            z[0],
-            th.tensor(0, dtype=dtype, device=device),
-        ])
-    x = x / th.linalg.norm(x)
-    y = th.cross(z, x)
+#     if (z == ideal_normal).all():
+#         x = th.tensor([1, 0, 0], dtype=dtype, device=device)
+#         # TODO add sanity 90° angle check between x and z
+#     else:
+#         x = th.stack([
+#             -z[1],
+#             z[0],
+#             th.tensor(0, dtype=dtype, device=device),
+#         ])
+#     x = x / th.linalg.norm(x)
+#     y = th.cross(z, x)
 
-    # Add heliostat rotation error/disturbance.
-    x_err_rot = utils.axis_angle_rotation(x, disturbance_angles[0])
-    y_err_rot = utils.axis_angle_rotation(y, disturbance_angles[1])
-    z_err_rot = utils.axis_angle_rotation(
-        z, disturbance_angles[2] + rotation_offset)
-    # print(Position)
-    # print(disturbance_angles)
-    full_rot = z_err_rot @ y_err_rot @ x_err_rot
+#     # Add heliostat rotation error/disturbance.
+#     x_err_rot = utils.axis_angle_rotation(x, disturbance_angles[0])
+#     y_err_rot = utils.axis_angle_rotation(y, disturbance_angles[1])
+#     z_err_rot = utils.axis_angle_rotation(
+#         z, disturbance_angles[2] + rotation_offset)
+#     # print(Position)
+#     # print(disturbance_angles)
+#     full_rot = z_err_rot @ y_err_rot @ x_err_rot
 
-    x = full_rot @ x
-    y = full_rot @ y
-    z = full_rot @ z
-    return x, y, z
+#     x = full_rot @ x
+#     y = full_rot @ y
+#     z = full_rot @ z
+#     return x, y, z
 
 
 class AbstractHeliostat:
