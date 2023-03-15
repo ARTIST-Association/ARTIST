@@ -506,14 +506,18 @@ def build_loss_funcs(
         )
         loss = raw_loss.clone()
 
-        # Penalize misses
-        # miss_loss = if_else_zero(
-        #     miss_loss_factor != 0,
-        #     lambda: miss_loss_func(pred_bitmap, dx_ints, dy_ints, env),
-        #     dtype,
-        #     device,
-        # )
-        # loss += miss_loss
+        #Penalize misses
+        miss_loss = if_else_zero(
+            miss_loss_factor != 0,
+            lambda: miss_loss_func(pred_bitmap, dx_ints, dy_ints, env),
+            dtype,
+            device,
+        )
+        #loss += miss_loss
+
+        #idea: 
+            # image loss if miss loss small
+            # alignment loss if miss loss high
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
