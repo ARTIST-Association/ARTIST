@@ -492,7 +492,9 @@ def build_loss_funcs(
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         dtype = pred_bitmap.dtype
         device = pred_bitmap.device
-
+        
+        #raw_loss = torch.tensor(0, dtype = dtype, device=device)
+        #loss = torch.tensor(0, dtype = dtype, device=device)
         raw_loss = if_else_zero(
             loss_factor != 0,
             lambda: test_loss_func(
@@ -505,13 +507,13 @@ def build_loss_funcs(
         loss = raw_loss.clone()
 
         # Penalize misses
-        miss_loss = if_else_zero(
-            miss_loss_factor != 0,
-            lambda: miss_loss_func(pred_bitmap, dx_ints, dy_ints, env),
-            dtype,
-            device,
-        )
-        loss += miss_loss
+        # miss_loss = if_else_zero(
+        #     miss_loss_factor != 0,
+        #     lambda: miss_loss_func(pred_bitmap, dx_ints, dy_ints, env),
+        #     dtype,
+        #     device,
+        # )
+        # loss += miss_loss
 
         # Penalize misalignment
         # TODO Does this even make sense when using active canting?
@@ -519,14 +521,16 @@ def build_loss_funcs(
             alignment_loss_factor != 0,
             lambda: alignment_primitive_loss_func(
                 (
-                    z_alignment.mean(dim=0)
-                    if z_alignment.ndim > 1 and target_z_alignment.ndim == 1
-                    else z_alignment
+                    z_alignment
+                    # z_alignment.mean(dim=0)
+                    # if z_alignment.ndim > 1 and target_z_alignment.ndim == 1
+                    # else z_alignment
                 ),
                 (
-                    target_z_alignment.mean(dim=0)
-                    if target_z_alignment.ndim > 1 and z_alignment.ndim == 1
-                    else target_z_alignment
+                    target_z_alignment
+                    # target_z_alignment.mean(dim=0)
+                    # if target_z_alignment.ndim > 1 and z_alignment.ndim == 1
+                    # else target_z_alignment
                 ),
             ) * alignment_loss_factor,
             dtype,
@@ -535,39 +539,39 @@ def build_loss_funcs(
         loss += alignment_loss
 
         # Weighted Hausdorff loss
-        hausdorff_loss = if_else_zero(
-            hausdorff_loss_factor != 0,
-            lambda: hausdorff_loss_func(pred_bitmap, target_set),
-            dtype,
-            device,
-        )
-        loss += hausdorff_loss
+        # hausdorff_loss = if_else_zero(
+        #     hausdorff_loss_factor != 0,
+        #     lambda: hausdorff_loss_func(pred_bitmap, target_set),
+        #     dtype,
+        #     device,
+        # )
+        # loss += hausdorff_loss
 
-        if (
-                isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper))
-                and cfg.USE_L1_WEIGHT_DECAY
-        ):
-            weight_penalty = l1_weight_penalty(opt, None)
-            weight_decay_factor: float = cfg.WEIGHT_DECAY_FACTOR
-            loss += weight_decay_factor * weight_penalty
-        else:
-            for name in to_optimize:
-                normalized_name, _ = normalize_param_group_name(name)
+        # if (
+        #         isinstance(opt, (th.optim.LBFGS, BasinHoppingWrapper))
+        #         and cfg.USE_L1_WEIGHT_DECAY
+        # ):
+        #     weight_penalty = l1_weight_penalty(opt, None)
+        #     weight_decay_factor: float = cfg.WEIGHT_DECAY_FACTOR
+        #     loss += weight_decay_factor * weight_penalty
+        # else:
+        #     for name in to_optimize:
+        #         normalized_name, _ = normalize_param_group_name(name)
 
-                if normalized_name == 'surface':
-                    node: CfgNode = cfg
-                else:
-                    continue
-                    node = getattr(cfg, normalized_name.upper())
+        #         if normalized_name == 'surface':
+        #             node: CfgNode = cfg
+        #         else:
+        #             continue
+        #             node = getattr(cfg, normalized_name.upper())
 
-                if not node.USE_L1_WEIGHT_DECAY:
-                    continue
+        #         if not node.USE_L1_WEIGHT_DECAY:
+        #             continue
 
-                # TODO This is very inefficient as we do a N^2 loop.
-                #      However, N is super small so we shouldn't care.
-                weight_penalty = l1_weight_penalty(opt, name)
-                weight_decay_factor = node.WEIGHT_DECAY_FACTOR
-                loss += weight_decay_factor * weight_penalty
+        #         # TODO This is very inefficient as we do a N^2 loop.
+        #         #      However, N is super small so we shouldn't care.
+        #         weight_penalty = l1_weight_penalty(opt, name)
+        #         weight_decay_factor = node.WEIGHT_DECAY_FACTOR
+        #         loss += weight_decay_factor * weight_penalty
         return loss, raw_loss
 
     return loss_func, test_loss_func
@@ -674,11 +678,11 @@ def calc_batch_loss(
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(th.sum(pred_bitmap), th.sum(target))
         # if i == 0:
-        #     # print('target: ' + str(target_z_alignment))
-        #     # print('current: ' + str(alignment[..., -1, :]))
+        #     print('target: ' + str(target_z_alignment))
+        #     print('current: ' + str(alignment[..., -1, :]))
         #     print(heliostat_model.get_params())
         # else: 
-        #     continue
+        #      continue
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,

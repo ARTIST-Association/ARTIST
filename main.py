@@ -225,9 +225,9 @@ def main(
         'joint_2_cosys_pivot_elev',
         'joint_2_cosys_pivot_rad',
 
-        # 'concentrator_cosys_pivot_azim',
-        # 'concentrator_cosys_pivot_elev',
-        # 'concentrator_cosys_pivot_rad',
+        'concentrator_cosys_pivot_azim',
+        'concentrator_cosys_pivot_elev',
+        'concentrator_cosys_pivot_rad',
 
         'joint_1_east_tilt',
         'joint_1_north_tilt',
@@ -272,11 +272,15 @@ def main(
     training_renderer = {}
     #for i, datapoint in enumerate(training_data_points.values()):
     for i, sun_direction in enumerate(sun_directions):
+        if torch.abs(sun_direction[1]) < 0.1:
+            sun_direction[1] = sun_direction[1]*2
+        if sun_direction[2] < 0.1:
+            sun_direction[2] = sun_direction[2]*2
         if sun_direction[2] < 0:
             sun_direction[2] = - sun_direction[2]
         if sun_direction[1] > 0:
             sun_direction[1] = - sun_direction[1]
-        
+        sun_direction = sun_direction/sun_direction.norm()
 
         normal, pivoting_point, side_east, side_up, actuator_steps, cosys = target_alignment_model.alignmentFromSourceVec(to_source=sun_direction, aimpoint=aimpoint)
         training_data_points[i] = HeliostatDataPoint(id = i, 
@@ -444,7 +448,6 @@ def main(
                                             #None, 
                                             to_source = sun_directions_test,
                                             )
-    
         #ENV = Environment(cfg.AC, device)
         #ENV.receiver_center = datapoint.aimpoint
         R = Renderer(
