@@ -287,7 +287,7 @@ def heliostat_by_function(
     cfg = heliostat_function_cfg
 
     # width = cfg.WIDTH / 2
-    # height = cfg.HEIGHT / 2
+    # height = cfg.HEIGHT / 2MeasurementData
 
     # X = th.linspace(-width, width, cfg.ROWS)
     # Y = th.linspace(-height, height, cfg.COLS)
@@ -849,7 +849,8 @@ class AbstractHeliostat:
 
     def align(
             self,
-            sun_direction: torch.Tensor,
+            alignment: torch.Tensor,
+            align_origin: torch.Tensor,
             aim_point: Optional[torch.Tensor] = None,
     ) -> 'AbstractHeliostat':
         assert hasattr(self, 'aligned_cls'), (
@@ -858,7 +859,36 @@ class AbstractHeliostat:
         )
         if aim_point is None:
             aim_point = self.aim_point
-        return self.aligned_cls(self, sun_direction, aim_point)
+        return self.aligned_cls(self, alignment,align_origin, aim_point)
+    
+    def align2(
+            self,
+            sun_direction: torch.Tensor,
+            aim_point: Optional[torch.Tensor] = None,
+        ) -> torch.Tensor:
+            
+            if aim_point is None:
+                aim_point = self.aim_point
+                
+            ideal_normal = th.tensor(
+                self.cfg.IDEAL.NORMAL_VECS,
+                dtype=sun_direction.dtype,
+                device=sun_direction.device,
+            )
+            
+            alignment = th.stack(heliostat_coord_system(
+            self.position_on_field,
+            sun_direction,
+            aim_point,
+            ideal_normal,
+            self.disturbance_angles,
+            self.rotation_offset,
+        ))
+            align_origin = [
+                throt.Rotate(alignment, dtype=alignment.dtype)]
+        
+            return alignment, align_origin
+
 
 
 class Heliostat(AbstractHeliostat):
@@ -1294,7 +1324,7 @@ class Heliostat(AbstractHeliostat):
             # Assume that we weren't able to set NURBS facets.
             for (facet, normals) in zip(
                     self.facets._facets,  # type: ignore[attr-defined]
-                    data['heliostat_normals'],
+                    data['heliostat_normals']
             ):
                 facet._normals = normals
         self.disturbance_angles = data['disturbance_rotation_angles_rad']
@@ -1315,7 +1345,9 @@ class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
             heliostat: Heliostat,
-            sun_direction: torch.Tensor,
+            #sun_direction: torch.Tensor,
+            alignment: torch.Tensor,
+            align_origin: torch.Tensor,
             aim_point: torch.Tensor,
             align_points: bool = True,
     ) -> None:
@@ -1326,42 +1358,27 @@ class AlignedHeliostat(AbstractHeliostat):
 
         self._heliostat = heliostat
 
-        from_sun = -sun_direction
-        self.from_sun = from_sun.unsqueeze(0)
-        ideal_normal = th.tensor(
-            self._heliostat.cfg.IDEAL.NORMAL_VECS,
-            dtype=from_sun.dtype,
-            device=from_sun.device,
-        )
+        #from_sun = -sun_direction
+        #self.from_sun = from_sun.unsqueeze(0)
+        #ideal_normal = th.tensor(
+        #    self._heliostat.cfg.IDEAL.NORMAL_VECS,
+        #    dtype=from_sun.dtype,
+        #    device=from_sun.device,
+        #)
 
         self.facets = self._heliostat.facets
         if isinstance(self._heliostat.canting_algo, ActiveCanting):
             self.alignment = th.stack([
-                th.stack(heliostat_coord_system(
-                    position + self._heliostat.position_on_field,
-                    sun_direction,
-                    aim_point,
-                    ideal_normal,
-                    self._heliostat.disturbance_angles,
-                    self._heliostat.rotation_offset,
-                ))
+                alignment
                 for position in self.facets.positions
             ])
             self.align_origin = [
-                throt.Rotate(alignment, dtype=self.alignment.dtype)
+                align_origin
                 for alignment in self.alignment
             ]
         else:
-            self.alignment = th.stack(heliostat_coord_system(
-                self._heliostat.position_on_field,
-                sun_direction,
-                aim_point,
-                ideal_normal,
-                self._heliostat.disturbance_angles,
-                self._heliostat.rotation_offset,
-            ))
-            self.align_origin = [
-                throt.Rotate(self.alignment, dtype=self.alignment.dtype)]
+            self.alignment = alignment
+            self.align_origin = align_origin
 
         if align_points:
             self._align()
@@ -1479,8 +1496,8 @@ class AlignedHeliostat(AbstractHeliostat):
             self._heliostat.facets.offsets,
         )
 
-    def get_ray_directions(self) -> torch.Tensor:
-        return reflect_rays_(self.from_sun, self.normals)
+    #def get_ray_directions(self) -> torch.Tensor:
+    #    return reflect_rays_(self.from_sun, self.normals)
 
 
 Heliostat.aligned_cls = AlignedHeliostat

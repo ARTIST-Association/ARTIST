@@ -14,7 +14,7 @@ _C.SEED                                 = 42
 _C.USE_FLOAT64                          = False
 _C.USE_GPU                              = True
 _C.USE_CURL                             = False
-_C.USE_NURBS                            = True
+_C.USE_NURBS                            = False
 _C.SAVE_RESULTS                         = True
 _C.CP_PATH                              = ""
 # _C.CP_PATH                              = "C:\\Python\\DiffSTRAL\\diff-stral\\Results\\MoreNURBS\\LongRunMultiSun\\Logfiles\\MultiNURBSHeliostat.pt"
@@ -125,6 +125,9 @@ _C.H.SHAPE                              = "function"                            
 # z-axis rotation offset in degrees.
 _C.H.ROTATION_OFFSET_ANGLE = 0
 
+#_C.H.TARGET_ALIGNMENT_FILE = None
+#_C.H.ALIGNMENT_FILE = None
+
 _C.H.IDEAL                              = CN()
 _C.H.IDEAL.POSITION_ON_FIELD            = [0, 0, 0]  # in m
 _C.H.IDEAL.NORMAL_VECS                  = [0, 0, 1]
@@ -135,7 +138,7 @@ _C.H.IDEAL.COLS                         = 32
 
 # Where to aim the heliostat. If `None`, automatically aim at
 # `cfg.AC.RECEIVER.CENTER`.
-_C.H.IDEAL.AIM_POINT = None
+_C.H.IDEAL.AIM_POINT = [0, -10, 0]
 # Rotational disturbance angles (x, y and z axes) in degrees.
 _C.H.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.IDEAL.FACETS = CN()
@@ -170,7 +173,7 @@ _C.H.FUNCTION.FREQUENCY                 = 2
 _C.H.FUNCTION.REDUCTION_FACTOR          = 1000
 
 # See `cfg.H.IDEAL` for documentation.
-_C.H.FUNCTION.AIM_POINT = None
+_C.H.FUNCTION.AIM_POINT = [0, -10, 0]
 _C.H.FUNCTION.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.FUNCTION.FACETS = CN()
 _C.H.FUNCTION.FACETS.POSITIONS = _C.H.IDEAL.FACETS.POSITIONS.copy()
@@ -198,7 +201,7 @@ _C.H.DEFLECT_DATA.FACETHEADER_STRUCT_FMT        = '=i9fI'
 _C.H.DEFLECT_DATA.RAY_STRUCT_FMT                = '=7f'
 
 # See `cfg.H.IDEAL` for documentation.
-_C.H.DEFLECT_DATA.AIM_POINT = None
+_C.H.DEFLECT_DATA.AIM_POINT = [0, -10, 0]
 _C.H.DEFLECT_DATA.DISTURBANCE_ROT_ANGLES        = [0.0, 0.0, 0.0]
 _C.H.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
@@ -221,7 +224,7 @@ _C.H.OTHER.FILENAME                     = 'tinker.obj'
 _C.H.OTHER.USE_WEIGHTED_AVG             = True
 
 # See `cfg.H.IDEAL` for documentation.
-_C.H.OTHER.AIM_POINT = None
+_C.H.OTHER.AIM_POINT = [0, -10, 0]
 _C.H.OTHER.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.H.OTHER.FACETS = CN()
 _C.H.OTHER.POSITION_ON_FIELD = [0, 0, 0]  # in m

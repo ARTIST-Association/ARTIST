@@ -4,7 +4,7 @@ import torch as th
 
 from environment import Environment
 from heliostat_models import AbstractHeliostat
-
+import utils
 
 def Rx(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
     zeros = th.zeros_like(alpha)
@@ -273,19 +273,29 @@ def normalize_bitmap(
 class Renderer(object):
     def __init__(
             self,
-            heliostat: AbstractHeliostat,
+            #heliostat: AbstractHeliostat,
             environment: Environment,
     ) -> None:
-        self.H = heliostat
+        #self.H = heliostat
         self.ENV = environment
         self.redraw_random_variables: bool = \
             self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
 
-        if not self.redraw_random_variables:
-            self.xi, self.yi = self.ENV.sun.sample(len(self.H))
+        #if not self.redraw_random_variables:
+        #    self.xi, self.yi = self.ENV.sun.sample(2008) # 2008=len(self.H)!!!
+        self.xi = None
+        self.yi = None
+        
+    def reflect_rays_(self, 
+                      rays: torch.Tensor, 
+                      normals: torch.Tensor) -> torch.Tensor:
+        return rays - 2 * utils.batch_dot(rays, normals) * normals
 
     def render(
             self,
+            surface_points,
+            surface_normals,
+            rays,
             heliostat: Optional[AbstractHeliostat] = None,
             return_extras: bool = False,
     ) -> Union[
@@ -302,14 +312,18 @@ class Renderer(object):
             ],
         ],
     ]:
-        if heliostat is None:
-            heliostat = self.H
+        
+        ray_directions = self.reflect_rays_(rays, surface_normals)
         if self.redraw_random_variables:
-            xi, yi = self.ENV.sun.sample(len(heliostat))
+            xi, yi = self.ENV.sun.sample(len(ray_directions))
+        elif not torch.is_tensor(self.xi):
+            xi, yi = self.ENV.sun.sample(len(ray_directions))
+            self.xi = xi
+            self.yi = yi
         else:
             xi = self.xi
             yi = self.yi
-        surface_points, ray_directions = heliostat()
+        #surface_points, ray_directions = heliostat()
         # TODO Maybe another name?
 
         distorted_ray_directions = compute_ray_directions(

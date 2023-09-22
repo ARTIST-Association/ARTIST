@@ -450,10 +450,7 @@ def get_z_alignments(
         sun_directions: torch.Tensor,
 ) -> torch.Tensor:
     return th.stack([
-        cast(
-            'AlignedHeliostat',
-            heliostat.align(sun_dir),
-        ).alignment[..., -1, :]
+        heliostat.align2(sun_dir)[0][..., -1, :]
         for sun_dir in sun_directions
     ])
 

@@ -43,13 +43,17 @@ TrainObjects = collections.namedtuple(
     [
         'opt',
         'sched',
-        'H',
+        #'H',
+        'heliostat_model',
         'ENV',
-        'R',
-        'targets',
-        'target_z_alignments',
+        #'R',
+        'test_renderer',
+        'training_data_points',
+        #'targets',
+        #'target_z_alignments',
+        #'sun_directions',
         'target_sets',
-        'sun_directions',
+        #'sun_directions',
         'loss_func',
         'config',
         'epoch',
@@ -64,18 +68,22 @@ TrainObjects = collections.namedtuple(
 TestObjects = collections.namedtuple(
     'TestObjects',
     [
-         'H',
+         #'H',
+         'heliostat_model',
          'ENV',
-         'R',
-         'test_targets',
+         #'R',
+         'test_renderer',
+         'test_data_points',
+         #'test_targets',
          'test_target_sets',
-         'test_sun_directions',
+         #'test_sun_directions',
          'test_loss_func',
          'cfg',
          'epoch',
          'prefix',
          'writer',
-         'H_target',
+         #'H_target'
+         'heliostat_model_target',
          'logdir',
          'reduction',
          'prealignment',
@@ -297,8 +305,7 @@ def _build_scheduler(
             max_lr=cfg.MAX_LR,
             step_size_up=cfg.STEP_SIZE_UP,
             cycle_momentum=cfg.CYCLE_MOMENTUM,
-            mode=cfg.MODE,
-        )
+            mode=cfg.MODE)
     elif name == "exponential":
         cfg = cfg_scheduler.EXP
         sched = th.optim.lr_scheduler.ExponentialLR(opt, cfg.GAMMA)
@@ -577,13 +584,15 @@ def calc_batch_loss(
         opt,
         # Don't need scheduler.
         _,
-        H,
+        #H,
+        heliostat_model,
         ENV,
-        R,
-        targets,
-        target_z_alignments,
+        training_renderer,
+        #targets,
+        training_data_points,
+        #target_z_alignments,
         target_sets,
-        sun_directions,
+        #sun_directions,
         loss_func,
         config,
         epoch,
@@ -598,49 +607,76 @@ def calc_batch_loss(
     # print(index)
     if minimizer_epoch:
         epoch = minimizer_epoch
-
+    
     # Initialize Parameters
     # =====================
     # print(targets.shape,target_z_alignments.shape,sun_directions.shape)
-    loss = th.tensor(0.0, dtype=targets.dtype, device=H.device)
+    loss = th.tensor(0.0, dtype=torch.float64, device=heliostat_model.device)
     raw_loss = th.zeros_like(loss)
     if return_extras:
-        num_missed = th.tensor(0.0, dtype=targets.dtype, device=H.device)
+        num_missed = th.tensor(0.0, dtype=torch.float64, device=heliostat_model.device)
 
     # Batch Loop
     # ==========
     for (i, (
-            target,
-            target_z_alignment,
+            #target,
+            #target_z_alignment,
+            #sun_direction,
+            R,
+            datapoints,
             target_set,
-            sun_direction,
             prealignment,
     )) in enumerate(zip(
-            targets,
-            target_z_alignments,
+            training_renderer.values(),
+            training_data_points.values(),
+            #targets,
+            #target_z_alignments,
+            #sun_directions,
             target_sets if target_sets is not None else itertools.repeat(None),
-            sun_directions,
             (
                 prealignments
                 if prealignments is not None
                 else itertools.repeat(None)
             ),
     )):
+            
+        target = datapoints.desired_image
+        target_z_alignment = datapoints.desired_concentrator_normal
+        sun_direction = datapoints.sun_directions
+        
+        
+        
         if index is None:
             index = i
         if prealignment:
-            H.disturbance_angles = prealignment
-        H_aligned = H.align(sun_direction)
+            heliostat_model.disturbance_angles = prealignment
+        
+        
+        
+        #alignment, align_origin = H.align2(sun_direction)#datapoint.sun_direction
+        alignment, align_origin = heliostat_model.align(datapoints)
+
+        #H_aligned = H.align(alignment, align_origin)
+        surface_points, surface_normals = heliostat_model.surface_points(alignment, align_origin)
+
+        
+        #surface_points = H_aligned.discrete_points
+        #surface_normals = H_aligned.normals
+        from_sun = - sun_direction
+        rays = from_sun.unsqueeze(0)
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, indices, _, _),
-        ) = R.render(H_aligned, return_extras=True)
+        ) = R.render(surface_points, surface_normals, rays, return_extras=True)
+        
+        
         # pred_bitmap = pred_bitmap.unsqueeze(0)
         # print(th.sum(pred_bitmap), th.sum(target))
         curr_loss, curr_raw_loss = loss_func(
             pred_bitmap,
             target,
-            H_aligned.alignment[..., -1, :],
+            #H_aligned.alignment[..., -1, :], #check
+            alignment[..., -1, :], #ok?
             target_z_alignment,
             target_set,
             dx_ints,
@@ -657,15 +693,15 @@ def calc_batch_loss(
             index=i,
         )
 
-        loss += curr_loss / len(targets)
-        raw_loss += curr_raw_loss / len(targets)
+        loss += curr_loss / len(training_data_points)#len(targets) ok?
+        raw_loss += curr_raw_loss / len(training_data_points)#len(targets) ok?
 
         with torch.no_grad():
             if return_extras:
                 # Compare metrics
                 num_missed += (
                     (indices.numel() - indices.count_nonzero())
-                    / len(targets)
+                    / len(training_data_points)#len(targets) ok?
                 )
     # exit()
     if return_extras:
@@ -798,7 +834,7 @@ def train_batch(
     else:
         sched.step()
 
-    train_objects.H.step(verbose=True)
+    train_objects.heliostat_model.step(verbose=True) #check
     # if opt.param_groups[0]["lr"] < last_lr:
     #     last_lr = opt.param_groups[0]["lr"]
 
@@ -811,18 +847,22 @@ def test_batch(
         minimizer_epoch: Optional[int] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     (
-        heliostat,
+        heliostat_model,
+        #heliostat,
         env,
-        renderer,
-        targets,
+        test_renderer,
+        #renderer,
+        test_data_points,
+        #targets,
         target_sets,
-        sun_directions,
+        #sun_directions,
         loss_func,
         config,
         epoch,
         prefix,
         writer,
-        H_target,
+        #H_target,
+        heliostat_model_target,
         logdir,
         reduction,
         prealignments,
@@ -836,36 +876,54 @@ def test_batch(
         plot_interval = config.TEST.IMG_INTERVAL
     # print(prealignments)
 
-    mean_loss = th.tensor(0.0, dtype=targets.dtype, device=heliostat.device)
+    mean_loss = th.tensor(0.0, dtype=test_data_points[0].desired_image.dtype, device=heliostat_model.device)
     losses = []
     bitmaps: Optional[torch.Tensor] = None
-    for (i, (target, sun_direction, prealignment)) in enumerate(zip(
-            targets,
-            sun_directions,
+    for (i, (R, datapoints_test, prealignment)) in enumerate(zip(
+            #targets,
+            #sun_directions,
+            test_renderer.values(),
+            test_data_points.values(),
             (
                 prealignments
                 if prealignments is not None
                 else itertools.repeat(None)
             ),
     )):
+        target = datapoints_test.desired_image
+        sun_direction = datapoints_test.sun_directions
+        
         if prealignment:
             # print(prealignment)
-            heliostat.disturbance_angles = prealignment
-        heliostat_aligned = heliostat.align(sun_direction)
+            heliostat_model.disturbance_angles = prealignment
+            
+        alignment, align_origin = heliostat_model.align(datapoints_test)
+        #heliostat_aligned = heliostat_model.align(alignment, align_origin)
+        #heliostat_aligned = heliostat.align(sun_direction)
+
+        #surface_points = heliostat_aligned.discrete_points
+        #surface_normals = heliostat_aligned.normals
+        surface_points, surface_normals = heliostat_model.surface_points(alignment, align_origin)
+        from_sun = -sun_direction
+        rays = from_sun.unsqueeze(0)
+    
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, _, _, _),
-        ) = renderer.render(heliostat_aligned, return_extras=True)
+        ) = R.render(surface_points, surface_normals, rays, return_extras=True)
+
+
 
         if bitmaps is None:
             bitmaps = th.empty(
-                (len(targets),) + pred_bitmap.shape,
+                (len(test_data_points)#len(targets) #ok?
+                 ,) + pred_bitmap.shape,
                 dtype=pred_bitmap.dtype,
             )
 
         loss = loss_func(pred_bitmap, target)
         if reduction:
-            mean_loss += loss / len(targets)
+            mean_loss += loss / len(test_data_points)#len(targets) #ok?
         else:
             losses.append(loss)
         bitmaps[i] = pred_bitmap.detach().cpu()
