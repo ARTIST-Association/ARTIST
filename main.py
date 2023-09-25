@@ -2,7 +2,7 @@ import atexit
 import copy
 from datetime import datetime
 import os
-from typing import Callable, cast, List, Optional
+from typing import Callable, cast, List, Optional, Union
 
 import torch
 import torch as th
@@ -40,7 +40,7 @@ def load_defaults(config_file_name: Optional[str] = None) -> CfgNode:
         DESCRIPTION. config including all parameters (will be splitted in seperate parts soon)#TODO
 
     """
-    cfg_default = get_cfg_defaults()
+    cfg_default = get_cfg_defaults() # default.py
     if config_file_name:
         print(f"load: {config_file_name}")
         # config_file = os.path.join("configs", config_file_name)
@@ -57,10 +57,10 @@ def change_pytorch_float_type(use_float_64: bool) -> None:
     else:
         th.set_default_dtype(th.float32)
 
-def _name_root_logdir(sweep:bool, cfg:CfgNode)-> str:
+def _name_root_logdir(config_file_name: str, cfg:CfgNode, sweep:bool)-> str:
     if sweep:
         assert config_file_name is not None
-        logdir = os.path.split(config_file_name)[0] #Takes the 
+        logdir = os.path.split(config_file_name)[0] #Takes the name of the sweep as the folder name
     else:
         now = datetime.now()
         time_str = now.strftime("%y%m%d_%H%M%S")
@@ -78,51 +78,55 @@ def _name_root_logdir(sweep:bool, cfg:CfgNode)-> str:
         )
     return logdir
 
-def setup_logging(save_results: bool, cfg:CfgNode, sweep: bool):
-    if save_results:
-            logdir = _name_root_logdir(sweep)
+def setup_logging(config_file_name: str, cfg:CfgNode, sweep: bool)-> tuple[dict, Union[SummaryWriter,None]]:
+    logdirs = {}
+    if cfg.SAVE_RESULTS:
+            logdir = _name_root_logdir(config_file_name, cfg, sweep)
+            logdirs["root"] = logdir
             os.makedirs(logdir, exist_ok=True)
             with open(os.path.join(logdir, "config.yaml"), "w") as f:
                 f.write(cfg.dump())
 
             assert logdir is not None
-            logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
-            assert logdir_files is not None
-            logdir_images: Optional[str] = os.path.join(logdir, "Images")
-            assert logdir_images is not None
-            logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
-            logdir_surfaces = os.path.join(logdir_images, "Surfaces")
-    
-            os.makedirs(logdir, exist_ok=True)
-            os.makedirs(logdir_files, exist_ok=True)
-            os.makedirs(logdir_images, exist_ok=True)
-            os.makedirs(logdir_enhanced_test, exist_ok=True)
-    
+            logdirs["files"]: Optional[str] = os.path.join(logdir, "Logfiles")
+            os.makedirs(logdirs["files"], exist_ok=True)
+            
+            assert logdirs["files"] is not None
+            logdirs["images"]: Optional[str] = os.path.join(logdir, "Images")
+            os.makedirs(logdirs["images"], exist_ok=True)
+            
+            assert logdirs["images"] is not None
+            logdirs["enhanced_test"] = os.path.join(logdirs["images"], "EnhancedTest")
+            os.makedirs(logdirs["enhanced_test"], exist_ok=True)
+            
+            logdirs["surfaces"] = os.path.join(logdirs["images"], "Surfaces")
+            os.makedirs(logdirs["surfaces"], exist_ok=True)
+            
             writer: Optional[SummaryWriter] = SummaryWriter(logdir)
     else:
         writer = None
-        logdir = None
-        logdir_files = None
-        logdir_images = None
     
     if isinstance(writer, SummaryWriter):
         atexit.register(lambda: cast(SummaryWriter, writer).close())
+        
+    return logdirs, writer
 
 def main(
         config_file_name: Optional[str] = None,
         sweep: Optional[bool] = False,
 ) -> None:
-    cfg = load_defaults()
+    cfg = load_defaults(config_file_name) 
     
     # Set system parameters
     # =====================
     utils.fix_pytorch3d() # Fix pytorch3d dtype propagation
     change_pytorch_float_type(cfg.USE_FLOAT64)
-    setup_logging(cfg.SAVE_RESULTS)
+    logdirs, writer = setup_logging(config_file_name, cfg, sweep)
     sanity_checks.check_config_file_on_common_mistakes(cfg)
     # Set system params
     # =================
     th.manual_seed(cfg.SEED)
+    print("HELLO",cfg.USE_GPU)
     device = th.device(
         'cuda'
         if cfg.USE_GPU and th.cuda.is_available()
@@ -240,7 +244,7 @@ def main(
             H_target,
             ENV,
             sun_directions,
-            logdir_files,
+            logdirs["files"],
             "train",
             writer,
         )
@@ -580,7 +584,7 @@ def main(
             writer,
             #H_target,
             heliostat_model_target,
-            logdir_surfaces,
+            logdirs["surfaces"],
             True,
             test_prealignment,
         )
@@ -645,7 +649,7 @@ def main(
                     H,
                     #heliostat_model,
                     epoch,
-                    logdir_surfaces,
+                    logdirs["surfaces"],
                     writer,
                 )
                 # for i, image in enumerate(pred_bitmap):
@@ -662,7 +666,7 @@ def main(
 
         # Save Section
         # Advanced Plotting
-        plot.create_plots(H, epoch, logdir_enhanced_test, H_target=H_target)
+        plot.create_plots(H, epoch, logdirs["enhanced_test"], H_target=H_target)
 
         if test_loss.detach().cpu() < best_result:
             if cfg.SAVE_RESULTS:
@@ -673,14 +677,14 @@ def main(
                 opt_save_data = {'opt': copy.deepcopy(opt.state_dict())}
                 # Store remembered data and optimizer state on disk.
                 model_name = type(H).__name__
-                assert logdir_files is not None
+                assert logdirs["files"] is not None
                 th.save(
                     save_data,
-                    os.path.join(logdir_files, f'{model_name}.pt'),
+                    os.path.join(logdirs["files"], f'{model_name}.pt'),
                 )
                 th.save(
                     opt_save_data,
-                    os.path.join(logdir_files, f'{model_name}_opt.pt'),
+                    os.path.join(logdirs["files"], f'{model_name}_opt.pt'),
                 )
             best_result = test_loss.detach().cpu()
 
@@ -692,5 +696,5 @@ def main(
 if __name__ == '__main__':
     path_to_yaml = os.path.join(
         "TestingConfigs", "BestSurfaceReconstructionRealPosition.yaml")
-    main(path_to_yaml)
+    main(config_file_name=path_to_yaml)
     # main()
