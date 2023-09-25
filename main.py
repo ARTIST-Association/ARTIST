@@ -57,6 +57,57 @@ def change_pytorch_float_type(use_float_64: bool) -> None:
     else:
         th.set_default_dtype(th.float32)
 
+def _name_root_logdir(sweep:bool, cfg:CfgNode)-> str:
+    if sweep:
+        assert config_file_name is not None
+        logdir = os.path.split(config_file_name)[0] #Takes the 
+    else:
+        now = datetime.now()
+        time_str = now.strftime("%y%m%d_%H%M%S")
+
+        logdir = cfg.LOGDIR
+        assert logdir is not None
+        logdir = utils.normalize_path(logdir)
+
+        root_logdir = os.path.join(logdir, cfg.ID)
+        os.makedirs(root_logdir, exist_ok=True)
+
+        logdir = os.path.join(
+            root_logdir,
+            cfg.EXPERIMENT_NAME + f"_{time_str}",
+        )
+    return logdir
+
+def setup_logging(save_results: bool, cfg:CfgNode, sweep: bool):
+    if save_results:
+            logdir = _name_root_logdir(sweep)
+            os.makedirs(logdir, exist_ok=True)
+            with open(os.path.join(logdir, "config.yaml"), "w") as f:
+                f.write(cfg.dump())
+
+            assert logdir is not None
+            logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
+            assert logdir_files is not None
+            logdir_images: Optional[str] = os.path.join(logdir, "Images")
+            assert logdir_images is not None
+            logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
+            logdir_surfaces = os.path.join(logdir_images, "Surfaces")
+    
+            os.makedirs(logdir, exist_ok=True)
+            os.makedirs(logdir_files, exist_ok=True)
+            os.makedirs(logdir_images, exist_ok=True)
+            os.makedirs(logdir_enhanced_test, exist_ok=True)
+    
+            writer: Optional[SummaryWriter] = SummaryWriter(logdir)
+    else:
+        writer = None
+        logdir = None
+        logdir_files = None
+        logdir_images = None
+    
+    if isinstance(writer, SummaryWriter):
+        atexit.register(lambda: cast(SummaryWriter, writer).close())
+
 def main(
         config_file_name: Optional[str] = None,
         sweep: Optional[bool] = False,
@@ -67,57 +118,8 @@ def main(
     # =====================
     utils.fix_pytorch3d() # Fix pytorch3d dtype propagation
     change_pytorch_float_type(cfg.USE_FLOAT64)
-    
-    # Set up Logging
-    # ==============
-    if cfg.SAVE_RESULTS:
-        logdir: Optional[str]
-        if sweep:
-            assert config_file_name is not None
-            logdir = os.path.split(config_file_name)[0]
-        else:
-            now = datetime.now()
-            time_str = now.strftime("%y%m%d_%H%M%S")
-
-            logdir = cfg.LOGDIR
-            assert logdir is not None
-            logdir = utils.normalize_path(logdir)
-
-            root_logdir = os.path.join(logdir, cfg.ID)
-            os.makedirs(root_logdir, exist_ok=True)
-
-            logdir = os.path.join(
-                root_logdir,
-                cfg.EXPERIMENT_NAME + f"_{time_str}",
-            )
-            os.makedirs(logdir, exist_ok=True)
-            with open(os.path.join(logdir, "config.yaml"), "w") as f:
-                f.write(cfg.dump())
-
-        assert logdir is not None
-        logdir_files: Optional[str] = os.path.join(logdir, "Logfiles")
-        assert logdir_files is not None
-        logdir_images: Optional[str] = os.path.join(logdir, "Images")
-        assert logdir_images is not None
-        logdir_enhanced_test = os.path.join(logdir_images, "EnhancedTest")
-        logdir_surfaces = os.path.join(logdir_images, "Surfaces")
-
-        os.makedirs(logdir, exist_ok=True)
-        os.makedirs(logdir_files, exist_ok=True)
-        os.makedirs(logdir_images, exist_ok=True)
-        os.makedirs(logdir_enhanced_test, exist_ok=True)
-
-        writer: Optional[SummaryWriter] = SummaryWriter(logdir)
-    else:
-        writer = None
-        logdir = None
-        logdir_files = None
-        logdir_images = None
-
-    if isinstance(writer, SummaryWriter):
-        atexit.register(lambda: cast(SummaryWriter, writer).close())
-
-    check_consistency(cfg)
+    setup_logging(cfg.SAVE_RESULTS)
+    sanity_checks.check_config_file_on_common_mistakes(cfg)
     # Set system params
     # =================
     th.manual_seed(cfg.SEED)
