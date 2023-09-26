@@ -115,23 +115,16 @@ def main(
         config_file_name: Optional[str] = None,
         sweep: Optional[bool] = False,
 ) -> None:
-    cfg = load_defaults(config_file_name) 
+    cfg = load_defaults(config_file_name=config_file_name) 
     
     # Set system parameters
     # =====================
     utils.fix_pytorch3d() # Fix pytorch3d dtype propagation
-    change_pytorch_float_type(cfg.USE_FLOAT64)
+    change_pytorch_float_type(use_float=cfg.USE_FLOAT64)
     logdirs, writer = setup_logging(config_file_name, cfg, sweep)
     sanity_checks.check_config_file_on_common_mistakes(cfg)
-    # Set system params
-    # =================
-    th.manual_seed(cfg.SEED)
-    print("HELLO",cfg.USE_GPU)
-    device = th.device(
-        'cuda'
-        if cfg.USE_GPU and th.cuda.is_available()
-        else 'cpu'
-    )
+    th.manual_seed(cfg.SEED) # repeatability for experiments
+    device = th.device('cuda' if cfg.USE_GPU and th.cuda.is_available() else 'cpu')
 
     (
         (
