@@ -6,13 +6,13 @@ from yacs.config import CfgNode
 
 
 class Sun_Distribution(object):
-    def __init__(self, sun_configs: CfgNode, device: th.device) -> None:
-        self.dist_type: str = sun_configs.DISTRIBUTION
-        self.num_rays: int = sun_configs.GENERATE_N_RAYS
+    def __init__(self, light_configs: CfgNode, device: th.device) -> None:
+        self.dist_type: str = light_configs.DISTRIBUTION
+        self.num_rays: int = light_configs.GENERATE_N_RAYS
 
         dtype = th.get_default_dtype()
         if self.dist_type == "Normal":
-            self.cfg: CfgNode = sun_configs.NORMAL_DIST
+            self.cfg: CfgNode = light_configs.NORMAL_DIST
             self.mean = th.tensor(
                 self.cfg.MEAN,
                 dtype=dtype,
@@ -29,7 +29,7 @@ class Sun_Distribution(object):
         elif self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
         else:
-            raise ValueError("unknown sun distribution type")
+            raise ValueError("unknown light distribution type")
 
     def sample(
             self,
@@ -41,7 +41,7 @@ class Sun_Distribution(object):
             ).transpose(0, 1).permute(2, 1, 0)
             return xi, yi
         else:
-            raise ValueError('unknown sun distribution type')
+            raise ValueError('unknown light distribution type')
 
 
 class Environment(object):
@@ -68,4 +68,4 @@ class Environment(object):
         self.receiver_resolution_x: int = self.cfg.RECEIVER.RESOLUTION_X
         self.receiver_resolution_y: int = self.cfg.RECEIVER.RESOLUTION_Y
 
-        self.sun = Sun_Distribution(self.cfg.SUN, device)
+        self.light = Sun_Distribution(self.cfg.LIGHT, device)

@@ -19,30 +19,30 @@ from environment import Environment
 from heliostat_models import AbstractHeliostat
 
 
-def make_cached_generate_sun_array_factory(
+def make_cached_generate_light_array_factory(
         device: th.device,
 ) -> Callable[
-    [str],
-    Callable[
-        [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
-        Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
-    ],
+                [str],
+                Callable[
+                    [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
+                    Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
+                ],
 ]:
-    def make_cached_generate_sun_array(
+    def make_cached_generate_light_array(
             prefix: str,
     ) -> Callable[
         [CfgNode, th.device, Optional[torch.Tensor], Optional[str]],
         Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]],
     ]:
         return disk_cache.disk_cache(
-            data.generate_sun_array,
+            data.generate_light_array,
             device,
             'cached',
             prefix,
             ignore_argnums=[1],
         )
 
-    return make_cached_generate_sun_array
+    return make_cached_generate_light_array
 
 
 def make_cached_generate_dataset_factory(
@@ -99,51 +99,35 @@ def make_cached_generate_dataset_factory(
 
 def set_up_light_position_caching(
         device: th.device,
-        writer: Optional[SummaryWriter],
-) -> Tuple[
-    Tuple[Callable, Callable],
-    Tuple[
-        Callable,
-        Callable,
-        Callable,
-    ],
-]:
-    make_cached_generate_sun_array = make_cached_generate_sun_array_factory(
+        train_or_test: str,
+) -> Tuple[Callable, Callable]:
+    make_cached_generate_light_array = make_cached_generate_light_array_factory(
         device)
-
-    return (
-            make_cached_generate_sun_array('target_'),
-            make_cached_generate_sun_array('test_'),
-            )
+    if train_or_test=="train":
+        return make_cached_generate_light_array('train_')
+    elif train_or_test=="test":
+        return make_cached_generate_light_array('test_')
+    else:
+        raise ValueError("Invalid option for train_or_test. use string \"train\" or \"test\".")
     
 
 def set_up_dataset_caching(
         device: th.device,
         writer: Optional[SummaryWriter],
-) -> Tuple[
-    Tuple[Callable, Callable],
-    Tuple[
-        Callable,
-        Callable,
-        Callable,
-    ],
-]:
-    make_cached_generate_sun_array = make_cached_generate_sun_array_factory(
-        device)
+        which_dataset: str,
+) -> Tuple[Callable,Callable,Callable]:
     make_cached_generate_dataset = make_cached_generate_dataset_factory(
         device, writer)
 
-    return (
-        (
-            make_cached_generate_sun_array('target_'),
-            make_cached_generate_sun_array('test_'),
-        ),
-        (
-            make_cached_generate_dataset('train'),
-            make_cached_generate_dataset('pretrain'),
-            make_cached_generate_dataset('test'),
-        ),
-    )
+    if which_dataset == "train":
+        return make_cached_generate_dataset('train')
+    elif which_dataset == "test":
+        return make_cached_generate_dataset('test')
+    elif which_dataset == "pretrain":
+        return make_cached_generate_dataset('pretrain')
+    else:
+        raise ValueError("Invalid option for which_dataset use string \"train\",  \"test\" or \"pretrain\".")
+    
 
 def set_up_test_dataset_caching(
         device: th.device,
@@ -159,16 +143,16 @@ def set_up_test_dataset_caching(
         Callable,
     ],
 ]:
-    make_cached_generate_sun_array = make_cached_generate_sun_array_factory(
+    make_cached_generate_light_array = make_cached_generate_light_array_factory(
         device)
     make_cached_generate_dataset = make_cached_generate_dataset_factory(
         device, writer, False)
 
     return (
         (
-            make_cached_generate_sun_array('grid_'),
-            make_cached_generate_sun_array('spheric_'),
-            make_cached_generate_sun_array('season_'),
+            make_cached_generate_light_array('grid_'),
+            make_cached_generate_light_array('spheric_'),
+            make_cached_generate_light_array('season_'),
         ),
         (
             make_cached_generate_dataset('grid'),

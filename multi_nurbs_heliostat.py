@@ -173,7 +173,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device: th.device,
             setup_params: bool = True,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -184,10 +184,10 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device,
             setup_params=False,
             receiver_center=receiver_center,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
         )
-        maybe_sun_direction = heliostat_models.to_sun_direction(
-            sun_directions, self.device)
+        maybe_light_direction = heliostat_models.to_light_direction(
+            light_directions, self.device)
 
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
@@ -276,7 +276,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
         facets = self._create_facets(
             self.cfg,
             self.nurbs_cfg,
-            maybe_sun_direction,
+            maybe_light_direction,
         )
         self.facets = NURBSFacets(
             self, cast(List[AbstractNURBSHeliostat], facets))
@@ -411,7 +411,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             span_e: torch.Tensor,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
-            sun_direction: Optional[torch.Tensor],
+            light_direction: Optional[torch.Tensor],
     ) -> NURBSHeliostat:
         heliostat_config = self._facet_heliostat_config(
             heliostat_config,
@@ -426,7 +426,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             self.device,
             setup_params=False,
-            sun_directions=sun_direction,
+            light_directions=light_direction,
         )
         return facet
 
@@ -434,7 +434,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             self,
             heliostat_config: CfgNode,
             nurbs_config: CfgNode,
-            sun_direction: Optional[torch.Tensor],
+            light_direction: Optional[torch.Tensor],
     ) -> List[NURBSHeliostat]:
         return [
             self._create_facet(
@@ -444,7 +444,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
                 span_e,
                 heliostat_config,
                 nurbs_config,
-                sun_direction,
+                light_direction,
             )
             for (i, (position, span_n, span_e)) in enumerate(zip(
                     self.facets.positions,
@@ -532,7 +532,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -552,7 +552,7 @@ class MultiNURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             device,
             receiver_center=receiver_center,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)
@@ -575,7 +575,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
     def __init__(
             self,
             heliostat: MultiNURBSHeliostat,
-            #sun_direction: torch.Tensor,
+            #light_direction: torch.Tensor,
             alignment: torch.Tensor,
             align_origin: torch.Tensor,
             aim_point: torch.Tensor,
@@ -585,7 +585,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
-            #sun_direction,
+            #light_direction,
             alignment,
             align_origin,
             aim_point,
@@ -599,7 +599,7 @@ class AlignedMultiNURBSHeliostat(AlignedNURBSHeliostat):
                 [
                     cast(
                         AlignedNURBSHeliostat,
-                        #facet.align(sun_direction, aim_point),
+                        #facet.align(light_direction, aim_point),
                         facet.align(alignment, align_origin, aim_point),
 
                     )

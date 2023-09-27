@@ -26,7 +26,7 @@ class HeliostatModel:
         #to_optimize += self.concentrator_model.get_to_optimize()
         return to_optimize
     def align(self, datapoint):
-        return self.alignment_model.align2(datapoint.sun_directions)
+        return self.alignment_model.align2(datapoint.light_directions)
     def surface_points(self, alignment, align_origin):
         H_aligned = self.concentrator_model.align(alignment, align_origin)
         surface_points = H_aligned.discrete_points

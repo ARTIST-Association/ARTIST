@@ -58,7 +58,7 @@ class Plotter:
             self,
             cfg: CfgNode,
             R: Renderer,
-            sun_directions: torch.Tensor,
+            light_directions: torch.Tensor,
             loss_func: Callable[
                 [torch.Tensor, torch.Tensor],
                 torch.Tensor,
@@ -75,9 +75,9 @@ class Plotter:
                 
         (
             (
-                cached_generate_grid_sun_array,
-                cached_generate_spheric_sun_array,
-                cached_generate_season_sun_array,
+                cached_generate_grid_light_array,
+                cached_generate_spheric_light_array,
+                cached_generate_season_light_array,
             ),
             (
                 cached_generate_grid_dataset,
@@ -101,87 +101,87 @@ class Plotter:
         )
         
         H_validation = cached_build_target_heliostat(
-        cfg, sun_directions, device)
+        cfg, light_directions, device)
         ENV_validation = Environment(cfg.AC, device)
         
         if cfg.TEST.PLOT.GRID:
             print("Create Dataset for Grid Plot")
             (
-                self.grid_test_sun_directions,
+                self.grid_test_light_directions,
                 self.grid_test_ae,
-            ) = cached_generate_grid_sun_array(
-                cfg.TEST.SUN_DIRECTIONS,
+            ) = cached_generate_grid_light_array(
+                cfg.TEST.LIGHT_DIRECTIONS,
                 device,
                 case="grid",
             )
             self.grid_test_targets = cached_generate_grid_dataset(
                 H_validation,
                 ENV_validation,
-                self.grid_test_sun_directions,
+                self.grid_test_light_directions,
                 None,
                 "grid",
             )
             # # th.random.set_rng_state(state)
             H_naive_grid = cached_build_target_heliostat(
-                cfg, sun_directions, device)
+                cfg, light_directions, device)
             H_naive_grid._normals = H_naive_grid.get_raw_normals_ideal()
             self.grid_naive_targets = cached_generate_naive_grid_dataset(
                 H_naive_grid,
                 ENV_validation,
-                self.grid_test_sun_directions,
+                self.grid_test_light_directions,
                 None,
                 "naive",
             )
         if cfg.TEST.PLOT.SPHERIC:
             print("Create Dataset for Spheric Plot")
             (
-                self.spheric_test_sun_directions,
+                self.spheric_test_light_directions,
                 self.spheric_test_ae,
-            ) = cached_generate_spheric_sun_array(
-                cfg.TEST.SUN_DIRECTIONS,
+            ) = cached_generate_spheric_light_array(
+                cfg.TEST.LIGHT_DIRECTIONS,
                 device,
-                train_vec=sun_directions,
+                train_vec=light_directions,
                 case="spheric",
             )
             self.spheric_test_targets = cached_generate_spheric_dataset(
                 H_validation,
                 ENV_validation,
-                self.spheric_test_sun_directions,
+                self.spheric_test_light_directions,
                 None,
                 "spheric",
             )
 
             H_naive_spheric = cached_build_target_heliostat(
-                cfg, sun_directions, device)
+                cfg, light_directions, device)
             H_naive_spheric._normals = H_naive_spheric.get_raw_normals_ideal()
             self.spheric_naive_test_targets = cached_generate_naive_spheric_dataset(
                 H_naive_spheric,
                 ENV_validation,
-                self.spheric_test_sun_directions,
+                self.spheric_test_light_directions,
                 None,
                 "naive_spheric",
             )
         if cfg.TEST.PLOT.SEASON:
             print("Create Dataset for Season Plot")
             (
-                season_test_sun_directions,
+                season_test_light_directions,
                 season_test_extras,
-            ) = cached_generate_season_sun_array(
-                cfg.TEST.SUN_DIRECTIONS,
+            ) = cached_generate_season_light_array(
+                cfg.TEST.LIGHT_DIRECTIONS,
                 device,
                 case="season",
             )
             # TODO bring to GPU in data.py
-            season_test_sun_directions = season_test_sun_directions.to(device)
+            season_test_light_directions = season_test_light_directions.to(device)
             season_test_targets = cached_generate_season_dataset(
                 H_validation,
                 ENV_validation,
-                season_test_sun_directions,
+                season_test_light_directions,
                 None,
                 "season",
             )
             H_naive_season = cached_build_target_heliostat(
-                cfg, sun_directions, device)
+                cfg, light_directions, device)
             H_naive_season._normals = H_naive_season.get_raw_normals_ideal()
             
             season_test_target_sets = hausdorff_distance.images_to_sets(
@@ -196,7 +196,7 @@ class Plotter:
                 R,
                 season_test_targets,
                 season_test_target_sets,
-                season_test_sun_directions,
+                season_test_light_directions,
                 loss_func,
                 cfg,
                 None,  # epoch
@@ -211,12 +211,12 @@ class Plotter:
             season_test_objects = self.season_test_objects._replace(H=H_naive_season)
             self.season_naive_test_loss, self.season_naive_hd, self.season_naive_test_targets = training.test_batch(season_test_objects)
         if cfg.TEST.PLOT.REAL_DATA:
-            assert cfg.TEST.SUN_DIRECTIONS.CASE == "vecs", \
-                'to plot real data, sun directions must be given by CASE "vecs".'
+            assert cfg.TEST.LIGHT_DIRECTIONS.CASE == "vecs", \
+                'to plot real data, light directions must be given by CASE "vecs".'
             print("Initialize Real Data Plot")
  
-            train_sundirections = th.tensor(cfg.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS)
-            H_naive_trainset = build_target_heliostat(cfg, train_sundirections , device)
+            train_lightdirections = th.tensor(cfg.TRAIN.LIGHT_DIRECTIONS.VECS.DIRECTIONS)
+            H_naive_trainset = build_target_heliostat(cfg, train_lightdirections , device)
             H_naive_trainset._normals = H_naive_trainset.get_raw_normals_ideal()
             train_targets = data.load_images(
                 cfg.TRAIN.IMAGES.PATHS,
@@ -239,7 +239,7 @@ class Plotter:
                 R,
                 train_targets,
                 train_target_sets,
-                train_sundirections,
+                train_lightdirections,
                 loss_func,
                 cfg,
                 None,#epoch
@@ -257,8 +257,8 @@ class Plotter:
             # plt.show()
             # exit()
             
-            test_sundirections = th.tensor(cfg.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS)
-            H_naive_testset = build_target_heliostat(cfg, test_sundirections , device)
+            test_lightdirections = th.tensor(cfg.TEST.LIGHT_DIRECTIONS.VECS.DIRECTIONS)
+            H_naive_testset = build_target_heliostat(cfg, test_lightdirections , device)
             H_naive_testset._normals = H_naive_testset.get_raw_normals_ideal()
             test_targets = data.load_images(
                 cfg.TEST.IMAGES.PATHS,
@@ -281,7 +281,7 @@ class Plotter:
                 R,
                 test_targets,
                 test_target_sets,
-                test_sundirections,
+                test_lightdirections,
                 loss_func,
                 cfg,
                 None,#epoch
@@ -819,7 +819,7 @@ def target_image_comparision_pred_orig_naive(
         original: torch.Tensor,
         predicted: torch.Tensor,
         naive: torch.Tensor,
-        train_sun_position: torch.Tensor,
+        train_light_position: torch.Tensor,
         epoch: int,
         logdir: str,
         start_main_plot_at_row: int = 1,
@@ -828,7 +828,7 @@ def target_image_comparision_pred_orig_naive(
     num_ele = len(th.unique(ae[:, 1]))
 
     ae = ae.detach().cpu()
-    train_sun_position = train_sun_position.detach().cpu()
+    train_light_position = train_light_position.detach().cpu()
 
     small_width = [0.2] * num_ele * 4
     width_ratios = [1.0] * num_ele * 4
@@ -949,17 +949,17 @@ def target_image_comparision_pred_orig_naive(
         color='r',
         marker='x',
         s=10,
-        label="Test sun positions",
+        label="Test light positions",
     )
 
-    train_sun_position = utils.vec_to_ae(train_sun_position)
+    train_light_position = utils.vec_to_ae(train_light_position)
     axbig.scatter(
-        th.deg2rad(train_sun_position[:, 0]),
-        -train_sun_position[:, 1],
+        th.deg2rad(train_light_position[:, 0]),
+        -train_light_position[:, 1],
         color='b',
         marker='x',
         s=10,
-        label="Train sun position",
+        label="Train light position",
     )
     axbig.legend(loc='upper right', bbox_to_anchor=(-0.1, 0.5, 0.5, 0.5))
     axbig.set_yticks(th.arange(-90, 20, 30))

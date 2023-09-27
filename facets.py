@@ -308,7 +308,7 @@ class Facets(AbstractFacets):
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
-            sun_direction: Optional[torch.Tensor],
+            light_direction: Optional[torch.Tensor],
             focus_point: Optional[torch.Tensor],
     ) -> C:
         facetted_discrete_points: List[torch.Tensor] = []
@@ -322,7 +322,7 @@ class Facets(AbstractFacets):
         )
 
         canting_params = canting.get_canting_params(
-            heliostat, sun_direction, focus_point)
+            heliostat, light_direction, focus_point)
 
         for (i, (position, span_n, span_e)) in enumerate(zip(
                 positions,

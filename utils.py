@@ -194,7 +194,7 @@ def calculateSunAngles(
 
         declination = math.asin(math.sin(epsilon) * s_lambda)
 
-        # local hour angle of the sun
+        # local hour angle of the light
         hourAngle = (
             6.30038809903 * JD_t
             + 4.8824623
@@ -262,7 +262,7 @@ def calculateSunAngles(
     return azimuthAngle, elevationAngle
 
 
-def get_sun_array(
+def get_light_array(
         *datetime: List[int],
         **observer: float,
 ) -> Tuple[torch.Tensor, List[List[Union[int, float]]]]:
@@ -293,7 +293,7 @@ def get_sun_array(
     observerLatitude = observer.get('latitude', 50.92)
     observerLongitude = observer.get('longitude', 6.36)
 
-    # sunAngles = np.empty((3,1440,2))
+    # lightAngles = np.empty((3,1440,2))
     extras = []
     ae = []
     for year in years:
@@ -324,8 +324,8 @@ def get_sun_array(
                             ])
                             ae.append([azi, ele])
     ae = th.tensor(ae)
-    sun_vecs = ae_to_vec(ae[:, 0], ae[:, 1])
-    return sun_vecs, extras
+    light_vecs = ae_to_vec(ae[:, 0], ae[:, 1])
+    return light_vecs, extras
 
 
 def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
@@ -447,11 +447,11 @@ def rot_z_mat(
 
 def get_z_alignments(
         heliostat: 'Heliostat',
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
 ) -> torch.Tensor:
     return th.stack([
-        heliostat.align2(sun_dir)[0][..., -1, :]
-        for sun_dir in sun_directions
+        heliostat.align2(light_dir)[0][..., -1, :]
+        for light_dir in light_directions
     ])
 
 
@@ -1271,7 +1271,7 @@ def save_target(
         receiver_normal: torch.Tensor,
         receiver_up_dir: Optional[torch.Tensor],
 
-        sun: torch.Tensor,
+        light: torch.Tensor,
         num_rays: int,
         mean: torch.Tensor,
         cov: torch.Tensor,
@@ -1295,7 +1295,7 @@ def save_target(
         'receiver_normal': receiver_normal,
         'receiver_up_dir': receiver_up_dir,
 
-        'sun': sun,
+        'light': light,
         'num_rays': num_rays,
         'mean': mean,
         'cov': cov,

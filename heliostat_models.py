@@ -616,28 +616,28 @@ def other_objects(config: CfgNode, device: th.device) -> HeliostatParams:
 # Heliostat-specific functions
 # ============================
 
-def to_sun_direction(
-        sun_directions: Union[torch.Tensor, List[List[float]], None],
+def to_light_direction(
+        light_directions: Union[torch.Tensor, List[List[float]], None],
         device: th.device,
 ) -> Optional[torch.Tensor]:
     if (
-            sun_directions is not None
-            and not isinstance(sun_directions, th.Tensor)
+            light_directions is not None
+            and not isinstance(light_directions, th.Tensor)
     ):
-        sun_directions = th.tensor(
-            sun_directions,
+        light_directions = th.tensor(
+            light_directions,
             dtype=th.get_default_dtype(),
             device=device,
         )
-    if sun_directions is None:
-        sun_direction = None
+    if light_directions is None:
+        light_direction = None
     else:
-        if sun_directions.ndim > 1:
-            sun_direction = sun_directions[0]
+        if light_directions.ndim > 1:
+            light_direction = light_directions[0]
         else:
-            sun_direction = sun_directions
-        assert sun_direction.shape == (3,)
-    return sun_direction
+            light_direction = light_directions
+        assert light_direction.shape == (3,)
+    return light_direction
 
 
 def _rotate(
@@ -863,7 +863,7 @@ class AbstractHeliostat:
     
     def align2(
             self,
-            sun_direction: torch.Tensor,
+            light_direction: torch.Tensor,
             aim_point: Optional[torch.Tensor] = None,
         ) -> torch.Tensor:
             
@@ -872,13 +872,13 @@ class AbstractHeliostat:
                 
             ideal_normal = th.tensor(
                 self.cfg.IDEAL.NORMAL_VECS,
-                dtype=sun_direction.dtype,
-                device=sun_direction.device,
+                dtype=light_direction.dtype,
+                device=light_direction.device,
             )
             
             alignment = th.stack(heliostat_coord_system(
             self.position_on_field,
-            sun_direction,
+            light_direction,
             aim_point,
             ideal_normal,
             self.disturbance_angles,
@@ -907,7 +907,7 @@ class Heliostat(AbstractHeliostat):
             device: th.device,
             setup_params: bool = True,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -928,14 +928,14 @@ class Heliostat(AbstractHeliostat):
                 dtype=th.get_default_dtype(),
                 device=device,
             )
-        maybe_sun_direction = to_sun_direction(sun_directions, self.device)
+        maybe_light_direction = to_light_direction(light_directions, self.device)
 
         self._to_optimize: List[str] = self.cfg.TO_OPTIMIZE
 
         self._checked_dict = False
         self.params: Union[Dict[str, Any], CfgNode, None] = None
 
-        self.load(receiver_center, maybe_sun_direction)
+        self.load(receiver_center, maybe_light_direction)
         if setup_params:
             self.setup_params()
 
@@ -992,7 +992,7 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal: torch.Tensor,
             normals: torch.Tensor,
             normals_ideal: torch.Tensor,
-            maybe_sun_direction: Optional[torch.Tensor],
+            maybe_light_direction: Optional[torch.Tensor],
             need_up_focus_point: bool,
     ) -> None:
         if self.canting_enabled:
@@ -1029,7 +1029,7 @@ class Heliostat(AbstractHeliostat):
             discrete_points_ideal,
             normals,
             normals_ideal,
-            maybe_sun_direction,
+            maybe_light_direction,
             focus_point,
         )
 
@@ -1073,7 +1073,7 @@ class Heliostat(AbstractHeliostat):
     def load(
             self,
             maybe_aim_point: Optional[torch.Tensor],
-            maybe_sun_direction: Optional[torch.Tensor],
+            maybe_light_direction: Optional[torch.Tensor],
     ) -> None:
         builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
         self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
@@ -1107,7 +1107,7 @@ class Heliostat(AbstractHeliostat):
         self.canting_algo = canting.get_algorithm(self._canting_cfg)
         if isinstance(self.canting_algo, canting.StandardCanting):
             self.canting_algo = canting.FirstSunCanting()
-            maybe_sun_direction = th.tensor(
+            maybe_light_direction = th.tensor(
                 self.cfg.IDEAL.NORMAL_VECS,
                 dtype=self.position_on_field.dtype,
                 device=self.device,
@@ -1124,7 +1124,7 @@ class Heliostat(AbstractHeliostat):
             heliostat_ideal,
             heliostat_normals,
             heliostat_ideal_vecs,
-            maybe_sun_direction,
+            maybe_light_direction,
             need_up_focus_point,
         )
         self.params = params
@@ -1289,7 +1289,7 @@ class Heliostat(AbstractHeliostat):
             device: th.device,
             config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -1306,7 +1306,7 @@ class Heliostat(AbstractHeliostat):
             config,
             device,
             receiver_center=receiver_center,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)
@@ -1345,7 +1345,7 @@ class AlignedHeliostat(AbstractHeliostat):
     def __init__(
             self,
             heliostat: Heliostat,
-            #sun_direction: torch.Tensor,
+            #light_direction: torch.Tensor,
             alignment: torch.Tensor,
             align_origin: torch.Tensor,
             aim_point: torch.Tensor,
@@ -1358,12 +1358,12 @@ class AlignedHeliostat(AbstractHeliostat):
 
         self._heliostat = heliostat
 
-        #from_sun = -sun_direction
-        #self.from_sun = from_sun.unsqueeze(0)
+        #from_light = -light_direction
+        #self.from_light = from_light.unsqueeze(0)
         #ideal_normal = th.tensor(
         #    self._heliostat.cfg.IDEAL.NORMAL_VECS,
-        #    dtype=from_sun.dtype,
-        #    device=from_sun.device,
+        #    dtype=from_light.dtype,
+        #    device=from_light.device,
         #)
 
         self.facets = self._heliostat.facets
@@ -1497,7 +1497,7 @@ class AlignedHeliostat(AbstractHeliostat):
         )
 
     #def get_ray_directions(self) -> torch.Tensor:
-    #    return reflect_rays_(self.from_sun, self.normals)
+    #    return reflect_rays_(self.from_light, self.normals)
 
 
 Heliostat.aligned_cls = AlignedHeliostat

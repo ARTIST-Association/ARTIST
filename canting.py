@@ -30,7 +30,7 @@ class ActiveCanting(ActiveCantingAlgorithm):
 
 
 class FirstSunCanting(ActiveCantingAlgorithm):
-    name = 'first_sun'
+    name = 'first_light'
 
 
 class CantingParams:
@@ -49,7 +49,7 @@ class LikeActiveCantingParams(CantingParams):
 
 @dataclass
 class FirstSunCantingParams(CantingParams):
-    sun_direction: torch.Tensor
+    light_direction: torch.Tensor
     focus_point: torch.Tensor
     position_on_field: torch.Tensor
     disturbance_angles: List[torch.Tensor]
@@ -82,7 +82,7 @@ def get_algorithm(canting_cfg: CfgNode) -> Optional[CantingAlgorithm]:
     if not canting_enabled(canting_cfg):
         return None
     if isinstance(canting_algo, FirstSunCanting):
-        raise ValueError('first sun canting currently broken')
+        raise ValueError('first light canting currently broken')
     return canting_algo
 
 
@@ -96,20 +96,20 @@ def is_like_active(algo: Optional[CantingAlgorithm]) -> bool:
 
 def get_canting_params(
         heliostat: 'AbstractHeliostat',
-        sun_direction: Optional[torch.Tensor],
+        light_direction: Optional[torch.Tensor],
         focus_point: Optional[torch.Tensor],
 ) -> Optional[CantingParams]:
     if not heliostat.canting_enabled:
         canting_params: Optional[CantingParams] = None
     elif isinstance(heliostat.canting_algo, FirstSunCanting):
-        assert sun_direction is not None, \
-            'need sun direction to cant towards'
+        assert light_direction is not None, \
+            'need light direction to cant towards'
         assert focus_point is not None, (
             'need focus point for perfectly canting towards the '
-            'first sun'
+            'first light'
         )
         canting_params = FirstSunCantingParams(
-            sun_direction,
+            light_direction,
             focus_point,
             heliostat.position_on_field,
             heliostat.disturbance_angles,
@@ -119,8 +119,8 @@ def get_canting_params(
         canting_params = LikeActiveCantingParams()
     else:
         assert False, (
-            'standard canting should be replaced by "first sun" canting with '
-            'a sun direction of [0, 0, -1] before initialization'
+            'standard canting should be replaced by "first light" canting with '
+            'a light direction of [0, 0, -1] before initialization'
         )
         canting_params = StandardCantingParams(
             heliostat.focus_point,
@@ -370,7 +370,7 @@ def decant_facet(
         from heliostat_models import heliostat_coord_system
         facet_alignment = th.stack(heliostat_coord_system(
             facet_position + canting_params.position_on_field,
-            canting_params.sun_direction,
+            canting_params.light_direction,
             canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,
@@ -383,7 +383,7 @@ def decant_facet(
 
         alignment = th.stack(heliostat_coord_system(
             canting_params.position_on_field,
-            canting_params.sun_direction,
+            canting_params.light_direction,
             canting_params.focus_point,
             target_normal,
             canting_params.disturbance_angles,

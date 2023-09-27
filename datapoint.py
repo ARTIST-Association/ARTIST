@@ -10,15 +10,15 @@ class DataPoint(object):
                  point_id,
                  desired_image,
                  desired_concentrator_normal,
-                 sun_directions):
+                 light_directions):
         
         self.point_id = point_id
         self.desired_image = desired_image
         self.desired_concentrator_normal = desired_concentrator_normal
-        self.sun_directions = sun_directions
+        self.light_directions = light_directions
         
     def __call__(self):
-        return (self.desired_image, self.desired_concentrator_normal, self.sun_directions)
+        return (self.desired_image, self.desired_concentrator_normal, self.light_directions)
         
     def desired_image(self):
         return self.desired_image
@@ -26,5 +26,5 @@ class DataPoint(object):
     def desired_concentrator_normal(self):
         return self.desired_concentrator_normal
     
-    def sun_directions(self):
-        return self.sun_directions
+    def light_directions(self):
+        return self.light_directions

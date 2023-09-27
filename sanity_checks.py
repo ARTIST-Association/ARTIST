@@ -6,7 +6,7 @@ from heliostat_models import Heliostat
 def check_config_file_on_common_mistakes(cfg: CfgNode) -> None:
     print("Loaded Switches:")
     print(f"Heliostat shape: {cfg.H.SHAPE}")
-    print(f"Solar distribution: {cfg.AC.SUN.DISTRIBUTION}")
+    print(f"Solar distribution: {cfg.AC.LIGHT.DISTRIBUTION}")
     print(f"Scheduler: {cfg.TRAIN.SCHEDULER.NAME}")
     print(f"Optimizer: {cfg.TRAIN.OPTIMIZER.NAME}")
     print(f"Loss: {cfg.TRAIN.LOSS.NAME}")

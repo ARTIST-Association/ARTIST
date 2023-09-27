@@ -27,7 +27,7 @@ class Target:
         'receiver_normal',
         'receiver_up_dir',
 
-        'sun',
+        'light',
         'num_rays',
         'mean',
         'cov',
@@ -67,7 +67,7 @@ def parse_args(cfg):
         '--num_tests',
         type=int,
         default=32,
-        help='How many different sun positions to test.',
+        help='How many different light positions to test.',
     )
 
     # Values with defaults given by configuration.
@@ -184,13 +184,13 @@ def main():
         target.receiver_normal.tolist(),
         # TODO Missing `receiver_up_dir`
 
-        'AC.SUN.DIRECTION',
-        target.sun.tolist(),
-        'AC.SUN.GENERATE_N_RAYS',
+        'AC.LIGHT.DIRECTION',
+        target.light.tolist(),
+        'AC.LIGHT.GENERATE_N_RAYS',
         target.num_rays,
-        'AC.SUN.NORMAL_DIST.MEAN',
+        'AC.LIGHT.NORMAL_DIST.MEAN',
         target.mean.tolist(),
-        'AC.SUN.NORMAL_DIST.COV',
+        'AC.LIGHT.NORMAL_DIST.COV',
         target.cov.tolist(),
     ])
     target_cfg = cfg.clone()
@@ -227,21 +227,21 @@ def main():
         heliostat._normals = model
 
     for test in range(args.num_tests):
-        sun = th.rand_like(target.sun)
+        light = th.rand_like(target.light)
         # Allow negative x and y values
-        sun[:-1] -= 0.5
-        sun /= th.linalg.norm(sun)
+        light[:-1] -= 0.5
+        light /= th.linalg.norm(light)
 
         target_cfg.merge_from_list([
-            'AC.SUN.DIRECTION',
-            sun.tolist(),
+            'AC.LIGHT.DIRECTION',
+            light.tolist(),
         ])
 
         env = Environment(target_cfg.AC, device)
         target_heliostat_aligned = target_heliostat.align(
-            env.sun_direction, env.receiver_center)
+            env.light_direction, env.receiver_center)
         heliostat_aligned = heliostat.align(
-            env.sun_direction, env.receiver_center)
+            env.light_direction, env.receiver_center)
 
         target_renderer = Renderer(target_heliostat_aligned, env)
         renderer = Renderer(heliostat_aligned, env)
@@ -304,7 +304,7 @@ def main():
 
         print(
             f'test {test}: '
-            f'sun {sun.detach().cpu().numpy()}, '
+            f'light {light.detach().cpu().numpy()}, '
             f'loss {loss.detach().cpu().numpy()}'
             # f'target missed {target_num_missed.detach().cpu().numpy()}, '
             # f'missed {num_missed.detach().cpu().numpy()}, '

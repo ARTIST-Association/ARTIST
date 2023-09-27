@@ -52,7 +52,7 @@ for distance in distance_array:
     name_string = name_string+short_name+"_"+str(distance)+"_" 
     for num_images in num_images_array:
         short_name = "I"
-        long_name = "TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES"
+        long_name = "TRAIN.LIGHT_DIRECTIONS.RAND.NUM_SAMPLES"
         new_cfg.merge_from_list([long_name, num_images])
         name_string_final = name_string+short_name+"_"+str(num_images)+"_" 
         #Save to File

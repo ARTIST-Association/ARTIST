@@ -85,7 +85,7 @@ def mean_ray_directions(
 def create_target(
         H: AbstractHeliostat,
         ENV: Environment,
-        sun_direction: torch.Tensor,
+        light_direction: torch.Tensor,
         save_path: Optional[str] = None,
 ) -> torch.Tensor:
     device = H.device
@@ -94,7 +94,7 @@ def create_target(
             H.position_on_field,
             th.tensor(
                 H.cfg.IDEAL.NORMAL_VECS,
-                dtype=sun_direction.dtype,
+                dtype=light_direction.dtype,
                 device=device,
             ),
             H.discrete_points,
@@ -107,13 +107,13 @@ def create_target(
             ENV.receiver_plane_normal,
             None,  # TODO
 
-            sun_direction,
-            ENV.sun.num_rays,
-            ENV.sun.mean,
-            ENV.sun.cov,
+            light_direction,
+            ENV.light.num_rays,
+            ENV.light.mean,
+            ENV.light.cov,
         )
 
-    H_aligned = H.align(sun_direction)
+    H_aligned = H.align(light_direction)
     R = Renderer(H_aligned, ENV)
     if save_path:
         if R.redraw_random_variables:
@@ -149,7 +149,7 @@ def create_target(
 def generate_dataset(
         H: AbstractHeliostat,
         ENV: Environment,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         save_dir: Optional[str],
         prefix: str,
         writer: Optional[SummaryWriter] = None,
@@ -160,7 +160,7 @@ def generate_dataset(
     save_path: Optional[str] = None
 
     targets = None
-    for (i, sun_direction) in enumerate(sun_directions):
+    for (i, light_direction) in enumerate(light_directions):
         if save_dir:
             save_path = os.path.join(
                 save_dir,
@@ -170,13 +170,13 @@ def generate_dataset(
         target_bitmap = create_target(
             H,
             ENV,
-            sun_direction,
+            light_direction,
             save_path=save_path,
         )
         if targets is None:
             targets = th.empty(
-                (len(sun_directions),) + target_bitmap.shape,
-                dtype=sun_directions.dtype,
+                (len(light_directions),) + target_bitmap.shape,
+                dtype=light_directions.dtype,
                 device=device,
             )
         targets[i] = target_bitmap
@@ -185,7 +185,7 @@ def generate_dataset(
     return targets
 
 
-def _random_sun_array(
+def _random_light_array(
         cfg: CfgNode,
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -221,15 +221,15 @@ def _random_sun_array(
         dtype=th.get_default_dtype(),
         device=device,
     )
-    sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
-    sun_directions = (
-        sun_directions
-        / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+    light_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
+    light_directions = (
+        light_directions
+        / th.linalg.norm(light_directions, dim=1).unsqueeze(-1)
     )
-    return sun_directions, ae
+    return light_directions, ae
 
 
-def _grid_sun_array(
+def _grid_light_array(
         cfg: CfgNode,
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -254,33 +254,33 @@ def _grid_sun_array(
     # all possible combinations of azi ele
     ae = th.cartesian_prod(azi, ele)
     # create 3D vector from azi, ele
-    sun_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
-    return sun_directions, ae
+    light_directions = utils.ae_to_vec(ae[:, 0], ae[:, 1])
+    return light_directions, ae
 
 
-def _vec_sun_array(
+def _vec_light_array(
         cfg: CfgNode,
         device: th.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    sun_directions: List[List[float]] = (
+    light_directions: List[List[float]] = (
         utils.with_outer_list(cfg.DIRECTIONS))
 
-    sun_directions: torch.Tensor = th.tensor(
-        sun_directions,
+    light_directions: torch.Tensor = th.tensor(
+        light_directions,
         dtype=th.get_default_dtype(),
         device=device,
     )
 
-    sun_directions = (
-        sun_directions
-        / th.linalg.norm(sun_directions, dim=1).unsqueeze(-1)
+    light_directions = (
+        light_directions
+        / th.linalg.norm(light_directions, dim=1).unsqueeze(-1)
     )
 
-    ae = utils.vec_to_ae(sun_directions)
-    return sun_directions, ae
+    ae = utils.vec_to_ae(light_directions)
+    return light_directions, ae
 
 
-def _spheric_sun_array(
+def _spheric_light_array(
         cfg: CfgNode,
         device: th.device,
         train_vec: Optional[torch.Tensor],
@@ -290,7 +290,7 @@ def _spheric_sun_array(
             "train_vec is None. Spheric testing needs a train vector")
     if not train_vec.squeeze().shape == (3,):
         raise ValueError(
-            "multiple sun vectors detected. "
+            "multiple light vectors detected. "
             "spheric plot is only possible using 1 vector"
         )
     dtype = train_vec.dtype
@@ -334,13 +334,13 @@ def _spheric_sun_array(
         utils.vec_to_ae(spheric_vecs_ele)).detach().cpu()
 
     ae = th.cat([ae_azi_west_dir, ae_azi_east_dir, ae_ele_dir], 0)
-    sun_directions = th.cat(
+    light_directions = th.cat(
         [spheric_vecs_azi_west, spheric_vecs_azi_east, spheric_vecs_ele], 0)
 
-    return sun_directions, ae
+    return light_directions, ae
 
 
-def _season_sun_array(
+def _season_light_array(
         device: th.device,
         stepsize_hours: int = 1,
         stepsize_minutes: int = 30,
@@ -358,7 +358,7 @@ def _season_sun_array(
         - args must be in descending order years, months, days, ...
 
    Output:
-       - List of all sun positions including simualted hours (N, 8)
+       - List of all light positions including simualted hours (N, 8)
          including [hour,minute,sec,day,month,year,azi,ele] starting
          with longest day, start of autumn, shortest day, start of
          spring, measurment day
@@ -378,7 +378,7 @@ def _season_sun_array(
         hours = [9, 12]
     else:
         hours = [9]
-    sun_vecs_short, extras = utils.get_sun_array(
+    light_vecs_short, extras = utils.get_light_array(
         years,
         months,
         days,
@@ -386,7 +386,7 @@ def _season_sun_array(
         minutes,
         secs,
     )
-    trajectories.append(sun_vecs_short)
+    trajectories.append(light_vecs_short)
 
     # Equinox
     months = [3]
@@ -395,7 +395,7 @@ def _season_sun_array(
         hours = [9, 12, 15]
     else:
         hours = [12]
-    sun_vecs_autumn, extras = utils.get_sun_array(
+    light_vecs_autumn, extras = utils.get_light_array(
         years,
         months,
         days,
@@ -403,7 +403,7 @@ def _season_sun_array(
         minutes,
         secs,
     )
-    trajectories.append(sun_vecs_autumn)
+    trajectories.append(light_vecs_autumn)
     # Longest Day
     months = [6]
     days = [21]
@@ -411,7 +411,7 @@ def _season_sun_array(
         hours = [9, 12, 15, 18]
     else:
         hours = [18]
-    sun_vecs_long, extras = utils.get_sun_array(
+    light_vecs_long, extras = utils.get_light_array(
         years,
         months,
         days,
@@ -419,20 +419,20 @@ def _season_sun_array(
         minutes,
         secs,
     )
-    trajectories.append(sun_vecs_long)
+    trajectories.append(light_vecs_long)
 
     trajectories = th.cat(trajectories).to(device)
     infos: Dict[str, Any] = {}
     return trajectories, infos
 
 
-def generate_sun_array(
-        cfg_sun_directions: CfgNode,
+def generate_light_array(
+        cfg_light_directions: CfgNode,
         device: th.device,
         train_vec: Optional[torch.Tensor] = None,
         case: Optional[str] = None
 ) -> Tuple[torch.Tensor, Union[torch.Tensor, Dict[str, Any]]]:
-    cfg = cfg_sun_directions
+    cfg = cfg_light_directions
     if not case:
         case = cfg.CASE
         print(case)
@@ -440,19 +440,19 @@ def generate_sun_array(
 
     if case == "random":
         extras: Union[torch.Tensor, Dict[str, Any]]
-        sun_directions, extras = _random_sun_array(cfg.RAND, device)
+        light_directions, extras = _random_light_array(cfg.RAND, device)
     elif case == "grid":
-        sun_directions, extras = _grid_sun_array(cfg.GRID, device)
+        light_directions, extras = _grid_light_array(cfg.GRID, device)
     elif case == "vecs":
-        sun_directions, extras = _vec_sun_array(cfg.VECS, device)
+        light_directions, extras = _vec_light_array(cfg.VECS, device)
     elif case == "spheric":
-        sun_directions, extras = _spheric_sun_array(
+        light_directions, extras = _spheric_light_array(
             cfg.SPHERIC, device, train_vec)
     elif case == "season":
-        sun_directions, extras = _season_sun_array(device)
+        light_directions, extras = _season_light_array(device)
     else:
-        raise ValueError("unknown `cfg.CASE` in `generate_sun_rays`")
-    return sun_directions, extras
+        raise ValueError("unknown `cfg.CASE` in `generate_light_rays`")
+    return light_directions, extras
 
 
 def log_contoured(

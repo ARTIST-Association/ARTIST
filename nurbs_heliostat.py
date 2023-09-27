@@ -101,7 +101,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config: CfgNode,
             device: th.device,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -113,7 +113,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             device,
             setup_params=False,
             receiver_center=receiver_center,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
         )
         assert len(self.facets.positions) == 1, (
             'cannot handle multiple facets with `NURBSHeliostat`; '
@@ -700,7 +700,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             config: Optional[CfgNode] = None,
             nurbs_config: Optional[CfgNode] = None,
             receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
+            light_directions: Union[
                 torch.Tensor,
                 List[List[float]],
                 None,
@@ -720,7 +720,7 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
             nurbs_config,
             device,
             receiver_center=receiver_center,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
             setup_params=False,
         )
         self._from_dict(data, restore_strictly)
@@ -762,12 +762,12 @@ class NURBSHeliostat(AbstractNURBSHeliostat, Heliostat):
 class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     _heliostat: NURBSHeliostat
     align_origin: List[Transform3d]
-    from_sun: torch.Tensor
+    from_light: torch.Tensor
 
     def __init__(
             self,
             heliostat: NURBSHeliostat,
-            sun_direction: torch.Tensor,
+            light_direction: torch.Tensor,
             aim_point: torch.Tensor,
     ) -> None:
         assert isinstance(heliostat, NURBSHeliostat), \
@@ -775,7 +775,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
         AlignedHeliostat.__init__(
             cast(AlignedHeliostat, self),
             heliostat,
-            sun_direction,
+            light_direction,
             aim_point,
             align_points=False,
         )
@@ -815,7 +815,7 @@ class AlignedNURBSHeliostat(AbstractNURBSHeliostat):
     ) -> torch.Tensor:
         if normals is None:
             normals = self.normals
-        return heliostat_models.reflect_rays_(self.from_sun, normals)
+        return heliostat_models.reflect_rays_(self.from_light, normals)
 
 
 NURBSHeliostat.aligned_cls = AlignedNURBSHeliostat

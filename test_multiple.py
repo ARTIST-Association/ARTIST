@@ -39,7 +39,7 @@ CONFIG_PATH = os.path.join(
     'config.yaml',
 )
 
-SUN_DIRECTIONS = [
+LIGHT_DIRECTIONS = [
     [-0.43719268, 0.7004466, 0.564125],
 ]
 
@@ -114,16 +114,16 @@ def main() -> None:
         'AC.RECEIVER.RESOLUTION_Y',
         bitmap_width,
 
-        'TEST.SUN_DIRECTIONS.CASE',
+        'TEST.LIGHT_DIRECTIONS.CASE',
         'vecs',
 
-        'TEST.SUN_DIRECTIONS.VECS.DIRECTIONS',
-        SUN_DIRECTIONS,
+        'TEST.LIGHT_DIRECTIONS.VECS.DIRECTIONS',
+        LIGHT_DIRECTIONS,
     ])
 
     # Create targets
-    cached_generate_sun_array = disk_cache.disk_cache(
-        data.generate_sun_array,
+    cached_generate_light_array = disk_cache.disk_cache(
+        data.generate_light_array,
         device,
         'cached',
         'test_',
@@ -147,17 +147,17 @@ def main() -> None:
         ),
     )
 
-    sun_directions, ae = cached_generate_sun_array(
-        cfg.TEST.SUN_DIRECTIONS, device)
+    light_directions, ae = cached_generate_light_array(
+        cfg.TEST.LIGHT_DIRECTIONS, device)
     target_heliostat = cached_build_target_heliostat(
-        cfg, sun_directions, device)
+        cfg, light_directions, device)
     env = Environment(cfg.AC, device)
     renderer = Renderer(target_heliostat, env)
 
     targets = cached_generate_dataset(
         target_heliostat,
         env,
-        sun_directions,
+        light_directions,
         None,
         'test',
         None,
@@ -168,18 +168,18 @@ def main() -> None:
 
     test_loss_func = training.build_loss_funcs(cfg.TRAIN.LOSS, [])[-1]
 
-    for (i, (sun_direction, target)) in enumerate(zip(
-            sun_directions,
+    for (i, (light_direction, target)) in enumerate(zip(
+            light_directions,
             targets,
     )):
         for (j, heliostat) in enumerate(heliostats):
-            heliostat_aligned = heliostat.align(sun_direction)
+            heliostat_aligned = heliostat.align(light_direction)
 
             pred_bitmap = cast(th.Tensor, renderer.render(heliostat_aligned))
 
             loss = test_loss_func(pred_bitmap, target)
 
-            print('sun', i, 'h ' + str(j) + ':', loss.item())
+            print('light', i, 'h ' + str(j) + ':', loss.item())
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import atexit
 import copy
 from datetime import datetime
 import os
-from typing import Callable, cast, List, Optional, Union
+from typing import Callable, cast, List, Optional, Union, Tuple
 
 import torch
 import torch as th
@@ -111,6 +111,26 @@ def setup_logging(config_file_name: str, cfg:CfgNode, sweep: bool)-> tuple[dict,
         
     return logdirs, writer
 
+def load_light_positions(cfg_light_directions: CfgNode,
+                         device: th.device,
+                         writer: Optional[SummaryWriter],
+                         which_dataset: str,
+                         ) -> Tuple[th.Tensor,th.Tensor]:
+
+    cached_generate_light_array = dataset_cache.set_up_light_position_caching(device, which_dataset)
+    light_directions_unit_vec, light_directions_azi_ele = cached_generate_light_array(
+        cfg_light_directions, device)
+    return light_directions_unit_vec, light_directions_azi_ele
+
+def load_datasets(cfg:CfgNode,
+                  device: th.device,
+                  writer: Optional[SummaryWriter],
+                  which_dataset: str,
+                  ) -> th.Tensor:
+
+    cached_generate_dataset = dataset_cache.set_up_dataset_caching(device, writer, which_dataset)
+    return cached_generate_dataset
+
 def main(
         config_file_name: Optional[str] = None,
         sweep: Optional[bool] = False,
@@ -128,17 +148,7 @@ def main(
 
     # Create Dataset
     # ==============
-    (
-        (
-            cached_generate_sun_array,
-            cached_generate_test_sun_array,
-        ),
-        (
-            cached_generate_target_dataset,
-            cached_generate_pretrain_dataset,
-            cached_generate_test_dataset,
-        ),
-    ) = dataset_cache.set_up_dataset_caching(device, writer)
+    light_directions_unit_vec, light_directions_azi_ele = load_light_positions(cfg.TRAIN.LIGHT_DIRECTIONS, device, writer, "train")
     
     
     cached_build_target_heliostat = cast(
@@ -150,20 +160,11 @@ def main(
             ignore_argnums=[2],
         ),
     )
-    
-    print("Create dataset using:")
-    print(f"Receiver Center: {cfg.AC.RECEIVER.CENTER}")
-    print(
-        f"Receiver Resolution: {cfg.AC.RECEIVER.RESOLUTION_X}×"
-        f"{cfg.AC.RECEIVER.RESOLUTION_Y}"
-    )
-    print("=============================")
-    sun_directions, ae = cached_generate_sun_array(
-        cfg.TRAIN.SUN_DIRECTIONS, device)
-    H_target = cached_build_target_heliostat(cfg, sun_directions, device)
+
+    H_target = cached_build_target_heliostat(cfg, light_directions_unit_vec, device)
     print(f"Heliostat position on field: {H_target.position_on_field}")
     ENV = Environment(cfg.AC, device)
-    target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
+    target_z_alignments = utils.get_z_alignments(H_target, light_directions_unit_vec)
     # R = Renderer(
     #     #H,
     #     ENV)
@@ -175,15 +176,15 @@ def main(
     training_data_points = {}
     training_renderer = {}
     for i,(#desired_image,
-           desired_concentrator_normal, sun_directions) in enumerate(zip(#targets,
+           desired_concentrator_normal, light_directions) in enumerate(zip(#targets,
                                                                          target_z_alignments,
-                                                                         sun_directions)):
+                                                                         light_directions_unit_vec)):
 
         
         training_data_points[ i] = DataPoint(i, 
                                             None, 
                                             desired_concentrator_normal,
-                                            sun_directions)
+                                            light_directions)
         R = Renderer(
             #H,
             ENV)
@@ -193,12 +194,12 @@ def main(
     #===================================================
     
     if cfg.TRAIN.USE_IMAGES:
-        assert cfg.TRAIN.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
-            'must have known sun directions for training with images '
+        assert cfg.TRAIN.LIGHT_DIRECTIONS.CASE.lower() == 'vecs', (
+            'must have known light directions for training with images '
             '(set `CASE` to "vec" and check the given `VECS.DIRECTIONS`)'
         )
-        assert len(cfg.TRAIN.IMAGES.PATHS) == len(sun_directions), \
-            'number of sun directions does not match number of images'
+        assert len(cfg.TRAIN.IMAGES.PATHS) == len(light_directions), \
+            'number of light directions does not match number of images'
         targets = data.load_images(
             list(map(utils.normalize_path, cfg.TRAIN.IMAGES.PATHS)),
             cfg.AC.RECEIVER.PLANE_X,
@@ -216,8 +217,8 @@ def main(
             # H_aligned = H_target.align(alignment, align_origin)
             surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
             #surface_normals = H_aligned.normals
-            from_sun = -datapoint.sun_directions
-            rays = from_sun.unsqueeze(0)
+            from_light = -datapoint.light_directions
+            rays = from_light.unsqueeze(0)
             (
                 pred_bitmap,
                 (ray_directions, dx_ints, dy_ints, indices, _, _),
@@ -234,10 +235,15 @@ def main(
                 index=i,
             )
     else:
+        cached_generate_target_dataset = load_datasets(cfg              = cfg,
+                                                       device           = device,
+                                                       writer           = writer,
+                                                       which_dataset    = "train",
+                                                       )
         targets = cached_generate_target_dataset(
             H_target,
             ENV,
-            sun_directions,
+            light_directions,
             logdirs["files"],
             "train",
             writer,
@@ -245,7 +251,7 @@ def main(
     for i,key in enumerate(training_data_points.keys()):
         training_data_points[key].desired_image = targets[i]
         
-    # target_z_alignments = utils.get_z_alignments(H_target, sun_directions)
+    # target_z_alignments = utils.get_z_alignments(H_target, light_directions)
     
 
     #     from matplotlib import pyplot as plt #TODO Remove for release
@@ -258,7 +264,7 @@ def main(
     #     plt.gca().yaxis.set_major_locator(plt.NullLocator())
     #     # plt.show()
     #     plt.savefig(
-    #         str(sun_directions.squeeze()) + ".png",
+    #         str(light_directions.squeeze()) + ".png",
     #         bbox_inches='tight',
     #         pad_inches=0,
     #     )
@@ -282,18 +288,18 @@ def main(
     else:
         target_sets = None
     # H_naive_target = cached_build_target_heliostat(
-    #     cfg, sun_directions, device)
+    #     cfg, light_directions, device)
     # H_naive_target._normals = H_naive_target.get_raw_normals_ideal()
     # naive_targets = cached_generate_pretrain_dataset(
     #     H_naive_target,heliostat_model_target
     #     ENV,
-    #     sun_directions,
+    #     light_directions,
     #     logdir_files,
     #     "pretrain",
     #     writer,
     # )
     # naive_target_z_alignments = utils.get_z_alignments(
-    #     H_naive_target, sun_directions)
+    #     H_naive_target, light_directions)
 
     # if cfg.TRAIN.LOSS.HAUSDORFF.FACTOR != 0:
     #     naive_target_sets: Optional[
@@ -306,19 +312,19 @@ def main(
     # else:
     #     naive_target_sets = None
 
-    test_sun_directions, test_ae = cached_generate_test_sun_array(
-        cfg.TEST.SUN_DIRECTIONS, device)
+    test_light_directions, test_ae = load_light_positions(
+        cfg.TEST.LIGHT_DIRECTIONS, device, writer, "test")
     
     #new=================================================
     test_renderer = {}
     test_data_points = {}
-    for i,sun_directions_test in enumerate(test_sun_directions):
+    for i,light_directions_test in enumerate(test_light_directions):
 
         
         test_data_points[i] = DataPoint(point_id = i, 
                                             desired_image = None, 
                                             desired_concentrator_normal = None,
-                                            sun_directions = sun_directions_test)
+                                            light_directions = light_directions_test)
     
         R = Renderer(
         #H,
@@ -329,12 +335,12 @@ def main(
     #===================================================
 
     if cfg.TEST.USE_IMAGES:
-        assert cfg.TEST.SUN_DIRECTIONS.CASE.lower() == 'vecs', (
-            'must have known sun directions for testing with images '
+        assert cfg.TEST.LIGHT_DIRECTIONS.CASE.lower() == 'vecs', (
+            'must have known light directions for testing with images '
             '(set `CASE` to "vec" and check the given `VECS.DIRECTIONS`)'
         )
-        assert len(cfg.TEST.IMAGES.PATHS) == len(test_sun_directions), \
-            'number of sun directions does not match number of images'
+        assert len(cfg.TEST.IMAGES.PATHS) == len(test_light_directions), \
+            'number of light directions does not match number of images'
         test_targets = data.load_images(
             list(map(utils.normalize_path, cfg.TEST.IMAGES.PATHS)),
             cfg.AC.RECEIVER.PLANE_X,
@@ -353,8 +359,8 @@ def main(
             # H_aligned = H_target.align(alignment, align_origin)
             surface_points, surface_normals = heliostat_model_target.surface_points(alignment, align_origin)
             #surface_normals = H_aligned.normals
-            from_sun = -datapoint.sun_directions
-            rays = from_sun.unsqueeze(0)
+            from_light = -datapoint.light_directions
+            rays = from_light.unsqueeze(0)
             (
                 pred_bitmap,
                 (ray_directions, dx_ints, dy_ints, indices, _, _),
@@ -381,10 +387,15 @@ def main(
             
             # test_targets.append(pred_bitmap)
     else:
+        cached_generate_test_dataset = load_datasets(cfg              = cfg,
+                                                     device           = device,
+                                                     writer           = writer,
+                                                     which_dataset    = "train",
+                                                     )
         test_targets = cached_generate_test_dataset(
             H_target,
             ENV,
-            test_sun_directions,
+            test_light_directions,
             None,
             "test",
             writer,
@@ -422,8 +433,8 @@ def main(
     #     facet._normals = normals
     # alignment_params = []
     # found_something = False
-    # for i, sun in enumerate(sun_directions):
-    #     H = build_heliostat(cfg, sun.unsqueeze(0), device)
+    # for i, light in enumerate(light_directions):
+    #     H = build_heliostat(cfg, light.unsqueeze(0), device)
     #     ENV = Environment(cfg.AC, device)
     #     R = Renderer(H, ENV)
     #     H.set_to_optimize(["rotation_x","rotation_y","rotation_z"])
@@ -448,7 +459,7 @@ def main(
     #             targets[i].unsqueeze(0),
     #             target_z_alignments[i].unsqueeze(0),
     #             target_sets,
-    #             sun.unsqueeze(0),
+    #             light.unsqueeze(0),
     #             loss_func,
     #             cfg,
     #             epoch,
@@ -495,7 +506,7 @@ def main(
 
     epochs: int = cfg.TRAIN.EPOCHS
     steps_per_epoch = 1
-    H = build_heliostat(cfg, sun_directions, device)
+    H = build_heliostat(cfg, light_directions, device)
     ENV = Environment(cfg.AC, device)
     # R = Renderer(
     #     #H,
@@ -549,7 +560,7 @@ def main(
     plot = plotter.Plotter(
         cfg,
         R,
-        sun_directions,
+        light_directions,
         test_loss_func,
         device,
         train_prealignment=prealignment,
@@ -570,7 +581,7 @@ def main(
             test_data_points,
             #test_targets,
             test_target_sets,
-            #test_sun_directions,
+            #test_light_directions,
             test_loss_func,
             cfg,
             epoch,
@@ -594,7 +605,7 @@ def main(
             #targets, # desired images
             #target_z_alignments, # desired concentrator normals 
             target_sets,
-            #sun_directions, 
+            #light_directions, 
             loss_func,
             cfg,
             epoch,

@@ -70,15 +70,15 @@ _C.NURBS.FACETS.CANTING = CN()
 # When the canting algorithm is 'active', any value other than 0 is
 # ignored and treated as if it was `None`.
 _C.NURBS.FACETS.CANTING.FOCUS_POINT = 'inherit'
-# Canting algorithm can be 'standard', 'active', or 'first_sun'.
+# Canting algorithm can be 'standard', 'active', or 'first_light'.
 # - Standard canting calculates the canting rotation to the focus point
 #   once at the beginning. The focus point is assumed to be right above
 #   the heliostat center at the distance of the receiver.
 # - In active canting, each facet is canted perfectly onto the receiver
-#   center for each sun position. This means the focus point is always
+#   center for each light position. This means the focus point is always
 #   treated as if it was `None`.
-# - First sun specifies a mix of the two. The heliostat is canted
-#   perfectly (i.e. actively) for the first sun position. This canting
+# - First light specifies a mix of the two. The heliostat is canted
+#   perfectly (i.e. actively) for the first light position. This canting
 #   only happens once at the start, not for each alignment.
 #
 # If 'inherit', use the canting algorithm from the loaded heliostat.
@@ -250,14 +250,14 @@ _C.AC.RECEIVER.PLANE_Y                  = 5. # in m
 _C.AC.RECEIVER.RESOLUTION_X             = 512
 _C.AC.RECEIVER.RESOLUTION_Y             = 512
 
-_C.AC.SUN                               = CN()
+_C.AC.LIGHT                               = CN()
 
-_C.AC.SUN.GENERATE_N_RAYS               = 1500
-_C.AC.SUN.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
-_C.AC.SUN.REDRAW_RANDOM_VARIABLES       = False #TODO schauen wo das aufgerufen wird
-_C.AC.SUN.NORMAL_DIST                   = CN()
-_C.AC.SUN.NORMAL_DIST.MEAN              = [0,0]
-_C.AC.SUN.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
+_C.AC.LIGHT.GENERATE_N_RAYS               = 1500
+_C.AC.LIGHT.DISTRIBUTION                  = "Normal"                              #SWITCH FOR SOLAR DISTRIBUSTION: Normal, Point, Pillbox (not completly implemented)
+_C.AC.LIGHT.REDRAW_RANDOM_VARIABLES       = False #TODO schauen wo das aufgerufen wird
+_C.AC.LIGHT.NORMAL_DIST                   = CN()
+_C.AC.LIGHT.NORMAL_DIST.MEAN              = [0,0]
+_C.AC.LIGHT.NORMAL_DIST.COV               = [[0.002090**2, 0], [0, 0.002090**2]]
 
 
 
@@ -268,23 +268,23 @@ _C.TRAIN.EPOCHS                         = 2500
 _C.TRAIN.USE_IMAGES                     = False
 
 _C.TRAIN.IMAGES = CN()
-# Remember to set sun directions accordingly!
+# Remember to set light directions accordingly!
 _C.TRAIN.IMAGES.PATHS                   = ['Transform.png']
 
-_C.TRAIN.SUN_DIRECTIONS                 = CN()
-_C.TRAIN.SUN_DIRECTIONS.CASE            ="random"   #SWITCH FOR SUN_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TRAIN.LIGHT_DIRECTIONS                 = CN()
+_C.TRAIN.LIGHT_DIRECTIONS.CASE            ="random"   #SWITCH FOR LIGHT_DIRECTIONS DIRECTION VEKTOR GENERATION: vecs, random, grid
 
-_C.TRAIN.SUN_DIRECTIONS.VECS            = CN()
-_C.TRAIN.SUN_DIRECTIONS.VECS.DIRECTIONS = [[-0.43719268,  0.7004466,   0.564125  ],]
+_C.TRAIN.LIGHT_DIRECTIONS.VECS            = CN()
+_C.TRAIN.LIGHT_DIRECTIONS.VECS.DIRECTIONS = [[-0.43719268,  0.7004466,   0.564125  ],]
 
-_C.TRAIN.SUN_DIRECTIONS.RAND            = CN()
-_C.TRAIN.SUN_DIRECTIONS.RAND.NUM_SAMPLES = 10
-_C.TRAIN.SUN_DIRECTIONS.RAND.LATITUDE    = 50.92
-_C.TRAIN.SUN_DIRECTIONS.RAND.LONGITUDE   = 6.36
+_C.TRAIN.LIGHT_DIRECTIONS.RAND            = CN()
+_C.TRAIN.LIGHT_DIRECTIONS.RAND.NUM_SAMPLES = 10
+_C.TRAIN.LIGHT_DIRECTIONS.RAND.LATITUDE    = 50.92
+_C.TRAIN.LIGHT_DIRECTIONS.RAND.LONGITUDE   = 6.36
 
-_C.TRAIN.SUN_DIRECTIONS.GRID            = CN()
-_C.TRAIN.SUN_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
-_C.TRAIN.SUN_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
+_C.TRAIN.LIGHT_DIRECTIONS.GRID            = CN()
+_C.TRAIN.LIGHT_DIRECTIONS.GRID.AZI_RANGE  = [-90, 90, 3] #Start,Stop,Step
+_C.TRAIN.LIGHT_DIRECTIONS.GRID.ELE_RANGE  = [ 20, 80, 3] #Start,Stop,Step
 
 
 
@@ -406,30 +406,30 @@ _C.TEST.INNER_IMG_INTERVAL = 15
 _C.TEST.USE_IMAGES = False
 
 _C.TEST.IMAGES = CN()
-# Remember to set sun directions accordingly!
+# Remember to set light directions accordingly!
 _C.TEST.IMAGES.PATHS = []
 
 # Reduces test image array to 5, images will be generated with complete array
 
-_C.TEST.SUN_DIRECTIONS                  = CN()
-_C.TEST.SUN_DIRECTIONS.CASE             ="random"   #SWITCH FOR SUN DIRECTION VEKTOR GENERATION: vecs, random, grid
+_C.TEST.LIGHT_DIRECTIONS                  = CN()
+_C.TEST.LIGHT_DIRECTIONS.CASE             ="random"   #SWITCH FOR LIGHT DIRECTION VEKTOR GENERATION: vecs, random, grid
 
-_C.TEST.SUN_DIRECTIONS.VECS             = CN()
-_C.TEST.SUN_DIRECTIONS.VECS.DIRECTIONS  = [[-0.8662,  0.4890,  0.1026],] #Measurement Date 28.10.21 15:30
+_C.TEST.LIGHT_DIRECTIONS.VECS             = CN()
+_C.TEST.LIGHT_DIRECTIONS.VECS.DIRECTIONS  = [[-0.8662,  0.4890,  0.1026],] #Measurement Date 28.10.21 15:30
 
 
-_C.TEST.SUN_DIRECTIONS.RAND             = CN()
-_C.TEST.SUN_DIRECTIONS.RAND.NUM_SAMPLES = 5
-_C.TEST.SUN_DIRECTIONS.RAND.LATITUDE    = 50.92
-_C.TEST.SUN_DIRECTIONS.RAND.LONGITUDE   = 6.36
+_C.TEST.LIGHT_DIRECTIONS.RAND             = CN()
+_C.TEST.LIGHT_DIRECTIONS.RAND.NUM_SAMPLES = 5
+_C.TEST.LIGHT_DIRECTIONS.RAND.LATITUDE    = 50.92
+_C.TEST.LIGHT_DIRECTIONS.RAND.LONGITUDE   = 6.36
 
-_C.TEST.SUN_DIRECTIONS.GRID             = CN()
-_C.TEST.SUN_DIRECTIONS.GRID.AZI_RANGE   = [-90, 90, 7] #Start,Stop,Step
-_C.TEST.SUN_DIRECTIONS.GRID.ELE_RANGE   = [ 20, 80, 3] #Start,Stop,Step
-_C.TEST.SUN_DIRECTIONS.GRID.PLOT        = True
+_C.TEST.LIGHT_DIRECTIONS.GRID             = CN()
+_C.TEST.LIGHT_DIRECTIONS.GRID.AZI_RANGE   = [-90, 90, 7] #Start,Stop,Step
+_C.TEST.LIGHT_DIRECTIONS.GRID.ELE_RANGE   = [ 20, 80, 3] #Start,Stop,Step
+_C.TEST.LIGHT_DIRECTIONS.GRID.PLOT        = True
 
-_C.TEST.SUN_DIRECTIONS.SPHERIC          = CN()
-_C.TEST.SUN_DIRECTIONS.SPHERIC.NUM_SAMPLES =10
+_C.TEST.LIGHT_DIRECTIONS.SPHERIC          = CN()
+_C.TEST.LIGHT_DIRECTIONS.SPHERIC.NUM_SAMPLES =10
 
 _C.TEST.PLOT                            = CN()
 _C.TEST.PLOT.SPHERIC                     =False

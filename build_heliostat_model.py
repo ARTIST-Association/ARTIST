@@ -13,7 +13,7 @@ from nurbs_heliostat import AbstractNURBSHeliostat, NURBSHeliostat
 
 def load_heliostat(
         cfg: CfgNode,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         device: th.device,
 ) -> AbstractHeliostat:
     cp_path = os.path.expanduser(cfg.CP_PATH)
@@ -30,21 +30,21 @@ def load_heliostat(
             nurbs_config=cfg.NURBS,
             config=cfg.H,
             receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
         )
     else:
         H = Heliostat.from_dict(
             cp,
             device,
             receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
         )
     return H
 
 
 def _build_multi_nurbs_target(
         cfg: CfgNode,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         device: th.device,
 ) -> MultiNURBSHeliostat:
     mnh_cfg = cfg.clone()
@@ -85,7 +85,7 @@ def _build_multi_nurbs_target(
         nurbs_cfg,
         device,
         receiver_center=mnh_cfg.AC.RECEIVER.CENTER,
-        sun_directions=sun_directions,
+        light_directions=light_directions,
         setup_params=False,
     )
 
@@ -103,14 +103,14 @@ def _build_multi_nurbs_target(
 
 def _multi_nurbs_to_standard(
         cfg: CfgNode,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         mnh: MultiNURBSHeliostat,
 ) -> Heliostat:
     H = Heliostat(
         cfg.H,
         mnh.device,
         receiver_center=cfg.AC.RECEIVER.CENTER,
-        sun_directions=sun_directions,
+        light_directions=light_directions,
         setup_params=False,
     )
     discrete_points, normals = mnh.discrete_points_and_normals()
@@ -137,18 +137,18 @@ def _multi_nurbs_to_standard(
 
 def build_target_heliostat(
         cfg: CfgNode,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         device: th.device,
 ) -> Heliostat:
     if cfg.H.SHAPE.lower() == 'nurbs':
-        mnh = _build_multi_nurbs_target(cfg, sun_directions, device)
-        H = _multi_nurbs_to_standard(cfg, sun_directions, mnh)
+        mnh = _build_multi_nurbs_target(cfg, light_directions, device)
+        H = _multi_nurbs_to_standard(cfg, light_directions, mnh)
     else:
         H = Heliostat(
             cfg.H,
             device,
             receiver_center=cfg.AC.RECEIVER.CENTER,
-            sun_directions=sun_directions,
+            light_directions=light_directions,
             setup_params=False,
         )
     return H
@@ -156,11 +156,11 @@ def build_target_heliostat(
 
 def build_heliostat(
         cfg: CfgNode,
-        sun_directions: torch.Tensor,
+        light_directions: torch.Tensor,
         device: th.device,
 ) -> AbstractHeliostat:
     if cfg.CP_PATH and os.path.isfile(os.path.expanduser(cfg.CP_PATH)):
-        H = load_heliostat(cfg, sun_directions, device)
+        H = load_heliostat(cfg, light_directions, device)
     else:
         if cfg.USE_NURBS:
             H = MultiNURBSHeliostat(
@@ -168,13 +168,13 @@ def build_heliostat(
                 cfg.NURBS,
                 device,
                 receiver_center=cfg.AC.RECEIVER.CENTER,
-                sun_directions=sun_directions,
+                light_directions=light_directions,
             )
         else:
             H = Heliostat(
                 cfg.H,
                 device,
                 receiver_center=cfg.AC.RECEIVER.CENTER,
-                sun_directions=sun_directions,
+                light_directions=light_directions,
             )
     return H

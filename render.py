@@ -279,10 +279,10 @@ class Renderer(object):
         #self.H = heliostat
         self.ENV = environment
         self.redraw_random_variables: bool = \
-            self.ENV.cfg.SUN.REDRAW_RANDOM_VARIABLES
+            self.ENV.cfg.LIGHT.REDRAW_RANDOM_VARIABLES
 
         #if not self.redraw_random_variables:
-        #    self.xi, self.yi = self.ENV.sun.sample(2008) # 2008=len(self.H)!!!
+        #    self.xi, self.yi = self.ENV.light.sample(2008) # 2008=len(self.H)!!!
         self.xi = None
         self.yi = None
         
@@ -315,9 +315,9 @@ class Renderer(object):
         
         ray_directions = self.reflect_rays_(rays, surface_normals)
         if self.redraw_random_variables:
-            xi, yi = self.ENV.sun.sample(len(ray_directions))
+            xi, yi = self.ENV.light.sample(len(ray_directions))
         elif not torch.is_tensor(self.xi):
-            xi, yi = self.ENV.sun.sample(len(ray_directions))
+            xi, yi = self.ENV.light.sample(len(ray_directions))
             self.xi = xi
             self.yi = yi
         else:

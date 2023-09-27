@@ -51,9 +51,9 @@ TrainObjects = collections.namedtuple(
         'training_data_points',
         #'targets',
         #'target_z_alignments',
-        #'sun_directions',
+        #'light_directions',
         'target_sets',
-        #'sun_directions',
+        #'light_directions',
         'loss_func',
         'config',
         'epoch',
@@ -76,7 +76,7 @@ TestObjects = collections.namedtuple(
          'test_data_points',
          #'test_targets',
          'test_target_sets',
-         #'test_sun_directions',
+         #'test_light_directions',
          'test_loss_func',
          'cfg',
          'epoch',
@@ -592,7 +592,7 @@ def calc_batch_loss(
         training_data_points,
         #target_z_alignments,
         target_sets,
-        #sun_directions,
+        #light_directions,
         loss_func,
         config,
         epoch,
@@ -610,7 +610,7 @@ def calc_batch_loss(
     
     # Initialize Parameters
     # =====================
-    # print(targets.shape,target_z_alignments.shape,sun_directions.shape)
+    # print(targets.shape,target_z_alignments.shape,light_directions.shape)
     loss = th.tensor(0.0, dtype=torch.float64, device=heliostat_model.device)
     raw_loss = th.zeros_like(loss)
     if return_extras:
@@ -621,7 +621,7 @@ def calc_batch_loss(
     for (i, (
             #target,
             #target_z_alignment,
-            #sun_direction,
+            #light_direction,
             R,
             datapoints,
             target_set,
@@ -631,7 +631,7 @@ def calc_batch_loss(
             training_data_points.values(),
             #targets,
             #target_z_alignments,
-            #sun_directions,
+            #light_directions,
             target_sets if target_sets is not None else itertools.repeat(None),
             (
                 prealignments
@@ -642,7 +642,7 @@ def calc_batch_loss(
             
         target = datapoints.desired_image
         target_z_alignment = datapoints.desired_concentrator_normal
-        sun_direction = datapoints.sun_directions
+        light_direction = datapoints.light_directions
         
         
         
@@ -653,7 +653,7 @@ def calc_batch_loss(
         
         
         
-        #alignment, align_origin = H.align2(sun_direction)#datapoint.sun_direction
+        #alignment, align_origin = H.align2(light_direction)#datapoint.light_direction
         alignment, align_origin = heliostat_model.align(datapoints)
 
         #H_aligned = H.align(alignment, align_origin)
@@ -662,8 +662,8 @@ def calc_batch_loss(
         
         #surface_points = H_aligned.discrete_points
         #surface_normals = H_aligned.normals
-        from_sun = - sun_direction
-        rays = from_sun.unsqueeze(0)
+        from_light = - light_direction
+        rays = from_light.unsqueeze(0)
         (
             pred_bitmap,
             (ray_directions, dx_ints, dy_ints, indices, _, _),
@@ -855,7 +855,7 @@ def test_batch(
         test_data_points,
         #targets,
         target_sets,
-        #sun_directions,
+        #light_directions,
         loss_func,
         config,
         epoch,
@@ -881,7 +881,7 @@ def test_batch(
     bitmaps: Optional[torch.Tensor] = None
     for (i, (R, datapoints_test, prealignment)) in enumerate(zip(
             #targets,
-            #sun_directions,
+            #light_directions,
             test_renderer.values(),
             test_data_points.values(),
             (
@@ -891,7 +891,7 @@ def test_batch(
             ),
     )):
         target = datapoints_test.desired_image
-        sun_direction = datapoints_test.sun_directions
+        light_direction = datapoints_test.light_directions
         
         if prealignment:
             # print(prealignment)
@@ -899,13 +899,13 @@ def test_batch(
             
         alignment, align_origin = heliostat_model.align(datapoints_test)
         #heliostat_aligned = heliostat_model.align(alignment, align_origin)
-        #heliostat_aligned = heliostat.align(sun_direction)
+        #heliostat_aligned = heliostat.align(light_direction)
 
         #surface_points = heliostat_aligned.discrete_points
         #surface_normals = heliostat_aligned.normals
         surface_points, surface_normals = heliostat_model.surface_points(alignment, align_origin)
-        from_sun = -sun_direction
-        rays = from_sun.unsqueeze(0)
+        from_light = -light_direction
+        rays = from_light.unsqueeze(0)
     
         (
             pred_bitmap,
