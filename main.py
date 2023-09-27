@@ -150,7 +150,8 @@ def main(
     # ==============
     light_directions_unit_vec, light_directions_azi_ele = load_light_positions(cfg.TRAIN.LIGHT_DIRECTIONS, device, writer, "train")
     
-    
+    # Create Heliostat Model
+    # ======================
     cached_build_target_heliostat = cast(
         Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
         disk_cache.disk_cache(
