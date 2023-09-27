@@ -97,6 +97,26 @@ def make_cached_generate_dataset_factory(
     return make_cached_generate_dataset
 
 
+def set_up_light_position_caching(
+        device: th.device,
+        writer: Optional[SummaryWriter],
+) -> Tuple[
+    Tuple[Callable, Callable],
+    Tuple[
+        Callable,
+        Callable,
+        Callable,
+    ],
+]:
+    make_cached_generate_sun_array = make_cached_generate_sun_array_factory(
+        device)
+
+    return (
+            make_cached_generate_sun_array('target_'),
+            make_cached_generate_sun_array('test_'),
+            )
+    
+
 def set_up_dataset_caching(
         device: th.device,
         writer: Optional[SummaryWriter],
@@ -124,7 +144,6 @@ def set_up_dataset_caching(
             make_cached_generate_dataset('test'),
         ),
     )
-
 
 def set_up_test_dataset_caching(
         device: th.device,
