@@ -119,13 +119,15 @@ def main(
     
     # Set system parameters
     # =====================
-    utils.fix_pytorch3d() # Fix pytorch3d dtype propagation
-    change_pytorch_float_type(use_float=cfg.USE_FLOAT64)
+    utils.fix_pytorch3d_dtype_propagation()
+    change_pytorch_float_type(use_float_64=cfg.USE_FLOAT64)
     logdirs, writer = setup_logging(config_file_name, cfg, sweep)
     sanity_checks.check_config_file_on_common_mistakes(cfg)
     th.manual_seed(cfg.SEED) # repeatability for experiments
     device = th.device('cuda' if cfg.USE_GPU and th.cuda.is_available() else 'cpu')
 
+    # Create Dataset
+    # ==============
     (
         (
             cached_generate_sun_array,
@@ -137,6 +139,8 @@ def main(
             cached_generate_test_dataset,
         ),
     ) = dataset_cache.set_up_dataset_caching(device, writer)
+    
+    
     cached_build_target_heliostat = cast(
         Callable[[CfgNode, torch.Tensor, th.device], Heliostat],
         disk_cache.disk_cache(
@@ -146,10 +150,7 @@ def main(
             ignore_argnums=[2],
         ),
     )
-
-    # Create Dataset
-    # ==============
-    # Create Heliostat Object and Load Model defined in config file
+    
     print("Create dataset using:")
     print(f"Receiver Center: {cfg.AC.RECEIVER.CENTER}")
     print(

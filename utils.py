@@ -1316,7 +1316,7 @@ def normalize_path(path: str) -> str:
     return path
 
 
-def fix_pytorch3d() -> None:
+def fix_pytorch3d_dtype_propagation() -> None:
     # Monkey patch missing dtype propagation using default dtype.
     # Not a good solution but it handles the bug.
     tfs.Transform3d.__init__.__defaults__ = (
