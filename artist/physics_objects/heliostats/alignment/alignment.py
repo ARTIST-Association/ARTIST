@@ -9,7 +9,7 @@ from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusio
 
 class AlignmentModule(AModule):
     def __init__(self, position):
-        super(AlignmentModule, self).__init__()
+        super().__init__()
         self.position = position
         self.kinematicModel = NeuralNetworkRigidBodyFusion(position=position)
 
