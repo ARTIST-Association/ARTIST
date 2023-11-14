@@ -1,6 +1,6 @@
 import typing
 import torch
-from artist.physics_objects.parameter import AParameter
+from ..parameter import AParameter
 
 
 class ANormalization:
