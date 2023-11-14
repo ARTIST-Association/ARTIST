@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import torch
-from artist.scenario.light_source.light_source import ALightSource
-from artist.util import utils
+from .light_source import ALightSource
+from ...util import utils
 
 
 class Sun(ALightSource):
@@ -30,9 +30,9 @@ class Sun(ALightSource):
             raise ValueError("Not Implemented Yet")
         else:
             raise ValueError("unknown light distribution type")
-    
+
     def sample(self, num_rays_on_hel: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+               ) -> Tuple[torch.Tensor, torch.Tensor]:
         if self.dist_type == "Normal":
             distortion_x_dir, distortion_y_dir = self.distribution.sample(
                 (self.num_rays, num_rays_on_hel),
@@ -51,7 +51,6 @@ class Sun(ALightSource):
         rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
         return torch.matmul(rots, mat)
 
-
     def Rz(self, alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
         zeros = torch.zeros_like(alpha)
         coss = torch.cos(alpha)
@@ -62,14 +61,13 @@ class Sun(ALightSource):
         rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
         return torch.matmul(rots, mat)
 
-
-    def line_plane_intersections(self, 
-        planeNormal: torch.Tensor,
-        planePoint: torch.Tensor,
-        rayDirections: torch.Tensor,
-        rayPoints: torch.Tensor,
-        epsilon: float = 1e-6,
-    ) -> torch.Tensor:
+    def line_plane_intersections(self,
+                                 planeNormal: torch.Tensor,
+                                 planePoint: torch.Tensor,
+                                 rayDirections: torch.Tensor,
+                                 rayPoints: torch.Tensor,
+                                 epsilon: float = 1e-6,
+                                 ) -> torch.Tensor:
         ndotu = rayDirections.matmul(planeNormal)
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
@@ -78,16 +76,16 @@ class Sun(ALightSource):
         return rayPoints + rayDirections * ds.unsqueeze(-1)
 
     def compute_rays(self,
-        planeNormal: torch.Tensor,
-        planePoint: torch.Tensor,
-        ray_directions: torch.Tensor,
-        hel_in_field: torch.Tensor,
-        distortion_x_dir: torch.Tensor,
-        distortion_y_dir: torch.Tensor,
-    ) -> torch.Tensor:
-        intersections = self.line_plane_intersections(planeNormal=planeNormal, 
+                     planeNormal: torch.Tensor,
+                     planePoint: torch.Tensor,
+                     ray_directions: torch.Tensor,
+                     hel_in_field: torch.Tensor,
+                     distortion_x_dir: torch.Tensor,
+                     distortion_y_dir: torch.Tensor,
+                     ) -> torch.Tensor:
+        intersections = self.line_plane_intersections(planeNormal=planeNormal,
                                                       planePoint=planePoint,
-                                                      rayDirections=ray_directions, 
+                                                      rayDirections=ray_directions,
                                                       rayPoints=hel_in_field)
         as_ = intersections
         has = as_ - hel_in_field
@@ -115,7 +113,7 @@ class Sun(ALightSource):
             [
                 has[:, 2] * has[:, 0],
                 has[:, 2] * has[:, 1],
-                -has[:, 0]**2 - has[:, 1]**2,
+                -has[:, 0] ** 2 - has[:, 1] ** 2,
             ],
             -1,
         )
@@ -141,30 +139,30 @@ class Sun(ALightSource):
         return rays
         # return rotated_has
 
-    def reflect_rays_(self, 
-                      rays: torch.Tensor, 
+    def reflect_rays_(self,
+                      rays: torch.Tensor,
                       normals: torch.Tensor) -> torch.Tensor:
         return rays - 2 * utils.batch_dot(rays, normals) * normals
-    
+
     def compute_receiver_intersections(self,
-        planeNormal: torch.Tensor,
-        planePoint: torch.Tensor,
-        ray_directions: torch.Tensor,
-        hel_in_field: torch.Tensor,
-    ) -> torch.Tensor:
+                                       planeNormal: torch.Tensor,
+                                       planePoint: torch.Tensor,
+                                       ray_directions: torch.Tensor,
+                                       hel_in_field: torch.Tensor,
+                                       ) -> torch.Tensor:
         # Execute the kernel
         intersections = self.line_plane_intersections(
             planeNormal, planePoint, ray_directions, hel_in_field, epsilon=1e-6)
         # print(intersections)
         return intersections
-    
+
     def line_plane_intersections(self,
-        planeNormal: torch.Tensor,
-        planePoint: torch.Tensor,
-        rayDirections: torch.Tensor,
-        rayPoints: torch.Tensor,
-        epsilon: float = 1e-6,
-    ) -> torch.Tensor:
+                                 planeNormal: torch.Tensor,
+                                 planePoint: torch.Tensor,
+                                 rayDirections: torch.Tensor,
+                                 rayPoints: torch.Tensor,
+                                 epsilon: float = 1e-6,
+                                 ) -> torch.Tensor:
         ndotu = rayDirections.matmul(planeNormal)
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
@@ -173,14 +171,14 @@ class Sun(ALightSource):
         return rayPoints + rayDirections * ds.unsqueeze(-1)
 
     def sample_bitmap(self,
-        dx_ints: torch.Tensor,
-        dy_ints: torch.Tensor,
-        indices: torch.Tensor,
-        planex: float,
-        planey: float,
-        bitmap_height: int,
-        bitmap_width: int,
-    ) -> torch.Tensor:
+                      dx_ints: torch.Tensor,
+                      dy_ints: torch.Tensor,
+                      indices: torch.Tensor,
+                      planex: float,
+                      planey: float,
+                      bitmap_height: int,
+                      bitmap_width: int,
+                      ) -> torch.Tensor:
 
         x_ints = dx_ints[indices] / planex * bitmap_height
         y_ints = dy_ints[indices] / planey * bitmap_width
@@ -275,10 +273,10 @@ class Sun(ALightSource):
         # choose only those indices that are actually in the bitmap (i.e. we
         # prevent out-of-bounds access).
         indices = (
-            (0 <= x_inds)
-            & (x_inds < bitmap_height)
-            & (0 <= y_inds)
-            & (y_inds < bitmap_width)
+                (0 <= x_inds)
+                & (x_inds < bitmap_height)
+                & (0 <= y_inds)
+                & (y_inds < bitmap_width)
         )
 
         # Flux density map for heliostat field
@@ -294,4 +292,3 @@ class Sun(ALightSource):
             accumulate=True,
         )
         return total_bitmap
-
