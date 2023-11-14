@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import unittest
 import torch
-from PIL import Image
+from artist import ARTIST_ROOT
 
 from ..sun import Sun
 from ....io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
@@ -42,8 +42,6 @@ class TestASunModule(unittest.TestCase):
         )
 
     def test_compute_rays(self):
-        expected = False
-
         receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
         receiver_center = self.receiver_center
         receiver_plane_x = 8.629666667
@@ -75,10 +73,10 @@ class TestASunModule(unittest.TestCase):
         dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
 
         indices = (
-                (-1 <= dx_ints)
-                & (dx_ints < receiver_plane_x + 1)
-                & (-1 <= dy_ints)
-                & (dy_ints < receiver_plane_y + 1)
+            (-1 <= dx_ints)
+            & (dx_ints < receiver_plane_x + 1)
+            & (-1 <= dy_ints)
+            & (dy_ints < receiver_plane_y + 1)
         )
 
         total_bitmap = self.sun.sample_bitmap(
@@ -94,7 +92,9 @@ class TestASunModule(unittest.TestCase):
         plt.imshow(total_bitmap.detach().numpy())
         plt.show()
 
-        expected = torch.load("Bitmaps/testMap.pt")
+        expected = torch.load(
+            f"{ARTIST_ROOT}/artist/scenario/light_source/tests/bitmaps/testMap.pt"
+        )
 
         torch.testing.assert_close(total_bitmap, expected)
 
