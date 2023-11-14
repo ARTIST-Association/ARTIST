@@ -1,11 +1,9 @@
-import sys
-sys.path.append('../../../..')
 import unittest
 import torch
 import math
 
-from Code.NeuralNetworkRigidBodyFusionModule import NeuralNetworkRigidBodyFusion
-from Code.ADatapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 
 class TestAKinematicModule(unittest.TestCase):
     def setUp(self):
