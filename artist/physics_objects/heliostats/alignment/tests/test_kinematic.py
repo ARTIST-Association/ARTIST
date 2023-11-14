@@ -58,7 +58,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0, 0, 0, 1],
             ]
         )
-        orientation_matrix = self.kinematic_model.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
             self.datapoint1
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
@@ -72,7 +72,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0, 0, 0, 1],
             ]
         )
-        orientation_matrix = self.kinematic_model.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
             self.datapoint2
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
@@ -86,7 +86,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
-        orientation_matrix = self.kinematic_model.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
             self.datapoint3
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
@@ -100,7 +100,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
-        orientation_matrix = self.kinematic_model.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
             self.datapoint4
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
@@ -114,7 +114,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
-        orientation_matrix = self.kinematic_model.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
             self.datapoint5
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
@@ -128,7 +128,7 @@ class TestAKinematicModule(unittest.TestCase):
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
-        orientation_matrix = self.kinematic_model2.computeOrientationFromAimpoint(
+        orientation_matrix = self.kinematic_model2.compute_orientation_from_aimpoint(
             self.datapoint6
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
