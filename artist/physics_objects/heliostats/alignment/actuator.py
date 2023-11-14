@@ -1,7 +1,8 @@
 import torch
-from artist.physics_objects.module import AModule
-from artist.physics_objects.heliostats.normalization import ParameterNormalizer
-from artist.physics_objects.parameter import AParameter
+
+from ...module import AModule
+from ..normalization import ParameterNormalizer
+from ...parameter import AParameter
 
 
 class ActuatorModule(AModule):

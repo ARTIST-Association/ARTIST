@@ -64,7 +64,7 @@ class AlignmentModule(AModule):
         -------
 
         """
-        return self.kinematicModel.computeOrientationFromAimpoint(datapoint)
+        return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
 
     def heliostat_coord_system(
         self,

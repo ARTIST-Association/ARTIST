@@ -1,10 +1,11 @@
-from artist.physics_objects.heliostats.alignment.concentrator import ConcentratorModule
+from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from ..module import AModule
 
 
 class HeliostatModule(AModule):
     def __init__(self, concentrator: ConcentratorModule, alignment: AlignmentModule):
+        super().__init__()
         self.concentrator = concentrator
         self.alignment = alignment
 
