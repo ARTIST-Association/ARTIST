@@ -1,6 +1,6 @@
-import ConcentratorModule
-import AlignmentModule
-from module import AModule
+from artist.physics_objects.heliostats.alignment.concentrator import ConcentratorModule
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from ..module import AModule
 
 
 class HeliostatModule(AModule):
