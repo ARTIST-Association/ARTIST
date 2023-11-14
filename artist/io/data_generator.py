@@ -1,14 +1,11 @@
 import pickle
 
-class DataGenerator():
+
+class DataGenerator:
     def __init__(self):
         pass
 
-    def generate(self, filename, targetHeliostat, lightSource):
-        data = {
-            "targetHeliostat": targetHeliostat,
-            "lightSource": lightSource
-        }
-        file = open(filename, 'wb')
-        pickle.dump(data, file)
-        file.close()
+    def generate(self, filename, target_heliostat, light_source):
+        data = {"targetHeliostat": target_heliostat, "lightSource": light_source}
+        with open(filename, "wb") as file:
+            pickle.dump(data, file)
