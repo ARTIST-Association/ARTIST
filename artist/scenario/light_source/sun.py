@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import torch
-from .ALightSource import ALightSource
-from ...util import utils
+from artist.scenario.light_source.light_source import ALightSource
+from artist.util import utils
 
 
 class Sun(ALightSource):
