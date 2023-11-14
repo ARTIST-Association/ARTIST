@@ -1,4 +1,4 @@
-from artist.physics_objects.module import AModule
+from ...module import AModule
 
 
 class ConcentratorModule(AModule):
