@@ -1,4 +1,4 @@
-![ARTIST Logo](./LOGO.svg)
+![ARTIST Logo](./logo.svg)
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
