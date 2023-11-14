@@ -23,7 +23,7 @@ class TestDataGeneratorAndLoader(unittest.TestCase):
             "targetHeliostat": self.datapoint,
             "lightSource": self.sun
         }
-        filename = 'HelioFiles/test_heliostat.pickle'
+        filename = '../../../scenario_objects/heliostats/test_heliostat.pickle'
         DataGenerator.generate(self, filename, self.datapoint, self.sun)
         self.dataloader = DataLoader()
         data = self.dataloader.loadHelioFile(filename)
