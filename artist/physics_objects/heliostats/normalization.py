@@ -8,7 +8,7 @@ class ANormalization:
         raise NotImplementedError()
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+            _, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         raise NotImplementedError()
 
@@ -21,7 +21,7 @@ class MinMaxNormalization(ANormalization):
             return value
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+            _, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         if parameter.has_tolerance:
             return 2 * normalized_value * parameter.tolerance + parameter.min
@@ -37,19 +37,20 @@ class ZNormalization(ANormalization):
             return value
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+            _, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         if parameter.has_tolerance:
             return normalized_value * parameter.tolerance + parameter.initial_value
         else:
             return normalized_value
 
+
 class ParameterNormalizer:
     def __init__(
-        self,
-        normalization_method: typing.Literal[
-            "min-max", "z-transformation"
-        ] = "z-transformation",
+            self,
+            normalization_method: typing.Literal[
+                "min-max", "z-transformation"
+            ] = "z-transformation",
     ):
         self._parameters = {}
 
@@ -64,7 +65,7 @@ class ParameterNormalizer:
         self._parameters[parameter.NAME] = parameter
 
     def get_denormalized_parameter(
-        self, name: str, normalized_value: torch.Tensor
+            self, name: str, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         try:
             return self._normalization.denormalize(
