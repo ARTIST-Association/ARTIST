@@ -1,4 +1,5 @@
 import torch
+from typing import Union
 
 
 class AParameter:
@@ -6,8 +7,8 @@ class AParameter:
 
     def __init__(
         self,
-        value: torch.Tensor | float,
-        tolerance: torch.Tensor | float = None,
+        value: Union[torch.Tensor, float],
+        tolerance: Union[torch.Tensor, float] = None,
         distort: bool = False,
         requires_grad=False,
     ):
