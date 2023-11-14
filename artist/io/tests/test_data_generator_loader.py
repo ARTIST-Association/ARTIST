@@ -1,13 +1,12 @@
 import sys
 
-sys.path.append( '.' )
 import unittest
 import torch
 
-from Data.DataGenerator import DataGenerator
-from Data.DatasetLoader import DataLoader
-from Code.ADatapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from Code.Sun import Sun
+from artist.io.data_generator import DataGenerator
+from artist.io.dataset_loader import DataLoader
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.scenario.light_source.sun import Sun
 
 class TestDataGeneratorAndLoader(unittest.TestCase):
     def setUp(self):
