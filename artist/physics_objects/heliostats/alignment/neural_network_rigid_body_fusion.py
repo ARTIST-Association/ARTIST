@@ -477,7 +477,7 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
                 if torch.any(eps <= min_eps):
                     break
             last_epoch_loss = loss.detach()
-            actuator_steps = self.computeStepsFromNormal(desired_concentrator_normal)
+            actuator_steps = self.compute_steps_from_normal(desired_concentrator_normal)
 
         return orientation
 
