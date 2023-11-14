@@ -1,6 +1,6 @@
 ![ARTIST Logo](./LOGO.svg)
 
-# AI-enhanced differentiable Ray Tracer for Irradiationprediction in Solar Tower Dig
+# AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
 [![fair-software.eu]
 ![PyPI]
