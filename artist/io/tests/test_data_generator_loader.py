@@ -3,11 +3,11 @@ import sys
 import unittest
 import torch
 
-from artist import ARTIST_ROOT
-from artist.io.data_generator import DataGenerator
-from artist.io.dataset_loader import DataLoader
-from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.scenario.light_source.sun import Sun
+from ... import ARTIST_ROOT
+from ..data_generator import DataGenerator
+from ..dataset_loader import DataLoader
+from ..datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from ...scenario.light_source.sun import Sun
 
 
 class TestDataGeneratorAndLoader(unittest.TestCase):
