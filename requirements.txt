@@ -22,6 +22,7 @@ python-dateutil==2.8.2
 six==1.16.0
 sympy==1.12
 tomli==2.0.1
-torch==2.0.1
+torch~=2.1.0
 typing_extensions==4.7.1
 zipp==3.17.0
+pytorch3d~=0.7.5
