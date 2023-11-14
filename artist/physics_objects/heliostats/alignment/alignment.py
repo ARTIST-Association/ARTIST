@@ -2,7 +2,7 @@ from typing import Tuple
 import torch
 import pytorch3d.transforms as throt
 from artist.physics_objects.module import AModule
-from .NeuralNetworkRigidBodyFusionModule import NeuralNetworkRigidBodyFusion
+from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
 
 class AlignmentModule(AModule):
     def __init__(self, position):
