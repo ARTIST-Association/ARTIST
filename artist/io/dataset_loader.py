@@ -1,11 +1,11 @@
 import pickle
 
-class DataLoader():
+
+class DataLoader:
     def __init__(self):
         pass
 
-    def loadHelioFile(self, filename):
-        file = open(filename, 'rb')
-        data = pickle.load(file)
-        file.close()
-        return data
+    @staticmethod
+    def load_helio_file(filename):
+        with open(filename, "rb") as file:
+            return pickle.load(file)
