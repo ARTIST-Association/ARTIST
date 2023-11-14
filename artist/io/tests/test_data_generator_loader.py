@@ -3,6 +3,7 @@ import sys
 import unittest
 import torch
 
+from artist import ARTIST_ROOT
 from artist.io.data_generator import DataGenerator
 from artist.io.dataset_loader import DataLoader
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
@@ -23,10 +24,10 @@ class TestDataGeneratorAndLoader(unittest.TestCase):
 
     def test_generate(self):
         expected = {"targetHeliostat": self.datapoint, "lightSource": self.sun}
-        filename = "../../../scenario_objects/heliostats/test_heliostat.pickle"
+        filename = f"{ARTIST_ROOT}/scenario_objects/heliostats/test_heliostat.pickle"
         DataGenerator.generate(self, filename, self.datapoint, self.sun)
         self.dataloader = DataLoader()
-        data = self.dataloader.load_helio_file()
+        data = DataLoader.load_helio_file(filename=filename)
         self.assertEqual(
             data["targetHeliostat"].point_id, expected["targetHeliostat"].point_id
         )
