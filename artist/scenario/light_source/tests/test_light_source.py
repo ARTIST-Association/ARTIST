@@ -6,9 +6,9 @@ import unittest
 import torch
 from PIL import Image
 
-from Code.Sun import Sun
-from Code.ADatapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from Code.AlignmentModule import AlignmentModule 
+from artist.scenario.light_source.sun import Sun
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 
 class TestASunModule(unittest.TestCase):
     def setUp(self):
