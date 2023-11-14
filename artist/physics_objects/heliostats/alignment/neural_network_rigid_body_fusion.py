@@ -1,7 +1,7 @@
 import torch
-from .AActuatorModule import ActuatorModule
-from .ADatapoint import HeliostatDataPoint
-from .AKinematicModule import AKinematicModule
+from artist.physics_objects.heliostats.alignment.actuator import ActuatorModule
+from artist.io.datapoint import HeliostatDataPoint
+from artist.physics_objects.heliostats.alignment.kinematic import AKinematicModule
 from artist.physics_objects.parameter import AParameter
 
 
