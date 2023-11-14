@@ -1,0 +1,1 @@
+ARTIST_ROOT = '/'.join(__file__.split('/')[:-2])
