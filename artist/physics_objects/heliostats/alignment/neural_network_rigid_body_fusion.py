@@ -7,7 +7,7 @@ from ...parameter import AParameter
 
 class NeuralNetworkRigidBodyFusion(AKinematicModule):
     """
-    This class implements neural network rigid body fusion as a kinematic Model for the heliostat.
+    This class implements neural network rigid body fusion as a possible kinematic Model.
 
     See Also
     --------
