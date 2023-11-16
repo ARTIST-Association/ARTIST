@@ -9,23 +9,6 @@ class Sun(ALightSource):
     """
     Implementation of the sun as a specific light source.
 
-    Attributes
-    ----------
-    dist_type : str
-        Type of the distribution to be implemented.
-
-    ray_count : int
-        The amount of rays send out.
-
-    mean : List[float]
-        The mean that describes the normal distribution.
-
-    cov : List[float]
-        The covariance that describes the normal distribution.
-
-    device : torch.device
-        Specifies the device type responsible to load tensors into memory.
-
     See Also
     :class:ALightSource : Reference to the parent class
     """
@@ -38,6 +21,31 @@ class Sun(ALightSource):
         cov: List[float],
         device: torch.device,
     ) -> None:
+        """
+        Initialize a sun as a light source
+
+        Parameters
+        ----------
+        dist_type : str
+            Type of the distribution to be implemented.
+
+        ray_count : int
+            The amount of rays send out.
+
+        mean : List[float]
+            The mean that describes the normal distribution.
+
+        cov : List[float]
+            The covariance that describes the normal distribution.
+
+        device : torch.device
+            Specifies the device type responsible to load tensors into memory.
+
+        Raises
+        ------
+        ValueError
+            If the chosen dist_type is unknown
+        """
         super(Sun, self).__init__()
         self.dist_type: str = dist_type
         self.num_rays: int = ray_count
