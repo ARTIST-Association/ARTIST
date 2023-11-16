@@ -3,15 +3,34 @@ import torch
 import pytorch3d.transforms as throt
 from ...module import AModule
 from .neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
+from ....io.datapoint import HeliostatDataPoint
 
 
 class AlignmentModule(AModule):
-    def __init__(self, position):
+    """
+    This class implements the alignemnt module for the Heliostat.
+
+    See Also
+    --------
+    :class: AModule : Reference to the parent class
+    """
+
+    def __init__(self, position: torch.Tensor) -> None:
+        """
+        Initialize the alignemnt module.
+
+        Parameters
+        ----------
+        position : torch.Tensor
+            Position of the heliostat for which the alignemnt model is created.
+        """
         super().__init__()
         self.position = position
         self.kinematicModel = NeuralNetworkRigidBodyFusion(position=position)
 
-    def align_surface(self, datapoint, surface_points, surface_normals):
+    def align_surface(
+        self, datapoint, surface_points, surface_normals
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a given orientation.
 
@@ -26,7 +45,8 @@ class AlignmentModule(AModule):
 
         Returns
         -------
-
+        Tuple[torch.Tensor, torch.Tensor]
+            Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(datapoint=datapoint)
         alignment = torch.stack(
@@ -50,27 +70,48 @@ class AlignmentModule(AModule):
         ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
-    def align(self, datapoint):
+    def align(self, datapoint: HeliostatDataPoint) -> torch.Tensor:
         """
-        Compute orientation from aimpoint.
+        Compute the orientation from a given aimpoint.
 
         Parameters
         ----------
-        datapoint :
+        datapoint : HeliostatDataPoint
+            Contains information about the heliostat and the environment (lightsource, receiver,...).
 
         Returns
         -------
-
+        torch.Tensor
+            The orientation matrix.
         """
         return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
 
     def heliostat_coord_system(
-            self,
-            position: torch.Tensor,
-            sun: torch.Tensor,
-            aimpoint: torch.Tensor,
-            ideal_normal: torch.Tensor,
+        self,
+        position: torch.Tensor,
+        sun: torch.Tensor,
+        aimpoint: torch.Tensor,
+        ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Construct the heliostat coordination system.
+
+        Parameters
+        ----------
+        position : torch.tensor
+            The position of the heliostat.
+        sun : torch.Tensor
+            The sun vector / direction.
+        aimpoint : torch.Tensor
+            The aimpoint.
+        ideal_normal : torch.Tensor
+            The ideal normal vector of the heliostat.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+            The heliostat coordination system.
+        """
         dtype = position.dtype
         device = position.device
         p_sun = sun
