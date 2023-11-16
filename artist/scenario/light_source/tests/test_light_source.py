@@ -64,7 +64,7 @@ class TestASunModule(unittest.TestCase):
             yi,
         )
 
-        intersections = self.sun.compute_receiver_intersections(
+        intersections = self.sun.line_plane_intersections(
             receiver_plane_normal, receiver_center, rays, self.aligned_surface_points
         )
 
