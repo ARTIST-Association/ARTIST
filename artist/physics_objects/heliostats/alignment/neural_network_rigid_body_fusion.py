@@ -6,6 +6,14 @@ from ...parameter import AParameter
 
 
 class NeuralNetworkRigidBodyFusion(AKinematicModule):
+    """
+    This class implements neural network rigid body fusion as a kinematic Model for the heliostat.
+
+    See Also
+    --------
+    :class: AKinematicModule : Reference to the parent class
+    """
+
     class DevTranslationParameter(AParameter):
         def __init__(
             self,
@@ -79,7 +87,15 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         "joint_radius": torch.tensor(0.309),
     }
 
-    def __init__(self, position: torch.Tensor, **deviations):
+    def __init__(self, position: torch.Tensor, **deviations) -> None:
+        """
+        Initialize the neural network rigid body fusion as a kinematic module.
+
+        Parameters
+        ----------
+        position : torch.Tensor
+            Position of the heliostat for which the kinematic model is valid.
+        """
         super().__init__(position=position)
         self.position = position
         self.deviations = deviations
@@ -119,12 +135,38 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         "north_tilt_2": torch.tensor(0.0),
     }
 
-    def _translation_with_deviation(self, parameter_name):
+    def _translation_with_deviation(self, parameter_name: str) -> torch.Tensor:
+        """
+        Perform a translation with a deviation.
+
+        Parameters
+        ----------
+        parameter_name : str
+            Name of the parameter.
+
+        Returns
+        -------
+        torch.Tensor
+            The deviation of the parameter added to the value of the parameter.
+        """
         return self.parameters_dict[parameter_name] + self._get_parameter(
             "dev_" + parameter_name
         )
 
-    def _rotation_with_deviation(self, parameter_name):
+    def _rotation_with_deviation(self, parameter_name: str) -> torch.Tensor:
+        """
+        Perform a rotation with a deviation.
+
+        Parameters
+        ----------
+        parameter_name : str
+            Name of the parameter.
+
+        Returns
+        -------
+        torch.Tensor
+            The deviation of the parameter added to the value of the parameter.
+        """
         return self.parameters_dict[parameter_name] + self._get_parameter(
             "dev_" + parameter_name
         )
@@ -168,7 +210,15 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
     def _north_tilt_2(self) -> torch.Tensor:
         return self._rotation_with_deviation("north_tilt_2")
 
-    def _register_parameter(self, parameter: AParameter):
+    def _register_parameter(self, parameter: AParameter) -> None:
+        """
+        Add parameter to the module, register it.
+
+        Parameters
+        ----------
+        parameter : AParameter
+            name of the parameter to be registered.
+        """
         self.register_parameter(
             parameter.NAME,
             torch.nn.Parameter(
@@ -177,11 +227,37 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
             ),
         )
 
-    def _get_parameter(self, name: str):
+    def _get_parameter(self, name: str) -> AParameter:
+        """
+        Return the specified parameter.
+
+        Parameters
+        ----------
+        name : str
+            Name of the parameter to be returned
+
+        Returns
+        -------
+        AParameter
+            The parameter referenced by name.
+        """
         return self.get_parameter(name)
 
     def build_first_rotation_matrix(self, angles: torch.Tensor) -> torch.Tensor:
-        """Build the first rotation matrix. The first joint rotation is around the x-axis (east-axis)."""
+        """Build the first rotation matrices.
+
+        The first joint rotation is around the x-axis (east-axis).
+
+        Parameters
+        ----------
+        angles : torch.Tensor
+            Angles specifiying the rotation
+
+        Returns
+        -------
+        torch.Tensor
+            Returns the rotation-matrices for the specified angles.
+        """
         # Compute rotation matrix elements
         zeros = torch.zeros_like(angles)
         ones = torch.ones_like(angles)
@@ -213,7 +289,21 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         return rotation_matrices
 
     def build_second_rotation_matrix(self, angles: torch.Tensor) -> torch.Tensor:
-        """Build the second rotation matrix. The second joint rotation is around the z-axis (up-axis)."""
+        """
+        Build the second rotation matrices.
+
+        The second joint rotation is around the z-axis (up-axis).
+
+        Parameters
+        ----------
+        angles : torch.Tensor
+            Angle specifiying the rotation
+
+        Returns
+        -------
+        torch.Tensor
+            Returns the rotation-matrices for the specified angles.
+        """
         # Compute rotation matrix elements
         zeros = torch.zeros_like(angles)
         ones = torch.ones_like(angles)
@@ -245,7 +335,14 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         return rotation_matrices
 
     def build_concentrator_matrix(self) -> torch.Tensor:
-        """Build the concentrator rotation matrix."""
+        """
+        Build the concentrator rotation matrix.
+
+        Returns
+        -------
+        rotation_matrix
+            Returns a rotation matrix.
+        """
         rotation_matrix = torch.eye(4)
         rotation_matrix[0, -1] += self._conc_translation_e()
         rotation_matrix[1, -1] += self._conc_translation_n()
@@ -254,7 +351,7 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
     def compute_orientation_from_steps(
         self, actuator_1_steps: torch.Tensor, actuator_2_steps: torch.Tensor
-    ):
+    ) -> torch.Tensor:
         """
         Compute the orientation matrix from given actuator steps.
 
@@ -267,7 +364,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
         Returns
         -------
-
+        torch.Tensor
+            Returns the orientation matrix.
         """
         linear_actuator_1 = getattr(self, "LinearActuator1")
         linear_actuator_2 = getattr(self, "LinearActuator2")
@@ -279,7 +377,7 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
     def compute_orientation_from_angles(
         self, joint_1_angles: torch.Tensor, joint_2_angles: torch.Tensor
-    ):
+    ) -> torch.Tensor:
         """
         Compute the orientation matrix from given joint angles.
 
@@ -292,7 +390,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
         Returns
         -------
-
+        torch.Tensor
+            Returns the orientation matrix.
         """
         first_rot_matrices = self.build_first_rotation_matrix(joint_1_angles)
         second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
@@ -309,18 +408,21 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         second_orientations = first_orientations @ second_rot_matrices
         return second_orientations @ conc_trans_matrix
 
-    def transform_normal_to_first_coord_sys(self, concentrator_normal: torch.Tensor):
+    def transform_normal_to_first_coord_sys(
+        self, concentrator_normal: torch.Tensor
+    ) -> torch.Tensor:
         """
         Transform the concentrator normal from the global coordinate system to the CS of the first joint.
 
         Parameters
         ----------
         concentrator_normal : torch.Tensor
-            Normal vector of the heliostat
+            Normal vector of the heliostat.
 
         Returns
         -------
-
+        torch.Tensor
+            The transformed concentrator normal.
         """
         normal4x1 = -torch.cat(
             (concentrator_normal, torch.zeros(concentrator_normal.shape[0], 1)), dim=1
@@ -344,7 +446,9 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         ).squeeze(-1)
         return normal_first_orientation[:, :3]
 
-    def compute_steps_from_normal(self, concentrator_normal: torch.Tensor):
+    def compute_steps_from_normal(
+        self, concentrator_normal: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute the steps for actuator 1 and 2 from the concentrator normal
 
@@ -355,7 +459,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
         Returns
         -------
-
+        torch.Tensor
+            The calculated necessary actuator steps to reach a given normal vector.
         """
         normal_first_orientation = self.transform_normal_to_first_coord_sys(
             concentrator_normal=concentrator_normal
@@ -372,7 +477,9 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         actuator_steps_2 = linear_actuator_2._angles_to_steps(joint_angles[:, 1])
         return torch.stack((actuator_steps_1, actuator_steps_2), dim=-1)
 
-    def compute_angles_from_normal(self, normal_first_orientation: torch.Tensor):
+    def compute_angles_from_normal(
+        self, normal_first_orientation: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute the two joint angles from a normal vector.
 
@@ -383,7 +490,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
         Returns
         -------
-
+        torch.Tensor
+            The calculated necessary actuator angles to reach a given normal vector.
         """
         e = 0
         n = 1
@@ -421,7 +529,7 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         data_point: HeliostatDataPoint,
         max_num_epochs: int = 20,
         min_eps: float = 0.0001,
-    ):
+    ) -> torch.Tensor:
         """
         Compute the orientation-matrix from an aimpoint defined in a datapoint.
 
@@ -436,7 +544,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
 
         Returns
         -------
-
+        torch.Tensor
+            The orientation matrix.
         """
         actuator_steps = torch.zeros((2, 2), requires_grad=True)
         orientation = None
@@ -493,15 +602,16 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         Parameters
         ----------
         angle : torch.Tensor
-
+            Angle specifiying the rotation.
         dtype : torch.dtype
-
+            Type and size of the data.
         device : torch.device
-
+            Specifies the device type responsible to load tensors into memory.
 
         Returns
         -------
         torch.Tensor
+            The rotation matrix
 
         """
         s = torch.sin(angle)
@@ -528,15 +638,16 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         Parameters
         ----------
         angle : torch.Tensor
-
+            Angle specifiying the rotation.
         dtype : torch.dtype
-
+            Type and size of the data.
         device : torch.device
-
+            Specifies the device type responsible to load tensors into memory.
 
         Returns
         -------
         torch.Tensor
+            The rotation matrix
 
         """
         s = torch.sin(angle)
@@ -563,15 +674,16 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
         Parameters
         ----------
         angle : torch.Tensor
-
+            Angle specifiying the rotation.
         dtype : torch.dtype
-
+            Type and size of the data.
         device : torch.device
-
+            Specifies the device type responsible to load tensors into memory.
 
         Returns
         -------
         torch.Tensor
+            The rotation matrix
 
         """
         s = torch.sin(angle)
