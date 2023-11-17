@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 from ...module import AModule
-
+from .nurbs.nurbs_surface import NURBSSurface
 
 class ConcentratorModule(AModule):
     def __init__(self):
