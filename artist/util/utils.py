@@ -48,3 +48,42 @@ def initialize_spline_knots_(knots: torch.Tensor, spline_degree: int) -> None:
     knots[:spline_degree] = 0
     knots[spline_degree:-spline_degree] = knot_vals
     knots[-spline_degree:] = 1
+
+
+def initialize_spline_ctrl_points(
+        control_points: torch.Tensor,
+        origin: torch.Tensor,
+        rows: int,
+        cols: int,
+        h_width: float,
+        h_height: float,
+) -> None:
+    """
+    Initialize the spline control points.
+
+    Parameters
+    ----------
+    control_points : torch.Tensor
+        The control points.
+    origin : torch.Tensor
+        Initialize at the origin where the heliostat's discrete points are as well.
+    rows : int
+        Number of rows.
+    cols : int
+        Number of columns
+    h_width : float
+        Width of the heliostat.
+    h_height : float
+        Height of the heliostat.
+    """
+    device = control_points.device
+    origin_offsets_x = torch.linspace(
+        -h_width / 2, h_width / 2, rows, device=device)
+    origin_offsets_y = torch.linspace(
+        -h_height / 2, h_height / 2, cols, device=device)
+    origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
+    origin_offsets = torch.hstack((
+        origin_offsets,
+        torch.zeros((len(origin_offsets), 1), device=device),
+    ))
+    control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
