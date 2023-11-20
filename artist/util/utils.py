@@ -18,9 +18,9 @@ def initialize_spline_knots(
     Parameters
     ----------
     knots_x : torch.Tensor
-        List of numbers representing the knots in x direction.
+        List of numbers representing the knots in x dimension.
     knots_y : torch.Tensor
-        List of numbers representing the knots in y direction.
+        List of numbers representing the knots in y dimension.
     spline_degree_x : int
         Spline degree in x direction.
     spline_degree_y : int 
@@ -87,3 +87,88 @@ def initialize_spline_ctrl_points(
         torch.zeros((len(origin_offsets), 1), device=device),
     ))
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
+
+
+def initialize_spline_eval_points(
+        rows: int,
+        cols: int,
+        device: torch.device,
+) -> torch.Tensor:
+    """
+    Initialize the spline evaluation points.
+
+    Parameters
+    ----------
+    rows : int
+        Number of rows.
+    cols : int
+        Number of columns
+    device : torch.device
+        Specifies the device type responsible to load tensors into memory.
+
+    Returns
+    -------
+    torch.Tensor
+        The evaluation points of the spline.
+    """
+    return _cartesian_linspace_around(0, 1, rows, 0, 1, cols, device)
+
+def _cartesian_linspace_around(
+        minval_x: Union[float, torch.Tensor],
+        maxval_x: Union[float, torch.Tensor],
+        num_x: int,
+        minval_y: Union[float, torch.Tensor],
+        maxval_y: Union[float, torch.Tensor],
+        num_y: int,
+        device: torch.device,
+        dtype: Optional[torch.dtype] = None,
+) -> torch.Tensor:
+    """
+    Comute the initialized evaluation points of the spline.
+
+    Parameters
+    minval_x : Union[float, torch.Tensor]
+        Minimum value for x.
+    maxval_x : Union[float, torch.Tensor]
+        Maximum value for x
+    num_x: int
+        Number of rows.
+    minval_y: Union[float, torch.Tensor]
+        Minimum value for y.
+    maxval_y: Union[float, torch.Tensor]
+        Maximum value for y    
+    num_y: int
+        Number of columns
+    device: torch.device
+        Specifies the device type responsible to load tensors into memory.
+    dtype: Optional[torch.dtype] = None
+        The data type of the tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        The initialized evaluation points of the spline.
+    """
+    if dtype is None:
+        dtype = torch.get_default_dtype()
+    if not isinstance(minval_x, torch.Tensor):
+        minval_x = torch.tensor(minval_x, dtype=dtype, device=device)
+    if not isinstance(maxval_x, torch.Tensor):
+        maxval_x = torch.tensor(maxval_x, dtype=dtype, device=device)
+    if not isinstance(minval_y, torch.Tensor):
+        minval_y = torch.tensor(minval_y, dtype=dtype, device=device)
+    if not isinstance(maxval_y, torch.Tensor):
+        maxval_y = torch.tensor(maxval_y, dtype=dtype, device=device)
+    spline_max = 1
+
+    minval_x = minval_x.clamp(0, spline_max)
+    maxval_x = maxval_x.clamp(0, spline_max)
+    minval_y = minval_y.clamp(0, spline_max)
+    maxval_y = maxval_y.clamp(0, spline_max)
+
+    points_x = torch.linspace(
+        minval_x, maxval_x, num_x, device=device)  # type: ignore[arg-type]
+    points_y = torch.linspace(
+        minval_y, maxval_y, num_y, device=device)  # type: ignore[arg-type]
+    points = torch.cartesian_prod(points_x, points_y)
+    return points

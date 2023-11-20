@@ -70,6 +70,7 @@ class NURBSSurface(ANURBSSurface):
   
         self.initialize_control_points(ctrl_points)
         self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
+        self.initialize_eval_points()
 
     
     def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
@@ -271,6 +272,19 @@ class NURBSSurface(ANURBSSurface):
     @property
     def knots_y(self) -> torch.Tensor:
         return torch.cat(self._knots_y_splits)
+    
+
+    def initialize_eval_points(self) -> None:
+        """
+        Initialize the spline evaluation points.
+        """
+        # Unless we change the knots, we don't need to recalculate
+        # as we simply distribute the points uniformly.
+        self._recalc_eval_points = False
+        self._eval_points = utils.initialize_spline_eval_points(
+            self.rows, self.cols, self.device)
+
+
         
 
 class ProgressiveGrowing:
