@@ -68,7 +68,36 @@ class NURBSSurface(ANURBSSurface):
             knots_x, knots_y, self.degree_x, self.degree_y)
         ctrl_weights[:] = 1
   
+        self.initialize_control_points(ctrl_points)
+
     
+    def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
+        """
+        Initialize the control points.
+
+        Parameters
+        ----------
+        ctrl_points : torch.Tensor
+            The control points of the nurbs surface.
+        """
+        nurbs_config = self.nurbs_cfg
+
+        width = nurbs_config.WIDTH
+        height = nurbs_config.HEIGHT
+
+        print(torch.zeros_like(self.position_on_field))
+
+        utils.initialize_spline_ctrl_points(
+            ctrl_points,
+            # We are only moved to `position_on_field` upon alignment,
+            # so initialize at the origin where the heliostat's discrete
+            # points are as well.
+            torch.zeros_like(self.position_on_field),
+            self.rows,
+            self.cols,
+            width,
+            height,
+        )
 
 
 class ProgressiveGrowing:
