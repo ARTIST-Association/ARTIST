@@ -285,6 +285,36 @@ class NURBSSurface(ANURBSSurface):
             self.rows, self.cols, self.device)
 
 
+    def calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Caluclate the surface points and the surface normals of the nurbs.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, torch.Tensor]
+            The surface points and surface normals.
+        """
+        eval_points = self.eval_points
+        ctrl_points, ctrl_weights, knots_x, knots_y = \
+            self._progressive_growing.select()
+
+        surface_points, normals = nurbs.calc_normals_and_surface_slow(
+            eval_points[:, 0],
+            eval_points[:, 1],
+            self.degree_x,
+            self.degree_y,
+            ctrl_points,
+            ctrl_weights,
+            knots_x,
+            knots_y,
+        )
+
+        return surface_points, normals
+
+    @property
+    def eval_points(self) -> torch.Tensor:
+        eval_points = self._eval_points
+        return eval_points
         
 
 class ProgressiveGrowing:
