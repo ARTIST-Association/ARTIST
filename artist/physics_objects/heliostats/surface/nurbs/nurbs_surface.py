@@ -69,6 +69,7 @@ class NURBSSurface(ANURBSSurface):
         ctrl_weights[:] = 1
   
         self.initialize_control_points(ctrl_points)
+        self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
 
     
     def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
@@ -99,6 +100,178 @@ class NURBSSurface(ANURBSSurface):
             height,
         )
 
+    def split_nurbs_params(
+            self,
+            ctrl_points: torch.Tensor,
+            ctrl_weights: torch.Tensor,
+            knots_x: torch.Tensor,
+            knots_y: torch.Tensor,
+    ) -> None:
+        """
+        Split the nurbs parameters along their dimensions.
+
+        Paraneters
+        ----------
+        ctrl_points : torch.Tensor
+            The control points of the nurbs.
+        ctrl_weights : torch.Tensor,
+            The weights of the control points.
+        knots_x : torch.Tensor
+            List of numbers representing the knots in x dimension.
+        knots_y : torch.Tensor
+            List of numbers representing the knots in y dimension. 
+        """
+        with torch.no_grad():
+            self.set_ctrl_points(ctrl_points)
+            self.set_ctrl_weights(ctrl_weights)
+            self.set_knots_x(knots_x)
+            self.set_knots_y(knots_y)
+    
+    def set_ctrl_points(self, ctrl_points: torch.Tensor) -> None:
+        """
+        Split the control points in the last dimension then column dimension, then row dimension.
+
+        Parameters
+        ----------
+        ctrl_points : torch.Tensor
+            The control points of the nurbs.
+        """
+        with torch.no_grad():
+            first_row = [
+                [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for row_slice in [
+                        ctrl_points[:1, :1],
+                        ctrl_points[:1, 1:-1],
+                        ctrl_points[:1, -1:],
+                ]
+            ]
+            inner_rows = [
+                [rows_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for rows_slice in [
+                        ctrl_points[1:-1, :1],
+                        ctrl_points[1:-1, 1:-1],
+                        ctrl_points[1:-1, -1:],
+                ]
+            ]
+            last_row = [
+                [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
+                for row_slice in [
+                        ctrl_points[-1:, :1],
+                        ctrl_points[-1:, 1:-1],
+                        ctrl_points[-1:, -1:],
+                ]
+            ]
+
+            self._ctrl_points_splits = [first_row, inner_rows, last_row]
+            assert (self.ctrl_points == ctrl_points).all()
+
+    def set_ctrl_weights(self, ctrl_weights: torch.Tensor) -> None:
+        """
+        Split the control weights in column dimension, then row dimension.
+
+        Parameters
+        ----------
+        ctrl_weights : torch.Tensor
+            The weights of the control points of the nurbs.
+        """
+        with torch.no_grad():
+            first_row = [
+                ctrl_weights[:1, :1],
+                ctrl_weights[:1, 1:-1],
+                ctrl_weights[:1, -1:],
+            ]
+            inner_rows = [
+                ctrl_weights[1:-1, :1],
+                ctrl_weights[1:-1, 1:-1],
+                ctrl_weights[1:-1, -1:],
+            ]
+            last_row = [
+                ctrl_weights[-1:, :1],
+                ctrl_weights[-1:, 1:-1],
+                ctrl_weights[-1:, -1:],
+            ]
+
+            self._ctrl_weights_splits = [first_row, inner_rows, last_row]
+            assert (self.ctrl_weights == ctrl_weights).all()
+
+    def set_knots_x(self, knots_x: torch.Tensor) -> None:
+        """
+        Set the knots in x dimension.
+
+        Parameters
+        ----------
+        knots_x : torch.Tensor
+            The knots of the x dimension.
+        """
+        with torch.no_grad():
+            self._knots_x_splits = self._split_knots(knots_x)
+            assert (self.knots_x == knots_x).all()
+
+    def set_knots_y(self, knots_y: torch.Tensor) -> None:
+        """
+        Set the knots in y dimension.
+
+        Parameters
+        ----------
+        knots_y : torch.Tensor
+            The knots of the y dimension.
+        """
+        with torch.no_grad():
+            self._knots_y_splits = self._split_knots(knots_y)
+            assert (self.knots_y == knots_y).all()
+    
+    @staticmethod
+    def _split_knots(knots: torch.Tensor) -> List[torch.Tensor]:
+        """
+        Split the knots into three groups.
+
+        Parameters
+        ----------
+        knots : torch.Tensor
+            List of knots to be split.
+        
+        Returns 
+        List[torch.Tensor]
+            The splitted knots.
+        """
+        with torch.no_grad():
+            return [knots[:1], knots[1:-1], knots[-1:]]
+        
+    @property
+    def ctrl_points(self) -> torch.Tensor:
+        # self._ctrl_points_splits[0][0] per-dim
+        # self._ctrl_points_splits[0] per-column
+        # self._ctrl_points_splits per-row
+        first_row = torch.cat([
+            torch.cat(row_slice, dim=-1)
+            for row_slice in self._ctrl_points_splits[0]
+        ], dim=1)
+        inner_rows = torch.cat([
+            torch.cat(rows_slice, dim=-1)
+            for rows_slice in self._ctrl_points_splits[1]
+        ], dim=1)
+        last_row = torch.cat([
+            torch.cat(row_slice, dim=-1)
+            for row_slice in self._ctrl_points_splits[2]
+        ], dim=1)
+
+        return torch.cat([first_row, inner_rows, last_row], dim=0)
+    
+    @property
+    def ctrl_weights(self) -> torch.Tensor:
+        first_row = torch.cat(self._ctrl_weights_splits[0], dim=1)
+        inner_rows = torch.cat(self._ctrl_weights_splits[1], dim=1)
+        last_row = torch.cat(self._ctrl_weights_splits[2], dim=1)
+        return torch.cat([first_row, inner_rows, last_row], dim=0)
+    
+    @property
+    def knots_x(self) -> torch.Tensor:
+        return torch.cat(self._knots_x_splits)
+    
+    @property
+    def knots_y(self) -> torch.Tensor:
+        return torch.cat(self._knots_y_splits)
+        
 
 class ProgressiveGrowing:
     def __init__(self, heliostat: 'NURBSSurface') -> None:
