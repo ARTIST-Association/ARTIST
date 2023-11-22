@@ -15,5 +15,5 @@ class ConcentratorModule(AModule):
         pass
 
     def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        surface_points, surface_normals = self.nurbs_surface._calc_normals_and_surface()
+        surface_points, surface_normals = self.nurbs_surface.calc_normals_and_surface()
         return surface_points, surface_normals
