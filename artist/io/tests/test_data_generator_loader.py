@@ -3,11 +3,19 @@ import sys
 import unittest
 import torch
 
-from ... import ARTIST_ROOT
-from ..data_generator import DataGenerator
-from ..dataset_loader import DataLoader
-from ..datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from ...scenario.light_source.sun import Sun
+#from artist import ARTIST_ROOT
+# from ... import ARTIST_ROOT
+# from ..data_generator import DataGenerator
+# from ..dataset_loader import DataLoader
+# from ..datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+# from ...scenario.light_source.sun import Sun
+
+from artist import ARTIST_ROOT
+from artist.io.data_generator import DataGenerator
+from artist.io.dataset_loader import DataLoader
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.scenario.light_source.sun import Sun
+
 
 
 class TestDataGeneratorAndLoader(unittest.TestCase):
@@ -21,6 +29,8 @@ class TestDataGeneratorAndLoader(unittest.TestCase):
         )
         self.sun = Sun("Normal", 1, [0, 0], [[4.3681e-06, 0], [0, 4.3681e-06]], device)
         self.dataGenerator = DataGenerator()
+        ARTIST_ROOT = '/'.join(__file__.split('/')[:-2])
+        print('/'.join(__file__.split('/')[:-2]))
 
     def test_generate(self):
         expected = {"targetHeliostat": self.datapoint, "lightSource": self.sun}
