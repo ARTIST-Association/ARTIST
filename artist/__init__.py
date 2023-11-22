@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import platform
+
 from pkg_resources import DistributionNotFound, get_distribution
 
 try:
@@ -10,4 +12,7 @@ except DistributionNotFound:
 finally:
     del get_distribution, DistributionNotFound
 
-ARTIST_ROOT = '/'.join(__file__.split('/')[:-2])
+if "Windows" not in platform.system():
+    ARTIST_ROOT = '/'.join(__file__.split('/')[:-2])
+else:
+    ARTIST_ROOT = '\\'.join(__file__.split('\\')[:-2])
