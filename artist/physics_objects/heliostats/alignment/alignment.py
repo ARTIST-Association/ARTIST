@@ -1,9 +1,9 @@
 from typing import Tuple
 import torch
 import pytorch3d.transforms as throt
-from ...module import AModule
-from .neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
-from ....io.datapoint import HeliostatDataPoint
+from artist.physics_objects.module import AModule
+from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
+from artist.io.datapoint import HeliostatDataPoint
 
 
 class AlignmentModule(AModule):
@@ -29,7 +29,7 @@ class AlignmentModule(AModule):
         self.kinematicModel = NeuralNetworkRigidBodyFusion(position=position)
 
     def align_surface(
-        self, datapoint, surface_points, surface_normals
+            self, datapoint, surface_points, surface_normals
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a given orientation.
@@ -87,11 +87,11 @@ class AlignmentModule(AModule):
         return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
 
     def heliostat_coord_system(
-        self,
-        position: torch.Tensor,
-        sun: torch.Tensor,
-        aimpoint: torch.Tensor,
-        ideal_normal: torch.Tensor,
+            self,
+            position: torch.Tensor,
+            sun: torch.Tensor,
+            aimpoint: torch.Tensor,
+            ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Construct the heliostat coordination system.
