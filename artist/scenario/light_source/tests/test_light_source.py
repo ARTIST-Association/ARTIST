@@ -3,9 +3,9 @@ import unittest
 import torch
 from artist import ARTIST_ROOT
 
-from ..sun import Sun
-from ....io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from ....physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.scenario.light_source.sun import Sun
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 
 # from artist.scenario.light_source.sun import Sun
 # from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
@@ -77,10 +77,10 @@ class TestASunModule(unittest.TestCase):
         dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
 
         indices = (
-            (-1 <= dx_ints)
-            & (dx_ints < receiver_plane_x + 1)
-            & (-1 <= dy_ints)
-            & (dy_ints < receiver_plane_y + 1)
+                (-1 <= dx_ints)
+                & (dx_ints < receiver_plane_x + 1)
+                & (-1 <= dy_ints)
+                & (dy_ints < receiver_plane_y + 1)
         )
 
         total_bitmap = self.sun.sample_bitmap(

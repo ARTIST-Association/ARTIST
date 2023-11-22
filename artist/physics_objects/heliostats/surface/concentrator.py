@@ -1,4 +1,7 @@
+
 from typing import Tuple
+
+from artist.physics_objects.module import AModule
 
 import torch
 
@@ -11,6 +14,6 @@ class ConcentratorModule(AModule):
         self.nurbs_surface = NURBSSurface()
         pass
 
-    def get_surface() -> Tuple[torch.Tensor, torch.Tensor]:
-        surface_points, surface_normals = nurbs_surface._calc_normals_and_surface()
+    def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        surface_points, surface_normals = self.nurbs_surface._calc_normals_and_surface()
         return surface_points, surface_normals
