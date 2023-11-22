@@ -564,3 +564,175 @@ def calc_basis_derivs_slow(
         r *= degree - k
     return ders
 
+
+
+
+
+
+
+
+
+def plot_surface(
+        degree_x: int,
+        degree_y: int,
+        control_points: torch.Tensor,
+        control_point_weights: torch.Tensor,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
+        step_granularity_x: float = 0.02,
+        step_granularity_y: float = 0.02,
+        show_plot: bool = True,
+) -> Tuple[mpl.figure.Figure, mpl.axes.Axes]:
+    device = control_points.device
+    xs = th.arange(0, 1, step_granularity_x, device=device)
+    ys = th.arange(0, 1, step_granularity_y, device=device)
+    xs = th.hstack([xs, th.tensor(1, device=device)])
+    ys = th.hstack([ys, th.tensor(1, device=device)])
+
+    eval_points = th.cartesian_prod(xs, ys)
+    res = evaluate_nurbs_surface_flex(
+        eval_points[:, 0],
+        eval_points[:, 1],
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+    res = res.reshape((len(xs), len(ys)) + res.shape[1:])
+
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    ax.scatter(
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
+        color='black',
+        alpha=0.3,
+        label='control_points',
+    )
+    ax.plot_wireframe(
+        control_points[:, :, 0].detach().cpu().numpy(),
+        control_points[:, :, 1].detach().cpu().numpy(),
+        control_points[:, :, 2].detach().cpu().numpy(),
+        color='black',
+        alpha=0.3,
+    )
+    ax.plot_surface(
+        res[:, :, 0].detach().cpu().numpy(),
+        res[:, :, 1].detach().cpu().numpy(),
+        res[:, :, 2].detach().cpu().numpy(),
+        cmap='plasma',
+        alpha=0.8,
+    )
+    if show_plot:
+        plt.show()
+    return fig, ax
+
+def evaluate_nurbs_surface_flex(
+        evaluation_points_x: torch.Tensor,
+        evaluation_points_y: torch.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: torch.Tensor,
+        control_point_weights: torch.Tensor,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
+) -> torch.Tensor:
+    """Return evaluations of the given NURBS surface at the given
+    evaluation points in x- and y-direction.
+    """
+    check_nurbs_surface_constraints(
+        evaluation_points_x,
+        evaluation_points_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+        knots_x,
+        knots_y,
+    )
+
+    num_evaluation_points = len(evaluation_points_x)
+    num_control_points_x = control_points.shape[0]
+    spans_x = find_span(
+        evaluation_points_x, degree_x, num_control_points_x, knots_x)
+    basis_values_x = get_basis(evaluation_points_x, spans_x, degree_x, knots_x)
+
+    num_control_points_y = control_points.shape[1]
+    spans_y = find_span(
+        evaluation_points_y, degree_y, num_control_points_y, knots_y)
+    basis_values_y = get_basis(evaluation_points_y, spans_y, degree_y, knots_y)
+
+    return evaluate_nurbs_surface_at_spans(
+        num_evaluation_points,
+        spans_x,
+        spans_y,
+        basis_values_x,
+        basis_values_y,
+        degree_x,
+        degree_y,
+        control_points,
+        control_point_weights,
+    )
+
+def get_basis(
+        evaluation_points: torch.Tensor,
+        span: torch.Tensor,
+        degree: int,
+        knots: torch.Tensor,
+) -> torch.Tensor:
+    """Return the basis functions applied to the evaluation points."""
+    device = knots.device
+    num_evaluation_points = len(evaluation_points)
+    next_degree = degree + 1
+    next_span = span + 1
+    basis_values = th.empty(
+        (num_evaluation_points, next_degree),
+        device=device,
+    )
+    basis_values[:, 0] = 1
+    left = th.empty((num_evaluation_points, next_degree), device=device)
+    right = th.empty((num_evaluation_points, next_degree), device=device)
+    for j in range(1, next_degree):
+        left[:, j] = evaluation_points - knots[next_span - j]
+        right[:, j] = knots[span + j] - evaluation_points
+        saved = th.zeros(num_evaluation_points, device=device)
+        for r in range(j):
+            tmp = basis_values[:, r] / (right[:, r + 1] + left[:, j - r])
+            basis_values[:, r] = saved + right[:, r + 1] * tmp
+            saved = left[:, j - r] * tmp
+        basis_values[:, j] = saved
+    return basis_values
+
+def evaluate_nurbs_surface_at_spans(
+        num_evaluation_points: int,
+        spans_x: torch.Tensor,
+        spans_y: torch.Tensor,
+        basis_values_x: torch.Tensor,
+        basis_values_y: torch.Tensor,
+        degree_x: int,
+        degree_y: int,
+        control_points: torch.Tensor,
+        control_point_weights: torch.Tensor,
+) -> torch.Tensor:
+    """Return evaluations of the given NURBS surface at the given spans
+    with the corresponding basis values.
+    """
+    device = control_points.device
+    projected = project_control_points(control_points, control_point_weights)
+    tmp = th.empty(
+        (num_evaluation_points, degree_y + 1, projected.shape[-1]),
+        device=device,
+    )
+    for j in range(degree_y + 1):
+        tmp[:, j] = 0
+        for k in range(degree_x + 1):
+            tmp[:, j] += (
+                basis_values_x[:, k].unsqueeze(-1)
+                * projected[spans_x - degree_x + k, spans_y - degree_y + j]
+            )
+    Sw = th.zeros((num_evaluation_points, projected.shape[-1]), device=device)
+    for j in range(degree_y + 1):
+        Sw += basis_values_y[:, j].unsqueeze(-1) * tmp[:, j]
+    return Sw[:, :-1] / Sw[:, -1].unsqueeze(-1)
