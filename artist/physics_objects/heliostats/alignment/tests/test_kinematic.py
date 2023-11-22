@@ -2,8 +2,8 @@ import unittest
 import torch
 import math
 
-from ..neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
-from .....io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
+from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 
 
 class TestAKinematicModule(unittest.TestCase):
