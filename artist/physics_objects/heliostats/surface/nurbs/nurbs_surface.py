@@ -5,9 +5,21 @@ import torch
 
 from .....util import utils
 from ..nurbs import nurbs
+from .....physics_objects.module import AModule
+from ..facets.facets import AFacets
 
+class ASurface(AModule):
+    facets: AFacets
+    def __init__(self):
+        pass
 
-class ANURBSSurface():
+class Surface(ASurface):
+    def __init__(self, heliostat_config: CfgNode):
+        super().__init__()
+        self.cfg = heliostat_config
+        
+
+class ANURBSSurface(Surface):
     def calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError(
             'please override `_calc_normals_and_surface`')
@@ -29,11 +41,12 @@ class ANURBSSurface():
 class NURBSSurface(ANURBSSurface):
     def __init__(
             self,
+            heliostat_config: CfgNode,
             nurbs_config: CfgNode,
             device: torch.device,
             position_on_field: torch.Tensor,
     ) -> None:
-        super().__init__()
+        super().__init__(heliostat_config)
         self.nurbs_cfg = nurbs_config
         self.device = device
         self.position_on_field = position_on_field
@@ -71,6 +84,13 @@ class NURBSSurface(ANURBSSurface):
         self.initialize_control_points(ctrl_points)
         self.split_nurbs_params(ctrl_points, ctrl_weights, knots_x, knots_y)
         self.initialize_eval_points()
+        
+        # nurbs.plot_surface(self.degree_x,
+        #                    self.degree_y,
+        #                    self.ctrl_points,
+        #                    self.ctrl_weights,
+        #                    self.knots_x,
+        #                    self.knots_y)
 
     
     def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
@@ -86,8 +106,6 @@ class NURBSSurface(ANURBSSurface):
 
         width = nurbs_config.WIDTH
         height = nurbs_config.HEIGHT
-
-        print(torch.zeros_like(self.position_on_field))
 
         utils.initialize_spline_ctrl_points(
             ctrl_points,
@@ -385,3 +403,148 @@ class ProgressiveGrowing:
 
     def _no_progressive_growing(self) -> bool:
         return self._interval < 1
+    
+
+
+class MultiNURBSSurface(ANURBSSurface):
+    def __init__(
+            self,
+            heliostat_config: CfgNode,
+            nurbs_config: CfgNode,
+            device: torch.device,
+    ) -> None:
+        super().__init__(heliostat_config)
+        self.device = device
+        self.nurbs_cfg = nurbs_config
+        self.cfg = heliostat_config
+
+        # facets_ = self._create_facets(
+        #     self.cfg,
+        #     self.nurbs_cfg,
+        # )
+
+    def _facet_heliostat_config(
+            self,
+            heliostat_config: CfgNode,
+            position: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
+    ) -> CfgNode:
+        heliostat_config = heliostat_config.clone()
+        heliostat_config.defrost()
+        # We change the shape in order to speed up construction.
+        # Later, we need to do adjust all loaded values to be the same
+        # as the parent heliostat.
+        heliostat_config.SHAPE = 'ideal'
+        heliostat_config.IDEAL.ROWS = 2
+        heliostat_config.IDEAL.COLS = 2
+
+        heliostat_config.TO_OPTIMIZE = [
+            self._FACET_OPTIMIZABLES[name]
+            for name in self.get_to_optimize()
+            if name in self._FACET_OPTIMIZABLES
+        ]
+        # We use `self.facets.positions` to position the heliostat's
+        # values.
+        heliostat_config.IDEAL.POSITION_ON_FIELD = [0.0, 0.0, 0.0]
+        # Give any aim point so it doesn't complain.
+        heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
+        # We don't want to optimize the rotation for each facet, only
+        # for the whole heliostat. So do not disturb facets.
+        heliostat_config.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
+        # Even though we use `self.facets.positions` to position the
+        # heliostat's values, we need this for correct initialization of
+        # the single NURBS heliostat facet.
+        heliostat_config.IDEAL.FACETS.POSITIONS = [position.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
+        # Do not cant facet NURBS in their constructor; we do it
+        # manually.
+        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
+        return heliostat_config
+    
+    @staticmethod
+    def _facet_nurbs_config(
+            nurbs_config: CfgNode,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
+    ) -> CfgNode:
+        height = (torch.linalg.norm(span_n) * 2).item()
+        width = (torch.linalg.norm(span_e) * 2).item()
+
+        nurbs_config = nurbs_config.clone()
+        nurbs_config.defrost()
+
+        nurbs_config.HEIGHT = height
+        nurbs_config.WIDTH = width
+
+        nurbs_config.SET_UP_WITH_KNOWLEDGE = False
+        nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
+        return nurbs_config
+    
+    def _create_facet(
+            self,
+            facet_index: int,
+            position: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
+            heliostat_config: CfgNode,
+            nurbs_config: CfgNode,
+    ) -> NURBSSurface:
+        orig_nurbs_config = nurbs_config
+        heliostat_config = self._facet_heliostat_config(
+            heliostat_config,
+            position,
+            span_n,
+            span_e,
+        )
+        nurbs_config = self._facet_nurbs_config(nurbs_config, span_n, span_e)
+
+        facet = NURBSSurface(
+            heliostat_config,
+            nurbs_config,
+            self.device,
+            setup_params=False,
+        )
+        return facet
+    
+    def _create_facets(
+            self,
+            heliostat_config: CfgNode,
+            nurbs_config: CfgNode,
+    ) -> NURBSSurface:
+        return [
+            self._create_facet(
+                i,
+                position,
+                span_n,
+                span_e,
+                heliostat_config,
+                nurbs_config,
+            )
+            for (i, (position, span_n, span_e)) in enumerate(zip(
+                    self.facets.positions,
+                    self.facets.spans_n,
+                    self.facets.spans_e,
+            ))
+        ]
+
+    # def _calc_normals_and_surface(
+    #         self,
+    #         reposition: bool = True,
+    # ) -> Tuple[torch.Tensor, torch.Tensor]:
+    #     assert isinstance(self.facets, NURBSFacets)
+    #     return self.facets.align_discrete_points_and_normals(
+    #         reposition=reposition)
+
+    # def discrete_points_and_normals(
+    #         self,
+    #         reposition: bool = True,
+    # ) -> Tuple[torch.Tensor, torch.Tensor]:
+    #     # We do this awkward call so that `AlignedMultiNURBSHeliostat`
+    #     # can call this method but avoid using its own
+    #     # `_calc_normals_and_surface` method.
+    #     discrete_points, normals = \
+    #         MultiNURBSHeliostat._calc_normals_and_surface(
+    #             self, reposition=reposition)
+    #     return discrete_points, normals
