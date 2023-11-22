@@ -7,6 +7,10 @@ from ..sun import Sun
 from ....io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from ....physics_objects.heliostats.alignment.alignment import AlignmentModule
 
+# from artist.scenario.light_source.sun import Sun
+# from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+# from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+
 
 class TestASunModule(unittest.TestCase):
     def setUp(self):
