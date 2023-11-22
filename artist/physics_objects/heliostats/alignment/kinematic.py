@@ -1,6 +1,6 @@
 import typing
 import torch
-from ...module import AModule
+from artist.physics_objects.module import AModule
 
 
 class AKinematicModule(AModule):
@@ -17,7 +17,7 @@ class AKinematicModule(AModule):
         self._position = position
 
     def computeOrientation(
-        self, data_point_tensor: torch.Tensor
+            self, data_point_tensor: torch.Tensor
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the orientation matrix to align the heliostat.
@@ -52,11 +52,11 @@ class AKinematicModule(AModule):
             data_point_tensor=data_point_tensor
         )
         aim_vectors = (
-            2 * (data_point_tensor[:, 2:5] @ normal_vectors) - data_point_tensor[:, 2:5]
+                2 * (data_point_tensor[:, 2:5] @ normal_vectors) - data_point_tensor[:, 2:5]
         )
         aimpoints = (
-            self._position
-            + aim_vectors * (data_point_tensor[:, 5:] - self._position).norm()
+                self._position
+                + aim_vectors * (data_point_tensor[:, 5:] - self._position).norm()
         )
         return aimpoints
 
