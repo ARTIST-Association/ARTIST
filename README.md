@@ -70,6 +70,7 @@ We plan to provide an official *ReadTheDocs* documentation including exemplary u
 
 ## How to contribute
 Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
+Please also carefully check our [code of conduct](CODE_OF_CONDUCT.md) :blue_heart:.
 
 ## License
 Hopefully MIT.
