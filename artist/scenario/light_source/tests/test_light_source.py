@@ -51,7 +51,7 @@ class TestASunModule(unittest.TestCase):
         sun_position = self.light_direction
 
         ray_directions = self.sun.reflect_rays_(
-            -sun_position, self.aligned_surface_normals
+            self.aligned_surface_normals,
         )
         xi, yi = self.sun.sample(1)
 
@@ -73,14 +73,13 @@ class TestASunModule(unittest.TestCase):
         dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
 
         indices = (
-                (-1 <= dx_ints)
-                & (dx_ints < receiver_plane_x + 1)
-                & (-1 <= dy_ints)
-                & (dy_ints < receiver_plane_y + 1)
+            (-1 <= dx_ints)
+            & (dx_ints < receiver_plane_x + 1)
+            & (-1 <= dy_ints)
+            & (dy_ints < receiver_plane_y + 1)
         )
 
         total_bitmap = self.sun.sample_bitmap(
-            dx_ints,
             dy_ints,
             indices,
             receiver_plane_x,
