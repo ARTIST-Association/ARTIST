@@ -2,67 +2,81 @@
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
-[![fair-software.eu]
-![PyPI]
-![PyPI - Downloads]
-[![OpenSSF Best Practices]
+[![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![](https://img.shields.io/badge/Python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![](https://img.shields.io/badge/Contact-max.pargmann%40dlr.de-orange)](mailto:max.pargmann@dlr.de)
-[![Documentation Status](https://readthedocs.org/projects/propulate/badge/?version=latest)](https://propulate.readthedocs.io/en/latest/?badge=latest)
-![](./coverage.svg)
 
-## Description
+## What ARTIST can do for you
 
-This Python program implements a differentiable ray tracer within the PyTorch Machine Learning framework. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization methods with smooth parametric descriptions of heliostats.
+The `ARTIST` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning 
+framework in `Python`. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of 
+heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization methods with 
+smooth parametric descriptions of heliostats.
 
-**Key capabilities of this program include:**
+**Our contributions include:**
 
-- **Neural Network Driven Heliostat Calibration**: A two-layer hybrid model for most efficient heliostat calibration. It inherits a robust geometric model for pre-alignment and a neural network disturbance model, which gradually adapts its impact via regularization sweeps. On this way, high data requirements of data-centric methods are overcome while maintaining flexibility for modeling complex real-world systems. For more details see[here](https://doi.org/10.1016/j.solener.2023.111962).  
+- **Neural-network driven heliostat calibration:** A two-layer hybrid model for most efficient heliostat calibration. 
+  It comprises a robust geometric model for pre-alignment and a neural network disturbance model, which gradually adapts 
+  its impact via regularization sweeps. On this way, high data requirements of data-centric methods are overcome while maintaining flexibility for modeling complex real-world systems. 
+  Check out [this paper](https://doi.org/10.1016/j.solener.2023.111962) for more details.  
 
-- **Surface Reconstruction and Flux Density Prediction**: Leveraging learning Non-Uniform Rational B-Splines (NURBS), the program reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants. Achieving sub-millimeter accuracy in mirror reconstruction from focal spot images, contributing to improved operational safety and efficiency. The reconstructed surfaces can be used for prediction unique heliostat flux densities with the same accuracy as state of the art. For more details see[here](https://doi.org/10.21203/rs.3.rs-2554998/v1).
+- **Surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS), 
+  `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants. 
+  Thus, we can achieve sub-millimeter accuracy in mirror reconstruction from focal spot images, contributing to improved 
+  operational safety and efficiency. The reconstructed surfaces can be used for predicting unique heliostat flux densities 
+  with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.21203/rs.3.rs-2554998/v1) for more details.
 
-- **Advanced Data Set Sampling Strategies** Utilizing a time independet data set sampling strategy based on Euler angles to improve accuracy by minimizing the needed data for calibration. For more details see[here](https://doi.org/10.21203/rs.3.rs-2898838/v1).
+- **Advanced data set sampling strategies:** `ARTIST` utilizes a time-independent data set sampling strategy based on Euler 
+  angles to improve accuracy by minimizing the needed data for calibration. Check out [this paper](https://doi.org/10.21203/rs.3.rs-2898838/v1) for more details.
 
-- **Immediate Deployment**: Enabling deployment at the beginning of a solar thermal plant's operation, allowing for in-situ calibration and subsequent improvements in energy efficiencies and cost reductions.
+- **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation, 
+  allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
 
-- **Optimize Flux Density** Coming Soon
-
-
-## Installation Instructions: 
-run setup.py without any commands
-
-## Folder Structure
-├───artist&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# Folder includes the file packages                   \
-│   ├───io&nbsp;&nbsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# ???                              \
-│   │   └───tests&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;# includes unit tests?                       \
-│   ├───physics_objects&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# includes all physical objects inside the &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;raytracing environment e.g. Heliostats or the Receiver                 \
-│   │   └───heliostats                  \
-│   │       ├───alignment               \
-│   │       │   └───tests               \
-│   │       │       └───bitmaps         \
-│   │       └───surface                 \
-│   │           └───facets              \
-│   ├───raytracing                      \
-│   ├───scenario                        \
-│   │   └───light_source                \
-│   │       └───tests                   \
-│   └───util                            \
-└───scenario_objects&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#Szenario Objects are ment to be &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;loaded from the experiment yaml file. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;For example to define wether the sun &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;or a beamer should be loaded                    \
-    └───heliostats                      
-
-## Usage: 
-Blub
+- **Optimized flux density:** Coming soon so stay tuned :rocket:!
 
 
-## Contributing: 
-See in the contribute.md file
+## Installation
+We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+` virtual environment.
+1. Clone the `ARTIST` repository:
+   ```bash
+   git clone https://github.com/ARTIST-Association/ARTIST.git
+   ```
+2. Install the package from the main branch:
+   ```bash
+   pip install .
+   ```
+## Structure
+├───`artist` # Parent package \
+│   ├───`io` # IO functionality \
+│   │   └───`tests`# IO functionality tests \
+│   ├───`physics_objects` # Physical objects in the raytracing environment, e.g., heliostats or the receiver \
+│   │   └───`heliostats`                 
+│   │       ├───`alignment` \
+│   │       │   └───`tests`\
+│   │       │       └───`bitmaps` \
+│   │       └───`surface` \
+│   │           └───`facets` \
+│   ├───`raytracing` \
+│   ├───`scenario` \
+│   │   └───`light_source` \
+│   │       └───`tests` \
+│   └───`util` \
+└───`scenario_objects` # Scenario objects are loaded from the experiment yaml file to, e.g., define whether the sun or a beamer should be loaded \
+    └───`heliostats`                      
 
-## Credits: 
-Thanks to the Helmholtz HAICU Voucher Project for boosting the start of this Project
-Thanks to Helmoltz ARTIST Project four founding
+## How to use ARTIST
+We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.
 
-## License: 
-Hopefully MIT
-## Documentation: 
-Coming Soon
+## How to contribute
+Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
+
+## License
+Hopefully MIT.
+
+## Documentation
+Coming soon :rocket:!
+
+## Acknowledgments
+This work is supported by the [Helmholtz AI](https://www.helmholtz.ai/) platform grant.
+
+![ARTIST Logo](.figs/logos_ARTIST.pdf)
