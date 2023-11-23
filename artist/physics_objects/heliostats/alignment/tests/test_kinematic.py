@@ -1,9 +1,15 @@
-import unittest
-import torch
+"""
+Test kinematic module.
+"""
 import math
+import unittest
 
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
+import torch
+
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
+from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
+    NeuralNetworkRigidBodyFusion,
+)
 
 
 class TestAKinematicModule(unittest.TestCase):
