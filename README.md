@@ -79,4 +79,4 @@ Coming soon :rocket:!
 ## Acknowledgments
 This work is supported by the [Helmholtz AI](https://www.helmholtz.ai/) platform grant.
 
-![ARTIST Logo](.figs/logos_ARTIST.pdf)
+![ARTIST Logo](.figs/logos_ARTIST.svg)
