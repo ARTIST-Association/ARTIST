@@ -46,24 +46,25 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
    pip install .
    ```
 ## Structure
-├───`artist` # Parent package \
-│   ├───`io` # IO functionality \
-│   │   └───`tests`# IO functionality tests \
-│   ├───`physics_objects` # Physical objects in the raytracing environment, e.g., heliostats or the receiver \
-│   │   └───`heliostats`                 
-│   │       ├───`alignment` \
-│   │       │   └───`tests`\
-│   │       │       └───`bitmaps` \
-│   │       └───`surface` \
-│   │           └───`facets` \
-│   ├───`raytracing` \
-│   ├───`scenario` \
-│   │   └───`light_source` \
-│   │       └───`tests` \
-│   └───`util` \
-└───`scenario_objects` # Scenario objects are loaded from the experiment yaml file to, e.g., define whether the sun or a beamer should be loaded \
-    └───`heliostats`                      
-
+```
+├──artist # Parent package
+│   ├───io # IO functionality
+│   │   └───tests # IO functionality tests
+│   ├───physics_objects # Physical objects in raytracing environment, e.g., heliostats or receiver
+│   │   └───heliostats                 
+│   │       ├───alignment
+│   │       │   └───tests
+│   │       │       └───bitmaps
+│   │       └───surface
+│   │           └───facets
+│   ├───raytracing
+│   ├───scenario
+│   │   └───light_source
+│   │       └───tests
+│   └───util
+└───scenario_objects # Loaded from experiment yaml file to, e.g., define whether the sun or a beamer should be loaded
+    └───heliostats                   
+```
 ## How to use ARTIST
 We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.
 
