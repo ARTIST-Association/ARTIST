@@ -10,7 +10,7 @@ class AParameter:
         value: Union[torch.Tensor, float],
         tolerance: Union[torch.Tensor, float] = None,
         distort: bool = False,
-        requires_grad: bool =False,
+        requires_grad: bool = False,
     ):
         self.initial_value = (
             value if isinstance(value, torch.Tensor) else torch.tensor(value)
@@ -30,4 +30,4 @@ class AParameter:
             self.distort()
 
     def distort(self):
-        raise NotImplementedError("Must override")
+        raise NotImplementedError("Must override.")

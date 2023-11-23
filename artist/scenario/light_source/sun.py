@@ -14,39 +14,35 @@ class Sun(ALightSource):
     """
 
     def __init__(
-            self,
-            dist_type: str,
-            ray_count: int,
-            mean: List[float],
-            cov: List[float],
-            device: torch.device,
+        self,
+        dist_type: str,
+        ray_count: int,
+        mean: List[float],
+        cov: List[float],
+        device: torch.device,
     ) -> None:
         """
-        Initialize a sun as a light source
+        Initialize the sun as a light source.
 
         Parameters
         ----------
         dist_type : str
             Type of the distribution to be implemented.
-
         ray_count : int
-            The amount of rays send out.
-
+            The amount of rays sent out.
         mean : List[float]
             The mean that describes the normal distribution.
-
         cov : List[float]
             The covariance that describes the normal distribution.
-
         device : torch.device
             Specifies the device type responsible to load tensors into memory.
 
         Raises
         ------
         ValueError
-            If the chosen dist_type is unknown
+            If the chosen ``dist_type`` is unknown.
         """
-        super(Sun, self).__init__()
+        super().__init__()
         self.dist_type: str = dist_type
         self.num_rays: int = ray_count
 
@@ -67,13 +63,13 @@ class Sun(ALightSource):
             )
 
         elif self.dist_type == "Pillbox":
-            raise ValueError("Not Implemented Yet")
+            raise ValueError("Not implemented yet.")
         else:
-            raise ValueError("unknown light distribution type")
+            raise ValueError("Unknown light distribution type.")
 
     def sample(
-            self,
-            num_rays_on_hel: int,
+        self,
+        num_rays_on_hel: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
@@ -81,17 +77,17 @@ class Sun(ALightSource):
         Parameters
         ----------
         num_rays_on_hel : int
-            Defines the number of rays on the heliostat.
+            The number of rays on the heliostat.
 
         Returns
         -------
         Tuple[torch.Tensor, torch.Tensor]
-            Returns the distortion in x and y direction.
+            The distortion in x and y direction.
 
         Raises
         ------
         ValueError
-            Raised if the distribution type is not valid, currently only the normal distribution is implemented.
+            If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.dist_type == "Normal":
             distortion_x_dir, distortion_y_dir = (
@@ -105,14 +101,15 @@ class Sun(ALightSource):
         else:
             raise ValueError("unknown light distribution type")
 
+    # TODO: Fix mismatch in docstring and function signature!
     def compute_rays(
-            self,
-            plane_normal: torch.Tensor,
-            plane_point: torch.Tensor,
-            ray_directions: torch.Tensor,
-            surface_points: torch.Tensor,
-            distortion_x_dir: torch.Tensor,
-            distortion_y_dir: torch.Tensor,
+        self,
+        plane_normal: torch.Tensor,
+        plane_point: torch.Tensor,
+        ray_directions: torch.Tensor,
+        hel_in_field: torch.Tensor,
+        xi: torch.Tensor,
+        yi: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the scattered rays for points on a surface.
@@ -121,42 +118,36 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
-
         plane_point : torch.Tensor
-            Point on the plane (Center point of the receiver).
-
+            Point on the plane (center point of the receiver).
         ray_directions : torch.Tensor
-            Directions of the reflected sun light.
-
+            Directions of the reflected sunlight.
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
-
         distortion_x_dir : torch.Tensor
             Distortion of the rays in x direction.
-
         distortion_y_dir : torch.Tensor
             Distortion of the rays in y direction.
 
         Returns
         -------
         torch.Tensor
-            Returns the scattered rays.
-
+            The scattered rays.
         """
         intersections = self.line_plane_intersections(
             plane_normal=plane_normal,
             plane_point=plane_point,
             ray_directions=ray_directions,
-            surface_points=surface_points,
+            surface_points=surface_points,  # TODO: Fix unresolved reference!
         )
         as_ = intersections
         has = as_ - surface_points
-        # TODO Wieder der Vektor von vorher?
-        #      Evtl. ist dieser Aufruf von `line_plane_intersections` unnötig
+        # TODO: Again use vector from before?
+        #       Maybe this call of `line_plane_intersections` is not necessary.
         has = has / torch.linalg.norm(has, dim=1).unsqueeze(-1)
 
-        # rotate: Calculate 3D rotationmatrix in heliostat system.
-        # 1 axis is pointing towards the receiver, the other are orthogonal
+        # rotate: Calculate 3D rotation matrix in heliostat system.
+        # 1st axis points towards the receiver, the others are orthogonal.
         rotates_x = torch.stack(
             [has[:, 0], has[:, 1], has[:, 2]],
             -1,
@@ -194,8 +185,12 @@ class Sun(ALightSource):
         rotated_has = torch.matmul(rotates, has.unsqueeze(-1))
 
         # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-        rot_y = self.Ry(distortion_x_dir, mat=(rotated_has.to(torch.float)))
-        rot_z = self.Rz(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
+        rot_y = self.rotate_y(
+            distortion_x_dir, mat=(rotated_has.to(torch.float))
+        )  # TODO: Fix unresolved reference!
+        rot_z = (
+            self.rotate_z(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
+        )  # TODO: Fix unresolved reference!
         rays = (
             torch.matmul(inv_rot.to(torch.float), rot_z)
             .transpose(0, -1)
@@ -205,12 +200,12 @@ class Sun(ALightSource):
         return rays
 
     def line_plane_intersections(
-            self,
-            plane_normal: torch.Tensor,
-            plane_point: torch.Tensor,
-            ray_directions: torch.Tensor,
-            surface_points: torch.Tensor,
-            epsilon: float = 1e-6,
+        self,
+        plane_normal: torch.Tensor,
+        plane_point: torch.Tensor,
+        ray_directions: torch.Tensor,
+        surface_points: torch.Tensor,
+        epsilon: float = 1e-6,
     ) -> torch.Tensor:
         """
         Compute line-plane intersections of ray directions and the (receiver) plane
@@ -219,28 +214,24 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
-
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
-
         ray_directions : torch.Tensor
-            Direction of the reflected sun light.
-
+            Direction of the reflected sunlight.
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
-
         epsilon : float
-            small value, upper limit.
+            Small value, upper limit.
 
         Returns
         -------
         torch.Tensor
-            Return the intersections of the lines and plane.
+            The intersections of the lines and plane.
 
         Raises
         ------
         RuntimeError
-            Raised when there are no intersections between the line and the plane.
+            When there are no intersections between the line and the plane.
         """
         ndotu = ray_directions.matmul(plane_normal)
         if (torch.abs(ndotu) < epsilon).any():
@@ -249,39 +240,41 @@ class Sun(ALightSource):
 
         return surface_points + ray_directions * ds.unsqueeze(-1)
 
-    def reflect_rays_(self, rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
         """
-        Reflect incoming rays according to a noraml vector.
+        Reflect incoming rays according to a normal vector.
 
         Parameters
         ----------
         rays : torch.Tensor
             The incoming rays (from the sun) to be reflected.
-
         normals : Torch.Tensor
             Surface normals on which the rays are reflected.
 
         Returns
         -------
         torch.Tensor
-            Returns the reflected rays.
+            The reflected rays.
         """
         return rays - 2 * utils.batch_dot(rays, normals) * normals
 
-    def Ry(self, alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def rotate_y(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
         """
-        Create rotation matrices and rotate the input along the y-axis in the heliostat coordination system.
+        Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
 
         Parameters
         ----------
         alpha : torch.Tensor
-
+            The rotation angle.
         mat : torch.Tensor
+            Input to be rotated.
 
         Returns
         -------
         torch.Tensor
-            Returns rotation matrix.
+            The rotated matrix.
         """
         zeros = torch.zeros_like(alpha)
         coss = torch.cos(alpha)
@@ -292,20 +285,22 @@ class Sun(ALightSource):
         rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
         return torch.matmul(rots, mat)
 
-    def Rz(self, alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def rotate_z(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
         """
-        Create rotation matrices and rotate the input along the z-axis in the heliostat coordination system.
+        Create rotation matrices and rotate the input along the z-axis in the heliostat coordinate system.
 
         Parameters
         ----------
         alpha : torch.Tensor
-
+            The rotation angle.
         mat : torch.Tensor
+            Input to be rotated.
 
         Returns
         -------
         torch.Tensor
-            Returns rotation matrix.
+            The rotated matrix.
         """
         zeros = torch.zeros_like(alpha)
         coss = torch.cos(alpha)
@@ -316,15 +311,15 @@ class Sun(ALightSource):
         rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
         return torch.matmul(rots, mat)
 
+    @staticmethod
     def sample_bitmap(
-            self,
-            dx_ints: torch.Tensor,
-            dy_ints: torch.Tensor,
-            indices: torch.Tensor,
-            plane_x: float,
-            plane_y: float,
-            bitmap_height: int,
-            bitmap_width: int,
+        dx_ints: torch.Tensor,
+        dy_ints: torch.Tensor,
+        indices: torch.Tensor,
+        plane_x: float,
+        plane_y: float,
+        bitmap_height: int,
+        bitmap_width: int,
     ) -> torch.Tensor:
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
@@ -447,10 +442,10 @@ class Sun(ALightSource):
         # choose only those indices that are actually in the bitmap (i.e. we
         # prevent out-of-bounds access).
         indices = (
-                (0 <= x_inds)
-                & (x_inds < bitmap_height)
-                & (0 <= y_inds)
-                & (y_inds < bitmap_width)
+            (0 <= x_inds)
+            & (x_inds < bitmap_height)
+            & (0 <= y_inds)
+            & (y_inds < bitmap_width)
         )
 
         # Flux density map for heliostat field
