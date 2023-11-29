@@ -49,6 +49,13 @@ class TestAKinematicModule(unittest.TestCase):
         position2 = torch.tensor([0.0, 1.0, 0.0])
         self.kinematic_model2 = NeuralNetworkRigidBodyFusion(position=position2)
 
+        self.datapoint7 = HeliostatDataPoint(
+            point_id=7,
+            light_directions=torch.tensor([0.0, -10.0, 0.0]),
+            desired_aimpoint=torch.tensor([0, -50, 0]),
+            label=HeliostatDataPointLabel(),
+        )
+
     def test_compute_orientation_from_aimpoint1(self):
         expected = torch.tensor(
             [
@@ -130,6 +137,21 @@ class TestAKinematicModule(unittest.TestCase):
         )
         orientation_matrix = self.kinematic_model2.compute_orientation_from_aimpoint(
             self.datapoint6
+        )
+        torch.testing.assert_close(orientation_matrix[0], expected)
+
+    
+    def test_compute_orientation_from_aimpoint7(self):
+        expected = torch.tensor(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
+                [0.0, 0.0, -1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
+        orientation_matrix = self.kinematic_model.compute_orientation_from_aimpoint(
+            self.datapoint7
         )
         torch.testing.assert_close(orientation_matrix[0], expected)
 
