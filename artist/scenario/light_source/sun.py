@@ -6,11 +6,43 @@ from artist.util import utils
 
 
 class Sun(ALightSource):
+    # TODO: Complete docstring.
     """
     Implementation of the sun as a specific light source.
 
+    Attributes
+    ----------
+    dist_type : str
+        Type of the distribution to be implemented.
+    num_rays : int
+        The number of rays sent out.
+    mean
+        The mean of the normal distribution.
+    cov
+        The covariance of the normal distribution.
+    distribution
+        The actual normal distribution.
+
+    Methods
+    -------
+    sample()
+        Sample rays from a given distribution.
+    compute_rays()
+        Compute the scattered rays for points on a surface.
+    line_plane_intersections()
+        Compute line-plane intersections of ray directions and the (receiver) plane.
+    reflect_rays_()
+        Reflect incoming rays according to a normal vector.
+    rotate_y()
+        Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
+    rotate_z()
+        Create rotation matrices and rotate the input along the z-axis in the heliostat coordinate system.
+    sample_bitmap()
+        Sample a bitmap (flux density distribution of the reflected rays on the receiver).
+
     See Also
-    :class:ALightSource : Reference to the parent class
+    --------
+    :class:ALightSource : The parent class.
     """
 
     def __init__(
@@ -29,18 +61,18 @@ class Sun(ALightSource):
         dist_type : str
             Type of the distribution to be implemented.
         ray_count : int
-            The amount of rays sent out.
+            The number of rays sent out.
         mean : List[float]
-            The mean that describes the normal distribution.
+            The mean of the normal distribution.
         cov : List[float]
-            The covariance that describes the normal distribution.
+            The covariance of the normal distribution.
         device : torch.device
             Specifies the device type responsible to load tensors into memory.
 
         Raises
         ------
-        ValueError
-            If the chosen ``dist_type`` is unknown.
+        Union[ValueError, NotImplementedError]
+            If the chosen dist_type is unknown
         """
         super().__init__()
         self.dist_type: str = dist_type
@@ -63,7 +95,7 @@ class Sun(ALightSource):
             )
 
         elif self.dist_type == "Pillbox":
-            raise ValueError("Not implemented yet.")
+            raise NotImplementedError("Not implemented yet.")
         else:
             raise ValueError("Unknown light distribution type.")
 
@@ -101,15 +133,14 @@ class Sun(ALightSource):
         else:
             raise ValueError("unknown light distribution type")
 
-    # TODO: Fix mismatch in docstring and function signature!
     def compute_rays(
         self,
         plane_normal: torch.Tensor,
         plane_point: torch.Tensor,
         ray_directions: torch.Tensor,
-        hel_in_field: torch.Tensor,
-        xi: torch.Tensor,
-        yi: torch.Tensor,
+        surface_points: torch.Tensor,
+        distortion_x_dir: torch.Tensor,
+        distortion_y_dir: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the scattered rays for points on a surface.
@@ -118,14 +149,19 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
+
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
+
         ray_directions : torch.Tensor
             Directions of the reflected sunlight.
+
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
+
         distortion_x_dir : torch.Tensor
             Distortion of the rays in x direction.
+
         distortion_y_dir : torch.Tensor
             Distortion of the rays in y direction.
 
@@ -133,21 +169,22 @@ class Sun(ALightSource):
         -------
         torch.Tensor
             The scattered rays.
+
         """
         intersections = self.line_plane_intersections(
             plane_normal=plane_normal,
             plane_point=plane_point,
             ray_directions=ray_directions,
-            surface_points=surface_points,  # TODO: Fix unresolved reference!
+            surface_points=surface_points,
         )
         as_ = intersections
         has = as_ - surface_points
-        # TODO: Again use vector from before?
-        #       Maybe this call of `line_plane_intersections` is not necessary.
+        # TODO Again vector from before?
+        #      Maybe calling `line_plane_intersections` is not necessary here.
         has = has / torch.linalg.norm(has, dim=1).unsqueeze(-1)
 
         # rotate: Calculate 3D rotation matrix in heliostat system.
-        # 1st axis points towards the receiver, the others are orthogonal.
+        # 1 axis is pointing towards the receiver, the other are orthogonal
         rotates_x = torch.stack(
             [has[:, 0], has[:, 1], has[:, 2]],
             -1,
@@ -185,12 +222,8 @@ class Sun(ALightSource):
         rotated_has = torch.matmul(rotates, has.unsqueeze(-1))
 
         # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-        rot_y = self.rotate_y(
-            distortion_x_dir, mat=(rotated_has.to(torch.float))
-        )  # TODO: Fix unresolved reference!
-        rot_z = (
-            self.rotate_z(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
-        )  # TODO: Fix unresolved reference!
+        rot_y = self.rotate_y(distortion_x_dir, mat=(rotated_has.to(torch.float)))
+        rot_z = self.rotate_z(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
         rays = (
             torch.matmul(inv_rot.to(torch.float), rot_z)
             .transpose(0, -1)
@@ -199,8 +232,8 @@ class Sun(ALightSource):
 
         return rays
 
+    @staticmethod
     def line_plane_intersections(
-        self,
         plane_normal: torch.Tensor,
         plane_point: torch.Tensor,
         ray_directions: torch.Tensor,
@@ -208,7 +241,7 @@ class Sun(ALightSource):
         epsilon: float = 1e-6,
     ) -> torch.Tensor:
         """
-        Compute line-plane intersections of ray directions and the (receiver) plane
+        Compute line-plane intersections of ray directions and the (receiver) plane.
 
         Parameters
         ----------
@@ -217,11 +250,11 @@ class Sun(ALightSource):
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
         ray_directions : torch.Tensor
-            Direction of the reflected sunlight.
+            The direction of the reflected sunlight.
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
         epsilon : float
-            Small value, upper limit.
+            A small value corresponding to the upper limit.
 
         Returns
         -------
@@ -267,9 +300,9 @@ class Sun(ALightSource):
         Parameters
         ----------
         alpha : torch.Tensor
-            The rotation angle.
+            The rotation angles.
         mat : torch.Tensor
-            Input to be rotated.
+            The matrix to be rotated.
 
         Returns
         -------
@@ -293,10 +326,9 @@ class Sun(ALightSource):
         Parameters
         ----------
         alpha : torch.Tensor
-            The rotation angle.
+            The rotation angles.
         mat : torch.Tensor
-            Input to be rotated.
-
+            The matrix to be rotated.
         Returns
         -------
         torch.Tensor
@@ -321,6 +353,7 @@ class Sun(ALightSource):
         bitmap_height: int,
         bitmap_width: int,
     ) -> torch.Tensor:
+        # TODO : Complete docstring.
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
 
@@ -334,20 +367,17 @@ class Sun(ALightSource):
 
         plane_x : float
             x dimension of the receiver plane.
-
         plane_y : float
             y dimension of the receiver plane.
-
         bitmap_height : int
-            resolution of the resulting bitmap (x direction) -> height
-
+            Resolution of the resulting bitmap (x direction) -> height
         bitmap_width : int
-            resolution of the resulting bitmap (y direction) -> width
+            Resolution of the resulting bitmap (y direction) -> width
 
         Returns
         -------
         torch.Tensor
-            Returns the flux density distribution of the reflected rays on the receiver
+            The flux density distribution of the reflected rays on the receiver
         """
         x_ints = dx_ints[indices] / plane_x * bitmap_height
         y_ints = dy_ints[indices] / plane_y * bitmap_width
