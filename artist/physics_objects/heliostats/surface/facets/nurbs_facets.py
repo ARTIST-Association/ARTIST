@@ -12,10 +12,10 @@ from artist.physics_objects.heliostats.surface.nurbs import bpro_loader, canting
 from artist.util import utils
 
 
-C = TypeVar('C', bound='NURBSFacetModule')
+#C = TypeVar('C', bound='NURBSFacetModule')
 
 HeliostatParams = Tuple[
-    torch.Tensor,  # heliostat position on field
+    torch.Tensor,  # surface position on field
     torch.Tensor,  # facet positions
     torch.Tensor,  # facet spans N
     torch.Tensor,  # facet spans E
@@ -30,10 +30,10 @@ HeliostatParams = Tuple[
     Optional[Dict[str, Any]],  # params
 ]
 
-def real_heliostat(
+def real_surface(
         real_configs: CfgNode, device: torch.device,
 ) -> HeliostatParams:
-    """Return a heliostat loaded from deflectometric data."""
+    """Return a surface loaded from deflectometric data."""
     cfg = real_configs
     dtype = torch.get_default_dtype()
 
@@ -43,7 +43,7 @@ def real_heliostat(
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
-        heliostat_position,
+        surface_position,
         facet_positions,
         facet_spans_n,
         facet_spans_e,
@@ -59,15 +59,15 @@ def real_heliostat(
         ray_struct,
         cfg.VERBOSE,
     )
-    heliostat_position: torch.Tensor = (
-        torch.tensor(heliostat_position, dtype=dtype, device=device)
+    surface_position: torch.Tensor = (
+        torch.tensor(surface_position, dtype=dtype, device=device)
         if cfg.POSITION_ON_FIELD is None
         else get_position(cfg, dtype, device)
     )
 
     if cfg.ZS_PATH:
         if cfg.VERBOSE:
-            print("Path to heliostat surface values found. Load values...")
+            print("Path to surface values found. Load values...")
         positions = copy.deepcopy(ideal_positions)
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
         pos_type = type(positions[0][0][0])
@@ -114,7 +114,7 @@ def real_heliostat(
     if not cfg.ZS_PATH:
         if cfg.VERBOSE:
             print(
-                "No path to heliostat surface values found. "
+                "No path to surface surface values found. "
                 "Calculate values..."
             )
         zs_list = []
@@ -175,7 +175,7 @@ def real_heliostat(
     cols = None
     params = None
     return (
-        heliostat_position,
+        surface_position,
         torch.tensor(facet_positions, dtype=dtype, device=device),
         torch.tensor(facet_spans_n, dtype=dtype, device=device),
         torch.tensor(facet_spans_e, dtype=dtype, device=device),
@@ -219,7 +219,7 @@ class NURBSFacetModule(AFacetModule):
             maybe_aim_point: Optional[torch.Tensor],
             maybe_sun_direction: Optional[torch.Tensor],
     ) -> None:
-        builder_fn, h_cfg = self.select_heliostat_builder(self.cfg)
+        builder_fn, h_cfg = self.select_surface_builder(self.cfg)
         self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
 
         self.canting_algo = canting.get_algorithm(self._canting_cfg)
@@ -232,14 +232,14 @@ class NURBSFacetModule(AFacetModule):
         self.disturbance_angles = self._get_disturbance_angles(h_cfg)
 
         (
-            heliostat_position,
+            surface_position,
             facet_positions,
             facet_spans_n,
             facet_spans_e,
-            heliostat,
-            heliostat_ideal,
-            heliostat_normals,
-            heliostat_ideal_vecs,
+            surface_points,
+            surface_ideal,
+            surface_normals,
+            surface_ideal_vecs,
             height,
             width,
             rows,
@@ -247,15 +247,15 @@ class NURBSFacetModule(AFacetModule):
             params,
         ) = builder_fn(h_cfg, self.device)
 
-        self.position_on_field = heliostat_position
+        self.position_on_field = surface_position
         self.set_up_facets(
             facet_positions,
             facet_spans_n,
             facet_spans_e,
-            heliostat,
-            heliostat_ideal,
-            heliostat_normals,
-            heliostat_ideal_vecs,
+            surface_points,
+            surface_ideal,
+            surface_normals,
+            surface_ideal_vecs,
             maybe_sun_direction,
         )
         self.params = params
@@ -264,14 +264,14 @@ class NURBSFacetModule(AFacetModule):
         self.rows = rows
         self.cols = cols
 
-    def select_heliostat_builder(self, cfg: CfgNode) -> Tuple[
+    def select_surface_builder(self, cfg: CfgNode) -> Tuple[
             Callable[[CfgNode, torch.device], HeliostatParams],
             CfgNode,
     ]:
         shape = cfg.SHAPE.lower()
         if shape == "real":
-            return real_heliostat, cfg.DEFLECT_DATA
-        raise ValueError('unknown heliostat shape')
+            return real_surface, cfg.DEFLECT_DATA
+        raise ValueError('unknown surface shape')
     
 
     def _get_aim_point(
@@ -360,7 +360,7 @@ class NURBSFacetModule(AFacetModule):
     # @classmethod
     # def find_facets(
     #         cls: Type[C],
-    #         heliostat: 'ASurface',
+    #         surface: 'ASurface',
     #         positions: torch.Tensor,
     #         spans_n: torch.Tensor,
     #         spans_e: torch.Tensor,
@@ -380,7 +380,7 @@ class NURBSFacetModule(AFacetModule):
     #         device=positions.device,
     #     )
 
-    #     canting_params = canting.get_canting_params(heliostat, sun_direction)
+    #     canting_params = canting.get_canting_params(surface, sun_direction)
 
     #     for (i, (position, span_n, span_e)) in enumerate(zip(
     #             positions,
@@ -407,7 +407,7 @@ class NURBSFacetModule(AFacetModule):
     #             facet_discrete_points_ideal,
     #             facet_normals,
     #             facet_normals_ideal,
-    #             heliostat.cfg.IDEAL.NORMAL_VECS,
+    #             surface.cfg.IDEAL.NORMAL_VECS,
     #             canting_params,
     #         )
 
@@ -422,7 +422,7 @@ class NURBSFacetModule(AFacetModule):
     #         cant_rots[i] = cant_rot
 
     #     return cls(
-    #         heliostat,
+    #         surface,
     #         positions,
     #         spans_n,
     #         spans_e,
