@@ -80,5 +80,7 @@ Coming soon :rocket:!
 
 ## Acknowledgments
 This work is supported by the [Helmholtz AI](https://www.helmholtz.ai/) platform grant.
-
-![ARTIST Logo](.figs/logos_ARTIST.svg)
+-----------
+<div align="center">
+  <a href="https://www.dlr.de/EN/Home/home_node.html"><img src="./logos/logo_dlr.svg" height="50px" hspace="3%" vspace="20px"></a><a href="https://www.fz-juelich.de/portal/EN/Home/home_node.html"><img src="./logos/logo_fzj.svg" height="50px" hspace="3%" vspace="20px"></a><a href="http://www.kit.edu/english/index.php"><img src="./logos/logo_kit.svg" height="50px" hspace="3%" vspace="20px"></a><a href="https://www.helmholtz.ai/"><img src="./logos/logo_hai.svg" height="50px" hspace="3%" vspace="20px"></a><a href="https://synhelion.com/"><img src="./logos/logo_synhelion.svg" height="50px" hspace="3%" vspace="20px"></a>
+</div>
