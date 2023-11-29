@@ -53,6 +53,7 @@ class AlignmentModule(AModule):
         orientation = self.align(datapoint=datapoint)
         alignment = torch.stack(
             self.heliostat_coord_system(
+                self.position,
                 -datapoint.light_directions,
                 datapoint.desired_aimpoint,
                 (orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32))[:1, :3],
