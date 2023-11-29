@@ -11,9 +11,9 @@ from artist.physics_objects.heliostats.alignment.alignment import AlignmentModul
 class TestASunModule(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(0)
-        self.light_direction = torch.tensor([0.0, 0.0, 1.0])
-        self.heliostat_position = torch.tensor([0.0, 10.0, 0.0])
-        self.receiver_center = torch.tensor([0.0, -100.0, 0.0])
+        self.light_direction = torch.tensor([0.0, -10.0, 0.0])
+        self.heliostat_position = torch.tensor([0.0, 0.0, 0.0])
+        self.receiver_center = torch.tensor([0.0, -50.0, 0.0])
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.sun = Sun(
@@ -88,6 +88,8 @@ class TestASunModule(unittest.TestCase):
             receiver_resolution_x,
             receiver_resolution_y,
         )
+
+        total_bitmap = total_bitmap.T
 
         plt.imshow(total_bitmap.detach().numpy())
         plt.show()

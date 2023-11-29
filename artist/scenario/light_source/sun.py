@@ -465,4 +465,6 @@ class Sun(ALightSource):
             ints[indices],
             accumulate=True,
         )
+
+        print(len(indices)/4)
         return total_bitmap
