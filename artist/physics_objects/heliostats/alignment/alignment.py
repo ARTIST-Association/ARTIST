@@ -29,7 +29,10 @@ class AlignmentModule(AModule):
         self.kinematicModel = NeuralNetworkRigidBodyFusion(position=position)
 
     def align_surface(
-            self, datapoint, surface_points, surface_normals
+            self,
+            datapoint: HeliostatDataPoint,
+            surface_points: torch.Tensor,
+            surface_normals: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a given orientation.
