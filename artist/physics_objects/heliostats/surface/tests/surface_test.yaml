@@ -12,11 +12,11 @@
        FOCUS_POINT: 0.0
    FILENAME: Helio_AA39_Rim0_STRAL-Input_211028212814.binp
    POSITION_ON_FIELD:
-   - 13.2
-   - 25.0
-   - 1.795
+   - 0.0
+   - 0.0
+   - 0.0
    RAY_STRUCT_FMT: =7f
-   TAKE_N_VECTORS: 8000
+   TAKE_N_VECTORS: 200000
    VERBOSE: true
    ZS_PATH: Helio_AA39_Rim0_LocalResults_220303111914.csv
  FUNCTION:
@@ -118,7 +118,7 @@
    FACETS:
      CANTING:
        ALGORITHM: standard
-       FOCUS_POINT: 0
+       FOCUS_POINT: 100000
      POSITIONS:
      - 0.0
      - 0.0
