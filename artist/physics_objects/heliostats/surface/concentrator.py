@@ -1,24 +1,26 @@
-
-from typing import Tuple
+from typing import List, Tuple
 
 from artist.physics_objects.module import AModule
 
 import torch
-from yacs.config import CfgNode
+from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
+
 from artist.physics_objects.module import AModule
 
 class ConcentratorModule(AModule):
     def __init__(self,
-                 surface_config: CfgNode,
-                 nurbs_config: CfgNode,
-                 device: torch.device,
-                 position_on_field: torch.Tensor,
-                 receiver_center: torch.Tensor,
-                 sun_directions: torch.Tensor):
+                 facets: List[AFacetModule]
+    ):
         super().__init__()
-        
+        self.facets = facets
 
 
     def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        surface_points, surface_normals = self.multi_nurbs_surface._discrete_points()
+        surface_points = torch.empty(0, 3)
+        surface_normals = torch.empty(0, 3)
+        
+        for facet in self.facets:
+            surface_points = torch.cat((surface_points, facet[0]), 0)
+            surface_normals = torch.cat((surface_normals, facet[1]), 0)
+
         return surface_points, surface_normals
