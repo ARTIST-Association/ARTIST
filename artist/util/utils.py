@@ -760,3 +760,37 @@ def initialize_spline_eval_points_perfectly(
             knots_y,
     )
     return eval_points
+
+def axis_angle_rotation(
+        axis: torch.Tensor,
+        angle_rad: torch.Tensor,
+) -> torch.Tensor:
+    cos = torch.cos(angle_rad)
+    icos = 1 - cos
+    sin = torch.sin(angle_rad)
+    x = axis[..., 0]
+    y = axis[..., 1]
+    z = axis[..., 2]
+    axis_sq = axis**2
+
+    rows = [
+        torch.stack(row, dim=-1)
+        for row in [
+                [
+                    cos + axis_sq[..., 0] * icos,
+                    x * y * icos - z * sin,
+                    x * z * icos + y * sin,
+                ],
+                [
+                    y * x * icos + z * sin,
+                    cos + axis_sq[..., 1] * icos,
+                    y * z * icos - x * sin,
+                ],
+                [
+                    z * x * icos - y * sin,
+                    z * y * icos + x * sin,
+                    cos + axis_sq[..., 2] * icos,
+                ],
+        ]
+    ]
+    return torch.stack(rows, dim=1)
