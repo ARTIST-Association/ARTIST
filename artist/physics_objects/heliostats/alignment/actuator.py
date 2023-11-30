@@ -40,7 +40,7 @@ class ActuatorModule(AModule):
             distort: bool = False,
         ):
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     class DevPercentageParameter(AParameter):
         def __init__(
@@ -52,7 +52,7 @@ class ActuatorModule(AModule):
             distort: bool = False,
         ):
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     DEV_PARAMETERS = {
         "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
