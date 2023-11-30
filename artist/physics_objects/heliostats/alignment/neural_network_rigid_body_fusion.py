@@ -18,26 +18,26 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
     class DevTranslationParameter(AParameter):
         def __init__(
             self,
-            name,
+            name: str,
             value: float = 0.0,
             tolerance: float = 0.1,
             requires_grad: bool = True,
             distort: bool = False,
         ):  # -> +/- 0.1 => 1
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     class DevRotationParameter(AParameter):
         def __init__(
             self,
-            name,
+            name: str,
             value: float = 0.0,
             tolerance: float = 0.01,
             requires_grad: bool = True,
             distort: bool = False,
         ):
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     DEV_PARAMETERS = {
         "dev_first_translation_e": DevTranslationParameter(
@@ -221,7 +221,7 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
             name of the parameter to be registered.
         """
         self.register_parameter(
-            parameter.NAME,
+            parameter.name,
             torch.nn.Parameter(
                 parameter.initial_value,
                 parameter.requires_grad,
