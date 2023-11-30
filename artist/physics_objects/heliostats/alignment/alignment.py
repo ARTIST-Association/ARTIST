@@ -52,18 +52,21 @@ class AlignmentModule(AModule):
         self.kinematic_model = NeuralNetworkRigidBodyFusion(position=position)
 
     def align_surface(
-        self, datapoint, surface_points, surface_normals
+        self,
+        datapoint: HeliostatDataPoint,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a given orientation.
 
         Parameters
         ----------
-        datapoint :
+        datapoint : HeliostatDataPoint
             Contains information about the heliostat and the environment (light source, receiver,...).
-        surface_points :
+        surface_points : torch.Tensor
             Points on the surface of the heliostat that reflect the light.
-        surface_normals :
+        surface_normals : torch.Tensor
             Normals to the surface points.
 
         Returns
@@ -143,9 +146,9 @@ class AlignmentModule(AModule):
         # Calculation ideal heliostat
         # Iteration 0
         z = p_aimpoint - p_position
-        z = z / torch.linalg.norm(z)
+        z /= torch.linalg.norm(z)
         z = p_sun + z
-        z = z / torch.linalg.norm(z)
+        z /= torch.linalg.norm(z)
 
         if (z == ideal_normal).all():
             x = torch.tensor([1, 0, 0], dtype=dtype, device=device)
@@ -157,6 +160,6 @@ class AlignmentModule(AModule):
                     torch.tensor(0, dtype=dtype, device=device),
                 ]
             )
-        x = x / torch.linalg.norm(x)
+        x /= torch.linalg.norm(x)
         y = torch.cross(z, x)
         return x, y, z
