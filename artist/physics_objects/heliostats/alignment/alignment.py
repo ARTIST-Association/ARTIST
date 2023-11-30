@@ -1,20 +1,41 @@
+"""
+Alignment module for the heliostat.
+"""
 from typing import Tuple
-import torch
+
 import pytorch3d.transforms as throt
-from artist.physics_objects.module import AModule
+import torch
+
+from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
     NeuralNetworkRigidBodyFusion,
 )
-from artist.io.datapoint import HeliostatDataPoint
+from artist.physics_objects.module import AModule
 
 
 class AlignmentModule(AModule):
     """
     This class implements the alignment module for the heliostat.
 
+    Attributes
+    ----------
+    position : torch.Tensor
+        Position of the heliostat for which the alignment model is created.
+    kinematic_model : NeuralNetworkRigidBodyFusion
+        The kinematic model used.
+
+    Methods
+    -------
+    align_surface()
+        Align given surface points and surface normals according to a given orientation.
+    align()
+        Compute the orientation from a given aimpoint.
+    heliostat_coord_system()
+        Construct the heliostat coordinate system.
+
     See Also
     --------
-    :class: AModule : Reference to the parent class
+    :class: AModule : The parent class.
     """
 
     def __init__(self, position: torch.Tensor) -> None:
@@ -28,7 +49,7 @@ class AlignmentModule(AModule):
         """
         super().__init__()
         self.position = position
-        self.kinematicModel = NeuralNetworkRigidBodyFusion(position=position)
+        self.kinematic_model = NeuralNetworkRigidBodyFusion(position=position)
 
     def align_surface(
         self, datapoint, surface_points, surface_normals
@@ -86,7 +107,7 @@ class AlignmentModule(AModule):
         torch.Tensor
             The orientation matrix.
         """
-        return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
+        return self.kinematic_model.compute_orientation_from_aimpoint(datapoint)
 
     @staticmethod
     def heliostat_coord_system(
@@ -96,7 +117,7 @@ class AlignmentModule(AModule):
         ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Construct the heliostat coordination system.
+        Construct the heliostat coordinate system.
 
         Parameters
         ----------
