@@ -194,7 +194,7 @@ class ParameterNormalizer:
         parameter : AParameter
             name of the parameter to be registered.
         """
-        self._parameters[parameter.NAME] = parameter
+        self._parameters[parameter.name] = parameter
 
     def get_denormalized_parameter(
         self, name: str, normalized_value: torch.Tensor

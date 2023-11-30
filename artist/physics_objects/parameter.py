@@ -1,9 +1,10 @@
-import torch
 from typing import Union
+
+import torch
 
 
 class AParameter:
-    NAME = "<PARAMETER_NAME>"
+    name = "<PARAMETER_NAME>"
 
     def __init__(
         self,

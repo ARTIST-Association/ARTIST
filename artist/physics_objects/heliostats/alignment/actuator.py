@@ -101,10 +101,10 @@ class ActuatorModule(AModule):
         self.parameter_normalizer.register_parameter(parameter)
 
         self.register_parameter(
-            parameter.NAME,
+            parameter.name,
             torch.nn.Parameter(
                 self.parameter_normalizer.get_normalized_parameter(
-                    parameter.NAME, parameter.initial_value
+                    parameter.name, parameter.initial_value
                 ),
                 parameter.requires_grad,
             ),
