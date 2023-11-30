@@ -1,9 +1,10 @@
-from typing import Tuple
+from typing import List, Tuple
 import torch
 import pytorch3d.transforms as throt
 from artist.physics_objects.module import AModule
 from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import NeuralNetworkRigidBodyFusion
 from artist.io.datapoint import HeliostatDataPoint
+from artist.util import utils
 
 
 class AlignmentModule(AModule):
@@ -52,21 +53,31 @@ class AlignmentModule(AModule):
             Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(datapoint=datapoint)
+        print(orientation)
+        normal_vec = (orientation @ torch.tensor([0, 1.0, 0, 0.0], dtype=torch.float32))[:1, :3]
         alignment = torch.stack(
             self.heliostat_coord_system(
                 self.position,
-                -datapoint.light_directions,
+                datapoint.light_directions,
                 datapoint.desired_aimpoint,
-                (orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32))[:1, :3],
+                normal_vec,
+                # torch.Tensor([0.0, 0.0, 0.0]),
+                # torch.Tensor([0.0, 0.0, 0.0]),
             )
         )
+        print(normal_vec)    
         align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
+
         aligned_surface_points = align_origin.transform_points(
             surface_points.to(torch.float)
         )
+        
+        # aligned_surface_normals = torch.cat([normal_vec] * len(surface_normals))
+
         aligned_surface_normals = align_origin.transform_normals(
             surface_normals.to(torch.float)
         )
+
         aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
@@ -88,13 +99,15 @@ class AlignmentModule(AModule):
             The orientation matrix.
         """
         return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
-
+    
     def heliostat_coord_system(
             self,
-            position: torch.Tensor,
-            sun: torch.Tensor,
-            aimpoint: torch.Tensor,
+            Position: torch.Tensor,
+            Sun: torch.Tensor,
+            Aimpoint: torch.Tensor,
             ideal_normal: torch.Tensor,
+            #disturbance_angles: List[torch.Tensor],
+            #rotation_offset: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Construct the heliostat coordination system.
@@ -115,28 +128,40 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = position.dtype
-        device = position.device
-        p_sun = sun
-        p_position = position
-        p_aimpoint = aimpoint
-        # Calculation ideal heliostat
-        # Iteration 0
-        z = p_aimpoint - p_position
+        dtype = Position.dtype
+        device = Position.device
+        #rotation_offset = torch.deg2rad(rotation_offset)
+        pSun = Sun
+        pPosition = Position
+        pAimpoint = Aimpoint
+        # print(pSun,pPosition,pAimpoint)
+        # Berechnung Idealer Heliostat
+        # 0. Iteration
+        z = pAimpoint - pPosition
         z = z / torch.linalg.norm(z)
-        z = p_sun + z
+        z = pSun + z
         z = z / torch.linalg.norm(z)
 
         if (z == ideal_normal).all():
             x = torch.tensor([1, 0, 0], dtype=dtype, device=device)
         else:
-            x = torch.stack(
-                [
-                    -z[1],
-                    z[0],
-                    torch.tensor(0, dtype=dtype, device=device),
-                ]
-            )
+            x = torch.stack([
+                -z[1],
+                z[0],
+                torch.tensor(0, dtype=dtype, device=device),
+            ])
         x = x / torch.linalg.norm(x)
         y = torch.cross(z, x)
+
+        # # Add heliostat rotation error/disturbance.
+        # x_err_rot = utils.axis_angle_rotation(x, disturbance_angles[0])
+        # y_err_rot = utils.axis_angle_rotation(y, disturbance_angles[1])
+        # z_err_rot = utils.axis_angle_rotation(z, disturbance_angles[2]+rotation_offset)
+        # # print(Position)
+        # # print(disturbance_angles)
+        # full_rot = z_err_rot @ y_err_rot @ x_err_rot
+
+        # x = full_rot @ x
+        # y = full_rot @ y
+        # z = full_rot @ z
         return x, y, z
