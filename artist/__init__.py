@@ -12,4 +12,4 @@ except DistributionNotFound:
 finally:
     del get_distribution, DistributionNotFound
 
-ARTIST_ROOT = f"{os.sep}".join(__file__.split("/")[:-2])
+ARTIST_ROOT = f"{os.sep}".join(__file__.split(os.sep)[:-2])
