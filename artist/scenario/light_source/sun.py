@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import torch
+
 from artist.scenario.light_source.light_source import ALightSource
 from artist.util import utils
 
