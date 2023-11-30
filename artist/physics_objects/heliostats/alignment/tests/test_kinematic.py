@@ -129,10 +129,10 @@ class TestAKinematicModule(unittest.TestCase):
     def test_compute_orientation_from_aimpoint6(self):
         expected = torch.tensor(
             [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 1.0],
-                [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
-                [0.0, 0.0, 0.0, 1.0],
+                [1, 0, 0, 0],
+                [0, -1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
+                [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+                [0, 0, 0, 1],
             ]
         )
         orientation_matrix = self.kinematic_model2.compute_orientation_from_aimpoint(
