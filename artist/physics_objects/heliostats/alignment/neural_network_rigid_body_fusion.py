@@ -574,8 +574,8 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
                     data_point.light_directions + desired_reflect_vec
             )
             desired_concentrator_normal /= desired_concentrator_normal.norm()
-            desired_concentrator_normal -= concentrator_origins
-            desired_concentrator_normal /= desired_concentrator_normal.norm()
+            #desired_concentrator_normal -= concentrator_origins
+            #desired_concentrator_normal /= desired_concentrator_normal.norm()
 
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
