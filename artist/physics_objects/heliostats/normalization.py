@@ -32,7 +32,7 @@ class ANormalization:
         _, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         """
-        Denormailze a parameters value.
+        Denormalize a parameters value.
 
         Parameters
         ----------
