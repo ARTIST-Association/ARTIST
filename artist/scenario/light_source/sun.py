@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import torch
 from artist.scenario.light_source.light_source import ALightSource
@@ -28,16 +28,12 @@ class Sun(ALightSource):
         ----------
         dist_type : str
             Type of the distribution to be implemented.
-
         ray_count : int
             The amount of rays send out.
-
         mean : List[float]
             The mean that describes the normal distribution.
-
         cov : List[float]
             The covariance that describes the normal distribution.
-
         device : torch.device
             Specifies the device type responsible to load tensors into memory.
 
@@ -121,26 +117,21 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
-
         plane_point : torch.Tensor
             Point on the plane (Center point of the receiver).
-
         ray_directions : torch.Tensor
-            Directions of the reflected sun light.
-
+            Directions of the reflected sun light
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
-
         distortion_x_dir : torch.Tensor
             Distortion of the rays in x direction.
-
         distortion_y_dir : torch.Tensor
             Distortion of the rays in y direction.
 
         Returns
         -------
         torch.Tensor
-            Returns the scattered rays.
+            The scattered rays.
 
         """
         intersections = self.line_plane_intersections(
@@ -219,23 +210,19 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
-
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
-
         ray_directions : torch.Tensor
             Direction of the reflected sun light.
-
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
-
         epsilon : float
             small value, upper limit.
 
         Returns
         -------
         torch.Tensor
-            Return the intersections of the lines and plane.
+            The intersections of the lines and plane.
 
         Raises
         ------
@@ -339,13 +326,10 @@ class Sun(ALightSource):
 
         plane_x : float
             x dimension of the receiver plane.
-
         plane_y : float
             y dimension of the receiver plane.
-
         bitmap_height : int
             resolution of the resulting bitmap (x direction) -> height
-
         bitmap_width : int
             resolution of the resulting bitmap (y direction) -> width
 
@@ -467,3 +451,37 @@ class Sun(ALightSource):
         )
 
         return total_bitmap
+
+    def normalize_bitmap(
+            self,
+            bitmap: torch.Tensor,
+            total_intensity: Union[float, torch.Tensor],
+            plane_x: float,
+            plane_y: float,
+    ) -> torch.Tensor:
+        """
+        Normalize a bitmap.
+
+        Parameters
+        ----------
+        bitmap : torch.Tensor
+            The bitmap to be normalized.
+        total_intensity : Union[float, torch.Tensor]
+            The total intensity of the bitmap.
+        plane_x : float
+            x dimension of the receiver plane.
+        plane_y : float
+            y dimension of the receiver plane.
+
+        Returns
+        -------
+        The normalized bitmap.
+        """
+        bitmap_height = bitmap.shape[0]
+        bitmap_width = bitmap.shape[1]
+
+        plane_area = plane_x * plane_y
+        num_pixels = bitmap_height * bitmap_width
+        plane_area_per_pixel = plane_area / num_pixels
+
+        return bitmap / (total_intensity * plane_area_per_pixel)
