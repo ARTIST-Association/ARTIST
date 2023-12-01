@@ -53,7 +53,7 @@ class AlignmentModule(AModule):
             Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(datapoint=datapoint)
-        print(orientation)
+
         normal_vec = (orientation @ torch.tensor([0, 1.0, 0, 0.0], dtype=torch.float32))[:1, :3]
         alignment = torch.stack(
             self.heliostat_coord_system(
@@ -65,19 +65,14 @@ class AlignmentModule(AModule):
                 # torch.Tensor([0.0, 0.0, 0.0]),
             )
         )
-        print(normal_vec)    
         align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
-
-        aligned_surface_points = align_origin.transform_points(
-            surface_points.to(torch.float)
-        )
-        
-        # aligned_surface_normals = torch.cat([normal_vec] * len(surface_normals))
 
         aligned_surface_normals = align_origin.transform_normals(
             surface_normals.to(torch.float)
         )
-
+        aligned_surface_points = align_origin.transform_points(
+            surface_points.to(torch.float)
+        )
         aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
@@ -106,8 +101,8 @@ class AlignmentModule(AModule):
             Sun: torch.Tensor,
             Aimpoint: torch.Tensor,
             ideal_normal: torch.Tensor,
-            #disturbance_angles: List[torch.Tensor],
-            #rotation_offset: torch.Tensor
+            # disturbance_angles: List[torch.Tensor],
+            # rotation_offset: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Construct the heliostat coordination system.
