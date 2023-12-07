@@ -16,7 +16,7 @@
    - 0.0
    - 0.0
    RAY_STRUCT_FMT: =7f
-   TAKE_N_VECTORS: 200000
+   TAKE_N_VECTORS: 120000
    VERBOSE: true
    ZS_PATH: Helio_AA39_Rim0_LocalResults_220303111914.csv
  FUNCTION:
@@ -118,7 +118,7 @@
    FACETS:
      CANTING:
        ALGORITHM: standard
-       FOCUS_POINT: 100000
+       FOCUS_POINT: 0
      POSITIONS:
      - 0.0
      - 0.0
@@ -137,7 +137,7 @@
    - 0
    - 0
    USE_WEIGHTED_AVG: true
- ROTATION_OFFSET_ANGLE: 0
+ ROTATION_OFFSET_ANGLE: 270
  SHAPE: real
  TO_OPTIMIZE_NEW:
  - surface

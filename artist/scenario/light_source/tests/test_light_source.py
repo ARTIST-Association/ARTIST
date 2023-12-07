@@ -1,7 +1,11 @@
+import math
 from matplotlib import pyplot as plt
 import unittest
+import numpy
+import pandas as pd
 import torch
 from artist import ARTIST_ROOT
+import numpy as np
 
 from artist.scenario.light_source.sun import Sun
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
@@ -10,22 +14,24 @@ from artist.physics_objects.heliostats.alignment.alignment import AlignmentModul
 
 class TestASunModule(unittest.TestCase):
     def setUp(self):
-        torch.manual_seed(0)
-        self.light_direction = torch.tensor([0.0, 0.0, 1.0])
-        self.heliostat_position = torch.tensor([0.0, 1.0, 0.0])
-        self.receiver_center = torch.tensor([0.0, -50.0, 0.0])
+        self.light_direction = torch.tensor([0.0, -1.0, 1.0])
+        self.heliostat_position = torch.tensor([0.0, 5.0, 0.0])
+        self.receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
+        cov = 1e-12       #4.3681e-06
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.sun = Sun(
-            "Normal", 1, [0, 0], [[0.0000000001, 0], [0, 0.0000000001]], device
+            "Normal", 300, [0, 0], [[cov, 0], [0, cov]], device
+            #"Normal", 1, [0, 0], [[1, 0], [0, 1]], device
         )
-        surface_normals = torch.tensor(
+
+        self.surface_normals = torch.tensor(
             [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]]
         )
-        surface_points = torch.tensor(
+        self.surface_points = torch.tensor(
             [[-1, -1, 0], [1, 1, 0], [-1, 1, 0], [1, -1, 0], [0, 0, 0]]
         )
-        self.alignmentModel = AlignmentModule(position=self.heliostat_position)
+        self.alignment_model = AlignmentModule(position=self.heliostat_position)
         self.datapoint = HeliostatDataPoint(
             point_id=1,
             light_directions=self.light_direction,
@@ -35,31 +41,26 @@ class TestASunModule(unittest.TestCase):
         (
             self.aligned_surface_points,
             self.aligned_surface_normals,
-        ) = self.alignmentModel.align_surface(
+        ) = self.alignment_model.align_surface(
             datapoint=self.datapoint,
-            surface_points=surface_points,
-            surface_normals=surface_normals,
+            surface_points=self.surface_points,
+            surface_normals=self.surface_normals,
         )
-        print(self.aligned_surface_points)
-        print(self.aligned_surface_normals)
 
     def test_compute_rays(self):
         receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
         receiver_center = self.receiver_center
-        receiver_plane_x = 8.629666667
-        receiver_plane_y = 7.0
-        receiver_resolution_x = 64
-        receiver_resolution_y = 64
+        receiver_plane_x = 10
+        receiver_plane_y = 10
+        receiver_resolution_x = 256
+        receiver_resolution_y = 256
         sun_position = self.light_direction
-
-        # sun_position = sun_position.float()
-        # self.aligned_surface_normals = self.aligned_surface_normals.float()
 
         ray_directions = self.sun.reflect_rays_(
             -sun_position, self.aligned_surface_normals
         )
-        print(ray_directions)
-        xi, yi = self.sun.sample(1)
+        
+        xi, yi = self.sun.sample(len(ray_directions))
 
         rays = self.sun.compute_rays(
             receiver_plane_normal,
@@ -95,17 +96,72 @@ class TestASunModule(unittest.TestCase):
             receiver_resolution_y,
         )
 
+        total_bitmap = self.sun.normalize_bitmap(
+            total_bitmap,
+            xi.numel(),
+            receiver_plane_x,
+            receiver_plane_y,
+        )
+
         total_bitmap = total_bitmap.T
         
-        torch.set_printoptions(threshold=10_000)
-        #print(total_bitmap)
+        # torch.set_printoptions(threshold=10_000)
+        # print(total_bitmap)
 
-        plt.imshow(total_bitmap.detach().numpy())
+        # stral_df = pd.read_csv("artist\physics_objects\heliostats\\tests\\fdm_max_marlene.txt", delimiter="\t", header=1)
+        # stral_df.to_csv("artist\physics_objects\heliostats\\tests\\fdm_max_marlene.csv", encoding='utf-8', index=False)
+
+        # stral_df = pd.read_csv("artist\physics_objects\heliostats\\tests\\fdm_max_marlene.csv")
+        # # # plt.imshow(stral_df, cmap="jet")
+        # # # plt.show()
+        
+        # stral_df_rotated = numpy.rot90(stral_df, 0)
+        # # plt.imshow(stral_df_rotated, cmap="jet")
+        # # plt.show()
+
+        # stral_tensor = torch.Tensor(stral_df_rotated.copy())#[:, 1:]
+        # stral_tensor_rotated_normalized = self.sun.normalize_bitmap(
+        #     stral_tensor,
+        #     xi.numel(),
+        #     receiver_plane_x,
+        #     receiver_plane_y,
+        # )
+
+        # tick_positions = np.linspace(0, 150, 11)  # Define 11 tick positions between 0 and 256
+        # tick_labels = np.linspace(-1.5, 1.5, 11)     # Define corresponding labels from 0 to 10
+
+        # # Set the ticks and labels for both x and y axes
+        # plt.xticks(tick_positions, tick_labels)
+        # plt.yticks(tick_positions, tick_labels) 
+        # plt.imshow((stral_tensor_rotated_normalized), cmap="jet")
+        # plt.grid(True)
+        # plt.show()
+
+
+        fig, ax = plt.subplots(figsize=(6,6))
+        tick_positions = np.linspace(0, 256, 11)  # Define 11 tick positions between 0 and 256
+        tick_labels = np.linspace(5, 5, 11)     # Define corresponding labels from 0 to 10
+
+        # Set the ticks and labels for both x and y axes
+        plt.xticks(tick_positions, tick_labels)
+        plt.yticks(tick_positions, tick_labels) 
+        plt.imshow(total_bitmap.detach().numpy(), aspect="equal", cmap="jet")
+        plt.grid(True)
         plt.show()
 
-        expected = torch.load(
-            f"{ARTIST_ROOT}/artist/scenario/light_source/tests/bitmaps/testMap.pt"
-        )
+        # loss = torch.nn.L1Loss()
+        # l = loss(total_bitmap, stral_tensor_rotated_normalized)
+        # print(l)
+        # plt.xticks(tick_positions, tick_labels)
+        # plt.yticks(tick_positions, tick_labels) 
+        # plt.imshow(total_bitmap - stral_tensor_rotated_normalized)
+        # plt.grid(True)
+        # plt.show()
+
+
+        # expected = torch.load(
+        #     f"{ARTIST_ROOT}/artist/scenario/light_source/tests/bitmaps/testMap.pt"
+        # )
 
         # torch.testing.assert_close(total_bitmap, expected)
 
