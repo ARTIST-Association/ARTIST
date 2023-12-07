@@ -1,4 +1,6 @@
 from typing import List, Tuple, Union
+from matplotlib import pyplot as plt
+import numpy as np
 
 import torch
 from artist.scenario.light_source.light_source import ALightSource
@@ -59,8 +61,23 @@ class Sun(ALightSource):
                 device=device,
             )
             self.distribution = torch.distributions.MultivariateNormal(
-                self.mean, self.cov
+                self.mean, covariance_matrix=self.cov
             )
+
+            # print(self.distribution)
+            # N = 60
+            # X = np.linspace(-3, 3, N)
+            # Y = np.linspace(-3, 4, N)
+            # X, Y = np.meshgrid(X, Y)
+
+            # pos = torch.empty(X.shape + (2,))
+            # pos[:, :, 0] = torch.from_numpy(X)
+            # pos[:, :, 1] = torch.from_numpy(Y)
+            # Z = self.distribution.log_prob(pos).exp().numpy()
+            # fig = plt.figure()
+            # ax = plt.axes(projection='3d')
+            # ax.plot_surface(X, Y, Z, rstride=3, cstride=3, linewidth=1, antialiased=True)
+
 
         elif self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
@@ -185,14 +202,13 @@ class Sun(ALightSource):
         rotated_has = torch.matmul(rotates, has.unsqueeze(-1))
 
         # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-        rot_y = self.Ry(distortion_x_dir, mat=(rotated_has.to(torch.float)))
+        rot_y = self.Ry(distortion_x_dir, (rotated_has.to(torch.float)))
         rot_z = self.Rz(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
         rays = (
             torch.matmul(inv_rot.to(torch.float), rot_z)
             .transpose(0, -1)
             .transpose(1, -1)
         )
-
         return rays
 
     def line_plane_intersections(
