@@ -11,7 +11,7 @@ from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 
 
-def generate_sun_module_data(light_direction, expected_value):
+def generate_sun_data(light_direction, expected_value):
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
@@ -56,19 +56,19 @@ def generate_sun_module_data(light_direction, expected_value):
     ([1.0, 0.0, 0.0], "east.pt"),
     ([-1.0, 0.0, 0.0], "west.pt"),
     ([0.0, -1.0, 0.0], "south.pt"),
-], name="sun_module_data")
+], name="sun_data")
 def sun_module_data(request):
-    return generate_sun_module_data(*request.param)
+    return generate_sun_data(*request.param)
 
 
-def test_compute_rays(sun_module_data):
+def test_compute_bitmaps(sun_data):
     torch.manual_seed(7)
-    sun = sun_module_data['sun']
-    aligned_surface_points = sun_module_data['aligned_surface_points']
-    aligned_surface_normals = sun_module_data['aligned_surface_normals']
-    receiver_center = sun_module_data['receiver_center']
-    light_direction = sun_module_data['light_direction']
-    expected_value = sun_module_data['expected_value']
+    sun = sun_data['sun']
+    aligned_surface_points = sun_data['aligned_surface_points']
+    aligned_surface_normals = sun_data['aligned_surface_normals']
+    receiver_center = sun_data['receiver_center']
+    light_direction = sun_data['light_direction']
+    expected_value = sun_data['expected_value']
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
     receiver_plane_x = 10
