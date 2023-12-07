@@ -14,7 +14,8 @@ from artist.physics_objects.heliostats.alignment.alignment import AlignmentModul
 
 class TestASunModule(unittest.TestCase):
     def setUp(self):
-        self.light_direction = torch.tensor([0.0, -1.0, 1.0])
+        torch.manual_seed(7)
+        self.light_direction = torch.tensor([0.0, 1.0, 1.0])
         self.heliostat_position = torch.tensor([0.0, 5.0, 0.0])
         self.receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
@@ -149,6 +150,8 @@ class TestASunModule(unittest.TestCase):
         plt.grid(True)
         plt.show()
 
+        torch.save(total_bitmap, 'artist\scenario\light_source\\tests\\bitmaps\\north_above.pt')
+
         # loss = torch.nn.L1Loss()
         # l = loss(total_bitmap, stral_tensor_rotated_normalized)
         # print(l)
@@ -163,7 +166,7 @@ class TestASunModule(unittest.TestCase):
         #     f"{ARTIST_ROOT}/artist/scenario/light_source/tests/bitmaps/testMap.pt"
         # )
 
-        # torch.testing.assert_close(total_bitmap, expected)
+        #torch.testing.assert_close(total_bitmap, expected)
 
 
 if __name__ == "__main__":
