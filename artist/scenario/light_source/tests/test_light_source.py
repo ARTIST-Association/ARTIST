@@ -1,4 +1,3 @@
-
 import os
 from matplotlib import pyplot as plt
 import numpy as np
@@ -17,9 +16,7 @@ def generate_sun_data(light_direction, expected_value):
 
     cov = 1e-12  # 4.3681e-06
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sun = Sun(
-        "Normal", 300, [0, 0], [[cov, 0], [0, cov]], device
-    )
+    sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], device)
 
     surface_normals = torch.tensor(
         [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]]
@@ -43,32 +40,36 @@ def generate_sun_data(light_direction, expected_value):
     )
 
     return {
-        'sun': sun,
-        'aligned_surface_points': aligned_surface_points,
-        'aligned_surface_normals': aligned_surface_normals,
-        'receiver_center': receiver_center,
-        'light_direction': torch.tensor(light_direction),
-        'expected_value': expected_value
+        "sun": sun,
+        "aligned_surface_points": aligned_surface_points,
+        "aligned_surface_normals": aligned_surface_normals,
+        "receiver_center": receiver_center,
+        "light_direction": torch.tensor(light_direction),
+        "expected_value": expected_value,
     }
 
-@pytest.fixture(params=[
-    ([0.0, 0.0, 1.0], "above.pt"),
-    ([1.0, 0.0, 0.0], "east.pt"),
-    ([-1.0, 0.0, 0.0], "west.pt"),
-    ([0.0, -1.0, 0.0], "south.pt"),
-], name="sun_data")
-def sun_module_data(request):
+
+@pytest.fixture(
+    params=[
+        ([0.0, 0.0, 1.0], "above.pt"),
+        ([1.0, 0.0, 0.0], "east.pt"),
+        ([-1.0, 0.0, 0.0], "west.pt"),
+        ([0.0, -1.0, 0.0], "south.pt"),
+    ],
+    name="sun_data",
+)
+def sun_data(request):
     return generate_sun_data(*request.param)
 
 
 def test_compute_bitmaps(sun_data):
     torch.manual_seed(7)
-    sun = sun_data['sun']
-    aligned_surface_points = sun_data['aligned_surface_points']
-    aligned_surface_normals = sun_data['aligned_surface_normals']
-    receiver_center = sun_data['receiver_center']
-    light_direction = sun_data['light_direction']
-    expected_value = sun_data['expected_value']
+    sun = sun_data["sun"]
+    aligned_surface_points = sun_data["aligned_surface_points"]
+    aligned_surface_normals = sun_data["aligned_surface_normals"]
+    receiver_center = sun_data["receiver_center"]
+    light_direction = sun_data["light_direction"]
+    expected_value = sun_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
     receiver_plane_x = 10
@@ -76,10 +77,8 @@ def test_compute_bitmaps(sun_data):
     receiver_resolution_x = 256
     receiver_resolution_y = 256
     sun_position = light_direction
-    
-    ray_directions = sun.reflect_rays_(
-        -sun_position, aligned_surface_normals
-    )
+
+    ray_directions = sun.reflect_rays_(-sun_position, aligned_surface_normals)
 
     xi, yi = sun.sample(len(ray_directions))
 
@@ -124,13 +123,17 @@ def test_compute_bitmaps(sun_data):
     )
 
     total_bitmap = total_bitmap.T
-    
+
     expected_path = os.path.join(
-        ARTIST_ROOT, "artist", "scenario", "light_source", "tests", "bitmaps", expected_value
+        ARTIST_ROOT,
+        "artist",
+        "scenario",
+        "light_source",
+        "tests",
+        "bitmaps",
+        expected_value,
     )
 
     expected = torch.load(expected_path)
 
     torch.testing.assert_close(total_bitmap, expected)
-
-
