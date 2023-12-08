@@ -1,8 +1,7 @@
 from typing import List, Tuple, Union
-from matplotlib import pyplot as plt
-import numpy as np
 
 import torch
+
 from artist.scenario.light_source.light_source import ALightSource
 from artist.util import utils
 
