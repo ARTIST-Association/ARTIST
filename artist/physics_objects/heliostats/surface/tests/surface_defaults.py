@@ -1,4 +1,7 @@
+import os
 from yacs.config import CfgNode as CN
+
+from artist import ARTIST_ROOT
 
 _C = CN()
 
@@ -118,5 +121,9 @@ def get_cfg_defaults() -> CN:
 
 
 def load_config_file(cfg: CN) -> CN:
-    cfg.merge_from_file("artist\physics_objects\heliostats\surface\\tests\surface_test.yaml")
+    expected_path = os.path.join(
+        ARTIST_ROOT, "artist", "physics_objects", "heliostats", "surface", "tests", "surface_test.yaml"
+    )
+    cfg.merge_from_file(expected_path)
+    #cfg.merge_from_file("artist\physics_objects\heliostats\surface\\tests\surface_test.yaml")
     return cfg
