@@ -1,13 +1,12 @@
 import os
-from matplotlib import pyplot as plt
-import numpy as np
-import torch
 import pytest
-from artist import ARTIST_ROOT
 
-from artist.scenario.light_source.sun import Sun
+import torch
+
+from artist import ARTIST_ROOT
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.scenario.light_source.sun import Sun
 
 
 def generate_sun_data(light_direction, expected_value):
