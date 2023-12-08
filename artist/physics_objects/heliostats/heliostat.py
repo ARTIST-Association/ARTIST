@@ -1,5 +1,5 @@
-from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.module import AModule
 
 
