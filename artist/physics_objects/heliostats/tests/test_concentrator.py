@@ -1,3 +1,4 @@
+
 import unittest
 from matplotlib import pyplot as plt
 
@@ -13,18 +14,20 @@ from artist.scenario.light_source.sun import Sun
 
 class TestConcentrator(unittest.TestCase):
     def setUp(self):
-        torch.manual_seed(0)
         self.position = torch.Tensor([0.0, 0.0, 0.0])
         self.aim_point =torch.Tensor([0.0, -50.0, 0.0])
-        self.sun_direction = torch.Tensor([0.0, 0.0, 1.0])
+        self.sun_direction = torch.Tensor([1.0, 0.0, 0.0])
         
         cfg_default_surface = surface_defaults.get_cfg_defaults()
         self.surface_config = surface_defaults.load_config_file(cfg_default_surface)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        cov = 4.3681e-06
         self.sun = Sun(
-            "Normal", 1, [0, 0], [[4.3681e-06, 0], [0, 4.3681e-06]], self.device
+            "Normal", 100, [0, 0], [[cov, 0], [0, cov]], self.device
+            #"Normal", 1, [0, 0], [[0.1, 0], [0, 0.1]], self.device
+            #"Normal", 1, [0, 0], [[math.sqrt(4.3681e-06), 0], [0, math.sqrt(4.3681e-06)]], self.device
         )
         
         point_cloud_facets = PointCloudFacetModule(self.surface_config, self.aim_point, self.sun_direction, self.device)
@@ -32,7 +35,7 @@ class TestConcentrator(unittest.TestCase):
         concentrator = ConcentratorModule(facets)
         surface_points, surface_normals = concentrator.get_surface()
 
-        self.alignmentModel = AlignmentModule(position=self.position)
+        self.alignment_model = AlignmentModule(position=self.position)
         self.datapoint = HeliostatDataPoint(
             point_id=1,
             light_directions=self.sun_direction,
@@ -42,13 +45,14 @@ class TestConcentrator(unittest.TestCase):
         (
             self.aligned_surface_points,
             self.aligned_surface_normals,
-        ) = self.alignmentModel.align_surface(
+        ) = self.alignment_model.align_surface(
             datapoint=self.datapoint,
             surface_points=surface_points,
             surface_normals=surface_normals,
         )
 
     def test_compute_rays(self):
+        torch.manual_seed(7)
         receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
         receiver_center = self.aim_point
         receiver_plane_x = 8.629666667
@@ -60,7 +64,8 @@ class TestConcentrator(unittest.TestCase):
         ray_directions = self.sun.reflect_rays_(
             -sun_position, self.aligned_surface_normals
         )
-        xi, yi = self.sun.sample(1)
+        
+        xi, yi = self.sun.sample(len(ray_directions))
 
         rays = self.sun.compute_rays(
             receiver_plane_normal,
@@ -95,9 +100,27 @@ class TestConcentrator(unittest.TestCase):
             receiver_resolution_x,
             receiver_resolution_y,
         )
+        
+        total_bitmap = self.sun.normalize_bitmap(
+            total_bitmap,
+            xi.numel(),
+            receiver_plane_x,
+            receiver_plane_y,
+        )
 
-        plt.imshow(total_bitmap.detach().numpy())
+        
+        #total_bitmap = total_bitmap.T
+
+        plt.imshow(total_bitmap, cmap="jet")
+        plt.grid(True)
+        plt.scatter(128, 128)
         plt.show()
+
+        #torch.save(total_bitmap, 'artist\physics_objects\heliostats\\tests\\bitmaps\\testMap.pt')
+        
+
+        # # plt.imshow(total_bitmap.detach().numpy(), cmap="jet")
+        # # plt.show()
 
 if __name__ == "__main__":
     unittest.main()
