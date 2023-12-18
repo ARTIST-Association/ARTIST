@@ -53,8 +53,7 @@ class AlignmentModule(AModule):
             Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(datapoint=datapoint)
-
-        normal_vec = (orientation @ torch.tensor([0, 1.0, 0, 0.0], dtype=torch.float32))[:1, :3]
+        normal_vec = (orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32))[:1, :3]
         alignment = torch.stack(
             self.heliostat_coord_system(
                 self.position,
