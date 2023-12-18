@@ -104,7 +104,7 @@ class Sun(ALightSource):
         ------
         ValueError
             Raised if the distribution type is not valid, currently only the normal distribution is implemented.
-        """
+        """  
         if self.dist_type == "Normal":
             distortion_x_dir, distortion_y_dir = (
                 self.distribution.sample(
