@@ -60,8 +60,8 @@ class TestAKinematicModule(unittest.TestCase):
         expected = torch.tensor(
             [
                 [1, 0, 0, 0],
-                [0, -1 / math.sqrt(2), -1 / math.sqrt(2), 0],
                 [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+                [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
                 [0, 0, 0, 1],
             ]
         )
@@ -73,9 +73,9 @@ class TestAKinematicModule(unittest.TestCase):
     def test_compute_orientation_from_aimpoint2(self):
         expected = torch.tensor(
             [
-                [1 / math.sqrt(2), 1 / math.sqrt(2), 0, 0],
-                [1 / math.sqrt(2), -1 / math.sqrt(2), 0, 0],
-                [0, 0, -1, 0],
+                [1 / math.sqrt(2), 0, 1 / math.sqrt(2), 0],
+                [1 / math.sqrt(2), 0, -1 / math.sqrt(2), 0],
+                [0, 1, 0, 0],
                 [0, 0, 0, 1],
             ]
         )
@@ -88,8 +88,8 @@ class TestAKinematicModule(unittest.TestCase):
         expected = torch.tensor(
             [
                 [1.0, 0.0, 0.0, 0.0],
-                [0.0, -1.0, 0.0, 0.0],
                 [0.0, 0.0, -1.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
@@ -101,9 +101,9 @@ class TestAKinematicModule(unittest.TestCase):
     def test_compute_orientation_from_aimpoint4(self):
         expected = torch.tensor(
             [
-                [1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                [-1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                [0.0, 0.0, -1.0, 0.0],
+                [1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                [-1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
@@ -116,8 +116,8 @@ class TestAKinematicModule(unittest.TestCase):
         expected = torch.tensor(
             [
                 [1.0, 0.0, 0.0, 0.0],
-                [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 0.0],
                 [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
+                [0.0, math.cos(math.pi / 8), math.sin(math.pi / 8), 0.0],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
@@ -130,8 +130,8 @@ class TestAKinematicModule(unittest.TestCase):
         expected = torch.tensor(
             [
                 [1, 0, 0, 0],
-                [0, -1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
-                [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+                [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
+                [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
                 [0, 0, 0, 1],
             ]
         )
@@ -145,8 +145,8 @@ class TestAKinematicModule(unittest.TestCase):
         expected = torch.tensor(
             [
                 [1.0, 0.0, 0.0, 0.0],
-                [0.0, -1.0, 0.0, 0.0],
                 [0.0, 0.0, -1.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         )
