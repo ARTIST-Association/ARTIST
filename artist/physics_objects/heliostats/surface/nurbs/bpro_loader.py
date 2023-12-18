@@ -65,7 +65,9 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
-            facet_pos = nwu_to_enu(cast(Tuple3d, facetHeader_data[1:4]))
+            facet_pos = cast(Tuple3d, facetHeader_data[1:4])
+            # print(facetHeader_data[1:4])
+            # print(facet_pos)
             facet_vec_x = np.array([
                 -facetHeader_data[5],
                 facetHeader_data[4],
@@ -95,10 +97,16 @@ def load_bpro(
             ray_datas = ray_struct.iter_unpack(byte_data)
 
             for ray_data in ray_datas:
-                positions[f].append(nwu_to_enu(cast(Tuple3d, ray_data[:3])))
-                directions[f].append(nwu_to_enu(cast(Tuple3d, ray_data[3:6])))
+                positions[f].append(cast(Tuple3d, ray_data[:3]))
+                directions[f].append(cast(Tuple3d, ray_data[3:6]))
                 ideal_normal_vecs[f].append(ideal_normal)
                 # powers.append(ray_data[6])
+
+            # print('facet header' , facetHeader_data[7:10])
+            # print('facet header' , facetHeader_data[1:4])
+            # print('facet pos' , facet_positions)
+            # print('facet span e ' ,  facet_spans_e)
+            # print('facet span n ' , facet_spans_n)
 
     return (
         hel_pos,
