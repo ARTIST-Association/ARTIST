@@ -12,13 +12,15 @@ class ConcentratorModule(AModule):
         super().__init__()
         self.facets = facets
 
-
     def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        surface_points = torch.empty(0, 3)
-        surface_normals = torch.empty(0, 3)
+        surface_points_list = []
+        surface_normals_list = []
         
         for facet in self.facets:
-            surface_points = torch.cat((surface_points, facet[0]), 0)
-            surface_normals = torch.cat((surface_normals, facet[1]), 0)
+            surface_points_list.append(facet[0])
+            surface_normals_list.append(facet[1])
+
+        surface_points = torch.cat(surface_points_list, 0)
+        surface_normals = torch.cat(surface_normals_list, 0)
 
         return surface_points, surface_normals
