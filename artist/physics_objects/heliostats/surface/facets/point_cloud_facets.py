@@ -1,3 +1,7 @@
+"""
+This file contains the functionality to create a heliostat surface from a loaded pointcloud.
+"""
+
 import copy
 import struct
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
@@ -12,8 +16,6 @@ from yacs.config import CfgNode
 from artist.physics_objects.heliostats.surface.nurbs import bpro_loader, canting
 from artist.util import utils
 
-
-C = TypeVar('C', bound='PointCloudFacetModule')
 
 HeliostatParams = Tuple[
     torch.Tensor,  # surface position on field
@@ -32,11 +34,28 @@ HeliostatParams = Tuple[
 ]
 
 def real_surface(
-        real_configs: CfgNode, device: torch.device,
+        real_configs: CfgNode,
+        device: torch.device,
 ) -> HeliostatParams:
-    """Return a surface loaded from deflectometric data."""
+    """
+    Compute a surface loaded from deflectometric data.
+    
+    Parameters
+    ----------
+    real_config : CfgNode
+        The config file containing Information about the real surface.
+    device : torch.device
+        Specifies the device type responsible to load tensors into memory.
+    
+    Returns
+    -------
+    HeliostatParams
+        Tuple of all heliostat parameters.
+
+    """
     cfg = real_configs
     dtype = torch.get_default_dtype()
+
 
     concentratorHeader_struct = struct.Struct(
         cfg.CONCENTRATORHEADER_STRUCT_FMT)
@@ -60,6 +79,7 @@ def real_surface(
         ray_struct,
         cfg.VERBOSE,
     )
+    
     surface_position: torch.Tensor = (
         torch.tensor(surface_position, dtype=dtype, device=device)
         if cfg.POSITION_ON_FIELD is None
@@ -71,12 +91,26 @@ def real_surface(
             print("Path to surface values found. Load values...")
         positions = copy.deepcopy(ideal_positions)
         integrated = bpro_loader.load_csv(cfg.ZS_PATH, len(positions))
+        
+        for f_index, facet in enumerate(integrated):
+            for p_index, point in enumerate(facet):
+                temp = point[0]
+                integrated[f_index][p_index][0] = point[1]
+                integrated[f_index][p_index][1] = -temp
+                integrated[f_index][p_index][2] = point[2]
+        
+
         pos_type = type(positions[0][0][0])
 
         for (
                 facet_index,
                 (integrated_facet, pos_facet),
+                
         ) in enumerate(zip(integrated, positions)):
+            # integrated_facet = integrated_facet[::10000]
+            # pos_facet = pos_facet[::10000]
+
+
             integrated_facet_iter = iter(integrated_facet)
             in_facet_index = 0
             while in_facet_index < len(pos_facet):
@@ -102,6 +136,7 @@ def real_surface(
                     pos = pos_facet[in_facet_index]
                     rounded_pos = [round(val, 4) for val in pos[:-1]]
                 else:
+                    pos = list(pos)
                     pos[-1] = pos_type(curr_integrated[-1])
                     in_facet_index += 1
         del integrated
@@ -196,6 +231,23 @@ def get_position(
         dtype: torch.dtype,
         device: torch.device,
 ) -> torch.Tensor:
+    """
+    Retrieve the position of the heliostat in the field as tensor.
+
+    Parameters
+    ----------
+    cfg : CfgNode
+        The config file containing the information about the heliostat.
+    dtype : torch.dtype
+        The type and size of the tensor.
+    device : torch.device
+        Specifies the device type responsible to load tensors into memory.
+    
+    Returns
+    -------
+    torch.tensor
+        The position of the heliostat in the field.
+    """
     position_on_field: List[float] = cfg.POSITION_ON_FIELD
     return torch.tensor(position_on_field, dtype=dtype, device=device)
 
@@ -224,6 +276,7 @@ def facet_point_indices(
         to_xyz[:-1],
     )
 
+
 class PointCloudFacetModule(AFacetModule):
     def __init__(self,
                  config : CfgNode,
@@ -235,24 +288,32 @@ class PointCloudFacetModule(AFacetModule):
         
         self.cfg = config
         self.device = device
-        self.canting_enabled = True
 
         self.load(aimpoint, sun_direction)
-        
 
     def load(
             self,
-            maybe_aim_point: Optional[torch.Tensor],
-            maybe_sun_direction: Optional[torch.Tensor],
+            aim_point: Optional[torch.Tensor],
+            sun_direction: Optional[torch.Tensor],
     ) -> None:
-        builder_fn, h_cfg = self.select_surface_builder(self.cfg)
-        self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
+        """
+        Load a surface from deflectometry data.
 
-        self.canting_algo = canting.get_algorithm(self._canting_cfg)
+        Parameters
+        ----------
+        aim_point : Optional[torch.Tensor]
+            The aimpoint.
+        sun_direction : Optional[torch.Tensor]
+            The sun vector.
+        """
+        builder_fn, h_cfg = self.select_surface_builder(self.cfg)
+        # self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
+        # self.canting_enabled = True #(h_cfg.FACETS.CANTING.ALGORITHM is not None)
+        # self.canting_algo = canting.get_algorithm(self._canting_cfg)
 
         self.aim_point = self._get_aim_point(
             h_cfg,
-            maybe_aim_point,
+            aim_point,
         )
         # Radians
         self.disturbance_angles = self._get_disturbance_angles(h_cfg)
@@ -271,7 +332,7 @@ class PointCloudFacetModule(AFacetModule):
             rows,
             cols,
             params,
-        ) = builder_fn(h_cfg, self.device)
+        ) = builder_fn(h_cfg, self.device)  
 
         self.position_on_field = surface_position
         self.set_up_facets(
@@ -282,7 +343,7 @@ class PointCloudFacetModule(AFacetModule):
             surface_ideal,
             surface_normals,
             surface_ideal_vecs,
-            maybe_sun_direction,
+            sun_direction,
         )
         self.params = params
         self.height = height
@@ -290,13 +351,27 @@ class PointCloudFacetModule(AFacetModule):
         self.rows = rows
         self.cols = cols
 
-        self.surface_points = surface_points
-        self.surface_normals = surface_normals
+        self.surface_points : torch.Tensor
+        self.surface_normals :torch.Tensor
 
-    def select_surface_builder(self, cfg: CfgNode) -> Tuple[
-            Callable[[CfgNode, torch.device], HeliostatParams],
-            CfgNode,
-    ]:
+    def select_surface_builder(self, 
+                               cfg: CfgNode
+    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
+        """
+        Select which kind of surface is to be loaded.
+
+        At the moment only real surfaces can be loaded.
+
+        Parameters
+        ----------
+        cfg : CfgNode
+            Contains the information about the shape/ kind of surface to be loaded.
+        
+        Returns
+        -------
+        Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]
+            Returns the loaded surface, the heliostat parameters and deflectometry data.
+        """
         shape = cfg.SHAPE.lower()
         if shape == "real":
             return real_surface, cfg.DEFLECT_DATA
@@ -305,8 +380,23 @@ class PointCloudFacetModule(AFacetModule):
     def _get_aim_point(
             self,
             cfg: CfgNode,
-            maybe_aim_point: Optional[torch.Tensor],
+            aim_point: Optional[torch.Tensor],
     ) -> torch.Tensor:
+        """
+        Retrieve the aim point.
+        
+        Parameters
+        ----------
+        cfg : CfgNode
+            The config file containing indormation about the aim point.
+        aim_point : Optional[torch.Tensor]
+            Optionally pass an aim point.
+        
+        Returns
+        -------
+        torch.Tensor
+            The aim point.
+        """
         cfg_aim_point: Optional[List[float]] = cfg.AIM_POINT
         if cfg_aim_point is not None:
             aim_point = torch.tensor(
@@ -314,13 +404,28 @@ class PointCloudFacetModule(AFacetModule):
                 dtype=torch.get_default_dtype(),
                 device=self.device,
             )
-        elif maybe_aim_point is not None:
-            aim_point = maybe_aim_point
+        elif aim_point is not None:
+            aim_point = aim_point
         else:
             raise ValueError('no aim point was supplied')
         return aim_point
     
-    def _get_disturbance_angles(self, h_cfg: CfgNode) -> List[torch.Tensor]:
+    def _get_disturbance_angles(self,
+                                h_cfg: CfgNode
+    ) -> List[torch.Tensor]:
+        """
+        Retrieve the disturbance angles.
+
+        Parameters
+        ----------
+        h_cfg : CfgNode
+            The config file containing information about the disturbance angles.
+        
+        Returns
+        -------
+        List[torch.Tensor]
+            The disturbance angles.
+        """
         angles: List[float] = h_cfg.DISTURBANCE_ROT_ANGLES
         return [
             torch.deg2rad(torch.tensor(
@@ -342,29 +447,49 @@ class PointCloudFacetModule(AFacetModule):
             normals_ideal: torch.Tensor,
             maybe_sun_direction: Optional[torch.Tensor],
     ) -> None:
-        if self.canting_enabled:
-            self.focus_point = canting.get_focus_point(
-                self._canting_cfg,
-                self.aim_point,
-                self.cfg.IDEAL.NORMAL_VECS,
-                facet_positions.dtype,
-                self.device,
-            )
-        else:
-            self.focus_point = None
-        self._set_deconstructed_focus_point(self.focus_point)
+        # if self.canting_enabled:
+        #     self.focus_point = canting.get_focus_point(
+        #         self._canting_cfg,
+        #         self.aim_point,
+        #         self.cfg.IDEAL.NORMAL_VECS,
+        #         facet_positions.dtype,
+        #         self.device,
+        #     )
+        # else:
+        #     self.focus_point = None
+        # self._set_deconstructed_focus_point(self.focus_point)
 
-        self.facetted_discrete_points, self.facetted_normals= self.find_facets(
-            facet_positions,
-            facet_spans_n,
-            facet_spans_e,
-            discrete_points,
-            discrete_points_ideal,
-            normals,
-            normals_ideal,
-            maybe_sun_direction,
-        )
+        # self.facetted_discrete_points = []
+        # self.facetted_normals = []
+        # discrete_points = torch.tensor_split(discrete_points, 4)
+        # normals = torch.tensor_split(normals, 4)
+        # print(discrete_points)
+        
+        # for index, (position, span_n, span_e) in enumerate(zip(facet_positions, facet_spans_n, facet_spans_e)):
+        #     print(position)
+        #     print(span_e)
+        #     print(span_n)
 
+        #     # span_n = torch.Tensor([0, 1, 0])
+        #     # span_e = torch.Tensor([-1, 0, 0])
+
+        #     # indices = facet_point_indices(discrete_points, position, span_n, span_e)
+        #     # facet_discrete_points = discrete_points[indices]
+        #     # facet_normals = normals[indices]
+
+        #     cant_rot = utils.get_rot_matrix(torch.Tensor([0, 0, 1]), torch.cross(span_n, span_e))
+            
+        #     facet_points, facet_normal = canting._cant_facet_to_normal(position, cant_rot, discrete_points[index], normals[index])
+        #     #facet_points, facet_normal = canting._cant_facet_to_normal(position, cant_rot, discrete_points, normals)
+        #     #facet_points, facet_normal = canting._cant_facet_to_normal(position, cant_rot, facet_discrete_points, facet_normals)
+
+        #     self.facetted_discrete_points.append(facet_points)
+        #     self.facetted_normals.append(facet_normal)
+
+        self.facetted_discrete_points = torch.tensor_split(discrete_points, 4)
+        self.facetted_normals = torch.tensor_split(normals, 4)
+        
+        
     def _set_deconstructed_focus_point(
             self,
             focus_point: Optional[torch.Tensor],
@@ -412,6 +537,7 @@ class PointCloudFacetModule(AFacetModule):
                 spans_n,
                 spans_e,
         )):
+
             # Select points on facet based on positions of ideal points.
             indices = facet_point_indices(
                 discrete_points_ideal, position, span_n, span_e)
@@ -445,7 +571,8 @@ class PointCloudFacetModule(AFacetModule):
             facetted_normals_ideal.append(facet_normals_ideal)
             cant_rots[i] = cant_rot
 
-        return facetted_discrete_points, facetted_normals
+        
+        return facetted_discrete_points, facetted_normals, cant_rots
     
     def discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.surface_points, self.surface_normals
@@ -456,7 +583,15 @@ class PointCloudFacetModule(AFacetModule):
     def make_facets_list(self):
         facets = []
         facetted_discrete_points, facetted_normals = self.facetted_discrete_points_and_normals()
-        for i in range(len(facetted_discrete_points)):
-            facets.append([facetted_discrete_points[i], facetted_normals[i]])
+        
+        # print(facetted_discrete_points)
+        # print(facetted_normals)
+        
+        # for i in range(len(facetted_discrete_points)):
+        #     if i == 0:
+        #         facets.append([facetted_discrete_points[i], facetted_normals[i]])
+
+        for points, normals in zip(facetted_discrete_points, facetted_normals):
+            facets.append([points, normals])
         return facets
         
