@@ -10,13 +10,26 @@ Vector3d = List[np.floating]
 
 
 def nwu_to_enu(vec: Tuple3d) -> Vector3d:
+    """
+    Cast the coordinate system from nwu to enu.
+
+    Parameters
+    ----------
+    vec : Tuple3d
+        The vector that is to be casted.
+
+    Returns
+    -------
+    Vector3d
+        The castet vector in the enu coordinate system.
+    """
     return [-vec[1], vec[0], vec[2]]
 
 
 def load_bpro(
     filename: str,
-    concentratorHeader_struct: struct.Struct,
-    facetHeader_struct: struct.Struct,
+    concentrator_header_struct: struct.Struct,
+    facet_header_struct: struct.Struct,
     ray_struct: struct.Struct,
     verbose: bool = True,
 ) -> Tuple[
@@ -30,15 +43,36 @@ def load_bpro(
     float,
     float,
 ]:
-    concentratorHeader_struct_len = concentratorHeader_struct.size
-    facetHeader_struct_len = facetHeader_struct.size
+    """
+    Load a bpro file and extract information from it.
+
+    Parameters
+    ----------
+    filename : str
+        The file that contains the data.
+    concentrator_header_struct : struct.Struct
+        The concentrator header.
+    facet_header_struct : struct.Struct
+        The facet header.
+    ray_struct : struct.Struct
+        The ray struct.
+    verbose : bool
+        Print option.
+
+    Returns
+    -------
+    Tuple[Vector3d, List[Vector3d], List[Vector3d], List[Vector3d], List[List[Vector3d]], List[List[Vector3d]], List[List[Vector3d]], float, float,
+        Information about the facets and the surface
+    """
+    concentratorHeader_struct_len = concentrator_header_struct.size
+    facetHeader_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
     # powers = []
     binp_loc = os.path.join(os.path.dirname(__file__), "MeasurementData", filename)
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
-        concentratorHeader_data = concentratorHeader_struct.unpack_from(byte_data)
+        concentratorHeader_data = concentrator_header_struct.unpack_from(byte_data)
         if verbose:
             print("READING bpro filename: " + filename)
 
@@ -59,7 +93,7 @@ def load_bpro(
 
         for f in range(nFacets):
             byte_data = file.read(facetHeader_struct_len)
-            facetHeader_data = facetHeader_struct.unpack_from(byte_data)
+            facetHeader_data = facet_header_struct.unpack_from(byte_data)
 
             # 0 for square, 1 for round 2 triangle, ...
             # facetshape = facetHeader_data[0]
@@ -118,6 +152,21 @@ def load_bpro(
 
 
 def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
+    """
+    Load data from csv file.
+
+    Parameters
+    ----------
+    path : str
+        The path to the csv file.
+    num_facets : int
+        The number of facets that are to be loaded.
+
+    Returns
+    -------
+    List[List[Vector3d]]
+        The facets.
+    """
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
