@@ -15,12 +15,12 @@ class Sun(ALightSource):
     """
 
     def __init__(
-            self,
-            dist_type: str,
-            ray_count: int,
-            mean: List[float],
-            cov: List[float],
-            device: torch.device,
+        self,
+        dist_type: str,
+        ray_count: int,
+        mean: List[float],
+        cov: List[float],
+        device: torch.device,
     ) -> None:
         """
         Initialize a sun as a light source
@@ -77,15 +77,14 @@ class Sun(ALightSource):
             # ax = plt.axes(projection='3d')
             # ax.plot_surface(X, Y, Z, rstride=3, cstride=3, linewidth=1, antialiased=True)
 
-
         elif self.dist_type == "Pillbox":
             raise ValueError("Not Implemented Yet")
         else:
             raise ValueError("unknown light distribution type")
 
     def sample(
-            self,
-            num_rays_on_hel: int,
+        self,
+        num_rays_on_hel: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
@@ -104,7 +103,7 @@ class Sun(ALightSource):
         ------
         ValueError
             Raised if the distribution type is not valid, currently only the normal distribution is implemented.
-        """  
+        """
         if self.dist_type == "Normal":
             distortion_x_dir, distortion_y_dir = (
                 self.distribution.sample(
@@ -118,13 +117,13 @@ class Sun(ALightSource):
             raise ValueError("unknown light distribution type")
 
     def compute_rays(
-            self,
-            plane_normal: torch.Tensor,
-            plane_point: torch.Tensor,
-            ray_directions: torch.Tensor,
-            surface_points: torch.Tensor,
-            distortion_x_dir: torch.Tensor,
-            distortion_y_dir: torch.Tensor,
+        self,
+        plane_normal: torch.Tensor,
+        plane_point: torch.Tensor,
+        ray_directions: torch.Tensor,
+        surface_points: torch.Tensor,
+        distortion_x_dir: torch.Tensor,
+        distortion_y_dir: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the scattered rays for points on a surface.
@@ -211,12 +210,12 @@ class Sun(ALightSource):
         return rays
 
     def line_plane_intersections(
-            self,
-            plane_normal: torch.Tensor,
-            plane_point: torch.Tensor,
-            ray_directions: torch.Tensor,
-            surface_points: torch.Tensor,
-            epsilon: float = 1e-6,
+        self,
+        plane_normal: torch.Tensor,
+        plane_point: torch.Tensor,
+        ray_directions: torch.Tensor,
+        surface_points: torch.Tensor,
+        epsilon: float = 1e-6,
     ) -> torch.Tensor:
         """
         Compute line-plane intersections of ray directions and the (receiver) plane
@@ -319,14 +318,14 @@ class Sun(ALightSource):
         return torch.matmul(rots, mat)
 
     def sample_bitmap(
-            self,
-            dx_ints: torch.Tensor,
-            dy_ints: torch.Tensor,
-            indices: torch.Tensor,
-            plane_x: float,
-            plane_y: float,
-            bitmap_height: int,
-            bitmap_width: int,
+        self,
+        dx_ints: torch.Tensor,
+        dy_ints: torch.Tensor,
+        indices: torch.Tensor,
+        plane_x: float,
+        plane_y: float,
+        bitmap_height: int,
+        bitmap_width: int,
     ) -> torch.Tensor:
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
@@ -446,10 +445,10 @@ class Sun(ALightSource):
         # choose only those indices that are actually in the bitmap (i.e. we
         # prevent out-of-bounds access).
         indices = (
-                (0 <= x_inds)
-                & (x_inds < bitmap_height)
-                & (0 <= y_inds)
-                & (y_inds < bitmap_width)
+            (0 <= x_inds)
+            & (x_inds < bitmap_height)
+            & (0 <= y_inds)
+            & (y_inds < bitmap_width)
         )
 
         # Flux density map for heliostat field
@@ -468,11 +467,11 @@ class Sun(ALightSource):
         return total_bitmap
 
     def normalize_bitmap(
-            self,
-            bitmap: torch.Tensor,
-            total_intensity: Union[float, torch.Tensor],
-            plane_x: float,
-            plane_y: float,
+        self,
+        bitmap: torch.Tensor,
+        total_intensity: Union[float, torch.Tensor],
+        plane_x: float,
+        plane_y: float,
     ) -> torch.Tensor:
         """
         Normalize a bitmap.
