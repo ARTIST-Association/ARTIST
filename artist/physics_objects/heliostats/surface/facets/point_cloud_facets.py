@@ -273,9 +273,6 @@ class PointCloudFacetModule(AFacetModule):
             The sun vector.
         """
         builder_fn, h_cfg = self.select_surface_builder(self.cfg)
-        # self._canting_cfg: CfgNode = h_cfg.FACETS.CANTING
-        # self.canting_enabled = True #(h_cfg.FACETS.CANTING.ALGORITHM is not None)
-        # self.canting_algo = canting.get_algorithm(self._canting_cfg)
 
         self.aim_point = self._get_aim_point(
             h_cfg,
