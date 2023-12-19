@@ -4,16 +4,18 @@ import torch
 from ..physics_objects.heliostats.surface.nurbs import nurbs
 
 # We would like to say that T can be everything but a list.
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
+
 def initialize_spline_knots(
-        knots_x: torch.Tensor,
-        knots_y: torch.Tensor,
-        spline_degree_x: int,
-        spline_degree_y: int,
+    knots_x: torch.Tensor,
+    knots_y: torch.Tensor,
+    spline_degree_x: int,
+    spline_degree_y: int,
 ) -> None:
     """
     Initialize the spline knots in x and y direction.
@@ -26,7 +28,7 @@ def initialize_spline_knots(
         List of numbers representing the knots in y dimension.
     spline_degree_x : int
         Spline degree in x direction.
-    spline_degree_y : int 
+    spline_degree_y : int
         Spline degree in y direction.
     """
     initialize_spline_knots_(knots_x, spline_degree_x)
@@ -54,12 +56,12 @@ def initialize_spline_knots_(knots: torch.Tensor, spline_degree: int) -> None:
 
 
 def initialize_spline_ctrl_points(
-        control_points: torch.Tensor,
-        origin: torch.Tensor,
-        rows: int,
-        cols: int,
-        h_width: float,
-        h_height: float,
+    control_points: torch.Tensor,
+    origin: torch.Tensor,
+    rows: int,
+    cols: int,
+    h_width: float,
+    h_height: float,
 ) -> None:
     """
     Initialize the spline control points.
@@ -80,22 +82,22 @@ def initialize_spline_ctrl_points(
         Height of the heliostat.
     """
     device = control_points.device
-    origin_offsets_x = torch.linspace(
-        -h_width / 2, h_width / 2, rows, device=device)
-    origin_offsets_y = torch.linspace(
-        -h_height / 2, h_height / 2, cols, device=device)
+    origin_offsets_x = torch.linspace(-h_width / 2, h_width / 2, rows, device=device)
+    origin_offsets_y = torch.linspace(-h_height / 2, h_height / 2, cols, device=device)
     origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
-    origin_offsets = torch.hstack((
-        origin_offsets,
-        torch.zeros((len(origin_offsets), 1), device=device),
-    ))
+    origin_offsets = torch.hstack(
+        (
+            origin_offsets,
+            torch.zeros((len(origin_offsets), 1), device=device),
+        )
+    )
     control_points[:] = (origin + origin_offsets).reshape(control_points.shape)
 
 
 def initialize_spline_eval_points(
-        rows: int,
-        cols: int,
-        device: torch.device,
+    rows: int,
+    cols: int,
+    device: torch.device,
 ) -> torch.Tensor:
     """
     Initialize the spline evaluation points.
@@ -116,15 +118,16 @@ def initialize_spline_eval_points(
     """
     return _cartesian_linspace_around(0, 1, rows, 0, 1, cols, device)
 
+
 def _cartesian_linspace_around(
-        minval_x: Union[float, torch.Tensor],
-        maxval_x: Union[float, torch.Tensor],
-        num_x: int,
-        minval_y: Union[float, torch.Tensor],
-        maxval_y: Union[float, torch.Tensor],
-        num_y: int,
-        device: torch.device,
-        dtype: Optional[torch.dtype] = None,
+    minval_x: Union[float, torch.Tensor],
+    maxval_x: Union[float, torch.Tensor],
+    num_x: int,
+    minval_y: Union[float, torch.Tensor],
+    maxval_y: Union[float, torch.Tensor],
+    num_y: int,
+    device: torch.device,
+    dtype: Optional[torch.dtype] = None,
 ) -> torch.Tensor:
     """
     Comute the initialized evaluation points of the spline.
@@ -139,7 +142,7 @@ def _cartesian_linspace_around(
     minval_y: Union[float, torch.Tensor]
         Minimum value for y.
     maxval_y: Union[float, torch.Tensor]
-        Maximum value for y    
+        Maximum value for y
     num_y: int
         Number of columns
     device: torch.device
@@ -170,11 +173,14 @@ def _cartesian_linspace_around(
     maxval_y = maxval_y.clamp(0, spline_max)
 
     points_x = torch.linspace(
-        minval_x, maxval_x, num_x, device=device)  # type: ignore[arg-type]
+        minval_x, maxval_x, num_x, device=device
+    )  # type: ignore[arg-type]
     points_y = torch.linspace(
-        minval_y, maxval_y, num_y, device=device)  # type: ignore[arg-type]
+        minval_y, maxval_y, num_y, device=device
+    )  # type: ignore[arg-type]
     points = torch.cartesian_prod(points_x, points_y)
     return points
+
 
 def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
     # Type errors come from T being able to be a list. So we ignore them
@@ -185,9 +191,10 @@ def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
         return cast(List[List[T]], values)
     return cast(List[List[T]], [values])
 
+
 def axis_angle_rotation(
-        axis: torch.Tensor,
-        angle_rad: torch.Tensor,
+    axis: torch.Tensor,
+    angle_rad: torch.Tensor,
 ) -> torch.Tensor:
     """
     Rotate the axis by a specified angle.
@@ -198,7 +205,7 @@ def axis_angle_rotation(
         The axis to be rotated.
     angle_rad : torch.Tensor
         The angle in radians by which the axis is rotated.
-    
+
     Returns
     -------
     torch.Tensor
@@ -215,28 +222,29 @@ def axis_angle_rotation(
     rows = [
         torch.stack(row, dim=-1)
         for row in [
-                [
-                    cos + axis_sq[..., 0] * icos,
-                    x * y * icos - z * sin,
-                    x * z * icos + y * sin,
-                ],
-                [
-                    y * x * icos + z * sin,
-                    cos + axis_sq[..., 1] * icos,
-                    y * z * icos - x * sin,
-                ],
-                [
-                    z * x * icos - y * sin,
-                    z * y * icos + x * sin,
-                    cos + axis_sq[..., 2] * icos,
-                ],
+            [
+                cos + axis_sq[..., 0] * icos,
+                x * y * icos - z * sin,
+                x * z * icos + y * sin,
+            ],
+            [
+                y * x * icos + z * sin,
+                cos + axis_sq[..., 1] * icos,
+                y * z * icos - x * sin,
+            ],
+            [
+                z * x * icos - y * sin,
+                z * y * icos + x * sin,
+                cos + axis_sq[..., 2] * icos,
+            ],
         ]
     ]
     return torch.stack(rows, dim=1)
 
+
 def get_rot_matrix(
-        start: torch.Tensor,
-        target: torch.Tensor,
+    start: torch.Tensor,
+    target: torch.Tensor,
 ) -> torch.Tensor:
     """
     Compute a rotation Matrix to rotate from start to target.
@@ -264,46 +272,47 @@ def get_rot_matrix(
     full_rot = axis_angle_rotation(rot_axis, rot_angle)
     return full_rot
 
+
 def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Compute the angle between direction a and b.
 
     Parameters
     ----------
-    a : torch.Tensor 
+    a : torch.Tensor
         Starting direction.
     b : torch.Tensor
         target direction.
-    
+
     Returns
     -------
     torch.Tensor
         The angle
     """
-    angles = torch.acos(torch.clamp(
-        (
-            batch_dot(a, b).squeeze(-1)
-            / (
-                torch.linalg.norm(a, dim=-1)
-                * torch.linalg.norm(b, dim=-1)
-            )
-        ),
-        -1.0,
-        1.0,
-    )).squeeze(-1)
+    angles = torch.acos(
+        torch.clamp(
+            (
+                batch_dot(a, b).squeeze(-1)
+                / (torch.linalg.norm(a, dim=-1) * torch.linalg.norm(b, dim=-1))
+            ),
+            -1.0,
+            1.0,
+        )
+    ).squeeze(-1)
     return angles
 
+
 def initialize_spline_ctrl_points_perfectly(
-        control_points: torch.Tensor,
-        world_points: torch.Tensor,
-        num_points_x: int,
-        num_points_y: int,
-        degree_x: int,
-        degree_y: int,
-        knots_x: torch.Tensor,
-        knots_y: torch.Tensor,
-        change_z_only: bool,
-        change_knots: bool,
+    control_points: torch.Tensor,
+    world_points: torch.Tensor,
+    num_points_x: int,
+    num_points_y: int,
+    degree_x: int,
+    degree_y: int,
+    knots_x: torch.Tensor,
+    knots_y: torch.Tensor,
+    change_z_only: bool,
+    change_knots: bool,
 ) -> None:
     """
     Initialize the spline control points.
@@ -320,7 +329,7 @@ def initialize_spline_ctrl_points_perfectly(
         number of points in y direction.
     degree_x : int
         The degree of the NURBS surface in x direction.
-    degree_y : int 
+    degree_y : int
         The degree of the NURBS surface in y direction.
     knots_x : torch.Tensor
         The knots of the NURBS surface in x direction.
@@ -352,10 +361,10 @@ def initialize_spline_ctrl_points_perfectly(
 
 
 def make_structured_points(
-        points: torch.Tensor,
-        rows: Optional[int] = None,
-        cols: Optional[int] = None,
-        tolerance: float = 0.0075,
+    points: torch.Tensor,
+    rows: Optional[int] = None,
+    cols: Optional[int] = None,
+    tolerance: float = 0.0075,
 ) -> Tuple[torch.Tensor, int, int]:
     """
     Structure the given points.
@@ -381,16 +390,17 @@ def make_structured_points(
     else:
         return _make_structured_points_from_corners(points, rows, cols)
 
+
 def _make_structured_points_from_unique(
-        points: torch.Tensor,
-        tolerance: float,
+    points: torch.Tensor,
+    tolerance: float,
 ) -> Tuple[torch.Tensor, int, int]:
     x_vals = points[:, 0]
     x_vals = torch.unique(x_vals, sorted=True)
 
     prev_i = 0
     keep_indices = [prev_i]
-    for (i, x) in enumerate(x_vals[1:]):
+    for i, x in enumerate(x_vals[1:]):
         if not torch.isclose(x, x_vals[prev_i], atol=tolerance):
             prev_i = i
             keep_indices.append(prev_i)
@@ -401,7 +411,7 @@ def _make_structured_points_from_unique(
 
     prev_i = 0
     keep_indices = [prev_i]
-    for (i, y) in enumerate(y_vals[1:]):
+    for i, y in enumerate(y_vals[1:]):
         if not torch.isclose(y, y_vals[prev_i], atol=tolerance):
             prev_i = i
             keep_indices.append(prev_i)
@@ -410,16 +420,12 @@ def _make_structured_points_from_unique(
     structured_points = torch.cartesian_prod(x_vals, y_vals)
 
     distances = torch.linalg.norm(
-        (
-            structured_points.unsqueeze(1)
-            - points[:, :-1].unsqueeze(0)
-        ),
+        (structured_points.unsqueeze(1) - points[:, :-1].unsqueeze(0)),
         dim=-1,
     )
     argmin_distances = distances.argmin(1)
     z_vals = points[argmin_distances, -1]
-    structured_points = torch.cat(
-        [structured_points, z_vals.unsqueeze(-1)], dim=-1)
+    structured_points = torch.cat([structured_points, z_vals.unsqueeze(-1)], dim=-1)
 
     rows = len(x_vals)
     cols = len(y_vals)
@@ -427,9 +433,9 @@ def _make_structured_points_from_unique(
 
 
 def _make_structured_points_from_corners(
-        points: torch.Tensor,
-        rows: int,
-        cols: int,
+    points: torch.Tensor,
+    rows: int,
+    cols: int,
 ) -> Tuple[torch.Tensor, int, int]:
     x_vals = points[:, 0]
     y_vals = points[:, 1]
@@ -440,29 +446,28 @@ def _make_structured_points_from_corners(
     y_max = y_vals.max()
 
     x_vals = torch.linspace(
-        x_min, x_max, rows, device=x_vals.device)  # type: ignore[arg-type]
+        x_min, x_max, rows, device=x_vals.device
+    )  # type: ignore[arg-type]
     y_vals = torch.linspace(
-        y_min, y_max, cols, device=y_vals.device)  # type: ignore[arg-type]
+        y_min, y_max, cols, device=y_vals.device
+    )  # type: ignore[arg-type]
 
     structured_points = torch.cartesian_prod(x_vals, y_vals)
 
     distances = torch.linalg.norm(
-        (
-            structured_points.unsqueeze(1)
-            - points[:, :-1].unsqueeze(0)
-        ),
+        (structured_points.unsqueeze(1) - points[:, :-1].unsqueeze(0)),
         dim=-1,
     )
     argmin_distances = distances.argmin(1)
     z_vals = points[argmin_distances, -1]
-    structured_points = torch.cat(
-        [structured_points, z_vals.unsqueeze(-1)], dim=-1)
+    structured_points = torch.cat([structured_points, z_vals.unsqueeze(-1)], dim=-1)
 
     return structured_points, rows, cols
 
+
 def axis_angle_rotation(
-        axis: torch.Tensor,
-        angle_rad: torch.Tensor,
+    axis: torch.Tensor,
+    angle_rad: torch.Tensor,
 ) -> torch.Tensor:
     cos = torch.cos(angle_rad)
     icos = 1 - cos
@@ -475,21 +480,21 @@ def axis_angle_rotation(
     rows = [
         torch.stack(row, dim=-1)
         for row in [
-                [
-                    cos + axis_sq[..., 0] * icos,
-                    x * y * icos - z * sin,
-                    x * z * icos + y * sin,
-                ],
-                [
-                    y * x * icos + z * sin,
-                    cos + axis_sq[..., 1] * icos,
-                    y * z * icos - x * sin,
-                ],
-                [
-                    z * x * icos - y * sin,
-                    z * y * icos + x * sin,
-                    cos + axis_sq[..., 2] * icos,
-                ],
+            [
+                cos + axis_sq[..., 0] * icos,
+                x * y * icos - z * sin,
+                x * z * icos + y * sin,
+            ],
+            [
+                y * x * icos + z * sin,
+                cos + axis_sq[..., 1] * icos,
+                y * z * icos - x * sin,
+            ],
+            [
+                z * x * icos - y * sin,
+                z * y * icos + x * sin,
+                cos + axis_sq[..., 2] * icos,
+            ],
         ]
     ]
     return torch.stack(rows, dim=1)
