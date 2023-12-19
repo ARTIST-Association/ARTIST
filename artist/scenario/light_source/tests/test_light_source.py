@@ -1,4 +1,5 @@
 import os
+from matplotlib import pyplot as plt
 import pytest
 
 import torch
@@ -133,6 +134,14 @@ def test_compute_bitmaps(sun_data):
         expected_value,
     )
 
+    # plt.imshow(total_bitmap, cmap="jet")
+    # plt.scatter(128, 128)
+    # plt.show()
+
     expected = torch.load(expected_path)
+
+    # plt.imshow(expected, cmap="jet")
+    # plt.scatter(128, 128)
+    # plt.show()
 
     torch.testing.assert_close(total_bitmap, expected)
