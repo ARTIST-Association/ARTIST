@@ -1,6 +1,5 @@
 import os
 from matplotlib import pyplot as plt
-import pandas as pd
 import pytest
 
 import torch
