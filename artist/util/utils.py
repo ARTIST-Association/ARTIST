@@ -185,287 +185,6 @@ def with_outer_list(values: Union[List[T], List[List[T]]]) -> List[List[T]]:
         return cast(List[List[T]], values)
     return cast(List[List[T]], [values])
 
-def deflec_facet_zs_many(
-        points: torch.Tensor,
-        normals: torch.Tensor,
-        normals_ideal: torch.Tensor,
-        num_samples: int = 4,
-        use_weighted_average: bool = False,
-        eps: float = 1e-6,
-) -> torch.Tensor:
-    """
-    Calculate z values for a surface given by normals at x-y-planar
-    positions.
-
-    We are left with a different unknown offset for each z value; we
-    assume this to be constant.
-    
-    Parameters
-    ----------
-    points : torch.Tensor
-        Points on the given surface.
-    normals : torch.Tensor 
-        Normal vectors coressponding to the points.
-    normals_ideal : torch.Tensor
-        Ideal normal vectors.
-    num_samples : int = 4
-        Number of samples.
-    use_weighted_average : bool = False
-        Wether or not to use weighted averages.
-    eps : float = 1e-6
-        Cut-off value/ limit.
-    
-    Returns
-    -------
-    torch.Tensor
-        The z values.
-    """
-    # TODO When `num_samples == 1`, we can just use the old method.
-    device = points.device
-    dtype = points.dtype
-
-    distances = horizontal_distance(
-        points.unsqueeze(0),
-        points.unsqueeze(1),
-    )
-    distances, distance_sorted_indices = distances.sort(dim=-1)
-    del distances
-    # Take closest point that isn't the point itself.
-    closest_indices = distance_sorted_indices[..., 1]
-
-    # Take closest point in different directions from the given point.
-
-    # For that, first calculate angles between direction to closest
-    # point and all others, sorted by distance.
-    angles = _all_angles(
-        points,
-        normals,
-        closest_indices,
-        distance_sorted_indices[..., 2:],
-    ).unsqueeze(0)
-
-    # Find positions of all angles in each slice except the zeroth one.
-    angles_in_slice, angle_slices = _find_angles_in_other_slices(
-        angles, num_samples)
-
-    # And take the first one.angle we found in each slice. Remember
-    # these are still sorted by distance, so we obtain the first
-    # matching angle that is also closest to the desired point.
-    #
-    # We need to handle not having any slices except the zeroth one
-    # extra.
-    if len(angles_in_slice) > 1:
-        angle_indices = torch.argmax(angles_in_slice.long(), dim=-1)
-    else:
-        angle_indices = torch.empty(
-            (0, len(points)), dtype=torch.long, device=device)
-
-    # Select the angles we found for each slice.
-    angles = torch.gather(angles.squeeze(0), -1, angle_indices.T)
-
-    # Handle _not_ having found an angle. We here create an array of
-    # booleans, indicating whether we found an angle, for each slice.
-    found_angles = torch.gather(
-        angles_in_slice,
-        -1,
-        angle_indices.unsqueeze(-1),
-    ).squeeze(-1)
-    # We always found something in the zeroth slice, so add those here.
-    found_angles = torch.cat([
-        torch.ones((1,) + found_angles.shape[1:], dtype=torch.bool, device=device),
-        found_angles,
-    ], dim=0)
-    del angles_in_slice
-
-    # Set up some numbers for averaging.
-    if use_weighted_average:
-        angle_diffs = (
-            torch.cat([
-                torch.zeros((len(angles), 1), dtype=dtype, device=device),
-                angles,
-            ], dim=-1)
-            - angle_slices.squeeze(-1).T
-        )
-        # Inverse difference in angle.
-        weights = 1 / (angle_diffs + eps).T
-        del angle_diffs
-    else:
-        # Number of samples we found angles for.
-        num_available_samples = torch.count_nonzero(found_angles, dim=0)
-
-    # Finally, combine the indices of the closest points (zeroth slice)
-    # with the indices of all closest points in the other slices.
-    closest_indices = torch.cat((
-        closest_indices.unsqueeze(0),
-        angle_indices,
-    ), dim=0)
-    del angle_indices, angle_slices
-
-    midway_normal = normals + normals[closest_indices]
-    midway_normal /= torch.linalg.norm(midway_normal, dim=-1, keepdims=True)
-
-    rot_90deg = axis_angle_rotation(
-        normals_ideal, torch.tensor(math.pi / 2, dtype=dtype, device=device))
-
-    connector = points[closest_indices] - points
-    connector_norm = torch.linalg.norm(connector, dim=-1)
-    orthogonal = torch.matmul(
-        rot_90deg.unsqueeze(0),
-        connector.unsqueeze(-1),
-    ).squeeze(-1)
-    orthogonal /= torch.linalg.norm(orthogonal, dim=-1, keepdims=True)
-    tilted_connector = torch.cross(orthogonal, midway_normal, dim=-1)
-    tilted_connector /= torch.linalg.norm(tilted_connector, dim=-1, keepdims=True)
-    tilted_connector *= torch.sign(connector[..., -1]).unsqueeze(-1)
-
-    angle = torch.acos(torch.clamp(
-        (
-            batch_dot(tilted_connector, connector).squeeze(-1)
-            / connector_norm
-        ),
-        -1,
-        1,
-    ))
-    # Here, we handle values for which we did not find an angle. For
-    # some reason, the NaNs those create propagate even to supposedly
-    # unaffected values, so we handle them explicitly.
-    angle = torch.where(
-        found_angles & ~torch.isnan(angle),
-        angle,
-        torch.tensor(0.0, dtype=dtype, device=device),
-    )
-
-    # Average over each slice.
-    if use_weighted_average:
-        zs = (
-            (weights * connector_norm * torch.tan(angle)).sum(dim=0)
-            / (weights * found_angles.to(dtype)).sum(dim=0)
-        )
-    else:
-        zs = (
-            (connector_norm * torch.tan(angle)).sum(dim=0)
-            / num_available_samples
-        )
-
-    return zs
-
-def horizontal_distance(
-        a: torch.Tensor,
-        b: torch.Tensor,
-        ord: Union[int, float, str] = 2,
-) -> torch.Tensor:
-    """Return the horizontal distance between a and b"""
-    return torch.linalg.norm(b[..., :-1] - a[..., :-1], dim=-1, ord=ord)
-
-
-def _all_angles(
-        points: torch.Tensor,
-        normals: torch.Tensor,
-        closest_indices: torch.Tensor,
-        remaining_indices: torch.Tensor,
-) -> torch.Tensor:
-    """
-    Calculate angles between direction to closest point and all others
-
-    Parameters
-    ----------
-    points : torch.Tensor
-        The points to be considered.
-    normals : torch.Tensor
-        The normals corresponding to the points.
-    closest_indices : torch.Tensor
-        Indices of the closest points.
-    remaining_indices : torch.Tensor
-        Indices of the remaining points.
-    
-    Returns
-    -------
-    torch.Tensor
-        The angles between the direction of the closest point and all others.
-    """
-    connector = (points[closest_indices] - points).unsqueeze(1)
-    other_connectors = (
-        points[remaining_indices]
-        - points.unsqueeze(1)
-    )
-    angles = torch.acos(torch.clamp(
-        (
-            batch_dot(connector, other_connectors).squeeze(-1)
-            / (
-                torch.linalg.norm(connector, dim=-1)
-                * torch.linalg.norm(other_connectors, dim=-1)
-            )
-        ),
-        -1,
-        1,
-    )).squeeze(-1)
-
-    # Give the angles a rotation direction.
-    angles *= (
-        1
-        - 2 * (
-            batch_dot(
-                normals.unsqueeze(1),
-                # Cross product does not support broadcasting, so do it
-                # manually.
-                torch.cross(
-                    torch.tile(connector, (1, other_connectors.shape[1], 1)),
-                    other_connectors,
-                    dim=-1,
-                ),
-            ).squeeze(-1)
-            < 0
-        )
-    )
-
-    # And convert to 360° rotations.
-    tau = 2 * torch.tensor(math.pi, dtype=angles.dtype, device=angles.device)
-    angles = torch.where(angles < 0, tau + angles, angles)
-    return angles
-
-
-def _find_angles_in_other_slices(
-        angles: torch.Tensor,
-        num_slices: int,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Find positions of all angles in each slice
-
-    Parameters
-    ----------
-    angles : torch.Tensor
-        The angles.
-    num_slices : int 
-        The number of slices.
-
-    Returns
-    -------
-    Tuple[torch.Tensor, torch.Tensor]
-        The positions of all angles ine ach slice and all the slices.
-    """
-    dtype = angles.dtype
-    device = angles.device
-    # Set up uniformly sized cake/pizza slices for which to find angles.
-    tau = 2 * torch.tensor(math.pi, dtype=dtype, device=device)
-    angle_slice = tau / num_slices
-
-    angle_slices = (
-        torch.arange(
-            num_slices,
-            dtype=dtype,
-            device=device,
-        )
-        * angle_slice
-    ).unsqueeze(-1).unsqueeze(-1)
-    # We didn't calculate angles in the "zeroth" slice so we disregard them.
-    angle_start = angle_slices[1:] - angle_slice / 2
-    angle_end = angle_slices[1:] + angle_slice / 2
-
-    # Find all angles lying in each slice.
-    angles_in_slice = ((angle_start <= angles) & (angles < angle_end))
-    return angles_in_slice, angle_slices
-
-
 def axis_angle_rotation(
         axis: torch.Tensor,
         angle_rad: torch.Tensor,
@@ -545,7 +264,6 @@ def get_rot_matrix(
     full_rot = axis_angle_rotation(rot_axis, rot_angle)
     return full_rot
 
-
 def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Compute the angle between direction a and b.
@@ -560,6 +278,7 @@ def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     Returns
     -------
     torch.Tensor
+        The angle
     """
     angles = torch.acos(torch.clamp(
         (
@@ -654,7 +373,7 @@ def make_structured_points(
     Returns
     -------
     Tuple[torch.Tensor, int, int]
-        Return the structured points as 
+        Return the structured points
 
     """
     if rows is None or cols is None:
@@ -740,26 +459,6 @@ def _make_structured_points_from_corners(
         [structured_points, z_vals.unsqueeze(-1)], dim=-1)
 
     return structured_points, rows, cols
-
-def initialize_spline_eval_points_perfectly(
-        points: torch.Tensor,
-        degree_x: int,
-        degree_y: int,
-        ctrl_points: torch.Tensor,
-        ctrl_weights: torch.Tensor,
-        knots_x: torch.Tensor,
-        knots_y: torch.Tensor,
-) -> torch.Tensor:
-    eval_points, distances = nurbs.invert_points_slow(
-            points,
-            degree_x,
-            degree_y,
-            ctrl_points,
-            ctrl_weights,
-            knots_x,
-            knots_y,
-    )
-    return eval_points
 
 def axis_angle_rotation(
         axis: torch.Tensor,
