@@ -1,4 +1,5 @@
 import csv
+from matplotlib import pyplot as plt
 import numpy as np
 import struct
 from typing import cast, List, Tuple
@@ -67,7 +68,6 @@ def load_bpro(
     concentratorHeader_struct_len = concentrator_header_struct.size
     facetHeader_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
-
     # powers = []
     binp_loc = os.path.join(os.path.dirname(__file__), "MeasurementData", filename)
     with open(binp_loc, "rb") as file:
@@ -75,7 +75,6 @@ def load_bpro(
         concentratorHeader_data = concentrator_header_struct.unpack_from(byte_data)
         if verbose:
             print("READING bpro filename: " + filename)
-
         hel_pos = nwu_to_enu(cast(Tuple3d, concentratorHeader_data[0:3]))
         width, height = concentratorHeader_data[3:5]
         # offsets = concentratorHeader_data[7:9]
@@ -114,9 +113,19 @@ def load_bpro(
                     facetHeader_data[9],
                 ]
             )
+            
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
 
+            #print(facet_pos)
+            # facet_pos_list = list(facet_pos)
+            # facet_pos_list[0] = 100
+            # facet_pos_list[1] *= 5
+            # facet_pos_list[2] *= 5
+            # facet_pos = tuple(facet_pos_list)
+            #print(facet_pos)
+  
             facet_positions.append(facet_pos)
+
             facet_spans_n.append(facet_vec_x.tolist())
             facet_spans_e.append(facet_vec_y.tolist())
 
@@ -138,6 +147,9 @@ def load_bpro(
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
+    #plt.scatter(np.array(positions)[0, :,0], np.array(positions)[0, :, 1])
+    #plt.show()
+
     return (
         hel_pos,
         facet_positions,
@@ -149,6 +161,7 @@ def load_bpro(
         width,
         height,
     )
+
 
 
 def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
