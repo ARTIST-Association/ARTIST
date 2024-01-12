@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import torch
 import torch as th
 
-C = TypeVar('C', bound='NURBSCurve')
+# C = TypeVar('C', bound='NURBSCurve')
 
 class NoConvergenceError(RuntimeError):
-    """An error indicating that NURBS point inversion failed to fit
+    """
+    An error indicating that NURBS point inversion failed to fit
     towards a satisfying result.
     """
     pass
@@ -21,7 +22,7 @@ def setup_nurbs_surface(
         device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Compute uninitialized parameters for a NURBS surface with the desired properties on the given device.
+    Create uninitialized parameters for a NURBS surface with the desired properties on the given device.
 
     Parameters
     ----------
@@ -81,7 +82,8 @@ def calc_normals_and_surface_slow(
         knots_x: torch.Tensor,
         knots_y: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Return both the evaluation and normals of the given NURBS surface
+    """
+    Return both the evaluation and normals of the given NURBS surface
     at the given evaluation points.
 
     Parameters
@@ -229,7 +231,6 @@ def calc_derivs_surface_slow(
                 vs = vs - th.binomial(k.to(dtype), i.to(dtype)) * vs2
             result[k][m] = vs / wders[:, 0, 0].unsqueeze(-1)
     return result
-
 
 @th.no_grad()
 def check_nurbs_surface_constraints(
@@ -479,7 +480,8 @@ def calc_basis_derivs_slow(
 
     Returns
     -------
-    The first nth derivatives.
+    List[List[torch.Tensor]]
+        The first nth derivatives.
     """
     device = knots.device
     num_evaluation_points = len(evaluation_points)
@@ -833,7 +835,6 @@ def evaluate_nurbs_surface_at_spans(
         Sw += basis_values_y[:, j].unsqueeze(-1) * tmp[:, j]
     return Sw[:, :-1] / Sw[:, -1].unsqueeze(-1)
 
-
 def approximate_surface(
         world_points: torch.Tensor,
         num_points_x: int,
@@ -962,7 +963,6 @@ def approximate_surface(
         P[i, 1:num_control_points_y] = th.lu_solve(Rv, NTNv_LU, NTNv_pivots)
     return P, knots_x, knots_y
 
-
 def get_mesh_params_(
         world_points: torch.Tensor,
         num_points: int,
@@ -986,7 +986,7 @@ def get_mesh_params_(
     Returns
     -------
     torch.Tensor
-    Return the mesh parameters of the NURBS surface.    
+        The mesh parameters of the NURBS surface.    
     """
     dtype = world_points.dtype
     device = world_points.device
@@ -1034,7 +1034,6 @@ def get_mesh_params_(
     params[1:num_points] /= num_nondegenerate
     return params
 
-
 def place_knots(
         params: torch.Tensor,
         num_control_points: int,
@@ -1055,7 +1054,7 @@ def place_knots(
     Returns
     -------
     torch.Tensor
-        Return the knots of the given direction.
+        The knots of the given direction.
     """
     # m = num_points
     # n = num_control_points
@@ -1098,7 +1097,7 @@ def calc_basis_mat(
     Returns
     -------
     torch.Tensor
-        Returns the basis matrix.
+        The basis matrix.
     """
     # m = num_points
     # n = num_control_points
@@ -1122,6 +1121,7 @@ def calc_basis_mat(
 def calc_basisTbasis(N: torch.Tensor) -> torch.Tensor:
     return th.matmul(N.T, N)
 
+#
 def calc_R(
         world_points: torch.Tensor,
         col: int,
@@ -1298,6 +1298,570 @@ def get_single_basis(
     return result
 
 
+# def invert_points_slow(
+#         world_points: torch.Tensor,
+#         degree_x: int,
+#         degree_y: int,
+#         control_points: torch.Tensor,
+#         control_point_weights: torch.Tensor,
+#         knots_x: torch.Tensor,
+#         knots_y: torch.Tensor,
+#         num_samples: int = 8,
+#         norm_p: int = 2,
+#         max_iters: int = 100,
+#         distance_tolerance: float = 1e-5,
+#         cosine_tolerance: float = 1e-7,
+# ) -> Tuple[torch.Tensor, torch.Tensor]:
+#     """
+#     Compute evaluation points and their evaluated distances to
+#     `world_points` for the given NURBS surface. The returned evaluation
+#     points are calculated so that `world_points` are fitted to the
+#     desired error tolerances.
+
+#     Parameters
+#     ----------
+#     world_points : torch.Tensor
+#         The world points of the given NURBS surface
+#     degree_x : int 
+#         The degree of the NURBS surface in x direction.
+#     degree_y : int 
+#         The degree of the NURBS surface in y direction.
+#     control_points : torch.Tensor
+#         The control points of the NURBS surface.
+#     control_point_weights : torch.Tensor
+#         The weights of the control points.
+#     knots_x : torch.Tensor
+#         The knots in x dimension.
+#     knots_x : torch.Tensor
+#         The knots in y dimension.
+#     num_samples : int = 8
+#         The number of samples.
+#     norm_p : int = 2
+#         ...
+#     max_iters : int = 100
+#         The maximum number of iterations allowed.
+#     distance_tolerance : float = 1e-5
+#         Tolerance value for the distance.
+#     cosine_tolerance : float = 1e-7
+
+#     Returns
+#     -------
+#     Tuple[torch.Tensor, torch.Tensor]
+#         Return evaluation points.
+#     """
+#     argmin_distances, min_distances = get_inversion_start_values(
+#         world_points,
+#         degree_x,
+#         degree_y,
+#         control_points,
+#         control_point_weights,
+#         knots_x,
+#         knots_y,
+#         num_samples,
+#         norm_p=norm_p,
+#     )
+
+#     # TODO We should handle differing x and y limits here.
+#     point_min = 0
+#     point_max = 1
+
+#     derivs = calc_derivs_surface_slow(
+#         argmin_distances[:, 0],
+#         argmin_distances[:, 1],
+#         degree_x,
+#         degree_y,
+#         control_points,
+#         control_point_weights,
+#         knots_x,
+#         knots_y,
+#         nth_deriv=2,
+#     )
+
+#     surface_points = derivs[0][0]
+
+#     point_difference = surface_points - world_points
+#     no_change_indices = th.zeros_like(min_distances, dtype=th.bool)
+
+#     for i in range(max_iters):
+#         Su = derivs[1][0]
+#         Sv = derivs[0][1]
+
+#         points_coincide_indices = min_distances <= distance_tolerance
+#         no_change_indices = no_change_indices | points_coincide_indices
+
+#         zero_cosine_indices = (
+#             (
+#                 th.linalg.norm(
+#                     batch_dot(Su, point_difference),
+#                     ord=norm_p,
+#                     dim=-1,
+#                 )
+#                 / (th.linalg.norm(Su, ord=norm_p, dim=-1) * min_distances)
+#             ) <= cosine_tolerance
+#         ) & (
+#             (
+#                 th.linalg.norm(
+#                     batch_dot(Sv, point_difference),
+#                     ord=norm_p,
+#                     dim=-1,
+#                 )
+#                 / (th.linalg.norm(Sv, ord=norm_p, dim=-1) * min_distances)
+#             ) <= cosine_tolerance
+#         )
+#         no_change_indices = no_change_indices | zero_cosine_indices
+
+#         if points_coincide_indices.all() and zero_cosine_indices.all():
+#             break
+
+#         both_dir_dot = (
+#             batch_dot(Su, Sv)
+#             + batch_dot(point_difference, derivs[1][1])
+#         )
+
+#         J = th.stack([
+#             th.hstack([
+#                 (
+#                     th.linalg.norm(Su, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
+#                     + batch_dot(point_difference, derivs[2][0])
+#                 ),
+#                 both_dir_dot,
+#             ]),
+#             th.hstack([
+#                 both_dir_dot,
+#                 (
+#                     th.linalg.norm(Sv, ord=norm_p, dim=-1).pow(2).unsqueeze(-1)
+#                     + batch_dot(point_difference, derivs[0][2])
+#                 ),
+#             ]),
+#         ], dim=1)
+#         kappa = -th.hstack([
+#             batch_dot(point_difference, Su),
+#             batch_dot(point_difference, Sv),
+#         ])
+
+#         delta = th.linalg.solve(J, kappa)
+
+#         prev_argmin_distances = argmin_distances.clone()
+#         change_indices = ~no_change_indices
+#         argmin_distances[change_indices] = (
+#             delta[change_indices]
+#             + prev_argmin_distances[change_indices]
+#         )
+
+#         argmin_distances[change_indices] = \
+#             argmin_distances[change_indices].clamp(point_min, point_max)
+
+#         # TODO We always assume non-closed surfaces.
+#         # argmin_distance_x = argmin_distance[:, 0]
+#         # argmin_distance_y = argmin_distance[:, 1]
+
+#         # argmin_distance_x = argmin_distance_x.clamp(point_min, point_max)
+#         # argmin_distance_y = argmin_distance_y.clamp(point_min, point_max)
+
+#         # argmin_distance = th.stack([
+#         #     argmin_distance_x,
+#         #     argmin_distance_y,
+#         # ], dim=-1)
+
+#         derivs = calc_derivs_surface_slow(
+#             argmin_distances[:, 0],
+#             argmin_distances[:, 1],
+#             degree_x,
+#             degree_y,
+#             control_points,
+#             control_point_weights,
+#             knots_x,
+#             knots_y,
+#             nth_deriv=2,
+#         )
+
+#         surface_points = derivs[0][0]
+
+#         point_difference = surface_points - world_points
+#         min_distances = th.linalg.norm(
+#             point_difference,
+#             ord=norm_p,
+#             dim=-1,
+#         )
+
+#         insignificant_change_indices = th.linalg.norm(
+#             (
+#                 (
+#                     argmin_distances[:, 0]
+#                     - prev_argmin_distances[:, 0]
+#                 ).unsqueeze(-1) * Su
+#                 + (
+#                     argmin_distances[:, 1]
+#                     - prev_argmin_distances[:, 1]
+#                 ).unsqueeze(-1) * Sv
+#             ),
+#             ord=norm_p,
+#             dim=-1,
+#         ) <= distance_tolerance
+#         no_change_indices = no_change_indices | insignificant_change_indices
+#         if no_change_indices.all():
+#             break
+#     else:
+#         # We recalculate here in order to handle `max_iters == 0`.
+#         change_indices = ~no_change_indices
+#         num_unconverged = change_indices.count_nonzero()
+#         raise NoConvergenceError(
+#             f'convergence failed for {num_unconverged} points; '
+#             f'try to increase `num_samples`, `max_iters`, '
+#             f'`distance_tolerance`, or `cosine_tolerance`'
+#         )
+#     return argmin_distances, min_distances
+
+
+# def get_inversion_start_values(
+#         world_points: torch.Tensor,
+#         degree_x: int,
+#         degree_y: int,
+#         control_points: torch.Tensor,
+#         control_point_weights: torch.Tensor,
+#         knots_x: torch.Tensor,
+#         knots_y: torch.Tensor,
+#         num_samples: int,
+#         norm_p: int = 2,
+# ) -> Tuple[torch.Tensor, torch.Tensor]:
+#     """Compute values in `world_points` and their distance; the values
+#     chosen minimize the distance to the given NURBS surface.
+
+#     The values are used as start values for Newton iterations for point
+#     inversion.
+
+#     Parameters
+#     ----------
+#     world_points : torch.Tensor
+#         The world points.
+#     degree_x : int
+#         The degree of the NURBS surface in x dimension.
+#     degree_y : int 
+#         The degree of the NURBS surface in y dimension.
+#     control_points : torch.Tensor
+#         The control points of the NURBS surface.
+#     control_point_weights : torch.Tensor
+#         The weights of the control points.
+#     knots_x : torch.Tensor
+#         The knots of the NURBS surface in x dimension.
+#     knots_y : torch.Tensor 
+#         The knots of the NURBS surface in y dimension.
+#     num_samples : int
+#         The number of samples.
+#     norm_p : int = 2
+#         ...
+
+#     Returns
+#     -------
+#     Tuple[torch.Tensor, torch.Tensor]
+#         Evaluation points and their distances.
+#     """
+#     device = control_points.device
+
+#     start_spans_x = th.arange(degree_x, len(knots_x) - degree_x, device=device)
+#     start_spans_y = th.arange(degree_y, len(knots_y) - degree_y, device=device)
+
+#     evaluation_points_x = th.hstack([
+#         th.linspace(
+#             knots_x[span_x],  # type: ignore[arg-type]
+#             knots_x[span_x + 1],  # type: ignore[arg-type]
+#             num_samples,
+#             device=device,
+#         )[:-1]
+#         for span_x in start_spans_x[:-1]
+#     ] + [knots_x[start_spans_x[-1]]])
+#     evaluation_points_y = th.hstack([
+#         th.linspace(
+#             knots_y[span_y],  # type: ignore[arg-type]
+#             knots_y[span_y + 1],  # type: ignore[arg-type]
+#             num_samples,
+#             device=device,
+#         )[:-1]
+#         for span_y in start_spans_y[:-1]
+#     ] + [knots_y[start_spans_y[-1]]])
+#     evaluation_points = th.cartesian_prod(
+#         evaluation_points_x, evaluation_points_y)
+#     del start_spans_x
+#     del start_spans_y
+#     del evaluation_points_x
+#     del evaluation_points_y
+
+#     surface_points = evaluate_nurbs_surface_flex(
+#         evaluation_points[:, 0],
+#         evaluation_points[:, 1],
+#         degree_x,
+#         degree_y,
+#         control_points,
+#         control_point_weights,
+#         knots_x,
+#         knots_y,
+#     )
+
+#     distances = th.linalg.norm(
+#         surface_points.unsqueeze(0) - world_points.unsqueeze(1),
+#         ord=norm_p,
+#         dim=-1,
+#     )
+#     min_distances, argmin_distances = distances.min(1)
+#     return evaluation_points[argmin_distances], min_distances
+
+# class NURBSCurve:
+#     def __init__(
+#             self,
+#             degree: int,
+#             control_points: torch.Tensor,
+#             control_point_weights: torch.Tensor,
+#             knots: torch.Tensor,
+#     ) -> None:
+#         self.degree = degree
+#         self.control_points = control_points
+#         self.control_point_weights = control_point_weights
+#         self.knots = knots
+    
+
+# def calc_basis_derivs(
+#         evaluation_points: torch.Tensor,
+#         span: torch.Tensor,
+#         degree: int,
+#         knots: torch.Tensor,
+#         nth_deriv: int = 1,
+# ) -> torch.Tensor:
+#     """
+#     Return the first `nth_deriv` derivatives for the basis functions
+#     applied to the given evaluation points. The k-th derivative is at
+#     index k, 0 <= k <= `nth_deriv`.
+    
+#     Parameters
+#     ----------
+#     evaluation_points : torch.Tensor
+#         The evaluation points of the NURBS surface.
+#     span : torch.Tensor
+#         The span of the NURBS surface.
+#     degree : int
+#         The degree of the NURBS.
+#     knots : torch.Tensor
+#         The knots of the NURBS surface.
+#     nth_deriv : int = 1
+#         The amount of derivatives to consider.
+    
+#     Return
+#     ------
+#     torch.Tensor
+#         The nth derivatives for the basis functions.
+#     """
+#     device = knots.device
+#     num_evaluation_points = len(evaluation_points)
+#     next_span = span + 1
+#     next_degree = degree + 1
+#     next_nth_deriv = nth_deriv + 1
+#     ndu = th.empty(
+#         (num_evaluation_points, next_degree, next_degree),
+#         device=device,
+#     )
+#     ndu[:, 0, 0] = 1
+#     left = th.empty((num_evaluation_points, next_degree), device=device)
+#     right = th.empty((num_evaluation_points, next_degree), device=device)
+#     for j in range(1, next_degree):
+#         left[:, j] = evaluation_points - knots[next_span - j]
+#         right[:, j] = knots[span + j] - evaluation_points
+#         saved = th.zeros(num_evaluation_points, device=device)
+#         for r in range(j):
+#             ndu[:, j, r] = right[:, r + 1] + left[:, j - r]
+#             tmp = ndu[:, r, j - 1] / ndu[:, j, r]
+#             ndu[:, r, j] = saved + right[:, r + 1] * tmp
+#             saved = left[:, j - r] * tmp
+#         ndu[:, j, j] = saved
+
+#     ders = th.empty(
+#         (num_evaluation_points, next_nth_deriv, next_degree),
+#         device=device,
+#     )
+#     for j in range(next_degree):
+#         ders[:, 0, j] = ndu[:, j, degree]
+#     a = th.empty((num_evaluation_points, 2, next_degree), device=device)
+#     for r in range(next_degree):
+#         s1 = 0
+#         s2 = 1
+#         a[:, 0, 0] = 1
+#         for k in range(1, next_nth_deriv):
+#             d = th.zeros(num_evaluation_points, device=device)
+#             rk = r - k
+#             pk = degree - k
+#             if r >= k:
+#                 a[:, s2, 0] = a[:, s1, 0] / ndu[:, pk + 1, rk]
+#                 d = a[:, s2, 0] * ndu[:, rk, pk]
+#             if rk >= -1:
+#                 j1 = 1
+#             else:
+#                 j1 = -rk
+#             if r - 1 <= pk:
+#                 j2 = k - 1
+#             else:
+#                 j2 = degree - r
+#             for j in range(j1, j2 + 1):
+#                 a[:, s2, j] = (
+#                     (a[:, s1, j] - a[:, s1, j - 1])
+#                     / ndu[:, pk + 1, rk + j]
+#                 )
+#                 d += a[:, s2, j] * ndu[:, rk + j, pk]
+#             if r <= pk:
+#                 a[:, s2, k] = -a[:, s1, k - 1] / ndu[:, pk + 1, r]
+#                 d += a[:, s2, k] * ndu[:, r, pk]
+#             ders[:, k, r] = d
+#             j = s1
+#             s1 = s2
+#             s2 = j
+
+#     r = degree
+#     for k in range(1, next_nth_deriv):
+#         for j in range(next_degree):
+#             ders[:, k, j] *= r
+#         r *= degree - k
+#     return ders
+
+# @th.no_grad()
+# def check_nurbs_constraints(
+#         evaluation_points: torch.Tensor,
+#         degree: int,
+#         control_points: torch.Tensor,
+#         control_point_weights: torch.Tensor,
+#         knots: torch.Tensor,
+# ) -> None:
+#     """Assert that NURBS constraints are fulfilled for evaluating the
+#     given curve.
+
+#     Parameters
+#     ----------
+#     evaluation_points : torch.Tensor
+#         The evaluation points of the NURBS surface.
+#     degree : int
+#         The degree of the NURBS surface.
+#     control_points : torch.Tensor
+#         The control_points of the given NURBS surface.
+#     control_points_weights : torch.Tensor
+#         The weights of the control points.
+#     knots : torch.Tensor
+#         The knots of the given NURBS surface.
+#     """
+#     next_degree = degree + 1
+#     assert control_points.shape[-1] == 2, \
+#         "please use another evaluation function for this NURBS' dimensionality"
+#     assert control_points.ndim == 2, \
+#         "please use another evaluation function for this NURBS' dimensionality"
+#     assert (control_point_weights > 0).all(), \
+#         'control point weights must be greater than zero'
+#     assert (knots[:next_degree] == 0).all(), \
+#         f'first {next_degree} knots must be zero'
+#     assert (knots[len(control_points):] == 1).all(), \
+#         f'last {next_degree} knots must be one'
+#     assert (knots.sort().values == knots).all(), \
+#         'knots must be ordered monotonically increasing in value'
+
+# def calc_bspline_derivs(
+#         evaluation_point: torch.Tensor,
+#         degree: int,
+#         control_points: torch.Tensor,
+#         knots: torch.Tensor,
+#         nth_deriv: int = 1,
+# ) -> torch.Tensor:
+#     """
+#     Compute the first `nth_deriv` derivatives for the given B-spline
+#     curve at the given evaluation points. The k-th derivative is at
+#     index k, 0 <= k <= `nth_deriv`.
+
+#     Parameters
+#     ----------
+#     evaluation_point : torch.Tensor
+#         The evaluation point of the B-spline curve.
+#     degree : int 
+#         The degree of the NURBS surface.
+#     control_points : torch.Tensor
+#         The control points of the B-spline curve.
+#     knots : torch.Tensor
+#         The knots of the B-spline curve.
+#     nth_deriv : int = 1
+#         The amount of derivatives to return.
+    
+#     Returns
+#     -------
+#     torch.Tensor
+#         The first nth derivatives for the B-spline curve at the given evaluation point.
+#     """
+#     device = control_points.device
+#     next_degree = degree + 1
+#     next_nth_deriv = nth_deriv + 1
+#     num_control_points = len(control_points) - 1
+#     du = min(nth_deriv, degree)
+#     result = th.empty(
+#         (next_nth_deriv, control_points.shape[-1]), device=device)
+#     for k in range(next_degree, next_nth_deriv):
+#         result[k] = 0
+#     span = find_span(evaluation_point, degree, num_control_points, knots)
+#     basis_derivs = calc_basis_derivs(evaluation_point, span, degree, knots, du)
+#     spanmdeg = span - degree
+#     for k in range(du + 1):
+#         result[k] = 0
+#         for j in range(next_degree):
+#             result[k] += basis_derivs[k, j] * control_points[spanmdeg + j]
+#     return result
+
+# def calc_derivs(
+#         evaluation_point: torch.Tensor,
+#         degree: int,
+#         control_points: torch.Tensor,
+#         control_point_weights: torch.Tensor,
+#         knots: torch.Tensor,
+#         nth_deriv: int = 1,
+# ) -> torch.Tensor:
+#     """
+#     Compute the first `nth_deriv` derivatives for the given NURBS
+#     curve at the given evaluation points. The k-th derivative is at
+#     index k, 0 <= k <= `nth_deriv`.
+    
+#     Parameters
+#     ----------
+#     evaluation_point : torch.Tensor
+#         The evaluation point of the NURBS surface.
+#     degree : int 
+#         The degree of the NURBS surface.
+#     control_points : torch.Tensor
+#         The control points of the NURBS surface.
+#     control_point_weights : torch.Tensor
+#         The weights of the control point.
+#     knots : torch.Tensor
+#         The knots of the NURBS surface.
+#     nth_deriv : int = 1
+#         The amount of derivatives to return.
+    
+#     Returns
+#     -------
+#     torch.Tensor
+#         The first nth derivatives for the NURBS surface at the given evaluation point.
+#     """
+#     dtype = control_points.dtype
+#     device = control_points.device
+#     next_nth_deriv = nth_deriv + 1
+
+#     projected = project_control_points(control_points, control_point_weights)
+#     Cwders = calc_bspline_derivs(
+#         evaluation_point, degree, projected, knots, nth_deriv)
+#     Aders = Cwders[:, :-1]
+#     wders = Cwders[:, -1]
+#     result = th.empty_like(Aders)
+#     for k in th.arange(next_nth_deriv, device=device):
+#         v = Aders[k]
+#         for i in th.arange(1, k + 1, device=device):
+#             v -= (
+#                 th.binomial(k.to(dtype), i.to(dtype))
+#                 * wders[i]
+#                 * result[k - i]
+#             )
+#         result[k] = v / wders[0]
+#     return result
+
+
+###########################################
+
 def invert_points_slow(
         world_points: torch.Tensor,
         degree_x: int,
@@ -1313,41 +1877,45 @@ def invert_points_slow(
         cosine_tolerance: float = 1e-7,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute evaluation points and their evaluated distances to
+    Return evaluation points and their evaluated distances to
     `world_points` for the given NURBS surface. The returned evaluation
     points are calculated so that `world_points` are fitted to the
     desired error tolerances.
 
+    This function is slightly slower than `invert_points` but fully
+    differentiable.
+
     Parameters
     ----------
     world_points : torch.Tensor
-        The world points of the given NURBS surface
-    degree_x : int 
-        The degree of the NURBS surface in x direction.
-    degree_y : int 
-        The degree of the NURBS surface in y direction.
+        The world points.
+    degree_x : int
+        Spline degree in x dimension.
+    degree_y : int
+        Spline degree in y dimension.
     control_points : torch.Tensor
-        The control points of the NURBS surface.
+        The control points.
     control_point_weights : torch.Tensor
-        The weights of the control points.
+        The weights to the control points.
     knots_x : torch.Tensor
-        The knots in x dimension.
-    knots_x : torch.Tensor
-        The knots in y dimension.
+        A list of numbers representing the knots in x dimension.
+    knots_y : torch.Tensor
+        A list of numbers representing the knots in y dimension.
     num_samples : int = 8
         The number of samples.
-    norm_p : int = 2
+    norm_p : int = 2,
         ...
     max_iters : int = 100
-        The maximum number of iterations allowed.
+        Upper limit for the amount of iterations.
     distance_tolerance : float = 1e-5
-        Tolerance value for the distance.
+        Tolerance for the distance.
     cosine_tolerance : float = 1e-7
+        Tolerance for the cosine.
 
     Returns
     -------
     Tuple[torch.Tensor, torch.Tensor]
-        Return evaluation points.
+        The evaluation points and their evaluated distances to `world_points` for the given NURBS surface.
     """
     argmin_distances, min_distances = get_inversion_start_values(
         world_points,
@@ -1513,13 +2081,6 @@ def invert_points_slow(
     return argmin_distances, min_distances
 
 
-def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """Return a dot product over the batch dimensions of tensors `x` and
-    `y`.
-    """
-    return (x * y).sum(-1).unsqueeze(-1)
-
-
 def get_inversion_start_values(
         world_points: torch.Tensor,
         degree_x: int,
@@ -1531,7 +2092,8 @@ def get_inversion_start_values(
         num_samples: int,
         norm_p: int = 2,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Compute values in `world_points` and their distance; the values
+    """
+    Return values in `world_points` and their distance; the values
     chosen minimize the distance to the given NURBS surface.
 
     The values are used as start values for Newton iterations for point
@@ -1542,26 +2104,26 @@ def get_inversion_start_values(
     world_points : torch.Tensor
         The world points.
     degree_x : int
-        The degree of the NURBS surface in x dimension.
-    degree_y : int 
-        The degree of the NURBS surface in y dimension.
+        Spline degree in x dimension.
+    degree_y : int
+        Spline degree in y dimension.
     control_points : torch.Tensor
-        The control points of the NURBS surface.
+        The control points.
     control_point_weights : torch.Tensor
-        The weights of the control points.
+        The weights to the control points.
     knots_x : torch.Tensor
-        The knots of the NURBS surface in x dimension.
-    knots_y : torch.Tensor 
-        The knots of the NURBS surface in y dimension.
+        A list of numbers representing the knots in x dimension.
+    knots_y : torch.Tensor
+        A list of numbers representing the knots in y dimension.
     num_samples : int
         The number of samples.
     norm_p : int = 2
         ...
-
+    
     Returns
     -------
     Tuple[torch.Tensor, torch.Tensor]
-        Evaluation points and their distances.
+        Start values for Newton iterations.
     """
     device = control_points.device
 
@@ -1614,262 +2176,20 @@ def get_inversion_start_values(
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """Return a dot product over the batch dimensions of tensors `x` and
+    """
+    Computes the dot product over the batch dimensions of tensors `x` and
     `y`.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        First tensor.
+    y : torch.Tensor
+        Second tensor.
+    
+    Returns
+    -------
+    torch.Tensor
+        The batch dot product.
     """
     return (x * y).sum(-1).unsqueeze(-1)
-
-
-class NURBSCurve:
-    def __init__(
-            self,
-            degree: int,
-            control_points: torch.Tensor,
-            control_point_weights: torch.Tensor,
-            knots: torch.Tensor,
-    ) -> None:
-        self.degree = degree
-        self.control_points = control_points
-        self.control_point_weights = control_point_weights
-        self.knots = knots
-    
-
-def calc_basis_derivs(
-        evaluation_points: torch.Tensor,
-        span: torch.Tensor,
-        degree: int,
-        knots: torch.Tensor,
-        nth_deriv: int = 1,
-) -> torch.Tensor:
-    """
-    Return the first `nth_deriv` derivatives for the basis functions
-    applied to the given evaluation points. The k-th derivative is at
-    index k, 0 <= k <= `nth_deriv`.
-    
-    Parameters
-    ----------
-    evaluation_points : torch.Tensor
-        The evaluation points of the NURBS surface.
-    span : torch.Tensor
-        The span of the NURBS surface.
-    degree : int
-        The degree of the NURBS.
-    knots : torch.Tensor
-        The knots of the NURBS surface.
-    nth_deriv : int = 1
-        The amount of derivatives to consider.
-    
-    Return
-    ------
-    torch.Tensor
-        The nth derivatives for the basis functions.
-    """
-    device = knots.device
-    num_evaluation_points = len(evaluation_points)
-    next_span = span + 1
-    next_degree = degree + 1
-    next_nth_deriv = nth_deriv + 1
-    ndu = th.empty(
-        (num_evaluation_points, next_degree, next_degree),
-        device=device,
-    )
-    ndu[:, 0, 0] = 1
-    left = th.empty((num_evaluation_points, next_degree), device=device)
-    right = th.empty((num_evaluation_points, next_degree), device=device)
-    for j in range(1, next_degree):
-        left[:, j] = evaluation_points - knots[next_span - j]
-        right[:, j] = knots[span + j] - evaluation_points
-        saved = th.zeros(num_evaluation_points, device=device)
-        for r in range(j):
-            ndu[:, j, r] = right[:, r + 1] + left[:, j - r]
-            tmp = ndu[:, r, j - 1] / ndu[:, j, r]
-            ndu[:, r, j] = saved + right[:, r + 1] * tmp
-            saved = left[:, j - r] * tmp
-        ndu[:, j, j] = saved
-
-    ders = th.empty(
-        (num_evaluation_points, next_nth_deriv, next_degree),
-        device=device,
-    )
-    for j in range(next_degree):
-        ders[:, 0, j] = ndu[:, j, degree]
-    a = th.empty((num_evaluation_points, 2, next_degree), device=device)
-    for r in range(next_degree):
-        s1 = 0
-        s2 = 1
-        a[:, 0, 0] = 1
-        for k in range(1, next_nth_deriv):
-            d = th.zeros(num_evaluation_points, device=device)
-            rk = r - k
-            pk = degree - k
-            if r >= k:
-                a[:, s2, 0] = a[:, s1, 0] / ndu[:, pk + 1, rk]
-                d = a[:, s2, 0] * ndu[:, rk, pk]
-            if rk >= -1:
-                j1 = 1
-            else:
-                j1 = -rk
-            if r - 1 <= pk:
-                j2 = k - 1
-            else:
-                j2 = degree - r
-            for j in range(j1, j2 + 1):
-                a[:, s2, j] = (
-                    (a[:, s1, j] - a[:, s1, j - 1])
-                    / ndu[:, pk + 1, rk + j]
-                )
-                d += a[:, s2, j] * ndu[:, rk + j, pk]
-            if r <= pk:
-                a[:, s2, k] = -a[:, s1, k - 1] / ndu[:, pk + 1, r]
-                d += a[:, s2, k] * ndu[:, r, pk]
-            ders[:, k, r] = d
-            j = s1
-            s1 = s2
-            s2 = j
-
-    r = degree
-    for k in range(1, next_nth_deriv):
-        for j in range(next_degree):
-            ders[:, k, j] *= r
-        r *= degree - k
-    return ders
-
-@th.no_grad()
-def check_nurbs_constraints(
-        evaluation_points: torch.Tensor,
-        degree: int,
-        control_points: torch.Tensor,
-        control_point_weights: torch.Tensor,
-        knots: torch.Tensor,
-) -> None:
-    """Assert that NURBS constraints are fulfilled for evaluating the
-    given curve.
-
-    Parameters
-    ----------
-    evaluation_points : torch.Tensor
-        The evaluation points of the NURBS surface.
-    degree : int
-        The degree of the NURBS surface.
-    control_points : torch.Tensor
-        The control_points of the given NURBS surface.
-    control_points_weights : torch.Tensor
-        The weights of the control points.
-    knots : torch.Tensor
-        The knots of the given NURBS surface.
-    """
-    next_degree = degree + 1
-    assert control_points.shape[-1] == 2, \
-        "please use another evaluation function for this NURBS' dimensionality"
-    assert control_points.ndim == 2, \
-        "please use another evaluation function for this NURBS' dimensionality"
-    assert (control_point_weights > 0).all(), \
-        'control point weights must be greater than zero'
-    assert (knots[:next_degree] == 0).all(), \
-        f'first {next_degree} knots must be zero'
-    assert (knots[len(control_points):] == 1).all(), \
-        f'last {next_degree} knots must be one'
-    assert (knots.sort().values == knots).all(), \
-        'knots must be ordered monotonically increasing in value'
-
-def calc_bspline_derivs(
-        evaluation_point: torch.Tensor,
-        degree: int,
-        control_points: torch.Tensor,
-        knots: torch.Tensor,
-        nth_deriv: int = 1,
-) -> torch.Tensor:
-    """
-    Compute the first `nth_deriv` derivatives for the given B-spline
-    curve at the given evaluation points. The k-th derivative is at
-    index k, 0 <= k <= `nth_deriv`.
-
-    Parameters
-    ----------
-    evaluation_point : torch.Tensor
-        The evaluation point of the B-spline curve.
-    degree : int 
-        The degree of the NURBS surface.
-    control_points : torch.Tensor
-        The control points of the B-spline curve.
-    knots : torch.Tensor
-        The knots of the B-spline curve.
-    nth_deriv : int = 1
-        The amount of derivatives to return.
-    
-    Returns
-    -------
-    torch.Tensor
-        The first nth derivatives for the B-spline curve at the given evaluation point.
-    """
-    device = control_points.device
-    next_degree = degree + 1
-    next_nth_deriv = nth_deriv + 1
-    num_control_points = len(control_points) - 1
-    du = min(nth_deriv, degree)
-    result = th.empty(
-        (next_nth_deriv, control_points.shape[-1]), device=device)
-    for k in range(next_degree, next_nth_deriv):
-        result[k] = 0
-    span = find_span(evaluation_point, degree, num_control_points, knots)
-    basis_derivs = calc_basis_derivs(evaluation_point, span, degree, knots, du)
-    spanmdeg = span - degree
-    for k in range(du + 1):
-        result[k] = 0
-        for j in range(next_degree):
-            result[k] += basis_derivs[k, j] * control_points[spanmdeg + j]
-    return result
-
-def calc_derivs(
-        evaluation_point: torch.Tensor,
-        degree: int,
-        control_points: torch.Tensor,
-        control_point_weights: torch.Tensor,
-        knots: torch.Tensor,
-        nth_deriv: int = 1,
-) -> torch.Tensor:
-    """
-    Compute the first `nth_deriv` derivatives for the given NURBS
-    curve at the given evaluation points. The k-th derivative is at
-    index k, 0 <= k <= `nth_deriv`.
-    
-    Parameters
-    ----------
-    evaluation_point : torch.Tensor
-        The evaluation point of the NURBS surface.
-    degree : int 
-        The degree of the NURBS surface.
-    control_points : torch.Tensor
-        The control points of the NURBS surface.
-    control_point_weights : torch.Tensor
-        The weights of the control point.
-    knots : torch.Tensor
-        The knots of the NURBS surface.
-    nth_deriv : int = 1
-        The amount of derivatives to return.
-    
-    Returns
-    -------
-    torch.Tensor
-        The first nth derivatives for the NURBS surface at the given evaluation point.
-    """
-    dtype = control_points.dtype
-    device = control_points.device
-    next_nth_deriv = nth_deriv + 1
-
-    projected = project_control_points(control_points, control_point_weights)
-    Cwders = calc_bspline_derivs(
-        evaluation_point, degree, projected, knots, nth_deriv)
-    Aders = Cwders[:, :-1]
-    wders = Cwders[:, -1]
-    result = th.empty_like(Aders)
-    for k in th.arange(next_nth_deriv, device=device):
-        v = Aders[k]
-        for i in th.arange(1, k + 1, device=device):
-            v -= (
-                th.binomial(k.to(dtype), i.to(dtype))
-                * wders[i]
-                * result[k - i]
-            )
-        result[k] = v / wders[0]
-    return result
