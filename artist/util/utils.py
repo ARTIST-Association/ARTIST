@@ -8,6 +8,21 @@ T = TypeVar("T")
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    """
+    Computes the dot product over the batch dimensions of tensors `x` and `y`.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        First tensor.
+    y : torch.Tensor
+        Second tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        The batch dot product.
+    """
     return (x * y).sum(-1).unsqueeze(-1)
 
 
@@ -382,7 +397,7 @@ def make_structured_points(
     Returns
     -------
     Tuple[torch.Tensor, int, int]
-        Return the structured points
+        Return the structured points.
 
     """
     if rows is None or cols is None:
@@ -395,6 +410,21 @@ def _make_structured_points_from_unique(
     points: torch.Tensor,
     tolerance: float,
 ) -> Tuple[torch.Tensor, int, int]:
+    """
+    Structure the given points.
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        The points to be structured.
+    tolerance : float
+        Tolerance value.
+
+    Returns
+    -------
+    Tuple[torch.Tensor, int, int]
+        The structured points.
+    """
     x_vals = points[:, 0]
     x_vals = torch.unique(x_vals, sorted=True)
 
@@ -437,6 +467,23 @@ def _make_structured_points_from_corners(
     rows: int,
     cols: int,
 ) -> Tuple[torch.Tensor, int, int]:
+    """
+    Structure the given points.
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        The points to be structured.
+    rows : int
+        Amount of rows along which the points are structured.
+    cols : int
+        Amount of columns along which the points are structured.
+
+    Returns
+    -------
+    Tuple[torch.Tensor, int, int]
+        The structured points.
+    """
     x_vals = points[:, 0]
     y_vals = points[:, 1]
 
@@ -465,36 +512,47 @@ def _make_structured_points_from_corners(
     return structured_points, rows, cols
 
 
-def axis_angle_rotation(
-    axis: torch.Tensor,
-    angle_rad: torch.Tensor,
+def initialize_spline_eval_points_perfectly(
+    points: torch.Tensor,
+    degree_x: int,
+    degree_y: int,
+    ctrl_points: torch.Tensor,
+    ctrl_weights: torch.Tensor,
+    knots_x: torch.Tensor,
+    knots_y: torch.Tensor,
 ) -> torch.Tensor:
-    cos = torch.cos(angle_rad)
-    icos = 1 - cos
-    sin = torch.sin(angle_rad)
-    x = axis[..., 0]
-    y = axis[..., 1]
-    z = axis[..., 2]
-    axis_sq = axis**2
+    """
+    Initialize the spline evaluation points perfectly
 
-    rows = [
-        torch.stack(row, dim=-1)
-        for row in [
-            [
-                cos + axis_sq[..., 0] * icos,
-                x * y * icos - z * sin,
-                x * z * icos + y * sin,
-            ],
-            [
-                y * x * icos + z * sin,
-                cos + axis_sq[..., 1] * icos,
-                y * z * icos - x * sin,
-            ],
-            [
-                z * x * icos - y * sin,
-                z * y * icos + x * sin,
-                cos + axis_sq[..., 2] * icos,
-            ],
-        ]
-    ]
-    return torch.stack(rows, dim=1)
+    Parameters
+    ----------
+    points : torch.Tensor
+        The world points.
+    degree_x : int
+        The spline degree in x direction.
+    degree_y : int
+        The spline degree in y direction.
+    ctrl_points : torch.Tensor
+        The control points of the NURBS surface
+    ctrl_weights : torch.Tensor
+        The weights to the control points.
+    knots_x : torch.Tensor
+        The knots of the NURBS surface in x direction.
+    knots_y : torch.Tensor
+        The knots of the NURBS surface in y direction.
+
+    Returns
+    -------
+    torch.Tensor
+        The spline evaluation points.
+    """
+    eval_points, distances = nurbs.invert_points_slow(
+        points,
+        degree_x,
+        degree_y,
+        ctrl_points,
+        ctrl_weights,
+        knots_x,
+        knots_y,
+    )
+    return eval_points
