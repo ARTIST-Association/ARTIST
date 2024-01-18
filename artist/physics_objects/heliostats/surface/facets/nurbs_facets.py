@@ -252,14 +252,14 @@ class NURBS:
         )
         self.initialize_eval_points()
 
-        nurbs.plot_surface(
-            self.degree_x,
-            self.degree_y,
-            self.ctrl_points,
-            self.ctrl_weights,
-            self.knots_x,
-            self.knots_y,
-        )
+        # nurbs.plot_surface(
+        #     self.degree_x,
+        #     self.degree_y,
+        #     self.ctrl_points,
+        #     self.ctrl_weights,
+        #     self.knots_x,
+        #     self.knots_y,
+        # )
 
         # self.surface_points, self.surface_normals = self._calc_normals_and_surface()
         # print(self.surface_points.size())
@@ -318,8 +318,7 @@ class NURBS:
             The control points of the NURBS surface.
         """
         nurbs_config = self.nurbs_cfg
-        nurbs_config.defrost()
-        nurbs_config.SET_UP_WITH_KNOWLEDGE = True
+
         if nurbs_config.SET_UP_WITH_KNOWLEDGE:
             width = self.width
             height = self.height
@@ -328,8 +327,7 @@ class NURBS:
             # starting point with width and height as initially guessed.
             width = nurbs_config.WIDTH
             height = nurbs_config.HEIGHT
-        nurbs_config.SET_UP_WITH_KNOWLEDGE = False
-        nurbs_config.freeze()
+
         utils.initialize_spline_ctrl_points(
             ctrl_points,
             # We are only moved to `position_on_field` upon alignment,
@@ -342,8 +340,6 @@ class NURBS:
             width,
             height,
         )
-        # nurbs_config.defrost()
-        # nurbs_config.INITIALIZE_WITH_KNOWLEDGE = True
         if nurbs_config.INITIALIZE_WITH_KNOWLEDGE:
             if self.h_rows is None or self.h_cols is None:
                 # Higher edge factor creates more interpolated points
@@ -372,8 +368,6 @@ class NURBS:
                 self.nurbs_cfg.INITIALIZE_Z_ONLY,
                 True,
             )
-        # nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
-        # nurbs_config.freeze()
 
     def split_nurbs_params(
         self,
@@ -515,8 +509,6 @@ class NURBS:
         """
         Initialize the evaluation points of the NURBS surface.
         """
-        self.nurbs_cfg.defrost()
-        self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE = True
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
             if not self.recalc_eval_points:
                 self._eval_points = utils.initialize_spline_eval_points_perfectly(
@@ -537,8 +529,6 @@ class NURBS:
                 self.rows, self.cols, self.device
             )
             # print(self._eval_points.size())
-        self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE = False
-        self.nurbs_cfg.freeze()
 
 
 class NURBSFacetsModule(AFacetModule):
@@ -923,8 +913,8 @@ class NURBSFacetsModule(AFacetModule):
         nurbs_config.HEIGHT = height
         nurbs_config.WIDTH = width
 
-        nurbs_config.SET_UP_WITH_KNOWLEDGE = False
-        # nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
+        #nurbs_config.SET_UP_WITH_KNOWLEDGE = False
+        nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
         return nurbs_config
 
     # def _create_facet(
