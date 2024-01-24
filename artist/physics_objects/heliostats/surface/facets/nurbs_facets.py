@@ -1071,9 +1071,7 @@ class NURBSFacetsModule(AFacetModule):
             facetted_normals,
         ) = self.facetted_discrete_points_and_normals()
         # for i in range(len(facetted_discrete_points)):
-        #     if(i == 0):
-        #         facets.append([facetted_discrete_points[i] * 2, facetted_normals[i]])
-        #     else:
+        #     if(i == 0 or i == 2):
         #         facets.append([facetted_discrete_points[i], facetted_normals[i]])
         for points, normals in zip(facetted_discrete_points, facetted_normals):
             facets.append([points, normals])
