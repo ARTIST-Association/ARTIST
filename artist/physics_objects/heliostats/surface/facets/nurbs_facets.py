@@ -913,7 +913,7 @@ class NURBSFacetsModule(AFacetModule):
         nurbs_config.HEIGHT = height
         nurbs_config.WIDTH = width
 
-        #nurbs_config.SET_UP_WITH_KNOWLEDGE = False
+        # nurbs_config.SET_UP_WITH_KNOWLEDGE = False
         nurbs_config.INITIALIZE_WITH_KNOWLEDGE = False
         return nurbs_config
 

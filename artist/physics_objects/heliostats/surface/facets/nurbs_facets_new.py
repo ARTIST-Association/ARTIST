@@ -25,29 +25,26 @@ HeliostatParams = Tuple[
     Optional[Dict[str, Any]],  # params
 ]
 
+
 def get_position(
-        cfg: CfgNode,
-        dtype: torch.dtype,
-        device: torch.device,
+    cfg: CfgNode,
+    dtype: torch.dtype,
+    device: torch.device,
 ) -> torch.Tensor:
     position_on_field: List[float] = cfg.POSITION_ON_FIELD
     return torch.tensor(position_on_field, dtype=dtype, device=device)
 
 
 def load_heliostat_position_file(
-        json_file_path: str,
-        heliostat_name: str,
-) -> Tuple[
-    List[float],
-    List[List[float]],
-    List[List[float]],
-    List[List[float]],
-]:
-    with open(json_file_path, 'r') as f:
-        data = json.load(f)['data']
-    values = next(filter(lambda x: x['Name'] == heliostat_name, data), None)
-    assert values is not None, \
-        f'heliostat {heliostat_name} not found in {json_file_path}'
+    json_file_path: str,
+    heliostat_name: str,
+) -> Tuple[List[float], List[List[float]], List[List[float]], List[List[float]],]:
+    with open(json_file_path, "r") as f:
+        data = json.load(f)["data"]
+    values = next(filter(lambda x: x["Name"] == heliostat_name, data), None)
+    assert (
+        values is not None
+    ), f"heliostat {heliostat_name} not found in {json_file_path}"
     # name = values["Name"]
     position = values["Position"].item()
     facet_positions = values["FacetPositions"].item()
@@ -55,25 +52,26 @@ def load_heliostat_position_file(
     facet_spans_e = values["FacetSpansE"].item()
     return position, facet_positions, facet_spans_n, facet_spans_e
 
+
 def _broadcast_spans(
-        spans: List[List[float]],
-        to_length: int,
+    spans: List[List[float]],
+    to_length: int,
 ) -> List[List[float]]:
     if len(spans) == to_length:
         return spans
 
     assert len(spans) == 1, (
-        'will only broadcast spans of length 1. If you did not intend '
-        'to broadcast, make sure there is the same amount of facet '
-        'positions and spans.'
+        "will only broadcast spans of length 1. If you did not intend "
+        "to broadcast, make sure there is the same amount of facet "
+        "positions and spans."
     )
     return spans * to_length
 
 
 def get_facet_params(
-        cfg: CfgNode,
-        dtype: torch.dtype,
-        device: torch.device,
+    cfg: CfgNode,
+    dtype: torch.dtype,
+    device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     positions: List[List[float]] = utils.with_outer_list(cfg.FACETS.POSITIONS)
     spans_n: List[List[float]] = utils.with_outer_list(cfg.FACETS.SPANS_N)
@@ -86,9 +84,10 @@ def get_facet_params(
     )
     return position, spans_n, spans_e
 
+
 def ideal_surface(
-        ideal_configs: CfgNode,
-        device: torch.device,
+    ideal_configs: CfgNode,
+    device: torch.device,
 ) -> HeliostatParams:
     """Return an ideally shaped heliostat lying flat on the ground."""
     cfg = ideal_configs
@@ -97,12 +96,12 @@ def ideal_surface(
     column = torch.arange(columns + 1, device=device)
     row = torch.arange(cfg.ROWS + 1, device=device)
 
-    h_x = (row/cfg.ROWS * cfg.HEIGHT) - (cfg.HEIGHT / 2)
+    h_x = (row / cfg.ROWS * cfg.HEIGHT) - (cfg.HEIGHT / 2)
     # Use points at centers of grid squares.
     h_x = h_x[:-1] + (h_x[1:] - h_x[:-1]) / 2
     h_x = torch.tile(h_x, (columns,))
     # heliostat y position
-    h_y = (column/columns * cfg.WIDTH) - (cfg.WIDTH / 2)
+    h_y = (column / columns * cfg.WIDTH) - (cfg.WIDTH / 2)
     # Use points at centers of grid squares.
     h_y = h_y[:-1] + (h_y[1:] - h_y[:-1]) / 2
     h_y = torch.tile(h_y.unsqueeze(-1), (1, cfg.ROWS)).ravel()
@@ -142,8 +141,10 @@ def ideal_surface(
         params,
     )
 
+
 def real_surface(
-        real_configs: CfgNode, device: torch.device,
+    real_configs: CfgNode,
+    device: torch.device,
 ) -> HeliostatParams:
     """Return a heliostat loaded from deflectometric data."""
     cfg = real_configs
@@ -250,41 +251,48 @@ def real_surface(
     h_ideal = []
     if not cfg.ZS_PATH:
         if cfg.VERBOSE:
-            print(
-                "No path to heliostat surface values found. "
-                "Calculate values..."
-            )
+            print("No path to heliostat surface values found. " "Calculate values...")
         zs_list = []
-    
+
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
-        h_normal_vecs.append(torch.tensor(
-            directions[f][::step_size],
-            dtype=dtype,
-            device=device,
-        ))
-        h_ideal_vecs.append(torch.tensor(
-            ideal_normal_vecs[f][::step_size],
-            dtype=dtype,
-            device=device,
-        ))
-        h.append(torch.tensor(
-            ideal_positions[f][::step_size],
-            dtype=dtype,
-            device=device,
-        ))
+        h_normal_vecs.append(
+            torch.tensor(
+                directions[f][::step_size],
+                dtype=dtype,
+                device=device,
+            )
+        )
+        h_ideal_vecs.append(
+            torch.tensor(
+                ideal_normal_vecs[f][::step_size],
+                dtype=dtype,
+                device=device,
+            )
+        )
+        h.append(
+            torch.tensor(
+                ideal_positions[f][::step_size],
+                dtype=dtype,
+                device=device,
+            )
+        )
         if not cfg.ZS_PATH:
-            zs_list.append(utils.deflec_facet_zs_many(
-                h[-1],
-                h_normal_vecs[-1],
-                h_ideal_vecs[-1],
-                num_samples=16,
-            ))
-        h_ideal.append(torch.tensor(
-            ideal_positions[f][::step_size],
-            dtype=dtype,
-            device=device,
-        ))
+            zs_list.append(
+                utils.deflec_facet_zs_many(
+                    h[-1],
+                    h_normal_vecs[-1],
+                    h_ideal_vecs[-1],
+                    num_samples=16,
+                )
+            )
+        h_ideal.append(
+            torch.tensor(
+                ideal_positions[f][::step_size],
+                dtype=dtype,
+                device=device,
+            )
+        )
 
     h_normal_vecs: torch.Tensor = torch.cat(h_normal_vecs, dim=0)
     h_ideal_vecs: torch.Tensor = torch.cat(h_ideal_vecs, dim=0)
@@ -317,11 +325,11 @@ def real_surface(
     params = None
 
     # Overwrite facet parameters if we **really** want to.
-    if hasattr(cfg.FACETS, '_POSITIONS'):
+    if hasattr(cfg.FACETS, "_POSITIONS"):
         facet_positions = cfg.FACETS._POSITIONS
-    if hasattr(cfg.FACETS, '_SPANS_N'):
+    if hasattr(cfg.FACETS, "_SPANS_N"):
         facet_spans_n = cfg.FACETS._SPANS_N
-    if hasattr(cfg.FACETS, '_SPANS_E'):
+    if hasattr(cfg.FACETS, "_SPANS_E"):
         facet_spans_e = cfg.FACETS._SPANS_E
 
     return (
@@ -341,6 +349,7 @@ def real_surface(
         # powers,
     )
 
+
 class NURBS:
     def __init__(
         self,
@@ -352,18 +361,16 @@ class NURBS:
         width: int,
         height: int,
     ) -> None:
-        
         self.device = device
         self.width = width
         self.height = height
-        
+
         self.nurbs_cfg = nurbs_config
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
             self.nurbs_cfg.freeze()
 
-        self._fix_spline_ctrl_weights: bool = \
-            self.nurbs_cfg.FIX_SPLINE_CTRL_WEIGHTS
+        self._fix_spline_ctrl_weights: bool = self.nurbs_cfg.FIX_SPLINE_CTRL_WEIGHTS
         self._fix_spline_knots: bool = self.nurbs_cfg.FIX_SPLINE_KNOTS
         self._recalc_eval_points: bool = self.nurbs_cfg.RECALCULATE_EVAL_POINTS
 
@@ -407,18 +414,17 @@ class NURBS:
         #     self.knots_x,
         #     self.knots_y,
         # )
-    
+
     def split_nurbs_params(
-            self,
-            ctrl_weights: torch.Tensor,
-            knots_x: torch.Tensor,
-            knots_y: torch.Tensor,
+        self,
+        ctrl_weights: torch.Tensor,
+        knots_x: torch.Tensor,
+        knots_y: torch.Tensor,
     ) -> None:
         with torch.no_grad():
             self.set_ctrl_weights(ctrl_weights)
             self.set_knots_x(knots_x)
             self.set_knots_y(knots_y)
-
 
     def set_ctrl_points(self, ctrl_points: torch.Tensor) -> None:
         with torch.no_grad():
@@ -427,30 +433,30 @@ class NURBS:
             first_row = [
                 [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
                 for row_slice in [
-                        ctrl_points[:1, :1],
-                        ctrl_points[:1, 1:-1],
-                        ctrl_points[:1, -1:],
+                    ctrl_points[:1, :1],
+                    ctrl_points[:1, 1:-1],
+                    ctrl_points[:1, -1:],
                 ]
             ]
             inner_rows = [
                 [rows_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
                 for rows_slice in [
-                        ctrl_points[1:-1, :1],
-                        ctrl_points[1:-1, 1:-1],
-                        ctrl_points[1:-1, -1:],
+                    ctrl_points[1:-1, :1],
+                    ctrl_points[1:-1, 1:-1],
+                    ctrl_points[1:-1, -1:],
                 ]
             ]
             last_row = [
                 [row_slice[:, :, dim].unsqueeze(-1) for dim in range(3)]
                 for row_slice in [
-                        ctrl_points[-1:, :1],
-                        ctrl_points[-1:, 1:-1],
-                        ctrl_points[-1:, -1:],
+                    ctrl_points[-1:, :1],
+                    ctrl_points[-1:, 1:-1],
+                    ctrl_points[-1:, -1:],
                 ]
             ]
 
             self._ctrl_points_splits = [first_row, inner_rows, last_row]
-            #assert (self.ctrl_points == ctrl_points).all()
+            # assert (self.ctrl_points == ctrl_points).all()
 
     def set_ctrl_weights(self, ctrl_weights: torch.Tensor) -> None:
         with torch.no_grad():
@@ -472,23 +478,23 @@ class NURBS:
             ]
 
             self._ctrl_weights_splits = [first_row, inner_rows, last_row]
-            #assert (ctrl_weights == ctrl_weights).all()
+            # assert (ctrl_weights == ctrl_weights).all()
 
     def set_knots_x(self, knots_x: torch.Tensor) -> None:
         with torch.no_grad():
             self._knots_x_splits = self._split_knots(knots_x)
-            #assert (self.knots_x == knots_x).all()
+            # assert (self.knots_x == knots_x).all()
 
     def set_knots_y(self, knots_y: torch.Tensor) -> None:
         with torch.no_grad():
             self._knots_y_splits = self._split_knots(knots_y)
-            #assert (self.knots_y == knots_y).all()
+            # assert (self.knots_y == knots_y).all()
 
     @staticmethod
     def _split_knots(knots: torch.Tensor) -> List[torch.Tensor]:
         with torch.no_grad():
             return [knots[:1], knots[1:-1], knots[-1:]]
-        
+
     def initialize_control_points(self, ctrl_points: torch.Tensor) -> None:
         nurbs_config = self.nurbs_cfg
 
@@ -507,7 +513,7 @@ class NURBS:
             # so initialize at the origin where the heliostat's discrete
             # points are as well.
             torch.tensor([0, 0, 0]),
-            #torch.zeros_like(self.position_on_field),
+            # torch.zeros_like(self.position_on_field),
             self.rows,
             self.cols,
             width,
@@ -545,23 +551,23 @@ class NURBS:
     def initialize_eval_points(self) -> None:
         if self.nurbs_cfg.SET_UP_WITH_KNOWLEDGE:
             if not self.recalc_eval_points:
-                self._eval_points = \
-                    utils.initialize_spline_eval_points_perfectly(
-                        self._orig_world_points,
-                        self.degree_x,
-                        self.degree_y,
-                        self.ctrl_points,
-                        self.ctrl_weights,
-                        self.knots_x,
-                        self.knots_y,
-                    )
+                self._eval_points = utils.initialize_spline_eval_points_perfectly(
+                    self._orig_world_points,
+                    self.degree_x,
+                    self.degree_y,
+                    self.ctrl_points,
+                    self.ctrl_weights,
+                    self.knots_x,
+                    self.knots_y,
+                )
         else:
             # Unless we change the knots, we don't need to recalculate
             # as we simply distribute the points uniformly.
             self._recalc_eval_points = False
             self._eval_points = utils.initialize_spline_eval_points(
-                self.rows, self.cols, self.device)
-    
+                self.rows, self.cols, self.device
+            )
+
     @property
     def recalc_eval_points(self) -> bool:
         return self._recalc_eval_points
@@ -585,19 +591,20 @@ class NURBS:
             eval_points = self._eval_points
         return eval_points
 
+
 class NURBSFacetsModule(AFacetModule):
     def __init__(
-            self,
-            surface_config: CfgNode,
-            nurbs_config: CfgNode,
-            device: torch.device,
-            setup_params: bool = True,
-            receiver_center: Union[torch.Tensor, List[float], None] = None,
-            sun_directions: Union[
-                torch.Tensor,
-                List[List[float]],
-                None,
-            ] = None,
+        self,
+        surface_config: CfgNode,
+        nurbs_config: CfgNode,
+        device: torch.device,
+        setup_params: bool = True,
+        receiver_center: Union[torch.Tensor, List[float], None] = None,
+        sun_directions: Union[
+            torch.Tensor,
+            List[List[float]],
+            None,
+        ] = None,
     ) -> None:
         super().__init__()
 
@@ -614,26 +621,26 @@ class NURBSFacetsModule(AFacetModule):
 
         cfg_width: float = self.nurbs_cfg.WIDTH
         if isinstance(cfg_width, str):
-            if cfg_width != 'inherit':
+            if cfg_width != "inherit":
                 raise ValueError(f'unknown width config "{cfg_width}"')
         else:
             self.width = cfg_width
 
         cfg_height: float = self.nurbs_cfg.HEIGHT
         if isinstance(cfg_height, str):
-            if cfg_height != 'inherit':
+            if cfg_height != "inherit":
                 raise ValueError(f'unknown height config "{cfg_height}"')
         else:
             self.height = cfg_height
 
-        #diff
-        cfg_position_on_field: Union[List[float], str] = \
-            self.nurbs_cfg.POSITION_ON_FIELD
+        # diff
+        cfg_position_on_field: Union[
+            List[float], str
+        ] = self.nurbs_cfg.POSITION_ON_FIELD
         if isinstance(cfg_position_on_field, str):
-            if cfg_position_on_field != 'inherit':
+            if cfg_position_on_field != "inherit":
                 raise ValueError(
-                    f'unknown position on field config '
-                    f'"{cfg_position_on_field}"'
+                    f"unknown position on field config " f'"{cfg_position_on_field}"'
                 )
         else:
             self.position_on_field = torch.tensor(
@@ -642,14 +649,13 @@ class NURBSFacetsModule(AFacetModule):
 
         cfg_aim_point: Union[List[float], str, None] = self.nurbs_cfg.AIM_POINT
         if isinstance(cfg_aim_point, str):
-            if cfg_aim_point != 'inherit':
+            if cfg_aim_point != "inherit":
                 raise ValueError(f'unknown aim point config "{cfg_aim_point}"')
             builder_fn, aim_point_cfg = self.select_surface_builder(self, self.cfg)
             maybe_aim_point: Optional[torch.Tensor] = receiver_center
         else:
-            if (
-                    receiver_center is not None
-                    and not isinstance(receiver_center, torch.Tensor)
+            if receiver_center is not None and not isinstance(
+                receiver_center, torch.Tensor
             ):
                 receiver_center = torch.tensor(
                     receiver_center,
@@ -660,22 +666,19 @@ class NURBSFacetsModule(AFacetModule):
             maybe_aim_point = receiver_center
         self.aim_point = self._get_aim_point(aim_point_cfg, maybe_aim_point)
 
-
-        #diff
-        cfg_disturbance_angles: Union[List[float], str] = \
-            self.nurbs_cfg.DISTURBANCE_ROT_ANGLES
+        # diff
+        cfg_disturbance_angles: Union[
+            List[float], str
+        ] = self.nurbs_cfg.DISTURBANCE_ROT_ANGLES
         if isinstance(cfg_disturbance_angles, str):
-            if cfg_disturbance_angles != 'inherit':
+            if cfg_disturbance_angles != "inherit":
                 raise ValueError(
-                    f'unknown disturbance angles config '
-                    f'"{cfg_disturbance_angles}"'
+                    f"unknown disturbance angles config " f'"{cfg_disturbance_angles}"'
                 )
         else:
             # Radians
-            self.disturbance_angles = self._get_disturbance_angles(
-                self.nurbs_cfg)
-            
-    
+            self.disturbance_angles = self._get_disturbance_angles(self.nurbs_cfg)
+
         (
             heliostat_position,
             positions,
@@ -692,9 +695,9 @@ class NURBSFacetsModule(AFacetModule):
             params,
         ) = builder_fn(aim_point_cfg, self.device)
 
-        #print(positions)
+        # print(positions)
 
-        #diff
+        # diff
         # facets = self._create_facets(
         #     self.cfg,
         #     self.nurbs_cfg,
@@ -702,10 +705,8 @@ class NURBSFacetsModule(AFacetModule):
         # )
         # self.facets = NURBSFacets(
         #     self, cast(List[AbstractNURBSHeliostat], facets))
-            
-        self.facets = self._create_nurbs_facets(
-            self.nurbs_cfg
-        )
+
+        self.facets = self._create_nurbs_facets(self.nurbs_cfg)
 
         (
             self.facetted_discrete_points,
@@ -724,7 +725,6 @@ class NURBSFacetsModule(AFacetModule):
             self.facetted_discrete_points, 4
         )
         self.facetted_normals = torch.tensor_split(self.facetted_normals, 4)
-
 
     def _calc_normals_and_surface(
         self,
@@ -748,33 +748,29 @@ class NURBSFacetsModule(AFacetModule):
         )
         return surface_points, normals
 
-
     @staticmethod
-    def _select_surface_builder(cfg: CfgNode) -> Tuple[
-            Callable[[CfgNode, torch.device], HeliostatParams],
-            str,
-    ]:
+    def _select_surface_builder(
+        cfg: CfgNode,
+    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], str,]:
         shape = cfg.SHAPE.lower()
-        if shape == 'ideal' or shape == 'nurbs':
-            return ideal_surface, 'IDEAL'
-        elif shape == 'real':
-            return real_surface, 'DEFLECT_DATA'
-        raise ValueError('unknown surface shape')
+        if shape == "ideal" or shape == "nurbs":
+            return ideal_surface, "IDEAL"
+        elif shape == "real":
+            return real_surface, "DEFLECT_DATA"
+        raise ValueError("unknown surface shape")
 
     @staticmethod
-    def select_surface_builder(self, cfg: CfgNode) -> Tuple[
-            Callable[[CfgNode, torch.device], HeliostatParams],
-            CfgNode,
-    ]:
+    def select_surface_builder(
+        self, cfg: CfgNode
+    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
         builder_fn, cfg_key = self._select_surface_builder(cfg)
         h_cfg = getattr(cfg, cfg_key)
         return builder_fn, h_cfg
-    
 
     def _get_aim_point(
-            self,
-            cfg: CfgNode,
-            maybe_aim_point: Optional[torch.Tensor],
+        self,
+        cfg: CfgNode,
+        maybe_aim_point: Optional[torch.Tensor],
     ) -> torch.Tensor:
         cfg_aim_point: Optional[List[float]] = cfg.AIM_POINT
         if cfg_aim_point is not None:
@@ -786,26 +782,27 @@ class NURBSFacetsModule(AFacetModule):
         elif maybe_aim_point is not None:
             aim_point = maybe_aim_point
         else:
-            raise ValueError('no aim point was supplied')
+            raise ValueError("no aim point was supplied")
         return aim_point
-    
 
     def _get_disturbance_angles(self, h_cfg: CfgNode) -> List[torch.Tensor]:
         angles: List[float] = h_cfg.DISTURBANCE_ROT_ANGLES
         return [
-            torch.deg2rad(torch.tensor(
-                angle,
-                dtype=self.aim_point.dtype,
-                device=self.device,
-            ))
+            torch.deg2rad(
+                torch.tensor(
+                    angle,
+                    dtype=self.aim_point.dtype,
+                    device=self.device,
+                )
+            )
             for angle in angles
         ]
-    
+
     @staticmethod
     def _facet_nurbs_config(
-            nurbs_config: CfgNode,
-            span_n: torch.Tensor,
-            span_e: torch.Tensor,
+        nurbs_config: CfgNode,
+        span_n: torch.Tensor,
+        span_e: torch.Tensor,
     ) -> CfgNode:
         height = (torch.linalg.norm(span_n) * 2).item()
         width = (torch.linalg.norm(span_e) * 2).item()
@@ -816,7 +813,6 @@ class NURBSFacetsModule(AFacetModule):
         nurbs_config.HEIGHT = height
         nurbs_config.WIDTH = width
         return nurbs_config
-    
 
     def _create_facet(
         self,

@@ -116,9 +116,9 @@ def load_bpro(
                     facetHeader_data[9],
                 ]
             )
-            
+
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
-  
+
             facet_positions.append(facet_pos)
 
             facet_spans_n.append(facet_vec_x.tolist())
@@ -141,7 +141,7 @@ def load_bpro(
         # However to keep consistent in our program we cast the west direction to east direction.
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
-    
+
     # print(positions)
     # print(facet_positions)
     # print(facet_spans_e)
@@ -157,40 +157,39 @@ def load_bpro(
     # ax.scatter(np.array(positions)[1, :, 0], np.array(positions)[1, :, 1], np.array(positions)[1, :, 2], alpha=0.01)
     # ax.scatter(np.array(positions)[2, :, 0], np.array(positions)[2, :, 1], np.array(positions)[2, :, 2], alpha=0.01)
     # ax.scatter(np.array(positions)[3, :, 0], np.array(positions)[3, :, 1], np.array(positions)[3, :, 2], alpha=0.01)
-    
+
     # ax.scatter(np.array(facet_positions)[0][0], np.array(facet_positions)[0][1], np.array(facet_positions)[0][2])
     # ax.scatter(np.array(facet_positions)[1][0], np.array(facet_positions)[1][1], np.array(facet_positions)[1][2])
     # ax.scatter(np.array(facet_positions)[2][0], np.array(facet_positions)[2][1], np.array(facet_positions)[2][2])
     # ax.scatter(np.array(facet_positions)[3][0], np.array(facet_positions)[3][1], np.array(facet_positions)[3][2])
 
-    #ax.quiver(np.array(positions)[0, :, 0], np.array(positions)[0, :, 1], np.array(positions)[0, :, 2], np.array(ideal_normal_vecs)[0, :, 0], np.array(ideal_normal_vecs)[0, :, 1], np.array(ideal_normal_vecs)[0, :, 2], arrow_length_ratio=0, length=600)
-    #ax.quiver(np.array(positions)[1, :, 0], np.array(positions)[1, :, 1], np.array(positions)[1, :, 2], np.array(ideal_normal_vecs)[1, :, 0], np.array(ideal_normal_vecs)[1, :, 1], np.array(ideal_normal_vecs)[1, :, 2], arrow_length_ratio=0, length=600)
-    #ax.quiver(np.array(positions)[2, :, 0], np.array(positions)[2, :, 1], np.array(positions)[2, :, 2], np.array(ideal_normal_vecs)[2, :, 0], np.array(ideal_normal_vecs)[2, :, 1], np.array(ideal_normal_vecs)[2, :, 2], arrow_length_ratio=0, length=600)
-    #ax.quiver(np.array(positions)[3, :, 0], np.array(positions)[3, :, 1], np.array(positions)[3, :, 2], np.array(ideal_normal_vecs)[3, :, 0], np.array(ideal_normal_vecs)[3, :, 1], np.array(ideal_normal_vecs)[3, :, 2], arrow_length_ratio=0, length=600)
-
+    # ax.quiver(np.array(positions)[0, :, 0], np.array(positions)[0, :, 1], np.array(positions)[0, :, 2], np.array(ideal_normal_vecs)[0, :, 0], np.array(ideal_normal_vecs)[0, :, 1], np.array(ideal_normal_vecs)[0, :, 2], arrow_length_ratio=0, length=600)
+    # ax.quiver(np.array(positions)[1, :, 0], np.array(positions)[1, :, 1], np.array(positions)[1, :, 2], np.array(ideal_normal_vecs)[1, :, 0], np.array(ideal_normal_vecs)[1, :, 1], np.array(ideal_normal_vecs)[1, :, 2], arrow_length_ratio=0, length=600)
+    # ax.quiver(np.array(positions)[2, :, 0], np.array(positions)[2, :, 1], np.array(positions)[2, :, 2], np.array(ideal_normal_vecs)[2, :, 0], np.array(ideal_normal_vecs)[2, :, 1], np.array(ideal_normal_vecs)[2, :, 2], arrow_length_ratio=0, length=600)
+    # ax.quiver(np.array(positions)[3, :, 0], np.array(positions)[3, :, 1], np.array(positions)[3, :, 2], np.array(ideal_normal_vecs)[3, :, 0], np.array(ideal_normal_vecs)[3, :, 1], np.array(ideal_normal_vecs)[3, :, 2], arrow_length_ratio=0, length=600)
 
     # ax.quiver(np.array(facet_positions)[0][0], np.array(facet_positions)[0][1], np.array(facet_positions)[0][2], normals[0][0], normals[0][1], normals[0][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[1][0], np.array(facet_positions)[1][1], np.array(facet_positions)[1][2], normals[1][0], normals[1][1], normals[1][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[2][0], np.array(facet_positions)[2][1], np.array(facet_positions)[2][2], normals[2][0], normals[2][1], normals[2][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[3][0], np.array(facet_positions)[3][1], np.array(facet_positions)[3][2], normals[3][0], normals[3][1], normals[3][2], arrow_length_ratio=0, length=600)
 
-    #cross product
+    # cross product
     # ax.quiver(np.array(facet_positions)[0][0], np.array(facet_positions)[0][1], np.array(facet_positions)[0][2], normals[3][0], normals[3][1], normals[3][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[1][0], np.array(facet_positions)[1][1], np.array(facet_positions)[1][2], normals[1][0], normals[1][1], normals[1][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[2][0], np.array(facet_positions)[2][1], np.array(facet_positions)[2][2], normals[2][0], normals[2][1], normals[2][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[3][0], np.array(facet_positions)[3][1], np.array(facet_positions)[3][2], normals[0][0], normals[0][1], normals[0][2], arrow_length_ratio=0, length=600)
-    
-    #ideal normals
+
+    # ideal normals
     # ax.quiver(np.array(facet_positions)[0][0], np.array(facet_positions)[0][1], np.array(facet_positions)[0][2], normals[1][0], normals[1][1], normals[1][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[1][0], np.array(facet_positions)[1][1], np.array(facet_positions)[1][2], normals[3][0], normals[3][1], normals[3][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[2][0], np.array(facet_positions)[2][1], np.array(facet_positions)[2][2], normals[0][0], normals[0][1], normals[0][2], arrow_length_ratio=0, length=600)
     # ax.quiver(np.array(facet_positions)[3][0], np.array(facet_positions)[3][1], np.array(facet_positions)[3][2], normals[2][0], normals[2][1], normals[2][2], arrow_length_ratio=0, length=600)
-    
-    # ax.axes.set_xlim3d(left=-3, right=3) 
-    # ax.axes.set_ylim3d(bottom=-3, top=3) 
-    # ax.axes.set_zlim3d(bottom=0.00, top=200) 
-    
-    #plt.show()
+
+    # ax.axes.set_xlim3d(left=-3, right=3)
+    # ax.axes.set_ylim3d(bottom=-3, top=3)
+    # ax.axes.set_zlim3d(bottom=0.00, top=200)
+
+    # plt.show()
 
     return (
         hel_pos,
@@ -203,7 +202,6 @@ def load_bpro(
         width,
         height,
     )
-
 
 
 def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:

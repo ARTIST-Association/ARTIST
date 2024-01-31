@@ -13,6 +13,6 @@ finally:
     del get_distribution, DistributionNotFound
 
 if "Windows" not in platform.system():
-    ARTIST_ROOT = '/'.join(__file__.split('/')[:-2])
+    ARTIST_ROOT = "/".join(__file__.split("/")[:-2])
 else:
-    ARTIST_ROOT = '\\'.join(__file__.split('\\')[:-2])
+    ARTIST_ROOT = "\\".join(__file__.split("\\")[:-2])
