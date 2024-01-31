@@ -16,6 +16,7 @@ class AKinematicModule(AModule):
         super(AKinematicModule, self).__init__()
         self._position = position
 
+    # data_point_tensor = tensor([ax1, ax2, sp_e, sp_n, sp_u, ap_e, ap_n, ap_u])
     def computeOrientation(
             self, data_point_tensor: torch.Tensor
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
@@ -33,7 +34,7 @@ class AKinematicModule(AModule):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must Be Overridden!")
-
+    # data_point_tensor = tensor([ax1, ax2, sp_e, sp_n, sp_u, ap_e, ap_n, ap_u])
     def computeReflection(self, data_point_tensor: torch.Tensor) -> torch.Tensor:
         """
         Compute the aimpoints starting from the orientation of the heliostat.

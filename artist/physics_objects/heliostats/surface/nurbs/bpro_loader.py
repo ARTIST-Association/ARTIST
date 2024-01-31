@@ -48,7 +48,7 @@ def load_bpro(
     float,
 ]:
     """
-    Load a bpro file and extract information from it.
+    Load a bpro (heliostat) file and extract information from it.
 
     Parameters
     ----------
