@@ -3,8 +3,8 @@ from typing import Tuple
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.module import AModule
 
 

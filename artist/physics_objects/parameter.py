@@ -1,16 +1,18 @@
+from typing import Union
+
 import torch
 from typing import Union
 
 
 class AParameter:
-    NAME = "<PARAMETER_NAME>"
+    name = "<PARAMETER_NAME>"
 
     def __init__(
         self,
         value: Union[torch.Tensor, float],
         tolerance: Union[torch.Tensor, float] = None,
         distort: bool = False,
-        requires_grad: bool =False,
+        requires_grad: bool = False,
     ):
         self.initial_value = (
             value if isinstance(value, torch.Tensor) else torch.tensor(value)
@@ -30,4 +32,4 @@ class AParameter:
             self.distort()
 
     def distort(self):
-        raise NotImplementedError("Must override")
+        raise NotImplementedError("Must override.")

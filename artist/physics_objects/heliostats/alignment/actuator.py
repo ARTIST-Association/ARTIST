@@ -12,7 +12,8 @@ class ActuatorModule(AModule):
     The actuator is parametrized by 5 parameters:
     - increment: stroke length change per motor step
     - initial_stroke_length: stroke length for a motor step of 0
-    - actuator_offset: offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot
+    - actuator_offset: offset between the linear actuator's pivoting point and the point around which the actuator is
+    allowed to pivot
     - joint_radius: the actuator's pivoting radius
     - phi_0 : the angle the actuator introduces to the manipulated coordinate system at the initial stroke length
 
@@ -22,6 +23,14 @@ class ActuatorModule(AModule):
     """
 
     class DevRotationParameter(AParameter):
+        """
+        Attributes
+        ----------
+
+        Methods
+        -------
+        """
+
         def __init__(
                 self,
                 name,
@@ -31,7 +40,7 @@ class ActuatorModule(AModule):
                 distort: bool = False,
         ):
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     class DevPercentageParameter(AParameter):
         def __init__(
@@ -43,7 +52,7 @@ class ActuatorModule(AModule):
                 distort: bool = False,
         ):
             super().__init__(value, tolerance, distort, requires_grad)
-            self.NAME = name
+            self.name = name
 
     DEV_PARAMETERS = {
         "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
@@ -92,10 +101,10 @@ class ActuatorModule(AModule):
         self.parameter_normalizer.register_parameter(parameter)
 
         self.register_parameter(
-            parameter.NAME,
+            parameter.name,
             torch.nn.Parameter(
                 self.parameter_normalizer.get_normalized_parameter(
-                    parameter.NAME, parameter.initial_value
+                    parameter.name, parameter.initial_value
                 ),
                 parameter.requires_grad,
             ),
@@ -162,10 +171,14 @@ class ActuatorModule(AModule):
             self._actuator_offset() ** 2 + self._joint_radius() ** 2 - calc_step_1
         )
         actuator_steps = (
-                                 stroke_length - self._initial_stroke_length()
-                         ) * self._increment()
+            stroke_length - self._initial_stroke_length()
+        ) * self._increment()
         return actuator_steps
 
-    def forward(self, actuator_pos: torch.Tensor):
+    def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+        """
+        :param actuator_pos:
+        :return:
+        """
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         return self._steps_to_angles(actuator_pos=actuator_pos)
