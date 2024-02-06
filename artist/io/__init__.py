@@ -1,5 +1,5 @@
 """
-This package bundles all classes that are used for io in ARTIST.
+This package bundles all classes that are used for IO in ARTIST.
 """
 
 from artist.io.datapoint import HeliostatDataPointLabel, HeliostatDataPoint

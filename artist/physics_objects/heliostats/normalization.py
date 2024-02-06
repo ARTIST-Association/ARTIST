@@ -31,21 +31,6 @@ class ANormalization:
     def denormalize(
         _, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Denormailze a parameters value.
-
-        Parameters
-        ----------
-        parameter : AParameter
-            The parameter to be denormalized.
-        value : torch.Tensor
-            The value of the parameter before denormalization.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called (abstract base class method).
-        """
         raise NotImplementedError()
 
 
@@ -186,14 +171,6 @@ class ParameterNormalizer:
             raise NotImplementedError()
 
     def register_parameter(self, parameter: AParameter) -> None:
-        """
-        Add parameter to the module, register it.
-
-        Parameters
-        ----------
-        parameter : AParameter
-            name of the parameter to be registered.
-        """
         self._parameters[parameter.NAME] = parameter
 
     def get_denormalized_parameter(
