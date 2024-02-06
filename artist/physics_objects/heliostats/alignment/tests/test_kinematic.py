@@ -160,5 +160,4 @@ def test_compute_orientation_from_aimpoint(
         # kinematic_model_fixture parameter
         kinematic_model_fixture
     ).compute_orientation_from_aimpoint(datapoints[datapoint_index])
-    print(orientation_matrix)
     torch.testing.assert_close(orientation_matrix[0], expected)
