@@ -77,8 +77,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1, 0, 0, 0],
-                    [0, -1 / math.sqrt(2), -1 / math.sqrt(2), 0],
                     [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -88,9 +88,9 @@ def datapoints():
             "kinematic_model",
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), 1 / math.sqrt(2), 0, 0],
-                    [1 / math.sqrt(2), -1 / math.sqrt(2), 0, 0],
-                    [0, 0, -1, 0],
+                    [1 / math.sqrt(2), 0, 1 / math.sqrt(2), 0],
+                    [1 / math.sqrt(2), 0, -1 / math.sqrt(2), 0],
+                    [0, 1, 0, 0],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -101,8 +101,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -1.0, 0.0, 0.0],
                     [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -112,9 +112,9 @@ def datapoints():
             "kinematic_model",
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                    [-1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
+                    [1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                    [-1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -125,8 +125,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 0.0],
                     [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
+                    [0.0, math.cos(math.pi / 8), math.sin(math.pi / 8), 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -136,10 +136,10 @@ def datapoints():
             "kinematic_model2",
             torch.tensor(
                 [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 1.0],
-                    [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [1, 0, 0, 0],
+                    [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
+                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
+                    [0, 0, 0, 1],
                 ]
             ),
         ),
@@ -160,4 +160,5 @@ def test_compute_orientation_from_aimpoint(
         # kinematic_model_fixture parameter
         kinematic_model_fixture
     ).compute_orientation_from_aimpoint(datapoints[datapoint_index])
+    print(orientation_matrix)
     torch.testing.assert_close(orientation_matrix[0], expected)
