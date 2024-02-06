@@ -116,7 +116,7 @@ class AlignmentModule(AModule):
         torch.Tensor
             The orientation matrix.
         """
-        return self.kinematicModel.compute_orientation_from_aimpoint(datapoint)
+        return self.kinematic_model.compute_orientation_from_aimpoint(datapoint)
     
     def heliostat_coord_system(
             self,
