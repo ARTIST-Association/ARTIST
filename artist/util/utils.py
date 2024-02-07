@@ -1,7 +1,8 @@
 import math
 from typing import List, Optional, Tuple, TypeVar, Union, cast
 import torch
-from ..physics_objects.heliostats.surface.nurbs import nurbs
+
+from artist.physics_objects.heliostats.surface.nurbs import nurbs
 
 # We would like to say that T can be everything but a list.
 T = TypeVar("T")
