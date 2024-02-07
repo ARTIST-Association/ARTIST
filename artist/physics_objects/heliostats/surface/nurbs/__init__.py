@@ -1,9 +1,8 @@
-
-from .....util import (
+from artist.util import (
     utils,
 )
 
-from ..nurbs import (
+from artist.physics_objects.heliostats.surface.nurbs import (
     nurbs,
 )
 
