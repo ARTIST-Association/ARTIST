@@ -79,28 +79,28 @@ def real_surface(
         else get_position(cfg, dtype, device)
     )
 
-    h_normal_vecs = []
-    h_ideal_vecs = []
-    h = []
-    h_ideal = []
+    heliostat_normal_vecs = []
+    heliostat_ideal_vecs = []
+    heliostat = []
+    heliostat_ideal = []
 
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
-        h_normal_vecs.append(
+        heliostat_normal_vecs.append(
             torch.tensor(
                 directions[f][::step_size],
                 dtype=dtype,
                 device=device,
             )
         )
-        h_ideal_vecs.append(
+        heliostat_ideal_vecs.append(
             torch.tensor(
                 ideal_normal_vecs[f][::step_size],
                 dtype=dtype,
                 device=device,
             )
         )
-        h.append(
+        heliostat.append(
             torch.tensor(
                 ideal_positions[f][::step_size],
                 dtype=dtype,
@@ -108,7 +108,7 @@ def real_surface(
             )
         )
 
-        h_ideal.append(
+        heliostat_ideal.append(
             torch.tensor(
                 ideal_positions[f][::step_size],
                 dtype=dtype,
@@ -116,31 +116,28 @@ def real_surface(
             )
         )
 
-    h_normal_vecs: torch.Tensor = torch.cat(h_normal_vecs, dim=0)
-    h_ideal_vecs: torch.Tensor = torch.cat(h_ideal_vecs, dim=0)
-    h: torch.Tensor = torch.cat(h, dim=0)
+    heliostat_normal_vecs: torch.Tensor = torch.cat(heliostat_normal_vecs, dim=0)
+    heliostat_ideal_vecs: torch.Tensor = torch.cat(heliostat_ideal_vecs, dim=0)
+    heliostat: torch.Tensor = torch.cat(heliostat, dim=0)
 
-    h_ideal: torch.Tensor = torch.cat(h_ideal, dim=0)
+    heliostat_ideal: torch.Tensor = torch.cat(heliostat_ideal, dim=0)
     if cfg.VERBOSE:
         print("Done")
 
-    rows = None
-    cols = None
-    params = None
     return (
         surface_position,
         torch.tensor(facet_positions, dtype=dtype, device=device),
         torch.tensor(facet_spans_n, dtype=dtype, device=device),
         torch.tensor(facet_spans_e, dtype=dtype, device=device),
-        h,
-        h_ideal,
-        h_normal_vecs,
-        h_ideal_vecs,
+        heliostat,
+        heliostat_ideal,
+        heliostat_normal_vecs,
+        heliostat_ideal_vecs,
         height,
         width,
-        rows,
-        cols,
-        params,
+        None,
+        None,
+        None,
     )
 
 
