@@ -32,25 +32,25 @@ class ActuatorModule(AModule):
         """
 
         def __init__(
-                self,
-                name,
-                value=0.0,
-                tolerance=0.01,
-                requires_grad=True,
-                distort: bool = False,
-        ):
+            self,
+            name: str,
+            value: float = 0.0,
+            tolerance: float = 0.01,
+            requires_grad: bool = True,
+            distort: bool = False,
+        ) -> None:
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
     class DevPercentageParameter(AParameter):
         def __init__(
-                self,
-                name,
-                value=0.0,
-                tolerance=0.01,
-                requires_grad=True,
-                distort: bool = False,
-        ):
+            self,
+            name: str,
+            value: float = 0.0,
+            tolerance: float = 0.01,
+            requires_grad: bool = True,
+            distort: bool = False,
+        ) -> None:
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
@@ -62,19 +62,19 @@ class ActuatorModule(AModule):
         "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
     }
 
-    def _percentage_with_deviation(self, parameter_name):
+    def _percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
         return self.PARAMS[parameter_name] * (
-                1 + self._get_parameter("dev_" + parameter_name)
+            1 + self._get_parameter("dev_" + parameter_name)
         )
 
-    def _rotation_with_deviation(self, parameter_name):
+    def _rotation_with_deviation(self, parameter_name: str) -> torch.Tensor:
         return self.PARAMS[parameter_name] + self._get_parameter(
             "dev_" + parameter_name
         )
 
-    def _normed_percentage_with_deviation(self, parameter_name):
+    def _normed_percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
         return self.PARAMS[parameter_name].norm() * (
-                1 + self._get_parameter("dev_" + parameter_name)
+            1 + self._get_parameter("dev_" + parameter_name)
         )
 
     def _increment(self) -> torch.Tensor:
@@ -95,7 +95,7 @@ class ActuatorModule(AModule):
     def _phi_0(self) -> torch.Tensor:
         return self._rotation_with_deviation("phi_0")
 
-    def _register_parameter(self, parameter: AParameter):
+    def _register_parameter(self, parameter: AParameter) -> None:
         if not hasattr(self, "parameter_normalizer"):
             self.parameter_normalizer = ParameterNormalizer()
         self.parameter_normalizer.register_parameter(parameter)
@@ -110,12 +110,14 @@ class ActuatorModule(AModule):
             ),
         )
 
-    def _get_parameter(self, name: str):
+    def _get_parameter(self, name: str) -> torch.Tensor:
         return self.parameter_normalizer.get_denormalized_parameter(
             name, self.get_parameter(name)
         )
 
-    def __init__(self, joint_number: int, clockwise: bool, params: dict, **deviations):
+    def __init__(
+        self, joint_number: int, clockwise: bool, params: dict, **deviations
+    ) -> None:
         super().__init__()
         self.JOINT_NUMBER = joint_number
         self.CLOCKWISE = clockwise
@@ -132,23 +134,23 @@ class ActuatorModule(AModule):
 
     # TODO remove self.JOINT_NUMBER
 
-    def _steps_to_phi(self, actuator_pos: torch.Tensor):
+    def _steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         stroke_length = (
-                actuator_pos[:, self.JOINT_NUMBER - 1] / self._increment()
-                + self._initial_stroke_length()
+            actuator_pos[:, self.JOINT_NUMBER - 1] / self._increment()
+            + self._initial_stroke_length()
         )
         calc_step_1 = (
-                self._actuator_offset() ** 2
-                + self._joint_radius() ** 2
-                - stroke_length ** 2
+            self._actuator_offset() ** 2
+            + self._joint_radius() ** 2
+            - stroke_length**2
         )
         calc_step_2 = 2.0 * self._actuator_offset() * self._joint_radius()
         calc_step_3 = calc_step_1 / calc_step_2
         angle = torch.arccos(calc_step_3)
         return angle
 
-    def _steps_to_angles(self, actuator_pos: torch.Tensor):
+    def _steps_to_angles(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         phi = self._steps_to_phi(actuator_pos=actuator_pos)
         phi_0 = self._steps_to_phi(actuator_pos=torch.zeros(actuator_pos.shape))
         delta_phi = phi_0 - phi
@@ -158,7 +160,7 @@ class ActuatorModule(AModule):
         )
         return angles
 
-    def _angles_to_steps(self, angles: torch.Tensor):
+    def _angles_to_steps(self, angles: torch.Tensor) -> torch.Tensor:
         delta_phi = angles - self._phi_0() if self.CLOCKWISE else self._phi_0() - angles
 
         phi_0 = self._steps_to_phi(actuator_pos=torch.zeros(angles.shape[0], 2))
