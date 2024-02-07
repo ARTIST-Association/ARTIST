@@ -1,3 +1,7 @@
+"""
+This pytest tests the correctness of the light source.
+"""
+
 import os
 from matplotlib import pyplot as plt
 import pytest
@@ -10,7 +14,28 @@ from artist.physics_objects.heliostats.alignment.alignment import AlignmentModul
 from artist.scenario.light_source.sun import Sun
 
 
-def generate_sun_data(light_direction, expected_value):
+def generate_data(
+    light_direction: torch.Tensor, expected_value: torch.Tensor
+) -> dict[str, torch.Tensor]:
+    """
+    Generate all the relevant data for this test.
+    This includes the position of the heliostat, the position of the receiver,
+    the sun as a light source, and 5 manually created surface points and normals.
+
+    The surface points and normals are aligned by the kinematic module.
+
+    Parameters
+    ----------
+    light_direction : torch.Tensor
+        The direction of the light.
+    expected_value : torch.Tensor
+        The expected bitmaps for the given test-cases.
+
+    Returns
+    -------
+    dict[str, torch.Tensor]
+        A dictionary containing all the data.
+    """
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
@@ -56,20 +81,33 @@ def generate_sun_data(light_direction, expected_value):
         ([-1.0, 0.0, 0.0], "west.pt"),
         ([0.0, -1.0, 0.0], "south.pt"),
     ],
-    name="sun_data",
+    name="environment_data",
 )
-def sun_data(request):
-    return generate_sun_data(*request.param)
+def data(request):
+    return generate_data(*request.param)
 
 
-def test_compute_bitmaps(sun_data):
+def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+    """
+    Compute resulting flux density distribution (bitmap) for the given test case.
+
+    With the aligned surface and the light direction, calculate the reflected rays on the heliostat surface.
+    Calculate the intersection on the receiver.
+    Compute the bitmaps and normalize them.
+    Compare the calculated bitmaps with the expected ones.
+
+    Parameters
+    ----------
+    environment_data : dict[str, torch.Tensor]
+        The dictionary containing all the data to compute the bitmaps.
+    """
     torch.manual_seed(7)
-    sun = sun_data["sun"]
-    aligned_surface_points = sun_data["aligned_surface_points"]
-    aligned_surface_normals = sun_data["aligned_surface_normals"]
-    receiver_center = sun_data["receiver_center"]
-    light_direction = sun_data["light_direction"]
-    expected_value = sun_data["expected_value"]
+    sun = environment_data["sun"]
+    aligned_surface_points = environment_data["aligned_surface_points"]
+    aligned_surface_normals = environment_data["aligned_surface_normals"]
+    receiver_center = environment_data["receiver_center"]
+    light_direction = environment_data["light_direction"]
+    expected_value = environment_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
     receiver_plane_x = 10
