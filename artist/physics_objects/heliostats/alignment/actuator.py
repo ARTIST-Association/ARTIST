@@ -151,6 +151,18 @@ class ActuatorModule(AModule):
         return angle
 
     def _steps_to_angles(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+        """
+        Translate the actuator steps to angles.
+
+        Parameters
+        ----------
+        actuator_pos : torch.Tensor
+            The current position of the actuator.
+        
+        Returns
+        -------
+            The angles corresponding to the actuator steps.
+        """
         phi = self._steps_to_phi(actuator_pos=actuator_pos)
         phi_0 = self._steps_to_phi(actuator_pos=torch.zeros(actuator_pos.shape))
         delta_phi = phi_0 - phi
@@ -161,6 +173,19 @@ class ActuatorModule(AModule):
         return angles
 
     def _angles_to_steps(self, angles: torch.Tensor) -> torch.Tensor:
+        """
+        Translate the angles to actuator steps.
+
+        Parameters
+        ----------
+        angles : torch.Tensor
+            The angles that are to be converted.
+        
+        Returns
+        -------
+        torch.Tensor
+            The actuator steps corresponding to the given angles.
+        """
         delta_phi = angles - self._phi_0() if self.clockwise else self._phi_0() - angles
 
         phi_0 = self._steps_to_phi(actuator_pos=torch.zeros(angles.shape[0], 2))
@@ -179,8 +204,16 @@ class ActuatorModule(AModule):
 
     def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
-        :param actuator_pos:
-        :return:
+        The forward kinematic.
+
+        Parameters
+        ----------
+        actuator_pos : torch.Tensor
+            The position of the actuator.
+        
+        Returns
+        torch.Tensor
+            The required angles.
         """
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         return self._steps_to_angles(actuator_pos=actuator_pos)
