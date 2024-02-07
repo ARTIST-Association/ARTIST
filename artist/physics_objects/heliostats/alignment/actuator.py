@@ -63,17 +63,17 @@ class ActuatorModule(AModule):
     }
 
     def _percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
-        return self.PARAMS[parameter_name] * (
+        return self.params[parameter_name] * (
             1 + self._get_parameter("dev_" + parameter_name)
         )
 
     def _rotation_with_deviation(self, parameter_name: str) -> torch.Tensor:
-        return self.PARAMS[parameter_name] + self._get_parameter(
+        return self.params[parameter_name] + self._get_parameter(
             "dev_" + parameter_name
         )
 
     def _normed_percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
-        return self.PARAMS[parameter_name].norm() * (
+        return self.params[parameter_name].norm() * (
             1 + self._get_parameter("dev_" + parameter_name)
         )
 
@@ -82,15 +82,15 @@ class ActuatorModule(AModule):
 
     def _initial_stroke_length(self) -> torch.Tensor:
         # return self._percentage_with_deviation('initial_stroke_length')
-        return self.PARAMS["initial_stroke_length"]
+        return self.params["initial_stroke_length"]
 
     def _actuator_offset(self) -> torch.Tensor:
         #    return self._percentage_with_deviation('actuator_offset')
-        return self.PARAMS["actuator_offset"]
+        return self.params["actuator_offset"]
 
     def _joint_radius(self) -> torch.Tensor:
         # return self._percentage_with_deviation('joint_radius')
-        return self.PARAMS["joint_radius"]
+        return self.params["joint_radius"]
 
     def _phi_0(self) -> torch.Tensor:
         return self._rotation_with_deviation("phi_0")
@@ -119,9 +119,9 @@ class ActuatorModule(AModule):
         self, joint_number: int, clockwise: bool, params: dict, **deviations
     ) -> None:
         super().__init__()
-        self.JOINT_NUMBER = joint_number
-        self.CLOCKWISE = clockwise
-        self.PARAMS = params
+        self.joint_number = joint_number
+        self.clockwise = clockwise
+        self.params = params
         self.deviations = deviations
 
         self.parameter_deviations = {
@@ -137,7 +137,7 @@ class ActuatorModule(AModule):
     def _steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         stroke_length = (
-            actuator_pos[:, self.JOINT_NUMBER - 1] / self._increment()
+            actuator_pos[:, self.joint_number - 1] / self._increment()
             + self._initial_stroke_length()
         )
         calc_step_1 = (
@@ -156,12 +156,12 @@ class ActuatorModule(AModule):
         delta_phi = phi_0 - phi
 
         angles = (
-            self._phi_0() + delta_phi if self.CLOCKWISE else self._phi_0() - delta_phi
+            self._phi_0() + delta_phi if self.clockwise else self._phi_0() - delta_phi
         )
         return angles
 
     def _angles_to_steps(self, angles: torch.Tensor) -> torch.Tensor:
-        delta_phi = angles - self._phi_0() if self.CLOCKWISE else self._phi_0() - angles
+        delta_phi = angles - self._phi_0() if self.clockwise else self._phi_0() - angles
 
         phi_0 = self._steps_to_phi(actuator_pos=torch.zeros(angles.shape[0], 2))
         phi = phi_0 - delta_phi
