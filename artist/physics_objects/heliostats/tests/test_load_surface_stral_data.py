@@ -1,3 +1,7 @@
+"""
+This pytest considers loading a heliostat surface from a pointcloud.
+"""
+
 import os
 from matplotlib import pyplot as plt
 import pytest
@@ -15,7 +19,30 @@ from artist.physics_objects.heliostats.surface.tests import surface_defaults
 from artist.scenario.light_source.sun import Sun
 
 
-def generate_data(light_direction, expected_value):
+def generate_data(
+    light_direction: torch.Tensor, expected_value: torch.Tensor
+) -> dict[str, torch.Tensor]:
+    """
+    Generate all the relevant data for this test.
+    This includes the position of the heliostat, the position of the receiver,
+    the sun as a light source, and the pointcloud as the heliostat surface.
+
+    The facets of the heliostat surface are loaded from a pointcloud.
+    The surface points and surface normals are calculated.
+    The surface points and normals are aligned.
+
+    Parameters
+    ----------
+    light_direction : torch.Tensor
+        The direction of the light.
+    expected_value : torch.Tensor
+        The expected bitmaps for the given test-cases.
+
+    Returns
+    -------
+    dict[str, torch.Tensor]
+        A dictionary containing all the data.
+    """
     position = torch.Tensor([0.0, 5.0, 0.0])
     receiver_center = torch.Tensor([0.0, -50.0, 0.0])
 
@@ -66,20 +93,33 @@ def generate_data(light_direction, expected_value):
         ([-1.0, 0.0, 0.0], "west.pt"),
         ([0.0, 0.0, 1.0], "above.pt"),
     ],
-    name="sun_data",
+    name="environment_data",
 )
-def sun_data(request):
+def data(request):
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(sun_data):
+def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+    """
+    Compute resulting flux density distribution (bitmap) for the given test case.
+
+    With the aligned surface and the light direction, calculate the reflected rays on the heliostat surface.
+    Calculate the intersection on the receiver.
+    Compute the bitmaps and normalize them.
+    Compare the calculated bitmaps with the expected ones.
+
+    Parameters
+    ----------
+    environment_data : dict[str, torch.Tensor]
+        The dictionary containing all the data to compute the bitmaps.
+    """
     torch.manual_seed(7)
-    sun = sun_data["sun"]
-    aligned_surface_points = sun_data["aligned_surface_points"]
-    aligned_surface_normals = sun_data["aligned_surface_normals"]
-    receiver_center = sun_data["receiver_center"]
-    light_direction = sun_data["light_direction"]
-    expected_value = sun_data["expected_value"]
+    sun = environment_data["sun"]
+    aligned_surface_points = environment_data["aligned_surface_points"]
+    aligned_surface_normals = environment_data["aligned_surface_normals"]
+    receiver_center = environment_data["receiver_center"]
+    light_direction = environment_data["light_direction"]
+    expected_value = environment_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
     receiver_plane_x = 8.629666667
@@ -147,9 +187,5 @@ def test_compute_bitmaps(sun_data):
     # plt.show()
     # plt.imshow(expected.T, cmap="jet", origin="lower")
     # plt.show()
-
-    # loss = torch.nn.L1Loss()
-    # loss = loss(total_bitmap, expected)
-    # torch.le(loss, torch.tensor(0.0000001))
 
     torch.testing.assert_close(total_bitmap, expected)
