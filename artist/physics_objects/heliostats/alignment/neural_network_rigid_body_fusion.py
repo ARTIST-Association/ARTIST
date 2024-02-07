@@ -561,24 +561,22 @@ class NeuralNetworkRigidBodyFusion(AKinematicModule):
             orientation[0][:3, 2] = torch.cross(
                 orientation[0][:3, 0], orientation[0][:3, 1]
             )
-            
+
             concentrator_normals = (
-                                           orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
-                                   )[:1, :3]
+                orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
+            )[:1, :3]
             concentrator_origins = (
-                                           orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
-                                   )[:1, :3]
-            
+                orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
+            )[:1, :3]
+
             # Compute desired normal.
             desired_reflect_vec = data_point.desired_aimpoint - concentrator_origins
             desired_reflect_vec /= desired_reflect_vec.norm()
             data_point.light_directions /= data_point.light_directions.norm()
             desired_concentrator_normal = (
-                    data_point.light_directions + desired_reflect_vec
+                data_point.light_directions + desired_reflect_vec
             )
             desired_concentrator_normal /= desired_concentrator_normal.norm()
-            #desired_concentrator_normal -= concentrator_origins
-            #desired_concentrator_normal /= desired_concentrator_normal.norm()
 
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
