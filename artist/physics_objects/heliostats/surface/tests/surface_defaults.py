@@ -70,7 +70,7 @@ _C.FUNCTION.FACETS.SPANS_E            = _C.IDEAL.FACETS.SPANS_E.copy()
 
 _C.FUNCTION.FACETS.CANTING            = CN()
 _C.FUNCTION.FACETS.CANTING.FOCUS_POINT = 0
-_C.FUNCTION.FACETS.CANTING.ALGORITHM  = 'standard'
+_C.FUNCTION.FACETS.CANTING.ALGORITHM  = "standard"
 
 _C.DEFLECT_DATA                       = CN()
 # IF `None`, use position from file.
