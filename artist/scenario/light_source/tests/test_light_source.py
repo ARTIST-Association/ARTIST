@@ -20,7 +20,7 @@ def generate_data(
     Generate all the relevant data for this test.
     
     This includes the position of the heliostat, the position of the receiver,
-    the sun as a light source, and 5 manually created surface points and normals.
+    the sun as a light source, and five manually created surface points and normals.
 
     The surface points and normals are aligned by the kinematic module.
 
