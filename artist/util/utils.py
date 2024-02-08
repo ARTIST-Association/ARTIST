@@ -109,7 +109,7 @@ def initialize_spline_eval_points(
     rows : int
         Number of rows.
     cols : int
-        Number of columns
+        Number of columns.
     device : torch.device
         Specifies the device type responsible to load tensors into memory.
 
