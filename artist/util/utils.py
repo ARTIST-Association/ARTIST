@@ -304,6 +304,7 @@ def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     ).squeeze(-1)
     return angles
 
+
 def make_structured_points(
     points: torch.Tensor,
     rows: Optional[int] = None,
