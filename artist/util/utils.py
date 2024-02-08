@@ -77,7 +77,7 @@ def initialize_spline_ctrl_points(
     rows : int
         Number of rows.
     cols : int
-        Number of columns
+        Number of columns.
     h_width : float
         Width of the heliostat.
     h_height : float
