@@ -129,7 +129,7 @@ class AlignmentModule(AModule):
         ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Construct the heliostat coordination system.
+        Construct the heliostat coordinate system.
 
         Parameters
         ----------
