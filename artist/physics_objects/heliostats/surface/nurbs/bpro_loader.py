@@ -126,8 +126,8 @@ def load_bpro(
                 directions[f].append(cast(Tuple3d, ray_data[3:6]))
                 ideal_normal_vecs[f].append(ideal_normal)
 
-        # Stral uses two different Coord sys, both use a west orientation we dont need a nwu to enu cast here.
-        # However to keep consistent in our program we cast the west direction to east direction.
+        # Stral uses two different coordinate systems, both with a West orientation. That is why we do not need an NWU to ENU cast here.
+        # However, to keep our code consistent, we cast the West direction to an East direction.
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
