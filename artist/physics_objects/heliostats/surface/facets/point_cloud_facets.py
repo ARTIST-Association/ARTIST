@@ -345,7 +345,7 @@ class PointCloudFacetModule(AFacetModule):
         cfg : CfgNode
             The config file containing indormation about the aim point.
         aim_point : Optional[torch.Tensor]
-            Optionally pass an aim point.
+            An aim point.
 
         Returns
         -------
