@@ -199,7 +199,7 @@ class PointCloudFacetModule(AFacetModule):
     Attributes
     ----------
     cfg : CfgNode
-        The config file, containing information about the surface.
+        The config file containing information about the surface.
     device : torch.device
         Specifies the device type responsible to load tensors into memory.
 
