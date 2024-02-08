@@ -262,7 +262,7 @@ def get_rot_matrix(
     Returns
     -------
     torch.Tensor
-        Return the rotation matrix.
+        The rotation matrix.
     """
     rot_angle = angle_between(start, target)
     # Handle parallel start/target normals.
