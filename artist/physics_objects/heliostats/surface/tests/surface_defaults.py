@@ -117,7 +117,7 @@ _C.OTHER.FACETS.SPANS_N               = [0.0, float("inf"), 0.0]
 _C.OTHER.FACETS.SPANS_E               = [-float("inf"), 0.0, 0.0]
 _C.OTHER.FACETS.CANTING               = CN()
 _C.OTHER.FACETS.CANTING.FOCUS_POINT   = 0
-_C.OTHER.FACETS.CANTING.ALGORITHM     = 'standard'
+_C.OTHER.FACETS.CANTING.ALGORITHM     = "standard"
 
 
 def get_cfg_defaults() -> CN:
