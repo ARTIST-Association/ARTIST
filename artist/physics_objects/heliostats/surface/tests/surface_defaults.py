@@ -91,7 +91,7 @@ _C.DEFLECT_DATA.FACETS                        = CN()
 # Positions and spans are read from the data.
 _C.DEFLECT_DATA.FACETS.CANTING                = CN()
 _C.DEFLECT_DATA.FACETS.CANTING.FOCUS_POINT    = 0.0
-_C.DEFLECT_DATA.FACETS.CANTING.ALGORITHM      = 'standard'
+_C.DEFLECT_DATA.FACETS.CANTING.ALGORITHM      = "standard"
 
 _C.NURBS                              = CN()
 _C.NURBS.MAX_ABS_NOISE                = 0.01
