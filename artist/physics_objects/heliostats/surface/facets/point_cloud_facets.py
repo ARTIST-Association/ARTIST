@@ -320,7 +320,7 @@ class PointCloudFacetModule(AFacetModule):
         Parameters
         ----------
         cfg : CfgNode
-            Contains the information about the shape/ kind of surface to be loaded.
+            Contains the information about the shape/kind of surface to be loaded.
 
         Returns
         -------
