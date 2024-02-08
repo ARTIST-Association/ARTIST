@@ -145,7 +145,7 @@ def _cartesian_linspace_around(
     minval_y: Union[float, torch.Tensor]
         Minimum value for y.
     maxval_y: Union[float, torch.Tensor]
-        Maximum value for y
+        Maximum value for y.
     num_y: int
         Number of columns
     device: torch.device
