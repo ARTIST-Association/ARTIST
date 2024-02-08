@@ -153,7 +153,7 @@ class Sun(ALightSource):
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
         ray_directions : torch.Tensor
-            Directions of the reflected sun light
+            Directions of the reflected sun light.
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
         distortion_x_dir : torch.Tensor
