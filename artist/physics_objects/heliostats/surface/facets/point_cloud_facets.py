@@ -235,7 +235,7 @@ class PointCloudFacetModule(AFacetModule):
         device: torch.device,
     ) -> None:
         """
-        Initialize the surface from a pointcloud
+        Initialize the surface from a pointcloud.
 
         Parameters
         ----------
