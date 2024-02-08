@@ -325,7 +325,7 @@ class PointCloudFacetModule(AFacetModule):
         Returns
         -------
         Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]
-            Returns the loaded surface, the heliostat parameters and deflectometry data.
+            The loaded surface, the heliostat parameters, and deflectometry data.
         """
         shape = cfg.SHAPE.lower()
         if shape == "real":
