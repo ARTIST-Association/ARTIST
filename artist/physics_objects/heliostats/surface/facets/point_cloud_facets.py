@@ -367,7 +367,7 @@ class PointCloudFacetModule(AFacetModule):
         elif aim_point is not None:
             aim_point = aim_point
         else:
-            raise ValueError("no aim point was supplied")
+            raise ValueError("No aim point was supplied.")
         return aim_point
 
     def _get_disturbance_angles(self, h_cfg: CfgNode) -> List[torch.Tensor]:
