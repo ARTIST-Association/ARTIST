@@ -61,7 +61,7 @@ def load_bpro(
 
     Returns
     -------
-    Tuple[Vector3d, List[Vector3d], List[Vector3d], List[Vector3d], List[List[Vector3d]], List[List[Vector3d]], List[List[Vector3d]], float, float,
+    Tuple[Vector3d, List[Vector3d], List[Vector3d], List[Vector3d], List[List[Vector3d]], List[List[Vector3d]], List[List[Vector3d]], float, float,]
         Information about the facets and the surface.
     """
     concentratorHeader_struct_len = concentrator_header_struct.size
