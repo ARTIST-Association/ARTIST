@@ -96,6 +96,8 @@ def generate_data(
     ],
     name="environment_data",
 )
+
+
 def data(request):
     return generate_data(*request.param)
 
