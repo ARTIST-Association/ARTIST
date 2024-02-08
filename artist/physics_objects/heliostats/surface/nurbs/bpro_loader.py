@@ -11,7 +11,7 @@ Vector3d = List[np.floating]
 
 def nwu_to_enu(vec: Tuple3d) -> Vector3d:
     """
-    Cast the coordinate system from North-West-Up (NWU) to East-North-Up (ENU).
+    Cast the coordinate system from nwu to enu.
 
     Parameters
     ----------
@@ -21,7 +21,7 @@ def nwu_to_enu(vec: Tuple3d) -> Vector3d:
     Returns
     -------
     Vector3d
-        The cast vector in the ENU coordinate system.
+        The castet vector in the enu coordinate system.
     """
     return [-vec[1], vec[0], vec[2]]
 
@@ -61,51 +61,57 @@ def load_bpro(
 
     Returns
     -------
-    Tuple[Vector3d, List[Vector3d], List[Vector3d], List[Vector3d], List[List[Vector3d]], List[List[Vector3d]], List[List[Vector3d]], float, float,]
-        Information about the facets and the surface.
+    Tuple[Vector3d, List[Vector3d], List[Vector3d], List[Vector3d], List[List[Vector3d]], List[List[Vector3d]], List[List[Vector3d]], float, float,
+        Information about the facets and the surface
     """
-    concentratorHeader_struct_len = concentrator_header_struct.size
-    facetHeader_struct_len = facet_header_struct.size
+    concentrator_header_struct_len = concentrator_header_struct.size
+    facet_header_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
+    # powers = []
     binp_loc = os.path.join(os.path.dirname(__file__), "MeasurementData", filename)
     with open(binp_loc, "rb") as file:
-        byte_data = file.read(concentratorHeader_struct_len)
-        concentratorHeader_data = concentrator_header_struct.unpack_from(byte_data)
+        byte_data = file.read(concentrator_header_struct_len)
+        concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
         if verbose:
             print("READING bpro filename: " + filename)
 
-        hel_pos = nwu_to_enu(cast(Tuple3d, concentratorHeader_data[0:3]))
-        width, height = concentratorHeader_data[3:5]
-        n_xy = concentratorHeader_data[5:7]
+        hel_pos = nwu_to_enu(cast(Tuple3d, concentrator_header_data[0:3]))
+        width, height = concentrator_header_data[3:5]
+        # offsets = concentratorHeader_data[7:9]
+        n_xy = concentrator_header_data[5:7]
 
-        nFacets = n_xy[0] * n_xy[1]
+        n_facets = n_xy[0] * n_xy[1]
+        # nFacets =1
         facet_positions: List[Vector3d] = []
         facet_spans_n: List[Vector3d] = []
         facet_spans_e: List[Vector3d] = []
 
-        positions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
-        directions: List[List[Vector3d]] = [[] for _ in range(nFacets)]
-        ideal_normal_vecs: List[List[Vector3d]] = [[] for _ in range(nFacets)]
+        positions: List[List[Vector3d]] = [[] for _ in range(n_facets)]
+        directions: List[List[Vector3d]] = [[] for _ in range(n_facets)]
+        ideal_normal_vecs: List[List[Vector3d]] = [[] for _ in range(n_facets)]
 
-        for f in range(nFacets):
-            byte_data = file.read(facetHeader_struct_len)
-            facetHeader_data = facet_header_struct.unpack_from(byte_data)
+        for f in range(n_facets):
+            byte_data = file.read(facet_header_struct_len)
+            facet_header_data = facet_header_struct.unpack_from(byte_data)
 
             # 0 for square, 1 for round 2 triangle, ...
-            facet_pos = cast(Tuple3d, facetHeader_data[1:4])
+            # facetshape = facetHeader_data[0]
+            facet_pos = cast(Tuple3d, facet_header_data[1:4])
+            # print(facetHeader_data[1:4])
+            # print(facet_pos)
             facet_vec_x = np.array(
                 [
-                    -facetHeader_data[5],
-                    facetHeader_data[4],
-                    facetHeader_data[6],
+                    -facet_header_data[5],
+                    facet_header_data[4],
+                    facet_header_data[6],
                 ]
             )
             facet_vec_y = np.array(
                 [
-                    -facetHeader_data[8],
-                    facetHeader_data[7],
-                    facetHeader_data[9],
+                    -facet_header_data[8],
+                    facet_header_data[7],
+                    facet_header_data[9],
                 ]
             )
             facet_vec_z = np.cross(facet_vec_x, facet_vec_y)
@@ -116,7 +122,7 @@ def load_bpro(
 
             ideal_normal = (facet_vec_z / np.linalg.norm(facet_vec_z)).tolist()
 
-            n_rays = facetHeader_data[10]
+            n_rays = facet_header_data[10]
 
             byte_data = file.read(ray_struct_len * n_rays)
             ray_datas = ray_struct.iter_unpack(byte_data)
@@ -125,9 +131,10 @@ def load_bpro(
                 positions[f].append(cast(Tuple3d, ray_data[:3]))
                 directions[f].append(cast(Tuple3d, ray_data[3:6]))
                 ideal_normal_vecs[f].append(ideal_normal)
+                # powers.append(ray_data[6])
 
-        # Stral uses two different coordinate systems, both with a West orientation. That is why we do not need an NWU to ENU cast here.
-        # However, to keep our code consistent, we cast the West direction to an East direction.
+        # Stral uses two different Coord sys, both use a west orientation we dont need a nwu to enu cast here.
+        # However to keep consistent in our program we cast the west direction to east direction.
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
@@ -161,7 +168,8 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
         The facets.
     """
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
-    mm_to_m_factor = 0.001  # mm to m conversion factor
+    # mm to m conversion factor
+    mm_to_m_factor = 0.001
     path = os.path.join(os.path.dirname(__file__), "MeasurementData", path)
     with open(path, "r", newline="") as csv_file:
         # Skip title
