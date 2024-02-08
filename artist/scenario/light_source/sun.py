@@ -151,7 +151,7 @@ class Sun(ALightSource):
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
         plane_point : torch.Tensor
-            Point on the plane (Center point of the receiver).
+            Point on the plane (center point of the receiver).
         ray_directions : torch.Tensor
             Directions of the reflected sun light
         surface_points : torch.Tensor
