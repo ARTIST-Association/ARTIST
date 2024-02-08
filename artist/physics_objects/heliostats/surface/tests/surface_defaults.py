@@ -129,5 +129,4 @@ def load_config_file(cfg: CN) -> CN:
         ARTIST_ROOT, "artist", "physics_objects", "heliostats", "surface", "tests", "surface_test.yaml"
     )
     cfg.merge_from_file(path)
-    #cfg.merge_from_file("artist\physics_objects\heliostats\surface\\tests\surface_test.yaml")
     return cfg
