@@ -47,7 +47,7 @@ _C.IDEAL.FACETS.SPANS_E               = [-1.0, 0.0, 0.0]
 # See `cfg.NURBS.FACETS.CANTING` for documentation.
 _C.IDEAL.FACETS.CANTING               = CN()
 _C.IDEAL.FACETS.CANTING.FOCUS_POINT   = 0
-_C.IDEAL.FACETS.CANTING.ALGORITHM     = 'standard'
+_C.IDEAL.FACETS.CANTING.ALGORITHM     = "standard"
 
 
 _C.FUNCTION                           = CN()
