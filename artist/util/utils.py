@@ -250,7 +250,7 @@ def get_rot_matrix(
     target: torch.Tensor,
 ) -> torch.Tensor:
     """
-    Compute a rotation Matrix to rotate from start to target.
+    Compute a rotation matrix to rotate from start to target.
 
     Parameters
     ----------
