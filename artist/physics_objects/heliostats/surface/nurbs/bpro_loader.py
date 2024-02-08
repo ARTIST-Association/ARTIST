@@ -21,7 +21,7 @@ def nwu_to_enu(vec: Tuple3d) -> Vector3d:
     Returns
     -------
     Vector3d
-        The castet vector in the enu coordinate system.
+        The cast vector in the ENU coordinate system.
     """
     return [-vec[1], vec[0], vec[2]]
 
