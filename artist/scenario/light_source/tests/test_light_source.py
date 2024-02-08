@@ -2,8 +2,7 @@
 This pytest tests the correctness of the light source.
 """
 
-import os
-
+import pathlib
 from matplotlib import pyplot as plt
 import pytest
 import torch
@@ -19,7 +18,7 @@ def generate_data(
 ) -> dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
-    
+
     This includes the position of the heliostat, the position of the receiver,
     the sun as a light source, and five manually created surface points and normals.
 
@@ -84,8 +83,6 @@ def generate_data(
     ],
     name="environment_data",
 )
-
-
 def data(request):
     return generate_data(*request.param)
 
@@ -165,16 +162,14 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = total_bitmap.T
 
-    expected_path = os.path.join(
-        ARTIST_ROOT,
-        "artist",
-        "scenario",
-        "light_source",
-        "tests",
-        "bitmaps",
-        expected_value,
+    expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
+        f"artist/scenario/light_source/tests/bitmaps/{expected_value}"
     )
 
+    plt.imshow(total_bitmap, cmap="jet")
+    plt.show()
     expected = torch.load(expected_path)
+    plt.imshow(expected, cmap="jet")
+    plt.show()
 
     torch.testing.assert_close(total_bitmap, expected)
