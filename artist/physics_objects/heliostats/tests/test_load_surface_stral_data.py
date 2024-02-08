@@ -2,9 +2,8 @@
 This pytest considers loading a heliostat surface from a pointcloud.
 """
 
-import os
+import pathlib
 
-from matplotlib import pyplot as plt
 import pytest
 import torch
 
@@ -24,7 +23,7 @@ def generate_data(
 ) -> dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
-    
+
     This includes the position of the heliostat, the position of the receiver,
     the sun as a light source, and the pointcloud as the heliostat surface.
 
@@ -96,10 +95,6 @@ def generate_data(
     ],
     name="environment_data",
 )
-
-
-
-
 def data(request):
     return generate_data(*request.param)
 
@@ -177,16 +172,9 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    expected_path = os.path.join(
-        "artist",
-        "physics_objects",
-        "heliostats",
-        "tests",
-        "test_bitmaps",
-        expected_value,
+    expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
+        f"artist/physics_objects/heliostats/tests/test_bitmaps/{expected_value}"
     )
-
     expected = torch.load(expected_path)
-
 
     torch.testing.assert_close(total_bitmap, expected)
