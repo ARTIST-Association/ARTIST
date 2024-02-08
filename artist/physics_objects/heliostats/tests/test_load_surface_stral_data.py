@@ -3,6 +3,7 @@ This pytest considers loading a heliostat surface from a pointcloud.
 """
 
 import os
+
 from matplotlib import pyplot as plt
 import pytest
 
