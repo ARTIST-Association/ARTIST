@@ -125,7 +125,6 @@ def load_bpro(
                 positions[f].append(cast(Tuple3d, ray_data[:3]))
                 directions[f].append(cast(Tuple3d, ray_data[3:6]))
                 ideal_normal_vecs[f].append(ideal_normal)
-                # powers.append(ray_data[6])
 
         # Stral uses two different Coord sys, both use a west orientation we dont need a nwu to enu cast here.
         # However to keep consistent in our program we cast the west direction to east direction.
