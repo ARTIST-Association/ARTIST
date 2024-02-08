@@ -351,6 +351,11 @@ class PointCloudFacetModule(AFacetModule):
         -------
         torch.Tensor
             The aim point.
+        
+        Raises
+        ------
+        ValueError
+            When no aim point is provided via optional argument or config file.        
         """
         cfg_aim_point: Optional[List[float]] = cfg.AIM_POINT
         if cfg_aim_point is not None:
