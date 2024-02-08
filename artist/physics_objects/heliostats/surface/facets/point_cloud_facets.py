@@ -38,7 +38,7 @@ def real_surface(
     Parameters
     ----------
     real_config : CfgNode
-        The config file containing Information about the real surface.
+        The config file containing information about the real surface.
     device : torch.device
         Specifies the device type responsible to load tensors into memory.
 
