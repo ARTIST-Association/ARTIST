@@ -441,6 +441,7 @@ class PointCloudFacetModule(AFacetModule):
         Create a list of facets.
 
         Returns
+        -------
         List[List[torch.Tensor], List[torch.Tensor]]
             The list of all facets with their points and normals.
         """
