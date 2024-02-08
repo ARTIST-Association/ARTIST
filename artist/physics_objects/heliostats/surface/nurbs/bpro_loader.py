@@ -95,7 +95,6 @@ def load_bpro(
             facetHeader_data = facet_header_struct.unpack_from(byte_data)
 
             # 0 for square, 1 for round 2 triangle, ...
-            # facetshape = facetHeader_data[0]
             facet_pos = cast(Tuple3d, facetHeader_data[1:4])
             # print(facetHeader_data[1:4])
             # print(facet_pos)
