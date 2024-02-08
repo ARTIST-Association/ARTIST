@@ -161,8 +161,7 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
         The facets.
     """
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
-    # mm to m conversion factor
-    mm_to_m_factor = 0.001
+    mm_to_m_factor = 0.001  # mm to m conversion factor
     path = os.path.join(os.path.dirname(__file__), "MeasurementData", path)
     with open(path, "r", newline="") as csv_file:
         # Skip title
