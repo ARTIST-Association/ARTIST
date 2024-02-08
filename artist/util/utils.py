@@ -2,8 +2,6 @@ import math
 from typing import List, Optional, Tuple, TypeVar, Union, cast
 import torch
 
-from artist.physics_objects.heliostats.surface.nurbs import nurbs
-
 # We would like to say that T can be everything but a list.
 T = TypeVar("T")
 
@@ -301,65 +299,6 @@ def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         )
     ).squeeze(-1)
     return angles
-
-
-def initialize_spline_ctrl_points_perfectly(
-    control_points: torch.Tensor,
-    world_points: torch.Tensor,
-    num_points_x: int,
-    num_points_y: int,
-    degree_x: int,
-    degree_y: int,
-    knots_x: torch.Tensor,
-    knots_y: torch.Tensor,
-    change_z_only: bool,
-    change_knots: bool,
-) -> None:
-    """
-    Initialize the spline control points.
-
-    Parameters
-    ----------
-    control_points : torch.Tensor
-        The control points of the NURBS surface
-    world_points : torch.Tensor
-        The world points.
-    num_points_x : int
-        number of points in x direction.
-    num_points_y : int
-        number of points in y direction.
-    degree_x : int
-        The degree of the NURBS surface in x direction.
-    degree_y : int
-        The degree of the NURBS surface in y direction.
-    knots_x : torch.Tensor
-        The knots of the NURBS surface in x direction.
-    knots_y : torch.Tensor
-        The knots of the NURBS surface in y direction.
-    change_z_only : bool
-        Which parameters of the control points  to change.
-    change_knots : bool
-        Change knots or leave them.
-    """
-    new_control_points, new_knots_x, new_knots_y = nurbs.approximate_surface(
-        world_points,
-        num_points_x,
-        num_points_y,
-        degree_x,
-        degree_y,
-        control_points.shape[0],
-        control_points.shape[1],
-        knots_x if change_knots else None,
-        knots_y if change_knots else None,
-    )
-
-    if not change_z_only:
-        control_points[:, :, :-1] = new_control_points[:, :, :-1]
-    control_points[:, :, -1:] = new_control_points[:, :, -1:]
-    if change_knots:
-        knots_x[:] = new_knots_x
-        knots_y[:] = new_knots_y
-
 
 def make_structured_points(
     points: torch.Tensor,
