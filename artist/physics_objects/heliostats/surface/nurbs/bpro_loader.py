@@ -11,7 +11,7 @@ Vector3d = List[np.floating]
 
 def nwu_to_enu(vec: Tuple3d) -> Vector3d:
     """
-    Cast the coordinate system from nwu to enu.
+    Cast the coordinate system from North-West-Up (NWU) to East-North-Up (ENU).
 
     Parameters
     ----------
