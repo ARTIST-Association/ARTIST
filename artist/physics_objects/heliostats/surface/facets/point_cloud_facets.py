@@ -222,8 +222,9 @@ class PointCloudFacetModule(AFacetModule):
     make_facets_list()
         Create a list of facets.
 
-    See also:
-    :class:AFacetModule : The parent class.
+    See also
+    --------
+    :class:AFacetModule : Reference to the parent class.
     """
 
     def __init__(
