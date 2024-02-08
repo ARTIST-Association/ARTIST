@@ -78,7 +78,6 @@ def load_bpro(
 
         hel_pos = nwu_to_enu(cast(Tuple3d, concentratorHeader_data[0:3]))
         width, height = concentratorHeader_data[3:5]
-        # offsets = concentratorHeader_data[7:9]
         n_xy = concentratorHeader_data[5:7]
 
         nFacets = n_xy[0] * n_xy[1]
