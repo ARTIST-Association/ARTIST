@@ -135,6 +135,7 @@ def _cartesian_linspace_around(
     Compute the initialized evaluation points of the spline.
 
     Parameters
+    ----------
     minval_x : Union[float, torch.Tensor]
         Minimum value for x.
     maxval_x : Union[float, torch.Tensor]
