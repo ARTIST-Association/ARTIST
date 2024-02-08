@@ -9,7 +9,7 @@ class AFacetModule(torch.nn.Module):
 
     See also
     --------
-    :class: torch.nn.Module : Reference to the parent class
+    :class: torch.nn.Module : Reference to the parent class.
     """
 
     # Relative to heliostat position.
