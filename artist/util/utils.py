@@ -177,7 +177,7 @@ def _cartesian_linspace_around(
 
     points_x = torch.linspace(
         minval_x, maxval_x, num_x, device=device
-    )  # type: ignore[arg-type]
+    )
     points_y = torch.linspace(
         minval_y, maxval_y, num_y, device=device
     )  # type: ignore[arg-type]
