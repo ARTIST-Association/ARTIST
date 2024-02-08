@@ -285,7 +285,7 @@ def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     a : torch.Tensor
         Starting direction.
     b : torch.Tensor
-        target direction.
+        Target direction.
 
     Returns
     -------
