@@ -68,7 +68,6 @@ def load_bpro(
     facetHeader_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
-    # powers = []
     binp_loc = os.path.join(os.path.dirname(__file__), "MeasurementData", filename)
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentratorHeader_struct_len)
