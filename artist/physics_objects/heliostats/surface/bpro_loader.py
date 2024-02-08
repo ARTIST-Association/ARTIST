@@ -1,9 +1,12 @@
 import csv
+import pathlib
+
 import numpy as np
 import struct
 from typing import cast, List, Tuple
 import os
 
+from artist import ARTIST_ROOT
 
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
 Vector3d = List[np.floating]
@@ -68,10 +71,7 @@ def load_bpro(
     facet_header_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
-    # powers = []
-    binp_loc = os.path.join(
-        os.path.dirname(__file__), "../../../../../measurement_data", filename
-    )
+    binp_loc = pathlib.Path(ARTIST_ROOT) / pathlib.Path(f"measurement_data/{filename}")
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentrator_header_struct_len)
         concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
@@ -80,11 +80,9 @@ def load_bpro(
 
         hel_pos = nwu_to_enu(cast(Tuple3d, concentrator_header_data[0:3]))
         width, height = concentrator_header_data[3:5]
-        # offsets = concentratorHeader_data[7:9]
         n_xy = concentrator_header_data[5:7]
 
         n_facets = n_xy[0] * n_xy[1]
-        # nFacets =1
         facet_positions: List[Vector3d] = []
         facet_spans_n: List[Vector3d] = []
         facet_spans_e: List[Vector3d] = []
@@ -98,10 +96,7 @@ def load_bpro(
             facet_header_data = facet_header_struct.unpack_from(byte_data)
 
             # 0 for square, 1 for round 2 triangle, ...
-            # facetshape = facetHeader_data[0]
             facet_pos = cast(Tuple3d, facet_header_data[1:4])
-            # print(facetHeader_data[1:4])
-            # print(facet_pos)
             facet_vec_x = np.array(
                 [
                     -facet_header_data[5],
@@ -133,10 +128,9 @@ def load_bpro(
                 positions[f].append(cast(Tuple3d, ray_data[:3]))
                 directions[f].append(cast(Tuple3d, ray_data[3:6]))
                 ideal_normal_vecs[f].append(ideal_normal)
-                # powers.append(ray_data[6])
 
-        # Stral uses two different Coord sys, both use a west orientation we dont need a nwu to enu cast here.
-        # However to keep consistent in our program we cast the west direction to east direction.
+        # Stral uses two different coordinate systems, both with a West orientation. That is why we do not need an NWU
+        # to ENU cast here. However, to keep our code consistent, we cast the West direction to an East direction.
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
@@ -153,14 +147,14 @@ def load_bpro(
     )
 
 
-def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
+def load_csv(filename: str, num_facets: int) -> List[List[Vector3d]]:
     """
     Load data from csv file.
 
     Parameters
     ----------
-    path : str
-        The path to the csv file.
+    filename : str
+        The file that contains the data.
     num_facets : int
         The number of facets that are to be loaded.
 
@@ -172,10 +166,8 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
-    path = os.path.join(
-        os.path.dirname(__file__), "../../../../../measurement_data", path
-    )
-    with open(path, "r", newline="") as csv_file:
+    csv_loc = pathlib.Path(ARTIST_ROOT) / pathlib.Path(f"measurement_data/{csv_loc}")
+    with open(csv_loc, "r", newline="") as csv_file:
         # Skip title
         next(csv_file)
         # Skip empty line
