@@ -3,6 +3,7 @@ This pytest tests the correctness of the light source.
 """
 
 import os
+
 from matplotlib import pyplot as plt
 import pytest
 import torch
