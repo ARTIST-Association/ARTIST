@@ -48,6 +48,8 @@ def initialize_spline_knots_(knots: torch.Tensor, spline_degree: int) -> None:
     spline_degree_x : int
         Spline degree, positive integer.
     """
+    if spline_degree_x <= 0:
+        raise ValueError("Spline degree must be a positive integer.")
     num_knot_vals = len(knots[spline_degree:-spline_degree])
     knot_vals = torch.linspace(0, 1, num_knot_vals)
     knots[:spline_degree] = 0
