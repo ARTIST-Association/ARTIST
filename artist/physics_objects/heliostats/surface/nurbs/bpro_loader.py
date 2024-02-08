@@ -94,8 +94,6 @@ def load_bpro(
 
             # 0 for square, 1 for round 2 triangle, ...
             facet_pos = cast(Tuple3d, facetHeader_data[1:4])
-            # print(facetHeader_data[1:4])
-            # print(facet_pos)
             facet_vec_x = np.array(
                 [
                     -facetHeader_data[5],
