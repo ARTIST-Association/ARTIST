@@ -180,7 +180,7 @@ def _cartesian_linspace_around(
     )
     points_y = torch.linspace(
         minval_y, maxval_y, num_y, device=device
-    )  # type: ignore[arg-type]
+    )
     points = torch.cartesian_prod(points_x, points_y)
     return points
 
