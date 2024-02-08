@@ -323,6 +323,7 @@ def make_structured_points(
     cols : Optional[int] = None
         The number of columns.
     tolerance : float = 0.0075
+        The tolerance.
 
     Returns
     -------
