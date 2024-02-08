@@ -104,7 +104,7 @@ _C.NURBS.ROWS                         = 8
 _C.NURBS.COLS                         = 8
 
 _C.OTHER                              = CN()
-_C.OTHER.FILENAME                     = 'tinker.obj'
+_C.OTHER.FILENAME                     = "tinker.obj"
 _C.OTHER.USE_WEIGHTED_AVG             = True
 
 # See `cfg.H.IDEAL` for documentation.
