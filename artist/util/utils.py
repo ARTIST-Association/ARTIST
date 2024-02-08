@@ -1,5 +1,6 @@
 import math
 from typing import List, Optional, Tuple, TypeVar, Union, cast
+
 import torch
 
 # We would like to say that T can be everything but a list.
