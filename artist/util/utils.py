@@ -132,7 +132,7 @@ def _cartesian_linspace_around(
     dtype: Optional[torch.dtype] = None,
 ) -> torch.Tensor:
     """
-    Comute the initialized evaluation points of the spline.
+    Compute the initialized evaluation points of the spline.
 
     Parameters
     minval_x : Union[float, torch.Tensor]
