@@ -290,7 +290,7 @@ def angle_between(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     Returns
     -------
     torch.Tensor
-        The angle
+        The angle.
     """
     angles = torch.acos(
         torch.clamp(
