@@ -8,7 +8,7 @@ class ALightSource(torch.nn.Module):
     Abstract base class for all light sources.
     See Also
     --------
-    :class: torch.nn.Module : Reference to the parent class
+    :class: torch.nn.Module : Reference to the parent class.
     """
 
     def __init__(self):
