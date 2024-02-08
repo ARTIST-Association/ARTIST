@@ -6,7 +6,6 @@ import os
 
 from matplotlib import pyplot as plt
 import pytest
-
 import torch
 
 from artist import ARTIST_ROOT
