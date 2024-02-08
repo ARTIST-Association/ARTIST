@@ -11,7 +11,6 @@ class AFacetModule(torch.nn.Module):
     --------
     :class: torch.nn.Module : Reference to the parent class.
     """
-
     # Relative to heliostat position.
     positions: torch.Tensor
     spans_n: torch.Tensor
