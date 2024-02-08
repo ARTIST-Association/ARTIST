@@ -11,7 +11,7 @@ _C = CN()
 
 _C                                    = CN()
 _C.TO_OPTIMIZE_NEW = [
-    'surface',
+    "surface",
 ]
 _C.SHAPE                              = "real"                            #SWITCH FOR HELIOSTAT MODELS: Ideal, Real, Function, Other, NURBS
 _C.ROTATION_OFFSET_ANGLE              = 0
