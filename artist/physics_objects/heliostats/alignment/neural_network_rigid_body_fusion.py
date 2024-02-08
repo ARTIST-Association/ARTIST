@@ -8,7 +8,7 @@ from artist.physics_objects.parameter import AParameter
 
 class NeuralNetworkRigidBodyFusion(AKinematicModule):
     """
-    This class implements neural network rigid body fusion as a possible kinematic Model.
+    This class implements neural network rigid body fusion as a possible kinematic model.
 
     See Also
     --------
