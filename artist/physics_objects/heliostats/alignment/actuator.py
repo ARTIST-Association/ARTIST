@@ -7,7 +7,7 @@ from artist.physics_objects.parameter import AParameter
 
 class ActuatorModule(AModule):
     """
-    This class implements the behavior of a linear actuator that moves within a 2D plane as a pytorch module.
+    This class implements the behavior of a linear actuator that moves within a 2D plane as a ``PyTorch`` module.
 
     The actuator is parametrized by 5 parameters:
     - increment: stroke length change per motor step
