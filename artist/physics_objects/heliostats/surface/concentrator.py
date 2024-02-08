@@ -24,7 +24,7 @@ class ConcentratorModule(AModule):
 
     See also
     --------
-    :class:AModule : The parent class.
+    :class:AModule : Reference to the parent class.
     """
 
     def __init__(self, facets: List[AFacetModule]) -> None:
