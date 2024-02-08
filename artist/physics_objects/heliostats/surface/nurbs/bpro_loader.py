@@ -80,7 +80,6 @@ def load_bpro(
         n_xy = concentratorHeader_data[5:7]
 
         nFacets = n_xy[0] * n_xy[1]
-        # nFacets =1
         facet_positions: List[Vector3d] = []
         facet_spans_n: List[Vector3d] = []
         facet_spans_e: List[Vector3d] = []
