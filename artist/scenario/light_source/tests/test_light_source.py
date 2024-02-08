@@ -177,8 +177,5 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    # plt.imshow(expected, cmap="jet")
-    # plt.scatter(128, 128)
-    # plt.show()
 
     torch.testing.assert_close(total_bitmap, expected)
