@@ -69,7 +69,9 @@ def load_bpro(
     ray_struct_len = ray_struct.size
 
     # powers = []
-    binp_loc = os.path.join(os.path.dirname(__file__), "measurement_data", filename)
+    binp_loc = os.path.join(
+        os.path.dirname(__file__), "../../../../../measurement_data", filename
+    )
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentrator_header_struct_len)
         concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
@@ -170,7 +172,9 @@ def load_csv(path: str, num_facets: int) -> List[List[Vector3d]]:
     facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
     # mm to m conversion factor
     mm_to_m_factor = 0.001
-    path = os.path.join(os.path.dirname(__file__), "measurement_data", path)
+    path = os.path.join(
+        os.path.dirname(__file__), "../../../../../measurement_data", path
+    )
     with open(path, "r", newline="") as csv_file:
         # Skip title
         next(csv_file)
