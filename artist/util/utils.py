@@ -328,7 +328,7 @@ def make_structured_points(
     Returns
     -------
     Tuple[torch.Tensor, int, int]
-        Return the structured points
+        The structured points.
 
     """
     if rows is None or cols is None:
