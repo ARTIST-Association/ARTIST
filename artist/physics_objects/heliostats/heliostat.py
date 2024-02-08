@@ -26,7 +26,7 @@ class HeliostatModule(AModule):
 
     See also
     --------
-    :class:AModule : The parent class.
+    :class:AModule : Reference to the parent class.
     """
 
     def __init__(
