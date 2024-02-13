@@ -17,7 +17,7 @@ except VersionConflict:
     sys.exit(1)
 
 if __name__ == "__main__":
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "torch"])
-    os.system("export PYTORCH3D_NO_EXTENSION=1")
+    # subprocess.check_call(
+    #     [sys.executable, "-m", "pip", "install", "torch"])
+    # os.system("export PYTORCH3D_NO_EXTENSION=1")
     setup()
