@@ -166,10 +166,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         f"artist/scenario/light_source/tests/bitmaps/{expected_value}"
     )
 
-    plt.imshow(total_bitmap, cmap="jet")
-    plt.show()
     expected = torch.load(expected_path)
-    plt.imshow(expected, cmap="jet")
-    plt.show()
 
     torch.testing.assert_close(total_bitmap, expected)
