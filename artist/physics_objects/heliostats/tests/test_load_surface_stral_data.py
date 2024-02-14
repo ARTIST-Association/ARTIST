@@ -43,7 +43,7 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    position = torch.Tensor([0.0, 5.0, 0.0])
+    heliostat_position = torch.Tensor([0.0, 5.0, 0.0])
     receiver_center = torch.Tensor([0.0, -50.0, 0.0])
 
     cfg_default_surface = surface_defaults.get_cfg_defaults()
@@ -51,8 +51,8 @@ def generate_data(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    cov = 4.3681e-06
-    sun = Sun("Normal", 100, [0, 0], [[cov, 0], [0, cov]], device)
+    cov = 4.3681e-06 # circum-solar ratio
+    sun = Sun("Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device)
 
     point_cloud_facets = PointCloudFacetModule(
         surface_config, receiver_center, torch.tensor(light_direction), device
@@ -61,7 +61,7 @@ def generate_data(
     concentrator = ConcentratorModule(facets)
     surface_points, surface_normals = concentrator.get_surface()
 
-    alignment_model = AlignmentModule(position=position)
+    alignment_model = AlignmentModule(position=heliostat_position)
     datapoint = HeliostatDataPoint(
         point_id=1,
         light_directions=torch.tensor(light_direction),
@@ -172,9 +172,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
-        f"artist/physics_objects/heliostats/tests/test_bitmaps/{expected_value}"
-    )
+    expected_path = pathlib.Path(ARTIST_ROOT) / "artist/physics_objects/heliostats/tests/test_bitmaps"/expected_value
+    
     expected = torch.load(expected_path)
 
     torch.testing.assert_close(total_bitmap, expected)
