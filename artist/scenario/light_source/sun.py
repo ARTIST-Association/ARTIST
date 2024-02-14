@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import torch
 
@@ -150,19 +150,14 @@ class Sun(ALightSource):
         ----------
         plane_normal : torch.Tensor
             The normal vector of the intersecting plane (normal vector of the receiver).
-
         plane_point : torch.Tensor
             Point on the plane (center point of the receiver).
-
         ray_directions : torch.Tensor
-            Directions of the reflected sunlight.
-
+            Directions of the reflected sun light.
         surface_points : torch.Tensor
             Points on which the rays are to be reflected.
-
         distortion_x_dir : torch.Tensor
             Distortion of the rays in x direction.
-
         distortion_y_dir : torch.Tensor
             Distortion of the rays in y direction.
 
@@ -491,4 +486,39 @@ class Sun(ALightSource):
             ints[indices],
             accumulate=True,
         )
+
         return total_bitmap
+
+    def normalize_bitmap(
+        self,
+        bitmap: torch.Tensor,
+        total_intensity: Union[float, torch.Tensor],
+        plane_x: float,
+        plane_y: float,
+    ) -> torch.Tensor:
+        """
+        Normalize a bitmap.
+
+        Parameters
+        ----------
+        bitmap : torch.Tensor
+            The bitmap to be normalized.
+        total_intensity : Union[float, torch.Tensor]
+            The total intensity of the bitmap.
+        plane_x : float
+            x dimension of the receiver plane.
+        plane_y : float
+            y dimension of the receiver plane.
+
+        Returns
+        -------
+        The normalized bitmap.
+        """
+        bitmap_height = bitmap.shape[0]
+        bitmap_width = bitmap.shape[1]
+
+        plane_area = plane_x * plane_y
+        num_pixels = bitmap_height * bitmap_width
+        plane_area_per_pixel = plane_area / num_pixels
+
+        return bitmap / (total_intensity * plane_area_per_pixel)

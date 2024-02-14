@@ -1,14 +1,15 @@
 """
 Alignment module for the heliostat.
 """
+
 from typing import Tuple
 
 import pytorch3d.transforms as throt
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
-    NeuralNetworkRigidBodyFusion,
+from artist.physics_objects.heliostats.alignment.rigid_body import (
+    RigidBodyModule,
 )
 from artist.physics_objects.module import AModule
 
@@ -49,7 +50,7 @@ class AlignmentModule(AModule):
         """
         super().__init__()
         self.position = position
-        self.kinematic_model = NeuralNetworkRigidBodyFusion(position=position)
+        self.kinematic_model = RigidBodyModule(position=position)
 
     def align_surface(
         self,
@@ -75,12 +76,15 @@ class AlignmentModule(AModule):
             Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(datapoint=datapoint)
+        normal_vec = (
+            orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
+        )[:1, :3]
         alignment = torch.stack(
             self.heliostat_coord_system(
                 self.position,
-                -datapoint.light_directions,
+                datapoint.light_directions,
                 datapoint.desired_aimpoint,
-                (orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32))[:1, :3],
+                normal_vec,
             )
         )
         align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
@@ -94,6 +98,9 @@ class AlignmentModule(AModule):
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
         ).unsqueeze(-1)
+        aligned_surface_normals /= torch.linalg.norm(
+            aligned_surface_normals, dim=-1
+        ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
     def align(self, datapoint: HeliostatDataPoint) -> torch.Tensor:
@@ -103,7 +110,7 @@ class AlignmentModule(AModule):
         Parameters
         ----------
         datapoint : HeliostatDataPoint
-            Contains information about the heliostat and the environment (light source, receiver,...).
+            Contains information about the heliostat and the environment (lightsource, receiver,...).
 
         Returns
         -------
@@ -112,11 +119,11 @@ class AlignmentModule(AModule):
         """
         return self.kinematic_model.compute_orientation_from_aimpoint(datapoint)
 
-    @staticmethod
     def heliostat_coord_system(
-        position: torch.Tensor,
-        sun: torch.Tensor,
-        aimpoint: torch.Tensor,
+        self,
+        Position: torch.Tensor,
+        Sun: torch.Tensor,
+        Aimpoint: torch.Tensor,
         ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -138,17 +145,15 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = position.dtype
-        device = position.device
-        p_sun = sun
-        p_position = position
-        p_aimpoint = aimpoint
-        # Calculation ideal heliostat
-        # Iteration 0
-        z = p_aimpoint - p_position
-        z /= torch.linalg.norm(z)
-        z = p_sun + z
-        z /= torch.linalg.norm(z)
+        dtype = Position.dtype
+        device = Position.device
+        pSun = Sun
+        pPosition = Position
+        pAimpoint = Aimpoint
+        z = pAimpoint - pPosition
+        z = z / torch.linalg.norm(z)
+        z = pSun + z
+        z = z / torch.linalg.norm(z)
 
         if (z == ideal_normal).all():
             x = torch.tensor([1, 0, 0], dtype=dtype, device=device)
@@ -161,5 +166,6 @@ class AlignmentModule(AModule):
                 ]
             )
         x /= torch.linalg.norm(x)
-        y = torch.cross(z, x)
+        y = torch.linalg.cross(z, x)
+
         return x, y, z

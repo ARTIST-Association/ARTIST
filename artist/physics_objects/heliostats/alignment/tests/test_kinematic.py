@@ -6,8 +6,8 @@ import torch
 import pytest
 
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
-    NeuralNetworkRigidBodyFusion,
+from artist.physics_objects.heliostats.alignment.rigid_body import (
+    RigidBodyModule,
 )
 
 
@@ -15,14 +15,14 @@ from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusio
 def kinematic_model():
     """Declare a kinematic model at the origin"""
     position = torch.tensor([0, 0, 0])
-    return NeuralNetworkRigidBodyFusion(position=position)
+    return RigidBodyModule(position=position)
 
 
 @pytest.fixture
 def kinematic_model2():
     """Declare a kinematic model placed one unit north"""
     position2 = torch.tensor([0.0, 1.0, 0.0])
-    return NeuralNetworkRigidBodyFusion(position=position2)
+    return RigidBodyModule(position=position2)
 
 
 @pytest.fixture
@@ -77,8 +77,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1, 0, 0, 0],
-                    [0, -1 / math.sqrt(2), -1 / math.sqrt(2), 0],
                     [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -88,9 +88,9 @@ def datapoints():
             "kinematic_model",
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), 1 / math.sqrt(2), 0, 0],
-                    [1 / math.sqrt(2), -1 / math.sqrt(2), 0, 0],
-                    [0, 0, -1, 0],
+                    [1 / math.sqrt(2), 0, 1 / math.sqrt(2), 0],
+                    [1 / math.sqrt(2), 0, -1 / math.sqrt(2), 0],
+                    [0, 1, 0, 0],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -101,8 +101,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -1.0, 0.0, 0.0],
                     [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -112,9 +112,9 @@ def datapoints():
             "kinematic_model",
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                    [-1 / math.sqrt(2), -1 / math.sqrt(2), 0.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
+                    [1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                    [-1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -125,8 +125,8 @@ def datapoints():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 0.0],
                     [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
+                    [0.0, math.cos(math.pi / 8), math.sin(math.pi / 8), 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -136,10 +136,10 @@ def datapoints():
             "kinematic_model2",
             torch.tensor(
                 [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, -math.cos(math.pi / 8), -math.sin(math.pi / 8), 1.0],
-                    [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [1, 0, 0, 0],
+                    [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
+                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
+                    [0, 0, 0, 1],
                 ]
             ),
         ),
@@ -148,8 +148,6 @@ def datapoints():
 def test_compute_orientation_from_aimpoint(
     request,
     datapoints,
-    kinematic_model,
-    kinematic_model2,
     datapoint_index,
     kinematic_model_fixture,
     expected,
