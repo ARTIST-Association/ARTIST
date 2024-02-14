@@ -1,0 +1,143 @@
+ DEFLECT_DATA:
+   AIM_POINT: null
+   CONCENTRATORHEADER_STRUCT_FMT: =5f2I2f
+   DISTURBANCE_ROT_ANGLES:
+   - 0.0
+   - 0.0
+   - 0.0
+   FACETHEADER_STRUCT_FMT: =i9fI
+   FACETS:
+     CANTING:
+       ALGORITHM: standard
+       FOCUS_POINT: 0.0
+   FILENAME: Helio_AA39_Rim0_STRAL-Input_211028212814.binp
+   POSITION_ON_FIELD:
+   - 0.0
+   - 0.0
+   - 0.0
+   RAY_STRUCT_FMT: =7f
+   TAKE_N_VECTORS: 120000
+   VERBOSE: true
+   ZS_PATH: Helio_AA39_Rim0_LocalResults_220303111914.csv
+ FUNCTION:
+   AIM_POINT: null
+   COLS: 64
+   DISTURBANCE_ROT_ANGLES:
+   - 0.0
+   - 0.0
+   - 0.0
+   FACETS:
+     CANTING:
+       ALGORITHM: standard
+       FOCUS_POINT: 0
+     POSITIONS:
+     - - 1.0
+       - -1.0
+       - 0.0
+     - - -1.0
+       - 1.0
+       - 0.0
+     - - 1.0
+       - -1.0
+       - 0.0
+     - - -1.0
+       - 1.0
+       - 0.0
+     SPANS_E:
+     - -1.0
+     - 0.0
+     - 0.0
+     SPANS_N:
+     - 0.0
+     - 1.0
+     - 0.0
+   FREQUENCY: 2
+   HEIGHT: 4
+   NAME: sin
+   POSITION_ON_FIELD:
+   - 0
+   - 0
+   - 0
+   REDUCTION_FACTOR: 1000
+   ROWS: 64
+   WIDTH: 4
+ IDEAL:
+   AIM_POINT: null
+   COLS: 32
+   DISTURBANCE_ROT_ANGLES:
+   - 0.0
+   - 0.0
+   - 0.0
+   FACETS:
+     CANTING:
+       ALGORITHM: standard
+       FOCUS_POINT: 0
+     POSITIONS:
+     - - 1.0
+       - -1.0
+       - 0.0
+     - - -1.0
+       - 1.0
+       - 0.0
+     - - 1.0
+       - -1.0
+       - 0.0
+     - - -1.0
+       - 1.0
+       - 0.0
+     SPANS_E:
+     - -1.0
+     - 0.0
+     - 0.0
+     SPANS_N:
+     - 0.0
+     - 1.0
+     - 0.0
+   HEIGHT: 4
+   NORMAL_VECS:
+   - 0
+   - 0
+   - 1
+   POSITION_ON_FIELD:
+   - 0
+   - 0
+   - 0
+   ROWS: 32
+   WIDTH: 4
+ NURBS:
+   COLS: 8
+   MAX_ABS_NOISE: 0.01
+   ROWS: 8
+   SPLINE_DEGREE: 3
+ OTHER:
+   AIM_POINT: null
+   DISTURBANCE_ROT_ANGLES:
+   - 0.0
+   - 0.0
+   - 0.0
+   FACETS:
+     CANTING:
+       ALGORITHM: standard
+       FOCUS_POINT: 0
+     POSITIONS:
+     - 0.0
+     - 0.0
+     - 0.0
+     SPANS_E:
+     - -.inf
+     - 0.0
+     - 0.0
+     SPANS_N:
+     - 0.0
+     - .inf
+     - 0.0
+   FILENAME: tinker.obj
+   POSITION_ON_FIELD:
+   - 0
+   - 0
+   - 0
+   USE_WEIGHTED_AVG: true
+ ROTATION_OFFSET_ANGLE: 270
+ SHAPE: real
+ TO_OPTIMIZE_NEW:
+ - surface

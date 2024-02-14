@@ -33,14 +33,12 @@ class ANormalization:
     ) -> torch.Tensor:
         """
         Denormalize a parameters value.
-
         Parameters
         ----------
         parameter : AParameter
             The parameter to be denormalized.
         value : torch.Tensor
             The value of the parameter before denormalization.
-
         Raises
         ------
         NotImplementedError
@@ -188,7 +186,6 @@ class ParameterNormalizer:
     def register_parameter(self, parameter: AParameter) -> None:
         """
         Add parameter to the module, register it.
-
         Parameters
         ----------
         parameter : AParameter
