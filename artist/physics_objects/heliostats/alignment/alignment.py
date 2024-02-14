@@ -98,9 +98,6 @@ class AlignmentModule(AModule):
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
         ).unsqueeze(-1)
-        aligned_surface_normals /= torch.linalg.norm(
-            aligned_surface_normals, dim=-1
-        ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
     def align(self, datapoint: HeliostatDataPoint) -> torch.Tensor:
