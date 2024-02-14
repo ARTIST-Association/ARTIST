@@ -529,7 +529,7 @@ class RigidBodyModule(AKinematicModule):
     def compute_orientation_from_aimpoint(
         self,
         data_point: HeliostatDataPoint,
-        max_num_epochs: int = 20,
+        max_num_epochs: int = 2,
         min_eps: float = 0.0001,
     ) -> torch.Tensor:
         """
