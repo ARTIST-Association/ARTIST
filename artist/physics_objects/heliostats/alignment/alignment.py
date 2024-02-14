@@ -7,13 +7,10 @@ import pytorch3d.transforms as throt
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
-    NeuralNetworkRigidBodyFusion,
+from artist.physics_objects.heliostats.alignment.rigid_body import (
+    RigidBodyModule,
 )
 from artist.physics_objects.module import AModule
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
-    NeuralNetworkRigidBodyFusion,
-)
 
 
 class AlignmentModule(AModule):
@@ -52,7 +49,7 @@ class AlignmentModule(AModule):
         """
         super().__init__()
         self.position = position
-        self.kinematic_model = NeuralNetworkRigidBodyFusion(position=position)
+        self.kinematic_model = RigidBodyModule(position=position)
 
     def align_surface(
         self,
