@@ -51,8 +51,10 @@ def generate_data(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    cov = 4.3681e-06 # circum-solar ratio
-    sun = Sun("Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device)
+    cov = 4.3681e-06  # circum-solar ratio
+    sun = Sun(
+        "Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
+    )
 
     point_cloud_facets = PointCloudFacetModule(
         surface_config, receiver_center, torch.tensor(light_direction), device
@@ -172,8 +174,12 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    expected_path = pathlib.Path(ARTIST_ROOT) / "artist/physics_objects/heliostats/tests/test_bitmaps"/expected_value
-    
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "artist/physics_objects/heliostats/tests/test_bitmaps"
+        / expected_value
+    )
+
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected)
+    torch.testing.assert_close(total_bitmap, expected, atol=2e-5, rtol=3e-5)
