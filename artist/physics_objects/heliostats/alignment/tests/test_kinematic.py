@@ -148,8 +148,6 @@ def datapoints():
 def test_compute_orientation_from_aimpoint(
     request,
     datapoints,
-    kinematic_model,
-    kinematic_model2,
     datapoint_index,
     kinematic_model_fixture,
     expected,
