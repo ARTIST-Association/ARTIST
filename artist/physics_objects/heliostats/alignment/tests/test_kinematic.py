@@ -6,8 +6,8 @@ import torch
 import pytest
 
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusion import (
-    NeuralNetworkRigidBodyFusion,
+from artist.physics_objects.heliostats.alignment.rigid_body import (
+    RigidBodyModule,
 )
 
 
@@ -15,14 +15,14 @@ from artist.physics_objects.heliostats.alignment.neural_network_rigid_body_fusio
 def kinematic_model():
     """Declare a kinematic model at the origin"""
     position = torch.tensor([0, 0, 0])
-    return NeuralNetworkRigidBodyFusion(position=position)
+    return RigidBodyModule(position=position)
 
 
 @pytest.fixture
 def kinematic_model2():
     """Declare a kinematic model placed one unit north"""
     position2 = torch.tensor([0.0, 1.0, 0.0])
-    return NeuralNetworkRigidBodyFusion(position=position2)
+    return RigidBodyModule(position=position2)
 
 
 @pytest.fixture
