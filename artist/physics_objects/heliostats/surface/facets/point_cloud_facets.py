@@ -16,14 +16,9 @@ HeliostatParams = Tuple[
     torch.Tensor,  # facet spans N
     torch.Tensor,  # facet spans E
     torch.Tensor,  # discrete points
-    torch.Tensor,  # ideal discrete points
     torch.Tensor,  # normals
-    torch.Tensor,  # ideal normals
     float,  # height
     float,  # width
-    Optional[int],  # rows
-    Optional[int],  # cols
-    Optional[Dict[str, Any]],  # params
 ]
 
 
@@ -78,14 +73,14 @@ def real_surface(
         else get_position(cfg, dtype, device)
     )
 
-    heliostat_normal_vecs = []
+    surface_normal_vecs = []
     heliostat_ideal_vecs = []
-    heliostat = []
-    heliostat_ideal = []
+    surface_points = []
+    surface_points_ideal = []
 
     step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
     for f in range(len(directions)):
-        heliostat_normal_vecs.append(
+        surface_normal_vecs.append(
             torch.tensor(
                 directions[f][::step_size],
                 dtype=dtype,
@@ -99,7 +94,7 @@ def real_surface(
                 device=device,
             )
         )
-        heliostat.append(
+        surface_points.append(
             torch.tensor(
                 ideal_positions[f][::step_size],
                 dtype=dtype,
@@ -107,7 +102,7 @@ def real_surface(
             )
         )
 
-        heliostat_ideal.append(
+        surface_points_ideal.append(
             torch.tensor(
                 ideal_positions[f][::step_size],
                 dtype=dtype,
@@ -115,11 +110,11 @@ def real_surface(
             )
         )
 
-    heliostat_normal_vecs: torch.Tensor = torch.cat(heliostat_normal_vecs, dim=0)
+    surface_normal_vecs: torch.Tensor = torch.cat(surface_normal_vecs, dim=0)
     heliostat_ideal_vecs: torch.Tensor = torch.cat(heliostat_ideal_vecs, dim=0)
-    heliostat: torch.Tensor = torch.cat(heliostat, dim=0)
+    surface_points: torch.Tensor = torch.cat(surface_points, dim=0)
 
-    heliostat_ideal: torch.Tensor = torch.cat(heliostat_ideal, dim=0)
+    surface_points_ideal: torch.Tensor = torch.cat(surface_points_ideal, dim=0)
     if cfg.VERBOSE:
         print("Done")
 
@@ -128,15 +123,10 @@ def real_surface(
         torch.tensor(facet_positions, dtype=dtype, device=device),
         torch.tensor(facet_spans_n, dtype=dtype, device=device),
         torch.tensor(facet_spans_e, dtype=dtype, device=device),
-        heliostat,
-        heliostat_ideal,
-        heliostat_normal_vecs,
-        heliostat_ideal_vecs,
+        surface_points,
+        surface_normal_vecs,
         height,
         width,
-        None,
-        None,
-        None,
     )
 
 
@@ -269,14 +259,14 @@ class PointCloudFacetModule(AFacetModule):
         sun_direction : Optional[torch.Tensor]
             The sun vector.
         """
-        builder_fn, h_cfg = self.select_surface_builder(self.cfg)
+        builder_fn, heliostat_cfg = self.get_surface_builder(self.cfg)
 
         self.aim_point = self._get_aim_point(
-            h_cfg,
+            heliostat_cfg,
             aim_point,
         )
         # Radians
-        self.disturbance_angles = self._get_disturbance_angles(h_cfg)
+        self.disturbance_angles = self._get_disturbance_angles(heliostat_cfg)
 
         (
             surface_position,
@@ -284,31 +274,24 @@ class PointCloudFacetModule(AFacetModule):
             facet_spans_n,
             facet_spans_e,
             surface_points,
-            surface_ideal,
             surface_normals,
-            surface_ideal_vecs,
             height,
             width,
-            rows,
-            cols,
-            params,
-        ) = builder_fn(h_cfg, self.device)
+        ) = builder_fn(heliostat_cfg, self.device)
 
         self.position_on_field = surface_position
         self.set_up_facets(
             surface_points,
             surface_normals,
         )
-        self.params = params
         self.height = height
         self.width = width
-        self.rows = rows
-        self.cols = cols
+
 
         self.surface_points: torch.Tensor
         self.surface_normals: torch.Tensor
 
-    def select_surface_builder(
+    def get_surface_builder(
         self, cfg: CfgNode
     ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
         """
@@ -326,10 +309,8 @@ class PointCloudFacetModule(AFacetModule):
         Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]
             The loaded surface, the heliostat parameters, and deflectometry data.
         """
-        shape = cfg.SHAPE.lower()
-        if shape == "real":
-            return real_surface, cfg.DEFLECT_DATA
-        raise ValueError("unknown surface shape")
+        return real_surface, cfg.DEFLECT_DATA
+
 
     def _get_aim_point(
         self,
