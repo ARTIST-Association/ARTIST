@@ -71,7 +71,7 @@ def load_bpro(
     facet_header_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
-    binp_loc = pathlib.Path(ARTIST_ROOT) / pathlib.Path(f"measurement_data/{filename}")
+    binp_loc = pathlib.Path(ARTIST_ROOT)/"measurement_data"/filename
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentrator_header_struct_len)
         concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
@@ -145,44 +145,3 @@ def load_bpro(
         width,
         height,
     )
-
-
-def load_csv(filename: str, num_facets: int) -> List[List[Vector3d]]:
-    """
-    Load data from csv file.
-
-    Parameters
-    ----------
-    filename : str
-        The file that contains the data.
-    num_facets : int
-        The number of facets that are to be loaded.
-
-    Returns
-    -------
-    List[List[Vector3d]]
-        The facets.
-    """
-    facets: List[List[Vector3d]] = [[] for _ in range(num_facets)]
-    # mm to m conversion factor
-    mm_to_m_factor = 0.001
-    csv_loc = pathlib.Path(ARTIST_ROOT) / pathlib.Path(f"measurement_data/{csv_loc}")
-    with open(csv_loc, "r", newline="") as csv_file:
-        # Skip title
-        next(csv_file)
-        # Skip empty line
-        next(csv_file)
-        csv_reader = csv.DictReader(csv_file)
-        for row in csv_reader:
-            if row["z-integrated(mm)"] == "NaN":
-                continue
-
-            # Convert mm to m
-            x = mm_to_m_factor * float(row["x-ideal(mm)"])
-            y = mm_to_m_factor * float(row["y-ideal(mm)"])
-            z = mm_to_m_factor * float(row["z-integrated(mm)"])
-            # Facet indices in CSV start at one.
-            facet_index = int(row["FacetIndex"]) - 1
-            facets[facet_index].append(nwu_to_enu(cast(Tuple3d, (x, y, z))))
-
-    return facets
