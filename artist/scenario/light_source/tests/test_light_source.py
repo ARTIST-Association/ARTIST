@@ -76,10 +76,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        # ([0.0, 0.0, 1.0], "above.pt"),
+        ([0.0, 0.0, 1.0], "above.pt"),
         ([1.0, 0.0, 0.0], "east.pt"),
         ([-1.0, 0.0, 0.0], "west.pt"),
-        # ([0.0, -1.0, 0.0], "south.pt"),
+        ([0.0, -1.0, 0.0], "south.pt"),
     ],
     name="environment_data",
 )
