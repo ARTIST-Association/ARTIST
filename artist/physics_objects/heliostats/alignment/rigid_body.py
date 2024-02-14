@@ -558,7 +558,7 @@ class RigidBodyModule(AKinematicModule):
             )
 
             orientation[0][:, 1] = orientation[0][:, 2]
-            orientation[0][:3, 2] = torch.cross(
+            orientation[0][:3, 2] = torch.linalg.cross(
                 orientation[0][:3, 0], orientation[0][:3, 1]
             )
 

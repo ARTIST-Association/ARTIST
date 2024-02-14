@@ -1,6 +1,7 @@
 """
 Alignment module for the heliostat.
 """
+
 from typing import Tuple
 
 import pytorch3d.transforms as throt
@@ -165,6 +166,6 @@ class AlignmentModule(AModule):
                 ]
             )
         x /= torch.linalg.norm(x)
-        y = torch.cross(z, x)
+        y = torch.linalg.cross(z, x)
 
         return x, y, z
