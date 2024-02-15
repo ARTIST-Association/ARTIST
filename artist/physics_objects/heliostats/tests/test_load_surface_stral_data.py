@@ -113,7 +113,7 @@ def data(request) -> Dict[str, torch.Tensor]:
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
