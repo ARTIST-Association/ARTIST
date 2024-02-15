@@ -4,6 +4,7 @@
 
 [![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![](./coverage.svg)
 [![](https://img.shields.io/badge/Contact-max.pargmann%40dlr.de-orange)](mailto:max.pargmann@dlr.de)
 
 ## What ARTIST can do for you
