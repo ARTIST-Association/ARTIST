@@ -258,7 +258,7 @@ class PointCloudFacetModule(AFacetModule):
         self.cfg = config
         self.device = device
 
-        self.load(aimpoint, sun_direction)
+        self.load(aimpoint)
 
     def load(
         self,
