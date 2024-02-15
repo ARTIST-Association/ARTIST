@@ -416,7 +416,7 @@ class PointCloudFacetModule(AFacetModule):
         """
         return self.facetted_discrete_points, self.facetted_normals
 
-    def make_facets_list(self) -> list[list[torch.Tensor], list[torch.Tensor]]:
+    def make_facets_list(self) -> List[List[torch.Tensor], List[torch.Tensor]]:
         """
         Create a list of facets.
 
