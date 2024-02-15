@@ -20,7 +20,7 @@ class AlignmentModule(AModule):
     ----------
     position : torch.Tensor
         Position of the heliostat for which the alignment model is created.
-    kinematic_model : NeuralNetworkRigidBodyFusion
+    kinematic_model : RigidBody
         The kinematic model used.
 
     Methods
@@ -37,7 +37,7 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, position: torch.Tensor) -> None:
+    def __init__(self, heliostat_position: torch.Tensor) -> None:
         """
         Initialize the alignment module.
 
@@ -47,8 +47,7 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        self.position = position
-        self.kinematic_model = RigidBodyModule(position=position)
+        self.kinematic_model = RigidBodyModule(heliostat_position)
 
     def align_surface(
         self,
@@ -113,7 +112,6 @@ class AlignmentModule(AModule):
 
     def heliostat_coord_system(
         self,
-        Position: torch.Tensor,
         Sun: torch.Tensor,
         Aimpoint: torch.Tensor,
         ideal_normal: torch.Tensor,
@@ -137,10 +135,10 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = Position.dtype
-        device = Position.device
+        dtype = heliostat_position.dtype
+        device = heliostat_position.device
         pSun = Sun
-        pPosition = Position
+        pPosition = heliostat_position
         pAimpoint = Aimpoint
         z = pAimpoint - pPosition
         z = z / torch.linalg.norm(z)

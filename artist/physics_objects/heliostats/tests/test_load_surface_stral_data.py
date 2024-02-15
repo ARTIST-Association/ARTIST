@@ -10,6 +10,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.physics_objects.heliostats.heliostat import HeliostatModule
 from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import (
     PointCloudFacetModule,
@@ -43,57 +44,43 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    heliostat_position = torch.Tensor([0.0, 5.0, 0.0])
-    receiver_center = torch.Tensor([0.0, -50.0, 0.0])
-
     cfg_default_surface = surface_defaults.get_cfg_defaults()
     surface_config = surface_defaults.load_config_file(cfg_default_surface)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    cov = 4.3681e-06  # circum-solar ratio
-    sun = Sun(
-        "Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
-    )
-
-    point_cloud_facets = PointCloudFacetModule(
-        surface_config, receiver_center, torch.tensor(light_direction), device
-    )
-    facets = point_cloud_facets.make_facets_list()
-    concentrator = ConcentratorModule(facets)
-    surface_points, surface_normals = concentrator.get_surface()
-
-    alignment_model = AlignmentModule(position=heliostat_position)
+    
+    receiver_center = torch.tensor([0.0, -50.0, 0.0]).reshape(-1, 1)
+    
     datapoint = HeliostatDataPoint(
         point_id=1,
-        light_directions=torch.tensor(light_direction),
+        light_directions=light_direction,
         desired_aimpoint=receiver_center,
         label=HeliostatDataPointLabel(),
     )
-    (
-        aligned_surface_points,
-        aligned_surface_normals,
-    ) = alignment_model.align_surface(
-        datapoint=datapoint,
-        surface_points=surface_points,
-        surface_normals=surface_normals,
+    
+    covariance = 4.3681e-06  # circum-solar ratio
+    sun = Sun(
+        "Normal", ray_count=100, mean=[0.0, 0.0], cov=[[covariance, 0.0], [0.0, covariance]]
     )
+
+    heliostat = HeliostatModule(surface_config)
+    
+    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(datapoint=datapoint)
+
     return {
         "sun": sun,
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "light_direction": torch.tensor(light_direction),
+        "light_direction": light_direction,
         "expected_value": expected_value,
     }
 
 
 @pytest.fixture(
     params=[
-        ([0.0, -1.0, 0.0], "south.pt"),
-        ([1.0, 0.0, 0.0], "east.pt"),
-        ([-1.0, 0.0, 0.0], "west.pt"),
-        ([0.0, 0.0, 1.0], "above.pt"),
+        (torch.tensor([0.0, -1.0, 0.0]), "south.pt"),
+        (torch.tensor([1.0, 0.0, 0.0]), "east.pt"),
+        (torch.tensor([-1.0, 0.0, 0.0]), "west.pt"),
+        (torch.tensor([0.0, 0.0, 1.0]), "above.pt"),
     ],
     name="environment_data",
 )

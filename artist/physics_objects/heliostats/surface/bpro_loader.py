@@ -4,6 +4,8 @@ import numpy as np
 import struct
 from typing import cast, List, Tuple
 
+import torch
+
 from artist import ARTIST_ROOT
 
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
@@ -76,7 +78,7 @@ def load_bpro(
         if verbose:
             print("READING bpro filename: " + filename)
 
-        hel_pos = nwu_to_enu(cast(Tuple3d, concentrator_header_data[0:3]))
+        surface_position = nwu_to_enu(cast(Tuple3d, concentrator_header_data[0:3]))
         width, height = concentrator_header_data[3:5]
         n_xy = concentrator_header_data[5:7]
 
@@ -85,9 +87,9 @@ def load_bpro(
         facet_spans_n: List[Vector3d] = []
         facet_spans_e: List[Vector3d] = []
 
-        positions: List[List[Vector3d]] = [[] for _ in range(n_facets)]
-        directions: List[List[Vector3d]] = [[] for _ in range(n_facets)]
-        ideal_normal_vecs: List[List[Vector3d]] = [[] for _ in range(n_facets)]
+        ideal_surface_points: List[List[Vector3d]] = [[] for _ in range(n_facets)]
+        normal_vectors: List[List[Vector3d]] = [[] for _ in range(n_facets)]
+        ideal_normal_vectors: List[List[Vector3d]] = [[] for _ in range(n_facets)]
 
         for f in range(n_facets):
             byte_data = file.read(facet_header_struct_len)
@@ -123,9 +125,9 @@ def load_bpro(
             ray_datas = ray_struct.iter_unpack(byte_data)
 
             for ray_data in ray_datas:
-                positions[f].append(cast(Tuple3d, ray_data[:3]))
-                directions[f].append(cast(Tuple3d, ray_data[3:6]))
-                ideal_normal_vecs[f].append(ideal_normal)
+                ideal_surface_points[f].append(cast(Tuple3d, ray_data[:3]))
+                normal_vectors[f].append(cast(Tuple3d, ray_data[3:6]))
+                ideal_normal_vectors[f].append(ideal_normal)
 
         # Stral uses two different coordinate systems, both with a West orientation. That is why we do not need an NWU
         # to ENU cast here. However, to keep our code consistent, we cast the West direction to an East direction.
@@ -133,13 +135,13 @@ def load_bpro(
             span_e[0] = -span_e[0]
 
     return (
-        hel_pos,
-        facet_positions,
-        facet_spans_n,
-        facet_spans_e,
-        positions,
-        directions,
-        ideal_normal_vecs,
+        torch.tensor(surface_position).unsqueeze(0).T.contiguous(),
+        torch.tensor(facet_positions).T.contiguous(),
+        torch.tensor(facet_spans_n).T.contiguous(),
+        torch.tensor(facet_spans_e).T.contiguous(),
+        torch.tensor(ideal_surface_points).swapaxes(2,1).contiguous(),
+        torch.tensor(normal_vectors).swapaxes(2,1).contiguous(),
+        torch.tensor(ideal_normal_vectors).swapaxes(2,1).contiguous(),
         width,
         height,
     )

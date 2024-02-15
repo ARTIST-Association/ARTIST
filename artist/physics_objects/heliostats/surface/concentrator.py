@@ -1,4 +1,7 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
+from yacs.config import CfgNode
+
+from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
 
 from artist.physics_objects.module import AModule
 
@@ -27,17 +30,18 @@ class ConcentratorModule(AModule):
     :class:AModule : Reference to the parent class.
     """
 
-    def __init__(self, facets: List[AFacetModule]) -> None:
+    def __init__(self, surface_config: CfgNode) -> None:
         """
         Initialize the concentrator.
 
         Parameters
         ----------
-        facets: List[AFacetModule]
-            The facets of the concentrator.
+        surface_config : CfgNode
+            The config file containing information about the surface.
         """
         super().__init__()
-        self.facets = facets
+
+        self.facets = [PointCloudFacetModule(surface_config)]
 
     def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -48,14 +52,7 @@ class ConcentratorModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             Return the surface points and the surface normals.
         """
-        surface_points_list = []
-        surface_normals_list = []
+        surface_points = [facet.ideal_surface_points for facet in self.facets]
+        surface_normals = [facet.surface_normals for facet in self.facets]
 
-        for facet in self.facets:
-            surface_points_list.append(facet[0])
-            surface_normals_list.append(facet[1])
-
-        surface_points = torch.cat(surface_points_list, 0)
-        surface_normals = torch.cat(surface_normals_list, 0)
-
-        return surface_points, surface_normals
+        return  torch.vstack(surface_points), torch.vstack(surface_normals)
