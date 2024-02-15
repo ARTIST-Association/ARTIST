@@ -1,10 +1,12 @@
-from typing import Tuple
+from typing import List, Optional, Tuple
+from yacs.config import CfgNode
 
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
 from artist.physics_objects.module import AModule
 
 
@@ -14,6 +16,10 @@ class HeliostatModule(AModule):
 
     Attributes
     ----------
+    position : torch.Tensor
+        The position of the heliostat in the field.
+    aim_point : torch.Tensor
+        The aim point on the receiver.
     concentrator : ConcentratorModule
         The surface of the heliostat.
     alignment : AlignmentModule
@@ -24,27 +30,29 @@ class HeliostatModule(AModule):
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
-    See Also
+    See also
     --------
     :class:AModule : Reference to the parent class.
     """
 
     def __init__(
-        self, concentrator: ConcentratorModule, alignment: AlignmentModule
+        self, heliostat_config : CfgNode
     ) -> None:
         """
         Initialize the heliostat.
 
         Parameters
         ----------
-        concentrator : ConcentratorModule
-            The surface of the heliostat.
-        alignment : AlignmentModule
-            The alignment module of the heliostat.
+        heliostat_config : CfgNode
+            The config file with the heliostat data
         """
         super().__init__()
-        self.concentrator = concentrator
-        self.alignment = alignment
+        self.aim_point = torch.tensor(heliostat_config.DEFLECT_DATA.AIM_POINT).reshape(-1, 1)
+        self.position = torch.tensor(heliostat_config.DEFLECT_DATA.POSITION_ON_FIELD).reshape(-1, 1)
+
+        self.concentrator = ConcentratorModule(heliostat_config)
+        self.alignment = AlignmentModule(heliostat_position=self.position)
+
 
     def get_aligned_surface(
         self, datapoint: HeliostatDataPoint
