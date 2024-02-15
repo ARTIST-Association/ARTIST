@@ -18,7 +18,6 @@
    RAY_STRUCT_FMT: =7f
    TAKE_N_VECTORS: 120000
    VERBOSE: true
-   ZS_PATH: Helio_AA39_Rim0_LocalResults_220303111914.csv
  FUNCTION:
    AIM_POINT: null
    COLS: 64
