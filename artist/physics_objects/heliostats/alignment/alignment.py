@@ -3,8 +3,6 @@ Alignment module for the heliostat.
 """
 
 from typing import Tuple
-
-import pytorch3d.transforms as throt
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
@@ -87,13 +85,10 @@ class AlignmentModule(AModule):
                 normal_vec,
             )
         )
-        align_origin = throt.Rotate(alignment, dtype=alignment.dtype)
-        aligned_surface_points = align_origin.transform_points(
-            surface_points.to(torch.float)
-        )
-        aligned_surface_normals = align_origin.transform_normals(
-            surface_normals.to(torch.float)
-        )
+        
+        aligned_surface_points =  surface_points @ alignment
+        aligned_surface_normals = surface_normals @ alignment
+
         aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
