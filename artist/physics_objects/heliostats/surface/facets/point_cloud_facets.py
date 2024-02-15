@@ -1,6 +1,7 @@
 """
 This file contains the functionality to create a heliostat surface from a loaded pointcloud.
 """
+
 import struct
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -287,13 +288,13 @@ class PointCloudFacetModule(AFacetModule):
         self.height = height
         self.width = width
 
-
         self.surface_points: torch.Tensor
         self.surface_normals: torch.Tensor
 
-    def get_surface_builder(
-        self, cfg: CfgNode
-    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
+    def get_surface_builder(self, cfg: CfgNode) -> Tuple[
+        Callable[[CfgNode, torch.device], HeliostatParams],
+        CfgNode,
+    ]:
         """
         Select which kind of surface is to be loaded.
 
@@ -310,7 +311,6 @@ class PointCloudFacetModule(AFacetModule):
             The loaded surface, the heliostat parameters, and deflectometry data.
         """
         return real_surface, cfg.DEFLECT_DATA
-
 
     def _get_aim_point(
         self,
@@ -416,7 +416,7 @@ class PointCloudFacetModule(AFacetModule):
         """
         return self.facetted_discrete_points, self.facetted_normals
 
-    def make_facets_list(self) -> List[List[torch.Tensor], List[torch.Tensor]]:
+    def make_facets_list(self) -> List[List[torch.Tensor]]:
         """
         Create a list of facets.
 
