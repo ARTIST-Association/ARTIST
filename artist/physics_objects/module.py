@@ -40,4 +40,4 @@ class AModule(torch.nn.Module):
         torch.Tensor
             [INSERT DESCRIPTION HERE!]
         """
-        raise NotImplementedError("Must be overridden!")
+        raise NotImplementedError("Must be overwritten!")
