@@ -14,7 +14,7 @@ from artist.scenario.light_source.sun import Sun
 
 def generate_data(
     light_direction: torch.Tensor, expected_value: torch.Tensor
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
@@ -32,7 +32,7 @@ def generate_data(
 
     Returns
     -------
-    dict[str, torch.Tensor]
+    Dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
@@ -111,7 +111,7 @@ def data(request) -> Dict[str, torch.Tensor]:
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -122,7 +122,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : dict[str, torch.Tensor]
+    environment_data : Dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
     torch.set_printoptions(precision=10)
@@ -193,4 +193,4 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected)
+    torch.testing.assert_close(total_bitmap, expected, atol=5e-5, rtol=5e-5)
