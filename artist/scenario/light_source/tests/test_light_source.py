@@ -44,10 +44,10 @@ def generate_data(
     sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], device)
 
     surface_normals = torch.tensor(
-        [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        [[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]]
     )
     surface_points = torch.tensor(
-        [[-1, -1, 0], [1, 1, 0], [-1, 1, 0], [1, -1, 0], [0, 0, 0]]
+        [[-1.0, -1.0, 0.0], [1.0, 1.0, 0.0], [-1.0, 1.0, 0.0], [1.0, -1.0, 0.0], [0.0, 0.0, 0.0]]
     )
     alignment_model = AlignmentModule(position=heliostat_position)
 
