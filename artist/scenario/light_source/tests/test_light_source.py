@@ -60,7 +60,7 @@ def generate_data(
             [0.0, 0.0, 0.0],
         ]
     )
-    alignment_model = AlignmentModule(position=heliostat_position)
+    alignment_model = AlignmentModule(heliostat_position=heliostat_position)
 
     datapoint = HeliostatDataPoint(
         point_id=1,

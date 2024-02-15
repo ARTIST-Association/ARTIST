@@ -24,7 +24,6 @@ HeliostatParams = Tuple[
 
 def real_surface(
     real_configs: CfgNode,
-    device: torch.device,
 ) -> HeliostatParams:
     """
     Compute a surface loaded from deflectometric data.
@@ -33,8 +32,6 @@ def real_surface(
     ----------
     real_config : CfgNode
         The config file containing information about the real surface.
-    device : torch.device
-        Specifies the device type responsible to load tensors into memory.
 
     Returns
     -------
@@ -42,119 +39,78 @@ def real_surface(
         Tuple of all heliostat parameters.
 
     """
-    cfg = real_configs
-    dtype = torch.get_default_dtype()
+    config = real_configs
 
-    concentratorHeader_struct = struct.Struct(cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
-    ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
+    concentratorHeader_struct = struct.Struct(config.CONCENTRATORHEADER_STRUCT_FMT)
+    facetHeader_struct = struct.Struct(config.FACETHEADER_STRUCT_FMT)
+    ray_struct = struct.Struct(config.RAY_STRUCT_FMT)
 
     (
         surface_position,
         facet_positions,
         facet_spans_n,
         facet_spans_e,
-        ideal_positions,
-        directions,
-        ideal_normal_vecs,
+        ideal_surface_points,
+        normal_vectors,
+        _,
         width,
         height,
     ) = bpro_loader.load_bpro(
-        cfg.FILENAME,
+        config.FILENAME,
         concentratorHeader_struct,
         facetHeader_struct,
         ray_struct,
-        cfg.VERBOSE,
+        config.VERBOSE,
     )
 
-    surface_position: torch.Tensor = (
-        torch.tensor(surface_position, dtype=dtype, device=device)
-        if cfg.POSITION_ON_FIELD is None
-        else get_position(cfg, dtype, device)
-    )
+    surface_position = set_default_surface_position(config, surface_position)
+    points_on_facet = normal_vectors.shape[2]
+    if points_on_facet < config.TAKE_N_VECTORS:
+        raise ValueError(f"TAKE_N_VECTORS was {config.TAKE_N_VECTORS} cannot be larger than number of points on facet {points_on_facet}")
+    step_size = points_on_facet // config.TAKE_N_VECTORS
 
-    surface_normal_vecs = []
-    heliostat_ideal_vecs = []
-    surface_points = []
-    surface_points_ideal = []
+    # thinning: keep only every step-size-th surface point and normal
+    # shape goes from (#facets, 3, #points) -> (#facets, 3, #points/step_size)
+    ideal_surface_points = ideal_surface_points[:, :, ::step_size]
+    normal_vectors = normal_vectors[:, :, ::step_size]
 
-    step_size = sum(map(len, directions)) // cfg.TAKE_N_VECTORS
-    for f in range(len(directions)):
-        surface_normal_vecs.append(
-            torch.tensor(
-                directions[f][::step_size],
-                dtype=dtype,
-                device=device,
-            )
-        )
-        heliostat_ideal_vecs.append(
-            torch.tensor(
-                ideal_normal_vecs[f][::step_size],
-                dtype=dtype,
-                device=device,
-            )
-        )
-        surface_points.append(
-            torch.tensor(
-                ideal_positions[f][::step_size],
-                dtype=dtype,
-                device=device,
-            )
-        )
-
-        surface_points_ideal.append(
-            torch.tensor(
-                ideal_positions[f][::step_size],
-                dtype=dtype,
-                device=device,
-            )
-        )
-
-    surface_normal_vecs: torch.Tensor = torch.cat(surface_normal_vecs, dim=0)
-    heliostat_ideal_vecs: torch.Tensor = torch.cat(heliostat_ideal_vecs, dim=0)
-    surface_points: torch.Tensor = torch.cat(surface_points, dim=0)
-
-    surface_points_ideal: torch.Tensor = torch.cat(surface_points_ideal, dim=0)
-    if cfg.VERBOSE:
+    if config.VERBOSE:
         print("Done")
 
     return (
         surface_position,
-        torch.tensor(facet_positions, dtype=dtype, device=device),
-        torch.tensor(facet_spans_n, dtype=dtype, device=device),
-        torch.tensor(facet_spans_e, dtype=dtype, device=device),
-        surface_points,
-        surface_normal_vecs,
+        facet_positions,
+        facet_spans_n,
+        facet_spans_e,
+        ideal_surface_points,
+        normal_vectors,
         height,
         width,
     )
 
 
-def get_position(
+def set_default_surface_position(
     cfg: CfgNode,
-    dtype: torch.dtype,
-    device: torch.device,
+    position: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     """
-    Retrieve the position of the heliostat in the field as tensor.
+    Retrieve the position of the heliostat in the field as tensor either from cfg or bpro.
 
     Parameters
     ----------
     cfg : CfgNode
         The config file containing the information about the heliostat.
-    dtype : torch.dtype
-        The type and size of the tensor.
-    device : torch.device
-        Specifies the device type responsible to load tensors into memory.
+    position : torch.Tensor
+        The position of the suspension point of the surface.
 
     Returns
     -------
     torch.tensor
         The position of the heliostat in the field.
     """
-    position_on_field: List[float] = cfg.POSITION_ON_FIELD
-    return torch.tensor(position_on_field, dtype=dtype, device=device)
-
+    if cfg.POSITION_ON_FIELD is None:
+        return torch.tensor(cfg.POSITION_ON_FIELD).reshape(-1, 1)
+    return position
 
 def _indices_between(
     points: torch.Tensor,
@@ -183,14 +139,22 @@ def facet_point_indices(
 
 class PointCloudFacetModule(AFacetModule):
     """
-    Implementation of the heliostat surface loaded from a pointcloud.
+    Implementation of the heliostat surface loaded from a point cloud.
 
     Attributes
     ----------
-    cfg : CfgNode
+    config : CfgNode
         The config file containing information about the surface.
-    device : torch.device
-        Specifies the device type responsible to load tensors into memory.
+    surface_position : torch.Tensor
+        The position of the surface suspension point.
+    ideal_surface_points : torch.Tensor
+        The ideal surface points.
+    surface_normals : torch.Tensor
+        The surface normal vectors.
+    heliostat_height : float
+        The height of the surface.
+    heliostat_width : float
+        The width of the surface.
 
     Methods
     -------
@@ -198,18 +162,6 @@ class PointCloudFacetModule(AFacetModule):
         Load a surface from deflectometry data.
     select_surface_builder()
         Select which kind of surface is to be loaded.
-    _get_aim_point()
-        Retrieve the aim point.
-    _get_disturbance_angles()
-        Retrieve the disturbance angles.
-    set_up_facets()
-        Split up the surface points and surface normals into their respective facets.
-    discrete_points_and_normals()
-        Return the surface points and surface normals.
-    facetted_discrete_points_and_normals()
-        Return the facetted surface points and facetted surface normals.
-    make_facets_list()
-        Create a list of facets.
 
     See also
     --------
@@ -218,36 +170,29 @@ class PointCloudFacetModule(AFacetModule):
 
     def __init__(
         self,
-        config: CfgNode,
-        aimpoint: torch.Tensor,
-        sun_direction: torch.Tensor,
-        device: torch.device,
+        config: CfgNode
     ) -> None:
         """
-        Initialize the surface from a pointcloud.
+        Initialize the surface from a point cloud.
 
         Parameters
         ----------
         config : CfgNode
             The config file containing information about the loaded surface.
-        aimpoint : torch.Tensor
-            The aimpoint of the heliostat.
-        sun_direction : torch.Tensor
-            The direction of the light.
-        device : torch.Tensor
-            Specifies the device type responsible to load tensors into memory.
         """
         super().__init__()
 
-        self.cfg = config
-        self.device = device
+        self.config = config
+        self.surface_position = None
+        self.ideal_surface_points = None
+        self.surface_normals = None
+        self.heliostat_height = 0.0
+        self.heliostat_width = 0.0
 
-        self.load(aimpoint, sun_direction)
+        self.load()
 
     def load(
         self,
-        aim_point: Optional[torch.Tensor],
-        sun_direction: Optional[torch.Tensor],
     ) -> None:
         """
         Load a surface from deflectometry data.
@@ -256,40 +201,19 @@ class PointCloudFacetModule(AFacetModule):
         ----------
         aim_point : Optional[torch.Tensor]
             The aimpoint.
-        sun_direction : Optional[torch.Tensor]
-            The sun vector.
         """
-        builder_fn, heliostat_cfg = self.get_surface_builder(self.cfg)
-
-        self.aim_point = self._get_aim_point(
-            heliostat_cfg,
-            aim_point,
-        )
-        # Radians
-        self.disturbance_angles = self._get_disturbance_angles(heliostat_cfg)
+        builder_function, heliostat_config = self.get_surface_builder(self.config)
 
         (
-            surface_position,
-            facet_positions,
-            facet_spans_n,
-            facet_spans_e,
-            surface_points,
-            surface_normals,
-            height,
-            width,
-        ) = builder_fn(heliostat_cfg, self.device)
-
-        self.position_on_field = surface_position
-        self.set_up_facets(
-            surface_points,
-            surface_normals,
-        )
-        self.height = height
-        self.width = width
-
-
-        self.surface_points: torch.Tensor
-        self.surface_normals: torch.Tensor
+            self.surface_position,
+            _,
+            _,
+            _,
+            self.ideal_surface_points,
+            self.surface_normals,
+            self.heliostat_height,
+            self.heliostat_width,
+        ) = builder_function(heliostat_config)
 
     def get_surface_builder(
         self, cfg: CfgNode
@@ -312,125 +236,5 @@ class PointCloudFacetModule(AFacetModule):
         return real_surface, cfg.DEFLECT_DATA
 
 
-    def _get_aim_point(
-        self,
-        cfg: CfgNode,
-        aim_point: Optional[torch.Tensor],
-    ) -> torch.Tensor:
-        """
-        Retrieve the aim point.
 
-        Parameters
-        ----------
-        cfg : CfgNode
-            The config file containing information about the aim point.
-        aim_point : Optional[torch.Tensor]
-            An aim point.
 
-        Returns
-        -------
-        torch.Tensor
-            The aim point.
-
-        Raises
-        ------
-        ValueError
-            When no aim point is provided via optional argument or config file.
-        """
-        cfg_aim_point: Optional[List[float]] = cfg.AIM_POINT
-        if cfg_aim_point is not None:
-            aim_point = torch.tensor(
-                cfg_aim_point,
-                dtype=torch.get_default_dtype(),
-                device=self.device,
-            )
-        elif aim_point is not None:
-            aim_point = aim_point
-        else:
-            raise ValueError("No aim point was supplied.")
-        return aim_point
-
-    def _get_disturbance_angles(self, h_cfg: CfgNode) -> List[torch.Tensor]:
-        """
-        Retrieve the disturbance angles.
-
-        Parameters
-        ----------
-        h_cfg : CfgNode
-            The config file containing information about the disturbance angles.
-
-        Returns
-        -------
-        List[torch.Tensor]
-            The disturbance angles.
-        """
-        angles: List[float] = h_cfg.DISTURBANCE_ROT_ANGLES
-        return [
-            torch.deg2rad(
-                torch.tensor(
-                    angle,
-                    dtype=self.aim_point.dtype,
-                    device=self.device,
-                )
-            )
-            for angle in angles
-        ]
-
-    def set_up_facets(
-        self,
-        discrete_points: torch.Tensor,
-        normals: torch.Tensor,
-    ) -> None:
-        """
-        Split up the surface points and surface normals into their respective facets.
-
-        Parameters
-        ----------
-        discrete_points : torch.Tensor
-            The surface points.
-        normals : torch.Tensor
-            The surface normals.
-        """
-        self.facetted_discrete_points = torch.tensor_split(discrete_points, 4)
-        self.facetted_normals = torch.tensor_split(normals, 4)
-
-    def discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Return the surface points and surface normals.
-
-        Returns
-        -------
-        Tuple[torch.Tensor, torch.Tensor]
-            The surface points and surface normals.
-        """
-        return self.surface_points, self.surface_normals
-
-    def facetted_discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Return the facetted surface points and facetted surface normals.
-
-        Returns
-        -------
-        Tuple[torch.Tensor, torch.Tensor]
-            The facetted surface points and facetted surface normals.
-        """
-        return self.facetted_discrete_points, self.facetted_normals
-
-    def make_facets_list(self) -> list[list[torch.Tensor], list[torch.Tensor]]:
-        """
-        Create a list of facets.
-
-        Returns
-        -------
-        List[List[torch.Tensor], List[torch.Tensor]]
-            The list of all facets with their points and normals.
-        """
-        facets = []
-        (
-            facetted_discrete_points,
-            facetted_normals,
-        ) = self.facetted_discrete_points_and_normals()
-
-        for points, normals in zip(facetted_discrete_points, facetted_normals):
-            facets.append([points, normals])
-        return facets

@@ -52,7 +52,6 @@ class Sun(ALightSource):
         ray_count: int,
         mean: List[float],
         cov: List[float],
-        device: torch.device,
     ) -> None:
         """
         Initialize the sun as a light source.
@@ -83,13 +82,9 @@ class Sun(ALightSource):
         if self.dist_type == "Normal":
             self.mean = torch.tensor(
                 mean,
-                dtype=dtype,
-                device=device,
             )
             self.cov = torch.tensor(
                 cov,
-                dtype=dtype,
-                device=device,
             )
             self.distribution = torch.distributions.MultivariateNormal(
                 self.mean, self.cov

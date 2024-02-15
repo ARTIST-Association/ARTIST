@@ -84,7 +84,7 @@ _C.DEFLECT_DATA.FACETHEADER_STRUCT_FMT = "=i9fI"
 _C.DEFLECT_DATA.RAY_STRUCT_FMT = "=7f"
 
 # See `cfg.H.IDEAL` for documentation.
-_C.DEFLECT_DATA.AIM_POINT = None
+_C.DEFLECT_DATA.AIM_POINT = [0.0, -50.0, 0.0]
 _C.DEFLECT_DATA.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
 _C.DEFLECT_DATA.FACETS = CN()
 # Positions and spans are read from the data.
