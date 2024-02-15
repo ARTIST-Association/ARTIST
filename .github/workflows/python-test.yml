@@ -26,9 +26,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
           pip install coverage-badge
-          pip install .
           python -m pip install --upgrade build
-          #python -m build
+          python -m build
 
       - name: Test with pytest
         run: |
