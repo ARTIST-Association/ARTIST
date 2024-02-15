@@ -1,6 +1,5 @@
 """This pytest tests the correctness of the light source."""
 
-from typing import Dict
 import pathlib
 from typing import Dict
 
