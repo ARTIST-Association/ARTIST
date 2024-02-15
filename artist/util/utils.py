@@ -7,15 +7,15 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
     Parameters
     ----------
-    x : torch.Tensor (1,3)
-        single tensor for computing dot product
-    y : torch.Tensor (N,3)
-        Nx3 tensor to multiply by x
+    x : torch.Tensor
+        Single tensor with dimension (1,3).
+    y : torch.Tensor
+        Single tensor with dimension (N,3).
 
 
     Returns
     -------
     torch.Tensor
-        (N,3) dot product of x and y.
+        Dot product of x and y as a tensor with dimension (N,3).
     """
     return (x * y).sum(-1).unsqueeze(-1)
