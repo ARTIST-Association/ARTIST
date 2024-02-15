@@ -1,8 +1,7 @@
-"""
-Alignment module for the heliostat.
-"""
+"""Alignment module for the heliostat."""
 
 from typing import Tuple
+
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
@@ -85,8 +84,8 @@ class AlignmentModule(AModule):
                 normal_vec,
             )
         )
-        
-        aligned_surface_points =  surface_points @ alignment
+
+        aligned_surface_points = surface_points @ alignment
         aligned_surface_normals = surface_normals @ alignment
 
         aligned_surface_points += self.position
@@ -113,9 +112,9 @@ class AlignmentModule(AModule):
 
     def heliostat_coord_system(
         self,
-        Position: torch.Tensor,
-        Sun: torch.Tensor,
-        Aimpoint: torch.Tensor,
+        position: torch.Tensor,
+        sun: torch.Tensor,
+        aimpoint: torch.Tensor,
         ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -137,14 +136,14 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = Position.dtype
-        device = Position.device
-        pSun = Sun
-        pPosition = Position
-        pAimpoint = Aimpoint
-        z = pAimpoint - pPosition
+        dtype = position.dtype
+        device = position.device
+        p_sun = sun
+        p_position = position
+        p_aimpoint = aimpoint
+        z = p_aimpoint - p_position
         z = z / torch.linalg.norm(z)
-        z = pSun + z
+        z = p_sun + z
         z = z / torch.linalg.norm(z)
 
         if (z == ideal_normal).all():

@@ -1,6 +1,4 @@
-"""
-This package bundles all classes that are used for alignment in ARTIST.
-"""
+"""This package bundles all classes that are used for alignment in ARTIST."""
 
 from artist.physics_objects.heliostats.alignment.actuator import ActuatorModule
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
@@ -8,7 +6,6 @@ from artist.physics_objects.heliostats.alignment.kinematic import AKinematicModu
 from artist.physics_objects.heliostats.alignment.rigid_body import (
     RigidBodyModule,
 )
-
 
 __all__ = [
     "ActuatorModule",

@@ -1,14 +1,12 @@
-"""
-This file contains the functionality to create a heliostat surface from a loaded pointcloud.
-"""
+"""This file contains the functionality to create a heliostat surface from a loaded point cloud."""
 import struct
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import torch
 from yacs.config import CfgNode
 
-from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 from artist.physics_objects.heliostats.surface import bpro_loader
+from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 
 HeliostatParams = Tuple[
     torch.Tensor,  # surface position on field
@@ -31,7 +29,7 @@ def real_surface(
 
     Parameters
     ----------
-    real_config : CfgNode
+    real_configs : CfgNode
         The config file containing information about the real surface.
     device : torch.device
         Specifies the device type responsible to load tensors into memory.
@@ -40,13 +38,12 @@ def real_surface(
     -------
     HeliostatParams
         Tuple of all heliostat parameters.
-
     """
     cfg = real_configs
     dtype = torch.get_default_dtype()
 
-    concentratorHeader_struct = struct.Struct(cfg.CONCENTRATORHEADER_STRUCT_FMT)
-    facetHeader_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
+    concentrator_header_struct = struct.Struct(cfg.CONCENTRATORHEADER_STRUCT_FMT)
+    facet_header_struct = struct.Struct(cfg.FACETHEADER_STRUCT_FMT)
     ray_struct = struct.Struct(cfg.RAY_STRUCT_FMT)
 
     (
@@ -61,8 +58,8 @@ def real_surface(
         height,
     ) = bpro_loader.load_bpro(
         cfg.FILENAME,
-        concentratorHeader_struct,
-        facetHeader_struct,
+        concentrator_header_struct,
+        facet_header_struct,
         ray_struct,
         cfg.VERBOSE,
     )
@@ -171,6 +168,25 @@ def facet_point_indices(
     span_n: torch.Tensor,
     span_e: torch.Tensor,
 ) -> torch.Tensor:
+    """
+    [INSERT DESCRIPTION HERE!].
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+    position : torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+    span_n : torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+    span_e : torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+
+    Returns
+    -------
+    torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+    """
     from_xyz = position + span_e - span_n
     to_xyz = position - span_e + span_n
     # We ignore the z-axis here.
@@ -206,12 +222,12 @@ class PointCloudFacetModule(AFacetModule):
         Split up the surface points and surface normals into their respective facets.
     discrete_points_and_normals()
         Return the surface points and surface normals.
-    facetted_discrete_points_and_normals()
-        Return the facetted surface points and facetted surface normals.
+    faceted_discrete_points_and_normals()
+        Return the faceted surface points and faceted surface normals.
     make_facets_list()
         Create a list of facets.
 
-    See also
+    See Also
     --------
     :class:AFacetModule : Reference to the parent class.
     """
@@ -224,7 +240,7 @@ class PointCloudFacetModule(AFacetModule):
         device: torch.device,
     ) -> None:
         """
-        Initialize the surface from a pointcloud.
+        Initialize the surface from a point cloud.
 
         Parameters
         ----------
@@ -242,22 +258,19 @@ class PointCloudFacetModule(AFacetModule):
         self.cfg = config
         self.device = device
 
-        self.load(aimpoint, sun_direction)
+        self.load(aimpoint)
 
     def load(
         self,
         aim_point: Optional[torch.Tensor],
-        sun_direction: Optional[torch.Tensor],
     ) -> None:
         """
-        Load a surface from deflectometry data.
+        Load a surface from deflectometric data.
 
         Parameters
         ----------
         aim_point : Optional[torch.Tensor]
             The aimpoint.
-        sun_direction : Optional[torch.Tensor]
-            The sun vector.
         """
         builder_fn, heliostat_cfg = self.get_surface_builder(self.cfg)
 
@@ -287,13 +300,15 @@ class PointCloudFacetModule(AFacetModule):
         self.height = height
         self.width = width
 
-
         self.surface_points: torch.Tensor
         self.surface_normals: torch.Tensor
 
     def get_surface_builder(
         self, cfg: CfgNode
-    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
+    ) -> Tuple[
+        Callable[[CfgNode, torch.device], HeliostatParams],
+        CfgNode,
+    ]:
         """
         Select which kind of surface is to be loaded.
 
@@ -307,10 +322,9 @@ class PointCloudFacetModule(AFacetModule):
         Returns
         -------
         Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]
-            The loaded surface, the heliostat parameters, and deflectometry data.
+            The loaded surface, the heliostat parameters, and deflectometric data.
         """
         return real_surface, cfg.DEFLECT_DATA
-
 
     def _get_aim_point(
         self,
@@ -405,7 +419,7 @@ class PointCloudFacetModule(AFacetModule):
         """
         return self.surface_points, self.surface_normals
 
-    def facetted_discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def faceted_discrete_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Return the facetted surface points and facetted surface normals.
 
@@ -429,7 +443,7 @@ class PointCloudFacetModule(AFacetModule):
         (
             facetted_discrete_points,
             facetted_normals,
-        ) = self.facetted_discrete_points_and_normals()
+        ) = self.faceted_discrete_points_and_normals()
 
         for points, normals in zip(facetted_discrete_points, facetted_normals):
             facets.append([points, normals])

@@ -1,8 +1,8 @@
-"""
-This pytest tests the correctness of the light source.
-"""
+"""This pytest tests the correctness of the light source."""
 
 import pathlib
+from typing import Dict
+
 import pytest
 import torch
 
@@ -94,7 +94,20 @@ def generate_data(
     ],
     name="environment_data",
 )
-def data(request):
+def data(request) -> Dict[str, torch.Tensor]:
+    """
+    [INSERT DESCRIPTION HERE!].
+
+    Parameters
+    ----------
+    request :
+        [INSERT DESCRIPTION HERE!]
+
+    Returns
+    -------
+    Dict[str, torch.Tensor]
+        [INSERT DESCRIPTION HERE!]
+    """
     return generate_data(*request.param)
 
 
