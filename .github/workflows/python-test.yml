@@ -26,3 +26,5 @@ jobs:
           pip install ruff pytest pytest-cov
           pip install coverage-badge
           pip install .
+          python -m pip install --upgrade build
+          #python -m build
