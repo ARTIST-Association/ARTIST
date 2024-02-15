@@ -1,7 +1,8 @@
-"""Alignment module for the heliostat."""
+"""
+Alignment module for the heliostat.
+"""
 
 from typing import Tuple
-
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
@@ -19,7 +20,7 @@ class AlignmentModule(AModule):
     ----------
     position : torch.Tensor
         Position of the heliostat for which the alignment model is created.
-    kinematic_model : NeuralNetworkRigidBodyFusion
+    kinematic_model : RigidBody
         The kinematic model used.
 
     Methods
@@ -36,7 +37,7 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, position: torch.Tensor) -> None:
+    def __init__(self, heliostat_position: torch.Tensor) -> None:
         """
         Initialize the alignment module.
 
@@ -46,8 +47,7 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        self.position = position
-        self.kinematic_model = RigidBodyModule(position=position)
+        self.kinematic_model = RigidBodyModule(heliostat_position)
 
     def align_surface(
         self,
@@ -84,8 +84,8 @@ class AlignmentModule(AModule):
                 normal_vec,
             )
         )
-
-        aligned_surface_points = surface_points @ alignment
+        
+        aligned_surface_points =  surface_points @ alignment
         aligned_surface_normals = surface_normals @ alignment
 
         aligned_surface_points += self.position
@@ -112,9 +112,8 @@ class AlignmentModule(AModule):
 
     def heliostat_coord_system(
         self,
-        position: torch.Tensor,
-        sun: torch.Tensor,
-        aimpoint: torch.Tensor,
+        Sun: torch.Tensor,
+        Aimpoint: torch.Tensor,
         ideal_normal: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -136,14 +135,14 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = position.dtype
-        device = position.device
-        p_sun = sun
-        p_position = position
-        p_aimpoint = aimpoint
-        z = p_aimpoint - p_position
+        dtype = heliostat_position.dtype
+        device = heliostat_position.device
+        pSun = Sun
+        pPosition = heliostat_position
+        pAimpoint = Aimpoint
+        z = pAimpoint - pPosition
         z = z / torch.linalg.norm(z)
-        z = p_sun + z
+        z = pSun + z
         z = z / torch.linalg.norm(z)
 
         if (z == ideal_normal).all():

@@ -1,5 +1,8 @@
  DEFLECT_DATA:
-   AIM_POINT: null
+   AIM_POINT: 
+   - 0.0
+   - -50.0
+   - 0.0
    CONCENTRATORHEADER_STRUCT_FMT: =5f2I2f
    DISTURBANCE_ROT_ANGLES:
    - 0.0
@@ -16,7 +19,7 @@
    - 0.0
    - 0.0
    RAY_STRUCT_FMT: =7f
-   TAKE_N_VECTORS: 120000
+   TAKE_N_VECTORS: 5
    VERBOSE: true
  FUNCTION:
    AIM_POINT: null
