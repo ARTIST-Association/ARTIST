@@ -1,8 +1,8 @@
 import pathlib
+import struct
+from typing import List, Tuple, cast
 
 import numpy as np
-import struct
-from typing import cast, List, Tuple
 
 from artist import ARTIST_ROOT
 

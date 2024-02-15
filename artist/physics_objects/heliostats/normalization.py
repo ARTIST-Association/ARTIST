@@ -1,5 +1,7 @@
 import typing
+
 import torch
+
 from artist.physics_objects.parameter import AParameter
 
 
@@ -10,7 +12,7 @@ class ANormalization:
     Normalizers implement both normalization and denormalisation functions.
     """
 
-    def normalize(_, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
+    def normalize(self, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
         """
         Normalize a parameters value.
 
@@ -29,16 +31,18 @@ class ANormalization:
         raise NotImplementedError()
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+        self, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         """
         Denormalize a parameters value.
+
         Parameters
         ----------
         parameter : AParameter
             The parameter to be denormalized.
         value : torch.Tensor
             The value of the parameter before denormalization.
+
         Raises
         ------
         NotImplementedError
@@ -56,7 +60,7 @@ class MinMaxNormalization(ANormalization):
     :class: ANormailzation: Reference to the parent class
     """
 
-    def normalize(_, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
+    def normalize(self, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
         """
         Normalize the parameters value according to the Min-Max normalization.
 
@@ -78,7 +82,7 @@ class MinMaxNormalization(ANormalization):
             return value
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+        self, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         """
         Denormalize the parameters value according to the Min-Max normalization.
@@ -110,7 +114,7 @@ class ZNormalization(ANormalization):
     :class: ANormailzation: Reference to the parent class
     """
 
-    def normalize(_, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
+    def normalize(self, parameter: AParameter, value: torch.Tensor) -> torch.Tensor:
         """
         Normalize the parameters value according to the Z-normalization method.
 
@@ -132,7 +136,7 @@ class ZNormalization(ANormalization):
             return value
 
     def denormalize(
-        _, parameter: AParameter, normalized_value: torch.Tensor
+        self, parameter: AParameter, normalized_value: torch.Tensor
     ) -> torch.Tensor:
         """
         Denormalize the parameters value according to the Z-normalization.
@@ -156,9 +160,7 @@ class ZNormalization(ANormalization):
 
 
 class ParameterNormalizer:
-    """
-    This class implemetns a parameter normalizer using either min-max or z-normalization.
-    """
+    """This class implements a parameter normalizer using either min-max or z-normalization."""
 
     def __init__(
         self,
@@ -167,12 +169,12 @@ class ParameterNormalizer:
         ] = "z-transformation",
     ) -> None:
         """
-        Initialize the parameter normalizer
+        Initialize the parameter normalizer.
 
         Parameters
         ----------
         normalization_method : typing.Literal
-            Selects the deired normalization method.
+            Selects the desired normalization method.
         """
         self._parameters = {}
 
@@ -186,6 +188,7 @@ class ParameterNormalizer:
     def register_parameter(self, parameter: AParameter) -> None:
         """
         Add parameter to the module, register it.
+
         Parameters
         ----------
         parameter : AParameter
