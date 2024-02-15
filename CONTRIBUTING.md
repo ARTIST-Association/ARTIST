@@ -11,14 +11,20 @@ By participating, you can help improve the project and make it even better.
    ```bash
    git clone https://github.com/ARTIST-Association/ARTIST.git
    ```
-
-3. **Create a Branch**: Create a new branch for your contribution. Choose a descriptive name. Depending on what you want
-   to work on, prepend either of the following prefixes, `features`, `bugfix`, or `hotfix`. Example:
+   
+3. **Install the Package with Development Options** in a separate virtual environment from the main branch of the repo:
+   ```bash
+   python -m pip install -e ".[dev]"
+   ```
+   This will put our pre-commit hooks, i.e., code linting and formatting with ruff, into place, ensuring PEP-8 conformity and overall good code quality consistently.
+   
+4. **Create a Branch**: Create a new branch for your contribution. Choose a descriptive name. Depending on what you want
+   to work on, prepend either of the following prefixes, `features`, `maintenance`, `bugfix`, or `hotfix`. Example:
    ```bash
    git checkout -b features/your-feature-name
    ```
 
-4. **Make Changes**: Make your desired changes to the codebase. Please stick to the following guidelines:
+5. **Make Changes**: Make your desired changes to the codebase. Please stick to the following guidelines:
    * `ARTIST` uses [*Black*](https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html) code style and so should you if you would like to contribute.
    * Please use type hints in all function definitions.
    * Please use American English for all comments and docstrings in the code.
@@ -44,11 +50,6 @@ By participating, you can help improve the project and make it even better.
      return_type
          Description of the return value.
 
-     Other Parameters
-     ----------------
-     param3 : type
-         Description of param3. (if there are additional parameters)
-
      Raises
      ------
      ExceptionType
@@ -72,64 +73,66 @@ By participating, you can help improve the project and make it even better.
      """
      ```
      When applicable, please make references to parent modules and classes using ```:class:`ParentClassName` ```
-as follows:
+as shown below. Do not include attributes and methods of the parent class explicitly.
 
      ```python
-     """
-     This is the docstring for MyClass.
-
-     Parameters
-     ----------
-     param1 : type
-              Description of param1.
-
-     Attributes
-     ----------
-     attr1 : type
-         Description of attr1.
-
-     See Also
-     --------
-     :class:`ParentClassName` : Reference to the parent class.
-
-     """
-
      class ParentClassName:
          """
          The docstring for the parent class.
+
+         Attributes
+         ----------
+         attribute : type
+             Description of attribute.
+
+         Methods
+         -------
+         method()
+             Description of method.
          """
 
      class MyClass(ParentClassName):
          """
          The docstring for MyClass.
 
-         Parameters
-         ----------
-         param2 : type
-                  Description of param2.
-
          Attributes
          ----------
-         attr2 : type
-                 Description of attr2.
+         attribute_child : type
+             Description of attribute_child.
+
+         Methods
+         ----------
+         method_child()
+             Description of method_child.
+
+         See Also
+         --------
+         :class:`ParentClassName` : Reference to the parent class.
          """
      ```
      In the example above, ``` :class:`ParentClassName` ``` is used to create a reference to the parent class `ParentClassName`.
      Sphinx autoapi will automatically generate links to the parent class documentation.
 
 
-5. **Commit Changes**: Commit your changes with a clear and concise commit message that describes what you have changed.
+6. **Commit Changes**: Commit your changes with a clear and concise commit message that describes what you have changed.
    Example:
    ```bash
    git commit -m "add rotation control for heliostat"
    ```
 
-6. **Push Changes**: Push your changes to your fork on GitHub:
+7. **Push Changes**: Push your changes to your fork on GitHub:
    ```bash
    git push origin features/your-feature-name
    ```
 
-7. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request.
+8. **Rebase Onto Current Main:** Rebase your feature branch onto the current main branch to include any changes that might have been pushed into the main in the meantime and resolve possible conflicts.
+   ```
+   git checkout main
+   git pull main
+   git rebase main features/your-feature-name
+   ```
+
+9. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request.
 
 ## Code of Conduct
 
