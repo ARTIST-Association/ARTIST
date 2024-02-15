@@ -182,4 +182,4 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected, atol=2e-5, rtol=3e-5)
+    torch.testing.assert_close(total_bitmap, expected)
