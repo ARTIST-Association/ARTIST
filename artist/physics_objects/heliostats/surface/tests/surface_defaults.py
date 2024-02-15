@@ -149,7 +149,7 @@ def load_config_file(cfg: CfgNode) -> CfgNode:
         / "heliostats"
         / "surface"
         / "tests"
-        / "surface_test.yaml",
+        / "surface_test.yaml"
     )
     cfg.merge_from_file(path)
     return cfg
