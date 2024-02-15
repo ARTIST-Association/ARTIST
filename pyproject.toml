@@ -1,3 +1,39 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artist"
+version = "0.0.1"
+authors = [
+  { name="ARTIST Consortium", email="artist@lists.kit.edu" },
+]
+description = "AI-enhanced Differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: TBD",
+    "Development Status :: 1 - Planning",
+]
+dependencies = [
+    "numpy",
+    "yacs",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "black",
+    "ruff",
+    "pytest",
+    "pytest-cov",]
+
+[project.urls]
+Homepage = "https://github.com/ARTIST-Association/ARTIST"
+Issues = "https://github.com/ARTIST-Association/ARTIST/issues"
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
