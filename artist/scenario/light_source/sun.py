@@ -199,7 +199,7 @@ class Sun(ALightSource):
             [
                 has[:, 2] * has[:, 0],
                 has[:, 2] * has[:, 1],
-                -has[:, 0] ** 2 - has[:, 1] ** 2,
+                -(has[:, 0] ** 2) - has[:, 1] ** 2,
             ],
             -1,
         )
@@ -325,6 +325,7 @@ class Sun(ALightSource):
             The rotation angles.
         mat : torch.Tensor
             The matrix to be rotated.
+
         Returns
         -------
         torch.Tensor
