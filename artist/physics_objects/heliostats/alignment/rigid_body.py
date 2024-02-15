@@ -10,12 +10,69 @@ class RigidBodyModule(AKinematicModule):
     """
     This class implements a rigid body kinematic model.
 
+    Attributes
+    ----------
+    DEV_PARAMETERS : dict[str, Union[DevTranslationParameter, DevRotationParameter]]
+        [INSERT DESCRIPTION HERE!]
+    actuator_1_params : dict[str, Tensor]
+        [INSERT DESCRIPTION HERE!]
+    actuator_2_params : dict[str, Tensor]
+        [INSERT DESCRIPTION HERE!]
+    deviations : dict[str, Any]
+        [INSERT DESCRIPTION HERE!]
+    parameter_deviations : dict
+        [INSERT DESCRIPTION HERE!]
+    parameters_dict : dict[str, Tensor]
+        [INSERT DESCRIPTION HERE!]
+    position : torch.Tensor
+        [INSERT DESCRIPTION HERE!]
+
+    Methods
+    -------
+    build_first_rotation_matrix()
+        [INSERT DESCRIPTION HERE!]
+    build_second_rotation_matrix()
+        [INSERT DESCRIPTION HERE!]
+    build_concentrator_matrix()
+        [INSERT DESCRIPTION HERE!]
+    compute_orientation_from_steps()
+        [INSERT DESCRIPTION HERE!]
+    compute_orientation_from_angles()
+        [INSERT DESCRIPTION HERE!]
+    transform_normal_to_first_coord_sys()
+        [INSERT DESCRIPTION HERE!]
+    compute_steps_from_normal()
+        [INSERT DESCRIPTION HERE!]
+    compute_orientation_from_aimpoint()
+        [INSERT DESCRIPTION HERE!]
+    build_east_rotation_4x4()
+        [INSERT DESCRIPTION HERE!]
+    build_north_rotation_4x4()
+        [INSERT DESCRIPTION HERE!]
+    build_up_rotation_4x4()
+        [INSERT DESCRIPTION HERE!]
+
     See Also
     --------
     :class: AKinematicModule : Reference to the parent class
     """
 
     class DevTranslationParameter(AParameter):
+        """
+        Deviation translation parameter.
+
+        [INSERT DESCRIPTION HERE!]
+
+        Attributes
+        ----------
+        name : str
+            [INSERT DESCRIPTION HERE!]
+
+        See Also
+        --------
+        :class: AParameter : Reference to the parent class.
+        """
+
         def __init__(
             self,
             name: str,
@@ -23,11 +80,40 @@ class RigidBodyModule(AKinematicModule):
             tolerance: float = 0.1,
             requires_grad: bool = True,
             distort: bool = False,
-        ):  # -> +/- 0.1 => 1
+        ) -> None:  # -> +/- 0.1 => 1
+            """
+            [INSERT DESCRIPTION HERE!].
+
+            Parameters
+            ----------
+            name : str
+                [INSERT DESCRIPTION HERE!]
+            value : float
+                [INSERT DESCRIPTION HERE!]
+            tolerance : float
+                [INSERT DESCRIPTION HERE!]
+            requires_grad : bool
+                [INSERT DESCRIPTION HERE!]
+            distort : bool
+                [INSERT DESCRIPTION HERE!]
+            """
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
     class DevRotationParameter(AParameter):
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Attributes
+        ----------
+        name : str
+            [INSERT DESCRIPTION HERE!]
+
+        See Also
+        --------
+        :class: AParameter : Reference to the parent class.
+        """
+
         def __init__(
             self,
             name: str,
@@ -35,7 +121,23 @@ class RigidBodyModule(AKinematicModule):
             tolerance: float = 0.01,
             requires_grad: bool = True,
             distort: bool = False,
-        ):
+        ) -> None:
+            """
+            [INSERT DESCRIPTION HERE!].
+
+            Parameters
+            ----------
+            name : str
+                [INSERT DESCRIPTION HERE!]
+            value : float
+                [INSERT DESCRIPTION HERE!]
+            tolerance : float
+                [INSERT DESCRIPTION HERE!]
+            requires_grad : bool
+                [INSERT DESCRIPTION HERE!]
+            distort : bool
+                [INSERT DESCRIPTION HERE!]
+            """
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
@@ -96,6 +198,8 @@ class RigidBodyModule(AKinematicModule):
         ----------
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
+        **deviations
+            Additional keyword arguments.
         """
         super().__init__(position=position)
         self.position = position
@@ -173,42 +277,146 @@ class RigidBodyModule(AKinematicModule):
         )
 
     def _first_translation_e(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("first_translation_e")
 
     def _first_translation_n(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("first_translation_n")
 
     def _first_translation_u(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("first_translation_u")
 
     def _second_translation_e(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("second_translation_e")
 
     def _second_translation_n(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("second_translation_n")
 
     def _second_translation_u(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("second_translation_u")
 
     def _conc_translation_e(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("conc_translation_e")
 
     def _conc_translation_n(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("conc_translation_n")
 
     def _conc_translation_u(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._translation_with_deviation("conc_translation_u")
 
     def _north_tilt_1(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._rotation_with_deviation("north_tilt_1")
 
     def _up_tilt_1(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._rotation_with_deviation("up_tilt_1")
 
     def _east_tilt_2(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._rotation_with_deviation("east_tilt_2")
 
     def _north_tilt_2(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._rotation_with_deviation("north_tilt_2")
 
     def _register_parameter(self, parameter: AParameter) -> None:
@@ -342,7 +550,7 @@ class RigidBodyModule(AKinematicModule):
 
         Returns
         -------
-        rotation_matrix
+        torch.Tensor
             The rotation matrix.
         """
         rotation_matrix = torch.eye(4)
@@ -452,7 +660,7 @@ class RigidBodyModule(AKinematicModule):
         self, concentrator_normal: torch.Tensor
     ) -> torch.Tensor:
         """
-        Compute the steps for actuator 1 and 2 from the concentrator normal
+        Compute the steps for actuator 1 and 2 from the concentrator normal.
 
         Parameters
         ----------
@@ -647,7 +855,7 @@ class RigidBodyModule(AKinematicModule):
         Returns
         -------
         torch.Tensor
-            The rotation matrix
+            The rotation matrix.
         """
         s = torch.sin(angle)
         c = torch.cos(angle)
@@ -682,7 +890,7 @@ class RigidBodyModule(AKinematicModule):
         Returns
         -------
         torch.Tensor
-            The rotation matrix
+            The rotation matrix.
         """
         s = torch.sin(angle)
         c = torch.cos(angle)

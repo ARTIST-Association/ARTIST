@@ -1,15 +1,15 @@
 import torch
 
-from artist.physics_objects.module import AModule
 from artist.physics_objects.heliostats.normalization import ParameterNormalizer
+from artist.physics_objects.module import AModule
 from artist.physics_objects.parameter import AParameter
 
 
 class ActuatorModule(AModule):
     """
-    This class implements the behavior of a linear actuator that moves within a 2D plane as a ``PyTorch`` module.
+    A linear actuator moving within a 2D plane implemented as a ``PyTorch`` module.
 
-    The actuator is parametrized by 5 parameters:
+    The actuator is parametrized by five parameters:
     - increment: stroke length change per motor step
     - initial_stroke_length: stroke length for a motor step of 0
     - actuator_offset: offset between the linear actuator's pivoting point and the point around which the actuator is
@@ -20,15 +20,66 @@ class ActuatorModule(AModule):
     The actuator is modelled by the law of cosine. Two directions are implemented:
     - motor steps -> angle
     - angle -> motor steps
+
+    Attributes
+    ----------
+    DEV_PARAMETERS : dict[str, Union[DevRotationParameter, DevPercentageParameter]]
+        [INSERT EXPLANATION HERE!]
+    clockwise : bool
+        [INSERT EXPLANATION HERE!]
+    deviations : dict[str, Any]
+        [INSERT EXPLANATION HERE!]
+    joint_number : int
+        [INSERT EXPLANATION HERE!]
+    parameter_deviations : dict
+        [INSERT EXPLANATION HERE!]
+    parameter_normalizer : ParameterNormalizer
+        [INSERT EXPLANATION HERE!]
+    params : dict
+        [INSERT EXPLANATION HERE!]
+
+    Methods
+    -------
+    forward()
+        The forward kinematic.
+
+    See Also
+    --------
+    :class: AModule : Reference to the parent class.
     """
 
     class DevRotationParameter(AParameter):
         """
+        Deviation rotation parameter.
+
+        [INSERT DESCRIPTION HERE!]
+
         Attributes
         ----------
+        name : str
+            [INSERT DESCRIPTION HERE!]
+        has_tolerance : bool
+            [INSERT DESCRIPTION HERE!]
+        initial_value : torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        max : Union[torch.Tensor, float]
+            [INSERT DESCRIPTION HERE!]
+        min : Union[torch.Tensor, float]
+            [INSERT DESCRIPTION HERE!]
+        requires_grad : bool
+            True if gradient calculation is required, else False.
+        tolerance : float
+            [INSERT DESCRIPTION HERE!]
 
         Methods
         -------
+        distort()
+            [INSERT DESCRIPTION HERE!]
+
+        See Also
+        --------
+        :class: AParameter : Reference to the parent class.
+
         """
 
         def __init__(
@@ -39,10 +90,58 @@ class ActuatorModule(AModule):
             requires_grad: bool = True,
             distort: bool = False,
         ) -> None:
+            """
+            [INSERT DESCRIPTION HERE!].
+
+            Parameters
+            ----------
+            name : str
+                [INSERT DESCRIPTION HERE!]
+            value : float
+                [INSERT DESCRIPTION HERE!]
+            tolerance : float
+                [INSERT DESCRIPTION HERE!]
+            requires_grad : bool
+                True if gradient calculation is required, else False.
+            distort : bool
+                [INSERT DESCRIPTION HERE!]
+            """
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
     class DevPercentageParameter(AParameter):
+        """
+        Deviation percentage parameter.
+
+        [INSERT DESCRIPTION HERE!]
+
+        Attributes
+        ----------
+        name : str
+            [INSERT DESCRIPTION HERE!]
+        has_tolerance : bool
+            [INSERT DESCRIPTION HERE!]
+        initial_value : torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        max : Union[torch.Tensor, float]
+            [INSERT DESCRIPTION HERE!]
+        min : Union[torch.Tensor, float]
+            [INSERT DESCRIPTION HERE!]
+        requires_grad : bool
+            True if gradient calculation is required, else False.
+        tolerance : float
+            [INSERT DESCRIPTION HERE!]
+
+        Methods
+        -------
+        distort()
+            [INSERT DESCRIPTION HERE!]
+
+        See Also
+        --------
+        :class: AParameter : Reference to the parent class.
+        """
+
         def __init__(
             self,
             name: str,
@@ -51,51 +150,148 @@ class ActuatorModule(AModule):
             requires_grad: bool = True,
             distort: bool = False,
         ) -> None:
+            """
+            [INSERT DESCRIPTION HERE!].
+
+            Parameters
+            ----------
+            name : str
+                [INSERT DESCRIPTION HERE!]
+            value : float
+                [INSERT DESCRIPTION HERE!]
+            tolerance : float
+                [INSERT DESCRIPTION HERE!]
+            requires_grad : bool
+                [INSERT DESCRIPTION HERE!]
+            distort : bool
+                [INSERT DESCRIPTION HERE!]
+            """
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
     DEV_PARAMETERS = {
         "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
-        # 'dev_initial_stroke_length': DevPercentageParameter('dev_initial_stroke_length'),# * 99%/101% => 1
-        # 'dev_actuator_offset': DevPercentageParameter('dev_actuator_offset'),# * 99%/101% => 1
-        # 'dev_joint_radius': DevPercentageParameter('dev_joint_radius'),# * 99%/101% => 1
         "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
     }
 
     def _percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        parameter_name : str
+            [INSERT DESCRIPTION HERE!]
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params[parameter_name] * (
             1 + self._get_parameter("dev_" + parameter_name)
         )
 
     def _rotation_with_deviation(self, parameter_name: str) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        parameter_name : str
+            [INSERT DESCRIPTION HERE!]
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params[parameter_name] + self._get_parameter(
             "dev_" + parameter_name
         )
 
     def _normed_percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        parameter_name : str
+            [INSERT DESCRIPTION HERE!]
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params[parameter_name].norm() * (
             1 + self._get_parameter("dev_" + parameter_name)
         )
 
     def _increment(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._percentage_with_deviation("increment")
 
     def _initial_stroke_length(self) -> torch.Tensor:
-        # return self._percentage_with_deviation('initial_stroke_length')
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params["initial_stroke_length"]
 
     def _actuator_offset(self) -> torch.Tensor:
-        #    return self._percentage_with_deviation('actuator_offset')
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params["actuator_offset"]
 
     def _joint_radius(self) -> torch.Tensor:
-        # return self._percentage_with_deviation('joint_radius')
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.params["joint_radius"]
 
     def _phi_0(self) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self._rotation_with_deviation("phi_0")
 
     def _register_parameter(self, parameter: AParameter) -> None:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        parameter : AParameter
+            [INSERT DESCRIPTION HERE!]
+        """
         if not hasattr(self, "parameter_normalizer"):
             self.parameter_normalizer = ParameterNormalizer()
         self.parameter_normalizer.register_parameter(parameter)
@@ -111,6 +307,19 @@ class ActuatorModule(AModule):
         )
 
     def _get_parameter(self, name: str) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        name : str
+            [INSERT DESCRIPTION HERE!]
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         return self.parameter_normalizer.get_denormalized_parameter(
             name, self.get_parameter(name)
         )
@@ -118,6 +327,18 @@ class ActuatorModule(AModule):
     def __init__(
         self, joint_number: int, clockwise: bool, params: dict, **deviations
     ) -> None:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        joint_number : int
+            [INSERT DESCRIPTION HERE!]
+        clockwise : bool
+            [INSERT DESCRIPTION HERE!]
+        params : dict
+            [INSERT DESCRIPTION HERE!]
+        """
         super().__init__()
         self.joint_number = joint_number
         self.clockwise = clockwise
@@ -132,18 +353,29 @@ class ActuatorModule(AModule):
             # register and normalize deviations
             self._register_parameter(param)
 
-    # TODO remove self.JOINT_NUMBER
+    # TODO remove self.joint_number
 
     def _steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+        """
+        [INSERT DESCRIPTION HERE!].
+
+        Parameters
+        ----------
+        actuator_pos : torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+
+        Returns
+        -------
+        torch.Tensor
+            [INSERT DESCRIPTION HERE!]
+        """
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         stroke_length = (
             actuator_pos[:, self.joint_number - 1] / self._increment()
             + self._initial_stroke_length()
         )
         calc_step_1 = (
-            self._actuator_offset() ** 2
-            + self._joint_radius() ** 2
-            - stroke_length**2
+            self._actuator_offset() ** 2 + self._joint_radius() ** 2 - stroke_length**2
         )
         calc_step_2 = 2.0 * self._actuator_offset() * self._joint_radius()
         calc_step_3 = calc_step_1 / calc_step_2
@@ -158,9 +390,10 @@ class ActuatorModule(AModule):
         ----------
         actuator_pos : torch.Tensor
             The current position of the actuator.
-        
+
         Returns
         -------
+        torch.Tensor
             The angles corresponding to the actuator steps.
         """
         phi = self._steps_to_phi(actuator_pos=actuator_pos)
@@ -180,7 +413,7 @@ class ActuatorModule(AModule):
         ----------
         angles : torch.Tensor
             The angles that are to be converted.
-        
+
         Returns
         -------
         torch.Tensor
@@ -204,14 +437,15 @@ class ActuatorModule(AModule):
 
     def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
-        The forward kinematic.
+        Perform the forward kinematic.
 
         Parameters
         ----------
         actuator_pos : torch.Tensor
             The position of the actuator.
-        
+
         Returns
+        -------
         torch.Tensor
             The required angles.
         """
