@@ -1,10 +1,8 @@
-import csv
 import pathlib
 
 import numpy as np
 import struct
 from typing import cast, List, Tuple
-import os
 
 from artist import ARTIST_ROOT
 
@@ -71,7 +69,7 @@ def load_bpro(
     facet_header_struct_len = facet_header_struct.size
     ray_struct_len = ray_struct.size
 
-    binp_loc = pathlib.Path(ARTIST_ROOT)/"measurement_data"/filename
+    binp_loc = pathlib.Path(ARTIST_ROOT) / "measurement_data" / filename
     with open(binp_loc, "rb") as file:
         byte_data = file.read(concentrator_header_struct_len)
         concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
