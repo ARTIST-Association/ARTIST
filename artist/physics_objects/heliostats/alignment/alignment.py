@@ -6,7 +6,7 @@ from typing import Tuple
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.rigid_body import (
+from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 from artist.physics_objects.module import AModule

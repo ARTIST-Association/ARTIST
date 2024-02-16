@@ -4,32 +4,6 @@ import torch
 
 
 class AParameter:
-    """
-    [INSERT DESCRIPTION HERE!].
-
-    Attributes
-    ----------
-    has_tolerance : bool
-        [INSERT DESCRIPTION HERE!]
-    initial_value : torch.Tensor
-        [INSERT DESCRIPTION HERE!]
-    max : Union[Tensor, float]
-        [INSERT DESCRIPTION HERE!]
-    min : Union[Tensor, float]
-        [INSERT DESCRIPTION HERE!]
-    name : str
-        [INSERT DESCRIPTION HERE!]
-    requires_grad : bool
-        [INSERT DESCRIPTION HERE!]
-    tolerance : Union[torch.Tensor, float]
-        [INSERT DESCRIPTION HERE!]
-
-    Methods
-    -------
-    distort()
-        [INSERT DESCRIPTION HERE!]
-    """
-
     name = "<PARAMETER_NAME>"
 
     def __init__(
@@ -57,12 +31,5 @@ class AParameter:
             self.distort()
 
     def distort(self):
-        """
-        [INSERT DESCRIPTION HERE!].
-
-        Raises
-        ------
-        NotImplementedError
-            ABC method must be overriden by child classes.
-        """
-        raise NotImplementedError("Must be overwritten.")
+        raise NotImplementedError("Must override.")
+    

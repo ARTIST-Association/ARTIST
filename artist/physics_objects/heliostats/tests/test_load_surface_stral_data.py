@@ -9,7 +9,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
-from artist.physics_objects.heliostats.surface.tests import surface_defaults
+from artist.physics_objects.heliostats.concentrator.tests import surface_defaults
 from artist.scenario.light_source.sun import Sun
 
 
