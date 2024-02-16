@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Tuple
 from yacs.config import CfgNode
 
 import torch
@@ -6,7 +6,6 @@ import torch
 from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
-from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
 from artist.physics_objects.module import AModule
 
 
@@ -44,7 +43,7 @@ class HeliostatModule(AModule):
         Parameters
         ----------
         heliostat_config : CfgNode
-            The config file with the heliostat data
+            The config file containing the heliostat data.
         """
         super().__init__()
         self.aim_point = torch.tensor(heliostat_config.DEFLECT_DATA.AIM_POINT).reshape(-1, 1)

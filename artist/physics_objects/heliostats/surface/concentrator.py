@@ -1,11 +1,8 @@
-from typing import List, Tuple, Union
+from typing import Tuple
+import torch
 from yacs.config import CfgNode
 
 from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
-
-import torch
-
-from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 from artist.physics_objects.module import AModule
 
 
@@ -23,7 +20,7 @@ class ConcentratorModule(AModule):
     get_surface()
         Compute the surface points and surface normals of the concentrator.
 
-    See Also
+    See also
     --------
     :class:AModule : Reference to the parent class.
     """
