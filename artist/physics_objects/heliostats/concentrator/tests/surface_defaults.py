@@ -129,7 +129,7 @@ def load_config_file(cfg: CN) -> CN:
         "artist",
         "physics_objects",
         "heliostats",
-        "surface",
+        "concentrator",
         "tests",
         "surface_test.yaml",
     )

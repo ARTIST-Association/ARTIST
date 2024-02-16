@@ -2,7 +2,7 @@ from typing import Tuple
 import torch
 from yacs.config import CfgNode
 
-from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
+from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets import PointCloudFacetModule
 from artist.physics_objects.module import AModule
 
 

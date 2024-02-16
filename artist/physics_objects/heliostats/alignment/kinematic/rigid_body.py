@@ -2,9 +2,9 @@ from typing import List
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.actuator import ActuatorModule
-from artist.physics_objects.heliostats.alignment.kinematic import AKinematicModule
-from artist.physics_objects.parameter import AParameter
+from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import AActuatorModule
+from artist.physics_objects.heliostats.alignment.kinematic.kinematic import AKinematicModule
+from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 from artist.util import utils
 
 
@@ -41,6 +41,20 @@ class RigidBodyModule(AKinematicModule):
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
+    class DevPercentageParameter(AParameter):
+        def __init__(
+            self,
+            name: str,
+            value: float = 0.0,
+            tolerance: float = 0.01,
+            requires_grad: bool = True,
+            distort: bool = False,
+        ) -> None:
+            super().__init__(value, tolerance, distort, requires_grad)
+            self.name = name
+
+
+
     DEV_PARAMETERS = {
         "dev_first_translation_e": DevTranslationParameter(
             "dev_first_translation_e"
@@ -73,8 +87,9 @@ class RigidBodyModule(AKinematicModule):
         "dev_up_tilt_1": DevRotationParameter("dev_up_tilt_1"),
         "dev_east_tilt_2": DevRotationParameter("dev_east_tilt_2"),
         "dev_north_tilt_2": DevRotationParameter("dev_north_tilt_2"),
+        "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
+        "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
     }
-
     actuator_1_params = {
         "increment": torch.tensor(154166.666),
         "initial_stroke_length": torch.tensor(0.075),
@@ -89,6 +104,20 @@ class RigidBodyModule(AKinematicModule):
         "actuator_offset": torch.tensor(0.3479),
         "joint_radius": torch.tensor(0.309),
     }
+    # actuator_1_params = {
+    #     "increment": torch.tensor(1.0),
+    #     "initial_stroke_length": torch.tensor(0.0),
+    #     "actuator_offset": torch.tensor(0.0),
+    #     "joint_radius": torch.tensor(0.0),
+    #     "phi_0": torch.tensor(0.0),
+    # }
+    # actuator_2_params = {
+    #     "phi_0": torch.tensor(0.0),
+    #     "increment": torch.tensor(1.0),
+    #     "initial_stroke_length": torch.tensor(0.0),
+    #     "actuator_offset": torch.tensor(0.0),
+    #     "joint_radius": torch.tensor(0.0),
+    # }
 
     def __init__(self, position: torch.Tensor, **deviations) -> None:
         """
@@ -111,31 +140,31 @@ class RigidBodyModule(AKinematicModule):
 
         self.add_module(
             "LinearActuator1",
-            ActuatorModule(
+            AActuatorModule(
                 joint_number=1, clockwise=False, params=self.actuator_1_params
             ),
         )
         self.add_module(
             "LinearActuator2",
-            ActuatorModule(
+            AActuatorModule(
                 joint_number=2, clockwise=True, params=self.actuator_2_params
             ),
         )
 
     parameters_dict = {
-        "first_translation_e": torch.tensor(0.0),
-        "first_translation_n": torch.tensor(0.0),
-        "first_translation_u": torch.tensor(0.0),
-        "second_translation_e": torch.tensor(0.0),
-        "second_translation_n": torch.tensor(0.0),
-        "second_translation_u": torch.tensor(0.0),
-        "conc_translation_e": torch.tensor(0.0),
-        "conc_translation_n": torch.tensor(0.0),
-        "conc_translation_u": torch.tensor(0.0),
-        "north_tilt_1": torch.tensor(0.0),
-        "up_tilt_1": torch.tensor(0.0),
-        "east_tilt_2": torch.tensor(0.0),
-        "north_tilt_2": torch.tensor(0.0),
+        "first_translation_e": torch.tensor([0.0]),
+        "first_translation_n": torch.tensor([0.0]),
+        "first_translation_u": torch.tensor([0.0]),
+        "second_translation_e": torch.tensor([0.0]),
+        "second_translation_n": torch.tensor([0.0]),
+        "second_translation_u": torch.tensor([0.0]),
+        "conc_translation_e": torch.tensor([0.0]),
+        "conc_translation_n": torch.tensor([0.0]),
+        "conc_translation_u": torch.tensor([0.0]),
+        "north_tilt_1": torch.tensor([0.0]),
+        "up_tilt_1": torch.tensor([0.0]),
+        "east_tilt_2": torch.tensor([0.0]),
+        "north_tilt_2": torch.tensor([0.0]),
     }
 
     def _translation_with_deviation(self, parameter_name: str) -> torch.Tensor:
@@ -273,14 +302,14 @@ class RigidBodyModule(AKinematicModule):
         rot_matrix = torch.stack(
             [
                 torch.stack(
-                    [ones, zeros, zeros, ones * self._first_translation_e()], dim=1
+                    [ones, zeros, zeros, ones * self._first_translation_e()[0]], dim=1
                 ),
                 torch.stack(
-                    [zeros, cos_theta, -sin_theta, ones * self._first_translation_n()],
+                    [zeros, cos_theta, -sin_theta, ones * self._first_translation_n()[0]],
                     dim=1,
                 ),
                 torch.stack(
-                    [zeros, sin_theta, cos_theta, ones * self._first_translation_u()],
+                    [zeros, sin_theta, cos_theta, ones * self._first_translation_u()[0]],
                     dim=1,
                 ),
                 torch.stack([zeros, zeros, zeros, ones], dim=1),
@@ -288,8 +317,8 @@ class RigidBodyModule(AKinematicModule):
             dim=1,
         )
 
-        north_tilt_matrix = self.build_north_rotation_4x4(angle=self._north_tilt_1())
-        up_tilt_matrix = self.build_up_rotation_4x4(angle=self._up_tilt_1())
+        north_tilt_matrix = self.build_north_rotation_4x4(angle=self._north_tilt_1()[0])
+        up_tilt_matrix = self.build_up_rotation_4x4(angle=self._up_tilt_1()[0])
         rotation_matrices = north_tilt_matrix @ up_tilt_matrix @ rot_matrix
         return rotation_matrices
 
@@ -319,23 +348,23 @@ class RigidBodyModule(AKinematicModule):
         rot_matrix = torch.stack(
             [
                 torch.stack(
-                    [cos_theta, -sin_theta, zeros, ones * self._second_translation_e()],
+                    [cos_theta, -sin_theta, zeros, ones * self._second_translation_e()[0]],
                     dim=1,
                 ),
                 torch.stack(
-                    [sin_theta, cos_theta, zeros, ones * self._second_translation_n()],
+                    [sin_theta, cos_theta, zeros, ones * self._second_translation_n()[0]],
                     dim=1,
                 ),
                 torch.stack(
-                    [zeros, zeros, ones, ones * self._second_translation_u()], dim=1
+                    [zeros, zeros, ones, ones * self._second_translation_u()[0]], dim=1
                 ),
                 torch.stack([zeros, zeros, zeros, ones], dim=1),
             ],
             dim=1,
         )
 
-        east_tilt_matrix = self.build_east_rotation_4x4(angle=self._east_tilt_2())
-        north_tilt_matrix = self.build_north_rotation_4x4(angle=self._north_tilt_2())
+        east_tilt_matrix = self.build_east_rotation_4x4(angle=self._east_tilt_2()[0])
+        north_tilt_matrix = self.build_north_rotation_4x4(angle=self._north_tilt_2()[0])
         rotation_matrices = east_tilt_matrix @ north_tilt_matrix @ rot_matrix
         return rotation_matrices
 
@@ -349,9 +378,9 @@ class RigidBodyModule(AKinematicModule):
             The rotation matrix.
         """
         rotation_matrix = torch.eye(4)
-        rotation_matrix[0, -1] += self._conc_translation_e()
-        rotation_matrix[1, -1] += self._conc_translation_n()
-        rotation_matrix[2, -1] += self._conc_translation_u()
+        rotation_matrix[0, -1] += self._conc_translation_e()[0]
+        rotation_matrix[1, -1] += self._conc_translation_n()[0]
+        rotation_matrix[2, -1] += self._conc_translation_u()[0]
         return rotation_matrix
 
     def compute_orientation_from_steps(
@@ -413,6 +442,7 @@ class RigidBodyModule(AKinematicModule):
 
         first_orientations = initial_orientations @ first_rot_matrices
         second_orientations = first_orientations @ second_rot_matrices
+
         return second_orientations @ conc_trans_matrix
 
     def transform_normal_to_first_coord_sys(

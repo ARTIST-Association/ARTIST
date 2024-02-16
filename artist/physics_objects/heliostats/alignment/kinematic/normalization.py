@@ -1,6 +1,6 @@
 import typing
 import torch
-from artist.physics_objects.parameter import AParameter
+from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 
 
 class ANormalization:

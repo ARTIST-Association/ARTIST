@@ -4,7 +4,7 @@ This package bundles all classes that are used for heliostats in ARTIST.
 
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
 
-from artist.physics_objects.heliostats.normalization import ANormalization, ZNormalization, MinMaxNormalization, \
+from artist.physics_objects.heliostats.alignment.kinematic.normalization import ANormalization, ZNormalization, MinMaxNormalization, \
     ParameterNormalizer
 
 __all__ = [
