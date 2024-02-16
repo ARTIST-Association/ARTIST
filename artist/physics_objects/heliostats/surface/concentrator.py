@@ -1,13 +1,8 @@
-from typing import List, Tuple, Union
+from typing import Tuple
+import torch
 from yacs.config import CfgNode
 
 from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import PointCloudFacetModule
-
-from artist.physics_objects.module import AModule
-
-import torch
-from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
-
 from artist.physics_objects.module import AModule
 
 

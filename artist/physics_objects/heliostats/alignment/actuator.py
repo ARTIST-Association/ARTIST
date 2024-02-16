@@ -132,8 +132,6 @@ class ActuatorModule(AModule):
             # register and normalize deviations
             self._register_parameter(param)
 
-    # TODO remove self.JOINT_NUMBER
-
     def _steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         stroke_length = (
