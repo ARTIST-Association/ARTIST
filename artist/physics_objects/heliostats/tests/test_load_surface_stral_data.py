@@ -8,12 +8,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
-from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
-from artist.physics_objects.heliostats.surface.facets.point_cloud_facets import (
-    PointCloudFacetModule,
-)
 from artist.physics_objects.heliostats.surface.tests import surface_defaults
 from artist.scenario.light_source.sun import Sun
 
@@ -50,8 +45,8 @@ def generate_data(
     
     datapoint = HeliostatDataPoint(
         point_id=1,
-        light_directions=light_direction,
-        desired_aimpoint=receiver_center,
+        light_directions=light_direction,#.reshape(-1, 1),
+        desired_aimpoint=receiver_center,#.reshape(-1, 1),
         label=HeliostatDataPointLabel(),
     )
     
