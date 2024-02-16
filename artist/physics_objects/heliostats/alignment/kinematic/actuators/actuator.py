@@ -1,11 +1,11 @@
 import torch
 
 from artist.physics_objects.module import AModule
-from artist.physics_objects.heliostats.normalization import ParameterNormalizer
-from artist.physics_objects.parameter import AParameter
+from artist.physics_objects.heliostats.alignment.kinematic.normalization import ParameterNormalizer
+from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 
 
-class ActuatorModule(AModule):
+class AActuatorModule(AModule):
     """
     This class implements the behavior of a linear actuator that moves within a 2D plane as a ``PyTorch`` module.
 
@@ -21,47 +21,6 @@ class ActuatorModule(AModule):
     - motor steps -> angle
     - angle -> motor steps
     """
-
-    class DevRotationParameter(AParameter):
-        """
-        Attributes
-        ----------
-
-        Methods
-        -------
-        """
-
-        def __init__(
-            self,
-            name: str,
-            value: float = 0.0,
-            tolerance: float = 0.01,
-            requires_grad: bool = True,
-            distort: bool = False,
-        ) -> None:
-            super().__init__(value, tolerance, distort, requires_grad)
-            self.name = name
-
-    class DevPercentageParameter(AParameter):
-        def __init__(
-            self,
-            name: str,
-            value: float = 0.0,
-            tolerance: float = 0.01,
-            requires_grad: bool = True,
-            distort: bool = False,
-        ) -> None:
-            super().__init__(value, tolerance, distort, requires_grad)
-            self.name = name
-
-    DEV_PARAMETERS = {
-        "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
-        # 'dev_initial_stroke_length': DevPercentageParameter('dev_initial_stroke_length'),# * 99%/101% => 1
-        # 'dev_actuator_offset': DevPercentageParameter('dev_actuator_offset'),# * 99%/101% => 1
-        # 'dev_joint_radius': DevPercentageParameter('dev_joint_radius'),# * 99%/101% => 1
-        "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
-    }
-
     def _percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
         return self.params[parameter_name] * (
             1 + self._get_parameter("dev_" + parameter_name)
@@ -135,7 +94,7 @@ class ActuatorModule(AModule):
     def _steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         stroke_length = (
-            actuator_pos[:, self.joint_number - 1] / self._increment()
+            actuator_pos[self.joint_number - 1, :] / self._increment()
             + self._initial_stroke_length()
         )
         calc_step_1 = (
@@ -215,3 +174,11 @@ class ActuatorModule(AModule):
         """
         # Access actuator_pos via joint number: items in actuator_pos list have to be ordered by number
         return self._steps_to_angles(actuator_pos=actuator_pos)
+
+
+#################
+    #def motor_steps_to_angle():
+
+    #def angle_to_motor_steps():
+
+    #def forward():
