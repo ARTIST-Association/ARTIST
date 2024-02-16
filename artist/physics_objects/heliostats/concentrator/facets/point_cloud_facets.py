@@ -7,8 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import torch
 from yacs.config import CfgNode
 
-from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
-from artist.physics_objects.heliostats.surface import bpro_loader
+from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
+from artist.physics_objects.heliostats.concentrator import bpro_loader
 
 HeliostatParams = Tuple[
     torch.Tensor,  # surface position on field

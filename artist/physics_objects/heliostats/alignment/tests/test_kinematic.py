@@ -6,7 +6,7 @@ import torch
 import pytest
 
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.alignment.rigid_body import (
+from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 
