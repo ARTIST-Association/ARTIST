@@ -18,9 +18,7 @@ class AlignmentModule(AModule):
 
     Attributes
     ----------
-    position : torch.Tensor
-        Position of the heliostat for which the alignment model is created.
-    kinematic_model : RigidBody
+    kinematic_model : RigidBodyModule
         The kinematic model used.
 
     Methods
@@ -108,7 +106,7 @@ class AlignmentModule(AModule):
         torch.Tensor
             The orientation matrix.
         """
-        return self.kinematic_model.compute_orientation_from_aimpoint(datapoint)
+        return self.kinematic_model.compute_orientation_from_aimpoint([datapoint])
 
     def heliostat_coord_system(
         self,
@@ -121,8 +119,6 @@ class AlignmentModule(AModule):
 
         Parameters
         ----------
-        position : torch.Tensor
-            The position of the heliostat.
         sun : torch.Tensor
             The sun vector / direction.
         aimpoint : torch.Tensor
@@ -135,8 +131,6 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             The heliostat coordination system.
         """
-        dtype = heliostat_position.dtype
-        device = heliostat_position.device
         pSun = Sun
         pPosition = heliostat_position
         pAimpoint = Aimpoint

@@ -23,14 +23,14 @@ HeliostatParams = Tuple[
 
 
 def real_surface(
-    real_configs: CfgNode,
+    config: CfgNode,
 ) -> HeliostatParams:
     """
     Compute a surface loaded from deflectometric data.
 
     Parameters
     ----------
-    real_config : CfgNode
+    config : CfgNode
         The config file containing information about the real surface.
 
     Returns
@@ -39,8 +39,6 @@ def real_surface(
         Tuple of all heliostat parameters.
 
     """
-    config = real_configs
-
     concentratorHeader_struct = struct.Struct(config.CONCENTRATORHEADER_STRUCT_FMT)
     facetHeader_struct = struct.Struct(config.FACETHEADER_STRUCT_FMT)
     ray_struct = struct.Struct(config.RAY_STRUCT_FMT)
@@ -90,7 +88,7 @@ def real_surface(
 
 
 def set_default_surface_position(
-    cfg: CfgNode,
+    config: CfgNode,
     position: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     """
@@ -98,7 +96,7 @@ def set_default_surface_position(
 
     Parameters
     ----------
-    cfg : CfgNode
+    config : CfgNode
         The config file containing the information about the heliostat.
     position : torch.Tensor
         The position of the suspension point of the surface.
@@ -108,33 +106,9 @@ def set_default_surface_position(
     torch.tensor
         The position of the heliostat in the field.
     """
-    if cfg.POSITION_ON_FIELD is None:
-        return torch.tensor(cfg.POSITION_ON_FIELD).reshape(-1, 1)
+    if config.POSITION_ON_FIELD is None:
+        return torch.tensor(config.POSITION_ON_FIELD).reshape(-1, 1)
     return position
-
-def _indices_between(
-    points: torch.Tensor,
-    from_: torch.Tensor,
-    to: torch.Tensor,
-) -> torch.Tensor:
-    indices = ((from_ <= points) & (points < to)).all(dim=-1)
-    return indices
-
-
-def facet_point_indices(
-    points: torch.Tensor,
-    position: torch.Tensor,
-    span_n: torch.Tensor,
-    span_e: torch.Tensor,
-) -> torch.Tensor:
-    from_xyz = position + span_e - span_n
-    to_xyz = position - span_e + span_n
-    # We ignore the z-axis here.
-    return _indices_between(
-        points[:, :-1],
-        from_xyz[:-1],
-        to_xyz[:-1],
-    )
 
 
 class PointCloudFacetModule(AFacetModule):
@@ -191,16 +165,9 @@ class PointCloudFacetModule(AFacetModule):
 
         self.load()
 
-    def load(
-        self,
-    ) -> None:
+    def load(self) -> None:
         """
         Load a surface from deflectometry data.
-
-        Parameters
-        ----------
-        aim_point : Optional[torch.Tensor]
-            The aimpoint.
         """
         builder_function, heliostat_config = self.get_surface_builder(self.config)
 
@@ -216,7 +183,7 @@ class PointCloudFacetModule(AFacetModule):
         ) = builder_function(heliostat_config)
 
     def get_surface_builder(
-        self, cfg: CfgNode
+        self, config: CfgNode
     ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
         """
         Select which kind of surface is to be loaded.
@@ -225,15 +192,15 @@ class PointCloudFacetModule(AFacetModule):
 
         Parameters
         ----------
-        cfg : CfgNode
-            Contains the information about the shape/kind of surface to be loaded.
+        config : CfgNode
+            Contains the information about the kind of surface to be loaded.
 
         Returns
         -------
         Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]
             The loaded surface, the heliostat parameters, and deflectometry data.
         """
-        return real_surface, cfg.DEFLECT_DATA
+        return real_surface, config.DEFLECT_DATA
 
 
 

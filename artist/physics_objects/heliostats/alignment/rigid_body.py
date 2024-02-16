@@ -1,9 +1,11 @@
+from typing import List
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.alignment.actuator import ActuatorModule
 from artist.physics_objects.heliostats.alignment.kinematic import AKinematicModule
 from artist.physics_objects.parameter import AParameter
+from artist.util import utils
 
 
 class RigidBodyModule(AKinematicModule):
@@ -105,7 +107,7 @@ class RigidBodyModule(AKinematicModule):
             for param_name, param in self.DEV_PARAMETERS.items()
         }
         for param in self.parameter_deviations:
-            self._register_parameter(param)  # Register and normalize deviations.
+            self._register_parameter(param)
 
         self.add_module(
             "LinearActuator1",
@@ -244,7 +246,7 @@ class RigidBodyModule(AKinematicModule):
         """
         return self.get_parameter(name)
 
-    def build_first_rotation_matrix(self, angles: torch.Tensor) -> torch.Tensor:
+    def build_rotation_matrix_first_axis_east(self, angles: torch.Tensor) -> torch.Tensor:
         """
         Build the first rotation matrices.
 
@@ -267,6 +269,7 @@ class RigidBodyModule(AKinematicModule):
         sin_theta = torch.sin(angles)
 
         # Initialize rotation_matrices with tilt deviations.
+
         rot_matrix = torch.stack(
             [
                 torch.stack(
@@ -395,7 +398,9 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        first_rot_matrices = self.build_first_rotation_matrix(joint_1_angles)
+        general_rot_matrices = utils.general_affine_matrix(tx=self._first_translation_e()+self._second_translation_e()+self._conc_translation_e(), ty=self._first_translation_n()+self._second_translation_n() + self._conc_translation_n(), tz=self._first_translation_u()+self._second_translation_u() + self._conc_translation_u(), rx=joint_1_angles, rz=joint_2_angles) 
+
+        first_rot_matrices = self.build_rotation_matrix_first_axis_east(joint_1_angles)
         second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
         conc_trans_matrix = self.build_concentrator_matrix()
 
@@ -429,7 +434,7 @@ class RigidBodyModule(AKinematicModule):
         normal4x1 = -torch.cat(
             (concentrator_normal, torch.zeros(concentrator_normal.shape[0], 1)), dim=1
         )
-        first_rot_matrices = self.build_first_rotation_matrix(
+        first_rot_matrices = self.build_rotation_matrix_first_axis_east(
             torch.zeros(len(concentrator_normal))
         )
 
@@ -528,7 +533,7 @@ class RigidBodyModule(AKinematicModule):
 
     def compute_orientation_from_aimpoint(
         self,
-        data_point: HeliostatDataPoint,
+        data_point: List[HeliostatDataPoint],
         max_num_epochs: int = 2,
         min_eps: float = 0.0001,
     ) -> torch.Tensor:
@@ -540,7 +545,7 @@ class RigidBodyModule(AKinematicModule):
         data_point : HeliostatDataPoint
             Datapoint containing the desired aimpoint.
         max_num_epochs : int
-            Maximum number of iterations (default 20)
+            Maximum number of iterations (default 2)
         min_eps : float
             Convergence criterion (default 0.0001)
 
@@ -549,9 +554,8 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        actuator_steps = torch.zeros((2, 2), requires_grad=True)
-        orientation = None
-        last_epoch_loss = None
+        actuator_steps = torch.zeros(2, (len(data_point)), requires_grad=True)
+        last_epoch_loss = torch.inf
         for epoch in range(max_num_epochs):
             orientation = self.compute_orientation_from_steps(
                 actuator_1_steps=actuator_steps, actuator_2_steps=actuator_steps
