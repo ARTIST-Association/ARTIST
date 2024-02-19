@@ -50,7 +50,7 @@ class HeliostatModule(AModule):
         self.position = torch.tensor(heliostat_config.DEFLECT_DATA.POSITION_ON_FIELD).reshape(-1, 1)
 
         self.concentrator = ConcentratorModule(heliostat_config)
-        self.alignment = AlignmentModule(heliostat_position=self.position)
+        self.alignment = AlignmentModule(heliostat_config)
 
 
     def get_aligned_surface(

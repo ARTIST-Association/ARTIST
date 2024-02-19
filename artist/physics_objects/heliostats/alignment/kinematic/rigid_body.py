@@ -1,5 +1,6 @@
 from typing import List
 import torch
+from yacs.config import CfgNode
 
 from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import AActuatorModule
@@ -87,39 +88,28 @@ class RigidBodyModule(AKinematicModule):
         "dev_up_tilt_1": DevRotationParameter("dev_up_tilt_1"),
         "dev_east_tilt_2": DevRotationParameter("dev_east_tilt_2"),
         "dev_north_tilt_2": DevRotationParameter("dev_north_tilt_2"),
-        "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
-        "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
-    }
-    actuator_1_params = {
-        "increment": torch.tensor(154166.666),
-        "initial_stroke_length": torch.tensor(0.075),
-        "actuator_offset": torch.tensor(0.34061),
-        "joint_radius": torch.tensor(0.3204),
-        "phi_0": torch.tensor(-1.570796),
-    }
-    actuator_2_params = {
-        "phi_0": torch.tensor(0.959931),
-        "increment": torch.tensor(154166.666),
-        "initial_stroke_length": torch.tensor(0.075),
-        "actuator_offset": torch.tensor(0.3479),
-        "joint_radius": torch.tensor(0.309),
+
     }
     # actuator_1_params = {
-    #     "increment": torch.tensor(1.0),
-    #     "initial_stroke_length": torch.tensor(0.0),
-    #     "actuator_offset": torch.tensor(0.0),
-    #     "joint_radius": torch.tensor(0.0),
-    #     "phi_0": torch.tensor(0.0),
+    #     "increment": torch.tensor(154166.666),
+    #     "initial_stroke_length": torch.tensor(0.075),
+    #     "actuator_offset": torch.tensor(0.34061),
+    #     "joint_radius": torch.tensor(0.3204),
+    #     "phi_0": torch.tensor(-1.570796),
     # }
     # actuator_2_params = {
-    #     "phi_0": torch.tensor(0.0),
-    #     "increment": torch.tensor(1.0),
-    #     "initial_stroke_length": torch.tensor(0.0),
-    #     "actuator_offset": torch.tensor(0.0),
-    #     "joint_radius": torch.tensor(0.0),
-    # }
+    #     "phi_0": torch.tensor(0.959931),
+    #     "increment": torch.tensor(154166.666),
+    #     "initial_stroke_length": torch.tensor(0.075),
+    #     "actuator_offset": torch.tensor(0.3479),
+    #     "joint_radius": torch.tensor(0.309),
+    #}
+    actuator_1_params = {
+    }
+    actuator_2_params = {
+    }
 
-    def __init__(self, position: torch.Tensor, **deviations) -> None:
+    def __init__(self, config: CfgNode, **deviations) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
 
@@ -128,8 +118,9 @@ class RigidBodyModule(AKinematicModule):
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
         """
-        super().__init__(position=position)
-        self.position = position
+        super().__init__(position=config.DEFLECT_DATA.POSITION_ON_FIELD)
+        self.config = config
+        self.position = config.DEFLECT_DATA.POSITION_ON_FIELD
         self.deviations = deviations
         self.parameter_deviations = {
             param: deviations.get(param_name)
@@ -139,13 +130,13 @@ class RigidBodyModule(AKinematicModule):
             self._register_parameter(param)
 
         self.add_module(
-            "LinearActuator1",
+            self.config.ACTUATOR_TYPE_1,
             AActuatorModule(
                 joint_number=1, clockwise=False, params=self.actuator_1_params
             ),
         )
         self.add_module(
-            "LinearActuator2",
+            self.config.ACTUATOR_TYPE_2,
             AActuatorModule(
                 joint_number=2, clockwise=True, params=self.actuator_2_params
             ),
@@ -401,8 +392,8 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        linear_actuator_1 = getattr(self, "LinearActuator1")
-        linear_actuator_2 = getattr(self, "LinearActuator2")
+        linear_actuator_1 = getattr(self, self.config.ACTUATOR_TYPE_1)
+        linear_actuator_2 = getattr(self, self.config.ACTUATOR_TYPE_2)
         first_joint_rot_angles = linear_actuator_1(actuator_pos=actuator_1_steps)
         second_joint_rot_angles = linear_actuator_2(actuator_pos=actuator_2_steps)
         return self.compute_orientation_from_angles(

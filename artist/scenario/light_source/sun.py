@@ -51,7 +51,7 @@ class Sun(ALightSource):
         dist_type: str,
         ray_count: int,
         mean: List[float],
-        cov: List[float],
+        covariance: List[float],
     ) -> None:
         """
         Initialize the sun as a light source.
@@ -64,7 +64,7 @@ class Sun(ALightSource):
             The number of rays sent out.
         mean : List[float]
             The mean of the normal distribution.
-        cov : List[float]
+        covariance : List[float]
             The covariance of the normal distribution.
         device : torch.device
             Specifies the device type responsible to load tensors into memory.
@@ -83,11 +83,11 @@ class Sun(ALightSource):
             self.mean = torch.tensor(
                 mean,
             )
-            self.cov = torch.tensor(
-                cov,
+            self.covariance = torch.tensor(
+                covariance,
             )
             self.distribution = torch.distributions.MultivariateNormal(
-                self.mean, self.cov
+                self.mean, self.covariance
             )
 
         elif self.dist_type == "Pillbox":

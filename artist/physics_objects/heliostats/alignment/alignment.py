@@ -4,6 +4,7 @@ Alignment module for the heliostat.
 
 from typing import Tuple
 import torch
+from yacs.config import CfgNode
 
 from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
@@ -35,7 +36,7 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, heliostat_position: torch.Tensor) -> None:
+    def __init__(self, config: CfgNode) -> None:
         """
         Initialize the alignment module.
 
@@ -45,7 +46,7 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        self.kinematic_model = RigidBodyModule(heliostat_position)
+        self.kinematic_model = RigidBodyModule(config)
 
     def align_surface(
         self,
@@ -74,14 +75,7 @@ class AlignmentModule(AModule):
         normal_vec = (
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
-        alignment = torch.stack(
-            self.heliostat_coord_system(
-                self.position,
-                datapoint.light_directions,
-                datapoint.desired_aimpoint,
-                normal_vec,
-            )
-        )
+        
         
         aligned_surface_points =  surface_points @ alignment
         aligned_surface_normals = surface_normals @ alignment
