@@ -5,6 +5,30 @@ from artist.physics_objects.heliostats.alignment.kinematic.normalization import 
 from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 
 
+class DevRotationParameter(AParameter):
+        def __init__(
+            self,
+            name: str,
+            value: float = 0.0,
+            tolerance: float = 0.01,
+            requires_grad: bool = True,
+            distort: bool = False,
+        ):
+            super().__init__(value, tolerance, distort, requires_grad)
+            self.name = name
+
+class DevPercentageParameter(AParameter):
+        def __init__(
+            self,
+            name: str,
+            value: float = 0.0,
+            tolerance: float = 0.01,
+            requires_grad: bool = True,
+            distort: bool = False,
+        ) -> None:
+            super().__init__(value, tolerance, distort, requires_grad)
+            self.name = name
+
 class AActuatorModule(AModule):
     """
     This class implements the behavior of a linear actuator that moves within a 2D plane as a ``PyTorch`` module.
@@ -21,6 +45,11 @@ class AActuatorModule(AModule):
     - motor steps -> angle
     - angle -> motor steps
     """
+    DEV_PARAMETERS = {
+        "dev_increment": DevPercentageParameter("dev_increment"),  # * 99%/101% => 1
+        "dev_phi_0": DevRotationParameter("dev_phi_0"),  # +/- 10mRad
+    }
+
     def _percentage_with_deviation(self, parameter_name: str) -> torch.Tensor:
         return self.params[parameter_name] * (
             1 + self._get_parameter("dev_" + parameter_name)
