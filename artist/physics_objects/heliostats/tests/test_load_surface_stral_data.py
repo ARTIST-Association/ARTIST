@@ -52,7 +52,7 @@ def generate_data(
     
     covariance = 4.3681e-06  # circum-solar ratio
     sun = Sun(
-        "Normal", ray_count=100, mean=[0.0, 0.0], cov=[[covariance, 0.0], [0.0, covariance]]
+        "Normal", ray_count=100, mean=[0.0, 0.0], covariance=[[covariance, 0.0], [0.0, covariance]]
     )
 
     heliostat = HeliostatModule(surface_config)

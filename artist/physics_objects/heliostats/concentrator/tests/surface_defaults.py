@@ -10,6 +10,8 @@ from artist import ARTIST_ROOT
 _C = CN()
 
 _C = CN()
+_C.ACTUATOR_TYPE_1 = "ideal_actuator_1"
+_C.ACTUATOR_TYPE_2 = "ideal_actuator_2"
 _C.TO_OPTIMIZE_NEW = [
     "surface",
 ]

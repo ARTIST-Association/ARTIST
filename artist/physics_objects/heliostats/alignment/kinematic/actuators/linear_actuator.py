@@ -1,10 +1,51 @@
+"""
+Implementation of linear actuators in ARTIST.
+"""
 import torch
+
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import AActuatorModule
 
 class LinearActuator(AActuatorModule):
+    """
+    This class contains the implementation of linear actuators.
+
+    Attributes
+    ----------
+    joint_number : int
+        Descriptor (number) of the joint.
+    clockwise : bool
+        Turning direction of the joint.
+    params : dict
+        The parameters that can be optimized.
+
+    Methods
+    -------
+    _steps_to_phi()
+
+    _steps_to_angles()
+        Translate the actuator steps to angles.
+    _angles_to_steps()
+        Translate the angles to actuator steps.
+    forward()
+        The forward kinematic.
+    
+    See Also
+    --------
+    :class:`AActuatorModule` : The parent class.
+    """
     def __init__(
         self, joint_number: int, clockwise: bool, params: dict, **deviations
     ) -> None:
+        """
+        Parameters
+        ----------
+        joint_number : int
+            Descriptor (number) of the joint.
+        clockwise : bool
+            Turning direction of the joint.
+        params : dict
+            The parameters that can be optimized.
+        """
         super().__init__()
         self.joint_number = joint_number
         self.clockwise = clockwise
@@ -89,6 +130,7 @@ class LinearActuator(AActuatorModule):
             The position of the actuator.
         
         Returns
+        -------
         torch.Tensor
             The required angles.
         """
