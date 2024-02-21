@@ -1,6 +1,8 @@
 import struct
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import torch
+from artist.physics_objects.heliostats.surface.facets import canting
+from artist.physics_objects.heliostats.surface.facets.canting import ActiveCanting
 from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 from yacs.config import CfgNode
 
@@ -166,6 +168,9 @@ def get_position(
     return torch.tensor(position_on_field, dtype=dtype, device=device)
 
 
+
+
+
 class NURBS:
     """
     Implementation of the NURBS surface.
@@ -173,7 +178,7 @@ class NURBS:
 
     def __init__(
         self,
-        # heliostat_config: CfgNode,
+        heliostat_config: CfgNode,
         nurbs_config: CfgNode,
         device: torch.device,
         rows: int,
@@ -530,6 +535,72 @@ class NURBS:
             )
             # print(self._eval_points.size())
 
+    @property
+    def discrete_points(self) -> torch.Tensor:
+        discrete_points, _ = self._calc_normals_and_surface()
+        return discrete_points
+
+    @property
+    def normals(self) -> torch.Tensor:
+        _, normals = self._calc_normals_and_surface()
+        return normals
+    
+    def _calc_normals_and_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        # eval_points = self.eval_points
+        # ctrl_points, ctrl_weights, knots_x, knots_y = \
+        #     self._progressive_growing.select()
+
+        surface_points, normals = nurbs.calc_normals_and_surface_slow(
+            self.eval_points[:, 0],
+            self.eval_points[:, 1],
+            self.degree_x,
+            self.degree_y,
+            self.ctrl_points,
+            self.ctrl_weights,
+            self.knots_x,
+            self.knots_y,
+        )
+
+        return surface_points, normals
+
+class NURBSFacets():
+    def __init__(
+            self,
+            heliostat: 'NURBSFacetsModule',
+            nurbs_heliostats: List[NURBS],
+    ):
+        self._facets = nurbs_heliostats
+        self.positions = heliostat.positions
+        self.spans_n = heliostat.spans_n
+        self.spans_e = heliostat.spans_e
+
+        # self.offsets = self._make_offsets(
+        #     cast(List['AbstractHeliostat'], self._facets))
+        self._canting_algo = heliostat.canting_algo
+        if (
+                self._canting_algo is None
+                or isinstance(self._canting_algo, ActiveCanting)
+        ):
+            self.cant_rots = torch.stack([
+                torch.eye(3, dtype=self.spans_n.dtype, device=self.spans_n.device)
+                for _ in range(len(self._facets))
+            ])
+        else:
+            self.cant_rots = torch.stack(
+                [facet.facets.cant_rots[0] for facet in self._facets])
+            for facet in self._facets:
+                facet.facets.cant_rots[0] = torch.eye(
+                    3, dtype=self.spans_n.dtype, device=self.spans_n.device)
+
+    @property
+    def _discrete_points(self) -> List[torch.Tensor]:  # type: ignore[override]
+        discrete_points = [facet.discrete_points for facet in self._facets]
+        return discrete_points
+    
+    @property
+    def _normals(self) -> List[torch.Tensor]:  # type: ignore[override]
+        return [facet.normals for facet in self._facets]
+
 
 class NURBSFacetsModule(AFacetModule):
     """
@@ -571,7 +642,7 @@ class NURBSFacetsModule(AFacetModule):
 
         self.device = device
         self.nurbs_cfg = nurbs_config
-        self.cfg = surface_config
+        self.surface_config = surface_config
 
         if not self.nurbs_cfg.is_frozen():
             self.nurbs_cfg = self.nurbs_cfg.clone()
@@ -608,7 +679,7 @@ class NURBSFacetsModule(AFacetModule):
         if isinstance(cfg_aim_point, str):
             if cfg_aim_point != "inherit":
                 raise ValueError(f'unknown aim point config "{cfg_aim_point}"')
-            builder_fn, aim_point_cfg = self.select_surface_builder(self.cfg)
+            builder_fn, aim_point_cfg = self.select_surface_builder(self.surface_config)
             maybe_aim_point: Optional[torch.Tensor] = receiver_center
 
         else:
@@ -636,11 +707,10 @@ class NURBSFacetsModule(AFacetModule):
             # Radians
             self.disturbance_angles = self._get_disturbance_angles(self.nurbs_cfg)
 
-        # builder_fn, aim_point_cfg = self.select_surface_builder(self.cfg)
-
+        self._canting_cfg: CfgNode = nurbs_config.FACETS.CANTING
         (
             heliostat_position,
-            positions,
+            self.positions,
             self.spans_n,
             self.spans_e,
             self.heliostat,
@@ -653,54 +723,75 @@ class NURBSFacetsModule(AFacetModule):
             self.cols,
             params,
         ) = builder_fn(aim_point_cfg, self.device)
-
-        # print(self.positions)
-        # print(self.heliostat_ideal)
-
-        # self.facetted_discrete_points = torch.split(self.heliostat_ideal, 4, dim=1)
-        # self.facetted_normals = torch.split(heliostat_ideal_vecs, 4, dim=1)
-
-        # self.facetted_discrete_points = torch.tensor_split(self.heliostat_ideal, 4)
-        # self.facetted_normals = torch.tensor_split(heliostat_ideal_vecs, 4)
-
-        # print(self.heliostat_ideal)
-        # self.heliostat_ideal *= 3
-        # print(self.heliostat_ideal)
-
-        # heliostat_ideal_split = self.heliostat_ideal.reshape(4, -1, 3)
-        # heliostat_ideal_split[0] *= 3
-        # self.heliostat_ideal = heliostat_ideal_split.reshape(-1, 3)
-
-        self.facets = self._create_nurbs_facets(
-            # self.cfg,
+        
+        self._inherit_canting()
+        
+        facets = self._create_nurbs_facets(
+            self.surface_config,
             self.nurbs_cfg,
             # sun_directions,
         )
 
-        (
-            self.facetted_discrete_points,
-            self.facetted_normals,
-        ) = self._calc_normals_and_surface(
-            self.facets.eval_points,
-            self.facets.degree_x,
-            self.facets.degree_y,
-            self.facets.ctrl_points,
-            self.facets.ctrl_weights,
-            self.facets.knots_x,
-            self.facets.knots_y,
-        )
+        self.facets = NURBSFacets(
+            self, [facets])
+        
+        self.facetted_discrete_points = self.facets._discrete_points
+        self.facetted_normals = self.facets._normals
 
-        # self.facetted_discrete_points = torch.stack([facet.surface_points for facet in self.facets])
-        # self.facetted_normals = torch.stack([facet.surface_normals for facet in self.facets])
 
-        # self.facetted_discrete_points = torch.tensor_split(self.facetted_discrete_points[0], 4)
-        # self.facetted_normals = torch.tensor_split(self.facetted_normals[0], 4)
+    def _inherit_canting(self) -> None:
+        old_canting_cfg = self._canting_cfg
+        self._canting_cfg = self.nurbs_cfg.FACETS.CANTING.clone()
+        self._canting_cfg.defrost()
 
-        self.facetted_discrete_points = torch.tensor_split(
-            self.facetted_discrete_points, 4
-        )
-        self.facetted_normals = torch.tensor_split(self.facetted_normals, 4)
+        cfg_focus_point: Union[None, List[float], float, str] = \
+            self._canting_cfg.FOCUS_POINT
+        if isinstance(cfg_focus_point, str):
+            if cfg_focus_point != 'inherit':
+                raise ValueError(
+                    f'unknown focus point config "{cfg_focus_point}"')
+            self._canting_cfg.FOCUS_POINT = old_canting_cfg.FOCUS_POINT
 
+        cfg_canting_algo: str = self._canting_cfg.ALGORITHM
+        if cfg_canting_algo == 'inherit':
+            self._canting_cfg.ALGORITHM = old_canting_cfg.ALGORITHM
+        self.canting_algo = canting.get_algorithm(self._canting_cfg)
+        
+        self.canting_enabled = False
+        if self.canting_enabled:
+            focus_point = canting.get_focus_point(
+                self._canting_cfg,
+                self.position_on_field,
+                self.aim_point,
+                self.surface_config.IDEAL.NORMAL_VECS,
+                dtype=self.position_on_field.dtype,
+                device=self.device,
+            )
+        else:
+            focus_point = None
+        self._set_deconstructed_focus_point(focus_point)
+
+        self._canting_cfg.freeze()
+
+    @staticmethod
+    def _deconstruct_focus_point(
+            focus_point: Optional[torch.Tensor],
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        if focus_point is not None:
+            focus_distance = torch.linalg.norm(focus_point)
+            focus_normal = focus_point / focus_distance
+        else:
+            focus_normal = None
+            focus_distance = None
+        return focus_normal, focus_distance
+
+    def _set_deconstructed_focus_point(
+            self,
+            focus_point: Optional[torch.Tensor],
+    ) -> None:
+        self._focus_normal, self._focus_distance = \
+            self._deconstruct_focus_point(focus_point)
+    
     def _calc_normals_and_surface(
         self,
         eval_points: torch.Tensor,
@@ -880,7 +971,47 @@ class NURBSFacetsModule(AFacetModule):
     #     # manually.
     #     surface_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
     #     return surface_config
+    def _facet_heliostat_config(
+            self,
+            heliostat_config: CfgNode,
+            position: torch.Tensor,
+            span_n: torch.Tensor,
+            span_e: torch.Tensor,
+    ) -> CfgNode:
+        heliostat_config = heliostat_config.clone()
+        heliostat_config.defrost()
 
+        # We change the shape in order to speed up construction.
+        # Later, we need to do adjust all loaded values to be the same
+        # as the parent heliostat.
+        heliostat_config.SHAPE = 'ideal'
+        heliostat_config.IDEAL.ROWS = 2
+        heliostat_config.IDEAL.COLS = 2
+
+        heliostat_config.TO_OPTIMIZE = [
+            # self._FACET_OPTIMIZABLES[name]
+            # for name in self.get_to_optimize()
+            # if name in self._FACET_OPTIMIZABLES
+        ]
+        # We use `self.facets.positions` to position the heliostat's
+        # values.
+        heliostat_config.IDEAL.POSITION_ON_FIELD = [0.0, 0.0, 0.0]
+        # Give any aim point so it doesn't complain.
+        heliostat_config.IDEAL.AIM_POINT = [0.0, 0.0, 0.0]
+        # We don't want to optimize the rotation for each facet, only
+        # for the whole heliostat. So do not disturb facets.
+        heliostat_config.IDEAL.DISTURBANCE_ROT_ANGLES = [0.0, 0.0, 0.0]
+        # Even though we use `self.facets.positions` to position the
+        # heliostat's values, we need this for correct initialization of
+        # the single NURBS heliostat facet.
+        heliostat_config.IDEAL.FACETS.POSITIONS = [position.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_N = [span_n.tolist()]
+        heliostat_config.IDEAL.FACETS.SPANS_E = [span_e.tolist()]
+        # Do not cant facet NURBS in their constructor; we do it
+        # manually.
+        heliostat_config.IDEAL.FACETS.CANTING.FOCUS_POINT = 0
+        return heliostat_config
+    
     @staticmethod
     def _facet_nurbs_config(
         nurbs_config: CfgNode,
@@ -978,9 +1109,10 @@ class NURBSFacetsModule(AFacetModule):
 
     def _create_facet(
         self,
+        position: torch.Tensor,
         span_n: torch.Tensor,
         span_e: torch.Tensor,
-        # heliostat_config: CfgNode,
+        heliostat_config: CfgNode,
         nurbs_config: CfgNode,
         # sun_direction: Optional[torch.Tensor],
     ) -> NURBS:
@@ -999,12 +1131,17 @@ class NURBSFacetsModule(AFacetModule):
         NURBS
             The NURBS for the facets.
         """
-        # orig_nurbs_config = nurbs_config
-        # heliostat_config = None
+        orig_nurbs_config = nurbs_config
+        heliostat_config = self._facet_heliostat_config(
+            heliostat_config,
+            position,
+            span_n,
+            span_e,
+        )
         nurbs_config = self._facet_nurbs_config(nurbs_config, span_n, span_e)
 
         facet = NURBS(
-            # heliostat_config,
+            heliostat_config,
             nurbs_config,
             self.device,
             rows=self.rows,
@@ -1019,7 +1156,7 @@ class NURBSFacetsModule(AFacetModule):
 
     def _create_nurbs_facets(
         self,
-        # heliostat_config: CfgNode,
+        heliostat_config: CfgNode,
         nurbs_config: CfgNode,
         # sun_direction: Optional[torch.Tensor],
     ) -> NURBS:
@@ -1039,9 +1176,10 @@ class NURBSFacetsModule(AFacetModule):
         # span_e = torch.tensor([1, 0, 0], dtype=torch.float64)
         # span_n = torch.tensor([0, 1, 0], dtype=torch.float64)
         return self._create_facet(
+            self.positions,
             self.spans_n,
             self.spans_e,
-            # heliostat_config,
+            heliostat_config,
             nurbs_config,
             # sun_direction,
         )
