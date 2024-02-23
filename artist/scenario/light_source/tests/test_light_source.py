@@ -3,6 +3,7 @@ This pytest tests the correctness of the light source.
 """
 
 import pathlib
+from typing import Dict
 import pytest
 import torch
 
@@ -13,8 +14,8 @@ from artist.scenario.light_source.sun import Sun
 
 
 def generate_data(
-    light_direction: torch.Tensor, expected_value: torch.Tensor
-) -> dict[str, torch.Tensor]:
+    incident_ray_direction: torch.Tensor, expected_value: str
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
@@ -39,8 +40,7 @@ def generate_data(
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
     cov = 1e-12  # 4.3681e-06
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], device)
+    sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], incident_ray_direction=incident_ray_direction)
 
     surface_normals = torch.tensor(
         [
@@ -64,7 +64,7 @@ def generate_data(
 
     datapoint = HeliostatDataPoint(
         point_id=1,
-        light_directions=torch.tensor(light_direction),
+        light_directions=torch.tensor(ray_direction),
         desired_aimpoint=receiver_center,
         label=HeliostatDataPointLabel(),
     )
@@ -80,7 +80,7 @@ def generate_data(
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "light_direction": torch.tensor(light_direction),
+        "light_direction": torch.tensor(ray_direction),
         "expected_value": expected_value,
     }
 

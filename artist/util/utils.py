@@ -13,7 +13,6 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     y : torch.Tensor
         Single tensor with dimension (N,3).
 
-
     Returns
     -------
     torch.Tensor

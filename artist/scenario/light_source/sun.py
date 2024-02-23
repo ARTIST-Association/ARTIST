@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import torch
 
@@ -32,7 +32,7 @@ class Sun(ALightSource):
         Compute the scattered rays for points on a surface.
     line_plane_intersections()
         Compute line-plane intersections of ray directions and the (receiver) plane.
-    reflect_rays_()
+    get_preferred_reflection_direction()
         Reflect incoming rays according to a normal vector.
     rotate_y()
         Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
@@ -48,63 +48,51 @@ class Sun(ALightSource):
 
     def __init__(
         self,
-        dist_type: str,
-        ray_count: int,
-        mean: List[float],
-        covariance: List[float],
+        distribution_parameters: Dict[str, float],
+        ray_count: int
     ) -> None:
         """
         Initialize the sun as a light source.
 
         Parameters
         ----------
-        dist_type : str
-            Type of the distribution to be implemented.
+        distribution_parameters
+            Parameters of the distribution used to model the sun.
         ray_count : int
-            The number of rays sent out.
-        mean : List[float]
-            The mean of the normal distribution.
-        covariance : List[float]
-            The covariance of the normal distribution.
-        device : torch.device
-            Specifies the device type responsible to load tensors into memory.
+            The number of sent-out rays sampled from the sun distribution.
 
         Raises
         ------
         Union[ValueError, NotImplementedError]
-            If the chosen dist_type is unknown
+            If the specified distribution type is unknown.
         """
         super().__init__()
-        self.dist_type: str = dist_type
-        self.num_rays: int = ray_count
+        self.distribution_parameters = distribution_parameters
+        self.num_rays = ray_count
 
-        dtype = torch.get_default_dtype()
-        if self.dist_type == "Normal":
-            self.mean = torch.tensor(
-                mean,
-            )
-            self.covariance = torch.tensor(
-                covariance,
-            )
+        if self.distribution_parameters["distribution_type"] == "Normal":
+            mean = torch.tensor([distribution_parameters["mean"], distribution_parameters["mean"]])
+            covariance = torch.tensor([[distribution_parameters["covariance"], 0], [0, distribution_parameters["covariance"]]])
+
             self.distribution = torch.distributions.MultivariateNormal(
-                self.mean, self.covariance
+                mean, covariance
             )
 
-        elif self.dist_type == "Pillbox":
+        elif self.distribution_parameters["distribution_type"] == "Pillbox":
             raise NotImplementedError("Not implemented yet.")
         else:
-            raise ValueError("Unknown light distribution type.")
+            raise ValueError("Unknown sunlight distribution type.")
 
     def sample(
         self,
-        num_rays_on_hel: int,
+        num_preferred_ray_directions: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
 
         Parameters
         ----------
-        num_rays_on_hel : int
+        num_preferred_ray_directions : int
             The number of rays on the heliostat.
 
         Returns
@@ -117,13 +105,12 @@ class Sun(ALightSource):
         ValueError
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
-        if self.dist_type == "Normal":
+        if self.distribution_parameters["distribution_type"] == "Normal":
             distortion_x_dir, distortion_y_dir = (
                 self.distribution.sample(
-                    (self.num_rays, num_rays_on_hel),
+                    (self.num_rays, num_preferred_ray_directions),
                 )
-                .transpose(0, 1)
-                .permute(2, 1, 0)
+                .permute(2, 0, 1)
             )
             return distortion_x_dir, distortion_y_dir
         else:
@@ -265,7 +252,7 @@ class Sun(ALightSource):
         return surface_points + ray_directions * ds.unsqueeze(-1)
 
     @staticmethod
-    def reflect_rays_(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
+    def get_preferred_reflection_direction(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
         """
         Reflect incoming rays according to a normal vector.
 
@@ -273,13 +260,13 @@ class Sun(ALightSource):
         ----------
         rays : torch.Tensor
             The incoming rays (from the sun) to be reflected.
-        normals : Torch.Tensor
+        normals : torch.Tensor
             Surface normals on which the rays are reflected.
 
         Returns
         -------
         torch.Tensor
-            The reflected rays.
+            The preferred direction of the reflected rays for each heliostat surface normal.
         """
         return rays - 2 * utils.batch_dot(rays, normals) * normals
 
