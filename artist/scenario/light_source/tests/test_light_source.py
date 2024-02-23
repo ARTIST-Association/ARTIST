@@ -1,8 +1,9 @@
-"""This pytest tests the correctness of the light source."""
+"""
+This pytest tests the correctness of the light source.
+"""
 
 import pathlib
 from typing import Dict
-
 import pytest
 import torch
 
@@ -13,7 +14,7 @@ from artist.scenario.light_source.sun import Sun
 
 
 def generate_data(
-    light_direction: torch.Tensor, expected_value: torch.Tensor
+    incident_ray_direction: torch.Tensor, expected_value: str
 ) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
@@ -32,15 +33,14 @@ def generate_data(
 
     Returns
     -------
-    Dict[str, torch.Tensor]
+    dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
-    cov = 4.3681e-06
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sun = Sun("Normal", 100, [0, 0], [[cov, 0], [0, cov]], device)
+    cov = 1e-12  # 4.3681e-06
+    sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], incident_ray_direction=incident_ray_direction)
 
     surface_normals = torch.tensor(
         [
@@ -64,7 +64,7 @@ def generate_data(
 
     datapoint = HeliostatDataPoint(
         point_id=1,
-        light_directions=torch.tensor(light_direction),
+        light_directions=torch.tensor(ray_direction),
         desired_aimpoint=receiver_center,
         label=HeliostatDataPointLabel(),
     )
@@ -80,7 +80,7 @@ def generate_data(
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "light_direction": torch.tensor(light_direction),
+        "light_direction": torch.tensor(ray_direction),
         "expected_value": expected_value,
     }
 
@@ -94,24 +94,11 @@ def generate_data(
     ],
     name="environment_data",
 )
-def data(request) -> Dict[str, torch.Tensor]:
-    """
-    [INSERT DESCRIPTION HERE!].
-
-    Parameters
-    ----------
-    request :
-        [INSERT DESCRIPTION HERE!]
-
-    Returns
-    -------
-    Dict[str, torch.Tensor]
-        [INSERT DESCRIPTION HERE!]
-    """
+def data(request):
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -122,7 +109,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : Dict[str, torch.Tensor]
+    environment_data : dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
     torch.set_printoptions(precision=10)
@@ -143,9 +130,16 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     ray_directions = sun.reflect_rays_(-sun_position, aligned_surface_normals)
 
-    xi, zi = sun.sample_distortions(len(ray_directions))
+    xi, yi = sun.sample(len(ray_directions))
 
-    rays = sun.scatter_rays(ray_directions, xi, zi)
+    rays = sun.compute_rays(
+        receiver_plane_normal,
+        receiver_center,
+        ray_directions,
+        aligned_surface_points,
+        xi,
+        yi,
+    )
 
     intersections = sun.line_plane_intersections(
         receiver_plane_normal, receiver_center, rays, aligned_surface_points
@@ -186,4 +180,4 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected, atol=5e-5, rtol=5e-5)
+    torch.testing.assert_close(total_bitmap, expected)
