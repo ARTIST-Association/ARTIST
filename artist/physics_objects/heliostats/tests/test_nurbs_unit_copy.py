@@ -164,4 +164,4 @@ def update(val):
    fig.canvas.draw_idle()
 
 slider.on_changed(update)
-plt.show()
+#plt.show()

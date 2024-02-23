@@ -132,11 +132,9 @@ def get_canting_params(
 
 def get_focus_point(
         canting_cfg: CfgNode,
-        heliostat_position_on_field: torch.Tensor,
         aim_point: Optional[torch.Tensor],
         # The normal of the ideal heliostat.
         ideal_normal: List[float],
-        dtype: th.dtype,
         device: th.device,
 ) -> Optional[torch.Tensor]:
     if canting_cfg.FOCUS_POINT is not None:
@@ -145,17 +143,13 @@ def get_focus_point(
                 'focus point as a list must be of length 3'
             focus_point: Optional[torch.Tensor] = th.tensor(
                 canting_cfg.FOCUS_POINT,
-                dtype=dtype,
                 device=device,
             )
         # We explicitly don't check for the float type so that
         # distance can be given as integers as well.
         elif canting_cfg.FOCUS_POINT != float('inf'):
-            assert canting_cfg.FOCUS_POINT > 0, \
-                'please do not call `get_focus_point` with disabled canting'
-            focus_point = heliostat_position_on_field + th.tensor(
+            focus_point = th.tensor(
                 ideal_normal,
-                dtype=dtype,
                 device=device,
             ) * canting_cfg.FOCUS_POINT
         else:
@@ -164,6 +158,7 @@ def get_focus_point(
         assert aim_point is not None
         focus_point = aim_point
     return focus_point
+
 
 
 def calc_focus_normal(

@@ -38,7 +38,7 @@ class TestConcentrator(unittest.TestCase):
         )
         
         nurbs_facets = NURBSFacetsModule(
-                surface_config, nurbs_config, self.device, receiver_center=self.receiver_center
+                surface_config, nurbs_config, self.device, receiver_center=self.receiver_center, sun_directions=self.sun_direction
         )
 
         facets = nurbs_facets.make_facets_list()
