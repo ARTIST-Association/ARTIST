@@ -15,7 +15,7 @@ from artist.scenario.light_source.sun import Sun
 
 
 def generate_data(
-    light_direction: torch.Tensor, expected_value: torch.Tensor
+    incident_ray_direction: torch.Tensor, expected_value: str
 ) -> dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
@@ -44,28 +44,26 @@ def generate_data(
     
     receiver_center = torch.tensor([0.0, -50.0, 0.0]).reshape(-1, 1)
     
-    datapoint = HeliostatDataPoint(
-        point_id=1,
-        light_directions=light_direction,#.reshape(-1, 1),
-        desired_aimpoint=receiver_center,#.reshape(-1, 1),
-        label=HeliostatDataPointLabel(),
-    )
-    
-    covariance = 4.3681e-06  # circum-solar ratio
+    sun_parameters = {
+        "distribution_type": "Normal",
+        "mean": 0.0,
+        "covariance": 4.3681e-06 # circum-solar ratio
+    }
+
     sun = Sun(
-        "Normal", ray_count=100, mean=[0.0, 0.0], covariance=[[covariance, 0.0], [0.0, covariance]]
+        distribution_parameters=sun_parameters, ray_count=100
     )
 
     heliostat = HeliostatModule(surface_config)
     
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(datapoint=datapoint)
+    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
     return {
         "sun": sun,
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "light_direction": light_direction,
+        "incident_ray_direction": incident_ray_direction,
         "expected_value": expected_value,
     }
 
@@ -102,7 +100,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     aligned_surface_points = environment_data["aligned_surface_points"]
     aligned_surface_normals = environment_data["aligned_surface_normals"]
     receiver_center = environment_data["receiver_center"]
-    light_direction = environment_data["light_direction"]
+    incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
@@ -110,19 +108,31 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     receiver_plane_y = 7.0
     receiver_resolution_x = 256
     receiver_resolution_y = 256
-    sun_position = light_direction
 
-    ray_directions = sun.reflect_rays_(-sun_position, aligned_surface_normals)
+    # Calculate preferred directions of the (?) rays sent out by the heliostat surface. 
+    # These rays originate from reflection of the `num_rays_heliostat` (?) incoming sun 
+    # rays hitting that heliostat's surface. The heliostat surface is described by `aligned_surface_normals`. 
+    # For each normal used to describe the heliostat surface, only the outgoing rays' 
+    # preferred directions are returned, which are to be scattered or distorted in the next step.
 
-    xi, yi = sun.sample(len(ray_directions))
+    # heliostat besteht aus 4 surface_points (4, 3) und dazugehörig (4, 3) normals
+    # Berechne mit sonnenvektor (incident_ray_direction) shape: (1, 3) die preferred_directions (4, 3)
+    # sende ray_count strahlen pro normal_vector aus und störe sie um xi, yi, shape: (ray_count, 4, 3)
+    # Beispiel ray_count = 2 -> ray_directions shape: (8, 3)
+    # 
+
+
+    preferred_ray_directions = sun.get_preferred_reflection_direction(-incident_ray_direction, aligned_surface_normals)
+    
+    distortion_x, distortion_y = sun.sample(len(preferred_ray_directions))
 
     rays = sun.compute_rays(
         receiver_plane_normal,
         receiver_center,
-        ray_directions,
+        preferred_ray_directions,
         aligned_surface_points,
-        xi,
-        yi,
+        distortion_x,
+        distortion_y,
     )
 
     intersections = sun.line_plane_intersections(
@@ -151,7 +161,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
-        xi.numel(),
+        distortion_x.numel(),
         receiver_plane_x,
         receiver_plane_y,
     )

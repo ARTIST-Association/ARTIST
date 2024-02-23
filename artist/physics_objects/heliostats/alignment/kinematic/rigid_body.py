@@ -554,8 +554,9 @@ class RigidBodyModule(AKinematicModule):
 
     def compute_orientation_from_aimpoint(
         self,
-        data_point: List[HeliostatDataPoint],
-        max_num_epochs: int = 2,
+        aim_point: torch.Tensor,
+        incident_ray_direction: torch.Tensor,
+        num_iterations: int = 2,
         min_eps: float = 0.0001,
     ) -> torch.Tensor:
         """
@@ -563,9 +564,11 @@ class RigidBodyModule(AKinematicModule):
 
         Parameters
         ----------
-        data_point : HeliostatDataPoint
-            Datapoint containing the desired aimpoint.
-        max_num_epochs : int
+        aim_point : torch.Tensor
+            The desired aim point.
+        incident_ray_direction : torch.Tensor
+            The direction of rays.
+        num_iterations : int
             Maximum number of iterations (default 2)
         min_eps : float
             Convergence criterion (default 0.0001)
@@ -575,9 +578,9 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        actuator_steps = torch.zeros(2, (len(data_point)), requires_grad=True)
+        actuator_steps = torch.zeros(2, 1, requires_grad=True)
         last_epoch_loss = torch.inf
-        for epoch in range(max_num_epochs):
+        for _ in range(num_iterations):
             orientation = self.compute_orientation_from_steps(
                 actuator_1_steps=actuator_steps, actuator_2_steps=actuator_steps
             )
@@ -595,11 +598,11 @@ class RigidBodyModule(AKinematicModule):
             )[:1, :3]
 
             # Compute desired normal.
-            desired_reflect_vec = data_point.desired_aimpoint - concentrator_origins
+            desired_reflect_vec = aim_point - concentrator_origins
             desired_reflect_vec /= desired_reflect_vec.norm()
-            data_point.light_directions /= data_point.light_directions.norm()
+            incident_ray_direction /= incident_ray_direction.norm()
             desired_concentrator_normal = (
-                data_point.light_directions + desired_reflect_vec
+                incident_ray_direction + desired_reflect_vec
             )
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 

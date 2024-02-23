@@ -19,6 +19,8 @@ class HeliostatModule(AModule):
         The position of the heliostat in the field.
     aim_point : torch.Tensor
         The aim point on the receiver.
+    incident_ray_direction : torch.Tensor
+        The direction of the rays.
     concentrator : ConcentratorModule
         The surface of the heliostat.
     alignment : AlignmentModule
@@ -35,7 +37,7 @@ class HeliostatModule(AModule):
     """
 
     def __init__(
-        self, heliostat_config : CfgNode
+        self, heliostat_config : CfgNode, incident_ray_direction : torch.Tensor
     ) -> None:
         """
         Initialize the heliostat.
@@ -48,21 +50,24 @@ class HeliostatModule(AModule):
         super().__init__()
         self.aim_point = torch.tensor(heliostat_config.DEFLECT_DATA.AIM_POINT).reshape(-1, 1)
         self.position = torch.tensor(heliostat_config.DEFLECT_DATA.POSITION_ON_FIELD).reshape(-1, 1)
+        self.incident_ray_direction = incident_ray_direction
 
         self.concentrator = ConcentratorModule(heliostat_config)
         self.alignment = AlignmentModule(heliostat_config)
 
 
     def get_aligned_surface(
-        self, datapoint: HeliostatDataPoint
+        self
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
         Parameters
         ----------
-        datapoint : HeliostatDataPoint
-            Datapoint containing information about the heliostat and the environment.
+        aim_point : torch.Tensor
+            The desired aim point.
+        incident_ray_direction : torch.Tensor
+            The direction of the rays.
 
         Returns
         -------
@@ -71,6 +76,6 @@ class HeliostatModule(AModule):
         """
         surface_points, surface_normals = self.concentrator.get_surface()
         aligned_surface_points, aligned_surface_normals = self.alignment.align_surface(
-            datapoint, surface_points, surface_normals
+            self.aim_point, self.incident_ray_direction, surface_points, surface_normals
         )
         return aligned_surface_points, aligned_surface_normals

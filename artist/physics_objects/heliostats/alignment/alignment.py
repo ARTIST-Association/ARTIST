@@ -50,7 +50,8 @@ class AlignmentModule(AModule):
 
     def align_surface(
         self,
-        datapoint: HeliostatDataPoint,
+        aim_point: torch.Tensor,
+        incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -59,8 +60,10 @@ class AlignmentModule(AModule):
 
         Parameters
         ----------
-        datapoint : HeliostatDataPoint
-            Contains information about the heliostat and the environment (light source, receiver,...).
+        aim_point : torch.Tensor
+            The desired aim point.
+        incident_ray_direction : torch.Tensor
+            The direction of the rays.
         surface_points : torch.Tensor
             Points on the surface of the heliostat that reflect the light.
         surface_normals : torch.Tensor
@@ -71,7 +74,7 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             Tuple containing the aligned surface points and normals.
         """
-        orientation = self.align(datapoint=datapoint)
+        orientation = self.align(aim_point, incident_ray_direction)
         normal_vec = (
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
@@ -86,64 +89,20 @@ class AlignmentModule(AModule):
         ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
-    def align(self, datapoint: HeliostatDataPoint) -> torch.Tensor:
+    def align(self, aim_point: torch.Tensor, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
         Compute the orientation from a given aimpoint.
 
         Parameters
         ----------
-        datapoint : HeliostatDataPoint
-            Contains information about the heliostat and the environment (lightsource, receiver,...).
+        aim_point : torch.Tensor
+            The desired aim point.
+        incident_ray_direction : torch.Tensor
+            The direction of the rays.
 
         Returns
         -------
         torch.Tensor
             The orientation matrix.
         """
-        return self.kinematic_model.compute_orientation_from_aimpoint([datapoint])
-
-    def heliostat_coord_system(
-        self,
-        Sun: torch.Tensor,
-        Aimpoint: torch.Tensor,
-        ideal_normal: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Construct the heliostat coordinate system.
-
-        Parameters
-        ----------
-        sun : torch.Tensor
-            The sun vector / direction.
-        aimpoint : torch.Tensor
-            The aimpoint.
-        ideal_normal : torch.Tensor
-            The ideal normal vector of the heliostat.
-
-        Returns
-        -------
-        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-            The heliostat coordination system.
-        """
-        pSun = Sun
-        pPosition = heliostat_position
-        pAimpoint = Aimpoint
-        z = pAimpoint - pPosition
-        z = z / torch.linalg.norm(z)
-        z = pSun + z
-        z = z / torch.linalg.norm(z)
-
-        if (z == ideal_normal).all():
-            x = torch.tensor([1, 0, 0], dtype=dtype, device=device)
-        else:
-            x = torch.stack(
-                [
-                    -z[1],
-                    z[0],
-                    torch.tensor(0, dtype=dtype, device=device),
-                ]
-            )
-        x /= torch.linalg.norm(x)
-        y = torch.linalg.cross(z, x)
-
-        return x, y, z
+        return self.kinematic_model.compute_orientation_from_aimpoint(aim_point, incident_ray_direction)
