@@ -32,7 +32,8 @@ dev = [
     "black",
     "ruff",
     "pytest",
-    "pytest-cov",]
+    "pytest-cov",
+    "sphinx-autoapi",]
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
