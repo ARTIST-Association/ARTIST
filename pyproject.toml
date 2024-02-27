@@ -23,7 +23,6 @@ dependencies = [
     "numpy",
     "yacs",
     "torch",
-    "h5py",
 ]
 
 [project.optional-dependencies]
@@ -33,8 +32,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-cov",
-    "sphinx-autoapi",
-    "sphinx-rtd-theme",]
+    "sphinx-autoapi",]
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
@@ -123,8 +121,3 @@ docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
-
-[tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
