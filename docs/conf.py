@@ -18,6 +18,7 @@ release = "0.0.1"
 extensions = [
     "sphinx.ext.autodoc",
     "autoapi.extension",
+    "sphinx.ext.napoleon",
 ]
 
 autoapi_dirs = ["../artist"]
