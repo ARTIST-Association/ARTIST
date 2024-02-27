@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 
 from artist.physics_objects.heliostats.normalization import ParameterNormalizer
@@ -11,6 +13,7 @@ class ActuatorModule(AModule):
 
     The actuator is parametrized by five parameters:
     - increment: stroke length change per motor step
+    - initial_stroke_length: stroke length for a motor step of 0
     - initial_stroke_length: stroke length for a motor step of 0
     - actuator_offset: offset between the linear actuator's pivoting point and the point around which the actuator is
     allowed to pivot
@@ -325,9 +328,13 @@ class ActuatorModule(AModule):
         )
 
     def __init__(
-        self, joint_number: int, clockwise: bool, params: dict, **deviations
+        self,
+        joint_number: int,
+        clockwise: bool,
+        params: dict,
+        **deviations: Any,
     ) -> None:
-        """
+        r"""
         [INSERT DESCRIPTION HERE!].
 
         Parameters
@@ -338,6 +345,10 @@ class ActuatorModule(AModule):
             [INSERT DESCRIPTION HERE!]
         params : dict
             [INSERT DESCRIPTION HERE!]
+        \*\*deviations : Any
+            [INSERT DESCRIPTION HERE!]
+
+
         """
         super().__init__()
         self.joint_number = joint_number

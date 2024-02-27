@@ -191,14 +191,14 @@ class RigidBodyModule(AKinematicModule):
     }
 
     def __init__(self, position: torch.Tensor, **deviations) -> None:
-        """
+        r"""
         Initialize the neural network rigid body fusion as a kinematic module.
 
         Parameters
         ----------
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
-        **deviations
+        \*\*deviations
             Additional keyword arguments.
         """
         super().__init__(position=position)
