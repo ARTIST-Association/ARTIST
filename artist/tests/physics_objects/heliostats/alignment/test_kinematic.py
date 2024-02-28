@@ -2,8 +2,9 @@
 Test kinematic module.
 """
 import math
-import torch
+
 import pytest
+import torch
 
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
 from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
