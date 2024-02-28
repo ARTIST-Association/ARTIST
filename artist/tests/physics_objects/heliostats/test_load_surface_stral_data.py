@@ -38,8 +38,8 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    cfg_default_surface = surface_defaults.get_cfg_defaults()
-    surface_config = surface_defaults.load_config_file(cfg_default_surface)
+    cfg_default_surface = concentrator_defaults.get_cfg_defaults()
+    surface_config = concentrator_defaults.load_config_file(cfg_default_surface)
 
     receiver_center = torch.tensor([0.0, -50.0, 0.0]).reshape(-1, 1)
 
@@ -51,7 +51,8 @@ def generate_data(
 
     sun = Sun(distribution_parameters=sun_parameters, ray_count=100)
 
-    heliostat = HeliostatModule(surface_config)
+    heliostat = HeliostatModule(incident_ray_direction=incident_ray_direction,
+                                config_file=surface_config)
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
