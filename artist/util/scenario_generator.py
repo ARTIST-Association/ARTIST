@@ -15,10 +15,7 @@ name = "test"
 
 # The following parameters refer to the receiver.
 receiver_params = {
-    "center": [0.0, -3.23, 35.89],
-    "plane_normal": [0.0, 1.0, 0.0],
-    "plane": [8.629666667, 7.0],
-    "resolution": [64.0, 64.0],
+    "center": [[0.0], [-50.0], [0.0]],
 }
 
 # The following parameters refer to the sun.
@@ -33,20 +30,10 @@ sun_params = {
 
 # The following parameters refer to the heliostat list.
 heliostats = {
-    "AA39": {
-        "position": [0.0, 3.0],
-        "parameters": _ideal_heliostat,
-        "surface_data": False,
-        "alignment_parameters": False,
-    },
-    "AA40": {
-        "position": [3.0, 3.0],
-        "parameters": _ideal_heliostat,
-        "surface_data": False,
-        "alignment_parameters": False,
-    },
-    "AA50": {
-        "position": [5.0, 5.0],
+    "Single_Heliostat": {
+        "id": 0,
+        "aim_point": [0.0, -50.0, 0.0],
+        "position": [0.0, 0.0, 0.0],
         "parameters": _ideal_heliostat,
         "surface_data": False,
         "alignment_parameters": False,
