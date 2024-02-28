@@ -1,7 +1,7 @@
  ACTUATOR_TYPE_1: "ideal_actuator_1"
- ACTUATOR_TYPE_2: "ideal_actuator_2" 
+ ACTUATOR_TYPE_2: "ideal_actuator_2"
  DEFLECT_DATA:
-   AIM_POINT: 
+   AIM_POINT:
    - 0.0
    - -50.0
    - 0.0

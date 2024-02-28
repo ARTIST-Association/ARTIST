@@ -1,8 +1,9 @@
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
+import h5py
 import torch
 
-from artist.scenario.light_source.light_source import ALightSource
+from artist.environment.light_source.light_source import ALightSource
 from artist.util import utils
 
 
@@ -48,8 +49,11 @@ class Sun(ALightSource):
 
     def __init__(
         self,
-        distribution_parameters: Dict[str, float],
-        ray_count: int
+        distribution_parameters: Dict[str, Any] = dict(
+            distribution_type="Normal", mean=0.0, covariance=4.3681e-06
+        ),
+        ray_count: int = 300,
+        config_file: h5py.File = None,
     ) -> None:
         """
         Initialize the sun as a light source.
@@ -67,16 +71,24 @@ class Sun(ALightSource):
             If the specified distribution type is unknown.
         """
         super().__init__()
-        self.distribution_parameters = distribution_parameters
-        self.num_rays = ray_count
+        if config_file is None:
+            self.distribution_parameters = distribution_parameters
+            self.num_rays = ray_count
+        else:
+            raise NotImplementedError("HDF5 config loading not yet implemented!")
 
         if self.distribution_parameters["distribution_type"] == "Normal":
-            mean = torch.tensor([distribution_parameters["mean"], distribution_parameters["mean"]])
-            covariance = torch.tensor([[distribution_parameters["covariance"], 0], [0, distribution_parameters["covariance"]]])
-
-            self.distribution = torch.distributions.MultivariateNormal(
-                mean, covariance
+            mean = torch.tensor(
+                [distribution_parameters["mean"], distribution_parameters["mean"]]
             )
+            covariance = torch.tensor(
+                [
+                    [distribution_parameters["covariance"], 0],
+                    [0, distribution_parameters["covariance"]],
+                ]
+            )
+
+            self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
 
         elif self.distribution_parameters["distribution_type"] == "Pillbox":
             raise NotImplementedError("Not implemented yet.")
@@ -106,12 +118,9 @@ class Sun(ALightSource):
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.distribution_parameters["distribution_type"] == "Normal":
-            distortion_x_dir, distortion_y_dir = (
-                self.distribution.sample(
-                    (self.num_rays, num_preferred_ray_directions),
-                )
-                .permute(2, 0, 1)
-            )
+            distortion_x_dir, distortion_y_dir = self.distribution.sample(
+                (self.num_rays, num_preferred_ray_directions),
+            ).permute(2, 0, 1)
             return distortion_x_dir, distortion_y_dir
         else:
             raise ValueError("unknown light distribution type")
@@ -181,7 +190,7 @@ class Sun(ALightSource):
             [
                 has[:, 2] * has[:, 0],
                 has[:, 2] * has[:, 1],
-                -has[:, 0] ** 2 - has[:, 1] ** 2,
+                -(has[:, 0] ** 2) - has[:, 1] ** 2,
             ],
             -1,
         )
@@ -252,7 +261,9 @@ class Sun(ALightSource):
         return surface_points + ray_directions * ds.unsqueeze(-1)
 
     @staticmethod
-    def get_preferred_reflection_direction(rays: torch.Tensor, normals: torch.Tensor) -> torch.Tensor:
+    def get_preferred_reflection_direction(
+        rays: torch.Tensor, normals: torch.Tensor
+    ) -> torch.Tensor:
         """
         Reflect incoming rays according to a normal vector.
 
@@ -307,6 +318,7 @@ class Sun(ALightSource):
             The rotation angles.
         mat : torch.Tensor
             The matrix to be rotated.
+
         Returns
         -------
         torch.Tensor

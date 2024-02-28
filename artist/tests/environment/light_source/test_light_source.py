@@ -1,31 +1,29 @@
 """
-This pytest considers loading a heliostat surface from a pointcloud.
+This pytest tests the correctness of the light source.
 """
 
 import pathlib
+from typing import Dict
 
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.environment.light_source.sun import Sun
 from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.heliostat import HeliostatModule
-from artist.physics_objects.heliostats.concentrator.tests import surface_defaults
-from artist.scenario.light_source.sun import Sun
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 
 
 def generate_data(
     incident_ray_direction: torch.Tensor, expected_value: str
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
     This includes the position of the heliostat, the position of the receiver,
-    the sun as a light source, and the pointcloud as the heliostat surface.
+    the sun as a light source, and five manually created surface points and normals.
 
-    The facets of the heliostat surface are loaded from a pointcloud.
-    The surface points and surface normals are calculated.
-    The surface points and normals are aligned.
+    The surface points and normals are aligned by the kinematic module.
 
     Parameters
     ----------
@@ -39,41 +37,67 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    cfg_default_surface = surface_defaults.get_cfg_defaults()
-    surface_config = surface_defaults.load_config_file(cfg_default_surface)
-    
-    receiver_center = torch.tensor([0.0, -50.0, 0.0]).reshape(-1, 1)
-    
-    sun_parameters = {
-        "distribution_type": "Normal",
-        "mean": 0.0,
-        "covariance": 4.3681e-06 # circum-solar ratio
-    }
+    heliostat_position = torch.tensor([0.0, 5.0, 0.0])
+    receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
+    cov = 1e-12  # 4.3681e-06
     sun = Sun(
-        distribution_parameters=sun_parameters, ray_count=100
+        "Normal",
+        300,
+        [0, 0],
+        [[cov, 0], [0, cov]],
+        incident_ray_direction=incident_ray_direction,
     )
 
-    heliostat = HeliostatModule(surface_config)
-    
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
+    surface_normals = torch.tensor(
+        [
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    surface_points = torch.tensor(
+        [
+            [-1.0, -1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0],
+            [1.0, -1.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ]
+    )
+    alignment_model = AlignmentModule(heliostat_position=heliostat_position)
+
+    datapoint = HeliostatDataPoint(
+        point_id=1,
+        light_directions=torch.tensor(ray_direction),
+        desired_aimpoint=receiver_center,
+        label=HeliostatDataPointLabel(),
+    )
+
+    aligned_surface_points, aligned_surface_normals = alignment_model.align_surface(
+        datapoint=datapoint,
+        surface_points=surface_points,
+        surface_normals=surface_normals,
+    )
 
     return {
         "sun": sun,
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "incident_ray_direction": incident_ray_direction,
+        "light_direction": torch.tensor(ray_direction),
         "expected_value": expected_value,
     }
 
 
 @pytest.fixture(
     params=[
-        (torch.tensor([0.0, -1.0, 0.0]), "south.pt"),
-        (torch.tensor([1.0, 0.0, 0.0]), "east.pt"),
-        (torch.tensor([-1.0, 0.0, 0.0]), "west.pt"),
-        (torch.tensor([0.0, 0.0, 1.0]), "above.pt"),
+        ([0.0, 0.0, 1.0], "above.pt"),
+        ([1.0, 0.0, 0.0], "east.pt"),
+        ([-1.0, 0.0, 0.0], "west.pt"),
+        ([0.0, -1.0, 0.0], "south.pt"),
     ],
     name="environment_data",
 )
@@ -95,44 +119,33 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     environment_data : dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
+    torch.set_printoptions(precision=10)
     torch.manual_seed(7)
     sun = environment_data["sun"]
     aligned_surface_points = environment_data["aligned_surface_points"]
     aligned_surface_normals = environment_data["aligned_surface_normals"]
     receiver_center = environment_data["receiver_center"]
-    incident_ray_direction = environment_data["incident_ray_direction"]
+    light_direction = environment_data["light_direction"]
     expected_value = environment_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
-    receiver_plane_x = 8.629666667
-    receiver_plane_y = 7.0
+    receiver_plane_x = 10
+    receiver_plane_y = 10
     receiver_resolution_x = 256
     receiver_resolution_y = 256
+    sun_position = light_direction
 
-    # Calculate preferred directions of the (?) rays sent out by the heliostat surface. 
-    # These rays originate from reflection of the `num_rays_heliostat` (?) incoming sun 
-    # rays hitting that heliostat's surface. The heliostat surface is described by `aligned_surface_normals`. 
-    # For each normal used to describe the heliostat surface, only the outgoing rays' 
-    # preferred directions are returned, which are to be scattered or distorted in the next step.
+    ray_directions = sun.reflect_rays_(-sun_position, aligned_surface_normals)
 
-    # heliostat besteht aus 4 surface_points (4, 3) und dazugehörig (4, 3) normals
-    # Berechne mit sonnenvektor (incident_ray_direction) shape: (1, 3) die preferred_directions (4, 3)
-    # sende ray_count strahlen pro normal_vector aus und störe sie um xi, yi, shape: (ray_count, 4, 3)
-    # Beispiel ray_count = 2 -> ray_directions shape: (8, 3)
-    # 
-
-
-    preferred_ray_directions = sun.get_preferred_reflection_direction(-incident_ray_direction, aligned_surface_normals)
-    
-    distortion_x, distortion_y = sun.sample(len(preferred_ray_directions))
+    xi, yi = sun.sample(len(ray_directions))
 
     rays = sun.compute_rays(
         receiver_plane_normal,
         receiver_center,
-        preferred_ray_directions,
+        ray_directions,
         aligned_surface_points,
-        distortion_x,
-        distortion_y,
+        xi,
+        yi,
     )
 
     intersections = sun.line_plane_intersections(
@@ -161,15 +174,15 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
-        distortion_x.numel(),
+        xi.numel(),
         receiver_plane_x,
         receiver_plane_y,
     )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "artist/physics_objects/heliostats/tests/test_bitmaps"
-        / expected_value
+    total_bitmap = total_bitmap.T
+
+    expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
+        f"artist/tests/environment/light_source/bitmaps/{expected_value}"
     )
 
     expected = torch.load(expected_path)
