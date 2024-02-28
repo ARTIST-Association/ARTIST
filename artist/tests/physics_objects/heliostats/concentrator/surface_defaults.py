@@ -1,8 +1,5 @@
 import os
-from yacs.config import CfgNode as CN
-from typing import Any
 
-import yacs
 from yacs.config import CfgNode as CN
 
 from artist import ARTIST_ROOT
@@ -129,10 +126,10 @@ def load_config_file(cfg: CN) -> CN:
     path = os.path.join(
         ARTIST_ROOT,
         "artist",
+        "tests",
         "physics_objects",
         "heliostats",
         "concentrator",
-        "tests",
         "surface_test.yaml",
     )
     cfg.merge_from_file(path)
