@@ -171,11 +171,6 @@ class Sun(ALightSource):
 
         # rotate: Calculate 3D rotation matrix in heliostat system.
         # 1 axis is pointing towards the receiver, the other are orthogonal
-        rotates_x = torch.stack(
-            [ray_directions[:, 0], ray_directions[:, 1], ray_directions[:, 2]],
-            -1,
-        )
-        rotates_x = rotates_x / torch.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
         rotates_y = torch.stack(
             [
                 ray_directions[:, 1],
@@ -194,9 +189,9 @@ class Sun(ALightSource):
             -1,
         )
         rotates_z = rotates_z / torch.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
-        rotates = torch.hstack([rotates_x, rotates_y, rotates_z]).reshape(
-            rotates_x.shape[0],
-            rotates_x.shape[1],
+        rotates = torch.hstack([ray_directions, rotates_y, rotates_z]).reshape(
+            ray_directions.shape[0],
+            ray_directions.shape[1],
             -1,
         )
         inv_rot = torch.linalg.inv(rotates)  # inverse matrix
