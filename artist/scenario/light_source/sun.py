@@ -167,39 +167,29 @@ class Sun(ALightSource):
             The scattered rays.
 
         """
-        intersections = self.line_plane_intersections(
-            plane_normal=plane_normal,
-            plane_point=plane_point,
-            ray_directions=ray_directions,
-            surface_points=surface_points,
-        )
-        as_ = intersections
-        has = as_ - surface_points
-        # TODO Again vector from before?
-        #      Maybe calling `line_plane_intersections` is not necessary here.
-        has = has / torch.linalg.norm(has, dim=1).unsqueeze(-1)
+        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
 
         # rotate: Calculate 3D rotation matrix in heliostat system.
         # 1 axis is pointing towards the receiver, the other are orthogonal
         rotates_x = torch.stack(
-            [has[:, 0], has[:, 1], has[:, 2]],
+            [ray_directions[:, 0], ray_directions[:, 1], ray_directions[:, 2]],
             -1,
         )
         rotates_x = rotates_x / torch.linalg.norm(rotates_x, dim=-1).unsqueeze(-1)
         rotates_y = torch.stack(
             [
-                has[:, 1],
-                -has[:, 0],
-                torch.zeros(has.shape[:1], device=as_.device),
+                ray_directions[:, 1],
+                -ray_directions[:, 0],
+                torch.zeros(ray_directions.shape[:1]),
             ],
             -1,
         )
         rotates_y = rotates_y / torch.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
         rotates_z = torch.stack(
             [
-                has[:, 2] * has[:, 0],
-                has[:, 2] * has[:, 1],
-                -has[:, 0] ** 2 - has[:, 1] ** 2,
+                ray_directions[:, 2] * ray_directions[:, 0],
+                ray_directions[:, 2] * ray_directions[:, 1],
+                -ray_directions[:, 0] ** 2 - ray_directions[:, 1] ** 2,
             ],
             -1,
         )
@@ -215,7 +205,7 @@ class Sun(ALightSource):
 
         # rays_tmp: first rotate aimpoint in right coord system,
         # apply xi, yi distortion, rotate back
-        rotated_has = torch.matmul(rotates, has.unsqueeze(-1))
+        rotated_has = torch.matmul(rotates, ray_directions.unsqueeze(-1))
 
         # rays = rotated_has.transpose(0, -1).transpose(1, -1)
         rot_y = self.rotate_y(distortion_x_dir, mat=(rotated_has.to(torch.float)))
