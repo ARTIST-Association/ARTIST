@@ -6,6 +6,7 @@ import torch
 class ALightSource(torch.nn.Module):
     """
     Abstract base class for all light sources.
+
     See Also
     --------
     :class: torch.nn.Module : Reference to the parent class.
