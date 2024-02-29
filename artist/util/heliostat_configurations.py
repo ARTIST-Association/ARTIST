@@ -1,8 +1,7 @@
 """This file contains bibliographies for different heliostat prototypes."""
 
 # Parameters for an ideal heliostat
-_ideal_heliostat = {
-    "aim_point": [0.0, 0.0, 0.0],
+_test_heliostat = {
     "columns": 32,
     "rows": 32,
     "height": 4.0,
@@ -19,7 +18,7 @@ _ideal_heliostat = {
             [1.0, -1.0, 0.0],
             [-1.0, 1.0, 0.0],
         ],
-        "spans_east": [-1.0, 0.0, 0.0],
         "spans_north": [0.0, 1.0, 0.0],
+        "spans_east": [-1.0, 0.0, 0.0],
     },
 }

@@ -6,12 +6,12 @@ from typing import Dict
 import h5py
 
 from artist import ARTIST_ROOT
-from artist.util.heliostat_configurations import _ideal_heliostat
+from artist.util.heliostat_configurations import _test_heliostat
 
 # The following configurations can be adapted to define the required scenario.
 
 # The following parameter is the name of the scenario.
-name = "test"
+name = "test_scenario"
 
 # The following parameters refer to the receiver.
 receiver_params = {
@@ -34,9 +34,9 @@ heliostats = {
         "id": 0,
         "aim_point": [0.0, -50.0, 0.0],
         "position": [0.0, 0.0, 0.0],
-        "parameters": _ideal_heliostat,
+        "parameters": _test_heliostat,
         "surface_data": False,
-        "alignment_parameters": False,
+        "alignment_data": False,
     },
 }
 
