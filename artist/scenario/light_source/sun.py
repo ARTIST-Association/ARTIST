@@ -123,23 +123,50 @@ class Sun(ALightSource):
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.dist_type == "Normal":
-            distortion_x_dir, distortion_y_dir = (
-                self.distribution.sample(
-                    (self.num_rays, num_rays_on_hel),
-                )
-                .transpose(0, 1)
-                .permute(2, 1, 0)
-            )
+            distortion_x_dir, distortion_y_dir = self.distribution.sample((self.num_rays, 1),).transpose(0, 1).permute(2,1,0).squeeze(-1)
             return distortion_x_dir, distortion_y_dir
         else:
             raise ValueError("unknown light distribution type")
 
+    def scatter_rays3(
+        self,
+        ray_directions,
+        distortion_x_dir,
+        distortion_y_dir,
+    ):
+        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
+
+        # distortion_x_dir = distortion_x_dir * torch.pi/180
+        # distortion_y_dir = distortion_y_dir * torch.pi/180
+        
+        rotation_matrix1 = utils.general_affine_matrix(rx=distortion_y_dir)
+        rotation_matrix2 = utils.general_affine_matrix(ry=distortion_y_dir)
+        scattered_rays = utils.transform_points(ray_directions, rotation_matrix1)
+
+        return scattered_rays
+    
+    def scatter_rays2(
+        self,
+        ray_directions,
+        distortion_x_dir,
+        distortion_y_dir,
+    ):
+        rotated_tensors = []
+        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
+        
+        for x, y in zip(distortion_x_dir, distortion_y_dir):
+            rotation_matrix = utils.general_affine_matrix(rx=[x], ry=[y])
+
+            rotated_tensor = torch.cat((ray_directions, torch.zeros((1, 1))), dim=1) @ rotation_matrix
+            
+            rotated_tensors.append(rotated_tensor[:, :, :3].squeeze(-1))
+
+        return torch.stack(rotated_tensors).squeeze(dim=1)
+        
+
     def compute_rays(
         self,
-        plane_normal: torch.Tensor,
-        plane_point: torch.Tensor,
         ray_directions: torch.Tensor,
-        surface_points: torch.Tensor,
         distortion_x_dir: torch.Tensor,
         distortion_y_dir: torch.Tensor,
     ) -> torch.Tensor:
@@ -212,6 +239,23 @@ class Sun(ALightSource):
         )
 
         return rays
+
+
+    def scatter_rays(self, ray_direction: torch.Tensor, num_rays_on_heliostat: int ):
+        """Scatter a single ray into multiple rays with random perturbations."""
+        scattered_rays = []
+        for _ in range(self.num_rays):
+            # Generate random rotation angles within the specified range
+            rotation_angles_x, rotation_angles_y = self.distribution.sample((self.num_rays, num_rays_on_heliostat),).transpose(0, 1).permute(2, 1, 0)
+            rotation_matrix = utils.general_affine_matrix(rx=rotation_angles_x, ry=rotation_angles_y)
+            # Compute the rotated direction vector
+            scattered_direction = rotate_vector(ray_direction, rotation_angles)
+            
+            # Normalize the resulting direction vector
+            scattered_direction /= torch.linalg.norm(scattered_direction)
+            
+            scattered_rays.append(scattered_direction)
+        return scattered_rays
 
     @staticmethod
     def line_plane_intersections(
