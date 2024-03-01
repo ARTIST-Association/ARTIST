@@ -21,7 +21,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
 
-def general_affine_matrix1(tx=0.0, ty=0.0, tz=0.0, rx=[0.0], ry=[0.0], rz=[0.0], sx=1.0, sy=1.0, sz=1.0):
+def general_affine_matrix(tx=0.0, ty=0.0, tz=0.0, rx=[0.0], ry=[0.0], rz=[0.0], sx=1.0, sy=1.0, sz=1.0):
     rx_cos = torch.cos(torch.tensor(rx))
     rx_sin = -torch.sin(torch.tensor(rx)) # due to heliostat convention
     ry_cos = torch.cos(torch.tensor(ry))
@@ -42,71 +42,9 @@ def general_affine_matrix1(tx=0.0, ty=0.0, tz=0.0, rx=[0.0], ry=[0.0], rz=[0.0],
         ],
     dim=1,
     )
-
+    
     return rot_matrix
 
-
-def general_affine_matrix(tx=[0.0], ty=[0.0], tz=[0.0], rx=[0.0], ry=[0.0], rz=[0.0], sx=1.0, sy=1.0, sz=1.0):
-    # Convert input parameters to PyTorch tensors
-    tx = torch.tensor(tx, dtype=torch.float32)
-    ty = torch.tensor(ty, dtype=torch.float32)
-    tz = torch.tensor(tz, dtype=torch.float32)
-    rx = torch.tensor(rx, dtype=torch.float32)
-    ry = torch.tensor(ry, dtype=torch.float32)
-    rz = torch.tensor(rz, dtype=torch.float32)
-
-    # Compute trigonometric functions
-    rx_cos = torch.cos(rx)
-    rx_sin = -torch.sin(rx)  # due to heliostat convention
-    ry_cos = torch.cos(ry)
-    ry_sin = torch.sin(ry)
-    rz_cos = torch.cos(rz)
-    rz_sin = torch.sin(rz)
-
-    # Broadcast translation components to match other parameters
-    num_points = max(len(tx), len(ty), len(tz), len(rx), len(ry), len(rz))
-    tx = tx.expand(num_points)
-    ty = ty.expand(num_points)
-    tz = tz.expand(num_points)
-    rx_cos = rx_cos.expand(num_points)
-    rx_sin = rx_sin.expand(num_points)
-    ry_cos = ry_cos.expand(num_points)
-    ry_sin = ry_sin.expand(num_points)
-    rz_cos = rz_cos.expand(num_points)
-    rz_sin = rz_sin.expand(num_points)
-
-    zeros = torch.tensor([0.0]).expand(num_points)
-    ones = torch.tensor([1.0]).expand(num_points)
-
-    # Compute rotation matrix
-    rot_matrix = torch.stack([
-        torch.stack([sx * ry_cos * rz_cos,   rz_sin,                  ry_sin,                 zeros]),
-        torch.stack([-rz_sin,                sy * rx_cos * rz_cos,    -rx_sin,                zeros]),
-        torch.stack([-ry_sin,                rx_sin,                  sz * rx_cos * ry_cos,   zeros]),
-        torch.stack([tx,                     ty,                      tz,                     ones]),
-    ], dim=1)
-
-    return rot_matrix.squeeze(-1)
-
-
-def general_affine_matrix_new(tx=torch.tensor([0.0]), ty=torch.tensor([0.0]), tz=torch.tensor([0.0]), rx=torch.tensor([0.0]), ry=torch.tensor([0.0]), rz=torch.tensor([0.0]), sx=torch.tensor([1.0]), sy=torch.tensor([1.0]), sz=torch.tensor([1.0])):
-    # Compute trigonometric functions
-    rx_cos = torch.cos(rx)
-    rx_sin = -torch.sin(rx)  # due to heliostat convention
-    ry_cos = torch.cos(ry)
-    ry_sin = torch.sin(ry)
-    rz_cos = torch.cos(rz)
-    rz_sin = torch.sin(rz)
-
-    # Compute rotation matrix
-    rot_matrix = torch.stack([
-        torch.stack([sx * ry_cos * rz_cos,   rz_sin,                  ry_sin,                torch.tensor([0.0])]),
-        torch.stack([-rz_sin,                sy * rx_cos * rz_cos,    -rx_sin,                torch.tensor([0.0])]),
-        torch.stack([-ry_sin,                rx_sin,                   sz * rx_cos * ry_cos,  torch.tensor([0.0])]),
-        torch.stack([tx,       ty,       tz,      torch.tensor([1.0])]),
-    ], dim=1)
-
-    return rot_matrix.squeeze(-1)
 
 def only_rotation_matrix(rx=torch.tensor([0.0]), rz=torch.tensor([0.0])):
     # Compute trigonometric functions
@@ -119,20 +57,10 @@ def only_rotation_matrix(rx=torch.tensor([0.0]), rz=torch.tensor([0.0])):
 
     # Compute rotation matrix
     rot_matrix = torch.stack([
-        torch.stack([rz_cos,   rz_sin,                  ones,                zeros]),
-        torch.stack([-rz_sin,                rx_cos * rz_cos,    -rx_sin,                zeros]),
-        torch.stack([ones,                rx_sin,                   rx_cos,  zeros]),
-        torch.stack([zeros,       zeros,       zeros,      ones]),
+        torch.stack([rz_cos,   rz_sin,           zeros,     zeros]),
+        torch.stack([-rz_sin,  rx_cos * rz_cos,  -rx_sin,   zeros]),
+        torch.stack([zeros,    rx_sin,           rx_cos,    zeros]),
+        torch.stack([zeros,    zeros,            zeros,     ones]),
     ], dim=1)
 
     return rot_matrix.permute(2, 3, 0, 1)
-
-# Function to apply transformation matrix to multiple points
-def transform_points(points, transform_matrix):
-    # Ensure points have shape (4, num_points)
-    if points.shape[0] != 4:
-        points = torch.cat((points, torch.ones(1, points.shape[1])), dim=0)
-    
-    # Perform batch matrix multiplication
-    transformed_points = torch.matmul(transform_matrix, points)
-    return transformed_points[:3].transpose(1,0)  # Remove the homogeneous coordinates
