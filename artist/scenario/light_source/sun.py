@@ -123,7 +123,7 @@ class Sun(ALightSource):
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.dist_type == "Normal":
-            distortion_x_dir, distortion_y_dir = self.distribution.sample((self.num_rays, 1),).transpose(0, 1).permute(2,1,0).squeeze(-1)
+            distortion_x_dir, distortion_y_dir = self.distribution.sample((self.num_rays, num_rays_on_hel),).transpose(0, 1).permute(2, 1, 0)
             return distortion_x_dir, distortion_y_dir
         else:
             raise ValueError("unknown light distribution type")
@@ -139,11 +139,13 @@ class Sun(ALightSource):
         # distortion_x_dir = distortion_x_dir * torch.pi/180
         # distortion_y_dir = distortion_y_dir * torch.pi/180
         
-        rotation_matrix1 = utils.general_affine_matrix(rx=distortion_y_dir)
-        rotation_matrix2 = utils.general_affine_matrix(ry=distortion_y_dir)
-        scattered_rays = utils.transform_points(ray_directions, rotation_matrix1)
+        rotation_matrix1 = utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_y_dir)
+        if ray_directions.shape[1] != 4:
+            ray_directions = torch.cat((ray_directions, torch.ones(ray_directions.shape[0],1)), dim=1)
 
-        return scattered_rays
+        scattered_rays = torch.matmul(rotation_matrix1, ray_directions.unsqueeze(-1))
+
+        return scattered_rays[:, :, :3, :].squeeze(-1)
     
     def scatter_rays2(
         self,
@@ -153,15 +155,15 @@ class Sun(ALightSource):
     ):
         rotated_tensors = []
         ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
-        
+        final_scattered_rays = torch.empty(self.num_rays, len(ray_directions), 3)
+        i = 0
         for x, y in zip(distortion_x_dir, distortion_y_dir):
-            rotation_matrix = utils.general_affine_matrix(rx=[x], ry=[y])
+            rotation_matrix = utils.general_affine_matrix_new(rx=torch.tensor([x]), rz=torch.tensor([y]))
 
-            rotated_tensor = torch.cat((ray_directions, torch.zeros((1, 1))), dim=1) @ rotation_matrix
-            
-            rotated_tensors.append(rotated_tensor[:, :, :3].squeeze(-1))
-
-        return torch.stack(rotated_tensors).squeeze(dim=1)
+            scattered_rays = utils.transform_points(ray_directions.transpose(0,1), rotation_matrix)
+            final_scattered_rays[i,:,:] = scattered_rays
+            i = i + 1
+        return final_scattered_rays
         
 
     def compute_rays(

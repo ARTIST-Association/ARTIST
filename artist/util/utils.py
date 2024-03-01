@@ -89,12 +89,50 @@ def general_affine_matrix(tx=[0.0], ty=[0.0], tz=[0.0], rx=[0.0], ry=[0.0], rz=[
     return rot_matrix.squeeze(-1)
 
 
+def general_affine_matrix_new(tx=torch.tensor([0.0]), ty=torch.tensor([0.0]), tz=torch.tensor([0.0]), rx=torch.tensor([0.0]), ry=torch.tensor([0.0]), rz=torch.tensor([0.0]), sx=torch.tensor([1.0]), sy=torch.tensor([1.0]), sz=torch.tensor([1.0])):
+    # Compute trigonometric functions
+    rx_cos = torch.cos(rx)
+    rx_sin = -torch.sin(rx)  # due to heliostat convention
+    ry_cos = torch.cos(ry)
+    ry_sin = torch.sin(ry)
+    rz_cos = torch.cos(rz)
+    rz_sin = torch.sin(rz)
+
+    # Compute rotation matrix
+    rot_matrix = torch.stack([
+        torch.stack([sx * ry_cos * rz_cos,   rz_sin,                  ry_sin,                torch.tensor([0.0])]),
+        torch.stack([-rz_sin,                sy * rx_cos * rz_cos,    -rx_sin,                torch.tensor([0.0])]),
+        torch.stack([-ry_sin,                rx_sin,                   sz * rx_cos * ry_cos,  torch.tensor([0.0])]),
+        torch.stack([tx,       ty,       tz,      torch.tensor([1.0])]),
+    ], dim=1)
+
+    return rot_matrix.squeeze(-1)
+
+def only_rotation_matrix(rx=torch.tensor([0.0]), rz=torch.tensor([0.0])):
+    # Compute trigonometric functions
+    rx_cos = torch.cos(rx)
+    rx_sin = -torch.sin(rx)  # due to heliostat convention
+    rz_cos = torch.cos(rz)
+    rz_sin = torch.sin(rz)
+    zeros = torch.zeros(rx.shape)
+    ones = torch.ones(rx.shape)
+
+    # Compute rotation matrix
+    rot_matrix = torch.stack([
+        torch.stack([rz_cos,   rz_sin,                  ones,                zeros]),
+        torch.stack([-rz_sin,                rx_cos * rz_cos,    -rx_sin,                zeros]),
+        torch.stack([ones,                rx_sin,                   rx_cos,  zeros]),
+        torch.stack([zeros,       zeros,       zeros,      ones]),
+    ], dim=1)
+
+    return rot_matrix.permute(2, 3, 0, 1)
+
 # Function to apply transformation matrix to multiple points
 def transform_points(points, transform_matrix):
     # Ensure points have shape (4, num_points)
-    if points.shape[1] != 4:
-        points = torch.cat((points, torch.ones(points.shape[0], 1)), dim=1)
+    if points.shape[0] != 4:
+        points = torch.cat((points, torch.ones(1, points.shape[1])), dim=0)
     
     # Perform batch matrix multiplication
-    transformed_points = torch.matmul(points, transform_matrix)
-    return transformed_points[:3].permute(2, 1, 0)  # Remove the homogeneous coordinates
+    transformed_points = torch.matmul(transform_matrix, points)
+    return transformed_points[:3].transpose(1,0)  # Remove the homogeneous coordinates
