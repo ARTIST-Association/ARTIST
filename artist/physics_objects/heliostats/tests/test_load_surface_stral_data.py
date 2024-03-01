@@ -3,6 +3,7 @@ This pytest considers loading a heliostat surface from a pointcloud.
 """
 
 import pathlib
+from matplotlib import pyplot as plt
 
 import pytest
 import torch
@@ -134,11 +135,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     xi, yi = sun.sample(len(ray_directions))
 
-    rays = sun.compute_rays(
-        receiver_plane_normal,
-        receiver_center,
+    rays = sun.scatter_rays3(
         ray_directions,
-        aligned_surface_points,
         xi,
         yi,
     )
@@ -173,7 +171,9 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_x,
         receiver_plane_y,
     )
-
+    plt.imshow(total_bitmap.T, origin="lower", cmap="jet")
+    plt.show()
+    
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "artist/physics_objects/heliostats/tests/test_bitmaps"
@@ -181,5 +181,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     expected = torch.load(expected_path)
-
+    # plt.imshow(expected.T, origin="lower", cmap="jet")
+    # plt.show()
     torch.testing.assert_close(total_bitmap, expected)

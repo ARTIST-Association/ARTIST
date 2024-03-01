@@ -3,6 +3,7 @@ This pytest tests the correctness of the light source.
 """
 
 import pathlib
+from matplotlib import pyplot as plt
 import pytest
 import torch
 
@@ -38,9 +39,9 @@ def generate_data(
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
-    cov = 1e-12  # 4.3681e-06
+    cov = 4.3681e-06
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    sun = Sun("Normal", 300, [0, 0], [[cov, 0], [0, cov]], device)
+    sun = Sun("Normal", 100, [0, 0], [[cov, 0], [0, cov]], device)
 
     surface_normals = torch.tensor(
         [
@@ -132,13 +133,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     xi, yi = sun.sample(len(ray_directions))
 
-    rays = sun.compute_rays(
-        receiver_plane_normal,
-        receiver_center,
-        ray_directions,
-        aligned_surface_points,
-        xi,
-        yi,
+    rays = sun.scatter_rays3(
+        ray_directions, xi, yi
     )
 
     intersections = sun.line_plane_intersections(
@@ -173,6 +169,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     total_bitmap = total_bitmap.T
+    plt.imshow(total_bitmap, origin="lower")
+    plt.show()
 
     expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
         f"artist/scenario/light_source/tests/bitmaps/{expected_value}"
