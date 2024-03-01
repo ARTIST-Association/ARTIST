@@ -4,9 +4,8 @@ from collections.abc import MutableMapping
 from typing import Dict
 
 import h5py
-
 from artist import ARTIST_ROOT
-from artist.util.heliostat_configurations import _test_heliostat
+from artist.util.heliostat_configurations import _test_binp_heliostat
 
 # The following configurations can be adapted to define the required scenario.
 
@@ -34,12 +33,10 @@ heliostats = {
         "id": 0,
         "aim_point": [0.0, -50.0, 0.0],
         "position": [0.0, 0.0, 0.0],
-        "parameters": _test_heliostat,
-        "surface_data": False,
+        "parameters": _test_binp_heliostat,
         "alignment_data": False,
     },
 }
-
 
 def flatten_dict(
     dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
