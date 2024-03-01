@@ -28,16 +28,12 @@ class Sun(ALightSource):
     -------
     sample()
         Sample rays from a given distribution.
-    compute_rays()
-        Compute the scattered rays for points on a surface.
+    scatter_rays()
+        Scatter the reflected rays around the preferred ray_direction.
     line_plane_intersections()
         Compute line-plane intersections of ray directions and the (receiver) plane.
     reflect_rays_()
         Reflect incoming rays according to a normal vector.
-    rotate_y()
-        Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
-    rotate_z()
-        Create rotation matrices and rotate the input along the z-axis in the heliostat coordinate system.
     sample_bitmap()
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
 
@@ -128,16 +124,30 @@ class Sun(ALightSource):
         else:
             raise ValueError("unknown light distribution type")
 
-    def scatter_rays3(
+    def scatter_rays(
         self,
-        ray_directions,
-        distortion_x_dir,
-        distortion_y_dir,
-    ):
-        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
+        ray_directions: torch.Tensor,
+        distortion_x_dir: torch.Tensor,
+        distortion_y_dir: torch.Tensor,
+    )-> torch.Tensor:
+        """
+        Scatter the reflected rays around the preferred ray_direction.
 
-        # distortion_x_dir = distortion_x_dir * torch.pi/180
-        # distortion_y_dir = distortion_y_dir * torch.pi/180
+        Parameters
+        ----------
+        ray_directions : torch.Tensor
+            The preferred ray direction.
+        distortion_x_dir : torch.Tensor
+            The distortions in x direction (angles for scattering).
+        distortion_y_dir : torch.Tensor
+            The distortions in y direction (angles for scattering).
+
+        Returns
+        -------
+        torch.Tensor
+            Scattered rays around the preferred direction.
+        """
+        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
         
         rotation_matrix1 = utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_y_dir)
         if ray_directions.shape[1] != 4:
@@ -147,118 +157,6 @@ class Sun(ALightSource):
 
         return scattered_rays[:, :, :3, :].squeeze(-1)
     
-    def scatter_rays2(
-        self,
-        ray_directions,
-        distortion_x_dir,
-        distortion_y_dir,
-    ):
-        rotated_tensors = []
-        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
-        final_scattered_rays = torch.empty(self.num_rays, len(ray_directions), 3)
-        i = 0
-        for x, y in zip(distortion_x_dir, distortion_y_dir):
-            rotation_matrix = utils.general_affine_matrix_new(rx=torch.tensor([x]), rz=torch.tensor([y]))
-
-            scattered_rays = utils.transform_points(ray_directions.transpose(0,1), rotation_matrix)
-            final_scattered_rays[i,:,:] = scattered_rays
-            i = i + 1
-        return final_scattered_rays
-        
-
-    def compute_rays(
-        self,
-        ray_directions: torch.Tensor,
-        distortion_x_dir: torch.Tensor,
-        distortion_y_dir: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Compute the scattered rays for points on a surface.
-
-        Parameters
-        ----------
-        plane_normal : torch.Tensor
-            The normal vector of the intersecting plane (normal vector of the receiver).
-        plane_point : torch.Tensor
-            Point on the plane (center point of the receiver).
-        ray_directions : torch.Tensor
-            Directions of the reflected sun light.
-        surface_points : torch.Tensor
-            Points on which the rays are to be reflected.
-        distortion_x_dir : torch.Tensor
-            Distortion of the rays in x direction.
-        distortion_y_dir : torch.Tensor
-            Distortion of the rays in y direction.
-
-        Returns
-        -------
-        torch.Tensor
-            The scattered rays.
-
-        """
-        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
-
-        # rotate: Calculate 3D rotation matrix in heliostat system.
-        # 1 axis is pointing towards the receiver, the other are orthogonal
-        rotates_y = torch.stack(
-            [
-                ray_directions[:, 1],
-                -ray_directions[:, 0],
-                torch.zeros(ray_directions.shape[:1]),
-            ],
-            -1,
-        )
-        rotates_y = rotates_y / torch.linalg.norm(rotates_y, dim=-1).unsqueeze(-1)
-        rotates_z = torch.stack(
-            [
-                ray_directions[:, 2] * ray_directions[:, 0],
-                ray_directions[:, 2] * ray_directions[:, 1],
-                -ray_directions[:, 0] ** 2 - ray_directions[:, 1] ** 2,
-            ],
-            -1,
-        )
-        rotates_z = rotates_z / torch.linalg.norm(rotates_z, dim=-1).unsqueeze(-1)
-        rotates = torch.hstack([ray_directions, rotates_y, rotates_z]).reshape(
-            ray_directions.shape[0],
-            ray_directions.shape[1],
-            -1,
-        )
-        inv_rot = torch.linalg.inv(rotates)  # inverse matrix
-        # rays_tmp = torch.tensor(ha, device=device)
-        # print(rays_tmp.shape)
-
-        # rays_tmp: first rotate aimpoint in right coord system,
-        # apply xi, yi distortion, rotate back
-        rotated_has = torch.matmul(rotates, ray_directions.unsqueeze(-1))
-
-        # rays = rotated_has.transpose(0, -1).transpose(1, -1)
-        rot_y = self.rotate_y(distortion_x_dir, mat=(rotated_has.to(torch.float)))
-        rot_z = self.rotate_z(distortion_y_dir, rot_y).transpose(0, -1).squeeze(0)
-        rays = (
-            torch.matmul(inv_rot.to(torch.float), rot_z)
-            .transpose(0, -1)
-            .transpose(1, -1)
-        )
-
-        return rays
-
-
-    def scatter_rays(self, ray_direction: torch.Tensor, num_rays_on_heliostat: int ):
-        """Scatter a single ray into multiple rays with random perturbations."""
-        scattered_rays = []
-        for _ in range(self.num_rays):
-            # Generate random rotation angles within the specified range
-            rotation_angles_x, rotation_angles_y = self.distribution.sample((self.num_rays, num_rays_on_heliostat),).transpose(0, 1).permute(2, 1, 0)
-            rotation_matrix = utils.general_affine_matrix(rx=rotation_angles_x, ry=rotation_angles_y)
-            # Compute the rotated direction vector
-            scattered_direction = rotate_vector(ray_direction, rotation_angles)
-            
-            # Normalize the resulting direction vector
-            scattered_direction /= torch.linalg.norm(scattered_direction)
-            
-            scattered_rays.append(scattered_direction)
-        return scattered_rays
-
     @staticmethod
     def line_plane_intersections(
         plane_normal: torch.Tensor,
@@ -318,57 +216,6 @@ class Sun(ALightSource):
             The reflected rays.
         """
         return rays - 2 * utils.batch_dot(rays, normals) * normals
-
-    @staticmethod
-    def rotate_y(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
-        """
-        Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
-
-        Parameters
-        ----------
-        alpha : torch.Tensor
-            The rotation angles.
-        mat : torch.Tensor
-            The matrix to be rotated.
-
-        Returns
-        -------
-        torch.Tensor
-            The rotated matrix.
-        """
-        zeros = torch.zeros_like(alpha)
-        coss = torch.cos(alpha)
-        sins = torch.sin(alpha)
-        rots_x = torch.stack([coss, zeros, sins], -1)
-        rots_y = torch.stack([zeros, torch.ones_like(alpha), zeros], -1)
-        rots_z = torch.stack([-sins, zeros, coss], -1)
-        rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
-        return torch.matmul(rots, mat)
-
-    @staticmethod
-    def rotate_z(alpha: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
-        """
-        Create rotation matrices and rotate the input along the z-axis in the heliostat coordinate system.
-
-        Parameters
-        ----------
-        alpha : torch.Tensor
-            The rotation angles.
-        mat : torch.Tensor
-            The matrix to be rotated.
-        Returns
-        -------
-        torch.Tensor
-            The rotated matrix.
-        """
-        zeros = torch.zeros_like(alpha)
-        coss = torch.cos(alpha)
-        sins = torch.sin(alpha)
-        rots_x = torch.stack([coss, -sins, zeros], -1)
-        rots_y = torch.stack([sins, coss, zeros], -1)
-        rots_z = torch.stack([zeros, zeros, torch.ones_like(alpha)], -1)
-        rots = torch.stack([rots_x, rots_y, rots_z], -1).reshape(rots_x.shape + (-1,))
-        return torch.matmul(rots, mat)
 
     @staticmethod
     def sample_bitmap(
