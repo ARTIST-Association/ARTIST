@@ -54,7 +54,7 @@ def generate_data(
 
     cov = 4.3681e-06  # circum-solar ratio
     sun = Sun(
-        "Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
+        "Normal", ray_count=200, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
     )
 
     point_cloud_facets = PointCloudFacetModule(
@@ -181,6 +181,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     expected = torch.load(expected_path)
-    # plt.imshow(expected.T, origin="lower", cmap="jet")
-    # plt.show()
+    plt.imshow(expected.T, origin="lower", cmap="jet")
+    plt.show()
     torch.testing.assert_close(total_bitmap, expected)
