@@ -30,7 +30,6 @@ _test_binp_heliostat = {
     "width": 3.2200000286102295,
     "surface_points": h5py.File(f"{ARTIST_ROOT}/measurement_data/{test_binp_name}.h5", "r")["Points"][()],
     "surface_normals": h5py.File(f"{ARTIST_ROOT}/measurement_data/{test_binp_name}.h5", "r")["Normals"][()],
-    "disturbance_rotation_angles": [0.0, 0.0, 0.0],
     "facets": {
         "number": 4,
         "positions": [
