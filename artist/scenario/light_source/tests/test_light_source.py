@@ -133,7 +133,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     xi, yi = sun.sample(len(ray_directions))
 
-    rays = sun.scatter_rays3(
+    rays = sun.scatter_rays(
         ray_directions, xi, yi
     )
 
@@ -169,8 +169,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     total_bitmap = total_bitmap.T
-    plt.imshow(total_bitmap, origin="lower")
-    plt.show()
 
     expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
         f"artist/scenario/light_source/tests/bitmaps/{expected_value}"
