@@ -1,7 +1,7 @@
 """This pytest tests the correctness of the light source."""
 
 import pathlib
-from matplotlib import pyplot as plt
+
 import pytest
 import torch
 
@@ -142,11 +142,9 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     ray_directions = sun.reflect_rays_(-sun_position, aligned_surface_normals)
 
-    xi, yi = sun.sample(len(ray_directions))
+    xi, zi = sun.sample_distortions(len(ray_directions))
 
-    rays = sun.scatter_rays(
-        ray_directions, xi, yi
-    )
+    rays = sun.scatter_rays(ray_directions, xi, zi)
 
     intersections = sun.line_plane_intersections(
         receiver_plane_normal, receiver_center, rays, aligned_surface_points
