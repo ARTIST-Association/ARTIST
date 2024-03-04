@@ -4,21 +4,17 @@ from collections.abc import MutableMapping
 from typing import Dict
 
 import h5py
-
 from artist import ARTIST_ROOT
-from artist.util.heliostat_configurations import _ideal_heliostat
+from artist.util.heliostat_configurations import _test_heliostat
 
 # The following configurations can be adapted to define the required scenario.
 
 # The following parameter is the name of the scenario.
-name = "test"
+name = "test_scenario"
 
 # The following parameters refer to the receiver.
 receiver_params = {
-    "center": [0.0, -3.23, 35.89],
-    "plane_normal": [0.0, 1.0, 0.0],
-    "plane": [8.629666667, 7.0],
-    "resolution": [64.0, 64.0],
+    "center": [[0.0], [-50.0], [0.0]],
 }
 
 # The following parameters refer to the sun.
@@ -28,28 +24,29 @@ sun_params = {
         "mean": 0.0,
         "covariance": 4.3681e-06,
     },
-    "redraw_random_variables": False,
+    "number_of_rays": 200,
 }
+
+# The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
+general_surface_measurements = "test_data"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
-    "AA39": {
-        "position": [0.0, 3.0],
-        "parameters": _ideal_heliostat,
-        "surface_data": False,
-        "alignment_parameters": False,
-    },
-    "AA40": {
-        "position": [3.0, 3.0],
-        "parameters": _ideal_heliostat,
-        "surface_data": False,
-        "alignment_parameters": False,
-    },
-    "AA50": {
-        "position": [5.0, 5.0],
-        "parameters": _ideal_heliostat,
-        "surface_data": False,
-        "alignment_parameters": False,
+    "general_surface_points": h5py.File(
+        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
+    )["Points"][()],
+    "general_surface_normals": h5py.File(
+        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
+    )["Normals"][()],
+    "heliostats_list": {
+        "Single_Heliostat": {
+            "id": 0,
+            "aim_point": [0.0, -50.0, 0.0],
+            "position": [0.0, 0.0, 0.0],
+            "parameters": _test_heliostat,
+            "individual_surface_points": False,
+            "individual_surface_normals": False,
+        },
     },
 }
 
