@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple, Union
 
+import h5py
 import torch
 
 from artist.environment.light_source.light_source import ALightSource
@@ -51,7 +52,7 @@ class Sun(ALightSource):
         distribution_parameters: Dict[str, Any] = dict(
             distribution_type="Normal", mean=0.0, covariance=4.3681e-06
         ),
-        ray_count: int = 300,
+        ray_count: int = 200,
         config_file: h5py.File = None,
     ) -> None:
         """
@@ -74,16 +75,28 @@ class Sun(ALightSource):
             self.distribution_parameters = distribution_parameters
             self.num_rays = ray_count
         else:
-            raise NotImplementedError("HDF5 config loading not yet implemented!")
+            self.distribution_parameters = {
+                "distribution_type": config_file["sun"]["distribution_parameters"][
+                    "distribution_type"
+                ][()].decode("utf-8"),
+                "mean": config_file["sun"]["distribution_parameters"]["mean"][()],
+                "covariance": config_file["sun"]["distribution_parameters"][
+                    "covariance"
+                ][()],
+            }
+            self.num_rays = config_file["sun"]["number_of_rays"]
 
-        if self.distribution_parameters["distribution_type"] == "Normal":
+        if self.distribution_parameters["distribution_type"] == "normal":
             mean = torch.tensor(
-                [distribution_parameters["mean"], distribution_parameters["mean"]]
+                [
+                    self.distribution_parameters["mean"],
+                    self.distribution_parameters["mean"],
+                ]
             )
             covariance = torch.tensor(
                 [
-                    [distribution_parameters["covariance"], 0],
-                    [0, distribution_parameters["covariance"]],
+                    [self.distribution_parameters["covariance"], 0],
+                    [0, self.distribution_parameters["covariance"]],
                 ]
             )
 

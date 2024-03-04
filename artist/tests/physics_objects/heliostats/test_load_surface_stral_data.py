@@ -4,6 +4,7 @@ This pytest considers loading a heliostat surface from a pointcloud.
 
 import pathlib
 
+import h5py
 import pytest
 import torch
 
@@ -13,7 +14,9 @@ from artist.physics_objects.heliostats.heliostat import HeliostatModule
 
 
 def generate_data(
-    incident_ray_direction: torch.Tensor, expected_value: str
+    incident_ray_direction: torch.Tensor,
+    expected_value: str,
+    scenario_config: str,
 ) -> dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
@@ -31,27 +34,25 @@ def generate_data(
         The direction of the light.
     expected_value : torch.Tensor
         The expected bitmaps for the given test-cases.
+    scenario_config : str
+        The name of the scenario config that should be loaded.
 
     Returns
     -------
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    cfg_default_surface = concentrator_defaults.get_cfg_defaults()
-    surface_config = concentrator_defaults.load_config_file(cfg_default_surface)
+    config_h5 = h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r")
+    # cfg_default_surface = concentrator_defaults.get_cfg_defaults()
+    # surface_config = concentrator_defaults.load_config_file(cfg_default_surface)
 
-    receiver_center = torch.tensor([0.0, -50.0, 0.0]).reshape(-1, 1)
+    receiver_center = torch.tensor(config_h5["receiver"]["center"][()])
 
-    sun_parameters = {
-        "distribution_type": "Normal",
-        "mean": 0.0,
-        "covariance": 4.3681e-06,  # circum-solar ratio
-    }
+    sun = Sun(config_file=config_h5)
 
-    sun = Sun(distribution_parameters=sun_parameters, ray_count=100)
-
-    heliostat = HeliostatModule(incident_ray_direction=incident_ray_direction,
-                                config_file=surface_config)
+    heliostat = HeliostatModule(
+        incident_ray_direction=incident_ray_direction, config_file=surface_config
+    )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
@@ -67,10 +68,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([0.0, -1.0, 0.0]), "south.pt"),
-        (torch.tensor([1.0, 0.0, 0.0]), "east.pt"),
-        (torch.tensor([-1.0, 0.0, 0.0]), "west.pt"),
-        (torch.tensor([0.0, 0.0, 1.0]), "above.pt"),
+        (torch.tensor([0.0, -1.0, 0.0]), "south.pt", "test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0]), "east.pt", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0]), "west.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0]), "above.pt", "test_scenario"),
     ],
     name="environment_data",
 )
