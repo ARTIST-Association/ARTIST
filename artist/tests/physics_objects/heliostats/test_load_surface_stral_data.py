@@ -124,11 +124,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     distortion_x, distortion_y = sun.sample(len(preferred_ray_directions))
 
-    rays = sun.compute_rays(
-        receiver_plane_normal,
-        receiver_center,
+    rays = sun.scatter_rays(
         preferred_ray_directions,
-        aligned_surface_points,
         distortion_x,
         distortion_y,
     )
