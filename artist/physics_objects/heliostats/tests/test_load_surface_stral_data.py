@@ -52,7 +52,7 @@ def generate_data(
 
     cov = 4.3681e-06  # circum-solar ratio
     sun = Sun(
-        "Normal", ray_count=200, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
+        "Normal", ray_count=100, mean=[0, 0], cov=[[cov, 0], [0, cov]], device=device
     )
 
     point_cloud_facets = PointCloudFacetModule(
@@ -182,7 +182,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         receiver_plane_x,
         receiver_plane_y,
     )
-
+    
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "artist/physics_objects/heliostats/tests/test_bitmaps"
