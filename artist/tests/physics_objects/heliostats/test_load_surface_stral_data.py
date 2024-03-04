@@ -10,7 +10,6 @@ import torch
 from artist import ARTIST_ROOT
 from artist.environment.light_source.sun import Sun
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
-from artist.tests.physics_objects.heliostats.concentrator import concentrator_defaults
 
 
 def generate_data(
