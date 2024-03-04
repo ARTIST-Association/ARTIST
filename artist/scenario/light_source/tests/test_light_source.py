@@ -1,6 +1,4 @@
-"""
-This pytest tests the correctness of the light source.
-"""
+"""This pytest tests the correctness of the light source."""
 
 import pathlib
 from matplotlib import pyplot as plt
@@ -15,7 +13,7 @@ from artist.scenario.light_source.sun import Sun
 
 def generate_data(
     light_direction: torch.Tensor, expected_value: torch.Tensor
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
@@ -33,7 +31,7 @@ def generate_data(
 
     Returns
     -------
-    dict[str, torch.Tensor]
+    Dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
@@ -95,11 +93,24 @@ def generate_data(
     ],
     name="environment_data",
 )
-def data(request):
+def data(request) -> Dict[str, torch.Tensor]:
+    """
+    [INSERT DESCRIPTION HERE!].
+
+    Parameters
+    ----------
+    request :
+        [INSERT DESCRIPTION HERE!]
+
+    Returns
+    -------
+    Dict[str, torch.Tensor]
+        [INSERT DESCRIPTION HERE!]
+    """
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -110,7 +121,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : dict[str, torch.Tensor]
+    environment_data : Dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
     torch.set_printoptions(precision=10)

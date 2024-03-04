@@ -3,8 +3,8 @@ from typing import Tuple
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
+from artist.physics_objects.heliostats.surface.concentrator import ConcentratorModule
 from artist.physics_objects.module import AModule
 
 
@@ -24,7 +24,7 @@ class HeliostatModule(AModule):
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
-    See also
+    See Also
     --------
     :class:AModule : Reference to the parent class.
     """

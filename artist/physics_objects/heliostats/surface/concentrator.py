@@ -1,10 +1,8 @@
 from typing import List, Tuple
 
-from artist.physics_objects.module import AModule
-
 import torch
-from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 
+from artist.physics_objects.heliostats.surface.facets.facets import AFacetModule
 from artist.physics_objects.module import AModule
 
 
@@ -22,7 +20,7 @@ class ConcentratorModule(AModule):
     get_surface()
         Compute the surface points and surface normals of the concentrator.
 
-    See also
+    See Also
     --------
     :class:AModule : Reference to the parent class.
     """
