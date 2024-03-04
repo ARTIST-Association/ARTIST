@@ -11,17 +11,17 @@ By participating, you can help improve the project and make it even better :rais
    ```bash
    git clone https://github.com/ARTIST-Association/ARTIST.git
    ```
-   
-3. **Install the Package with Development Options** in a separate virtual environment from the main branch of your repo. 
-   This will put a number of pre-commit hooks for code linting and formatting with [Ruff](https://github.com/astral-sh/ruff) 
-   into place, ensuring PEP-8 conformity and overall good code quality consistently. 
+
+3. **Install the Package with Development Options** in a separate virtual environment from the main branch of your repo.
+   This will put a number of pre-commit hooks for code linting and formatting with [Ruff](https://github.com/astral-sh/ruff)
+   into place, ensuring PEP-8 conformity and overall good code quality consistently.
    The commands shown below work on Unix-based systems:
    ```bash
    python3 -m venv <insert/path/to/your/venv>
    source <insert/path/to/your/venv/bin/activate>
    python -m pip install -e ".[dev]"
    ```
-   
+
 4. **Create a Branch**: Create a new branch for your contribution. Choose a descriptive name. Depending on what you want
    to work on, prepend either of the following prefixes, `features`, `maintenance`, `bugfix`, or `hotfix`. Example:
    ```bash
@@ -129,7 +129,7 @@ as shown below. Do not include attributes and methods of the parent class explic
    git push origin features/your-feature-name
    ```
 
-8. **Rebase Onto Current Main:** Rebase your feature branch onto the current main branch of the original repo. 
+8. **Rebase Onto Current Main:** Rebase your feature branch onto the current main branch of the original repo.
    This will include any changes that might have been pushed into the main in the meantime and resolve possible conflicts.
    To sync your fork with the original upstream repo, check out [this page](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
    or follow the steps below. Note that before you can sync your fork with an upstream repo, you must configure a remote that points to the upstream repository in Git.
