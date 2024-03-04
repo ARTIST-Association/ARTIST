@@ -135,7 +135,9 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     receiver_resolution_y = 256
     sun_position = light_direction
 
-    ray_directions = sun.get_preferred_reflection_direction(-sun_position, aligned_surface_normals)
+    ray_directions = sun.get_preferred_reflection_direction(
+        -sun_position, aligned_surface_normals
+    )
 
     xi, yi = sun.sample(len(ray_directions))
 
