@@ -1,9 +1,11 @@
 """
 This file contains the functionality to create a heliostat surface from a loaded pointcloud.
 """
+
 import struct
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import h5py
 import torch
 from yacs.config import CfgNode
 
@@ -64,7 +66,9 @@ def real_surface(
     surface_position = set_default_surface_position(config, surface_position)
     points_on_facet = normal_vectors.shape[2]
     if points_on_facet < config.TAKE_N_VECTORS:
-        raise ValueError(f"TAKE_N_VECTORS was {config.TAKE_N_VECTORS} cannot be larger than number of points on facet {points_on_facet}")
+        raise ValueError(
+            f"TAKE_N_VECTORS was {config.TAKE_N_VECTORS} cannot be larger than number of points on facet {points_on_facet}"
+        )
     step_size = points_on_facet // config.TAKE_N_VECTORS
 
     # thinning: keep only every step-size-th surface point and normal
@@ -88,8 +92,7 @@ def real_surface(
 
 
 def set_default_surface_position(
-    config: CfgNode,
-    position: Optional[torch.Tensor] = None
+    config: CfgNode, position: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     """
     Retrieve the position of the heliostat in the field as tensor either from cfg or bpro.
@@ -144,26 +147,31 @@ class PointCloudFacetModule(AFacetModule):
 
     def __init__(
         self,
-        config: CfgNode
+        heliostat_name: str,
+        config_file: h5py.File,
     ) -> None:
         """
         Initialize the surface from a point cloud.
 
         Parameters
         ----------
-        config : CfgNode
-            The config file containing information about the loaded surface.
+        heliostat_name : str
+            The name of the heliostat being initialized.
+        config_file : h5py.File
+            An open hdf5 file containing the scenario configuration.
         """
         super().__init__()
 
-        self.config = config
-        self.surface_position = None
-        self.ideal_surface_points = None
-        self.surface_normals = None
-        self.heliostat_height = 0.0
-        self.heliostat_width = 0.0
-
-        self.load()
+        print("THIS IS A FAR AS WE ARE")
+        print("KEEP WORKING FROM HERE")
+        # self.config = config
+        # self.surface_position = None
+        # self.ideal_surface_points = None
+        # self.surface_normals = None
+        # self.heliostat_height = 0.0
+        # self.heliostat_width = 0.0
+        #
+        # self.load()
 
     def load(self) -> None:
         """
@@ -182,9 +190,10 @@ class PointCloudFacetModule(AFacetModule):
             self.heliostat_width,
         ) = builder_function(heliostat_config)
 
-    def get_surface_builder(
-        self, config: CfgNode
-    ) -> Tuple[Callable[[CfgNode, torch.device], HeliostatParams], CfgNode,]:
+    def get_surface_builder(self, config: CfgNode) -> Tuple[
+        Callable[[CfgNode, torch.device], HeliostatParams],
+        CfgNode,
+    ]:
         """
         Select which kind of surface is to be loaded.
 
@@ -201,7 +210,3 @@ class PointCloudFacetModule(AFacetModule):
             The loaded surface, the heliostat parameters, and deflectometry data.
         """
         return real_surface, config.DEFLECT_DATA
-
-
-
-
