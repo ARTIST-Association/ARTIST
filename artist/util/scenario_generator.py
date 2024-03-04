@@ -24,7 +24,7 @@ sun_params = {
         "mean": 0.0,
         "covariance": 4.3681e-06,
     },
-    "redraw_random_variables": False,
+    "number_of_rays": 200,
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
@@ -44,8 +44,8 @@ heliostats = {
             "aim_point": [0.0, -50.0, 0.0],
             "position": [0.0, 0.0, 0.0],
             "parameters": _test_heliostat,
-            "individual_surface_measurements": False,
-            "individual_alignment_data": False,
+            "individual_surface_points": False,
+            "individual_surface_normals": False,
         },
     },
 }
