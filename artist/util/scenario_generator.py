@@ -32,10 +32,10 @@ general_surface_measurements = "test_data"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
-    "surface_points": h5py.File(
+    "general_surface_points": h5py.File(
         f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
     )["Points"][()],
-    "surface_normals": h5py.File(
+    "general_surface_normals": h5py.File(
         f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
     )["Normals"][()],
     "heliostats_list": {
