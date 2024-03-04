@@ -1,25 +1,29 @@
 """This file contains bibliographies for different heliostat prototypes."""
 
-# Parameters for an ideal heliostat
-_ideal_heliostat = {
-    "aim_point": [0.0, 0.0, 0.0],
-    "columns": 32,
-    "rows": 32,
-    "height": 4.0,
-    "width": 4.0,
-    "position_on_fields": [0.0, 0.0, 0.0],
-    "normal_vectors": [0.0, 0.0, 1.0],
-    "disturbance_rotation_angles": [0.0, 0.0, 0.0],
+#### Dump from binp for test
+_test_heliostat = {
+    "height": 2.559999942779541,
+    "width": 3.2200000286102295,
     "facets": {
-        "number": 4,
-        "shape": 0,
-        "positions": [
-            [1.0, -1.0, 0.0],
-            [-1.0, 1.0, 0.0],
-            [1.0, -1.0, 0.0],
-            [-1.0, 1.0, 0.0],
-        ],
-        "spans_east": [-1.0, 0.0, 0.0],
-        "spans_north": [0.0, 1.0, 0.0],
+        "1": {
+            "position": [-0.8075, 0.6425, 0.04019837],
+            "span_north": [-0.0, 0.8024845, -0.00498457],
+            "span_east": [6.3749224e-01, 1.9569216e-05, 3.1505227e-03],
+        },
+        "2": {
+            "position": [0.8075, 0.6425, 0.04019837],
+            "span_north": [-0.0, 0.8024845, -0.00498457],
+            "span_east": [6.3749224e-01, 1.9569216e-05, 3.1505227e-03],
+        },
+        "3": {
+            "position": [-0.8075, -0.6425, 0.04019837],
+            "span_north": [-0.0, 0.8024845, -0.00498457],
+            "span_east": [6.3749224e-01, 1.9569216e-05, 3.1505227e-03],
+        },
+        "4": {
+            "position": [0.8075, -0.6425, 0.04019837],
+            "span_north": [-0.0, 0.8024845, -0.00498457],
+            "span_east": [6.3749224e-01, 1.9569216e-05, 3.1505227e-03],
+        },
     },
 }
