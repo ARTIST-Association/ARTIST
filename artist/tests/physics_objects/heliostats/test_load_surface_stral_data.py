@@ -42,17 +42,14 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    config_h5 = h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r")
-    # cfg_default_surface = concentrator_defaults.get_cfg_defaults()
-    # surface_config = concentrator_defaults.load_config_file(cfg_default_surface)
-
-    receiver_center = torch.tensor(config_h5["receiver"]["center"][()])
-
-    sun = Sun(config_file=config_h5)
-
-    heliostat = HeliostatModule(
-        incident_ray_direction=incident_ray_direction, config_file=surface_config
-    )
+    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
+        receiver_center = torch.tensor(config_h5["receiver"]["center"][()])
+        sun = Sun(config_file=config_h5)
+        heliostat = HeliostatModule(
+            heliostat_name="Single_Heliostat",
+            incident_ray_direction=incident_ray_direction,
+            config_file=config_h5,
+        )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 

@@ -1,10 +1,14 @@
 from typing import Tuple
+
+import h5py
 from yacs.config import CfgNode
 
 import torch
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.concentrator.concentrator import ConcentratorModule
+from artist.physics_objects.heliostats.concentrator.concentrator import (
+    ConcentratorModule,
+)
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.module import AModule
 
@@ -37,28 +41,42 @@ class HeliostatModule(AModule):
     """
 
     def __init__(
-        self, heliostat_config : CfgNode, incident_ray_direction : torch.Tensor
+        self,
+        heliostat_name: str,
+        incident_ray_direction: torch.Tensor,
+        config_file: h5py.File = None,
     ) -> None:
         """
         Initialize the heliostat.
 
         Parameters
         ----------
-        heliostat_config : CfgNode
-            The config file containing the heliostat data.
+        heliostat_name : str
+            The name of the heliostat being initialized.
+        incident_ray_direction : torch.Tensor
+            The direction of the incident ray as seen from the heliostat.
+        config_file : h5py.File
+            An open hdf5 file containing the scenario configuration.
         """
         super().__init__()
-        self.aim_point = torch.tensor(heliostat_config.DEFLECT_DATA.AIM_POINT).reshape(-1, 1)
-        self.position = torch.tensor(heliostat_config.DEFLECT_DATA.POSITION_ON_FIELD).reshape(-1, 1)
+
+        print("Hi")
+
+        self.aim_point = torch.tensor(
+            config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
+                ()
+            ]
+        )
+        self.position = torch.tensor(
+            config_file["heliostats"]["heliostats_list"][heliostat_name]["position"][()]
+        )
         self.incident_ray_direction = incident_ray_direction
+        self.concentrator = ConcentratorModule(
+            heliostat_name=heliostat_name, config_file=config_file
+        )
+        # self.alignment = AlignmentModule(heliostat_config)
 
-        self.concentrator = ConcentratorModule(heliostat_config)
-        self.alignment = AlignmentModule(heliostat_config)
-
-
-    def get_aligned_surface(
-        self
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_aligned_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
