@@ -5,7 +5,7 @@ from typing import Dict
 
 import h5py
 from artist import ARTIST_ROOT
-from artist.util.heliostat_configurations import _test_binp_heliostat
+from artist.util.heliostat_configurations import _test_heliostat
 
 # The following configurations can be adapted to define the required scenario.
 
@@ -27,16 +27,29 @@ sun_params = {
     "redraw_random_variables": False,
 }
 
+# The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
+general_surface_measurements = "test_data"
+
 # The following parameters refer to the heliostat list.
 heliostats = {
-    "Single_Heliostat": {
-        "id": 0,
-        "aim_point": [0.0, -50.0, 0.0],
-        "position": [0.0, 0.0, 0.0],
-        "parameters": _test_binp_heliostat,
-        "alignment_data": False,
+    "surface_points": h5py.File(
+        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
+    )["Points"][()],
+    "surface_normals": h5py.File(
+        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
+    )["Normals"][()],
+    "heliostats_list": {
+        "Single_Heliostat": {
+            "id": 0,
+            "aim_point": [0.0, -50.0, 0.0],
+            "position": [0.0, 0.0, 0.0],
+            "parameters": _test_heliostat,
+            "individual_surface_measurements": False,
+            "individual_alignment_data": False,
+        },
     },
 }
+
 
 def flatten_dict(
     dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
