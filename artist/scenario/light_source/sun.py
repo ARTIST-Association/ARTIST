@@ -96,7 +96,7 @@ class Sun(ALightSource):
         else:
             raise ValueError("Unknown light distribution type.")
 
-    def sample(
+    def sample_distortions(
         self,
         num_rays_on_hel: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -119,8 +119,14 @@ class Sun(ALightSource):
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.dist_type == "Normal":
-            distortion_x_dir, distortion_y_dir = self.distribution.sample((self.num_rays, num_rays_on_hel),).transpose(0, 1).permute(2, 1, 0)
-            return distortion_x_dir, distortion_y_dir
+            distortion_x_dir, distortion_z_dir = (
+                self.distribution.sample(
+                    (self.num_rays, num_rays_on_hel),
+                )
+                .transpose(0, 1)
+                .permute(2, 1, 0)
+            )
+            return distortion_x_dir, distortion_z_dir
         else:
             raise ValueError("unknown light distribution type")
 
@@ -128,8 +134,8 @@ class Sun(ALightSource):
         self,
         ray_directions: torch.Tensor,
         distortion_x_dir: torch.Tensor,
-        distortion_y_dir: torch.Tensor,
-    )-> torch.Tensor:
+        distortion_z_dir: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Scatter the reflected rays around the preferred ray_direction.
 
@@ -139,24 +145,30 @@ class Sun(ALightSource):
             The preferred ray direction.
         distortion_x_dir : torch.Tensor
             The distortions in x direction (angles for scattering).
-        distortion_y_dir : torch.Tensor
-            The distortions in y direction (angles for scattering).
+        distortion_z_dir : torch.Tensor
+            The distortions in z direction (angles for scattering).
 
         Returns
         -------
         torch.Tensor
             Scattered rays around the preferred direction.
         """
-        ray_directions = ray_directions / torch.linalg.norm(ray_directions, dim=1).unsqueeze(-1)
-        
-        rotation_matrix = utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_y_dir)
-        if ray_directions.shape[1] != 4:
-            ray_directions = torch.cat((ray_directions, torch.ones(ray_directions.shape[0],1)), dim=1)
+        ray_directions = ray_directions / torch.linalg.norm(
+            ray_directions, dim=1
+        ).unsqueeze(-1)
 
-        scattered_rays = torch.matmul(rotation_matrix, ray_directions.unsqueeze(-1))
+        if ray_directions.shape[1] != 4:
+            ray_directions = torch.cat(
+                (ray_directions, torch.ones(ray_directions.shape[0], 1)), dim=1
+            )
+
+        scattered_rays = torch.matmul(
+            utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
+            ray_directions.unsqueeze(-1),
+        )
 
         return scattered_rays[:, :, :3, :].squeeze(-1)
-    
+
     @staticmethod
     def line_plane_intersections(
         plane_normal: torch.Tensor,
