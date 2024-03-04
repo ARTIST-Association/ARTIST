@@ -7,6 +7,7 @@ from typing import Dict
 
 import pytest
 import torch
+import h5py
 
 from artist import ARTIST_ROOT
 from artist.environment.light_source.sun import Sun
@@ -15,7 +16,9 @@ from artist.physics_objects.heliostats.alignment.alignment import AlignmentModul
 
 
 def generate_data(
-    incident_ray_direction: torch.Tensor, expected_value: str
+    incident_ray_direction: torch.Tensor,
+    expected_value: str,
+    scenario_config: str,
 ) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
@@ -31,12 +34,15 @@ def generate_data(
         The direction of the light.
     expected_value : torch.Tensor
         The expected bitmaps for the given test-cases.
+    scenario_config : str
+        The name of the scenario config that should be loaded.
 
     Returns
     -------
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
+    config_h5 = h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r")
     heliostat_position = torch.tensor([0.0, 5.0, 0.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0])
 
@@ -71,7 +77,7 @@ def generate_data(
 
     datapoint = HeliostatDataPoint(
         point_id=1,
-        light_directions=torch.tensor(ray_direction),
+        light_directions=torch.tensor(incident_ray_direction),
         desired_aimpoint=receiver_center,
         label=HeliostatDataPointLabel(),
     )
@@ -87,17 +93,17 @@ def generate_data(
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
         "receiver_center": receiver_center,
-        "light_direction": torch.tensor(ray_direction),
+        "light_direction": torch.tensor(incident_ray_direction),
         "expected_value": expected_value,
     }
 
 
 @pytest.fixture(
     params=[
-        ([0.0, 0.0, 1.0], "above.pt"),
-        ([1.0, 0.0, 0.0], "east.pt"),
-        ([-1.0, 0.0, 0.0], "west.pt"),
-        ([0.0, -1.0, 0.0], "south.pt"),
+        ([0.0, 0.0, 1.0], "above.pt", "test_scenario"),
+        ([1.0, 0.0, 0.0], "east.pt", "test_scenario"),
+        ([-1.0, 0.0, 0.0], "west.pt", "test_scenario"),
+        ([0.0, -1.0, 0.0], "south.pt", "test_scenario"),
     ],
     name="environment_data",
 )
