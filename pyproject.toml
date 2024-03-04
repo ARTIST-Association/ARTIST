@@ -1,3 +1,42 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["artist"]
+
+[project]
+name = "artist"
+version = "0.0.1"
+authors = [
+  { name="ARTIST Consortium", email="artist@lists.kit.edu" },
+]
+description = "AI-enhanced Differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: TBD",
+    "Development Status :: 1 - Planning",
+]
+dependencies = [
+    "numpy",
+    "yacs",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "black",
+    "ruff",
+    "pytest",
+    "pytest-cov",]
+
+[project.urls]
+Homepage = "https://github.com/ARTIST-Association/ARTIST"
+Issues = "https://github.com/ARTIST-Association/ARTIST/issues"
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
@@ -33,7 +72,7 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.8
+# Assume Python 3.8.
 target-version = "py38"
 
 [tool.ruff.lint]
@@ -41,7 +80,7 @@ target-version = "py38"
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 select = ["N", "E4", "E7", "E9", "F", "D"]
-ignore = []
+ignore = ["D100", "D104", "D404"]
 # Enable import sorting
 extend-select = ["I"]
 

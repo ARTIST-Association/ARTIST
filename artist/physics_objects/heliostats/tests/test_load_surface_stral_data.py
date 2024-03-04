@@ -1,6 +1,4 @@
-"""
-This pytest considers loading a heliostat surface from a pointcloud.
-"""
+"""This pytest considers loading a heliostat surface from a point cloud."""
 
 import pathlib
 from matplotlib import pyplot as plt
@@ -21,14 +19,14 @@ from artist.scenario.light_source.sun import Sun
 
 def generate_data(
     light_direction: torch.Tensor, expected_value: torch.Tensor
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
     This includes the position of the heliostat, the position of the receiver,
-    the sun as a light source, and the pointcloud as the heliostat surface.
+    the sun as a light source, and the point cloud as the heliostat surface.
 
-    The facets of the heliostat surface are loaded from a pointcloud.
+    The facets of the heliostat surface are loaded from a point cloud.
     The surface points and surface normals are calculated.
     The surface points and normals are aligned.
 
@@ -41,7 +39,7 @@ def generate_data(
 
     Returns
     -------
-    dict[str, torch.Tensor]
+    Dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     heliostat_position = torch.Tensor([0.0, 5.0, 0.0])
@@ -98,11 +96,24 @@ def generate_data(
     ],
     name="environment_data",
 )
-def data(request):
+def data(request) -> Dict[str, torch.Tensor]:
+    """
+    [INSERT DESCRIPTION HERE!].
+
+    Parameters
+    ----------
+    request :
+        [INSERT DESCRIPTION HERE!]
+
+    Returns
+    -------
+    Dict[str, torch.Tensor]
+        [INSERT DESCRIPTION HERE!]
+    """
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -113,7 +124,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : dict[str, torch.Tensor]
+    environment_data : Dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
     torch.manual_seed(7)
