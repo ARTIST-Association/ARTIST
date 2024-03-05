@@ -72,7 +72,11 @@ class HeliostatModule(AModule):
         self.concentrator = ConcentratorModule(
             heliostat_name=heliostat_name, config_file=config_file
         )
-        # self.alignment = AlignmentModule(heliostat_config)
+        self.alignment = AlignmentModule(
+            heliostat_name=heliostat_name, config_file=config_file
+        )
+        print("HI")
+        print("TEST")
 
     def get_aligned_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """

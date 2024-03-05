@@ -1,10 +1,16 @@
 from typing import List
+
+import h5py
 import torch
 from yacs.config import CfgNode
 
 from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import AActuatorModule
-from artist.physics_objects.heliostats.alignment.kinematic.kinematic import AKinematicModule
+from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import (
+    AActuatorModule,
+)
+from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
+    AKinematicModule,
+)
 from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 from artist.util import utils
 
@@ -54,8 +60,6 @@ class RigidBodyModule(AKinematicModule):
             super().__init__(value, tolerance, distort, requires_grad)
             self.name = name
 
-
-
     DEV_PARAMETERS = {
         "dev_first_translation_e": DevTranslationParameter(
             "dev_first_translation_e"
@@ -88,7 +92,6 @@ class RigidBodyModule(AKinematicModule):
         "dev_up_tilt_1": DevRotationParameter("dev_up_tilt_1"),
         "dev_east_tilt_2": DevRotationParameter("dev_east_tilt_2"),
         "dev_north_tilt_2": DevRotationParameter("dev_north_tilt_2"),
-
     }
     # actuator_1_params = {
     #     "increment": torch.tensor(154166.666),
@@ -103,13 +106,11 @@ class RigidBodyModule(AKinematicModule):
     #     "initial_stroke_length": torch.tensor(0.075),
     #     "actuator_offset": torch.tensor(0.3479),
     #     "joint_radius": torch.tensor(0.309),
-    #}
-    actuator_1_params = {
-    }
-    actuator_2_params = {
-    }
+    # }
+    actuator_1_params = {}
+    actuator_2_params = {}
 
-    def __init__(self, config: CfgNode, **deviations) -> None:
+    def __init__(self, config_file: h5py.File, **deviations) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
 
@@ -266,7 +267,9 @@ class RigidBodyModule(AKinematicModule):
         """
         return self.get_parameter(name)
 
-    def build_rotation_matrix_first_axis_east(self, angles: torch.Tensor) -> torch.Tensor:
+    def build_rotation_matrix_first_axis_east(
+        self, angles: torch.Tensor
+    ) -> torch.Tensor:
         """
         Build the first rotation matrices.
 
@@ -296,11 +299,21 @@ class RigidBodyModule(AKinematicModule):
                     [ones, zeros, zeros, ones * self._first_translation_e()[0]], dim=1
                 ),
                 torch.stack(
-                    [zeros, cos_theta, -sin_theta, ones * self._first_translation_n()[0]],
+                    [
+                        zeros,
+                        cos_theta,
+                        -sin_theta,
+                        ones * self._first_translation_n()[0],
+                    ],
                     dim=1,
                 ),
                 torch.stack(
-                    [zeros, sin_theta, cos_theta, ones * self._first_translation_u()[0]],
+                    [
+                        zeros,
+                        sin_theta,
+                        cos_theta,
+                        ones * self._first_translation_u()[0],
+                    ],
                     dim=1,
                 ),
                 torch.stack([zeros, zeros, zeros, ones], dim=1),
@@ -339,11 +352,21 @@ class RigidBodyModule(AKinematicModule):
         rot_matrix = torch.stack(
             [
                 torch.stack(
-                    [cos_theta, -sin_theta, zeros, ones * self._second_translation_e()[0]],
+                    [
+                        cos_theta,
+                        -sin_theta,
+                        zeros,
+                        ones * self._second_translation_e()[0],
+                    ],
                     dim=1,
                 ),
                 torch.stack(
-                    [sin_theta, cos_theta, zeros, ones * self._second_translation_n()[0]],
+                    [
+                        sin_theta,
+                        cos_theta,
+                        zeros,
+                        ones * self._second_translation_n()[0],
+                    ],
                     dim=1,
                 ),
                 torch.stack(
@@ -418,7 +441,19 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        general_rot_matrices = utils.general_affine_matrix(tx=self._first_translation_e()+self._second_translation_e()+self._conc_translation_e(), ty=self._first_translation_n()+self._second_translation_n() + self._conc_translation_n(), tz=self._first_translation_u()+self._second_translation_u() + self._conc_translation_u(), rx=joint_1_angles, rz=joint_2_angles) 
+        general_rot_matrices = utils.general_affine_matrix(
+            tx=self._first_translation_e()
+            + self._second_translation_e()
+            + self._conc_translation_e(),
+            ty=self._first_translation_n()
+            + self._second_translation_n()
+            + self._conc_translation_n(),
+            tz=self._first_translation_u()
+            + self._second_translation_u()
+            + self._conc_translation_u(),
+            rx=joint_1_angles,
+            rz=joint_2_angles,
+        )
 
         first_rot_matrices = self.build_rotation_matrix_first_axis_east(joint_1_angles)
         second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
@@ -601,9 +636,7 @@ class RigidBodyModule(AKinematicModule):
             desired_reflect_vec = aim_point - concentrator_origins
             desired_reflect_vec /= desired_reflect_vec.norm()
             incident_ray_direction /= incident_ray_direction.norm()
-            desired_concentrator_normal = (
-                incident_ray_direction + desired_reflect_vec
-            )
+            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
             # Compute epoch loss.
