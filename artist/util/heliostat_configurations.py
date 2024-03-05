@@ -6,6 +6,7 @@ _test_heliostat = {
     "width": 3.2200000286102295,
     "facets_type": "point_cloud",
     "alignment_type": "rigid_body",
+    "actuator_type": "ideal",
     "facets_list": {
         "1": {
             "position": [[-0.8075], [0.6425], [0.04019837]],
