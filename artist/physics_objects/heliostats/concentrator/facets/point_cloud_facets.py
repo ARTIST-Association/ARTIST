@@ -52,9 +52,9 @@ class PointCloudFacetModule(AFacetModule):
                 "Currently ARTIST is only implemented for general surface points."
             )
         else:
-            self.surface_points = config_file["heliostats"]["general_surface_points"][
-                ()
-            ]
-            self.surface_normals = config_file["heliostats"]["general_surface_normals"][
-                ()
-            ]
+            self.surface_points = torch.tensor(
+                config_file["heliostats"]["general_surface_points"][()]
+            )
+            self.surface_normals = torch.tensor(
+                config_file["heliostats"]["general_surface_normals"][()]
+            )

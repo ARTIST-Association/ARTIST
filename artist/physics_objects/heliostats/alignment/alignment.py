@@ -53,7 +53,9 @@ class AlignmentModule(AModule):
         ]["alignment_type"][()].decode("utf-8")
 
         if alignment_type == "rigid_body":
-            self.kinematic_model = RigidBodyModule(config_file)
+            self.kinematic_model = RigidBodyModule(
+                heliostat_name=heliostat_name, config_file=config_file
+            )
         else:
             raise NotImplementedError(
                 "ARTIST currently only supports RigidBody Kinematic models."
@@ -61,7 +63,6 @@ class AlignmentModule(AModule):
 
     def align_surface(
         self,
-        aim_point: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
@@ -85,7 +86,7 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             Tuple containing the aligned surface points and normals.
         """
-        orientation = self.align(aim_point, incident_ray_direction)
+        orientation = self.align(incident_ray_direction)
         normal_vec = (
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
@@ -99,9 +100,7 @@ class AlignmentModule(AModule):
         ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
-    def align(
-        self, aim_point: torch.Tensor, incident_ray_direction: torch.Tensor
-    ) -> torch.Tensor:
+    def align(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
         Compute the orientation from a given aimpoint.
 
@@ -118,5 +117,5 @@ class AlignmentModule(AModule):
             The orientation matrix.
         """
         return self.kinematic_model.compute_orientation_from_aimpoint(
-            aim_point, incident_ray_direction
+            incident_ray_direction
         )

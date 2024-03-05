@@ -62,29 +62,33 @@ def only_rotation_matrix(
 
 
 def general_affine_matrix(
-    tx=[0.0], ty=[0.0], tz=[0.0], rx=[0.0], ry=[0.0], rz=[0.0], sx=1.0, sy=1.0, sz=1.0
+    tx: torch.tensor,
+    ty: torch.tensor,
+    tz: torch.tensor,
+    rx: torch.tensor,
+    ry: torch.tensor,
+    rz: torch.tensor,
+    sx: torch.tensor,
+    sy: torch.tensor,
+    sz: torch.tensor,
 ):
-    rx_cos = torch.cos(torch.tensor(rx))
-    rx_sin = -torch.sin(torch.tensor(rx))  # due to heliostat convention
-    ry_cos = torch.cos(torch.tensor(ry))
-    ry_sin = torch.sin(torch.tensor(ry))
-    rz_cos = torch.cos(torch.tensor(rz))
-    rz_sin = torch.sin(torch.tensor(rz))
+    rx_cos = torch.cos(rx)
+    rx_sin = -torch.sin(rx)  # due to heliostat convention
+    ry_cos = torch.cos(ry)
+    ry_sin = torch.sin(ry)
+    rz_cos = torch.cos(rz)
+    rz_sin = torch.sin(rz)
+    zeros = torch.zeros(rx.shape)
+    ones = torch.ones(rx.shape)
 
     rot_matrix = torch.stack(
         [
-            torch.stack(
-                [sx * ry_cos * rz_cos, rz_sin, ry_sin, torch.tensor([0.0])], dim=1
-            ),
-            torch.stack(
-                [-rz_sin, sy * rx_cos * rz_cos, -rx_sin, torch.tensor([0.0])], dim=1
-            ),
-            torch.stack(
-                [-ry_sin, rx_sin, sz * rx_cos * ry_cos, torch.tensor([0.0])], dim=1
-            ),
-            torch.stack([tx, ty, tz, torch.tensor([1.0])], dim=1),
+            torch.stack([sx * ry_cos * rz_cos, rz_sin, ry_sin, zeros], dim=1),
+            torch.stack([-rz_sin, sy * rx_cos * rz_cos, -rx_sin, zeros], dim=1),
+            torch.stack([-ry_sin, rx_sin, sz * rx_cos * ry_cos, zeros], dim=1),
+            torch.stack([tx, ty, tz, ones], dim=1),
         ],
         dim=1,
     )
 
-    return rot_matrix
+    return rot_matrix.squeeze(-1)
