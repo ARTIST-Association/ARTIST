@@ -48,7 +48,7 @@ class ConcentratorModule(AModule):
 
         if facet_type == "point_cloud":
             self.facets = PointCloudFacetModule(
-                heliostat_name=heliostat_name, config_file=config_file
+                config_file=config_file,
             )
         else:
             raise NotImplementedError(

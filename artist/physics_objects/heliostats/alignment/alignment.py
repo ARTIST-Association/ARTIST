@@ -3,6 +3,8 @@ Alignment module for the heliostat.
 """
 
 from typing import Tuple
+
+import h5py
 import torch
 from yacs.config import CfgNode
 
@@ -36,7 +38,7 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, config: CfgNode) -> None:
+    def __init__(self, heliostat_name: str, config_file: h5py.File) -> None:
         """
         Initialize the alignment module.
 
@@ -46,7 +48,16 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        self.kinematic_model = RigidBodyModule(config)
+        alignment_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
+            "parameters"
+        ]["alignment_type"][()].decode("utf-8")
+
+        if alignment_type == "rigid_body":
+            self.kinematic_model = RigidBodyModule(config_file)
+        else:
+            raise NotImplementedError(
+                "ARTIST currently only supports RigidBody Kinematic models."
+            )
 
     def align_surface(
         self,
@@ -78,9 +89,8 @@ class AlignmentModule(AModule):
         normal_vec = (
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
-        
-        
-        aligned_surface_points =  surface_points @ alignment
+
+        aligned_surface_points = surface_points @ alignment
         aligned_surface_normals = surface_normals @ alignment
 
         aligned_surface_points += self.position
@@ -89,7 +99,9 @@ class AlignmentModule(AModule):
         ).unsqueeze(-1)
         return aligned_surface_points, aligned_surface_normals
 
-    def align(self, aim_point: torch.Tensor, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+    def align(
+        self, aim_point: torch.Tensor, incident_ray_direction: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute the orientation from a given aimpoint.
 
@@ -105,4 +117,6 @@ class AlignmentModule(AModule):
         torch.Tensor
             The orientation matrix.
         """
-        return self.kinematic_model.compute_orientation_from_aimpoint(aim_point, incident_ray_direction)
+        return self.kinematic_model.compute_orientation_from_aimpoint(
+            aim_point, incident_ray_direction
+        )
