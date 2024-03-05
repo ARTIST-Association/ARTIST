@@ -27,75 +27,75 @@ class RigidBodyModule(AKinematicModule):
     :class: AKinematicModule : Reference to the parent class
     """
 
-    class DevTranslationParameter(AParameter):
-        def __init__(
-            self,
-            name: str,
-            value: float = 0.0,
-            tolerance: float = 0.1,
-            requires_grad: bool = True,
-            distort: bool = False,
-        ):  # -> +/- 0.1 => 1
-            super().__init__(value, tolerance, distort, requires_grad)
-            self.name = name
-
-    class DevRotationParameter(AParameter):
-        def __init__(
-            self,
-            name: str,
-            value: float = 0.0,
-            tolerance: float = 0.01,
-            requires_grad: bool = True,
-            distort: bool = False,
-        ):
-            super().__init__(value, tolerance, distort, requires_grad)
-            self.name = name
-
-    class DevPercentageParameter(AParameter):
-        def __init__(
-            self,
-            name: str,
-            value: float = 0.0,
-            tolerance: float = 0.01,
-            requires_grad: bool = True,
-            distort: bool = False,
-        ) -> None:
-            super().__init__(value, tolerance, distort, requires_grad)
-            self.name = name
-
-    DEV_PARAMETERS = {
-        "dev_first_translation_e": DevTranslationParameter(
-            "dev_first_translation_e"
-        ),  # -> +/- 0.1 => 1
-        "dev_first_translation_n": DevTranslationParameter(
-            "dev_first_translation_n"
-        ),  # -> +/- 0.1 => 1
-        "dev_first_translation_u": DevTranslationParameter(
-            "dev_first_translation_u"
-        ),  # -> +/- 0.1 => 1
-        "dev_second_translation_e": DevTranslationParameter(
-            "dev_second_translation_e"
-        ),  # -> +/- 0.1 => 1
-        "dev_second_translation_n": DevTranslationParameter(
-            "dev_second_translation_n"
-        ),  # -> +/- 0.1 => 1
-        "dev_second_translation_u": DevTranslationParameter(
-            "dev_second_translation_u"
-        ),  # -> +/- 0.1 => 1
-        "dev_conc_translation_e": DevTranslationParameter(
-            "dev_conc_translation_e"
-        ),  # -> +/- 0.1 => 1
-        "dev_conc_translation_n": DevTranslationParameter(
-            "dev_conc_translation_n"
-        ),  # -> +/- 0.1 => 1
-        "dev_conc_translation_u": DevTranslationParameter(
-            "dev_conc_translation_u"
-        ),  # -> +/- 0.1 => 1
-        "dev_north_tilt_1": DevRotationParameter("dev_north_tilt_1"),
-        "dev_up_tilt_1": DevRotationParameter("dev_up_tilt_1"),
-        "dev_east_tilt_2": DevRotationParameter("dev_east_tilt_2"),
-        "dev_north_tilt_2": DevRotationParameter("dev_north_tilt_2"),
-    }
+    # class DevTranslationParameter(AParameter):
+    #     def __init__(
+    #         self,
+    #         name: str,
+    #         value: float = 0.0,
+    #         tolerance: float = 0.1,
+    #         requires_grad: bool = True,
+    #         distort: bool = False,
+    #     ):  # -> +/- 0.1 => 1
+    #         super().__init__(value, tolerance, distort, requires_grad)
+    #         self.name = name
+    #
+    # class DevRotationParameter(AParameter):
+    #     def __init__(
+    #         self,
+    #         name: str,
+    #         value: float = 0.0,
+    #         tolerance: float = 0.01,
+    #         requires_grad: bool = True,
+    #         distort: bool = False,
+    #     ):
+    #         super().__init__(value, tolerance, distort, requires_grad)
+    #         self.name = name
+    #
+    # class DevPercentageParameter(AParameter):
+    #     def __init__(
+    #         self,
+    #         name: str,
+    #         value: float = 0.0,
+    #         tolerance: float = 0.01,
+    #         requires_grad: bool = True,
+    #         distort: bool = False,
+    #     ) -> None:
+    #         super().__init__(value, tolerance, distort, requires_grad)
+    #         self.name = name
+    #
+    # DEV_PARAMETERS = {
+    #     "dev_first_translation_e": DevTranslationParameter(
+    #         "dev_first_translation_e"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_first_translation_n": DevTranslationParameter(
+    #         "dev_first_translation_n"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_first_translation_u": DevTranslationParameter(
+    #         "dev_first_translation_u"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_second_translation_e": DevTranslationParameter(
+    #         "dev_second_translation_e"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_second_translation_n": DevTranslationParameter(
+    #         "dev_second_translation_n"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_second_translation_u": DevTranslationParameter(
+    #         "dev_second_translation_u"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_conc_translation_e": DevTranslationParameter(
+    #         "dev_conc_translation_e"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_conc_translation_n": DevTranslationParameter(
+    #         "dev_conc_translation_n"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_conc_translation_u": DevTranslationParameter(
+    #         "dev_conc_translation_u"
+    #     ),  # -> +/- 0.1 => 1
+    #     "dev_north_tilt_1": DevRotationParameter("dev_north_tilt_1"),
+    #     "dev_up_tilt_1": DevRotationParameter("dev_up_tilt_1"),
+    #     "dev_east_tilt_2": DevRotationParameter("dev_east_tilt_2"),
+    #     "dev_north_tilt_2": DevRotationParameter("dev_north_tilt_2"),
+    # }
     # actuator_1_params = {
     #     "increment": torch.tensor(154166.666),
     #     "initial_stroke_length": torch.tensor(0.075),
@@ -110,8 +110,8 @@ class RigidBodyModule(AKinematicModule):
     #     "actuator_offset": torch.tensor(0.3479),
     #     "joint_radius": torch.tensor(0.309),
     # }
-    actuator_1_params = {}
-    actuator_2_params = {}
+    # actuator_1_params = {}
+    # actuator_2_params = {}
 
     def __init__(
         self, heliostat_name: str, config_file: h5py.File, **deviations
@@ -124,7 +124,13 @@ class RigidBodyModule(AKinematicModule):
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
         """
-        super().__init__(position=config.DEFLECT_DATA.POSITION_ON_FIELD)
+        super().__init__(
+            position=torch.tensor(
+                config_file["heliostats"]["heliostats_list"][heliostat_name][
+                    "position"
+                ][()]
+            )
+        )
 
         self.aim_point = torch.tensor(
             config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
@@ -139,48 +145,46 @@ class RigidBodyModule(AKinematicModule):
         if actuator_type == "ideal":
             # TODO: Check if the clockwise convention always applies
             self.actuator_1 = IdealActuator(joint_number=1, clockwise=False)
-            self.actuator_2 = IdealActuator(joint_number=True, clockwise=True)
+            self.actuator_2 = IdealActuator(joint_number=2, clockwise=True)
         else:
             raise NotImplementedError("ARTIST currently only supports ideal actuators.")
 
-        self.config = config
-        self.position = config.DEFLECT_DATA.POSITION_ON_FIELD
-        self.deviations = deviations
-        self.parameter_deviations = {
-            param: deviations.get(param_name)
-            for param_name, param in self.DEV_PARAMETERS.items()
-        }
-        for param in self.parameter_deviations:
-            self._register_parameter(param)
+        # self.deviations = deviations
+        # self.parameter_deviations = {
+        #     param: deviations.get(param_name)
+        #     for param_name, param in self.DEV_PARAMETERS.items()
+        # }
+        # for param in self.parameter_deviations:
+        #     self._register_parameter(param)
+        #
+        # self.add_module(
+        #     self.config.ACTUATOR_TYPE_1,
+        #     AActuatorModule(
+        #         joint_number=1, clockwise=False, params=self.actuator_1_params
+        #     ),
+        # )
+        # self.add_module(
+        #     self.config.ACTUATOR_TYPE_2,
+        #     AActuatorModule(
+        #         joint_number=2, clockwise=True, params=self.actuator_2_params
+        #     ),
+        # )
 
-        self.add_module(
-            self.config.ACTUATOR_TYPE_1,
-            AActuatorModule(
-                joint_number=1, clockwise=False, params=self.actuator_1_params
-            ),
-        )
-        self.add_module(
-            self.config.ACTUATOR_TYPE_2,
-            AActuatorModule(
-                joint_number=2, clockwise=True, params=self.actuator_2_params
-            ),
-        )
-
-    parameters_dict = {
-        "first_translation_e": torch.tensor([0.0]),
-        "first_translation_n": torch.tensor([0.0]),
-        "first_translation_u": torch.tensor([0.0]),
-        "second_translation_e": torch.tensor([0.0]),
-        "second_translation_n": torch.tensor([0.0]),
-        "second_translation_u": torch.tensor([0.0]),
-        "conc_translation_e": torch.tensor([0.0]),
-        "conc_translation_n": torch.tensor([0.0]),
-        "conc_translation_u": torch.tensor([0.0]),
-        "north_tilt_1": torch.tensor([0.0]),
-        "up_tilt_1": torch.tensor([0.0]),
-        "east_tilt_2": torch.tensor([0.0]),
-        "north_tilt_2": torch.tensor([0.0]),
-    }
+    # parameters_dict = {
+    #     "first_translation_e": torch.tensor([0.0]),
+    #     "first_translation_n": torch.tensor([0.0]),
+    #     "first_translation_u": torch.tensor([0.0]),
+    #     "second_translation_e": torch.tensor([0.0]),
+    #     "second_translation_n": torch.tensor([0.0]),
+    #     "second_translation_u": torch.tensor([0.0]),
+    #     "conc_translation_e": torch.tensor([0.0]),
+    #     "conc_translation_n": torch.tensor([0.0]),
+    #     "conc_translation_u": torch.tensor([0.0]),
+    #     "north_tilt_1": torch.tensor([0.0]),
+    #     "up_tilt_1": torch.tensor([0.0]),
+    #     "east_tilt_2": torch.tensor([0.0]),
+    #     "north_tilt_2": torch.tensor([0.0]),
+    # }
 
     def compute_orientation_from_aimpoint(
         self,
@@ -525,22 +529,20 @@ class RigidBodyModule(AKinematicModule):
             The orientation matrix.
         """
         general_rot_matrices = utils.general_affine_matrix(
-            tx=self._first_translation_e()
-            + self._second_translation_e()
-            + self._conc_translation_e(),
-            ty=self._first_translation_n()
-            + self._second_translation_n()
-            + self._conc_translation_n(),
-            tz=self._first_translation_u()
-            + self._second_translation_u()
-            + self._conc_translation_u(),
             rx=joint_1_angles,
             rz=joint_2_angles,
+            ry=torch.zeros(joint_1_angles.shape),
+            tx=torch.zeros(joint_1_angles.shape),
+            ty=torch.zeros(joint_1_angles.shape),
+            tz=torch.zeros(joint_1_angles.shape),
+            sx=torch.ones(joint_1_angles.shape),
+            sy=torch.ones(joint_1_angles.shape),
+            sz=torch.ones(joint_1_angles.shape),
         )
 
-        first_rot_matrices = self.build_rotation_matrix_first_axis_east(joint_1_angles)
-        second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
-        conc_trans_matrix = self.build_concentrator_matrix()
+        # first_rot_matrices = self.build_rotation_matrix_first_axis_east(joint_1_angles)
+        # second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
+        # conc_trans_matrix = self.build_concentrator_matrix()
 
         initial_orientations = (
             torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
@@ -552,7 +554,7 @@ class RigidBodyModule(AKinematicModule):
         first_orientations = initial_orientations @ first_rot_matrices
         second_orientations = first_orientations @ second_rot_matrices
 
-        return second_orientations @ conc_trans_matrix
+        return initial_orientations @ general_rot_matrices
 
     def transform_normal_to_first_coord_sys(
         self, concentrator_normal: torch.Tensor

@@ -59,7 +59,6 @@ class HeliostatModule(AModule):
             An open hdf5 file containing the scenario configuration.
         """
         super().__init__()
-
         self.position = torch.tensor(
             config_file["heliostats"]["heliostats_list"][heliostat_name]["position"][()]
         )
@@ -70,8 +69,6 @@ class HeliostatModule(AModule):
         self.alignment = AlignmentModule(
             heliostat_name=heliostat_name, config_file=config_file
         )
-        print("HI")
-        print("TEST")
 
     def get_aligned_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -89,8 +86,11 @@ class HeliostatModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             The aligned surface points and aligned surface normals.
         """
-        surface_points, surface_normals = self.concentrator.get_surface()
+        surface_points, surface_normals = (
+            self.concentrator.facets.surface_points,
+            self.concentrator.facets.surface_normals,
+        )
         aligned_surface_points, aligned_surface_normals = self.alignment.align_surface(
-            self.aim_point, self.incident_ray_direction, surface_points, surface_normals
+            self.incident_ray_direction, surface_points, surface_normals
         )
         return aligned_surface_points, aligned_surface_normals

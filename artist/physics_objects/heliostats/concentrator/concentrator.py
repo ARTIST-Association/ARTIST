@@ -55,16 +55,16 @@ class ConcentratorModule(AModule):
                 "ARTIST is currently only implemented for a point cloud facet type"
             )
 
-    def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Compute the surface points and surface normals of the concentrator.
-
-        Returns
-        -------
-        Tuple[torch.Tensor, torch.Tensor]
-            Return the surface points and the surface normals.
-        """
-        surface_points = [facet.ideal_surface_points for facet in self.facets]
-        surface_normals = [facet.surface_normals for facet in self.facets]
-
-        return torch.vstack(surface_points), torch.vstack(surface_normals)
+    # def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    #     """
+    #     Compute the surface points and surface normals of the concentrator.
+    #
+    #     Returns
+    #     -------
+    #     Tuple[torch.Tensor, torch.Tensor]
+    #         Return the surface points and the surface normals.
+    #     """
+    #     surface_points = [facet.surface_points for facet in self.facets]
+    #     surface_normals = [facet.surface_normals for facet in self.facets]
+    #
+    #     return torch.vstack(surface_points), torch.vstack(surface_normals)
