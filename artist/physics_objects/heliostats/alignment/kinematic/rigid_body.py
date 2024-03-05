@@ -8,6 +8,9 @@ from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import (
     AActuatorModule,
 )
+from artist.physics_objects.heliostats.alignment.kinematic.actuators.ideal_actuator import (
+    IdealActuator,
+)
 from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
     AKinematicModule,
 )
@@ -110,7 +113,9 @@ class RigidBodyModule(AKinematicModule):
     actuator_1_params = {}
     actuator_2_params = {}
 
-    def __init__(self, config_file: h5py.File, **deviations) -> None:
+    def __init__(
+        self, heliostat_name: str, config_file: h5py.File, **deviations
+    ) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
 
@@ -120,6 +125,24 @@ class RigidBodyModule(AKinematicModule):
             Position of the heliostat for which the kinematic model is valid.
         """
         super().__init__(position=config.DEFLECT_DATA.POSITION_ON_FIELD)
+
+        self.aim_point = torch.tensor(
+            config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
+                ()
+            ]
+        )
+
+        actuator_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
+            "parameters"
+        ]["actuator_type"][()].decode("utf-8")
+
+        if actuator_type == "ideal":
+            # TODO: Check if the clockwise convention always applies
+            self.actuator_1 = IdealActuator(joint_number=1, clockwise=False)
+            self.actuator_2 = IdealActuator(joint_number=True, clockwise=True)
+        else:
+            raise NotImplementedError("ARTIST currently only supports ideal actuators.")
+
         self.config = config
         self.position = config.DEFLECT_DATA.POSITION_ON_FIELD
         self.deviations = deviations
@@ -158,6 +181,92 @@ class RigidBodyModule(AKinematicModule):
         "east_tilt_2": torch.tensor([0.0]),
         "north_tilt_2": torch.tensor([0.0]),
     }
+
+    def compute_orientation_from_aimpoint(
+        self,
+        incident_ray_direction: torch.Tensor,
+        num_iterations: int = 2,
+        min_eps: float = 0.0001,
+    ) -> torch.Tensor:
+        """
+        Compute the orientation-matrix from an aimpoint defined in a datapoint.
+
+        Parameters
+        ----------
+        incident_ray_direction : torch.Tensor
+            The direction of rays.
+        num_iterations : int
+            Maximum number of iterations (default 2)
+        min_eps : float
+            Convergence criterion (default 0.0001)
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation matrix.
+        """
+        actuator_steps = torch.zeros(2, 1, requires_grad=True)
+        last_iteration_loss = torch.inf
+        for _ in range(num_iterations):
+            orientation = self.compute_orientation_from_steps(
+                actuator_1_steps=actuator_steps, actuator_2_steps=actuator_steps
+            )
+
+            orientation[0][:, 1] = orientation[0][:, 2]
+            orientation[0][:3, 2] = torch.linalg.cross(
+                orientation[0][:3, 0], orientation[0][:3, 1]
+            )
+
+            concentrator_normals = (
+                orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
+            )[:1, :3]
+            concentrator_origins = (
+                orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
+            )[:1, :3]
+
+            # Compute desired normal.
+            desired_reflect_vec = self.aim_point - concentrator_origins
+            desired_reflect_vec /= desired_reflect_vec.norm()
+            incident_ray_direction /= incident_ray_direction.norm()
+            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
+            desired_concentrator_normal /= desired_concentrator_normal.norm()
+
+            # Compute epoch loss.
+            loss = torch.abs(desired_concentrator_normal - concentrator_normals)
+
+            # Stop if converged.
+            if isinstance(last_iteration_loss, torch.Tensor):
+                eps = torch.abs(last_iteration_loss - loss)
+                if torch.any(eps <= min_eps):
+                    break
+            last_iteration_loss = loss.detach()
+            actuator_steps = self.compute_steps_from_normal(desired_concentrator_normal)
+
+        return orientation
+
+    def compute_orientation_from_steps(
+        self, actuator_1_steps: torch.Tensor, actuator_2_steps: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute the orientation matrix from given actuator steps.
+
+        Parameters
+        ----------
+        actuator_1_steps : torch.Tensor
+            Steps of actuator 1.
+        actuator_2_steps : torch.Tensor
+            Steps of actuator 2.
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation matrix.
+        """
+        first_joint_rot_angles = self.actuator_1(actuator_pos=actuator_1_steps)
+        second_joint_rot_angles = self.actuator_2(actuator_pos=actuator_2_steps)
+        return self.compute_orientation_from_angles(
+            first_joint_rot_angles, second_joint_rot_angles
+        )
 
     def _translation_with_deviation(self, parameter_name: str) -> torch.Tensor:
         """
@@ -397,32 +506,6 @@ class RigidBodyModule(AKinematicModule):
         rotation_matrix[2, -1] += self._conc_translation_u()[0]
         return rotation_matrix
 
-    def compute_orientation_from_steps(
-        self, actuator_1_steps: torch.Tensor, actuator_2_steps: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Compute the orientation matrix from given actuator steps.
-
-        Parameters
-        ----------
-        actuator_1_steps : torch.Tensor
-            Steps of actuator 1.
-        actuator_2_steps : torch.Tensor
-            Steps of actuator 2.
-
-        Returns
-        -------
-        torch.Tensor
-            The orientation matrix.
-        """
-        linear_actuator_1 = getattr(self, self.config.ACTUATOR_TYPE_1)
-        linear_actuator_2 = getattr(self, self.config.ACTUATOR_TYPE_2)
-        first_joint_rot_angles = linear_actuator_1(actuator_pos=actuator_1_steps)
-        second_joint_rot_angles = linear_actuator_2(actuator_pos=actuator_2_steps)
-        return self.compute_orientation_from_angles(
-            first_joint_rot_angles, second_joint_rot_angles
-        )
-
     def compute_orientation_from_angles(
         self, joint_1_angles: torch.Tensor, joint_2_angles: torch.Tensor
     ) -> torch.Tensor:
@@ -586,71 +669,6 @@ class RigidBodyModule(AKinematicModule):
         joint_1_angles = torch.arctan2(numerator, denominator) - torch.pi
 
         return torch.stack((joint_1_angles, joint_2_angles), dim=-1)
-
-    def compute_orientation_from_aimpoint(
-        self,
-        aim_point: torch.Tensor,
-        incident_ray_direction: torch.Tensor,
-        num_iterations: int = 2,
-        min_eps: float = 0.0001,
-    ) -> torch.Tensor:
-        """
-        Compute the orientation-matrix from an aimpoint defined in a datapoint.
-
-        Parameters
-        ----------
-        aim_point : torch.Tensor
-            The desired aim point.
-        incident_ray_direction : torch.Tensor
-            The direction of rays.
-        num_iterations : int
-            Maximum number of iterations (default 2)
-        min_eps : float
-            Convergence criterion (default 0.0001)
-
-        Returns
-        -------
-        torch.Tensor
-            The orientation matrix.
-        """
-        actuator_steps = torch.zeros(2, 1, requires_grad=True)
-        last_epoch_loss = torch.inf
-        for _ in range(num_iterations):
-            orientation = self.compute_orientation_from_steps(
-                actuator_1_steps=actuator_steps, actuator_2_steps=actuator_steps
-            )
-
-            orientation[0][:, 1] = orientation[0][:, 2]
-            orientation[0][:3, 2] = torch.linalg.cross(
-                orientation[0][:3, 0], orientation[0][:3, 1]
-            )
-
-            concentrator_normals = (
-                orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
-            )[:1, :3]
-            concentrator_origins = (
-                orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
-            )[:1, :3]
-
-            # Compute desired normal.
-            desired_reflect_vec = aim_point - concentrator_origins
-            desired_reflect_vec /= desired_reflect_vec.norm()
-            incident_ray_direction /= incident_ray_direction.norm()
-            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
-            desired_concentrator_normal /= desired_concentrator_normal.norm()
-
-            # Compute epoch loss.
-            loss = torch.abs(desired_concentrator_normal - concentrator_normals)
-
-            # Stop if converged.
-            if isinstance(last_epoch_loss, torch.Tensor):
-                eps = torch.abs(last_epoch_loss - loss)
-                if torch.any(eps <= min_eps):
-                    break
-            last_epoch_loss = loss.detach()
-            actuator_steps = self.compute_steps_from_normal(desired_concentrator_normal)
-
-        return orientation
 
     @staticmethod
     def build_east_rotation_4x4(
