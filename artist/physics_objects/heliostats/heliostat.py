@@ -60,8 +60,6 @@ class HeliostatModule(AModule):
         """
         super().__init__()
 
-        print("Hi")
-
         self.aim_point = torch.tensor(
             config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
                 ()
