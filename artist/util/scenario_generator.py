@@ -42,7 +42,7 @@ heliostats = {
         "Single_Heliostat": {
             "id": 0,
             "aim_point": [[0.0], [-50.0], [0.0]],
-            "position": [[0.0], [0.0], [0.0]],
+            "position": [[0.0], [5.0], [0.0]],
             "parameters": _test_heliostat,
             "individual_surface_points": False,
             "individual_surface_normals": False,
