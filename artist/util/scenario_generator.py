@@ -6,6 +6,7 @@ from typing import Dict
 import h5py
 from artist import ARTIST_ROOT
 from artist.util.heliostat_configurations import _test_heliostat
+from artist.util import config_dictionary
 
 # The following configurations can be adapted to define the required scenario.
 
@@ -14,17 +15,17 @@ name = "test_scenario"
 
 # The following parameters refer to the receiver.
 receiver_params = {
-    "center": [[0.0], [-50.0], [0.0]],
+    config_dictionary.receiver_center: [[0.0], [-50.0], [0.0], [1.0]],
 }
 
 # The following parameters refer to the sun.
 sun_params = {
-    "distribution_parameters": {
-        "distribution_type": str("normal"),
-        "mean": 0.0,
-        "covariance": 4.3681e-06,
+    config_dictionary.sun_distribution_parameters: {
+        config_dictionary.sun_distribution_type: str("normal"),
+        config_dictionary.sun_mean: 0.0,
+        config_dictionary.sun_covariance: 4.3681e-06,
     },
-    "number_of_rays": 200,
+    config_dictionary.sun_number_of_rays: 200,
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
@@ -32,20 +33,25 @@ general_surface_measurements = "test_data"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
-    "general_surface_points": h5py.File(
-        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
-    )["Points"][()],
-    "general_surface_normals": h5py.File(
-        f"{ARTIST_ROOT}/measurement_data/{general_surface_measurements}.h5", "r"
-    )["Normals"][()],
-    "heliostats_list": {
+    config_dictionary.general_surface_points: h5py.File(
+        f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/{general_surface_measurements}.h5",
+        "r",
+    )[config_dictionary.load_points_key][()],
+    config_dictionary.general_surface_normals: h5py.File(
+        f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/{general_surface_measurements}.h5",
+        "r",
+    )[config_dictionary.load_normals_key][()],
+    config_dictionary.actuator_type_key: config_dictionary.ideal_actuator_key,
+    config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
+    config_dictionary.alignment_type_key: config_dictionary.rigid_body_key,
+    config_dictionary.heliostats_list: {
         "Single_Heliostat": {
-            "id": 0,
-            "aim_point": [[0.0], [-50.0], [0.0]],
-            "position": [[0.0], [5.0], [0.0]],
-            "parameters": _test_heliostat,
-            "individual_surface_points": False,
-            "individual_surface_normals": False,
+            config_dictionary.heliostat_id: 0,
+            config_dictionary.heliostat_aim_point: [[0.0], [-50.0], [0.0], [1.0]],
+            config_dictionary.heliostat_position: [[0.0], [5.0], [0.0], [1.0]],
+            config_dictionary.heliostat_parameters: _test_heliostat,
+            config_dictionary.heliostat_individual_surface_points: False,
+            config_dictionary.heliostat_individual_surface_normals: False,
         },
     },
 }
@@ -125,15 +131,23 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
 
         # Include parameters for the receiver
         include_parameters(
-            file=f, prefix="receiver", parameters=flatten_dict(receiver_params)
+            file=f,
+            prefix=config_dictionary.receiver_prefix,
+            parameters=flatten_dict(receiver_params),
         )
 
         # Include parameters for the sun
-        include_parameters(file=f, prefix="sun", parameters=flatten_dict(sun_params))
+        include_parameters(
+            file=f,
+            prefix=config_dictionary.sun_prefix,
+            parameters=flatten_dict(sun_params),
+        )
 
         # Include heliostat parameters
         include_parameters(
-            file=f, prefix="heliostats", parameters=flatten_dict(heliostats)
+            file=f,
+            prefix=config_dictionary.heliostat_prefix,
+            parameters=flatten_dict(heliostats),
         )
 
 
