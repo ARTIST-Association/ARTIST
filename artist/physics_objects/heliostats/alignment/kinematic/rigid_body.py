@@ -128,14 +128,16 @@ class RigidBodyModule(AKinematicModule):
             position=torch.tensor(
                 config_file["heliostats"]["heliostats_list"][heliostat_name][
                     "position"
-                ][()]
+                ][()],
+                dtype=torch.float,
             )
         )
 
         self.aim_point = torch.tensor(
             config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
                 ()
-            ], dtype=torch.float
+            ],
+            dtype=torch.float,
         )
 
         actuator_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
@@ -546,7 +548,9 @@ class RigidBodyModule(AKinematicModule):
         # conc_trans_matrix = self.build_concentrator_matrix()
 
         initial_orientations = (
-            torch.eye(4, dtype=torch.float).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
+            torch.eye(4, dtype=torch.float)
+            .unsqueeze(0)
+            .repeat(len(joint_1_angles), 1, 1)
         )
         initial_orientations[:, 0, 3] += self.position[0]
         initial_orientations[:, 1, 3] += self.position[1]
