@@ -91,8 +91,8 @@ class AlignmentModule(AModule):
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
 
-        aligned_surface_points = surface_points @ alignment
-        aligned_surface_normals = surface_normals @ alignment
+        aligned_surface_points = surface_points @ orientation
+        aligned_surface_normals = surface_normals @ orientation
 
         aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
