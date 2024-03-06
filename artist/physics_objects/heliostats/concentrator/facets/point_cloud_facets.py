@@ -53,8 +53,10 @@ class PointCloudFacetModule(AFacetModule):
             )
         else:
             self.surface_points = torch.tensor(
-                config_file["heliostats"]["general_surface_points"][()]
+                config_file["heliostats"]["general_surface_points"][()],
+                dtype=torch.float,
             )
             self.surface_normals = torch.tensor(
-                config_file["heliostats"]["general_surface_normals"][()]
+                config_file["heliostats"]["general_surface_normals"][()],
+                dtype=torch.float,
             )
