@@ -213,12 +213,14 @@ class Sun(ALightSource):
         RuntimeError
             When there are no intersections between the line and the plane.
         """
-        ndotu = ray_directions.matmul(plane_normal)
+        ndotu = ray_directions.matmul(plane_normal.squeeze(-1))
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
-        ds = (plane_point - surface_points).matmul(plane_normal.to(torch.float)) / ndotu
+        ds = (plane_point.squeeze(-1) - surface_points.T.contiguous()).matmul(
+            plane_normal.squeeze(-1)
+        ) / ndotu
 
-        return surface_points + ray_directions * ds.unsqueeze(-1)
+        return surface_points.T.contiguous() + ray_directions * ds.unsqueeze(-1)
 
     @staticmethod
     def get_preferred_reflection_direction(
