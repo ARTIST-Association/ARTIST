@@ -135,7 +135,7 @@ class RigidBodyModule(AKinematicModule):
         self.aim_point = torch.tensor(
             config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
                 ()
-            ]
+            ], dtype=torch.float
         )
 
         actuator_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
@@ -229,7 +229,7 @@ class RigidBodyModule(AKinematicModule):
             )[:1, :3]
 
             # Compute desired normal.
-            desired_reflect_vec = self.aim_point - concentrator_origins
+            desired_reflect_vec = self.aim_point - concentrator_origins.T.contiguous()
             desired_reflect_vec /= desired_reflect_vec.norm()
             incident_ray_direction /= incident_ray_direction.norm()
             desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
@@ -545,14 +545,14 @@ class RigidBodyModule(AKinematicModule):
         # conc_trans_matrix = self.build_concentrator_matrix()
 
         initial_orientations = (
-            torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
+            torch.eye(4, dtype=torch.float).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
         )
         initial_orientations[:, 0, 3] += self.position[0]
         initial_orientations[:, 1, 3] += self.position[1]
         initial_orientations[:, 2, 3] += self.position[2]
 
-        first_orientations = initial_orientations @ first_rot_matrices
-        second_orientations = first_orientations @ second_rot_matrices
+        # first_orientations = initial_orientations @ first_rot_matrices
+        # second_orientations = first_orientations @ second_rot_matrices
 
         return initial_orientations @ general_rot_matrices
 
@@ -610,20 +610,20 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The calculated necessary actuator steps to reach a given normal vector.
         """
-        normal_first_orientation = self.transform_normal_to_first_coord_sys(
-            concentrator_normal=concentrator_normal
-        )
+        # normal_first_orientation = self.transform_normal_to_first_coord_sys(
+        #     concentrator_normal=concentrator_normal
+        # )
 
         joint_angles = self.compute_angles_from_normal(
-            normal_first_orientation=normal_first_orientation
+            normal_first_orientation=concentrator_normal
         )
 
-        linear_actuator_1 = getattr(self, "LinearActuator1")
-        linear_actuator_2 = getattr(self, "LinearActuator2")
+        # linear_actuator_1 = getattr(self, "LinearActuator1")
+        # linear_actuator_2 = getattr(self, "LinearActuator2")
 
-        actuator_steps_1 = linear_actuator_1._angles_to_steps(joint_angles[:, 0])
-        actuator_steps_2 = linear_actuator_2._angles_to_steps(joint_angles[:, 1])
-        return torch.stack((actuator_steps_1, actuator_steps_2), dim=-1)
+        actuator_steps_1 = self.actuator_1.angles_to_motor_steps(joint_angles[0, :])
+        actuator_steps_2 = self.actuator_2.angles_to_motor_steps(joint_angles[1, :])
+        return torch.vstack((actuator_steps_1, actuator_steps_2))
 
     def compute_angles_from_normal(
         self, normal_first_orientation: torch.Tensor
@@ -645,13 +645,13 @@ class RigidBodyModule(AKinematicModule):
         n = 1
         u = 2
 
-        sin_2e = torch.sin(self._second_translation_e())
-        cos_2e = torch.cos(self._second_translation_e())
+        sin_2e = torch.sin(torch.tensor([0.0]))
+        cos_2e = torch.cos(torch.tensor([0.0]))
 
-        sin_2n = torch.sin(self._second_translation_n())
-        cos_2n = torch.cos(self._second_translation_n())
+        sin_2n = torch.sin(torch.tensor([0.0]))
+        cos_2n = torch.cos(torch.tensor([0.0]))
 
-        calc_step_1 = normal_first_orientation[:, e] / cos_2n
+        calc_step_1 = normal_first_orientation[e, :] / cos_2n
         joint_2_angles = -torch.arcsin(calc_step_1)
 
         sin_2u = torch.sin(joint_2_angles)
@@ -662,15 +662,15 @@ class RigidBodyModule(AKinematicModule):
         b = -sin_2e * cos_2u - cos_2e * sin_2n * sin_2u
 
         numerator = (
-            a * normal_first_orientation[:, u] - b * normal_first_orientation[:, n]
+            a * normal_first_orientation[u, :] - b * normal_first_orientation[n, :]
         )
         denominator = (
-            a * normal_first_orientation[:, n] + b * normal_first_orientation[:, u]
+            a * normal_first_orientation[n, :] + b * normal_first_orientation[u, :]
         )
 
         joint_1_angles = torch.arctan2(numerator, denominator) - torch.pi
 
-        return torch.stack((joint_1_angles, joint_2_angles), dim=-1)
+        return torch.vstack((joint_1_angles, joint_2_angles))
 
     @staticmethod
     def build_east_rotation_4x4(

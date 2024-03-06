@@ -65,7 +65,7 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([0.0, -1.0, 0.0]), "south.pt", "test_scenario"),
+        (torch.tensor([[0.0], [-1.0], [0.0]]), "south.pt", "test_scenario"),
         (torch.tensor([1.0, 0.0, 0.0]), "east.pt", "test_scenario"),
         (torch.tensor([-1.0, 0.0, 0.0]), "west.pt", "test_scenario"),
         (torch.tensor([0.0, 0.0, 1.0]), "above.pt", "test_scenario"),
