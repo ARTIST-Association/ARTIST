@@ -91,14 +91,24 @@ class AlignmentModule(AModule):
             orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
         )[:1, :3]
 
+        # TODO: remove when all points are 4D
+        if surface_points.shape[1] != 4:
+            surface_points = torch.cat(
+                (surface_points, torch.ones(surface_points.shape[0], 1)), dim=1
+            )
+        if surface_normals.shape[1] != 4:
+            surface_normals = torch.cat(
+                (surface_normals, torch.ones(surface_normals.shape[0], 1)), dim=1
+            )
+
         aligned_surface_points = surface_points @ orientation
         aligned_surface_normals = surface_normals @ orientation
 
-        aligned_surface_points += self.position
+        #aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
         ).unsqueeze(-1)
-        return aligned_surface_points, aligned_surface_normals
+        return aligned_surface_points.squeeze()[:, :3].T.contiguous(), aligned_surface_normals.squeeze()[:, :3].T.contiguous()
 
     def align(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
