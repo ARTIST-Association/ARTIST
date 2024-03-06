@@ -16,6 +16,7 @@ from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
 )
 from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
 from artist.util import utils
+from artist.util import config_dictionary
 
 
 class RigidBodyModule(AKinematicModule):
@@ -124,10 +125,11 @@ class RigidBodyModule(AKinematicModule):
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
         """
+
         super().__init__(
             position=torch.tensor(
-                config_file["heliostats"]["heliostats_list"][heliostat_name][
-                    "position"
+                config_file[config_dictionary.heliostat_key][config_dictionary.heliostat_list_key][heliostat_name][
+                    config_dictionary.position
                 ][()],
                 dtype=torch.float,
             )
