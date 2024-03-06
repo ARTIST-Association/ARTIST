@@ -91,13 +91,15 @@ class Sun(ALightSource):
                 [
                     self.distribution_parameters["mean"],
                     self.distribution_parameters["mean"],
-                ]
+                ],
+                dtype=torch.float,
             )
             covariance = torch.tensor(
                 [
                     [self.distribution_parameters["covariance"], 0],
                     [0, self.distribution_parameters["covariance"]],
-                ]
+                ],
+                dtype=torch.float,
             )
 
             self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
@@ -165,14 +167,14 @@ class Sun(ALightSource):
         ).unsqueeze(-1)
 
         # TODO: remove when all points are 4D
-        if ray_directions.shape[1] != 4:
+        if ray_directions.shape[0] != 4:
             ray_directions = torch.cat(
-                (ray_directions, torch.ones(ray_directions.shape[0], 1)), dim=1
+                (ray_directions, torch.ones(1, ray_directions.shape[1])), dim=0
             )
 
         scattered_rays = torch.matmul(
             utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
-            ray_directions.unsqueeze(-1),
+            ray_directions.T.contiguous().unsqueeze(-1),
         )
 
         return scattered_rays[:, :, :3, :].squeeze(-1)

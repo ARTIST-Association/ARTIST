@@ -43,7 +43,9 @@ def generate_data(
         A dictionary containing all the data.
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
-        receiver_center = torch.tensor(config_h5["receiver"]["center"][()])
+        receiver_center = torch.tensor(
+            config_h5["receiver"]["center"][()], dtype=torch.float
+        )
         sun = Sun(config_file=config_h5)
         heliostat = HeliostatModule(
             heliostat_name="Single_Heliostat",

@@ -60,7 +60,10 @@ class HeliostatModule(AModule):
         """
         super().__init__()
         self.position = torch.tensor(
-            config_file["heliostats"]["heliostats_list"][heliostat_name]["position"][()]
+            config_file["heliostats"]["heliostats_list"][heliostat_name]["position"][
+                ()
+            ],
+            dtype=torch.float,
         )
         self.incident_ray_direction = incident_ray_direction
         self.concentrator = ConcentratorModule(
