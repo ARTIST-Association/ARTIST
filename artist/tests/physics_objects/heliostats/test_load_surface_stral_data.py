@@ -98,7 +98,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
-    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0])
+    receiver_plane_normal = torch.tensor([[0.0], [1.0], [0.0]])
     receiver_plane_x = 8.629666667
     receiver_plane_y = 7.0
     receiver_resolution_x = 256
@@ -120,7 +120,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         -incident_ray_direction, aligned_surface_normals
     )
 
-    distortion_x, distortion_y = sun.sample(len(preferred_ray_directions))
+    distortion_x, distortion_y = sun.sample(preferred_ray_directions.shape[1])
 
     rays = sun.scatter_rays(
         preferred_ray_directions,

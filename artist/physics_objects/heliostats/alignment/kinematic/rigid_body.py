@@ -213,7 +213,7 @@ class RigidBodyModule(AKinematicModule):
         last_iteration_loss = torch.inf
         for _ in range(num_iterations):
             orientation = self.compute_orientation_from_steps(
-                actuator_1_steps=actuator_steps, actuator_2_steps=actuator_steps
+                actuator_1_steps=actuator_steps[0], actuator_2_steps=actuator_steps[1]
             )
 
             orientation[0][:, 1] = orientation[0][:, 2]
@@ -528,6 +528,7 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
+
         general_rot_matrices = utils.general_affine_matrix(
             rx=joint_1_angles,
             rz=joint_2_angles,

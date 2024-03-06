@@ -84,7 +84,7 @@ class Sun(ALightSource):
                     "covariance"
                 ][()],
             }
-            self.num_rays = config_file["sun"]["number_of_rays"]
+            self.num_rays = config_file["sun"]["number_of_rays"][()]
 
         if self.distribution_parameters["distribution_type"] == "normal":
             mean = torch.tensor(
@@ -129,7 +129,7 @@ class Sun(ALightSource):
         ValueError
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
-        if self.distribution_parameters["distribution_type"] == "Normal":
+        if self.distribution_parameters["distribution_type"] == "normal":
             distortion_x_dir, distortion_y_dir = self.distribution.sample(
                 (self.num_rays, num_preferred_ray_directions),
             ).permute(2, 0, 1)
@@ -164,6 +164,7 @@ class Sun(ALightSource):
             ray_directions, dim=1
         ).unsqueeze(-1)
 
+        # TODO: remove when all points are 4D
         if ray_directions.shape[1] != 4:
             ray_directions = torch.cat(
                 (ray_directions, torch.ones(ray_directions.shape[0], 1)), dim=1
