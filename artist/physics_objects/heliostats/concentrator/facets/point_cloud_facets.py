@@ -47,25 +47,3 @@ class PointCloudFacetModule(AFacetModule):
 
         self.surface_points = surface_points
         self.surface_normals = surface_normals
-
-
-    @classmethod
-    def instantiate_from_file(cls, config_file: h5py.File):
-        if not config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_normals]:
-            raise NotImplementedError(
-                "Currently ARTIST is only implemented for general surface normals."
-            )
-        if not config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_points]:
-            raise NotImplementedError(
-                "Currently ARTIST is only implemented for general surface points."
-            )
-        else:
-            surface_points = torch.tensor(
-                config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_points][()],
-                dtype=torch.float,
-            )
-            surface_normals = torch.tensor(
-                config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_normals][()],
-                dtype=torch.float,
-            )
-        return cls(surface_points, surface_normals)

@@ -50,10 +50,10 @@ def generate_data(
             config_h5[config_dictionary.receiver_prefix][config_dictionary.receiver_center][()], dtype=torch.float
         )
         sun = Sun.instantiate_from_file(config_file=config_h5)
-        heliostat = HeliostatModule(
+        heliostat = HeliostatModule.instantiate_from_file(
             heliostat_name="Single_Heliostat",
             incident_ray_direction=incident_ray_direction,
-            config_file=config_h5,   
+            config_file=config_h5, 
   
             
         )

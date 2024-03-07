@@ -140,22 +140,6 @@ class RigidBodyModule(AKinematicModule):
         else:
             raise NotImplementedError("ARTIST currently only supports ideal actuators.")
         
-    @classmethod
-    def instantiate_from_file(cls, config_file: h5py.File, heliostat_name: str):
-        position=torch.tensor(
-                config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][
-                    config_dictionary.heliostat_position
-                ][()],
-                dtype=torch.float,
-            )
-        aim_point = torch.tensor(
-            config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_aim_point][
-                ()
-            ],
-            dtype=torch.float,
-        )
-        actuator_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.actuator_type_key][()].decode("utf-8")
-        return cls(position, aim_point, actuator_type)
 
         # self.deviations = deviations
         # self.parameter_deviations = {
