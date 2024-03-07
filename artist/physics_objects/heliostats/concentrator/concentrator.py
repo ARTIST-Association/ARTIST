@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import h5py
 import torch
@@ -8,7 +8,7 @@ from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets im
     PointCloudFacetModule,
 )
 from artist.physics_objects.module import AModule
-from artist.util import config_dictionary 
+from artist.util import artist_type_mapping_dict, config_dictionary 
 
 class ConcentratorModule(AModule):
     """
@@ -29,7 +29,11 @@ class ConcentratorModule(AModule):
     :class:AModule : Reference to the parent class.
     """
 
-    def __init__(self, config_file: h5py.File) -> None:
+    def __init__(self, 
+                 parameters_dict: Dict[str, Any],
+                 surface_points: torch.Tensor,
+                 surface_normals: torch.Tensor
+                ) -> None:
         """
         Initialize the concentrator.
 
@@ -42,19 +46,9 @@ class ConcentratorModule(AModule):
         """
         super().__init__()
 
-        facet_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.facets_type_key][()].decode("utf-8")
-
-        if facet_type == "point_cloud_facet":
-            self.facets = PointCloudFacetModule.instantiate_from_file(
-                config_file=config_file,
-            )
-        else:
-            raise NotImplementedError(
-                "ARTIST is currently only implemented for a point cloud facet type"
-            )
+        self.facets = artist_type_mapping_dict.facet_type_mapping.get(parameters_dict[config_dictionary.facets_type_key])(surface_points=surface_points, surface_normals=surface_normals)
 
         
-
     # def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
     #     """
     #     Compute the surface points and surface normals of the concentrator.
