@@ -5,19 +5,18 @@ import torch
 
 from artist.environment.light_source.light_source import ALightSource
 from artist.util import utils
-from artist.util import config_dictionary 
+from artist.util import config_dictionary
 
 
 class Sun(ALightSource):
-    # TODO: Complete docstring.
     """
-    Implementation of the sun as a specific light source.
+    This class implements the sun as a light source.
 
     Attributes
     ----------
     dist_type : str
         Type of the distribution to be implemented.
-    num_rays : int
+    ray_count : int
         The number of rays sent out.
     mean
         The mean of the normal distribution.
@@ -71,10 +70,10 @@ class Sun(ALightSource):
             If the specified distribution type is unknown.
         """
         super().__init__()
-   
+
         self.distribution_parameters = distribution_parameters
-        self.num_rays = ray_count
-        
+        self.ray_count = ray_count
+
         if self.distribution_parameters["distribution_type"] == "normal":
             mean = torch.tensor(
                 [
@@ -99,20 +98,38 @@ class Sun(ALightSource):
             raise ValueError("Unknown sunlight distribution type.")
 
     @classmethod
-    def instantiate_from_file(cls, config_file: h5py.File):
+    def from_hdf5(cls, config_file: h5py.File):
+        """
+        Class method that initializes a sun from a hdf5 file
+
+        Parameters
+        ----------
+        config_file : h5py.File
+            The hdf5 file containing the information on the sun.
+
+        """
         distribution_parameters = {
-            "distribution_type": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][
+            config_dictionary.sun_distribution_type: config_file[
+                config_dictionary.sun_prefix
+            ][config_dictionary.sun_distribution_parameters][
                 config_dictionary.sun_distribution_type
-            ][()].decode("utf-8"),
-            "mean": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][config_dictionary.sun_mean][()],
-            "covariance": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][
-                config_dictionary.sun_covariance
-            ][()],
-            }
-        num_rays = config_file[config_dictionary.sun_prefix][config_dictionary.sun_number_of_rays][()]
+            ][
+                ()
+            ].decode(
+                "utf-8"
+            ),
+            config_dictionary.sun_mean: config_file[config_dictionary.sun_prefix][
+                config_dictionary.sun_distribution_parameters
+            ][config_dictionary.sun_mean][()],
+            config_dictionary.sun_covariance: config_file[config_dictionary.sun_prefix][
+                config_dictionary.sun_distribution_parameters
+            ][config_dictionary.sun_covariance][()],
+        }
+        num_rays = config_file[config_dictionary.sun_prefix][
+            config_dictionary.sun_number_of_rays
+        ][()]
 
-        return cls(distribution_parameters, num_rays)
-
+        return cls(distribution_parameters=distribution_parameters, ray_count=num_rays)
 
     def sample(
         self,
@@ -138,7 +155,7 @@ class Sun(ALightSource):
         """
         if self.distribution_parameters["distribution_type"] == "normal":
             distortion_x_dir, distortion_y_dir = self.distribution.sample(
-                (self.num_rays, num_preferred_ray_directions),
+                (self.ray_count, num_preferred_ray_directions),
             ).permute(2, 0, 1)
             return distortion_x_dir, distortion_y_dir
         else:
@@ -171,18 +188,12 @@ class Sun(ALightSource):
             ray_directions, dim=1
         ).unsqueeze(-1)
 
-        # TODO: remove when all points are 4D
-        if ray_directions.shape[0] != 4:
-            ray_directions = torch.cat(
-                (ray_directions, torch.ones(1, ray_directions.shape[1])), dim=0
-            )
-
         scattered_rays = torch.matmul(
             utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
             ray_directions.T.contiguous().unsqueeze(-1),
         )
 
-        return scattered_rays[:, :, :3, :].squeeze(-1)
+        return scattered_rays[:, :, :, :].squeeze(-1)
 
     @staticmethod
     def line_plane_intersections(

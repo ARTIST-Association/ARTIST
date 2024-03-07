@@ -10,7 +10,8 @@ import torch
 from yacs.config import CfgNode
 
 from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
-from artist.util import config_dictionary 
+from artist.util import config_dictionary
+
 
 class PointCloudFacetModule(AFacetModule):
     """
@@ -38,10 +39,10 @@ class PointCloudFacetModule(AFacetModule):
 
         Parameters
         ----------
-        heliostat_name : str
-            The name of the heliostat being initialized.
-        config_file : h5py.File
-            An open hdf5 file containing the scenario configuration.
+        surface_points : torch.Tensor
+            The surface points vectors.
+        surface_normals : torch.Tensor
+            The surface normal vectors.
         """
         super().__init__()
 
