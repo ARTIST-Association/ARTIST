@@ -5,6 +5,7 @@ import torch
 
 from artist.environment.light_source.light_source import ALightSource
 from artist.util import utils
+from artist.util import config_dictionary 
 
 
 class Sun(ALightSource):
@@ -50,7 +51,7 @@ class Sun(ALightSource):
     def __init__(
         self,
         distribution_parameters: Dict[str, Any] = dict(
-            distribution_type="Normal", mean=0.0, covariance=4.3681e-06
+            distribution_type="normal", mean=0.0, covariance=4.3681e-06
         ),
         ray_count: int = 200,
         config_file: h5py.File = None,
@@ -76,15 +77,15 @@ class Sun(ALightSource):
             self.num_rays = ray_count
         else:
             self.distribution_parameters = {
-                "distribution_type": config_file["sun"]["distribution_parameters"][
-                    "distribution_type"
+                "distribution_type": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][
+                    config_dictionary.sun_distribution_type
                 ][()].decode("utf-8"),
-                "mean": config_file["sun"]["distribution_parameters"]["mean"][()],
-                "covariance": config_file["sun"]["distribution_parameters"][
-                    "covariance"
+                "mean": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][config_dictionary.sun_mean][()],
+                "covariance": config_file[config_dictionary.sun_prefix][config_dictionary.sun_distribution_parameters][
+                    config_dictionary.sun_covariance
                 ][()],
             }
-            self.num_rays = config_file["sun"]["number_of_rays"][()]
+            self.num_rays = config_file[config_dictionary.sun_prefix][config_dictionary.sun_number_of_rays][()]
 
         if self.distribution_parameters["distribution_type"] == "normal":
             mean = torch.tensor(
