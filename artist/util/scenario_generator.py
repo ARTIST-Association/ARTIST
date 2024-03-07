@@ -43,15 +43,11 @@ heliostats = {
     )[config_dictionary.load_normals_key][()],
     "Single_Heliostat": {
         config_dictionary.heliostat_id: 0,
+        config_dictionary.alignment_type_key: config_dictionary.rigid_body_key,
+        config_dictionary.actuator_type_key: config_dictionary.ideal_actuator_key,
         config_dictionary.heliostat_position: [[0.0], [5.0], [0.0], [1.0]],
-        config_dictionary.alignment_parameters_key: {
-            config_dictionary.alignment_type_key: config_dictionary.rigid_body_key,
-            config_dictionary.actuator_type_key: config_dictionary.ideal_actuator_key,
-            config_dictionary.heliostat_aim_point: [[0.0], [-50.0], [0.0], [1.0]],
-        },
-        config_dictionary.concentrator_parameters_key: {
-            config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
-        },
+        config_dictionary.heliostat_aim_point: [[0.0], [-50.0], [0.0], [1.0]],
+        config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
         config_dictionary.heliostat_individual_surface_points: False,
         config_dictionary.heliostat_individual_surface_normals: False,
     },
