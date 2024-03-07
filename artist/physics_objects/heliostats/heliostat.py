@@ -11,7 +11,8 @@ from artist.physics_objects.heliostats.concentrator.concentrator import (
 )
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.module import AModule
-from artist.util import config_dictionary 
+from artist.util import config_dictionary
+
 
 class HeliostatModule(AModule):
     """
@@ -19,8 +20,6 @@ class HeliostatModule(AModule):
 
     Attributes
     ----------
-    position : torch.Tensor
-        The position of the heliostat in the field.
     aim_point : torch.Tensor
         The aim point on the receiver.
     incident_ray_direction : torch.Tensor
@@ -44,8 +43,10 @@ class HeliostatModule(AModule):
         self,
         id: int,
         position: torch.Tensor,
-        alignment_parameter_dict: Dict[str, Any],
-        concentrator_parameters_dict: Dict[str, Any],
+        alignment_type: str,
+        actuator_type: str,
+        aim_point: torch.Tensor,
+        facet_type: str,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         incident_ray_direction: torch.Tensor,
@@ -55,47 +56,94 @@ class HeliostatModule(AModule):
 
         Parameters
         ----------
-        position : torch.Tensor
-            The position of the Heliostat.
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
         heliostat_name : str
             The name of the heliostat being initialized.
         """
         super().__init__()
-
-        self.position = position
+        self.id = id
         self.incident_ray_direction = incident_ray_direction
         self.concentrator = ConcentratorModule(
-            concentrator_parameters_dict, surface_points=surface_points, surface_normals=surface_normals
+            facets_type=facet_type,
+            surface_points=surface_points,
+            surface_normals=surface_normals,
         )
         self.alignment = AlignmentModule(
-            alignment_parameter_dict
+            alignment_type=alignment_type,
+            actuator_type=actuator_type,
+            position=position,
+            aim_point=aim_point,
         )
-    
+
     @classmethod
-    def instantiate_from_file(cls, config_file: h5py.File, incident_ray_direction, heliostat_name):
-        heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.heliostat_id][()]
-        heliostat_position = torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.heliostat_position][()], dtype=torch.float)
-        alignment_parameters_dict = {config_dictionary.alignment_type_key: config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.alignment_parameters_key][config_dictionary.alignment_type_key][()].decode("utf-8"),
-                                     config_dictionary.actuator_type_key: config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.alignment_parameters_key][config_dictionary.actuator_type_key][()].decode("utf-8"),
-                                     config_dictionary.heliostat_aim_point: torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.alignment_parameters_key][config_dictionary.heliostat_aim_point][()], dtype=torch.float)
-                                    }
-        concentrator_parameters_dict = {config_dictionary.facets_type_key: config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.concentrator_parameters_key][config_dictionary.facets_type_key][()].decode("utf-8")}
-        surface_points = torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.heliostat_individual_surface_points][()]) 
-        surface_normals = torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.heliostat_individual_surface_normals][()]) 
+    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction, heliostat_name):
+        heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][
+            config_dictionary.heliostat_id
+        ][()]
+        heliostat_position = torch.tensor(
+            config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.heliostat_position
+            ][()],
+            dtype=torch.float,
+        )
+        alignment_type = config_file[config_dictionary.heliostat_prefix][
+            heliostat_name
+        ][config_dictionary.alignment_type_key][()].decode("utf-8")
+        actuator_type = config_file[config_dictionary.heliostat_prefix][heliostat_name][
+            config_dictionary.actuator_type_key
+        ][()].decode("utf-8")
+        aim_point = torch.tensor(
+            config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.heliostat_aim_point
+            ][()],
+            dtype=torch.float,
+        )
+        facet_type = config_file[config_dictionary.heliostat_prefix][heliostat_name][
+            config_dictionary.facets_type_key
+        ][()].decode("utf-8")
+        surface_points = torch.tensor(
+            config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.heliostat_individual_surface_points
+            ][()]
+        )
+        surface_normals = torch.tensor(
+            config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.heliostat_individual_surface_normals
+            ][()]
+        )
 
         if surface_points.dtype == torch.bool and not surface_points:
-            surface_points = torch.tensor(config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_points][()], dtype=torch.float)
+            surface_points = torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][
+                    config_dictionary.general_surface_points
+                ][()],
+                dtype=torch.float,
+            )
         elif surface_points.dtype != torch.float:
             surface_points = surface_points.type(torch.float)
-        
+
         if surface_normals.dtype == torch.bool and not surface_normals:
-            surface_normals = torch.tensor(config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_normals][()], dtype=torch.float)
+            surface_normals = torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][
+                    config_dictionary.general_surface_normals
+                ][()],
+                dtype=torch.float,
+            )
         elif surface_normals.dtype != torch.float:
             surface_normals = surface_normals.type(torch.float)
 
-        return cls(heliostat_id, heliostat_position, alignment_parameters_dict, concentrator_parameters_dict, surface_points, surface_normals, incident_ray_direction)
+        return cls(
+            id=heliostat_id,
+            position=heliostat_position,
+            alignment_type=alignment_type,
+            actuator_type=actuator_type,
+            aim_point=aim_point,
+            facet_type=facet_type,
+            surface_points=surface_points,
+            surface_normals=surface_normals,
+            incident_ray_direction=incident_ray_direction,
+        )
 
     # def __init__(
     #     self,

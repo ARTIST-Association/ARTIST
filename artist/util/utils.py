@@ -8,9 +8,9 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     Parameters
     ----------
     x : torch.Tensor
-        Single tensor with dimension (3, 1).
+        Single tensor with dimension (4, 1).
     y : torch.Tensor
-        Single tensor with dimension (3, N).
+        Single tensor with dimension (4, N).
 
 
     Returns

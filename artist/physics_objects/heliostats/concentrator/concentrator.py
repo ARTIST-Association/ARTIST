@@ -8,7 +8,8 @@ from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets im
     PointCloudFacetModule,
 )
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict, config_dictionary 
+from artist.util import artist_type_mapping_dict, config_dictionary
+
 
 class ConcentratorModule(AModule):
     """
@@ -29,11 +30,12 @@ class ConcentratorModule(AModule):
     :class:AModule : Reference to the parent class.
     """
 
-    def __init__(self, 
-                 parameters_dict: Dict[str, Any],
-                 surface_points: torch.Tensor,
-                 surface_normals: torch.Tensor
-                ) -> None:
+    def __init__(
+        self,
+        facets_type: str,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
+    ) -> None:
         """
         Initialize the concentrator.
 
@@ -46,9 +48,10 @@ class ConcentratorModule(AModule):
         """
         super().__init__()
 
-        self.facets = artist_type_mapping_dict.facet_type_mapping.get(parameters_dict[config_dictionary.facets_type_key])(surface_points=surface_points, surface_normals=surface_normals)
+        self.facets = artist_type_mapping_dict.facet_type_mapping.get(facets_type)(
+            surface_points=surface_points, surface_normals=surface_normals
+        )
 
-        
     # def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
     #     """
     #     Compute the surface points and surface normals of the concentrator.
