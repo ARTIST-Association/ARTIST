@@ -13,7 +13,7 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 from artist.physics_objects.module import AModule
-
+from artist.util import config_dictionary 
 
 class AlignmentModule(AModule):
     """
@@ -48,9 +48,7 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        alignment_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
-            "parameters"
-        ]["alignment_type"][()].decode("utf-8")
+        alignment_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.alignment_type_key][()].decode("utf-8")
 
         if alignment_type == "rigid_body":
             self.kinematic_model = RigidBodyModule(
@@ -87,22 +85,9 @@ class AlignmentModule(AModule):
             Tuple containing the aligned surface points and normals.
         """
         orientation = self.align(incident_ray_direction)
-        normal_vec = (
-            orientation @ torch.tensor([0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
-        )[:1, :3]
 
-        # TODO: remove when all points are 4D
-        if surface_points.shape[1] != 4:
-            surface_points = torch.cat(
-                (surface_points, torch.ones(surface_points.shape[0], 1)), dim=1
-            )
-        if surface_normals.shape[1] != 4:
-            surface_normals = torch.cat(
-                (surface_normals, torch.ones(surface_normals.shape[0], 1)), dim=1
-            )
-
-        aligned_surface_points = surface_points @ orientation
-        aligned_surface_normals = surface_normals @ orientation
+        aligned_surface_points = (surface_points.T @ orientation).squeeze(0)
+        aligned_surface_normals = (surface_normals.T @ orientation).squeeze(0)
 
         #aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(

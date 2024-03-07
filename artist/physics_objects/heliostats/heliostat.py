@@ -11,7 +11,7 @@ from artist.physics_objects.heliostats.concentrator.concentrator import (
 )
 from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.module import AModule
-
+from artist.util import config_dictionary 
 
 class HeliostatModule(AModule):
     """
@@ -60,7 +60,7 @@ class HeliostatModule(AModule):
         """
         super().__init__()
         self.position = torch.tensor(
-            config_file["heliostats"]["heliostats_list"][heliostat_name]["position"][
+            config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_position][
                 ()
             ],
             dtype=torch.float,

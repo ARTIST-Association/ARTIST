@@ -8,7 +8,7 @@ from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets im
     PointCloudFacetModule,
 )
 from artist.physics_objects.module import AModule
-
+from artist.util import config_dictionary 
 
 class ConcentratorModule(AModule):
     """
@@ -42,11 +42,9 @@ class ConcentratorModule(AModule):
         """
         super().__init__()
 
-        facet_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
-            "parameters"
-        ]["facets_type"][()].decode("utf-8")
+        facet_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.facets_type_key][()].decode("utf-8")
 
-        if facet_type == "point_cloud":
+        if facet_type == "point_cloud_facet":
             self.facets = PointCloudFacetModule(
                 config_file=config_file,
             )

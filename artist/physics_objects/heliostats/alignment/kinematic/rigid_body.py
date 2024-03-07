@@ -128,25 +128,23 @@ class RigidBodyModule(AKinematicModule):
 
         super().__init__(
             position=torch.tensor(
-                config_file[config_dictionary.heliostat_key][config_dictionary.heliostat_list_key][heliostat_name][
-                    config_dictionary.position
+                config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][
+                    config_dictionary.heliostat_position
                 ][()],
                 dtype=torch.float,
             )
         )
 
         self.aim_point = torch.tensor(
-            config_file["heliostats"]["heliostats_list"][heliostat_name]["aim_point"][
+            config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_aim_point][
                 ()
             ],
             dtype=torch.float,
         )
 
-        actuator_type = config_file["heliostats"]["heliostats_list"][heliostat_name][
-            "parameters"
-        ]["actuator_type"][()].decode("utf-8")
+        actuator_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.actuator_type_key][()].decode("utf-8")
 
-        if actuator_type == "ideal":
+        if actuator_type == "ideal_actuator":
             # TODO: Check if the clockwise convention always applies
             self.actuator_1 = IdealActuator(joint_number=1, clockwise=False)
             self.actuator_2 = IdealActuator(joint_number=2, clockwise=True)
@@ -227,10 +225,10 @@ class RigidBodyModule(AKinematicModule):
 
             concentrator_normals = (
                 orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
-            )[:1, :3]
+            )[:1, :4]
             concentrator_origins = (
                 orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
-            )[:1, :3]
+            )[:1, :4]
 
             # Compute desired normal.
             desired_reflect_vec = self.aim_point - concentrator_origins.T.contiguous()
