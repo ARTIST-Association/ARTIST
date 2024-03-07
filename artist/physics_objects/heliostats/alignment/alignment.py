@@ -13,7 +13,8 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict, config_dictionary 
+from artist.util import artist_type_mapping_dict, config_dictionary
+
 
 class AlignmentModule(AModule):
     """
@@ -38,7 +39,13 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, parameters_dict : Dict[str, Any], position: torch.Tensor) -> None:
+    def __init__(
+        self,
+        alignment_type: str,
+        actuator_type: str,
+        position: torch.tensor,
+        aim_point: torch.tensor,
+    ) -> None:
         """
         Initialize the alignment module.
 
@@ -48,7 +55,13 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping.get(parameters_dict[config_dictionary.alignment_type_key])(position=position)
+        self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping.get(
+            alignment_type
+        )(
+            actuator_type=actuator_type,
+            position=position,
+            aim_point=aim_point,
+        )
 
     def align_surface(
         self,
@@ -80,11 +93,14 @@ class AlignmentModule(AModule):
         aligned_surface_points = (surface_points.T @ orientation).squeeze(0)
         aligned_surface_normals = (surface_normals.T @ orientation).squeeze(0)
 
-        #aligned_surface_points += self.position
+        # aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
         ).unsqueeze(-1)
-        return aligned_surface_points.squeeze()[:, :3].T.contiguous(), aligned_surface_normals.squeeze()[:, :3].T.contiguous()
+        return (
+            aligned_surface_points.squeeze().T.contiguous(),
+            aligned_surface_normals.squeeze().T.contiguous(),
+        )
 
     def align(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
