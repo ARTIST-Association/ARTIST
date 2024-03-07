@@ -2,7 +2,7 @@
 Alignment module for the heliostat.
 """
 
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import h5py
 import torch
@@ -13,7 +13,7 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 from artist.physics_objects.module import AModule
-from artist.util import config_dictionary 
+from artist.util import artist_type_mapping_dict, config_dictionary 
 
 class AlignmentModule(AModule):
     """
@@ -38,7 +38,7 @@ class AlignmentModule(AModule):
     :class: AModule : The parent class.
     """
 
-    def __init__(self, heliostat_name: str, config_file: h5py.File) -> None:
+    def __init__(self, parameters_dict : Dict[str, Any], position: torch.Tensor) -> None:
         """
         Initialize the alignment module.
 
@@ -48,16 +48,7 @@ class AlignmentModule(AModule):
             Position of the heliostat for which the alignment model is created.
         """
         super().__init__()
-        alignment_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.alignment_type_key][()].decode("utf-8")
-
-        if alignment_type == "rigid_body":
-            self.kinematic_model = RigidBodyModule.instantiate_from_file(
-                config_file=config_file, heliostat_name=heliostat_name 
-            )
-        else:
-            raise NotImplementedError(
-                "ARTIST currently only supports RigidBody Kinematic models."
-            )
+        self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping.get(parameters_dict[config_dictionary.alignment_type_key])(position=position)
 
     def align_surface(
         self,
