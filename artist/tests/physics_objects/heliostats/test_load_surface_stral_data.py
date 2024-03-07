@@ -13,6 +13,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.environment.light_source.sun import Sun
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
+from artist.util import config_dictionary 
 
 
 def generate_data(
@@ -46,7 +47,7 @@ def generate_data(
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
         receiver_center = torch.tensor(
-            config_h5["receiver"]["center"][()], dtype=torch.float
+            config_h5[config_dictionary.receiver_prefix][config_dictionary.receiver_center][()], dtype=torch.float
         )
         sun = Sun(config_file=config_h5)
         heliostat = HeliostatModule(
@@ -70,10 +71,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([[0.0], [-1.0], [0.0]]), "south.pt", "test_scenario"),
-        (torch.tensor([[1.0], [0.0], [0.0]]), "east.pt", "test_scenario"),
-        (torch.tensor([[-1.0], [0.0], [0.0]]), "west.pt", "test_scenario"),
-        (torch.tensor([[0.0], [0.0], [1.0]]), "above.pt", "test_scenario"),
+        (torch.tensor([[0.0], [-1.0], [0.0], [1.0]]), "south.pt", "test_scenario"),
+        (torch.tensor([[1.0], [0.0], [0.0], [1.0]]), "east.pt", "test_scenario"),
+        (torch.tensor([[-1.0], [0.0], [0.0], [1.0]]), "west.pt", "test_scenario"),
+        (torch.tensor([[0.0], [0.0], [1.0], [1.0]]), "above.pt", "test_scenario"),
     ],
     name="environment_data",
 )

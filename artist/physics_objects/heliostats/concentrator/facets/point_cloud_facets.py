@@ -10,7 +10,7 @@ import torch
 from yacs.config import CfgNode
 
 from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
-
+from artist.util import config_dictionary 
 
 class PointCloudFacetModule(AFacetModule):
     """
@@ -43,20 +43,20 @@ class PointCloudFacetModule(AFacetModule):
             An open hdf5 file containing the scenario configuration.
         """
         super().__init__()
-        if not config_file["heliostats"]["general_surface_normals"]:
+        if not config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_normals]:
             raise NotImplementedError(
                 "Currently ARTIST is only implemented for general surface normals."
             )
-        if not config_file["heliostats"]["general_surface_points"]:
+        if not config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_points]:
             raise NotImplementedError(
                 "Currently ARTIST is only implemented for general surface points."
             )
         else:
             self.surface_points = torch.tensor(
-                config_file["heliostats"]["general_surface_points"][()],
+                config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_points][()],
                 dtype=torch.float,
             )
             self.surface_normals = torch.tensor(
-                config_file["heliostats"]["general_surface_normals"][()],
+                config_file[config_dictionary.heliostat_prefix][config_dictionary.general_surface_normals][()],
                 dtype=torch.float,
             )
