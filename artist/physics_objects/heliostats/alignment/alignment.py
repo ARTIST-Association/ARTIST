@@ -51,8 +51,8 @@ class AlignmentModule(AModule):
         alignment_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.alignment_type_key][()].decode("utf-8")
 
         if alignment_type == "rigid_body":
-            self.kinematic_model = RigidBodyModule(
-                heliostat_name=heliostat_name, config_file=config_file
+            self.kinematic_model = RigidBodyModule.instantiate_from_file(
+                config_file=config_file, heliostat_name=heliostat_name 
             )
         else:
             raise NotImplementedError(

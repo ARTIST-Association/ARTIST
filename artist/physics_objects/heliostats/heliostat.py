@@ -40,6 +40,45 @@ class HeliostatModule(AModule):
     :class:AModule : Reference to the parent class.
     """
 
+    # def __init__(
+    #     self,
+    #     position: torch.Tensor,
+    #     incident_ray_direction: torch.Tensor,
+    #     heliostat_name: str,
+    # ) -> None:
+    #     """
+    #     Initialize the heliostat.
+
+    #     Parameters
+    #     ----------
+    #     position : torch.Tensor
+    #         The position of the Heliostat.
+    #     incident_ray_direction : torch.Tensor
+    #         The direction of the incident ray as seen from the heliostat.
+    #     heliostat_name : str
+    #         The name of the heliostat being initialized.
+    #     """
+    #     super().__init__()
+
+    #     self.position = position
+    #     self.incident_ray_direction = incident_ray_direction
+    #     self.concentrator = ConcentratorModule(
+    #         heliostat_name=heliostat_name, config_file=config_file
+    #     )
+    #     self.alignment = AlignmentModule(
+    #         heliostat_name=heliostat_name, config_file=config_file
+    #     )
+    
+    # @classmethod
+    # def instantiate_from_file(cls, config_file: h5py.File, incident_ray_direction, heliostat_name):
+    #     position = torch.tensor(
+    #         config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_position][
+    #             ()
+    #         ],
+    #         dtype=torch.float,
+    #     )
+    #     return cls(position, incident_ray_direction, heliostat_name)
+
     def __init__(
         self,
         heliostat_name: str,

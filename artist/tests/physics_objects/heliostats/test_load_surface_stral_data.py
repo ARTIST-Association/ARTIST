@@ -49,11 +49,13 @@ def generate_data(
         receiver_center = torch.tensor(
             config_h5[config_dictionary.receiver_prefix][config_dictionary.receiver_center][()], dtype=torch.float
         )
-        sun = Sun(config_file=config_h5)
+        sun = Sun.instantiate_from_file(config_file=config_h5)
         heliostat = HeliostatModule(
             heliostat_name="Single_Heliostat",
             incident_ray_direction=incident_ray_direction,
-            config_file=config_h5,
+            config_file=config_h5,   
+  
+            
         )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
