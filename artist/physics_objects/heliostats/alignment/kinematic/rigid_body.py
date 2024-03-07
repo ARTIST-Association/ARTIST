@@ -115,7 +115,10 @@ class RigidBodyModule(AKinematicModule):
     # actuator_2_params = {}
 
     def __init__(
-        self, heliostat_name: str, config_file: h5py.File, **deviations
+        self,
+        position: torch.Tensor,
+        aim_point: torch.Tensor,
+        actuator_type: str
     ) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
@@ -125,31 +128,34 @@ class RigidBodyModule(AKinematicModule):
         position : torch.Tensor
             Position of the heliostat for which the kinematic model is valid.
         """
+        super().__init__(position=position)
+        self.position = position
+        self.aim_point = aim_point
+        self.actuator_type = actuator_type
 
-        super().__init__(
-            position=torch.tensor(
-                config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][
-                    config_dictionary.heliostat_position
-                ][()],
-                dtype=torch.float,
-            )
-        )
-
-        self.aim_point = torch.tensor(
-            config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_aim_point][
-                ()
-            ],
-            dtype=torch.float,
-        )
-
-        actuator_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.actuator_type_key][()].decode("utf-8")
-
-        if actuator_type == "ideal_actuator":
+        if self.actuator_type == "ideal_actuator":
             # TODO: Check if the clockwise convention always applies
             self.actuator_1 = IdealActuator(joint_number=1, clockwise=False)
             self.actuator_2 = IdealActuator(joint_number=2, clockwise=True)
         else:
             raise NotImplementedError("ARTIST currently only supports ideal actuators.")
+        
+    @classmethod
+    def instantiate_from_file(cls, config_file: h5py.File, heliostat_name: str):
+        position=torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][
+                    config_dictionary.heliostat_position
+                ][()],
+                dtype=torch.float,
+            )
+        aim_point = torch.tensor(
+            config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_aim_point][
+                ()
+            ],
+            dtype=torch.float,
+        )
+        actuator_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.actuator_type_key][()].decode("utf-8")
+        return cls(position, aim_point, actuator_type)
 
         # self.deviations = deviations
         # self.parameter_deviations = {

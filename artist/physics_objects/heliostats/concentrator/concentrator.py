@@ -29,7 +29,7 @@ class ConcentratorModule(AModule):
     :class:AModule : Reference to the parent class.
     """
 
-    def __init__(self, heliostat_name: str, config_file: h5py.File) -> None:
+    def __init__(self, config_file: h5py.File) -> None:
         """
         Initialize the concentrator.
 
@@ -45,13 +45,15 @@ class ConcentratorModule(AModule):
         facet_type = config_file[config_dictionary.heliostat_prefix][config_dictionary.facets_type_key][()].decode("utf-8")
 
         if facet_type == "point_cloud_facet":
-            self.facets = PointCloudFacetModule(
+            self.facets = PointCloudFacetModule.instantiate_from_file(
                 config_file=config_file,
             )
         else:
             raise NotImplementedError(
                 "ARTIST is currently only implemented for a point cloud facet type"
             )
+
+        
 
     # def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
     #     """
