@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any
 
 import h5py
 import torch
@@ -15,7 +15,7 @@ from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
     AKinematicModule,
 )
 from artist.physics_objects.heliostats.alignment.kinematic.parameter import AParameter
-from artist.util import utils
+from artist.util import utils, artist_type_mapping_dict
 from artist.util import config_dictionary
 
 
@@ -115,10 +115,7 @@ class RigidBodyModule(AKinematicModule):
     # actuator_2_params = {}
 
     def __init__(
-        self,
-        position: torch.Tensor,
-        aim_point: torch.Tensor,
-        actuator_type: str
+        self, actuator_type: str, position: torch.tensor, aim_point: torch.tensor
     ) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
@@ -131,15 +128,13 @@ class RigidBodyModule(AKinematicModule):
         super().__init__(position=position)
         self.position = position
         self.aim_point = aim_point
-        self.actuator_type = actuator_type
 
-        if self.actuator_type == "ideal_actuator":
-            # TODO: Check if the clockwise convention always applies
-            self.actuator_1 = IdealActuator(joint_number=1, clockwise=False)
-            self.actuator_2 = IdealActuator(joint_number=2, clockwise=True)
-        else:
-            raise NotImplementedError("ARTIST currently only supports ideal actuators.")
-        
+        self.actuator_1 = artist_type_mapping_dict.actuator_type_mapping.get(
+            actuator_type
+        )(joint_number=1, clockwise=False)
+        self.actuator_2 = artist_type_mapping_dict.actuator_type_mapping.get(
+            actuator_type
+        )(joint_number=2, clockwise=True)
 
         # self.deviations = deviations
         # self.parameter_deviations = {

@@ -13,7 +13,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.environment.light_source.sun import Sun
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
-from artist.util import config_dictionary 
+from artist.util import config_dictionary
 
 
 def generate_data(
@@ -47,19 +47,19 @@ def generate_data(
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
         receiver_center = torch.tensor(
-            config_h5[config_dictionary.receiver_prefix][config_dictionary.receiver_center][()], dtype=torch.float
+            config_h5[config_dictionary.receiver_prefix][
+                config_dictionary.receiver_center
+            ][()],
+            dtype=torch.float,
         )
-        sun = Sun.instantiate_from_file(config_file=config_h5)
-        heliostat = HeliostatModule.instantiate_from_file(
+        sun = Sun.from_hdf5(config_file=config_h5)
+        heliostat = HeliostatModule.from_hdf5(
             heliostat_name="Single_Heliostat",
             incident_ray_direction=incident_ray_direction,
-            config_file=config_h5, 
-  
-            
+            config_file=config_h5,
         )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
-
 
     return {
         "sun": sun,
@@ -106,7 +106,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
-    receiver_plane_normal = torch.tensor([[0.0], [1.0], [0.0]])
+    receiver_plane_normal = torch.tensor([[0.0], [1.0], [0.0], [1.0]])
     receiver_plane_x = 8.629666667
     receiver_plane_y = 7.0
     receiver_resolution_x = 256
@@ -127,15 +127,21 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     selected_indices = np.arange(0, 161512, 300)
     selected_points = aligned_surface_points[:, selected_indices]
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    #ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
-    #ax.quiver(0, 0, 0, -incident_ray_direction[0], -incident_ray_direction[1], -incident_ray_direction[2], color='g')
-    ax.scatter(selected_points[0].detach().numpy(), selected_points[1].detach().numpy(), selected_points[2].detach().numpy(), c='b', marker='o')
-    ax.set_xlabel('E')
-    ax.set_ylabel('N')
-    ax.set_zlabel('U')
+    ax = fig.add_subplot(111, projection="3d")
+    # ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
+    # ax.quiver(0, 0, 0, -incident_ray_direction[0], -incident_ray_direction[1], -incident_ray_direction[2], color='g')
+    ax.scatter(
+        selected_points[0].detach().numpy(),
+        selected_points[1].detach().numpy(),
+        selected_points[2].detach().numpy(),
+        c="b",
+        marker="o",
+    )
+    ax.set_xlabel("E")
+    ax.set_ylabel("N")
+    ax.set_zlabel("U")
     ax.set_xlim(-3, 3)
-    #ax.set_ylim(-50, 3)
+    # ax.set_ylim(-50, 3)
     ax.set_ylim(-3, 3)
     ax.set_zlim(-3, 3)
     plt.show()
