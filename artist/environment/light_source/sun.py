@@ -184,22 +184,25 @@ class Sun(ALightSource):
         torch.Tensor
             Scattered rays around the preferred direction.
         """
-        ray_directions = ray_directions / torch.linalg.norm(
-            ray_directions, dim=1
+        ray_directions = ray_directions[:3] / torch.linalg.norm(
+            ray_directions[:3], dim=1
         ).unsqueeze(-1)
+        ray_directions = torch.cat((ray_directions, torch.ones(1, ray_directions.size(1))), dim=0)
 
-        scattered_rays = torch.matmul(
-            utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
-            ray_directions.T.contiguous().unsqueeze(-1),
-        )
+        # scattered_rays = torch.matmul(
+        #     utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
+        #     ray_directions.T.contiguous().unsqueeze(-1),
+        # )
 
-        return scattered_rays[:, :, :, :].squeeze(-1)
+        scattered_rays = torch.einsum("ijkl,lj->ikj", utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir), ray_directions)
+
+        return scattered_rays
 
     @staticmethod
     def line_plane_intersections(
         plane_normal: torch.Tensor,
         plane_point: torch.Tensor,
-        ray_directions: torch.Tensor,
+        rays: torch.Tensor,
         surface_points: torch.Tensor,
         epsilon: float = 1e-6,
     ) -> torch.Tensor:
@@ -229,14 +232,12 @@ class Sun(ALightSource):
         RuntimeError
             When there are no intersections between the line and the plane.
         """
-        ndotu = ray_directions.matmul(plane_normal.squeeze(-1))
+        ndotu = torch.einsum("ijk,jl->ik", rays, plane_normal)
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
-        ds = (plane_point.squeeze(-1) - surface_points.T.contiguous()).matmul(
-            plane_normal.squeeze(-1)
-        ) / ndotu
+        ds = torch.einsum("ij,ik->j", (plane_point - surface_points) , plane_normal) / ndotu
 
-        return surface_points.T.contiguous() + ray_directions * ds.unsqueeze(-1)
+        return surface_points + torch.einsum("ijk,ik->ijk", rays, ds)
 
     @staticmethod
     def get_preferred_reflection_direction(

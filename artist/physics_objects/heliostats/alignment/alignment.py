@@ -88,18 +88,18 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             Tuple containing the aligned surface points and normals.
         """
-        orientation = self.align(incident_ray_direction)
+        orientation = self.align(incident_ray_direction).squeeze()
 
-        aligned_surface_points = (surface_points.T @ orientation).squeeze(0)
-        aligned_surface_normals = (surface_normals.T @ orientation).squeeze(0)
+        aligned_surface_points = (orientation @ surface_points)
+        aligned_surface_normals = (orientation @ surface_normals)
 
         # aligned_surface_points += self.position
         aligned_surface_normals /= torch.linalg.norm(
             aligned_surface_normals, dim=-1
         ).unsqueeze(-1)
         return (
-            aligned_surface_points.squeeze().T.contiguous(),
-            aligned_surface_normals.squeeze().T.contiguous(),
+            aligned_surface_points,
+            aligned_surface_normals
         )
 
     def align(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
