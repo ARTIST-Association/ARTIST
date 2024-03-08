@@ -62,17 +62,17 @@ def only_rotation_matrix(
 
 
 def general_affine_matrix(
-    tx: torch.tensor,
-    ty: torch.tensor,
-    tz: torch.tensor,
-    rx: torch.tensor,
-    ry: torch.tensor,
-    rz: torch.tensor,
-    sx: torch.tensor,
-    sy: torch.tensor,
-    sz: torch.tensor,
+    tx: torch.Tensor,
+    ty: torch.Tensor,
+    tz: torch.Tensor,
+    rx: torch.Tensor,
+    ry: torch.Tensor,
+    rz: torch.Tensor,
+    sx: torch.Tensor,
+    sy: torch.Tensor,
+    sz: torch.Tensor,
 ):
-    rx_cos = torch.cos(rx)
+    rx_cos = -torch.cos(rx)  # due to heliostat convention
     rx_sin = -torch.sin(rx)  # due to heliostat convention
     ry_cos = torch.cos(ry)
     ry_sin = torch.sin(ry)
