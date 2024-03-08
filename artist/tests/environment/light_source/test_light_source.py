@@ -50,20 +50,20 @@ def generate_data(
 
     surface_normals = torch.tensor(
         [
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
+            [[0.0], [0.0], [1.0], [1.0]],
+            [[0.0], [0.0], [1.0], [1.0]],
+            [[0.0], [0.0], [1.0], [1.0]],
+            [[0.0], [0.0], [1.0], [1.0]],
+            [[0.0], [0.0], [1.0], [1.0]],
         ]
     )
     surface_points = torch.tensor(
         [
-            [-1.0, -1.0, 0.0],
-            [1.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0],
-            [1.0, -1.0, 0.0],
-            [0.0, 0.0, 0.0],
+            [[-1.0], [-1.0], [0.0], [1.0]],
+            [[1.0], [1.0], [0.0], [1.0]],
+            [[-1.0], [1.0], [0.0], [1.0]],
+            [[1.0], [-1.0], [0.0], [1.0]],
+            [[0.0], [0.0], [0.0], [1.0]],
         ]
     )
 
@@ -72,7 +72,7 @@ def generate_data(
                                 alignment_type="rigid_body",
                                 actuator_type="ideal_actuator",
                                 aim_point=receiver_center,
-                                facet_type="",
+                                facet_type="point_cloud_facet",
                                 surface_points=surface_points,
                                 surface_normals=surface_normals,
                                 incident_ray_direction=incident_ray_direction)
