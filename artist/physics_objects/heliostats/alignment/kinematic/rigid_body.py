@@ -208,20 +208,17 @@ class RigidBodyModule(AKinematicModule):
                 orientation[0][:3, 0], orientation[0][:3, 1]
             )
 
-            concentrator_normals = (
-                orientation @ torch.tensor([0, 0, 1, 0], dtype=torch.float32)
-            )[:1, :4]
-            concentrator_origins = (
-                orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
-            )[:1, :4]
+            concentrator_normals = (orientation @ torch.tensor([[0.0], [0.0], [1.0], [1.0]]))[:1, :4].squeeze(0)
+            concentrator_origins = (orientation @ torch.tensor([[0.0], [0.0], [0.0], [1.0]]))[:1, :4].squeeze(0)
 
             # Compute desired normal.
-            desired_reflect_vec = self.aim_point - concentrator_origins.T.contiguous()
+            desired_reflect_vec = self.aim_point[:3] - concentrator_origins[:3]
             desired_reflect_vec /= desired_reflect_vec.norm()
-            incident_ray_direction /= incident_ray_direction.norm()
-            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
+            incident_ray_direction /= incident_ray_direction[:3].norm()
+            desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
+            desired_concentrator_normal = torch.cat((desired_concentrator_normal, torch.tensor([[1.0]])))
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
 
