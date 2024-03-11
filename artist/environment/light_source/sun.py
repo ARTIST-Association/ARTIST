@@ -187,7 +187,7 @@ class Sun(ALightSource):
         ray_directions = ray_directions[:3] / torch.linalg.norm(
             ray_directions[:3], dim=1
         ).unsqueeze(-1)
-        ray_directions = torch.cat((ray_directions, torch.ones(1, ray_directions.size(1))), dim=0)
+        ray_directions = torch.cat((ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1)
 
         # scattered_rays = torch.matmul(
         #     utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
