@@ -90,13 +90,17 @@ class AlignmentModule(AModule):
         """
         orientation = self.align(incident_ray_direction).squeeze()
 
-        aligned_surface_points = (orientation @ surface_points)
-        aligned_surface_normals = (orientation @ surface_normals)
+        aligned_surface_points = (surface_points @ orientation.T)
+        aligned_surface_normals = (surface_normals @ orientation.T)
 
         # aligned_surface_points += self.position
-        aligned_surface_normals /= torch.linalg.norm(
-            aligned_surface_normals, dim=-1
+        aligned_surface_normals[:, :3] /= torch.linalg.norm(
+            aligned_surface_normals[:, :3], dim=-1
         ).unsqueeze(-1)
+
+        aligned_surface_normals[:, 3] = torch.ones(aligned_surface_normals.size(0), 1, dim=1)
+
+
         return (
             aligned_surface_points,
             aligned_surface_normals

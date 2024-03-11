@@ -9,14 +9,14 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
 
 @pytest.fixture
 def kinematic_model_1():
-    position = torch.tensor([[0.0], [0.0], [0.0], [1.0]])
-    aim_point = torch.tensor([[0.0], [-10.0], [0.0], [1.0]])
+    position = torch.tensor([0.0, 0.0, 0.0, 1.0])
+    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBodyModule("ideal_actuator", position, aim_point)
 
 @pytest.fixture
 def kinematic_model_2():
-    position = torch.tensor([[0.0], [1.0], [0.0], [1.0]])
-    aim_point = torch.tensor([[0.0], [-9.0], [0.0], [1.0]])
+    position = torch.tensor([0.0, 1.0, 0.0, 1.0])
+    aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBodyModule("ideal_actuator", position, aim_point)
 
 @pytest.mark.parametrize(
@@ -24,7 +24,7 @@ def kinematic_model_2():
     [
         (
             "kinematic_model_1",
-            torch.tensor([[0.0], [0.0], [1.0], [1.0]]),
+            torch.tensor([0.0, 0.0, 1.0, 1.0]),
             torch.tensor(
                 [
                     [1, 0, 0, 0],
@@ -36,7 +36,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([[1.0], [0.0], [0.0], [1.0]]),
+            torch.tensor([1.0, 0.0, 0.0, 1.0]),
             torch.tensor(
                 [
                     [1 / math.sqrt(2), 0, 1 / math.sqrt(2), 0],
@@ -48,7 +48,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([[0.0], [-1.0], [0.0], [1.0]]),
+            torch.tensor([0.0, -1.0, 0.0, 1.0]),
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
@@ -60,7 +60,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([[-1.0], [0.0], [0.0], [1.0]]),
+            torch.tensor([-1.0, 0.0, 0.0, 1.0]),
             torch.tensor(
                 [
                     [1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
@@ -72,7 +72,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([[0.0], [-1.0], [1.0], [1.0]]),
+            torch.tensor([0.0, -1.0, 1.0, 1.0]),
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
@@ -84,7 +84,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_2",
-            torch.tensor([[0.0], [0.0], [1.0], [1.0]]),
+            torch.tensor([0.0, 0.0, 1.0, 1.0]),
             torch.tensor(
                 [
                     [1, 0, 0, 0],

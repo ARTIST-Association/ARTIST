@@ -8,17 +8,17 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     Parameters
     ----------
     x : torch.Tensor
-        Single tensor with dimension (4, 1).
+        Single tensor with dimension (1, 4).
     y : torch.Tensor
-        Single tensor with dimension (4, N).
+        Single tensor with dimension (N, 4).
 
 
     Returns
     -------
     torch.Tensor
-        Dot product of x and y as a tensor with dimension (1, N).
+        Dot product of x and y as a tensor with dimension (N, 1).
     """
-    return (x * y).sum(0).unsqueeze(0)
+    return (x * y).sum(-1).unsqueeze(-1)
 
 
 def only_rotation_matrix(
