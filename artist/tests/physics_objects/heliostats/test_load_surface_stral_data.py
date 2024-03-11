@@ -73,10 +73,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([[0.0], [-1.0], [0.0], [1.0]]), "south.pt", "test_scenario"),
-        (torch.tensor([[1.0], [0.0], [0.0], [1.0]]), "east.pt", "test_scenario"),
-        (torch.tensor([[-1.0], [0.0], [0.0], [1.0]]), "west.pt", "test_scenario"),
-        (torch.tensor([[0.0], [0.0], [1.0], [1.0]]), "above.pt", "test_scenario"),
+        (torch.tensor([0.0, -1.0, 0.0, 1.0]), "south.pt", "test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 1.0]), "east.pt", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 1.0]), "west.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 1.0]), "above.pt", "test_scenario"),
     ],
     name="environment_data",
 )
@@ -106,7 +106,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
-    receiver_plane_normal = torch.tensor([[0.0], [1.0], [0.0], [1.0]])
+    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 1.0])
     receiver_plane_x = 8.629666667
     receiver_plane_y = 7.0
     receiver_resolution_x = 256

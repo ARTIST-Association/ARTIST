@@ -208,8 +208,8 @@ class RigidBodyModule(AKinematicModule):
                 orientation[0][:3, 0], orientation[0][:3, 1]
             )
 
-            concentrator_normals = (orientation @ torch.tensor([[0.0], [0.0], [1.0], [1.0]]))[:1, :4].squeeze(0)
-            concentrator_origins = (orientation @ torch.tensor([[0.0], [0.0], [0.0], [1.0]]))[:1, :4].squeeze(0)
+            concentrator_normals = (orientation @ torch.tensor([0.0, 0.0, 1.0, 1.0])).squeeze(0)
+            concentrator_origins = (orientation @ torch.tensor([0.0, 0.0, 0.0, 1.0])).squeeze(0)
 
             # Compute desired normal.
             desired_reflect_vec = self.aim_point[:3] - concentrator_origins[:3]
@@ -218,7 +218,7 @@ class RigidBodyModule(AKinematicModule):
             desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-            desired_concentrator_normal = torch.cat((desired_concentrator_normal, torch.tensor([[1.0]])))
+            desired_concentrator_normal = torch.cat((desired_concentrator_normal, torch.tensor([1.0])))
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
 
@@ -638,7 +638,7 @@ class RigidBodyModule(AKinematicModule):
         sin_2n = torch.sin(torch.tensor([0.0]))
         cos_2n = torch.cos(torch.tensor([0.0]))
 
-        calc_step_1 = normal_first_orientation[e, :] / cos_2n
+        calc_step_1 = normal_first_orientation[e] / cos_2n
         joint_2_angles = -torch.arcsin(calc_step_1)
 
         sin_2u = torch.sin(joint_2_angles)
@@ -649,10 +649,10 @@ class RigidBodyModule(AKinematicModule):
         b = -sin_2e * cos_2u - cos_2e * sin_2n * sin_2u
 
         numerator = (
-            a * normal_first_orientation[u, :] - b * normal_first_orientation[n, :]
+            a * normal_first_orientation[u] - b * normal_first_orientation[n]
         )
         denominator = (
-            a * normal_first_orientation[n, :] + b * normal_first_orientation[u, :]
+            a * normal_first_orientation[n] + b * normal_first_orientation[u]
         )
 
         joint_1_angles = torch.arctan2(numerator, denominator) - torch.pi
