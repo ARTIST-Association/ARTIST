@@ -225,50 +225,50 @@ class RigidBodyModule(AKinematicModule):
         desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
         desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-        # joint_2_angles = -torch.arcsin(desired_concentrator_normal[0])
-        # cos_2u = torch.cos(joint_2_angles)
+        joint_2_angles = -torch.arcsin(desired_concentrator_normal[0])
+        cos_2u = torch.cos(joint_2_angles)
 
-        # numerator = -cos_2u * desired_concentrator_normal[2]
-        # denominator = -cos_2u * desired_concentrator_normal[1]
-        #
-        # joint_1_angles = torch.tensor(
-        #     [torch.arctan2(numerator, denominator) - torch.pi]
-        # )
-        # joint_2_angles = torch.tensor([joint_2_angles])
-        # general_rot_matrices = utils.general_affine_matrix(
-        #     rx=joint_1_angles,
-        #     rz=joint_2_angles,
-        #     ry=torch.zeros(joint_1_angles.shape),
-        #     tx=torch.zeros(joint_1_angles.shape),
-        #     ty=torch.zeros(joint_1_angles.shape),
-        #     tz=torch.zeros(joint_1_angles.shape),
-        #     sx=torch.ones(joint_1_angles.shape),
-        #     sy=torch.ones(joint_1_angles.shape),
-        #     sz=torch.ones(joint_1_angles.shape),
-        # )
+        numerator = -cos_2u * desired_concentrator_normal[2]
+        denominator = -cos_2u * desired_concentrator_normal[1]
+
+        joint_1_angles = torch.tensor(
+            [torch.arctan2(numerator, denominator) - torch.pi]
+        )
+        joint_2_angles = torch.tensor([joint_2_angles])
+        general_rot_matrices = utils.general_affine_matrix(
+            rx=joint_1_angles,
+            rz=joint_2_angles,
+            ry=torch.zeros(joint_1_angles.shape),
+            tx=torch.zeros(joint_1_angles.shape),
+            ty=torch.zeros(joint_1_angles.shape),
+            tz=torch.zeros(joint_1_angles.shape),
+            sx=torch.ones(joint_1_angles.shape),
+            sy=torch.ones(joint_1_angles.shape),
+            sz=torch.ones(joint_1_angles.shape),
+        )
 
         # first_rot_matrices = self.build_rotation_matrix_first_axis_east(joint_1_angles)
         # second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
         # conc_trans_matrix = self.build_concentrator_matrix()
 
-        # initial_orientations = (
-        #     torch.eye(4, dtype=torch.float)
-        #     .unsqueeze(0)
-        #     .repeat(len(joint_1_angles), 1, 1)
-        # )
-        # initial_orientations[:, 0, 3] += self.position[0]
-        # initial_orientations[:, 1, 3] += self.position[1]
-        # initial_orientations[:, 2, 3] += self.position[2]
-
-        rot = utils.another_random_align_function(
-            desired_concentrator_normal.numpy(), concentrator_normal.numpy()
+        initial_orientations = (
+            torch.eye(4, dtype=torch.float)
+            .unsqueeze(0)
+            .repeat(len(joint_1_angles), 1, 1)
         )
-        rot = torch.tensor(rot, dtype=torch.float)
-        # ori = initial_orientations @ general_rot_matrices
-        # ori[:, 1] = ori[:, 2]
-        # ori[:3, 2] = torch.linalg.cross(ori[:3, 0], ori[:3, 1])
-        # return ori
-        return rot
+        initial_orientations[:, 0, 3] += self.position[0]
+        initial_orientations[:, 1, 3] += self.position[1]
+        initial_orientations[:, 2, 3] += self.position[2]
+
+        # rot = utils.another_random_align_function(
+        #     desired_concentrator_normal.numpy(), concentrator_normal.numpy()
+        # )
+        # rot = torch.tensor(rot, dtype=torch.float)
+        ori = initial_orientations @ general_rot_matrices
+        ori[0][:, 1] = ori[0][:, 2]
+        ori[0][:3, 2] = torch.linalg.cross(ori[0][:3, 0], ori[0][:3, 1])
+        return ori[0]
+        # return rot
 
     def compute_orientation_from_aimpoint(
         self,
