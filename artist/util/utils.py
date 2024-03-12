@@ -110,14 +110,13 @@ def another_random_align_function(v1, v2):
             [
                 axis[0] * axis[1] * k + axis[2],
                 axis[1] * axis[1] * k + cosA,
-                axis[1] * axis[2] * k + axis[0],
+                axis[2] * axis[1] * k - axis[0],
             ],
             [
                 axis[0] * axis[2] * k - axis[1],
-                axis[2] * axis[1] * k - axis[0],
+                axis[1] * axis[2] * k + axis[0],
                 axis[2] * axis[2] * k + cosA,
             ],
         ]
     )
-
-    return result
+    return result.T
