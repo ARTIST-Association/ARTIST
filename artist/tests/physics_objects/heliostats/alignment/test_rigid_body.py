@@ -13,11 +13,13 @@ def kinematic_model_1():
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBodyModule("ideal_actuator", position, aim_point)
 
+
 @pytest.fixture
 def kinematic_model_2():
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBodyModule("ideal_actuator", position, aim_point)
+
 
 @pytest.mark.parametrize(
     "kinematic_model_fixture, incident_ray_direction, expected",
@@ -105,4 +107,4 @@ def test_orientation_matrix(
     orientation_matrix = request.getfixturevalue(
         kinematic_model_fixture
     ).compute_rotation_matrix_from_aimpoint(incident_ray_direction)
-    torch.testing.assert_close(orientation_matrix[0], expected)
+    torch.testing.assert_close(orientation_matrix, expected[:3, :3])
