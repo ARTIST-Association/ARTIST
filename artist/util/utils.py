@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import torch
 
@@ -92,7 +94,7 @@ def general_affine_matrix(
         dim=1,
     )
 
-    return rot_matrix.squeeze(-1)
+    return rot_matrix.permute(0, 2, 1)
 
 
 def another_random_align_function(v1, v2):
@@ -120,3 +122,40 @@ def another_random_align_function(v1, v2):
         ]
     )
     return result.T
+
+
+def rotate_axis_angle(u, angle_radians):
+    sin_a = math.sin(angle_radians)
+    cos_a = math.cos(angle_radians)
+    one_minus_cos_a = 1.0 - cos_a
+
+    rot = np.array(
+        [
+            [
+                u[0] * u[0] * one_minus_cos_a + cos_a,
+                u[1] * u[0] * one_minus_cos_a - (sin_a * u[2]),
+                u[2] * u[0] * one_minus_cos_a + (sin_a * u[1]),
+            ],
+            [
+                u[0] * u[1] * one_minus_cos_a + (sin_a * u[2]),
+                u[1] * u[1] * one_minus_cos_a + cos_a,
+                u[2] * u[1] * one_minus_cos_a - (sin_a * u[0]),
+            ],
+            [
+                u[0] * u[2] * one_minus_cos_a - (sin_a * u[1]),
+                u[1] * u[2] * one_minus_cos_a + (sin_a * u[0]),
+                u[2] * u[2] * one_minus_cos_a + cos_a,
+            ],
+        ]
+    )
+
+    return rot.T
+
+
+def rotate_align_new(v1, v2):
+    axis = np.cross(v1, v2)
+    axis /= np.linalg.norm(axis)
+    dot_product = np.dot(v1, v2)
+    dot_product = np.clip(dot_product, -1.0, 1.0)
+    angle_radians = np.arccos(dot_product)
+    return rotate_axis_angle(axis, angle_radians)
