@@ -94,7 +94,7 @@ def general_affine_matrix(
         dim=1,
     )
 
-    return rot_matrix.permute(0, 2, 1)
+    return rot_matrix.permute(0, 1, 2).squeeze(-1)
 
 
 def another_random_align_function(v1, v2):
