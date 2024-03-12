@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 
 import h5py
 import torch
+import numpy as np
 from yacs.config import CfgNode
 from scipy.spatial.transform import Rotation
 
@@ -13,6 +14,7 @@ from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator im
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.ideal_actuator import (
     IdealActuator,
 )
+
 from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
     AKinematicModule,
 )
@@ -174,7 +176,7 @@ class RigidBodyModule(AKinematicModule):
     #     "east_tilt_2": torch.tensor([0.0]),
     #     "north_tilt_2": torch.tensor([0.0]),
     # }
-        
+
     # def compute_rotation_matrix_from_aimpoint1(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
     #     a = incident_ray_direction[:3]
     #     b = self.aim_point[:3]
@@ -213,7 +215,6 @@ class RigidBodyModule(AKinematicModule):
     #     R1 = Rx @ Ry @ Rz
     #     R2 = Rz @ Ry @ Rx
 
-
     def compute_rotation_matrix_from_aimpoint(self, incident_ray_direction):
         concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
         concentrator_normal = torch.tensor([0.0, 0.0, 1.0])
@@ -224,11 +225,12 @@ class RigidBodyModule(AKinematicModule):
         desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
         desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-        rot, _ = Rotation.align_vectors(desired_concentrator_normal, concentrator_normal)
-        rot = torch.tensor(rot.as_matrix(), dtype=torch.float)
-        
+        rot = utils.another_random_align_function(
+            desired_concentrator_normal.numpy(), concentrator_normal.numpy()
+        )
+        rot = torch.tensor(rot, dtype=torch.float)
+
         return rot
-        
 
     def compute_orientation_from_aimpoint(
         self,
@@ -265,17 +267,25 @@ class RigidBodyModule(AKinematicModule):
                 orientation[0][:3, 0], orientation[0][:3, 1]
             )
 
-            concentrator_normals = (orientation @ torch.tensor([0.0, 0.0, 1.0, 1.0])).squeeze(0)
-            concentrator_origins = (orientation @ torch.tensor([0.0, 0.0, 0.0, 1.0])).squeeze(0)
+            concentrator_normals = (
+                orientation @ torch.tensor([0.0, 0.0, 1.0, 1.0])
+            ).squeeze(0)
+            concentrator_origins = (
+                orientation @ torch.tensor([0.0, 0.0, 0.0, 1.0])
+            ).squeeze(0)
 
             # Compute desired normal.
             desired_reflect_vec = self.aim_point[:3] - concentrator_origins[:3]
             desired_reflect_vec /= desired_reflect_vec.norm()
             incident_ray_direction /= incident_ray_direction[:3].norm()
-            desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
+            desired_concentrator_normal = (
+                incident_ray_direction[:3] + desired_reflect_vec
+            )
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-            desired_concentrator_normal = torch.cat((desired_concentrator_normal, torch.tensor([1.0])))
+            desired_concentrator_normal = torch.cat(
+                (desired_concentrator_normal, torch.tensor([1.0]))
+            )
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
 
@@ -705,12 +715,8 @@ class RigidBodyModule(AKinematicModule):
         a = -cos_2e * cos_2u + sin_2e * sin_2n * sin_2u
         b = -sin_2e * cos_2u - cos_2e * sin_2n * sin_2u
 
-        numerator = (
-            a * normal_first_orientation[u] - b * normal_first_orientation[n]
-        )
-        denominator = (
-            a * normal_first_orientation[n] + b * normal_first_orientation[u]
-        )
+        numerator = a * normal_first_orientation[u] - b * normal_first_orientation[n]
+        denominator = a * normal_first_orientation[n] + b * normal_first_orientation[u]
 
         joint_1_angles = torch.arctan2(numerator, denominator) - torch.pi
 

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -92,3 +93,31 @@ def general_affine_matrix(
     )
 
     return rot_matrix.squeeze(-1)
+
+
+def another_random_align_function(v1, v2):
+    axis = np.cross(v1, v2)
+    cosA = np.dot(v1, v2)
+    k = 1.0 / (1.0 + cosA)
+
+    result = np.array(
+        [
+            [
+                axis[0] * axis[0] * k + cosA,
+                axis[1] * axis[0] * k - axis[2],
+                axis[2] * axis[0] * k + axis[1],
+            ],
+            [
+                axis[0] * axis[1] * k + axis[2],
+                axis[1] * axis[1] * k + cosA,
+                axis[1] * axis[2] * k + axis[0],
+            ],
+            [
+                axis[0] * axis[2] * k - axis[1],
+                axis[2] * axis[1] * k - axis[0],
+                axis[2] * axis[2] * k + cosA,
+            ],
+        ]
+    )
+
+    return result
