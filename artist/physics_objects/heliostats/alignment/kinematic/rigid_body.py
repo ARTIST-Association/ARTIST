@@ -177,9 +177,11 @@ class RigidBodyModule(AKinematicModule):
     #     "north_tilt_2": torch.tensor([0.0]),
     # }
 
-    def compute_rotation_matrix_from_aimpoint2(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+    def compute_rotation_matrix_from_aimpoint2(
+        self, incident_ray_direction: torch.Tensor
+    ) -> torch.Tensor:
         concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
-        concentrator_normal = torch.tensor([0.0, 0.0, 1.0])
+        concentrator_normal = torch.tensor([0.0, -1.0, 0.0])
 
         desired_reflect_vec = self.aim_point[:3] - concentrator_origins
         desired_reflect_vec /= desired_reflect_vec.norm()
@@ -187,19 +189,20 @@ class RigidBodyModule(AKinematicModule):
         desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
         desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-        v = torch.linalg.cross(desired_concentrator_normal, concentrator_normal)
-        s = v.norm()
-        c = torch.dot(desired_concentrator_normal, concentrator_normal)
+        v = torch.linalg.cross(concentrator_normal, desired_concentrator_normal)
+        c = torch.dot(concentrator_normal, desired_concentrator_normal)
 
         I = torch.eye(3)
-        vx = torch.tensor([[0,     -v[2], v[1]],
-                           [v[2],  0,    -v[0]],
-                           [-v[1], v[0],    0]])
+        vx = torch.tensor([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
         R = I + vx + torch.tensor([np.dot(vx, vx)]) * (1 / (1 + c))
-        return R
+        R[0][:, 1] = R[0][:, 2]
+        R[0][:3, 2] = torch.linalg.cross(R[0][:3, 0], R[0][:3, 1])
+        return R[0]
 
-    def compute_rotation_matrix_from_aimpoint1(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+    def compute_rotation_matrix_from_aimpoint1(
+        self, incident_ray_direction: torch.Tensor
+    ) -> torch.Tensor:
         concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
         concentrator_normal = torch.tensor([0.0, 0.0, 1.0])
 
@@ -209,7 +212,9 @@ class RigidBodyModule(AKinematicModule):
         desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
         desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-        rot, _ = Rotation.align_vectors(desired_concentrator_normal, concentrator_normal)
+        rot, _ = Rotation.align_vectors(
+            desired_concentrator_normal, concentrator_normal
+        )
         rot = torch.tensor(rot.as_matrix(), dtype=torch.float)
         return rot
 
@@ -249,23 +254,23 @@ class RigidBodyModule(AKinematicModule):
         # second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
         # conc_trans_matrix = self.build_concentrator_matrix()
 
-        initial_orientations = (
-            torch.eye(4, dtype=torch.float)
-            .unsqueeze(0)
-            .repeat(len(joint_1_angles), 1, 1)
-        )
-        initial_orientations[:, 0, 3] += self.position[0]
-        initial_orientations[:, 1, 3] += self.position[1]
-        initial_orientations[:, 2, 3] += self.position[2]
+        # initial_orientations = (
+        #     torch.eye(4, dtype=torch.float)
+        #     .unsqueeze(0)
+        #     .repeat(len(joint_1_angles), 1, 1)
+        # )
+        general_rot_matrices[:, 0, 3] += self.position[0]
+        general_rot_matrices[:, 1, 3] += self.position[1]
+        general_rot_matrices[:, 2, 3] += self.position[2]
 
         # rot = utils.another_random_align_function(
         #     desired_concentrator_normal.numpy(), concentrator_normal.numpy()
         # )
         # rot = torch.tensor(rot, dtype=torch.float)
-        ori = initial_orientations @ general_rot_matrices
-        ori[0][:, 1] = ori[0][:, 2]
-        ori[0][:3, 2] = torch.linalg.cross(ori[0][:3, 0], ori[0][:3, 1])
-        return ori[0]
+        # ori = initial_orientations @ general_rot_matrices
+        # ori[0][:, 1] = ori[0][:, 2]
+        # ori[0][:3, 2] = torch.linalg.cross(ori[0][:3, 0], ori[0][:3, 1])
+        return "HI"
         # return rot
 
     def compute_orientation_from_aimpoint(
@@ -298,10 +303,10 @@ class RigidBodyModule(AKinematicModule):
                 actuator_1_steps=actuator_steps[0], actuator_2_steps=actuator_steps[1]
             )
 
-            orientation[0][:, 1] = orientation[0][:, 2]
-            orientation[0][:3, 2] = torch.linalg.cross(
-                orientation[0][:3, 0], orientation[0][:3, 1]
-            )
+            # orientation[0][:, 1] = orientation[0][:, 2]
+            # orientation[0][:3, 2] = torch.linalg.cross(
+            #     orientation[0][:3, 0], orientation[0][:3, 1]
+            # )
 
             # concentrator_normals = (
             #     orientation @ torch.tensor([0.0, 0.0, 1.0, 1.0])
