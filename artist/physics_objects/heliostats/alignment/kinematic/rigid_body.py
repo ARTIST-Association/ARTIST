@@ -177,43 +177,41 @@ class RigidBodyModule(AKinematicModule):
     #     "north_tilt_2": torch.tensor([0.0]),
     # }
 
-    # def compute_rotation_matrix_from_aimpoint1(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
-    #     a = incident_ray_direction[:3]
-    #     b = self.aim_point[:3]
+    def compute_rotation_matrix_from_aimpoint2(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+        concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
+        concentrator_normal = torch.tensor([0.0, 0.0, 1.0])
 
-    #     v = torch.cross(a, b)
-    #     s = v.norm()
-    #     c = torch.dot(a, b)
+        desired_reflect_vec = self.aim_point[:3] - concentrator_origins
+        desired_reflect_vec /= desired_reflect_vec.norm()
+        incident_ray_direction /= incident_ray_direction[:3].norm()
+        desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
+        desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-    #     I = torch.eye(3)
-    #     vx = torch.tensor([[0,     -v[2], v[1]],
-    #                        [v[2],  0,    -v[0]],
-    #                        [-v[1], v[0],    0]])
+        v = torch.linalg.cross(desired_concentrator_normal, concentrator_normal)
+        s = v.norm()
+        c = torch.dot(desired_concentrator_normal, concentrator_normal)
 
-    #     R = I + vx + vx * vx * (1 / (1 + c))
+        I = torch.eye(3)
+        vx = torch.tensor([[0,     -v[2], v[1]],
+                           [v[2],  0,    -v[0]],
+                           [-v[1], v[0],    0]])
 
-    # def compute_rotation_matrix_from_aimpoint2(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
-    #     a = incident_ray_direction[:3]
-    #     b = self.aim_point[:3]
+        R = I + vx + torch.tensor([np.dot(vx, vx)]) * (1 / (1 + c))
+        return R
 
-    #     a = a / a.norm()
-    #     b = b / b.norm()
+    def compute_rotation_matrix_from_aimpoint1(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+        concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
+        concentrator_normal = torch.tensor([0.0, 0.0, 1.0])
 
-    #     cos = torch.dot(a, b)
-    #     sin = torch.cross(a, b)
-    #     sin = sin.norm()
+        desired_reflect_vec = self.aim_point[:3] - concentrator_origins
+        desired_reflect_vec /= desired_reflect_vec.norm()
+        incident_ray_direction /= incident_ray_direction[:3].norm()
+        desired_concentrator_normal = incident_ray_direction[:3] + desired_reflect_vec
+        desired_concentrator_normal /= desired_concentrator_normal.norm()
 
-    #     Rx = torch.tensor([[1, 0, 0],
-    #                       [0, cos, -sin],
-    #                       [0, sin , cos]])
-    #     Ry = torch.tensor([[cos, 0, sin],
-    #                        [0, 1, 0],
-    #                        [-sin, 0, cos]])
-    #     Rz = torch.tensor([[cos, -sin, 0],
-    #                       [sin, cos, 0],
-    #                       [0, 0 , 1]])
-    #     R1 = Rx @ Ry @ Rz
-    #     R2 = Rz @ Ry @ Rx
+        rot, _ = Rotation.align_vectors(desired_concentrator_normal, concentrator_normal)
+        rot = torch.tensor(rot.as_matrix(), dtype=torch.float)
+        return rot
 
     def compute_rotation_matrix_from_aimpoint(self, incident_ray_direction):
         concentrator_origins = torch.tensor([0.0, 0.0, 0.0])
