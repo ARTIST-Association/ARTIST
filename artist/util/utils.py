@@ -24,6 +24,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
 
+# TODO: Delete this function and rework it!
 def only_rotation_matrix(
     rx=torch.tensor([0.0]), rz=torch.tensor([0.0])
 ) -> torch.Tensor:
@@ -62,103 +63,6 @@ def only_rotation_matrix(
     )
 
     return rot_matrix.permute(2, 3, 0, 1)
-
-
-def general_affine_matrix(
-    tx: torch.Tensor,
-    ty: torch.Tensor,
-    tz: torch.Tensor,
-    rx: torch.Tensor,
-    ry: torch.Tensor,
-    rz: torch.Tensor,
-    sx: torch.Tensor,
-    sy: torch.Tensor,
-    sz: torch.Tensor,
-):
-    rx_cos = -torch.cos(rx)  # due to heliostat convention
-    rx_sin = -torch.sin(rx)  # due to heliostat convention
-    ry_cos = torch.cos(ry)
-    ry_sin = torch.sin(ry)
-    rz_cos = torch.cos(rz)
-    rz_sin = torch.sin(rz)
-    zeros = torch.zeros(rx.shape)
-    ones = torch.ones(rx.shape)
-
-    rot_matrix = torch.stack(
-        [
-            torch.stack([sx * ry_cos * rz_cos, rz_sin, ry_sin, zeros], dim=1),
-            torch.stack([-rz_sin, sy * rx_cos * rz_cos, -rx_sin, zeros], dim=1),
-            torch.stack([-ry_sin, rx_sin, sz * rx_cos * ry_cos, zeros], dim=1),
-            torch.stack([tx, ty, tz, ones], dim=1),
-        ],
-        dim=1,
-    )
-
-    return rot_matrix.permute(0, 1, 2).squeeze(-1)
-
-
-def another_random_align_function(v1, v2):
-    axis = np.cross(v1, v2)
-    cosA = np.dot(v1, v2)
-    k = 1.0 / (1.0 + cosA)
-
-    result = np.array(
-        [
-            [
-                axis[0] * axis[0] * k + cosA,
-                axis[1] * axis[0] * k - axis[2],
-                axis[2] * axis[0] * k + axis[1],
-            ],
-            [
-                axis[0] * axis[1] * k + axis[2],
-                axis[1] * axis[1] * k + cosA,
-                axis[2] * axis[1] * k - axis[0],
-            ],
-            [
-                axis[0] * axis[2] * k - axis[1],
-                axis[1] * axis[2] * k + axis[0],
-                axis[2] * axis[2] * k + cosA,
-            ],
-        ]
-    )
-    return result.T
-
-
-def rotate_axis_angle(u, angle_radians):
-    sin_a = math.sin(angle_radians)
-    cos_a = math.cos(angle_radians)
-    one_minus_cos_a = 1.0 - cos_a
-
-    rot = np.array(
-        [
-            [
-                u[0] * u[0] * one_minus_cos_a + cos_a,
-                u[1] * u[0] * one_minus_cos_a - (sin_a * u[2]),
-                u[2] * u[0] * one_minus_cos_a + (sin_a * u[1]),
-            ],
-            [
-                u[0] * u[1] * one_minus_cos_a + (sin_a * u[2]),
-                u[1] * u[1] * one_minus_cos_a + cos_a,
-                u[2] * u[1] * one_minus_cos_a - (sin_a * u[0]),
-            ],
-            [
-                u[0] * u[2] * one_minus_cos_a - (sin_a * u[1]),
-                u[1] * u[2] * one_minus_cos_a + (sin_a * u[0]),
-                u[2] * u[2] * one_minus_cos_a + cos_a,
-            ],
-        ]
-    )
-
-    return rot.T
-
-
-def rotate_align_new(v1, v2):
-    axis = np.cross(v1, v2)
-    axis /= np.linalg.norm(axis)
-    dot_product = np.dot(v1, v2)
-    dot_product = np.clip(dot_product, -1.0, 1.0)
-    angle_radians = np.arccos(dot_product)
-    return rotate_axis_angle(axis, angle_radians)
 
 
 def rotate_enu(
