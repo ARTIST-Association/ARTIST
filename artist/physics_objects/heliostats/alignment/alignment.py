@@ -45,6 +45,7 @@ class AlignmentModule(AModule):
         actuator_type: str,
         position: torch.tensor,
         aim_point: torch.tensor,
+        kinematic_deviation_parameters: Dict[str, torch.Tensor]
     ) -> None:
         """
         Initialize the alignment module.
@@ -61,6 +62,7 @@ class AlignmentModule(AModule):
             actuator_type=actuator_type,
             position=position,
             aim_point=aim_point,
+            deviation_parameters=kinematic_deviation_parameters
         )
 
     def align_surface(
