@@ -50,6 +50,7 @@ class HeliostatModule(AModule):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         incident_ray_direction: torch.Tensor,
+        kinematic_deviation_parameters: Dict[str, torch.Tensor],
     ) -> None:
         """
         Initialize the heliostat.
@@ -74,6 +75,7 @@ class HeliostatModule(AModule):
             actuator_type=actuator_type,
             position=position,
             aim_point=aim_point,
+            kinematic_deviation_parameters=kinematic_deviation_parameters
         )
 
     @classmethod
@@ -132,6 +134,26 @@ class HeliostatModule(AModule):
             )
         elif surface_normals.dtype != torch.float:
             surface_normals = surface_normals.type(torch.float)
+        
+        kinematic_deviation_parameters = {config_dictionary.first_joint_translation_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_translation_e][()], dtype=torch.float),
+                                          config_dictionary.first_joint_translation_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_translation_n][()], dtype=torch.float),
+                                          config_dictionary.first_joint_translation_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_translation_u][()], dtype=torch.float),
+                                          config_dictionary.first_joint_tilt_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_tilt_e][()], dtype=torch.float),
+                                          config_dictionary.first_joint_tilt_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_tilt_n][()], dtype=torch.float),
+                                          config_dictionary.first_joint_tilt_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.first_joint_tilt_u][()], dtype=torch.float),
+                                          config_dictionary.second_joint_translation_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_translation_e][()], dtype=torch.float),
+                                          config_dictionary.second_joint_translation_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_translation_n][()], dtype=torch.float),
+                                          config_dictionary.second_joint_translation_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_translation_u][()], dtype=torch.float),
+                                          config_dictionary.second_joint_tilt_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_tilt_e][()], dtype=torch.float),
+                                          config_dictionary.second_joint_tilt_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_tilt_n][()], dtype=torch.float),
+                                          config_dictionary.second_joint_tilt_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.second_joint_tilt_u][()], dtype=torch.float),
+                                          config_dictionary.concentrator_translation_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_translation_e][()], dtype=torch.float),
+                                          config_dictionary.concentrator_translation_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_translation_n][()], dtype=torch.float),
+                                          config_dictionary.concentrator_translation_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_translation_u][()], dtype=torch.float),
+                                          config_dictionary.concentrator_tilt_e : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_tilt_e][()], dtype=torch.float),
+                                          config_dictionary.concentrator_tilt_n : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_tilt_n][()], dtype=torch.float),
+                                          config_dictionary.concentrator_tilt_u : torch.tensor(config_file[config_dictionary.heliostat_prefix][heliostat_name][config_dictionary.kinematic_deviation_key][config_dictionary.concentrator_tilt_u][()], dtype=torch.float),
+                                          }
 
         return cls(
             id=heliostat_id,
@@ -143,6 +165,7 @@ class HeliostatModule(AModule):
             surface_points=surface_points,
             surface_normals=surface_normals,
             incident_ray_direction=incident_ray_direction,
+            kinematic_deviation_parameters=kinematic_deviation_parameters,
         )
 
     # def __init__(

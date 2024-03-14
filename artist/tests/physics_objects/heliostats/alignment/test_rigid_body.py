@@ -7,18 +7,19 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
 )
 
 
+
 @pytest.fixture
 def kinematic_model_1():
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
-    return RigidBodyModule("ideal_actuator", position, aim_point)
+    return RigidBodyModule(actuator_type="ideal_actuator", position=position, aim_point=aim_point)
 
 
 @pytest.fixture
 def kinematic_model_2():
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
-    return RigidBodyModule("ideal_actuator", position, aim_point)
+    return RigidBodyModule(actuator_type="ideal_actuator", position=position, aim_point=aim_point)
 
 
 @pytest.mark.parametrize(
@@ -30,8 +31,8 @@ def kinematic_model_2():
             torch.tensor(
                 [
                     [1, 0, 0, 0],
-                    [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
-                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
+                    [0, math.cos(math.pi/4),math.sin(math.pi/4), 0],
+                    [0, -math.sin(math.pi/4), math.cos(math.pi/4), 0],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -41,10 +42,10 @@ def kinematic_model_2():
             torch.tensor([1.0, 0.0, 0.0, 1.0]),
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), 0, 1 / math.sqrt(2), 0],
-                    [1 / math.sqrt(2), 0, -1 / math.sqrt(2), 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 0, 1],
+                    [math.cos(math.pi/4), -math.sin(math.pi/4), 0.0, 0.0],
+                    [math.sin(math.pi/4), math.cos(math.pi/4), 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
         ),
@@ -54,8 +55,8 @@ def kinematic_model_2():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -65,9 +66,9 @@ def kinematic_model_2():
             torch.tensor([-1.0, 0.0, 0.0, 1.0]),
             torch.tensor(
                 [
-                    [1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
-                    [-1 / math.sqrt(2), 0.0, -1 / math.sqrt(2), 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
+                    [math.cos(-math.pi/4), -math.sin(-math.pi/4), 0.0, 0.0],
+                    [math.sin(-math.pi/4), math.cos(-math.pi/4), 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -78,8 +79,8 @@ def kinematic_model_2():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.sin(math.pi / 8), -math.cos(math.pi / 8), 0.0],
-                    [0.0, math.cos(math.pi / 8), math.sin(math.pi / 8), 0.0],
+                    [0.0, math.cos(-math.pi / 8), -math.sin(-math.pi / 8), 0.0],
+                    [0.0, math.sin(-math.pi / 8), math.cos(-math.pi / 8), 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -89,10 +90,10 @@ def kinematic_model_2():
             torch.tensor([0.0, 0.0, 1.0, 1.0]),
             torch.tensor(
                 [
-                    [1, 0, 0, 0],
-                    [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 1.0],
-                    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
-                    [0, 0, 0, 1],
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, math.cos(math.pi/4),math.sin(math.pi/4), 1.0],
+                    [0.0, -math.sin(math.pi/4), math.cos(math.pi/4), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
         ),
@@ -107,4 +108,4 @@ def test_orientation_matrix(
     orientation_matrix = request.getfixturevalue(
         kinematic_model_fixture
     ).compute_orientation_from_aimpoint(incident_ray_direction)
-    torch.testing.assert_close(orientation_matrix, expected[:3, :3])
+    torch.testing.assert_close(orientation_matrix[0], expected)
