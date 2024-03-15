@@ -62,7 +62,7 @@ def rotate_nu(
             torch.stack([zeros, zeros, zeros, ones], dim=1),
         ],
         dim=1,
-    )
+    ).permute(0, 3, 1, 2)
 
 
 def rotate_e(

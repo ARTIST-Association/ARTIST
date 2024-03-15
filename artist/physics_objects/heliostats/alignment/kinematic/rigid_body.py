@@ -316,7 +316,7 @@ class RigidBodyModule(AKinematicModule):
         """
         first_joint_rot_angles = self.actuator_1(actuator_pos=actuator_1_steps)
         second_joint_rot_angles = self.actuator_2(actuator_pos=actuator_2_steps)
-        return self.compute_orientation_from_angles_old(
+        return self.compute_orientation_from_angles(
             first_joint_rot_angles, second_joint_rot_angles
         )
 
@@ -377,7 +377,9 @@ class RigidBodyModule(AKinematicModule):
             torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
         )
 
-        # initial_orientations = initial_orientations @ utils.rotate_e(e=torch.tensor([self.initial_orientation_offset]))
+        initial_orientations = initial_orientations @ utils.rotate_e(
+            e=torch.tensor([self.initial_orientation_offset])
+        )
 
         initial_orientations[:, 0, 3] += self.position[0]
         initial_orientations[:, 1, 3] += self.position[1]
@@ -612,9 +614,7 @@ class RigidBodyModule(AKinematicModule):
             last_epoch_loss = loss.detach()
             actuator_steps = self.compute_steps_from_normal(desired_concentrator_normal)
 
-        return orientation @ utils.rotate_e(
-            e=torch.tensor([self.initial_orientation_offset])
-        )
+        return orientation
 
     @staticmethod
     def build_east_rotation_4x4(
