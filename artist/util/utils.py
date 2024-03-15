@@ -23,6 +23,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     return (x * y).sum(-1).unsqueeze(-1)
 
+
 def rotate_nu(
     n: torch.Tensor,
     u: torch.Tensor,
@@ -63,6 +64,7 @@ def rotate_nu(
         dim=1,
     )
 
+
 def rotate_e(
     e: torch.Tensor,
 ):
@@ -83,18 +85,18 @@ def rotate_e(
         Corresponding rotation matrix.
     """
     cos_e = torch.cos(e)
-    sin_e = torch.sin(e)
+    sin_e = -torch.sin(e)  # Heliostat Convention
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)
-    #TODO: vorzeichen sin
     return torch.stack(
         [
             torch.stack([ones, zeros, zeros, zeros]),
-            torch.stack([zeros, cos_e, -sin_e, zeros]),
-            torch.stack([zeros, sin_e, cos_e, zeros]),
+            torch.stack([zeros, cos_e, sin_e, zeros]),
+            torch.stack([zeros, -sin_e, cos_e, zeros]),
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
+
 
 def rotate_n(
     n: torch.Tensor,
@@ -129,6 +131,7 @@ def rotate_n(
         ],
     ).squeeze(-1)
 
+
 def rotate_u(
     u: torch.Tensor,
 ):
@@ -161,6 +164,7 @@ def rotate_u(
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
+
 
 def translate_enu(
     e: torch.Tensor,
