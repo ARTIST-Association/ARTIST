@@ -1,5 +1,6 @@
 """A util script for generating scenario h5 files to be used in Artist."""
 
+import math
 from collections.abc import MutableMapping
 from typing import Dict
 
@@ -50,25 +51,27 @@ heliostats = {
         config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
         config_dictionary.heliostat_individual_surface_points: False,
         config_dictionary.heliostat_individual_surface_normals: False,
-        config_dictionary.kinematic_deviation_key: {config_dictionary.first_joint_translation_e : 0.0,
-                                                    config_dictionary.first_joint_translation_n : 0.0,
-                                                    config_dictionary.first_joint_translation_u: 0.0,
-                                                    config_dictionary.first_joint_tilt_e : 0.0,
-                                                    config_dictionary.first_joint_tilt_n : 0.0,
-                                                    config_dictionary.first_joint_tilt_u: 0.0,
-                                                    config_dictionary.second_joint_translation_e : 0.0,
-                                                    config_dictionary.second_joint_translation_n : 0.0,
-                                                    config_dictionary.second_joint_translation_u: 0.0,
-                                                    config_dictionary.second_joint_tilt_e : 0.0,
-                                                    config_dictionary.second_joint_tilt_n : 0.0,
-                                                    config_dictionary.second_joint_tilt_u: 0.0,
-                                                    config_dictionary.concentrator_translation_e : 0.0,
-                                                    config_dictionary.concentrator_translation_n : 0.0,
-                                                    config_dictionary.concentrator_translation_u : 0.0,
-                                                    config_dictionary.concentrator_tilt_e : 0.0,
-                                                    config_dictionary.concentrator_tilt_n : 0.0,
-                                                    config_dictionary.concentrator_tilt_u : 0.0,
-                                                    },
+        config_dictionary.kinematic_deviation_key: {
+            config_dictionary.first_joint_translation_e: 0.0,
+            config_dictionary.first_joint_translation_n: 0.0,
+            config_dictionary.first_joint_translation_u: 0.0,
+            config_dictionary.first_joint_tilt_e: 0.0,
+            config_dictionary.first_joint_tilt_n: 0.0,
+            config_dictionary.first_joint_tilt_u: 0.0,
+            config_dictionary.second_joint_translation_e: 0.0,
+            config_dictionary.second_joint_translation_n: 0.0,
+            config_dictionary.second_joint_translation_u: 0.0,
+            config_dictionary.second_joint_tilt_e: 0.0,
+            config_dictionary.second_joint_tilt_n: 0.0,
+            config_dictionary.second_joint_tilt_u: 0.0,
+            config_dictionary.concentrator_translation_e: 0.0,
+            config_dictionary.concentrator_translation_n: 0.0,
+            config_dictionary.concentrator_translation_u: 0.0,
+            config_dictionary.concentrator_tilt_e: 0.0,
+            config_dictionary.concentrator_tilt_n: 0.0,
+            config_dictionary.concentrator_tilt_u: 0.0,
+        },
+        config_dictionary.kinematic_initial_orientation_offset_key: math.pi / 2,
     },
 }
 

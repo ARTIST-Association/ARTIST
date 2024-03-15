@@ -68,3 +68,6 @@ concentrator_translation_u = "concentrator_translation_n"
 concentrator_tilt_e = "concentrator_tilt_e"
 concentrator_tilt_n = "concentrator_tilt_n"
 concentrator_tilt_u = "concentrator_tilt_u"
+
+# Parameter for orientation offset for the kinematic
+kinematic_initial_orientation_offset_key = "initial_kinematic_orientation_offset"
