@@ -2,6 +2,7 @@
 Alignment module for the heliostat.
 """
 
+import math
 from typing import Any, Dict, Tuple
 
 import h5py
@@ -62,7 +63,8 @@ class AlignmentModule(AModule):
             actuator_type=actuator_type,
             position=position,
             aim_point=aim_point,
-            deviation_parameters=kinematic_deviation_parameters
+            deviation_parameters=kinematic_deviation_parameters,
+            initial_orientation_offset=torch.tensor([(-math.pi/2)])
         )
 
     def align_surface(
@@ -92,15 +94,15 @@ class AlignmentModule(AModule):
         """
         orientation = self.align(incident_ray_direction).squeeze()
 
-        aligned_surface_points = (surface_points @ orientation.T)
-        aligned_surface_normals = (surface_normals @ orientation.T)
+        aligned_surface_points = (surface_points @ orientation)
+        aligned_surface_normals = (surface_normals @ orientation)
 
         # aligned_surface_points += self.position
         aligned_surface_normals[:, :3] /= torch.linalg.norm(
             aligned_surface_normals[:, :3], dim=-1
         ).unsqueeze(-1)
 
-        aligned_surface_normals[:, 3] = torch.ones(aligned_surface_normals.size(0), 1, dim=1)
+        #aligned_surface_normals[:, 3] = torch.ones(aligned_surface_normals.size(0), 1, dim=1)
 
 
         return (

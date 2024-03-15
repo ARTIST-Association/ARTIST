@@ -146,7 +146,7 @@ class Sun(ALightSource):
         Returns
         -------
         Tuple[torch.Tensor, torch.Tensor]
-            The distortion in x and y direction.
+            The distortion in north and up direction.
 
         Raises
         ------
@@ -154,18 +154,18 @@ class Sun(ALightSource):
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         if self.distribution_parameters["distribution_type"] == "normal":
-            distortion_x_dir, distortion_y_dir = self.distribution.sample(
+            distortions_n, distortions_u = self.distribution.sample(
                 (self.ray_count, num_preferred_ray_directions),
             ).permute(2, 0, 1)
-            return distortion_x_dir, distortion_y_dir
+            return distortions_n, distortions_u
         else:
             raise ValueError("unknown light distribution type")
 
     def scatter_rays(
         self,
         ray_directions: torch.Tensor,
-        distortion_x_dir: torch.Tensor,
-        distortion_z_dir: torch.Tensor,
+        distortion_n: torch.Tensor,
+        distortion_u: torch.Tensor,
     ) -> torch.Tensor:
         """
         Scatter the reflected rays around the preferred ray_direction.
@@ -174,27 +174,22 @@ class Sun(ALightSource):
         ----------
         ray_directions : torch.Tensor
             The preferred ray direction.
-        distortion_x_dir : torch.Tensor
-            The distortions in x direction (angles for scattering).
-        distortion_z_dir : torch.Tensor
-            The distortions in z direction (angles for scattering).
+        distortion_n : torch.Tensor
+            The distortions in north direction (angles for scattering).
+        distortion_u : torch.Tensor
+            The distortions in up direction (angles for scattering).
 
         Returns
         -------
         torch.Tensor
             Scattered rays around the preferred direction.
         """
-        ray_directions = ray_directions[:3] / torch.linalg.norm(
-            ray_directions[:3], dim=1
+        ray_directions = ray_directions[:, :3] / torch.linalg.norm(
+            ray_directions[:, :3], dim=1
         ).unsqueeze(-1)
         ray_directions = torch.cat((ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1)
 
-        # scattered_rays = torch.matmul(
-        #     utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir),
-        #     ray_directions.T.contiguous().unsqueeze(-1),
-        # )
-
-        scattered_rays = torch.einsum("ijkl,lj->ikj", utils.only_rotation_matrix(rx=distortion_x_dir, rz=distortion_z_dir), ray_directions)
+        scattered_rays = ray_directions @ utils.rotate_nu(n=distortion_n, u=distortion_u)
 
         return scattered_rays
 
