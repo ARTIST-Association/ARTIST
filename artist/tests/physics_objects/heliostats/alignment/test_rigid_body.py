@@ -91,7 +91,7 @@ def kinematic_model_2():
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(math.pi/4),math.sin(math.pi/4), 1.0],
+                    [0.0, math.cos(math.pi/4), math.sin(math.pi/4), 1.0],
                     [0.0, -math.sin(math.pi/4), math.cos(math.pi/4), 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]

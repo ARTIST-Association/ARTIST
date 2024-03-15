@@ -96,6 +96,7 @@ class RigidBodyModule(AKinematicModule):
                                                         config_dictionary.concentrator_tilt_n : torch.tensor(0.0),
                                                         config_dictionary.concentrator_tilt_u : torch.tensor(0.0),
                                                         },
+        initial_orientation_offset: float = 0.0,
     ) -> None:
         """
         Initialize the neural network rigid body fusion as a kinematic module.
@@ -121,6 +122,7 @@ class RigidBodyModule(AKinematicModule):
         )(joint_number=2, clockwise=True)
 
         self.deviation_parameters = deviation_parameters
+        self.initial_orientation_offset = initial_orientation_offset
         
 
     def build_first_rotation_matrix(self, angles: torch.Tensor) -> torch.Tensor:
@@ -254,8 +256,8 @@ class RigidBodyModule(AKinematicModule):
         return self.compute_orientation_from_angles(
             first_joint_rot_angles, second_joint_rot_angles
         )
-
-    def compute_orientation_from_angles(
+    
+    def compute_orientation_from_angles_old(
         self, joint_1_angles: torch.Tensor, joint_2_angles: torch.Tensor
     ) -> torch.Tensor:
         """
@@ -287,6 +289,38 @@ class RigidBodyModule(AKinematicModule):
         first_orientations = initial_orientations @ first_rot_matrices
         second_orientations = first_orientations @ second_rot_matrices
         return second_orientations @ conc_trans_matrix
+
+    def compute_orientation_from_angles(
+        self, joint_1_angles: torch.Tensor, joint_2_angles: torch.Tensor, 
+    ) -> torch.Tensor:
+        """
+        Compute the orientation matrix from given joint angles.
+
+        Parameters
+        ----------
+        joint_1_angles : torch.Tensor
+            Angles of the first joint.
+        joint_2_angles : torch.Tensor
+            Angles of the second joint.
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation matrix.
+        """
+        initial_orientations = (
+            torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
+        )
+
+        initial_orientations = initial_orientations @ utils.rotate_e(e=torch.tensor([self.initial_orientation_offset]))
+        
+        initial_orientations[:, 0, 3] += self.position[0]
+        initial_orientations[:, 1, 3] += self.position[1]
+        initial_orientations[:, 2, 3] += self.position[2]
+        
+        first_orientations = initial_orientations @ utils.rotate_n(n=self.deviation_parameters[config_dictionary.first_joint_tilt_n]) @ utils.rotate_u(u=self.deviation_parameters[config_dictionary.first_joint_tilt_u]) @ utils.translate_enu(e=self.deviation_parameters[config_dictionary.first_joint_translation_e], n=self.deviation_parameters[config_dictionary.first_joint_translation_n], u=self.deviation_parameters[config_dictionary.first_joint_translation_u]) @ utils.rotate_e(joint_1_angles)
+        second_orientations = first_orientations @ utils.rotate_e(e=self.deviation_parameters[config_dictionary.second_joint_tilt_e]) @ utils.rotate_n(n=self.deviation_parameters[config_dictionary.second_joint_tilt_n]) @ utils.translate_enu(e=self.deviation_parameters[config_dictionary.second_joint_translation_e], n=self.deviation_parameters[config_dictionary.second_joint_translation_n], u=self.deviation_parameters[config_dictionary.second_joint_translation_u]) @ utils.rotate_u(joint_2_angles)
+        return second_orientations @ utils.translate_enu(e=self.deviation_parameters[config_dictionary.concentrator_translation_e], n=self.deviation_parameters[config_dictionary.concentrator_translation_n], u=self.deviation_parameters[config_dictionary.concentrator_translation_u])
 
     def transform_normal_to_first_coord_sys(
         self, concentrator_normal: torch.Tensor
@@ -425,7 +459,7 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
-        actuator_steps = torch.zeros((2, 2), requires_grad=True)
+        actuator_steps = torch.zeros((1, 2), requires_grad=True)
         orientation = None
         last_epoch_loss = None
         for epoch in range(max_num_epochs):
