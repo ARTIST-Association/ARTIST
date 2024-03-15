@@ -187,11 +187,15 @@ class Sun(ALightSource):
         ray_directions = ray_directions[:, :3] / torch.linalg.norm(
             ray_directions[:, :3], dim=1
         ).unsqueeze(-1)
-        ray_directions = torch.cat((ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1)
+        ray_directions = torch.cat(
+            (ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1
+        )
 
-        scattered_rays = ray_directions @ utils.rotate_nu(n=distortion_n, u=distortion_u)
+        scattered_rays = utils.rotate_nu(
+            n=distortion_n, u=distortion_u
+        ) @ ray_directions.unsqueeze(-1)
 
-        return scattered_rays
+        return scattered_rays.squeeze(-1)
 
     @staticmethod
     def line_plane_intersections(
@@ -227,12 +231,12 @@ class Sun(ALightSource):
         RuntimeError
             When there are no intersections between the line and the plane.
         """
-        ndotu = torch.einsum("ijk,jl->ik", rays, plane_normal)
+        ndotu = rays @ plane_normal
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
-        ds = torch.einsum("ij,ik->j", (plane_point - surface_points) , plane_normal) / ndotu
+        ds = (plane_point - surface_points) @ plane_normal / ndotu
 
-        return surface_points + torch.einsum("ijk,ik->ijk", rays, ds)
+        return surface_points + rays * ds.unsqueeze(-1)
 
     @staticmethod
     def get_preferred_reflection_direction(
