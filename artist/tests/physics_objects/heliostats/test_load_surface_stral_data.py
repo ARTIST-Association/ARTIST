@@ -129,7 +129,15 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     # ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
-    ax.quiver(0, 0, 0, -incident_ray_direction[0], -incident_ray_direction[1], -incident_ray_direction[2], color='g')
+    ax.quiver(
+        0,
+        0,
+        0,
+        -incident_ray_direction[0],
+        -incident_ray_direction[1],
+        -incident_ray_direction[2],
+        color="g",
+    )
     ax.scatter(
         selected_points[:, 0].detach().numpy(),
         selected_points[:, 1].detach().numpy(),
@@ -150,7 +158,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         -incident_ray_direction, aligned_surface_normals
     )
 
-    distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[1])
+    distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
 
     rays = sun.scatter_rays(
         preferred_ray_directions,
@@ -162,8 +170,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_normal, receiver_center, rays, aligned_surface_points
     )
 
-    dx_ints = intersections[:, 0, :] + receiver_plane_x / 2 - receiver_center[0]
-    dy_ints = intersections[:, 2, :] + receiver_plane_y / 2 - receiver_center[2]
+    dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
+    dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
 
     indices = (
         (-1 <= dx_ints)
@@ -189,7 +197,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    plt.imshow(total_bitmap.T.detach().numpy(), origin="lower", cmap="jet" )
+    plt.imshow(total_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
     plt.show()
 
     expected_path = (
@@ -199,5 +207,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     expected = torch.load(expected_path)
+    plt.imshow(expected.T, origin="lower", cmap="jet")
+    plt.show()
 
     torch.testing.assert_close(total_bitmap, expected)
