@@ -24,7 +24,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
 
-# TODO: Delete this function and rework it!
+# TODO: Delete this function since it can't actually work!
 def only_rotation_matrix(
     rx=torch.tensor([0.0]), rz=torch.tensor([0.0])
 ) -> torch.Tensor:
@@ -63,6 +63,47 @@ def only_rotation_matrix(
     )
 
     return rot_matrix.permute(2, 3, 0, 1)
+
+
+def rotate_nu(
+    n: torch.Tensor,
+    u: torch.Tensor,
+):
+    """
+    Rotate around the north and then the up axis in this very order in a right-handed east north up
+    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
+    counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
+    resulting rotation matrix. Note that the order is fixed due to the non-commutative property of matrix-matrix
+    multiplication.
+
+    Parameters
+    ----------
+    n : torch.Tensor
+        North rotation angle in radians
+    u : torch.Tensor
+        Up rotation angle in radians.
+
+    Returns
+    -------
+    torch.Tensor
+        Corresponding rotation matrix.
+    """
+    cos_n = torch.cos(n)
+    sin_n = torch.sin(n)
+    cos_u = torch.cos(u)
+    sin_u = torch.sin(u)
+    zeros = torch.zeros(n.shape)
+    ones = torch.ones(n.shape)
+
+    return torch.stack(
+        [
+            torch.stack([cos_u * cos_n, -sin_u, -cos_u * sin_n, zeros], dim=1),
+            torch.stack([sin_u * cos_n, cos_u, -sin_u * sin_n, zeros], dim=1),
+            torch.stack([sin_n, zeros, cos_n, zeros], dim=1),
+            torch.stack([zeros, zeros, zeros, ones], dim=1),
+        ],
+        dim=1,
+    )
 
 
 def rotate_enu(
