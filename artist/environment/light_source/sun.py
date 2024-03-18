@@ -191,8 +191,8 @@ class Sun(ALightSource):
             (ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1
         )
 
-        scattered_rays = utils.rotate_nu(
-            n=distortion_n, u=distortion_u
+        scattered_rays = utils.rotate_ue(
+            u=distortion_u, e=distortion_n
         ) @ ray_directions.unsqueeze(-1)
 
         return scattered_rays.squeeze(-1)
