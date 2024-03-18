@@ -30,7 +30,7 @@ def kinematic_model_2():
     [
         (
             "kinematic_model_1",
-            torch.tensor([0.0, 0.0, 1.0, 1.0]),
+            torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
                     [1, 0, 0, 0],
@@ -42,7 +42,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([1.0, 0.0, 0.0, 1.0]),
+            torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
                     [math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0, 0.0],
@@ -54,7 +54,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([0.0, -1.0, 0.0, 1.0]),
+            torch.tensor([0.0, -1.0, 0.0, 0.0]),
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
@@ -66,7 +66,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([-1.0, 0.0, 0.0, 1.0]),
+            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
                     [math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 0.0, 0.0],
@@ -78,7 +78,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_1",
-            torch.tensor([0.0, -1.0, 1.0, 1.0]),
+            torch.tensor([0.0, -1.0, 1.0, 0.0]),
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
@@ -90,7 +90,7 @@ def kinematic_model_2():
         ),
         (
             "kinematic_model_2",
-            torch.tensor([0.0, 0.0, 1.0, 1.0]),
+            torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],

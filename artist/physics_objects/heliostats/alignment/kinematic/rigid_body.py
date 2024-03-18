@@ -449,9 +449,10 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The transformed concentrator normal.
         """
-        normal4x1 = -torch.cat(
-            (concentrator_normal, torch.zeros(concentrator_normal.shape[0], 1)), dim=1
-        )
+        # normal4x1 = -torch.cat(
+        #     (concentrator_normal, torch.zeros(concentrator_normal.shape[0], 1)), dim=1
+        # )
+        normal4x1 = -concentrator_normal
         first_rot_matrices = self.build_first_rotation_matrix(
             torch.zeros(len(concentrator_normal))
         )
@@ -589,17 +590,17 @@ class RigidBodyModule(AKinematicModule):
 
             concentrator_normals = (
                 orientation @ torch.tensor([0, -1, 0, 0], dtype=torch.float32)
-            )[:1, :3]
+            )
             concentrator_origins = (
                 orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
-            )[:1, :3]
+            )
 
             # Compute desired normal.
-            desired_reflect_vec = self.aim_point[:3] - concentrator_origins
+            desired_reflect_vec = self.aim_point - concentrator_origins
             desired_reflect_vec /= desired_reflect_vec.norm()
-            incident_ray_direction /= incident_ray_direction[:3].norm()
+            incident_ray_direction /= incident_ray_direction.norm()
             desired_concentrator_normal = (
-                incident_ray_direction[:3] + desired_reflect_vec
+                incident_ray_direction + desired_reflect_vec
             )
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
