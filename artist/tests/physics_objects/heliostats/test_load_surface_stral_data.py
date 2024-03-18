@@ -124,35 +124,35 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     # Beispiel ray_count = 2 -> ray_directions shape: (8, 3)
     #
 
-    selected_indices = np.arange(0, 161512, 300)
-    selected_points = aligned_surface_points[selected_indices, :]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    # ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
-    ax.quiver(
-        0,
-        0,
-        0,
-        -incident_ray_direction[0],
-        -incident_ray_direction[1],
-        -incident_ray_direction[2],
-        color="g",
-    )
-    ax.scatter(
-        selected_points[:, 0].detach().numpy(),
-        selected_points[:, 1].detach().numpy(),
-        selected_points[:, 2].detach().numpy(),
-        c="b",
-        marker="o",
-    )
-    ax.set_xlabel("E")
-    ax.set_ylabel("N")
-    ax.set_zlabel("U")
-    ax.set_xlim(-3, 3)
-    # ax.set_ylim(-50, 3)
-    ax.set_ylim(-3, 3)
-    ax.set_zlim(-3, 3)
-    plt.show()
+    # selected_indices = np.arange(0, 161512, 300)
+    # selected_points = aligned_surface_points[selected_indices, :]
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection="3d")
+    # # ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
+    # ax.quiver(
+    #     0,
+    #     0,
+    #     0,
+    #     -incident_ray_direction[0],
+    #     -incident_ray_direction[1],
+    #     -incident_ray_direction[2],
+    #     color="g",
+    # )
+    # ax.scatter(
+    #     selected_points[:, 0].detach().numpy(),
+    #     selected_points[:, 1].detach().numpy(),
+    #     selected_points[:, 2].detach().numpy(),
+    #     c="b",
+    #     marker="o",
+    # )
+    # ax.set_xlabel("E")
+    # ax.set_ylabel("N")
+    # ax.set_zlabel("U")
+    # ax.set_xlim(-3, 3)
+    # # ax.set_ylim(-50, 3)
+    # ax.set_ylim(-3, 3)
+    # ax.set_zlim(-3, 3)
+    # plt.show()
 
     preferred_ray_directions = sun.get_preferred_reflection_direction(
         -incident_ray_direction, aligned_surface_normals

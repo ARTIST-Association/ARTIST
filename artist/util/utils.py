@@ -200,3 +200,9 @@ def translate_enu(
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
+
+
+def norm_4D_point(point_4D: torch.Tensor):
+    point_3D = point_4D[:3]
+    norm = torch.linalg.norm(point_3D)
+    norm = torch.cat(norm, torch.ones(1), dim=1)
