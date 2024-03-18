@@ -192,7 +192,7 @@ class Sun(ALightSource):
         )
 
         scattered_rays = utils.rotate_ue(
-            u=distortion_u, e=distortion_n
+            u=distortion_n, e=distortion_u
         ) @ ray_directions.unsqueeze(-1)
 
         return scattered_rays.squeeze(-1)
