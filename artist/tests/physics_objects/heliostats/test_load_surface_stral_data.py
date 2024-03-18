@@ -155,7 +155,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     plt.show()
 
     preferred_ray_directions = sun.get_preferred_reflection_direction(
-        -incident_ray_direction, aligned_surface_normals
+        incident_ray_direction, aligned_surface_normals
     )
 
     distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
