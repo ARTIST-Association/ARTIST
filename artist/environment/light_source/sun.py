@@ -188,7 +188,7 @@ class Sun(ALightSource):
             ray_directions[:, :3], dim=1
         ).unsqueeze(-1)
         ray_directions = torch.cat(
-            (ray_directions, torch.ones(ray_directions.size(0), 1)), dim=1
+            (ray_directions, torch.zeros(ray_directions.size(0), 1)), dim=1
         )
 
         scattered_rays = utils.rotate_ue(
