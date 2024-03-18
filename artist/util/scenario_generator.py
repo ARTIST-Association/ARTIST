@@ -30,7 +30,7 @@ sun_params = {
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
-general_surface_measurements = "test_data"
+general_surface_measurements = "test_data2"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
@@ -71,7 +71,7 @@ heliostats = {
             config_dictionary.concentrator_tilt_n: 0.0,
             config_dictionary.concentrator_tilt_u: 0.0,
         },
-        config_dictionary.kinematic_initial_orientation_offset_key: -math.pi / 2,
+        config_dictionary.kinematic_initial_orientation_offset_key: math.pi / 2,
     },
 }
 

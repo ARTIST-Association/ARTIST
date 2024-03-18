@@ -43,27 +43,28 @@ def generate_data(
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    heliostat_position = torch.tensor([[0.0], [5.0], [0.0], [1.0]])
-    receiver_center = torch.tensor([[0.0], [-10.0], [0.0], [1.0]])
+
+    heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
+    receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
     
     sun = Sun()
 
     surface_normals = torch.tensor(
         [
-            [[0.0], [0.0], [1.0], [1.0]],
-            [[0.0], [0.0], [1.0], [1.0]],
-            [[0.0], [0.0], [1.0], [1.0]],
-            [[0.0], [0.0], [1.0], [1.0]],
-            [[0.0], [0.0], [1.0], [1.0]],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
         ]
     )
     surface_points = torch.tensor(
         [
-            [[-1.0], [-1.0], [0.0], [1.0]],
-            [[1.0], [1.0], [0.0], [1.0]],
-            [[-1.0], [1.0], [0.0], [1.0]],
-            [[1.0], [-1.0], [0.0], [1.0]],
-            [[0.0], [0.0], [0.0], [1.0]],
+            [-1.0, -1.0, 0.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
+            [-1.0, 1.0, 0.0, 1.0],
+            [1.0, -1.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0, 1.0],
         ]
     )
 
@@ -75,7 +76,9 @@ def generate_data(
                                 facet_type="point_cloud_facet",
                                 surface_points=surface_points,
                                 surface_normals=surface_normals,
-                                incident_ray_direction=incident_ray_direction)
+                                incident_ray_direction=incident_ray_direction,
+                                )
+
 
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
@@ -92,10 +95,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([[0.0], [0.0], [1.0], [1.0]]), "above.pt", "test_scenario"),
-        (torch.tensor([[1.0], [0.0], [0.0], [1.0]]), "east.pt", "test_scenario"),
-        (torch.tensor([[-1.0], [0.0], [0.0], [1.0]]), "west.pt", "test_scenario"),
-        (torch.tensor([[0.0], [-1.0], [0.0], [1.0]]), "south.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 1.0]), "above.pt", "test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 1.0]), "east.pt", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 1.0]), "west.pt", "test_scenario"),
+        (torch.tensor([0.0, -1.0, 0.0, 1.0]), "south.pt", "test_scenario"),
     ],
     name="environment_data",
 )
@@ -125,7 +128,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
-    receiver_plane_normal = torch.tensor([[0.0], [1.0], [0.0], [1.0]])
+    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
     receiver_plane_x = 10
     receiver_plane_y = 10
     receiver_resolution_x = 256
@@ -135,12 +138,12 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         -incident_ray_direction, aligned_surface_normals
     )
 
-    distortion_x, distortion_y = sun.sample(preferred_ray_directions.shape[1])
+    distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
 
     rays = sun.scatter_rays(
         preferred_ray_directions,
-        distortion_x,
-        distortion_y,
+        distortions_n,
+        distortions_u,
     )
 
 
@@ -170,7 +173,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
-        distortion_x.numel(),
+        distortions_n.numel(),
         receiver_plane_x,
         receiver_plane_y,
     )
