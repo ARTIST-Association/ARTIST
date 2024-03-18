@@ -12,7 +12,7 @@ from artist.util import config_dictionary
 # The following configurations can be adapted to define the required scenario.
 
 # The following parameter is the name of the scenario.
-name = "test_scenario"
+name = "test_scenario_2"
 
 # The following parameters refer to the receiver.
 receiver_params = {
@@ -30,7 +30,7 @@ sun_params = {
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
-general_surface_measurements = "test_data"
+general_surface_measurements = "test_data2"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
