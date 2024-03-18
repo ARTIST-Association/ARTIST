@@ -30,7 +30,7 @@ sun_params = {
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
-general_surface_measurements = "test_data2"
+general_surface_measurements = "test_data"
 
 # The following parameters refer to the heliostat list.
 heliostats = {
