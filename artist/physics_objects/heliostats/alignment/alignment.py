@@ -95,8 +95,11 @@ class AlignmentModule(AModule):
         """
         orientation = self.align(incident_ray_direction).squeeze()
 
-        aligned_surface_points = surface_points @ orientation
-        aligned_surface_normals = surface_normals @ orientation
+        aligned_surface_points = (orientation.T @ surface_points.T).T
+        aligned_surface_normals = (orientation.T @ surface_normals.T).T
+
+        aligned_surface_points = (surface_points @ orientation.T)
+        aligned_surface_normals = (surface_normals @ orientation.T)
 
         aligned_surface_points += self.kinematic_model.position
         # aligned_surface_normals[:, :3] /= torch.linalg.norm(
