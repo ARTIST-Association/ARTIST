@@ -99,11 +99,11 @@ class AlignmentModule(AModule):
         aligned_surface_normals = surface_normals @ orientation
 
         aligned_surface_points += self.kinematic_model.position
-        aligned_surface_normals[:, :3] /= torch.linalg.norm(
-            aligned_surface_normals[:, :3], dim=-1
-        ).unsqueeze(-1)
+        # aligned_surface_normals[:, :3] /= torch.linalg.norm(
+        #     aligned_surface_normals[:, :3], dim=-1
+        # ).unsqueeze(-1)
 
-        # aligned_surface_normals[:, 3] = torch.zeros(aligned_surface_normals.size(0))
+        aligned_surface_normals[:, 3] = torch.zeros(aligned_surface_normals.size(0))
         # aligned_surface_points[:, 3] = torch.ones(aligned_surface_points.size(0))
 
         return (aligned_surface_points, aligned_surface_normals)
