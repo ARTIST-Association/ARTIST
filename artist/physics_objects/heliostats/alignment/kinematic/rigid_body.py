@@ -121,10 +121,6 @@ class RigidBodyModule(AKinematicModule):
         orientation = None
         last_epoch_loss = None
         for epoch in range(max_num_epochs):
-            # orientation = self.compute_orientation_from_steps(
-            #     actuator_1_steps=actuator_steps[:, 0],
-            #     actuator_2_steps=actuator_steps[:, 1],
-            # )
             joint_1_angles = self.actuator_1(actuator_pos=actuator_steps[:, 0])
             joint_2_angles = self.actuator_2(actuator_pos=actuator_steps[:, 1])
 
@@ -269,6 +265,8 @@ class RigidBodyModule(AKinematicModule):
                 dim=-1,
             )
 
+        # Return orientation matrix multiplied by the initial orientation offset
+        # TODO: Allow the initial orientation to also be offset in N and U??
         return orientation @ utils.rotate_e(
             e=torch.tensor([self.initial_orientation_offset])
         )
