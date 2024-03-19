@@ -71,7 +71,7 @@ heliostats = {
             config_dictionary.concentrator_tilt_n: 0.0,
             config_dictionary.concentrator_tilt_u: 0.0,
         },
-        config_dictionary.kinematic_initial_orientation_offset_key: -math.pi / 2,
+        config_dictionary.kinematic_initial_orientation_offset_key: math.pi / 2,
     },
 }
 
