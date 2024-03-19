@@ -93,28 +93,8 @@ class AlignmentModule(AModule):
         Tuple[torch.Tensor, torch.Tensor]
             Tuple containing the aligned surface points and normals.
         """
-        orientation = self.align(incident_ray_direction).squeeze()
+        orientation = self.kinematic_model.align(incident_ray_direction).squeeze()
         aligned_surface_points = (orientation @ surface_points.T).T
         aligned_surface_normals = (orientation @ surface_normals.T).T
 
         return (aligned_surface_points, aligned_surface_normals)
-
-    def align(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
-        """
-        Compute the orientation from a given aimpoint.
-
-        Parameters
-        ----------
-        aim_point : torch.Tensor
-            The desired aim point.
-        incident_ray_direction : torch.Tensor
-            The direction of the rays.
-
-        Returns
-        -------
-        torch.Tensor
-            The orientation matrix.
-        """
-        return self.kinematic_model.compute_orientation_from_aimpoint(
-            incident_ray_direction
-        )
