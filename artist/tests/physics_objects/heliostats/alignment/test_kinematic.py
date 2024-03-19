@@ -1,6 +1,7 @@
 """
 Test kinematic module.
 """
+
 import math
 
 import pytest
@@ -158,5 +159,5 @@ def test_compute_orientation_from_aimpoint(
         # selects which kinematic model to used based on the
         # kinematic_model_fixture parameter
         kinematic_model_fixture
-    ).compute_orientation_from_aimpoint(datapoints[datapoint_index])
+    ).align(datapoints[datapoint_index])
     torch.testing.assert_close(orientation_matrix[0], expected)

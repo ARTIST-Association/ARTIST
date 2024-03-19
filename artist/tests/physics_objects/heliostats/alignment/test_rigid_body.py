@@ -108,7 +108,7 @@ def test_orientation_matrix(
     incident_ray_direction,
     expected,
 ):
-    orientation_matrix = request.getfixturevalue(
-        kinematic_model_fixture
-    ).compute_orientation_from_aimpoint(incident_ray_direction)
+    orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
+        incident_ray_direction
+    )
     torch.testing.assert_close(orientation_matrix[0], expected)
