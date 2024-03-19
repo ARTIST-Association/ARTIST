@@ -1,4 +1,7 @@
-"""Test kinematic module."""
+"""
+Test kinematic module.
+"""
+
 import math
 
 import pytest
@@ -12,21 +15,21 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
 
 @pytest.fixture
 def kinematic_model():
-    """Declare a kinematic model at the origin."""
+    """Declare a kinematic model at the origin"""
     position = torch.tensor([0, 0, 0])
     return RigidBodyModule(position=position)
 
 
 @pytest.fixture
 def kinematic_model2():
-    """Declare a kinematic model placed one unit north."""
+    """Declare a kinematic model placed one unit north"""
     position2 = torch.tensor([0.0, 1.0, 0.0])
     return RigidBodyModule(position=position2)
 
 
 @pytest.fixture
 def datapoints():
-    """Declare multiple data points with different light directions to be tested."""
+    """Declare multiple data points with different light directions to be tested"""
     datapoint1 = HeliostatDataPoint(
         point_id=1,
         light_directions=torch.tensor([0.0, 0.0, 1.0]),
@@ -151,10 +154,10 @@ def test_compute_orientation_from_aimpoint(
     kinematic_model_fixture,
     expected,
 ):
-    """Run the kinematic test for multiple datapoints and different kinematic models."""
+    """Run the kinematic test for multiple datapoints and different kinematic models"""
     orientation_matrix = request.getfixturevalue(
         # selects which kinematic model to used based on the
         # kinematic_model_fixture parameter
         kinematic_model_fixture
-    ).compute_orientation_from_aimpoint(datapoints[datapoint_index])
+    ).align(datapoints[datapoint_index])
     torch.testing.assert_close(orientation_matrix[0], expected)
