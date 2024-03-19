@@ -320,39 +320,6 @@ class RigidBodyModule(AKinematicModule):
             first_joint_rot_angles, second_joint_rot_angles
         )
 
-    def compute_orientation_from_angles_old(
-        self, joint_1_angles: torch.Tensor, joint_2_angles: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Compute the orientation matrix from given joint angles.
-
-        Parameters
-        ----------
-        joint_1_angles : torch.Tensor
-            Angles of the first joint.
-        joint_2_angles : torch.Tensor
-            Angles of the second joint.
-
-        Returns
-        -------
-        torch.Tensor
-            The orientation matrix.
-        """
-        first_rot_matrices = self.build_first_rotation_matrix(joint_1_angles)
-        second_rot_matrices = self.build_second_rotation_matrix(joint_2_angles)
-        conc_trans_matrix = self.build_concentrator_matrix()
-
-        initial_orientations = (
-            torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
-        )
-        initial_orientations[:, 0, 3] += self.position[0]
-        initial_orientations[:, 1, 3] += self.position[1]
-        initial_orientations[:, 2, 3] += self.position[2]
-
-        first_orientations = initial_orientations @ first_rot_matrices
-        second_orientations = first_orientations @ second_rot_matrices
-        return second_orientations @ conc_trans_matrix
-
     def compute_orientation_from_angles(
         self,
         joint_1_angles: torch.Tensor,
@@ -373,21 +340,18 @@ class RigidBodyModule(AKinematicModule):
         torch.Tensor
             The orientation matrix.
         """
+        # Heliostats are initially orientated at (0,0,0) pointing to the south
         initial_orientations = (
             torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
         )
 
-        initial_orientations = initial_orientations @ utils.rotate_e(
-            e=torch.tensor([self.initial_orientation_offset])
+        # Account for position
+        initial_orientations = initial_orientations @ utils.translate_enu(
+            e=self.position[0], n=self.position[1], u=self.position[2]
         )
 
-        initial_orientations[:, 0, 3] += self.position[0]
-        initial_orientations[:, 1, 3] += self.position[1]
-        initial_orientations[:, 2, 3] += self.position[2]
-
-        first_orientations = (
-            initial_orientations
-            @ utils.rotate_n(
+        joint_1_rotations = (
+            utils.rotate_n(
                 n=self.deviation_parameters[config_dictionary.first_joint_tilt_n]
             )
             @ utils.rotate_u(
@@ -406,9 +370,8 @@ class RigidBodyModule(AKinematicModule):
             )
             @ utils.rotate_e(joint_1_angles)
         )
-        second_orientations = (
-            first_orientations
-            @ utils.rotate_e(
+        joint_2_rotations = (
+            utils.rotate_e(
                 e=self.deviation_parameters[config_dictionary.second_joint_tilt_e]
             )
             @ utils.rotate_n(
@@ -427,10 +390,22 @@ class RigidBodyModule(AKinematicModule):
             )
             @ utils.rotate_u(joint_2_angles)
         )
-        return second_orientations @ utils.translate_enu(
-            e=self.deviation_parameters[config_dictionary.concentrator_translation_e],
-            n=self.deviation_parameters[config_dictionary.concentrator_translation_n],
-            u=self.deviation_parameters[config_dictionary.concentrator_translation_u],
+
+        return (
+            initial_orientations
+            @ joint_1_rotations
+            @ joint_2_rotations
+            @ utils.translate_enu(
+                e=self.deviation_parameters[
+                    config_dictionary.concentrator_translation_e
+                ],
+                n=self.deviation_parameters[
+                    config_dictionary.concentrator_translation_n
+                ],
+                u=self.deviation_parameters[
+                    config_dictionary.concentrator_translation_u
+                ],
+            )
         )
 
     def transform_normal_to_first_coord_sys(
@@ -460,9 +435,11 @@ class RigidBodyModule(AKinematicModule):
         initial_orientations = (
             torch.eye(4).unsqueeze(0).repeat(len(concentrator_normal), 1, 1)
         )
-        initial_orientations[:, 0, 3] += self.position[0]
-        initial_orientations[:, 1, 3] += self.position[1]
-        initial_orientations[:, 2, 3] += self.position[2]
+
+        # Account for position
+        initial_orientations = initial_orientations @ utils.translate_enu(
+            e=self.position[0], n=self.position[1], u=self.position[2]
+        )
 
         first_orientations = torch.matmul(initial_orientations, first_rot_matrices)
         transposed_first_orientations = torch.transpose(first_orientations, 1, 2)
@@ -588,20 +565,18 @@ class RigidBodyModule(AKinematicModule):
                 actuator_2_steps=actuator_steps[:, 1],
             )
 
-            concentrator_normals = (
-                orientation @ torch.tensor([0, -1, 0, 0], dtype=torch.float32)
+            concentrator_normals = orientation @ torch.tensor(
+                [0, -1, 0, 0], dtype=torch.float32
             )
-            concentrator_origins = (
-                orientation @ torch.tensor([0, 0, 0, 1], dtype=torch.float32)
+            concentrator_origins = orientation @ torch.tensor(
+                [0, 0, 0, 1], dtype=torch.float32
             )
 
             # Compute desired normal.
             desired_reflect_vec = self.aim_point - concentrator_origins
             desired_reflect_vec /= desired_reflect_vec.norm()
             incident_ray_direction /= incident_ray_direction.norm()
-            desired_concentrator_normal = (
-                incident_ray_direction + desired_reflect_vec
-            )
+            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
             desired_concentrator_normal /= desired_concentrator_normal.norm()
 
             # Compute epoch loss.
@@ -615,7 +590,9 @@ class RigidBodyModule(AKinematicModule):
             last_epoch_loss = loss.detach()
             actuator_steps = self.compute_steps_from_normal(desired_concentrator_normal)
 
-        return orientation
+        return orientation @ utils.rotate_e(
+            e=torch.tensor([self.initial_orientation_offset])
+        )
 
     @staticmethod
     def build_east_rotation_4x4(
