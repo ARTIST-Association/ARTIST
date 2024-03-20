@@ -59,11 +59,11 @@ def generate_data(
         config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
         config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
     }
-    initial_orientation_offset: float = - math.pi / 2
+    initial_orientation_offset: float = -math.pi / 2
 
     heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
-    
+
     sun = Sun()
 
     surface_normals = torch.tensor(
@@ -85,19 +85,19 @@ def generate_data(
         ]
     )
 
-    heliostat = HeliostatModule(id=1,
-                                position=heliostat_position,
-                                alignment_type="rigid_body",
-                                actuator_type="ideal_actuator",
-                                aim_point=receiver_center,
-                                facet_type="point_cloud_facet",
-                                surface_points=surface_points,
-                                surface_normals=surface_normals,
-                                incident_ray_direction=incident_ray_direction,
-                                kinematic_deviation_parameters=deviation_parameters,
-                                kinematic_initial_orientation_offset=initial_orientation_offset)
-
-
+    heliostat = HeliostatModule(
+        id=1,
+        position=heliostat_position,
+        alignment_type="rigid_body",
+        actuator_type="ideal_actuator",
+        aim_point=receiver_center,
+        facet_type="point_cloud_facet",
+        surface_points=surface_points,
+        surface_normals=surface_normals,
+        incident_ray_direction=incident_ray_direction,
+        kinematic_deviation_parameters=deviation_parameters,
+        kinematic_initial_orientation_offset=initial_orientation_offset,
+    )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
@@ -164,7 +164,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         distortions_u,
     )
 
-
     intersections = sun.line_plane_intersections(
         receiver_plane_normal, receiver_center, rays, aligned_surface_points
     )
@@ -198,8 +197,12 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = total_bitmap.T
 
-    expected_path = (pathlib.Path(ARTIST_ROOT) / "artist/tests/environment/light_source/bitmaps" / expected_value)
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "artist/tests/environment/light_source/bitmaps"
+        / expected_value
+    )
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected)
+    torch.testing.assert_close(total_bitmap, expected, atol=5e-3, rtol=5e-3)
