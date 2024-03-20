@@ -198,9 +198,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     total_bitmap = total_bitmap.T
 
     expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "artist/tests/environment/light_source/bitmaps"
-        / expected_value
+        pathlib.Path(ARTIST_ROOT) / "artist/tests/environment/bitmaps" / expected_value
     )
 
     expected = torch.load(expected_path)
