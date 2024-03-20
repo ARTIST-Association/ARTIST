@@ -108,18 +108,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     receiver_resolution_x = 256
     receiver_resolution_y = 256
 
-    # Calculate preferred directions of the (?) rays sent out by the heliostat surface.
-    # These rays originate from reflection of the `num_rays_heliostat` (?) incoming sun
-    # rays hitting that heliostat's surface. The heliostat surface is described by `aligned_surface_normals`.
-    # For each normal used to describe the heliostat surface, only the outgoing rays'
-    # preferred directions are returned, which are to be scattered or distorted in the next step.
-
-    # heliostat besteht aus 4 surface_points (4, 3) und dazugehörig (4, 3) normals
-    # Berechne mit sonnenvektor (incident_ray_direction) shape: (1, 3) die preferred_directions (4, 3)
-    # sende ray_count strahlen pro normal_vector aus und störe sie um xi, yi, shape: (ray_count, 4, 3)
-    # Beispiel ray_count = 2 -> ray_directions shape: (8, 3)
-    #
-
     preferred_ray_directions = sun.get_preferred_reflection_direction(
         -incident_ray_direction, aligned_surface_normals
     )
