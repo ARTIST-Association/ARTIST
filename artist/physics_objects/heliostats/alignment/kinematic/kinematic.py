@@ -1,9 +1,9 @@
-"""
-Kinematic modules in ARTIST.
-"""
+"""Kinematic modules in ARTIST."""
 
 import typing
+
 import torch
+
 from artist.physics_objects.module import AModule
 
 
@@ -29,12 +29,6 @@ class AKinematicModule(AModule):
     """
 
     def __init__(self, position: torch.Tensor) -> None:
-        """
-        Parameters
-        ----------
-        position : torch.Tensor
-            The position.
-        """
         super().__init__()
         self.position = position
 

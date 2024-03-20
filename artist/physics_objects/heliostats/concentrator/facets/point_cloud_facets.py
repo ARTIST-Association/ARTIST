@@ -1,6 +1,5 @@
-"""
-This file contains the functionality to create a heliostat surface from a loaded pointcloud.
-"""
+"""This file contains the functionality to create a heliostat surface from a loaded pointcloud."""
+
 import torch
 
 from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
@@ -17,7 +16,7 @@ class PointCloudFacetModule(AFacetModule):
     surface_normals : torch.Tensor
         The surface normals.
 
-    See also
+    See Also
     --------
     :class:AFacetModule : Reference to the parent class.
     """

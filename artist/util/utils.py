@@ -26,6 +26,8 @@ def rotate_distortions(
     u: torch.Tensor,
 ):
     """
+    Rotate the distortions for the sun.
+
     Rotate around the up and then the east axis in this very order in a right-handed east north up
     coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
     counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
@@ -45,7 +47,9 @@ def rotate_distortions(
         Corresponding rotation matrix.
     """
     if e.shape != u.shape:
-        raise ValueError("The two tensors containing angles for the east and up rotation must have the same shape.")
+        raise ValueError(
+            "The two tensors containing angles for the east and up rotation must have the same shape."
+        )
 
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat Convention
@@ -69,10 +73,12 @@ def rotate_e(
     e: torch.Tensor,
 ):
     """
-    Rotate around the east axis in a right-handed east north up
-    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
-    counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
-    resulting rotation matrix.
+    Rotate around the east axis.
+
+    Rotate around the east axis in a right-handed east north up coordinate system. Positive angles result in a rotation
+    in the mathematical direction of rotation, i.e. counter-clockwise. Points need to be multiplied as column vectors
+    from the right hand side with the resulting rotation matrix.
+
 
     Parameters
     ----------
@@ -102,6 +108,8 @@ def rotate_n(
     n: torch.Tensor,
 ):
     """
+    Rotate around the north axis.
+
     Rotate around the north axis in a right-handed east north up
     coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
     counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
@@ -136,6 +144,8 @@ def rotate_u(
     u: torch.Tensor,
 ):
     """
+    Rotate around the up axis.
+
     Rotate around the up axis in a right-handed east north up
     coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
     counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
@@ -172,6 +182,8 @@ def translate_enu(
     u: torch.Tensor,
 ):
     """
+    Trnslate in all directions.
+
     Translate a given point in the east, north and up direction. Note that the point must be multiplied as a column
     vector from the right hand side of the resulting matrix.
 
@@ -190,7 +202,9 @@ def translate_enu(
         Corresponding rotation matrix.
     """
     if e.shape != u.shape or e.shape != n.shape:
-        raise ValueError("The three tensors containing the east, north and up translations must have the same shape.")
+        raise ValueError(
+            "The three tensors containing the east, north and up translations must have the same shape."
+        )
 
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)

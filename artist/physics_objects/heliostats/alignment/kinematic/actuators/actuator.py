@@ -34,4 +34,12 @@ class AActuatorModule(AModule):
         self.clockwise = clockwise
 
     def forward(self) -> torch.Tensor:
+        """
+        Perform forward kinematic.
+
+        Raises
+        ------
+        NotImplementedError
+            This abstract method must be Overridden.
+        """
         raise NotImplementedError("Must Be Overridden!")

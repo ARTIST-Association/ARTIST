@@ -5,8 +5,8 @@ from collections.abc import MutableMapping
 from typing import Dict
 
 import h5py
+
 from artist import ARTIST_ROOT
-from artist.util.heliostat_configurations import _test_heliostat
 from artist.util import config_dictionary
 
 # The following configurations can be adapted to define the required scenario.
@@ -22,7 +22,9 @@ receiver_params = {
 # The following parameters refer to the sun.
 sun_params = {
     config_dictionary.sun_distribution_parameters: {
-        config_dictionary.sun_distribution_type: str("normal"),
+        config_dictionary.sun_distribution_type: str(
+            config_dictionary.sun_distribution_is_normal
+        ),
         config_dictionary.sun_mean: 0.0,
         config_dictionary.sun_covariance: 4.3681e-06,
     },

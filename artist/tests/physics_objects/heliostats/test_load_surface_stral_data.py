@@ -1,6 +1,4 @@
-"""
-This pytest considers loading a heliostat surface from a pointcloud.
-"""
+"""This pytest considers loading a heliostat surface from a pointcloud."""
 
 import pathlib
 
@@ -78,6 +76,19 @@ def generate_data(
     name="environment_data",
 )
 def data(request):
+    """
+    Compute the data required for the test.
+
+    Parameters
+    ----------
+    request : (torch.Tensor, str)
+        The pytest.fixture request with the incident ray direction and bitmap name required for the test.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing the data required for the test.
+    """
     return generate_data(*request.param)
 
 

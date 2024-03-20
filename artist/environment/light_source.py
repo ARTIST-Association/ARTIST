@@ -17,6 +17,7 @@ class ALightSource(torch.nn.Module):
 
     def sample(
         self,
+        num_preferred_ray_directions: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
@@ -30,6 +31,9 @@ class ALightSource(torch.nn.Module):
 
     def scatter_rays(
         self,
+        ray_directions: torch.Tensor,
+        distortion_u: torch.Tensor,
+        distortion_e: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the scattered rays for points on a surface.
