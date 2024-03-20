@@ -1,4 +1,5 @@
 from typing import Any, Dict, Tuple, Union
+from typing_extensions import Self
 
 import h5py
 import torch
@@ -92,7 +93,7 @@ class Sun(ALightSource):
             raise ValueError("Unknown sunlight distribution type.")
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File):
+    def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
         Class method that initializes a sun from a hdf5 file
 
@@ -101,6 +102,10 @@ class Sun(ALightSource):
         config_file : h5py.File
             The hdf5 file containing the information on the sun.
 
+        Returns
+        -------
+        Sun
+            A sun initialized from a h5 file.
         """
         distribution_parameters = {
             config_dictionary.sun_distribution_type: config_file[
