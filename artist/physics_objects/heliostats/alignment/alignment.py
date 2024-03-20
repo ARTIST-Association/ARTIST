@@ -15,7 +15,7 @@ class AlignmentModule(AModule):
 
     Attributes
     ----------
-    kinematic_model : RigidBodyModule
+    kinematic_model : Union[RigidBodyModule, ...]
         The kinematic model used.
 
     Methods
@@ -56,15 +56,16 @@ class AlignmentModule(AModule):
             The initial orientation-rotation angle of the heliostat.
         """
         super().__init__()
-        self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping.get(
-            alignment_type
-        )(
-            actuator_type=actuator_type,
-            position=position,
-            aim_point=aim_point,
-            deviation_parameters=kinematic_deviation_parameters,
-            initial_orientation_offset=kinematic_initial_orientation_offset,
-        )
+        try:
+            self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping[alignment_type](
+                actuator_type=actuator_type,
+                position=position,
+                aim_point=aim_point,
+                deviation_parameters=kinematic_deviation_parameters,
+                initial_orientation_offset=kinematic_initial_orientation_offset,
+            )
+        except:
+            raise KeyError(f"Currently the selected alignment type: {alignment_type} is not supported.")
 
     def align_surface(
         self,

@@ -15,12 +15,24 @@ class ALightSource(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def sample_distortions(
+    def sample(
         self,
-        num_rays_on_hel: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called (abstract base class method).
+        """
+        raise NotImplementedError("Must Be Overridden!")
+
+    def scatter_rays(
+        self,
+    ) -> torch.Tensor:
+        """
+        Compute the scattered rays for points on a surface.
 
         Raises
         ------

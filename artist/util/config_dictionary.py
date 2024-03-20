@@ -20,6 +20,8 @@ facets_type_key = "facets_type"
 
 
 heliostat_parameters = "parameters"
+has_individual_surface_points = "has_individual_surface_points"
+has_individual_surface_normals = "has_individual_surface_normals"
 heliostat_individual_surface_points = "individual_surface_points"
 heliostat_individual_surface_normals = "individual_surface_normals"
 heliostat_height = "height"
