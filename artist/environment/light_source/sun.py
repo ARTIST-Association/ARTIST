@@ -14,33 +14,27 @@ class Sun(ALightSource):
 
     Attributes
     ----------
-    dist_type : str
-        Type of the distribution to be implemented.
+    distribution_parameters : Dict[str, Any]
+        Parameters of the distribution used to model the sun.
     ray_count : int
-        The number of rays sent out.
-    mean
-        The mean of the normal distribution.
-    cov
-        The covariance of the normal distribution.
-    distribution
-        The actual normal distribution.
+        The number of sent-out rays sampled from the sun distribution.
 
     Methods
     -------
+    from_hdf5()
+        Classmethod to initialize helisotat from an h5 file.
     sample()
         Sample rays from a given distribution.
-    compute_rays()
-        Compute the scattered rays for points on a surface.
+    scatter_rays()
+        Scatter the reflected rays around the preferred ray_direction.
     line_plane_intersections()
         Compute line-plane intersections of ray directions and the (receiver) plane.
     get_preferred_reflection_direction()
         Reflect incoming rays according to a normal vector.
-    rotate_y()
-        Create rotation matrices and rotate the input along the y-axis in the heliostat coordinate system.
-    rotate_z()
-        Create rotation matrices and rotate the input along the z-axis in the heliostat coordinate system.
     sample_bitmap()
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
+    normalize_bitmap()
+        Normalize a bitmap.
 
     See Also
     --------
