@@ -23,6 +23,7 @@ dependencies = [
     "numpy",
     "yacs",
     "torch",
+    "h5py",
 ]
 
 [project.optional-dependencies]
