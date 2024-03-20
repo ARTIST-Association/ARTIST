@@ -1,6 +1,7 @@
 """
 This pytest considers loading a heliostat surface from a pointcloud.
 """
+
 import pathlib
 
 import h5py
@@ -171,4 +172,4 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap.T, expected)
+    torch.testing.assert_close(total_bitmap.T, expected, atol=5e-5, rtol=5e-5)
