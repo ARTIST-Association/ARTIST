@@ -1,11 +1,8 @@
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 import h5py
-from yacs.config import CfgNode
-
 import torch
 
-from artist.io.datapoint import HeliostatDataPoint
 from artist.physics_objects.heliostats.concentrator.concentrator import (
     ConcentratorModule,
 )
@@ -20,8 +17,8 @@ class HeliostatModule(AModule):
 
     Attributes
     ----------
-    aim_point : torch.Tensor
-        The aim point on the receiver.
+    id : int
+        Unique ID of the heliostat.
     incident_ray_direction : torch.Tensor
         The direction of the rays.
     concentrator : ConcentratorModule
@@ -31,6 +28,8 @@ class HeliostatModule(AModule):
 
     Methods
     -------
+    from_hdf5()
+        Classmethod to initialize helisotat from an h5 file.
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
@@ -58,10 +57,28 @@ class HeliostatModule(AModule):
 
         Parameters
         ----------
+        id : int
+            Unique ID of the heliostat.
+        position : torch.Tensor
+            The position of the heliostat in the field.
+        alignment_type : str
+            The method by which the helisotat is aligned, currently only rigid-body is possible.
+        actuator_type : str
+            The type of the actuators of the heliostat.
+        aim_point : torch.Tensor
+            The aimpoint.
+        facet_type : str
+            The type of the facets, for example point cloud facets or NURBS.
+        surface_points : torch.Tensor
+            The points on the surface of the heliostat.
+        surface_normals : torch.Tensor
+            The normals corresponding to the points on the surface.
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        heliostat_name : str
-            The name of the heliostat being initialized.
+        kinematic_deviation_parameters : Dict[str, torch.Tensor]
+            The 18 deviation parameters of the kinematic module.
+        kinematic_initial_orientation_offset : float
+            The initial orientation-rotation angle of the heliostat.
         """
         super().__init__()
         self.id = id
@@ -81,7 +98,23 @@ class HeliostatModule(AModule):
         )
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction, heliostat_name):
+    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction: torch.Tensor, heliostat_name: str):
+        """
+        Classmethod to initialize helisotat from an h5 file.
+
+        Parameters
+        ----------
+        config_file : h5py.File
+            The config file containing all the information about the heliostat and the environment.
+        incident_ray_direction : torch.Tensor
+            The direction of the incident ray as seen from the heliostat.
+        helisotat_name : str
+            The name of the heliostat, for identification.
+        
+        Returns
+        -------
+
+        """
         heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.heliostat_id
         ][()]
@@ -268,49 +301,9 @@ class HeliostatModule(AModule):
             kinematic_initial_orientation_offset=kinematic_initial_orientation_offset,
         )
 
-    # def __init__(
-    #     self,
-    #     heliostat_name: str,
-    #     incident_ray_direction: torch.Tensor,
-    #     config_file: h5py.File = None,
-    # ) -> None:
-    #     """
-    #     Initialize the heliostat.
-
-    #     Parameters
-    #     ----------
-    #     heliostat_name : str
-    #         The name of the heliostat being initialized.
-    #     incident_ray_direction : torch.Tensor
-    #         The direction of the incident ray as seen from the heliostat.
-    #     config_file : h5py.File
-    #         An open hdf5 file containing the scenario configuration.
-    #     """
-    #     super().__init__()
-    #     self.position = torch.tensor(
-    #         config_file[config_dictionary.heliostat_prefix][config_dictionary.heliostats_list][heliostat_name][config_dictionary.heliostat_position][
-    #             ()
-    #         ],
-    #         dtype=torch.float,
-    #     )
-    #     self.incident_ray_direction = incident_ray_direction
-    #     self.concentrator = ConcentratorModule(
-    #         heliostat_name=heliostat_name, config_file=config_file
-    #     )
-    #     self.alignment = AlignmentModule(
-    #         heliostat_name=heliostat_name, config_file=config_file
-    #     )
-
     def get_aligned_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
-
-        Parameters
-        ----------
-        aim_point : torch.Tensor
-            The desired aim point.
-        incident_ray_direction : torch.Tensor
-            The direction of the rays.
 
         Returns
         -------

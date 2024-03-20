@@ -1,6 +1,3 @@
-import math
-
-import numpy as np
 import torch
 
 
@@ -24,7 +21,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(-1).unsqueeze(-1)
 
 
-def rotate_ue(
+def rotate_distortions(
     e: torch.Tensor,
     u: torch.Tensor,
 ):
@@ -38,7 +35,7 @@ def rotate_ue(
     Parameters
     ----------
     e : torch.Tensor
-        North rotation angle in radians
+        East rotation angle in radians
     u : torch.Tensor
         Up rotation angle in radians.
 
@@ -47,6 +44,9 @@ def rotate_ue(
     torch.Tensor
         Corresponding rotation matrix.
     """
+    if e.shape != u.shape:
+        raise ValueError("The two tensors containing angles for the east and up rotation must have the same shape.")
+
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat Convention
     cos_u = torch.cos(u)
@@ -189,6 +189,9 @@ def translate_enu(
     torch.Tensor
         Corresponding rotation matrix.
     """
+    if e.shape != u.shape or e.shape != n.shape:
+        raise ValueError("The three tensors containing the east, north and up translations must have the same shape.")
+
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)
 
@@ -200,9 +203,3 @@ def translate_enu(
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
-
-
-def norm_4D_point(point_4D: torch.Tensor):
-    point_3D = point_4D[:3]
-    norm = torch.linalg.norm(point_3D)
-    norm = torch.cat(norm, torch.ones(1), dim=1)
