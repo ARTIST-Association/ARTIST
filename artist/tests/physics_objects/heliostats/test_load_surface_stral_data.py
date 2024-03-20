@@ -1,13 +1,9 @@
 """
 This pytest considers loading a heliostat surface from a pointcloud.
 """
-
-import math
 import pathlib
 
 import h5py
-from matplotlib import pyplot as plt
-import numpy as np
 import pytest
 import torch
 
@@ -28,15 +24,14 @@ def generate_data(
     This includes the position of the heliostat, the position of the receiver,
     the sun as a light source, and the pointcloud as the heliostat surface.
 
-    The facets of the heliostat surface are loaded from a pointcloud.
-    The surface points and surface normals are calculated.
+    The facets/points of the heliostat surface are loaded from a pointcloud.
     The surface points and normals are aligned.
 
     Parameters
     ----------
-    light_direction : torch.Tensor
+    incident_ray_direction : torch.Tensor
         The direction of the light.
-    expected_value : torch.Tensor
+    expected_value : str
         The expected bitmaps for the given test-cases.
     scenario_config : str
         The name of the scenario config that should be loaded.
@@ -125,36 +120,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     # Beispiel ray_count = 2 -> ray_directions shape: (8, 3)
     #
 
-    selected_indices = np.arange(0, 161512, 300)
-    selected_points = aligned_surface_points[selected_indices, :]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    # ax.quiver(0, -50, 0, receiver_plane_normal[0], receiver_plane_normal[1], receiver_plane_normal[2], color='r')
-    ax.quiver(
-        0,
-        0,
-        0,
-        -incident_ray_direction[0],
-        -incident_ray_direction[1],
-        -incident_ray_direction[2],
-        color="g",
-    )
-    ax.scatter(
-        selected_points[:, 0].detach().numpy(),
-        selected_points[:, 1].detach().numpy(),
-        selected_points[:, 2].detach().numpy(),
-        c="b",
-        marker="o",
-    )
-    ax.set_xlabel("E")
-    ax.set_ylabel("N")
-    ax.set_zlabel("U")
-    ax.set_xlim(-3, 3)
-    # ax.set_ylim(-50, 3)
-    ax.set_ylim(-3, 3)
-    ax.set_zlim(-3, 3)
-    plt.show()
-
     preferred_ray_directions = sun.get_preferred_reflection_direction(
         -incident_ray_direction, aligned_surface_normals
     )
@@ -198,9 +163,6 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    plt.imshow(total_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
-    plt.show()
-
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "artist/tests/physics_objects/heliostats/test_bitmaps"
@@ -208,7 +170,5 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     )
 
     expected = torch.load(expected_path)
-    plt.imshow(expected.T, origin="lower", cmap="jet")
-    plt.show()
 
-    torch.testing.assert_close(total_bitmap, expected)
+    torch.testing.assert_close(total_bitmap.T, expected)

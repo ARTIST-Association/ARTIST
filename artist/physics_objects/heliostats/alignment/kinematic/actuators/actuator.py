@@ -13,8 +13,6 @@ class AActuatorModule(AModule):
         Descriptor (number) of the joint.
     clockwise : bool
         Turning direction of the joint.
-    params : dict
-        The parameters that can be optimized.
 
     Methods
     -------
@@ -35,5 +33,5 @@ class AActuatorModule(AModule):
         self.joint_number = joint_number
         self.clockwise = clockwise
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self) -> torch.Tensor:
         raise NotImplementedError("Must Be Overridden!")

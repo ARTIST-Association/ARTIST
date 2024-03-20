@@ -1,16 +1,9 @@
 """
 This file contains the functionality to create a heliostat surface from a loaded pointcloud.
 """
-
-import struct
-from typing import Any, Callable, Dict, List, Optional, Tuple
-
-import h5py
 import torch
-from yacs.config import CfgNode
 
 from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
-from artist.util import config_dictionary
 
 
 class PointCloudFacetModule(AFacetModule):
@@ -20,9 +13,9 @@ class PointCloudFacetModule(AFacetModule):
     Attributes
     ----------
     surface_points : torch.Tensor
-        The surface points vectors.
+        The surface points.
     surface_normals : torch.Tensor
-        The surface normal vectors.
+        The surface normals.
 
     See also
     --------
@@ -40,9 +33,9 @@ class PointCloudFacetModule(AFacetModule):
         Parameters
         ----------
         surface_points : torch.Tensor
-            The surface points vectors.
+            The surface points.
         surface_normals : torch.Tensor
-            The surface normal vectors.
+            The surface normals.
         """
         super().__init__()
 
