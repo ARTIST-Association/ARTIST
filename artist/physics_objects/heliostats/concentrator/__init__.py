@@ -1,5 +1,5 @@
 """
-This package bundles all classes that are used for surfaces in ARTIST.
+This package bundles all classes that are used for concentrators in ARTIST.
 """
 
 from artist.physics_objects.heliostats.concentrator.concentrator import ConcentratorModule

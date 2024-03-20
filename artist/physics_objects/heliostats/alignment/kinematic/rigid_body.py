@@ -19,9 +19,9 @@ class RigidBodyModule(AKinematicModule):
         The position of the heliostat in the field.
     aim_point : torch.Tensor
         The aim point.
-    actuator_1 :
+    actuator_1 : Union[LinearActuator, Ideal_actuator, ...]
         Actuator number one of the heliostat.
-    actuator_2 :
+    actuator_2 : Union[LinearActuator, Ideal_actuator, ...]
         Actuator number two of the helisotat.
     deviation_parameters : Dict[str, torch.Tensor]
         18 deviation parameters describing imperfections in the heliostat.
@@ -86,13 +86,16 @@ class RigidBodyModule(AKinematicModule):
         self.aim_point = aim_point
 
         # TODO: Figure out how to handle true and false
-        self.actuator_1 = artist_type_mapping_dict.actuator_type_mapping.get(
-            actuator_type
-        )(joint_number=1, clockwise=False)
-        self.actuator_2 = artist_type_mapping_dict.actuator_type_mapping.get(
-            actuator_type
-        )(joint_number=2, clockwise=True)
-
+        try: 
+            self.actuator_1 = artist_type_mapping_dict.actuator_type_mapping[
+                actuator_type](joint_number=1, clockwise=False)
+        except:
+            raise KeyError(f"Currently the selected actuator type: {actuator_type} is not supported.")
+        try:
+            self.actuator_2 = artist_type_mapping_dict.actuator_type_mapping[
+                actuator_type](joint_number=2, clockwise=True)
+        except:
+            raise KeyError(f"Currently the selected actuator type: {actuator_type} is not supported.")
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offset = initial_orientation_offset
 

@@ -49,6 +49,8 @@ heliostats = {
         config_dictionary.heliostat_position: [0.0, 5.0, 0.0, 1.0],
         config_dictionary.heliostat_aim_point: [0.0, -50.0, 0.0, 1.0],
         config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
+        config_dictionary.has_individual_surface_points: False,
+        config_dictionary.has_individual_surface_normals: False,
         config_dictionary.heliostat_individual_surface_points: False,
         config_dictionary.heliostat_individual_surface_normals: False,
         config_dictionary.kinematic_deviation_key: {
