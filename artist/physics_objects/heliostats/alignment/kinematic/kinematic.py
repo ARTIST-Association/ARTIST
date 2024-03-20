@@ -18,7 +18,7 @@ class AKinematicModule(AModule):
 
     Methods
     -------
-    compute_orientation()
+    align()
         Compute the orientation matrix to align the heliostat.
     forward()
         Implement the forward kinematics.

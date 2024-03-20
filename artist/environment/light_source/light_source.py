@@ -17,7 +17,6 @@ class ALightSource(torch.nn.Module):
 
     def sample(
         self,
-        num_rays_on_hel: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample rays from a given distribution.
@@ -29,14 +28,8 @@ class ALightSource(torch.nn.Module):
         """
         raise NotImplementedError("Must Be Overridden!")
 
-    def compute_rays(
+    def scatter_rays(
         self,
-        plane_normal: torch.Tensor,
-        plane_point: torch.Tensor,
-        ray_directions: torch.Tensor,
-        hel_in_field: torch.Tensor,
-        xi: torch.Tensor,
-        yi: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the scattered rays for points on a surface.

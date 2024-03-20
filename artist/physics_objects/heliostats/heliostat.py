@@ -1,4 +1,5 @@
 from typing import Dict, Tuple
+from typing_extensions import Self
 
 import h5py
 import torch
@@ -98,7 +99,7 @@ class HeliostatModule(AModule):
         )
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction: torch.Tensor, heliostat_name: str):
+    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction: torch.Tensor, heliostat_name: str) -> Self:
         """
         Classmethod to initialize helisotat from an h5 file.
 
@@ -113,7 +114,8 @@ class HeliostatModule(AModule):
         
         Returns
         -------
-
+        HeliostatModule
+            A heliostat initialized from a h5 file.
         """
         heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.heliostat_id
@@ -139,37 +141,38 @@ class HeliostatModule(AModule):
         facet_type = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.facets_type_key
         ][()].decode("utf-8")
-        surface_points = torch.tensor(
-            config_file[config_dictionary.heliostat_prefix][heliostat_name][
-                config_dictionary.heliostat_individual_surface_points
-            ][()]
-        )
-        surface_normals = torch.tensor(
-            config_file[config_dictionary.heliostat_prefix][heliostat_name][
-                config_dictionary.heliostat_individual_surface_normals
-            ][()]
-        )
 
-        if surface_points.dtype == torch.bool and not surface_points:
+        if config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.has_individual_surface_points
+            ][()]:
+            surface_points = torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                    config_dictionary.heliostat_individual_surface_points
+                ][()], dtype=torch.float
+            )
+        else:
             surface_points = torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][
                     config_dictionary.general_surface_points
                 ][()],
                 dtype=torch.float,
             )
-        elif surface_points.dtype != torch.float:
-            surface_points = surface_points.type(torch.float)
-
-        if surface_normals.dtype == torch.bool and not surface_normals:
+        if config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                config_dictionary.has_individual_surface_normals
+            ][()]:
+            surface_normals = torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                    config_dictionary.heliostat_individual_surface_normals
+                ][()], dtype=torch.float
+            )
+        else:
             surface_normals = torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][
                     config_dictionary.general_surface_normals
                 ][()],
                 dtype=torch.float,
             )
-        elif surface_normals.dtype != torch.float:
-            surface_normals = surface_normals.type(torch.float)
-
+        
         kinematic_deviation_parameters = {
             config_dictionary.first_joint_translation_e: torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][heliostat_name][

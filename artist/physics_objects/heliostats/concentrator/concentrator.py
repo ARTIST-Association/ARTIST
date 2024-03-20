@@ -20,11 +20,6 @@ class ConcentratorModule(AModule):
     facets : List[AFacetModule]
         The facets of the concentrator.
 
-    Methods
-    -------
-    get_surface()
-        Compute the surface points and surface normals of the concentrator.
-
     See also
     --------
     :class:AModule : Reference to the parent class.
@@ -41,27 +36,17 @@ class ConcentratorModule(AModule):
 
         Parameters
         ----------
-        heliostat_name : str
-            The name of the heliostat being initialized.
-        config_file : h5py.File
-            An open hdf5 file containing the scenario configuration.
+        facets_type : str
+            The facet type, for example point cloud.
+        surface_points : torch.Tensor
+            The surface points on the concentrator.
+        surface_normals : torch.Tensor
+            The corresponding normal vectors to the points.
         """
         super().__init__()
-
-        self.facets = artist_type_mapping_dict.facet_type_mapping.get(facets_type)(
-            surface_points=surface_points, surface_normals=surface_normals
-        )
-
-    # def get_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
-    #     """
-    #     Compute the surface points and surface normals of the concentrator.
-    #
-    #     Returns
-    #     -------
-    #     Tuple[torch.Tensor, torch.Tensor]
-    #         Return the surface points and the surface normals.
-    #     """
-    #     surface_points = [facet.surface_points for facet in self.facets]
-    #     surface_normals = [facet.surface_normals for facet in self.facets]
-    #
-    #     return torch.vstack(surface_points), torch.vstack(surface_normals)
+        try:
+            self.facets = artist_type_mapping_dict.facet_type_mapping[facets_type](
+                surface_points=surface_points, surface_normals=surface_normals
+            )
+        except:
+            raise KeyError(f"Currently the selected facet type: {facets_type} is not supported.")
