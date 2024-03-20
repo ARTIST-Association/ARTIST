@@ -13,8 +13,8 @@ class AKinematicModule(AModule):
 
     Attributes
     ----------
-    _position : torch.Tensor
-        The position
+    position : torch.Tensor
+        The position of the heliostat in the field.
 
     Methods
     -------
@@ -38,16 +38,11 @@ class AKinematicModule(AModule):
         super().__init__()
         self.position = position
 
-    def compute_orientation(
-        self, data_point_tensor: torch.Tensor
+    def align(
+        self,
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the orientation matrix to align the heliostat.
-
-        Parameters
-        ----------
-        data_point_tensor: torch.Tensor
-            Contains the information about the heliostat, light source, receiver.
 
         Raises
         ------
@@ -56,14 +51,9 @@ class AKinematicModule(AModule):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self, data_points: torch.Tensor) -> torch.Tensor:
+    def forward(self) -> torch.Tensor:
         """
         Implement the forward kinematics.
-
-        Parameters
-        ----------
-        data_points : torch.Tensor
-            Contains the information about the heliostat, light source, receiver.
 
         Raises
         ------
