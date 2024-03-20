@@ -1,14 +1,7 @@
-from typing import Any, Dict, Tuple
-
-import h5py
 import torch
-from yacs.config import CfgNode
 
-from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets import (
-    PointCloudFacetModule,
-)
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict, config_dictionary
+from artist.util import artist_type_mapping_dict
 
 
 class ConcentratorModule(AModule):
@@ -20,7 +13,7 @@ class ConcentratorModule(AModule):
     facets : List[AFacetModule]
         The facets of the concentrator.
 
-    See also
+    See Also
     --------
     :class:AModule : Reference to the parent class.
     """
@@ -48,5 +41,7 @@ class ConcentratorModule(AModule):
             self.facets = artist_type_mapping_dict.facet_type_mapping[facets_type](
                 surface_points=surface_points, surface_normals=surface_normals
             )
-        except:
-            raise KeyError(f"Currently the selected facet type: {facets_type} is not supported.")
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected facet type: {facets_type} is not supported."
+            )

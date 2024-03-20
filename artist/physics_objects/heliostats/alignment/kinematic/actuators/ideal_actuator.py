@@ -6,6 +6,22 @@ from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator im
 
 
 class IdealActuator(AActuatorModule):
+    """
+    This class implements the behavior of an ideal actuator.
+
+    Methods
+    -------
+    motor_steps_to_angles()
+        Calculate the angles given motor steps.
+    angles_to_motor_steps()
+        Calculate the motor steps given the angles.
+    forward()
+        Perform the forward kinematic.
+
+    See Also
+    --------
+    :class:`AActuatorModule` : The parent class.
+    """
 
     def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:
         """
@@ -15,7 +31,7 @@ class IdealActuator(AActuatorModule):
         ----------
         motor_steps
             The motor steps.
-        
+
         Returns
         -------
         torch.Tensor
@@ -31,7 +47,7 @@ class IdealActuator(AActuatorModule):
         ----------
         angles : torch.Tensor
             The joint angles.
-        
+
         Returns
         -------
         torch.Tensor
@@ -41,7 +57,7 @@ class IdealActuator(AActuatorModule):
 
     def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
-        The forward kinematic.
+        Perform the forward kinematic for an ideal actuator.
 
         Parameters
         ----------

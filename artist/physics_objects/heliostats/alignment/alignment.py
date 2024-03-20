@@ -1,6 +1,5 @@
-"""
-Alignment module for the heliostat.
-"""
+"""Alignment module for the heliostat."""
+
 from typing import Dict, Tuple
 
 import torch
@@ -45,7 +44,7 @@ class AlignmentModule(AModule):
         alignment_type : str
             The method by which the helisotat is aligned, currently only rigid-body is possible.
         actuator_type : str
-            The type of the actuators of the heliostat.   
+            The type of the actuators of the heliostat.
         position : torch.Tensor
             Position of the heliostat for which the alignment model is created.
         aim_point : torch.Tensor
@@ -57,15 +56,19 @@ class AlignmentModule(AModule):
         """
         super().__init__()
         try:
-            self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping[alignment_type](
+            self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping[
+                alignment_type
+            ](
                 actuator_type=actuator_type,
                 position=position,
                 aim_point=aim_point,
                 deviation_parameters=kinematic_deviation_parameters,
                 initial_orientation_offset=kinematic_initial_orientation_offset,
             )
-        except:
-            raise KeyError(f"Currently the selected alignment type: {alignment_type} is not supported.")
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected alignment type: {alignment_type} is not supported."
+            )
 
     def align_surface(
         self,

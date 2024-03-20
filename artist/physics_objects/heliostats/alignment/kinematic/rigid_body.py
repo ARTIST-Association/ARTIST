@@ -5,8 +5,7 @@ import torch
 from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
     AKinematicModule,
 )
-from artist.util import utils, artist_type_mapping_dict
-from artist.util import config_dictionary
+from artist.util import artist_type_mapping_dict, config_dictionary, utils
 
 
 class RigidBodyModule(AKinematicModule):
@@ -86,16 +85,22 @@ class RigidBodyModule(AKinematicModule):
         self.aim_point = aim_point
 
         # TODO: Figure out how to handle true and false
-        try: 
+        try:
             self.actuator_1 = artist_type_mapping_dict.actuator_type_mapping[
-                actuator_type](joint_number=1, clockwise=False)
-        except:
-            raise KeyError(f"Currently the selected actuator type: {actuator_type} is not supported.")
+                actuator_type
+            ](joint_number=1, clockwise=False)
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected actuator type: {actuator_type} is not supported."
+            )
         try:
             self.actuator_2 = artist_type_mapping_dict.actuator_type_mapping[
-                actuator_type](joint_number=2, clockwise=True)
-        except:
-            raise KeyError(f"Currently the selected actuator type: {actuator_type} is not supported.")
+                actuator_type
+            ](joint_number=2, clockwise=True)
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected actuator type: {actuator_type} is not supported."
+            )
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offset = initial_orientation_offset
 
@@ -239,18 +244,14 @@ class RigidBodyModule(AKinematicModule):
                 self.deviation_parameters[config_dictionary.second_joint_translation_e]
             ) * torch.sin(
                 self.deviation_parameters[config_dictionary.second_joint_translation_n]
-            ) * torch.sin(
-                joint_2_angles
-            )
+            ) * torch.sin(joint_2_angles)
             b = -torch.sin(
                 self.deviation_parameters[config_dictionary.second_joint_translation_e]
             ) * torch.cos(joint_2_angles) - torch.cos(
                 self.deviation_parameters[config_dictionary.second_joint_translation_e]
             ) * torch.sin(
                 self.deviation_parameters[config_dictionary.second_joint_translation_n]
-            ) * torch.sin(
-                joint_2_angles
-            )
+            ) * torch.sin(joint_2_angles)
 
             joint_1_angles = (
                 torch.arctan2(

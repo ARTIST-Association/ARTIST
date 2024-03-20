@@ -1,13 +1,13 @@
 from typing import Dict, Tuple
-from typing_extensions import Self
 
 import h5py
 import torch
+from typing_extensions import Self
 
+from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.heliostats.concentrator.concentrator import (
     ConcentratorModule,
 )
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.module import AModule
 from artist.util import config_dictionary
 
@@ -34,7 +34,7 @@ class HeliostatModule(AModule):
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
-    See also
+    See Also
     --------
     :class:AModule : Reference to the parent class.
     """
@@ -99,7 +99,12 @@ class HeliostatModule(AModule):
         )
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, incident_ray_direction: torch.Tensor, heliostat_name: str) -> Self:
+    def from_hdf5(
+        cls,
+        config_file: h5py.File,
+        incident_ray_direction: torch.Tensor,
+        heliostat_name: str,
+    ) -> Self:
         """
         Classmethod to initialize helisotat from an h5 file.
 
@@ -111,7 +116,7 @@ class HeliostatModule(AModule):
             The direction of the incident ray as seen from the heliostat.
         helisotat_name : str
             The name of the heliostat, for identification.
-        
+
         Returns
         -------
         HeliostatModule
@@ -143,12 +148,13 @@ class HeliostatModule(AModule):
         ][()].decode("utf-8")
 
         if config_file[config_dictionary.heliostat_prefix][heliostat_name][
-                config_dictionary.has_individual_surface_points
-            ][()]:
+            config_dictionary.has_individual_surface_points
+        ][()]:
             surface_points = torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][heliostat_name][
                     config_dictionary.heliostat_individual_surface_points
-                ][()], dtype=torch.float
+                ][()],
+                dtype=torch.float,
             )
         else:
             surface_points = torch.tensor(
@@ -158,12 +164,13 @@ class HeliostatModule(AModule):
                 dtype=torch.float,
             )
         if config_file[config_dictionary.heliostat_prefix][heliostat_name][
-                config_dictionary.has_individual_surface_normals
-            ][()]:
+            config_dictionary.has_individual_surface_normals
+        ][()]:
             surface_normals = torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][heliostat_name][
                     config_dictionary.heliostat_individual_surface_normals
-                ][()], dtype=torch.float
+                ][()],
+                dtype=torch.float,
             )
         else:
             surface_normals = torch.tensor(
@@ -172,7 +179,7 @@ class HeliostatModule(AModule):
                 ][()],
                 dtype=torch.float,
             )
-        
+
         kinematic_deviation_parameters = {
             config_dictionary.first_joint_translation_e: torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][heliostat_name][

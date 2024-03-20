@@ -1,12 +1,11 @@
 from typing import Any, Dict, Tuple, Union
-from typing_extensions import Self
 
 import h5py
 import torch
+from typing_extensions import Self
 
 from artist.environment.light_source import ALightSource
-from artist.util import utils
-from artist.util import config_dictionary
+from artist.util import config_dictionary, utils
 
 
 class Sun(ALightSource):
@@ -95,7 +94,7 @@ class Sun(ALightSource):
     @classmethod
     def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
-        Class method that initializes a sun from a hdf5 file
+        Class method that initializes a sun from a hdf5 file.
 
         Parameters
         ----------
@@ -112,11 +111,7 @@ class Sun(ALightSource):
                 config_dictionary.sun_prefix
             ][config_dictionary.sun_distribution_parameters][
                 config_dictionary.sun_distribution_type
-            ][
-                ()
-            ].decode(
-                "utf-8"
-            ),
+            ][()].decode("utf-8"),
             config_dictionary.sun_mean: config_file[config_dictionary.sun_prefix][
                 config_dictionary.sun_distribution_parameters
             ][config_dictionary.sun_mean][()],
@@ -152,7 +147,10 @@ class Sun(ALightSource):
         ValueError
             If the distribution type is not valid, currently only the normal distribution is implemented.
         """
-        if self.distribution_parameters["distribution_type"] == "normal":
+        if (
+            self.distribution_parameters[config_dictionary.sun_distribution_type]
+            == config_dictionary.sun_distribution_is_normal
+        ):
             distortions_n, distortions_u = self.distribution.sample(
                 (self.ray_count, num_preferred_ray_directions),
             ).permute(2, 0, 1)
@@ -163,8 +161,8 @@ class Sun(ALightSource):
     def scatter_rays(
         self,
         ray_directions: torch.Tensor,
-        distortion_n: torch.Tensor,
         distortion_u: torch.Tensor,
+        distortion_e: torch.Tensor,
     ) -> torch.Tensor:
         """
         Scatter the reflected rays around the preferred ray_direction.
@@ -173,10 +171,10 @@ class Sun(ALightSource):
         ----------
         ray_directions : torch.Tensor
             The preferred ray direction.
-        distortion_n : torch.Tensor
-            The distortions in north direction (angles for scattering).
         distortion_u : torch.Tensor
             The distortions in up direction (angles for scattering).
+        distortion_e : torch.Tensor
+            The distortions in east direction (angles for scattering).
 
         Returns
         -------
@@ -191,7 +189,7 @@ class Sun(ALightSource):
         )
 
         scattered_rays = utils.rotate_distortions(
-            u=distortion_n, e=distortion_u
+            u=distortion_u, e=distortion_e
         ) @ ray_directions.unsqueeze(-1)
 
         return scattered_rays.squeeze(-1)
@@ -200,7 +198,7 @@ class Sun(ALightSource):
     def line_plane_intersections(
         plane_normal: torch.Tensor,
         plane_point: torch.Tensor,
-        rays: torch.Tensor,
+        ray_directions: torch.Tensor,
         surface_points: torch.Tensor,
         epsilon: float = 1e-6,
     ) -> torch.Tensor:
@@ -230,12 +228,12 @@ class Sun(ALightSource):
         RuntimeError
             When there are no intersections between the line and the plane.
         """
-        ndotu = rays @ plane_normal
+        ndotu = ray_directions @ plane_normal
         if (torch.abs(ndotu) < epsilon).any():
             raise RuntimeError("no intersection or line is within plane")
         ds = (plane_point - surface_points) @ plane_normal / ndotu
 
-        return surface_points + rays * ds.unsqueeze(-1)
+        return surface_points + ray_directions * ds.unsqueeze(-1)
 
     @staticmethod
     def get_preferred_reflection_direction(
@@ -408,8 +406,8 @@ class Sun(ALightSource):
 
         return total_bitmap
 
+    @staticmethod
     def normalize_bitmap(
-        self,
         bitmap: torch.Tensor,
         total_intensity: Union[float, torch.Tensor],
         plane_x: float,

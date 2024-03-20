@@ -1,4 +1,5 @@
 import math
+
 import pytest
 import torch
 
@@ -6,8 +7,10 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 
+
 @pytest.fixture
 def kinematic_model_1():
+    """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBodyModule(
@@ -17,6 +20,7 @@ def kinematic_model_1():
 
 @pytest.fixture
 def kinematic_model_2():
+    """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBodyModule(
@@ -107,6 +111,7 @@ def test_orientation_matrix(
     incident_ray_direction,
     expected,
 ):
+    """Tests that the alignment is working as desired."""
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
     )
