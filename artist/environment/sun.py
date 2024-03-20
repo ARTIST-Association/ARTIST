@@ -4,7 +4,7 @@ from typing_extensions import Self
 import h5py
 import torch
 
-from artist.environment.light_source.light_source import ALightSource
+from artist.environment.light_source import ALightSource
 from artist.util import utils
 from artist.util import config_dictionary
 
