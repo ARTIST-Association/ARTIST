@@ -1,4 +1,5 @@
 import torch
+
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import (
     AActuatorModule,
 )
@@ -6,12 +7,36 @@ from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator im
 
 class IdealActuator(AActuatorModule):
 
-    def motor_steps_to_angles(self, motor_steps: torch.Tensor):
+    def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:
+        """
+        Translate motor steps to a joint angle.
 
+        Parameters
+        ----------
+        motor_steps
+            The motor steps.
+        
+        Returns
+        -------
+        torch.Tensor
+            The joint angle.
+        """
         return motor_steps
 
-    def angles_to_motor_steps(self, angles: torch.Tensor):
+    def angles_to_motor_steps(self, angles: torch.Tensor) -> torch.Tensor:
+        """
+        Translate a joint angle to motor steps.
 
+        Parameters
+        ----------
+        angles : torch.Tensor
+            The joint angles.
+        
+        Returns
+        -------
+        torch.Tensor
+            The motor steps.
+        """
         return angles
 
     def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:

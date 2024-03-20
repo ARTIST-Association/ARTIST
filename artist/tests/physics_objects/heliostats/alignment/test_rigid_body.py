@@ -6,7 +6,6 @@ from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
     RigidBodyModule,
 )
 
-
 @pytest.fixture
 def kinematic_model_1():
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])

@@ -2,47 +2,64 @@
 This pytest tests the correctness of the light source.
 """
 
+import math
 import pathlib
 from typing import Dict
 
 import pytest
 import torch
-import h5py
 
 from artist import ARTIST_ROOT
 from artist.environment.light_source.sun import Sun
-from artist.io.datapoint import HeliostatDataPoint, HeliostatDataPointLabel
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
 from artist.physics_objects.heliostats.heliostat import HeliostatModule
+from artist.util import config_dictionary
 
 
 def generate_data(
     incident_ray_direction: torch.Tensor,
     expected_value: str,
-    scenario_config: str,
 ) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
-    This includes the position of the heliostat, the position of the receiver,
+    This includes the deviation parameters of the kinematic module, the position of the heliostat, the position of the receiver,
     the sun as a light source, and five manually created surface points and normals.
 
-    The surface points and normals are aligned by the kinematic module.
+    The surface points and normals are aligned by the kinematic module of the Heliost module.
 
     Parameters
     ----------
-    light_direction : torch.Tensor
+    incident_ray_direction : torch.Tensor
         The direction of the light.
-    expected_value : torch.Tensor
+    expected_value : str
         The expected bitmaps for the given test-cases.
-    scenario_config : str
-        The name of the scenario config that should be loaded.
 
     Returns
     -------
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
+    deviation_parameters = {
+        config_dictionary.first_joint_translation_e: torch.tensor(0.0),
+        config_dictionary.first_joint_translation_n: torch.tensor(0.0),
+        config_dictionary.first_joint_translation_u: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_e: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_n: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_u: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_e: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_n: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_u: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_e: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_n: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_u: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_e: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_n: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_u: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
+    }
+    initial_orientation_offset: float = - math.pi / 2
 
     heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
@@ -77,7 +94,8 @@ def generate_data(
                                 surface_points=surface_points,
                                 surface_normals=surface_normals,
                                 incident_ray_direction=incident_ray_direction,
-                                )
+                                kinematic_deviation_parameters=deviation_parameters,
+                                kinematic_initial_orientation_offset=initial_orientation_offset)
 
 
 
@@ -95,10 +113,10 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([0.0, 0.0, 1.0, 1.0]), "above.pt", "test_scenario"),
-        (torch.tensor([1.0, 0.0, 0.0, 1.0]), "east.pt", "test_scenario"),
-        (torch.tensor([-1.0, 0.0, 0.0, 1.0]), "west.pt", "test_scenario"),
-        (torch.tensor([0.0, -1.0, 0.0, 1.0]), "south.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt"),
     ],
     name="environment_data",
 )
@@ -180,9 +198,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = total_bitmap.T
 
-    expected_path = pathlib.Path(ARTIST_ROOT) / pathlib.Path(
-        f"artist/tests/environment/light_source/bitmaps/{expected_value}"
-    )
+    expected_path = (pathlib.Path(ARTIST_ROOT) / "artist/tests/environment/light_source/bitmaps" / expected_value)
 
     expected = torch.load(expected_path)
 

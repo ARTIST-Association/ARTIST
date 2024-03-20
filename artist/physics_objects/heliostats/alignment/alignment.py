@@ -1,20 +1,12 @@
 """
 Alignment module for the heliostat.
 """
+from typing import Dict, Tuple
 
-import math
-from typing import Any, Dict, Tuple
-
-import h5py
 import torch
-from yacs.config import CfgNode
 
-from artist.io.datapoint import HeliostatDataPoint
-from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
-    RigidBodyModule,
-)
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict, config_dictionary
+from artist.util import artist_type_mapping_dict
 
 
 class AlignmentModule(AModule):
@@ -29,11 +21,7 @@ class AlignmentModule(AModule):
     Methods
     -------
     align_surface()
-        Align given surface points and surface normals according to a given orientation.
-    align()
-        Compute the orientation from a given aimpoint.
-    heliostat_coord_system()
-        Construct the heliostat coordinate system.
+        Align given surface points and surface normals according to a calculated orientation.
 
     See Also
     --------
@@ -54,8 +42,18 @@ class AlignmentModule(AModule):
 
         Parameters
         ----------
+        alignment_type : str
+            The method by which the helisotat is aligned, currently only rigid-body is possible.
+        actuator_type : str
+            The type of the actuators of the heliostat.   
         position : torch.Tensor
             Position of the heliostat for which the alignment model is created.
+        aim_point : torch.Tensor
+            The aimpoint.
+        kinematic_deviation_parameters : Dict[str, torch.Tensor]
+            The 18 deviation parameters of the kinematic module.
+        kinematic_initial_orientation_offset : float
+            The initial orientation-rotation angle of the heliostat.
         """
         super().__init__()
         self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping.get(
@@ -75,12 +73,10 @@ class AlignmentModule(AModule):
         surface_normals: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Align given surface points and surface normals according to a given orientation.
+        Align given surface points and surface normals according to a calculated orientation.
 
         Parameters
         ----------
-        aim_point : torch.Tensor
-            The desired aim point.
         incident_ray_direction : torch.Tensor
             The direction of the rays.
         surface_points : torch.Tensor

@@ -1,3 +1,5 @@
+"""This file implements a type mapping dictionary."""
+
 from artist.physics_objects.heliostats.alignment.kinematic.actuators.ideal_actuator import (
     IdealActuator,
 )
