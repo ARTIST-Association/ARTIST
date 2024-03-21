@@ -49,22 +49,16 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
 ## Structure
 ```
 ├──artist # Parent package
-│   ├───io # IO functionality
-│   │   └───tests # IO functionality tests
 │   ├───physics_objects # Physical objects in raytracing environment, e.g., heliostats or receiver
-│   │   └───heliostats
-│   │       ├───alignment
-│   │       │   └───tests
-│   │       │       └───bitmaps
-│   │       └───surface
-│   │           └───facets
 │   ├───raytracing
-│   ├───scenario
-│   │   └───light_source
-│   │       └───tests
+│   ├───scene # Light sources and factors influencing the surroundings
 │   └───util
-└───scenario_objects # Loaded from experiment yaml file to, e.g., define whether the sun or a beamer should be loaded
-    └───heliostats
+└───measurement_data # Real measurements from a solar thermal power plant that can be used to create a scenario
+└───scenarios # Scenarios describing solar thermal power plants which can be loaded
+└───tests
+    ├───physics_objects # Tests for objects in the physics_objects package
+    ├───raytracing # Tests for objects in the raytracing package
+    └───scene # Tests for objects in the scene package
 ```
 ## How to use ARTIST
 We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.
