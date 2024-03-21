@@ -11,4 +11,5 @@ __all__ = [
     "raytracing",
     "scene",
     "util",
+    "ARTIST_ROOT",
 ]
