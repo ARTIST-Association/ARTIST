@@ -8,8 +8,8 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.environment.sun import Sun
 from artist.physics_objects import HeliostatModule
+from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
 
@@ -208,9 +208,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     total_bitmap = total_bitmap.T
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT) / "tests/environment/bitmaps" / expected_value
-    )
+    expected_path = pathlib.Path(ARTIST_ROOT) / "tests/scene/bitmaps" / expected_value
 
     expected = torch.load(expected_path)
 

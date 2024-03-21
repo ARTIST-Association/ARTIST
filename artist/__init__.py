@@ -2,7 +2,7 @@
 
 import os
 
-from artist import environment, physics_objects, raytracing, util
+from artist import physics_objects, raytracing, util
 
 ARTIST_ROOT = f"{os.sep}".join(__file__.split(os.sep)[:-2])
 
