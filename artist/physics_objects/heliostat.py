@@ -4,27 +4,10 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.physics_objects.actuator_ideal import (
-    IdealActuator,
-)
 from artist.physics_objects.alignment import AlignmentModule
-from artist.physics_objects.concentrator import (
-    ConcentratorModule,
-)
-from artist.physics_objects.facets_point_cloud import (
-    PointCloudFacetModule,
-)
-from artist.physics_objects.kinematic_rigid_body import (
-    RigidBodyModule,
-)
+from artist.physics_objects.concentrator import ConcentratorModule
 from artist.physics_objects.module import AModule
-from artist.util import config_dictionary
-
-alignment_type_mapping = {config_dictionary.rigid_body_key: RigidBodyModule}
-
-actuator_type_mapping = {config_dictionary.ideal_actuator_key: IdealActuator}
-
-facet_type_mapping = {config_dictionary.point_cloud_facet_key: PointCloudFacetModule}
+from artist.util import artist_type_mapping_dict, config_dictionary
 
 
 class HeliostatModule(AModule):
@@ -151,7 +134,9 @@ class HeliostatModule(AModule):
         ][config_dictionary.alignment_type_key][()].decode("utf-8")
 
         try:
-            alignment_type = alignment_type_mapping[alignment_type]
+            alignment_type = artist_type_mapping_dict.alignment_type_mapping[
+                alignment_type
+            ]
         except KeyError:
             raise KeyError(
                 f"Currently the selected alignment type: {alignment_type} is not supported."
@@ -162,7 +147,9 @@ class HeliostatModule(AModule):
         ][()].decode("utf-8")
 
         try:
-            actuator_type = actuator_type_mapping[actuator_type]
+            actuator_type = artist_type_mapping_dict.actuator_type_mapping[
+                actuator_type
+            ]
         except KeyError:
             raise KeyError(
                 f"Currently the selected actuator type: {actuator_type} is not supported."
@@ -178,7 +165,7 @@ class HeliostatModule(AModule):
         ][()].decode("utf-8")
 
         try:
-            facet_type = facet_type_mapping[facet_type]
+            facet_type = artist_type_mapping_dict.facet_type_mapping[facet_type]
         except KeyError:
             raise KeyError(
                 f"Currently the selected facet type: {facet_type} is not supported."
