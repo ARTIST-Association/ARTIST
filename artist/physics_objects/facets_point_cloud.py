@@ -2,7 +2,7 @@
 
 import torch
 
-from artist.physics_objects.heliostats.concentrator.facets.facets import AFacetModule
+from artist.physics_objects.facets import AFacetModule
 
 
 class PointCloudFacetModule(AFacetModule):

@@ -3,7 +3,7 @@ import math
 import pytest
 import torch
 
-from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
+from artist.physics_objects.kinematic_rigid_body import (
     RigidBodyModule,
 )
 

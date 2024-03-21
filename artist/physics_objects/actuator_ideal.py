@@ -1,6 +1,6 @@
 import torch
 
-from artist.physics_objects.heliostats.alignment.kinematic.actuators.actuator import (
+from artist.physics_objects.actuator import (
     AActuatorModule,
 )
 

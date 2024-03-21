@@ -1,13 +1,13 @@
 """This file implements a type mapping dictionary."""
 
-from artist.physics_objects.heliostats.alignment.kinematic.actuators.ideal_actuator import (
+from artist.physics_objects.actuator_ideal import (
     IdealActuator,
 )
-from artist.physics_objects.heliostats.alignment.kinematic.rigid_body import (
-    RigidBodyModule,
-)
-from artist.physics_objects.heliostats.concentrator.facets.point_cloud_facets import (
+from artist.physics_objects.facets_point_cloud import (
     PointCloudFacetModule,
+)
+from artist.physics_objects.kinematic_rigid_body import (
+    RigidBodyModule,
 )
 from artist.util import config_dictionary
 
