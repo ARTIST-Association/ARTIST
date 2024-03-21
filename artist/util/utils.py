@@ -46,10 +46,9 @@ def rotate_distortions(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    if e.shape != u.shape:
-        raise ValueError(
-            "The two tensors containing angles for the east and up rotation must have the same shape."
-        )
+    assert (
+        e.shape == u.shape
+    ), "The two tensors containing angles for the east and up rotation must have the same shape."
 
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat Convention
@@ -201,10 +200,9 @@ def translate_enu(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    if e.shape != u.shape or e.shape != n.shape:
-        raise ValueError(
-            "The three tensors containing the east, north and up translations must have the same shape."
-        )
+    assert (
+        e.shape == u.shape == n.shape
+    ), "The three tensors containing the east, north and up translations must have the same shape."
 
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)
