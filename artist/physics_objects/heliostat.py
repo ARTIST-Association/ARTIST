@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 import h5py
 import torch
@@ -9,7 +9,7 @@ from artist.physics_objects.concentrator import (
     ConcentratorModule,
 )
 from artist.physics_objects.module import AModule
-from artist.util import config_dictionary
+from artist.util import artist_type_mapping_dict, config_dictionary
 
 
 class HeliostatModule(AModule):
@@ -43,10 +43,10 @@ class HeliostatModule(AModule):
         self,
         id: int,
         position: torch.Tensor,
-        alignment_type: str,
-        actuator_type: str,
+        alignment_type: Any,
+        actuator_type: Any,
         aim_point: torch.Tensor,
-        facet_type: str,
+        facet_type: Any,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         incident_ray_direction: torch.Tensor,
@@ -62,13 +62,13 @@ class HeliostatModule(AModule):
             Unique ID of the heliostat.
         position : torch.Tensor
             The position of the heliostat in the field.
-        alignment_type : str
+        alignment_type : Any
             The method by which the helisotat is aligned, currently only rigid-body is possible.
-        actuator_type : str
+        actuator_type : Any
             The type of the actuators of the heliostat.
         aim_point : torch.Tensor
             The aimpoint.
-        facet_type : str
+        facet_type : Any
             The type of the facets, for example point cloud facets or NURBS.
         surface_points : torch.Tensor
             The points on the surface of the heliostat.
@@ -134,9 +134,28 @@ class HeliostatModule(AModule):
         alignment_type = config_file[config_dictionary.heliostat_prefix][
             heliostat_name
         ][config_dictionary.alignment_type_key][()].decode("utf-8")
+
+        try:
+            alignment_type = artist_type_mapping_dict.alignment_type_mapping[
+                alignment_type
+            ]
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected alignment type: {alignment_type} is not supported."
+            )
+
         actuator_type = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.actuator_type_key
         ][()].decode("utf-8")
+
+        try:
+            actuator_type = artist_type_mapping_dict.actuator_type_mapping[
+                actuator_type
+            ]
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected actuator type: {actuator_type} is not supported."
+            )
         aim_point = torch.tensor(
             config_file[config_dictionary.heliostat_prefix][heliostat_name][
                 config_dictionary.heliostat_aim_point
@@ -146,6 +165,13 @@ class HeliostatModule(AModule):
         facet_type = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.facets_type_key
         ][()].decode("utf-8")
+
+        try:
+            facet_type = artist_type_mapping_dict.facet_type_mapping[facet_type]
+        except KeyError:
+            raise KeyError(
+                f"Currently the selected facet type: {facet_type} is not supported."
+            )
 
         if config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.has_individual_surface_points

@@ -9,6 +9,9 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.physics_objects import HeliostatModule
+from artist.physics_objects.actuator_ideal import IdealActuator
+from artist.physics_objects.facets_point_cloud import PointCloudFacetModule
+from artist.physics_objects.kinematic_rigid_body import RigidBodyModule
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
@@ -86,10 +89,10 @@ def generate_data(
     heliostat = HeliostatModule(
         id=1,
         position=heliostat_position,
-        alignment_type="rigid_body",
-        actuator_type="ideal_actuator",
+        alignment_type=RigidBodyModule,
+        actuator_type=IdealActuator,
         aim_point=receiver_center,
-        facet_type="point_cloud_facet",
+        facet_type=PointCloudFacetModule,
         surface_points=surface_points,
         surface_normals=surface_normals,
         incident_ray_direction=incident_ray_direction,

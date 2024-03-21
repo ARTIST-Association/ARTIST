@@ -1,7 +1,8 @@
+from typing import Any
+
 import torch
 
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict
 
 
 class ConcentratorModule(AModule):
@@ -20,7 +21,7 @@ class ConcentratorModule(AModule):
 
     def __init__(
         self,
-        facets_type: str,
+        facets_type: Any,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
     ) -> None:
@@ -29,7 +30,7 @@ class ConcentratorModule(AModule):
 
         Parameters
         ----------
-        facets_type : str
+        facets_type : Any
             The facet type, for example point cloud.
         surface_points : torch.Tensor
             The surface points on the concentrator.
@@ -37,11 +38,6 @@ class ConcentratorModule(AModule):
             The corresponding normal vectors to the points.
         """
         super().__init__()
-        try:
-            self.facets = artist_type_mapping_dict.facet_type_mapping[facets_type](
-                surface_points=surface_points, surface_normals=surface_normals
-            )
-        except KeyError:
-            raise KeyError(
-                f"Currently the selected facet type: {facets_type} is not supported."
-            )
+        self.facets = facets_type(
+            surface_points=surface_points, surface_normals=surface_normals
+        )
