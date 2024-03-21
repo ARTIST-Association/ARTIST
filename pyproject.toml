@@ -122,7 +122,7 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-#[tool.pytest.ini_options]
-#testpaths = [
-#    "tests",
-#]
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
