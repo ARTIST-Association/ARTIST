@@ -7,8 +7,8 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.environment.sun import Sun
 from artist.physics_objects.heliostat import HeliostatModule
+from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
 
