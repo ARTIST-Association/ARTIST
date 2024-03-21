@@ -68,6 +68,10 @@ class Sun(ALightSource):
         self.distribution_parameters = distribution_parameters
         self.ray_count = ray_count
 
+        assert (
+            self.distribution_parameters["distribution_type"] == "normal"
+        ), "Unknown sunlight distribution type."
+
         if self.distribution_parameters["distribution_type"] == "normal":
             mean = torch.tensor(
                 [
@@ -85,11 +89,6 @@ class Sun(ALightSource):
             )
 
             self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
-
-        elif self.distribution_parameters["distribution_type"] == "Pillbox":
-            raise NotImplementedError("Not implemented yet.")
-        else:
-            raise ValueError("Unknown sunlight distribution type.")
 
     @classmethod
     def from_hdf5(cls, config_file: h5py.File) -> Self:
@@ -229,8 +228,9 @@ class Sun(ALightSource):
             When there are no intersections between the line and the plane.
         """
         ndotu = ray_directions @ plane_normal
-        if (torch.abs(ndotu) < epsilon).any():
-            raise RuntimeError("no intersection or line is within plane")
+        assert (
+            torch.abs(ndotu) < epsilon
+        ).any(), "No intersection or line is within plane"
         ds = (plane_point - surface_points) @ plane_normal / ndotu
 
         return surface_points + ray_directions * ds.unsqueeze(-1)
