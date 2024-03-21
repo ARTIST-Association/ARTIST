@@ -84,7 +84,6 @@ select = ["N", "E4", "E7", "E9", "F", "D"]
 ignore = ["D100", "D104", "D404"]
 # Enable import sorting
 extend-select = ["I"]
-ignore-init-module-imports = true
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -123,8 +122,8 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-[tool.pytest.ini_options]
-pythonpath = "src"
-addopts = [
-    "--import-mode=importlib",
-]
+#[tool.pytest.ini_options]
+#pythonpath = "src"
+#addopts = [
+#    "--import-mode=importlib",
+#]
