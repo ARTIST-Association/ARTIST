@@ -166,7 +166,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/test_bitmaps_load_surface_stral"
+        / "tests/physics_objects/test_bitmaps_load_surface_stral"
         / expected_value
     )
 
