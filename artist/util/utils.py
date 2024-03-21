@@ -46,7 +46,9 @@ def rotate_distortions(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    if e.shape != u.shape:
+    try:
+        e.shape != u.shape
+    except ValueError:
         raise ValueError(
             "The two tensors containing angles for the east and up rotation must have the same shape."
         )
