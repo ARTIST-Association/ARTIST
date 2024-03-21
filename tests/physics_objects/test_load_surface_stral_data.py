@@ -8,7 +8,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.environment.sun import Sun
-from artist.physics_objects.heliostats.heliostat import HeliostatModule
+from artist.physics_objects.heliostat import HeliostatModule
 from artist.util import config_dictionary
 
 
@@ -165,7 +165,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/physics_objects/heliostats/test_bitmaps"
+        / "tests/physics_objects/test_bitmaps"
         / expected_value
     )
 

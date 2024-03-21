@@ -2,7 +2,7 @@ from typing import Dict
 
 import torch
 
-from artist.physics_objects.heliostats.alignment.kinematic.kinematic import (
+from artist.physics_objects.kinematic import (
     AKinematicModule,
 )
 from artist.util import artist_type_mapping_dict, config_dictionary, utils

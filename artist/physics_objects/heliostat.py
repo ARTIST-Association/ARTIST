@@ -4,8 +4,8 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.physics_objects.heliostats.alignment.alignment import AlignmentModule
-from artist.physics_objects.heliostats.concentrator.concentrator import (
+from artist.physics_objects.alignment import AlignmentModule
+from artist.physics_objects.concentrator import (
     ConcentratorModule,
 )
 from artist.physics_objects.module import AModule
