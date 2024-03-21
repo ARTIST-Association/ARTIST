@@ -1,4 +1,4 @@
 import sys
 
 sys.path.append('.')
-sys.path.append('./artist.environment')
+sys.path.append('./artist/environment')
