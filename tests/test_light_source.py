@@ -37,7 +37,7 @@ def generate_data(
 
     Returns
     -------
-    dict[str, torch.Tensor]
+    Dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     deviation_parameters = {
@@ -138,7 +138,7 @@ def data(request: Tuple[torch.Tensor, str]) -> Dict[str, Any]:
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -149,7 +149,7 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : dict[str, torch.Tensor]
+    environment_data : Dict[str, torch.Tensor]
         The dictionary containing all the data to compute the bitmaps.
     """
     torch.manual_seed(7)

@@ -1,6 +1,7 @@
 """This pytest considers loading a heliostat surface from a pointcloud."""
 
 import pathlib
+from typing import Dict
 
 import h5py
 import pytest
@@ -16,7 +17,7 @@ def generate_data(
     incident_ray_direction: torch.Tensor,
     expected_value: str,
     scenario_config: str,
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
@@ -37,7 +38,7 @@ def generate_data(
 
     Returns
     -------
-    dict[str, torch.Tensor]
+    Dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
@@ -92,7 +93,7 @@ def data(request):
     return generate_data(*request.param)
 
 
-def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 

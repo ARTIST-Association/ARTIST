@@ -28,7 +28,7 @@ sun_params = {
         config_dictionary.sun_mean: 0.0,
         config_dictionary.sun_covariance: 4.3681e-06,
     },
-    config_dictionary.sun_number_of_rays: 200,
+    config_dictionary.sun_number_of_rays: 10,
 }
 
 # The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
