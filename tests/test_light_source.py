@@ -65,7 +65,7 @@ def generate_data(
     heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
 
-    sun = Sun()
+    sun = Sun(ray_count=10)
 
     surface_normals = torch.tensor(
         [
