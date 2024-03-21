@@ -1,15 +1,15 @@
 """This package bundles all classes that represent physical objects in ARTIST."""
 
-from artist.physics_objects.actuator import AActuatorModule
-from artist.physics_objects.actuator_ideal import IdealActuator
-from artist.physics_objects.alignment import AlignmentModule
-from artist.physics_objects.concentrator import ConcentratorModule
-from artist.physics_objects.facets import AFacetModule
-from artist.physics_objects.facets_point_cloud import PointCloudFacetModule
-from artist.physics_objects.heliostat import HeliostatModule
-from artist.physics_objects.kinematic import AKinematicModule
-from artist.physics_objects.kinematic_rigid_body import RigidBodyModule
-from artist.physics_objects.module import AModule
+from .actuator import AActuatorModule
+from .actuator_ideal import IdealActuator
+from .alignment import AlignmentModule
+from .concentrator import ConcentratorModule
+from .facets import AFacetModule
+from .facets_point_cloud import PointCloudFacetModule
+from .heliostat import HeliostatModule
+from .kinematic import AKinematicModule
+from .kinematic_rigid_body import RigidBodyModule
+from .module import AModule
 
 __all__ = [
     "AModule",
