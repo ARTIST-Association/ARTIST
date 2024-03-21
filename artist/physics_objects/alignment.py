@@ -1,11 +1,10 @@
 """Alignment module for the heliostat."""
 
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 import torch
 
 from artist.physics_objects.module import AModule
-from artist.util import artist_type_mapping_dict
 
 
 class AlignmentModule(AModule):
@@ -29,8 +28,8 @@ class AlignmentModule(AModule):
 
     def __init__(
         self,
-        alignment_type: str,
-        actuator_type: str,
+        alignment_type: Any,
+        actuator_type: Any,
         position: torch.tensor,
         aim_point: torch.tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
@@ -41,9 +40,9 @@ class AlignmentModule(AModule):
 
         Parameters
         ----------
-        alignment_type : str
+        alignment_type : Any
             The method by which the helisotat is aligned, currently only rigid-body is possible.
-        actuator_type : str
+        actuator_type : Any
             The type of the actuators of the heliostat.
         position : torch.Tensor
             Position of the heliostat for which the alignment model is created.
@@ -55,20 +54,14 @@ class AlignmentModule(AModule):
             The initial orientation-rotation angle of the heliostat.
         """
         super().__init__()
-        try:
-            self.kinematic_model = artist_type_mapping_dict.alignment_type_mapping[
-                alignment_type
-            ](
-                actuator_type=actuator_type,
-                position=position,
-                aim_point=aim_point,
-                deviation_parameters=kinematic_deviation_parameters,
-                initial_orientation_offset=kinematic_initial_orientation_offset,
-            )
-        except KeyError:
-            raise KeyError(
-                f"Currently the selected alignment type: {alignment_type} is not supported."
-            )
+
+        self.kinematic_model = alignment_type(
+            actuator_type=actuator_type,
+            position=position,
+            aim_point=aim_point,
+            deviation_parameters=kinematic_deviation_parameters,
+            initial_orientation_offset=kinematic_initial_orientation_offset,
+        )
 
     def align_surface(
         self,

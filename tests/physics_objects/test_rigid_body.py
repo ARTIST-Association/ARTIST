@@ -3,6 +3,7 @@ import math
 import pytest
 import torch
 
+from artist.physics_objects.actuator_ideal import IdealActuator
 from artist.physics_objects.kinematic_rigid_body import (
     RigidBodyModule,
 )
@@ -14,7 +15,7 @@ def kinematic_model_1():
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBodyModule(
-        actuator_type="ideal_actuator", position=position, aim_point=aim_point
+        actuator_type=IdealActuator, position=position, aim_point=aim_point
     )
 
 
@@ -24,7 +25,7 @@ def kinematic_model_2():
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBodyModule(
-        actuator_type="ideal_actuator", position=position, aim_point=aim_point
+        actuator_type=IdealActuator, position=position, aim_point=aim_point
     )
 
 

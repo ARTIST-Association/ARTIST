@@ -1,11 +1,11 @@
-from typing import Dict
+from typing import Any, Dict
 
 import torch
 
 from artist.physics_objects.kinematic import (
     AKinematicModule,
 )
-from artist.util import artist_type_mapping_dict, config_dictionary, utils
+from artist.util import config_dictionary, utils
 
 
 class RigidBodyModule(AKinematicModule):
@@ -41,7 +41,7 @@ class RigidBodyModule(AKinematicModule):
         self,
         position: torch.Tensor,
         aim_point: torch.Tensor,
-        actuator_type: str,
+        actuator_type: Any,
         deviation_parameters: Dict[str, torch.Tensor] = {
             config_dictionary.first_joint_translation_e: torch.tensor(0.0),
             config_dictionary.first_joint_translation_n: torch.tensor(0.0),
@@ -85,22 +85,9 @@ class RigidBodyModule(AKinematicModule):
         self.aim_point = aim_point
 
         # TODO: Figure out how to handle true and false
-        try:
-            self.actuator_1 = artist_type_mapping_dict.actuator_type_mapping[
-                actuator_type
-            ](joint_number=1, clockwise=False)
-        except KeyError:
-            raise KeyError(
-                f"Currently the selected actuator type: {actuator_type} is not supported."
-            )
-        try:
-            self.actuator_2 = artist_type_mapping_dict.actuator_type_mapping[
-                actuator_type
-            ](joint_number=2, clockwise=True)
-        except KeyError:
-            raise KeyError(
-                f"Currently the selected actuator type: {actuator_type} is not supported."
-            )
+        self.actuator_1 = actuator_type(joint_number=1, clockwise=False)
+        self.actuator_2 = actuator_type(joint_number=2, clockwise=True)
+
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offset = initial_orientation_offset
 
