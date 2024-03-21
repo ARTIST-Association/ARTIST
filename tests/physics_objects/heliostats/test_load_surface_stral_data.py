@@ -1,9 +1,8 @@
-"""This pytest tests the correctness of the light source."""
+"""This pytest considers loading a heliostat surface from a pointcloud."""
 
-import math
 import pathlib
-from typing import Any, Dict, Tuple
 
+import h5py
 import pytest
 import torch
 
@@ -16,14 +15,16 @@ from artist.util import config_dictionary
 def generate_data(
     incident_ray_direction: torch.Tensor,
     expected_value: str,
-) -> Dict[str, torch.Tensor]:
+    scenario_config: str,
+) -> dict[str, torch.Tensor]:
     """
     Generate all the relevant data for this test.
 
-    This includes the deviation parameters of the kinematic module, the position of the heliostat, the position of the receiver,
-    the sun as a light source, and five manually created surface points and normals.
+    This includes the position of the heliostat, the position of the receiver,
+    the sun as a light source, and the pointcloud as the heliostat surface.
 
-    The surface points and normals are aligned by the kinematic module of the Heliost module.
+    The facets/points of the heliostat surface are loaded from a pointcloud.
+    The surface points and normals are aligned.
 
     Parameters
     ----------
@@ -31,71 +32,27 @@ def generate_data(
         The direction of the light.
     expected_value : str
         The expected bitmaps for the given test-cases.
+    scenario_config : str
+        The name of the scenario config that should be loaded.
 
     Returns
     -------
     dict[str, torch.Tensor]
         A dictionary containing all the data.
     """
-    deviation_parameters = {
-        config_dictionary.first_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_u: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_u: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_e: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_n: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_u: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
-    }
-    initial_orientation_offset: float = -math.pi / 2
-
-    heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
-    receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
-
-    sun = Sun()
-
-    surface_normals = torch.tensor(
-        [
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-        ]
-    )
-    surface_points = torch.tensor(
-        [
-            [-1.0, -1.0, 0.0, 1.0],
-            [1.0, 1.0, 0.0, 1.0],
-            [-1.0, 1.0, 0.0, 1.0],
-            [1.0, -1.0, 0.0, 1.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-
-    heliostat = HeliostatModule(
-        id=1,
-        position=heliostat_position,
-        alignment_type="rigid_body",
-        actuator_type="ideal_actuator",
-        aim_point=receiver_center,
-        facet_type="point_cloud_facet",
-        surface_points=surface_points,
-        surface_normals=surface_normals,
-        incident_ray_direction=incident_ray_direction,
-        kinematic_deviation_parameters=deviation_parameters,
-        kinematic_initial_orientation_offset=initial_orientation_offset,
-    )
+    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
+        receiver_center = torch.tensor(
+            config_h5[config_dictionary.receiver_prefix][
+                config_dictionary.receiver_center
+            ][()],
+            dtype=torch.float,
+        )
+        sun = Sun.from_hdf5(config_file=config_h5)
+        heliostat = HeliostatModule.from_hdf5(
+            heliostat_name="Single_Heliostat",
+            incident_ray_direction=incident_ray_direction,
+            config_file=config_h5,
+        )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
@@ -111,14 +68,14 @@ def generate_data(
 
 @pytest.fixture(
     params=[
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt"),
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt", "test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
     ],
     name="environment_data",
 )
-def data(request: Tuple[torch.Tensor, str]) -> Dict[str, Any]:
+def data(request):
     """
     Compute the data required for the test.
 
@@ -158,8 +115,8 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
     expected_value = environment_data["expected_value"]
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
-    receiver_plane_x = 10
-    receiver_plane_y = 10
+    receiver_plane_x = 8.629666667
+    receiver_plane_y = 7.0
     receiver_resolution_x = 256
     receiver_resolution_y = 256
 
@@ -206,12 +163,12 @@ def test_compute_bitmaps(environment_data: dict[str, torch.Tensor]) -> None:
         receiver_plane_y,
     )
 
-    total_bitmap = total_bitmap.T
-
     expected_path = (
-        pathlib.Path(ARTIST_ROOT) / "artist/tests/environment/bitmaps" / expected_value
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/physics_objects/heliostats/test_bitmaps"
+        / expected_value
     )
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap, expected, atol=5e-3, rtol=5e-3)
+    torch.testing.assert_close(total_bitmap.T, expected, atol=5e-5, rtol=5e-5)
