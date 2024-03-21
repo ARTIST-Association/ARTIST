@@ -229,8 +229,8 @@ class Sun(ALightSource):
         """
         ndotu = ray_directions @ plane_normal
         assert (
-            torch.abs(ndotu) < epsilon
-        ).any(), "No intersection or line is within plane"
+            torch.abs(ndotu) >= epsilon
+        ).all(), "No intersection or line is within plane"
         ds = (plane_point - surface_points) @ plane_normal / ndotu
 
         return surface_points + ray_directions * ds.unsqueeze(-1)
