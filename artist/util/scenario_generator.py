@@ -164,7 +164,7 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
             parameters=flatten_dict(sun_params),
         )
 
-        # Include heliostat parameters
+        # Include heliostat parameters.
         include_parameters(
             file=f,
             prefix=config_dictionary.heliostat_prefix,
