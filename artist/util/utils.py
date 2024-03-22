@@ -191,7 +191,7 @@ def translate_enu(
     e : torch.Tensor
         East translation.
     n : torch.Tensor
-        North translation
+        North translation.
     u : torch.Tensor
         Up translation.
 
