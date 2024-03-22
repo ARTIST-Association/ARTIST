@@ -84,7 +84,7 @@ def flatten_dict(
     dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
 ) -> Dict:
     """
-    Flattens nested dictionaries to first level keys.
+    Flatten nested dictionaries to first-level keys.
 
     Parameters
     ----------
