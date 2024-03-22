@@ -141,7 +141,7 @@ def rotate_n(
 
 def rotate_u(
     u: torch.Tensor,
-):
+) -> torch.Tensor:
     """
     Rotate around the up axis.
 
