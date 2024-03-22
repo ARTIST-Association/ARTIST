@@ -21,7 +21,7 @@ class RigidBodyModule(AKinematicModule):
     actuator_1 : Union[LinearActuator, Ideal_actuator, ...]
         Actuator number one of the heliostat.
     actuator_2 : Union[LinearActuator, Ideal_actuator, ...]
-        Actuator number two of the helisotat.
+        Actuator number two of the heliostat.
     deviation_parameters : Dict[str, torch.Tensor]
         18 deviation parameters describing imperfections in the heliostat.
     initial_orientation_offset : float
