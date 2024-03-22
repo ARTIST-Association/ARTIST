@@ -11,10 +11,6 @@ class ConcentratorModule(torch.nn.Module):
     ----------
     facets : List[AFacetModule]
         The facets of the concentrator.
-
-    See Also
-    --------
-    :class:`AModule` : Reference to the parent class.
     """
 
     def __init__(
