@@ -107,7 +107,7 @@ class HeliostatModule(torch.nn.Module):
             The config file containing all the information about the heliostat and the environment.
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        helisotat_name : str
+        heliostat_name : str
             The name of the heliostat, for identification.
 
         Returns
