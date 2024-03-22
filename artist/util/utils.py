@@ -153,7 +153,7 @@ def rotate_u(
     Parameters
     ----------
     u : torch.Tensor
-        Up rotation angle in radians
+        Up rotation angle in radians.
 
     Returns
     -------
