@@ -27,7 +27,7 @@ class ALightSource(torch.nn.Module):
         NotImplementedError
             Whenever called (abstract base class method).
         """
-        raise NotImplementedError("Must Be Overridden!")
+        raise NotImplementedError("Must be overridden!")
 
     def scatter_rays(
         self,
