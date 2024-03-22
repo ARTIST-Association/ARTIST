@@ -118,7 +118,7 @@ class HeliostatModule(AModule):
         Returns
         -------
         HeliostatModule
-            A heliostat initialized from a h5 file.
+            A heliostat initialized from an h5 file.
         """
         heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][
             config_dictionary.heliostat_id
