@@ -23,7 +23,7 @@ class AlignmentModule(AModule):
 
     See Also
     --------
-    :class: AModule : The parent class.
+    :class:`AModule` : The parent class.
     """
 
     def __init__(
