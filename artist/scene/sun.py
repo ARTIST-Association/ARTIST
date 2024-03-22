@@ -22,7 +22,7 @@ class Sun(ALightSource):
     Methods
     -------
     from_hdf5()
-        Classmethod to initialize helisotat from an h5 file.
+        Class method to initialize heliostat from an h5 file.
     sample()
         Sample rays from a given distribution.
     scatter_rays()
