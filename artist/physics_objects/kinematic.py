@@ -20,10 +20,6 @@ class AKinematicModule(torch.nn.Module):
         Compute the orientation matrix to align the heliostat.
     forward()
         Implement the forward kinematics.
-
-    See Also
-    --------
-    :class:`AModule` : The parent class.
     """
 
     def __init__(self, position: torch.Tensor) -> None:
