@@ -30,8 +30,8 @@ class AlignmentModule(AModule):
         self,
         alignment_type: Any,
         actuator_type: Any,
-        position: torch.tensor,
-        aim_point: torch.tensor,
+        position: torch.Tensor,
+        aim_point: torch.Tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
         kinematic_initial_orientation_offset: float,
     ) -> None:
