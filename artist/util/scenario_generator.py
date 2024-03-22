@@ -31,7 +31,7 @@ sun_params = {
     config_dictionary.sun_number_of_rays: 10,
 }
 
-# The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats
+# The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats.
 general_surface_measurements = "test_data"
 
 # The following parameters refer to the heliostat list.
