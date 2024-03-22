@@ -127,7 +127,7 @@ def data(request: Tuple[torch.Tensor, str]) -> Dict[str, Any]:
 
     Parameters
     ----------
-    request : (torch.Tensor, str)
+    request : Tuple[torch.Tensor, str]
         The pytest.fixture request with the incident ray direction and bitmap name required for the test.
 
     Returns
