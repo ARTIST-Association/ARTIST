@@ -84,7 +84,6 @@ class RigidBodyModule(AKinematicModule):
         self.position = position
         self.aim_point = aim_point
 
-        # TODO: Figure out how to handle true and false
         self.actuator_1 = actuator_type(joint_number=1, clockwise=False)
         self.actuator_2 = actuator_type(joint_number=2, clockwise=True)
 
