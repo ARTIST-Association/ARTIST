@@ -155,7 +155,7 @@ class Sun(ALightSource):
             ).permute(2, 0, 1)
             return distortions_n, distortions_u
         else:
-            raise ValueError("unknown light distribution type")
+            raise ValueError("Unknown light distribution type.")
 
     def scatter_rays(
         self,
