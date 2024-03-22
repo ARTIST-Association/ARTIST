@@ -202,7 +202,7 @@ def translate_enu(
     """
     assert (
         e.shape == u.shape == n.shape
-    ), "The three tensors containing the east, north and up translations must have the same shape."
+    ), "The three tensors containing the east, north, and up translations must have the same shape."
 
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)
