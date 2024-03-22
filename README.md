@@ -5,7 +5,8 @@
 [![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![](./coverage.svg)
-[![](https://img.shields.io/badge/Contact-max.pargmann%40dlr.de-orange)](mailto:max.pargmann@dlr.de)
+[![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
+
 
 ## What ARTIST can do for you
 
@@ -49,22 +50,16 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
 ## Structure
 ```
 ├──artist # Parent package
-│   ├───io # IO functionality
-│   │   └───tests # IO functionality tests
 │   ├───physics_objects # Physical objects in raytracing environment, e.g., heliostats or receiver
-│   │   └───heliostats
-│   │       ├───alignment
-│   │       │   └───tests
-│   │       │       └───bitmaps
-│   │       └───surface
-│   │           └───facets
 │   ├───raytracing
-│   ├───scenario
-│   │   └───light_source
-│   │       └───tests
+│   ├───scene # Light sources and factors influencing the surroundings
 │   └───util
-└───scenario_objects # Loaded from experiment yaml file to, e.g., define whether the sun or a beamer should be loaded
-    └───heliostats
+└───measurement_data # Real measurements from a solar thermal power plant that can be used to create a scenario
+└───scenarios # Scenarios describing solar thermal power plants which can be loaded
+└───tests
+    ├───physics_objects # Tests for objects in the physics_objects package
+    ├───raytracing # Tests for objects in the raytracing package
+    └───scene # Tests for objects in the scene package
 ```
 ## How to use ARTIST
 We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.
