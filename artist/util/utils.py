@@ -51,7 +51,7 @@ def rotate_distortions(
     ), "The two tensors containing angles for the east and up rotation must have the same shape."
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat Convention
+    sin_e = -torch.sin(e)  # Heliostat convention
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
     zeros = torch.zeros(e.shape)
