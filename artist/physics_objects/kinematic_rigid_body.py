@@ -257,8 +257,7 @@ class RigidBodyModule(AKinematicModule):
                 dim=-1,
             )
 
-        # Return orientation matrix multiplied by the initial orientation offset
-        # TODO: Allow the initial orientation to also be offset in N and U??
+        # Return orientation matrix multiplied by the initial orientation offset.
         return orientation @ utils.rotate_e(
             e=torch.tensor([self.initial_orientation_offset])
         )
