@@ -27,7 +27,7 @@ class HeliostatModule(torch.nn.Module):
     Methods
     -------
     from_hdf5()
-        Classmethod to initialize helisotat from an h5 file.
+        Class method to initialize heliostat from an hdf5 file.
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
     """
