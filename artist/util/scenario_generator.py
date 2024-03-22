@@ -147,7 +147,7 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
 
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_name}.h5", "w") as f:
-        # Set scenario version as attribute
+        # Set scenario version as attribute.
         f.attrs["version"] = version
 
         # Include parameters for the receiver
