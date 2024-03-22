@@ -157,7 +157,7 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
             parameters=flatten_dict(receiver_params),
         )
 
-        # Include parameters for the sun
+        # Include parameters for the sun.
         include_parameters(
             file=f,
             prefix=config_dictionary.sun_prefix,
