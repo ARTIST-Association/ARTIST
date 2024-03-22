@@ -24,7 +24,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 def rotate_distortions(
     e: torch.Tensor,
     u: torch.Tensor,
-):
+) -> torch.Tensor:
     """
     Rotate the distortions for the sun.
 
