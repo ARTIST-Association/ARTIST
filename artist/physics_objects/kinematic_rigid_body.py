@@ -214,7 +214,7 @@ class RigidBodyModule(AKinematicModule):
 
             # Analytical Solution
 
-            # Calculate joint 2 angle
+            # Calculate joint 2 angle.
             joint_2_angles = -torch.arcsin(
                 -desired_concentrator_normal[:, 0]
                 / torch.cos(
