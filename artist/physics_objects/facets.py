@@ -7,5 +7,5 @@ class AFacetModule(torch.nn.Module):
 
     See Also
     --------
-    :class: torch.nn.Module : Reference to the parent class.
+    :class: `torch.nn.Module` : Reference to the parent class.
     """
