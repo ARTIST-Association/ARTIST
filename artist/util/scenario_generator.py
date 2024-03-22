@@ -1,4 +1,4 @@
-"""A util script for generating scenario h5 files to be used in Artist."""
+"""A util script for generating scenario h5 files to be used in ARTIST."""
 
 import math
 from collections.abc import MutableMapping
