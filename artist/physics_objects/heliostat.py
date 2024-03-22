@@ -61,7 +61,7 @@ class HeliostatModule(AModule):
         position : torch.Tensor
             The position of the heliostat in the field.
         alignment_type : Any
-            The method by which the helisotat is aligned, currently only rigid-body is possible.
+            The method by which the heliostat is aligned, currently only rigid-body is possible.
         actuator_type : Any
             The type of the actuators of the heliostat.
         aim_point : torch.Tensor
