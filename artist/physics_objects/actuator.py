@@ -40,6 +40,6 @@ class AActuatorModule(AModule):
         Raises
         ------
         NotImplementedError
-            This abstract method must be Overridden.
+            This abstract method must be overridden.
         """
         raise NotImplementedError("Must Be Overridden!")
