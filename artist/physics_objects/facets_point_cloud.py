@@ -1,4 +1,4 @@
-"""This file contains the functionality to create a heliostat surface from a loaded pointcloud."""
+"""This file contains the functionality to create a heliostat surface from a loaded point cloud."""
 
 import torch
 
