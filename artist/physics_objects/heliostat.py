@@ -341,8 +341,10 @@ class HeliostatModule(AModule):
 
         Returns
         -------
-        Tuple[torch.Tensor, torch.Tensor]
-            The aligned surface points and aligned surface normals.
+        torch.Tensor
+            The aligned surface points.
+        torch.Tensor
+            The aligned surface normals.
         """
         surface_points, surface_normals = (
             self.concentrator.facets.surface_points,
