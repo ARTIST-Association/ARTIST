@@ -70,7 +70,7 @@ def rotate_distortions(
 
 def rotate_e(
     e: torch.Tensor,
-):
+) -> torch.Tensor:
     """
     Rotate around the east axis.
 
