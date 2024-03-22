@@ -18,10 +18,6 @@ class AlignmentModule(torch.nn.Module):
     -------
     align_surface()
         Align given surface points and surface normals according to a calculated orientation.
-
-    See Also
-    --------
-    :class:`AModule` : The parent class.
     """
 
     def __init__(
