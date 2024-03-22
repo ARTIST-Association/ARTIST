@@ -30,10 +30,6 @@ class HeliostatModule(torch.nn.Module):
         Classmethod to initialize helisotat from an h5 file.
     get_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
-
-    See Also
-    --------
-    :class:AModule : Reference to the parent class.
     """
 
     def __init__(
