@@ -105,7 +105,7 @@ def rotate_e(
 
 def rotate_n(
     n: torch.Tensor,
-):
+) -> torch.Tensor:
     """
     Rotate around the north axis.
 
