@@ -164,7 +164,7 @@ class Sun(ALightSource):
         distortion_e: torch.Tensor,
     ) -> torch.Tensor:
         """
-        Scatter the reflected rays around the preferred ray_direction.
+        Scatter the reflected rays around the preferred ray direction.
 
         Parameters
         ----------
