@@ -2,10 +2,8 @@ from typing import Any
 
 import torch
 
-from artist.physics_objects.module import AModule
 
-
-class ConcentratorModule(AModule):
+class ConcentratorModule(torch.nn.Module):
     """
     Implementation of the concentrator module.
 

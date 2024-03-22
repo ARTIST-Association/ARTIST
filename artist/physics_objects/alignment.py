@@ -4,10 +4,8 @@ from typing import Any, Dict, Tuple
 
 import torch
 
-from artist.physics_objects.module import AModule
 
-
-class AlignmentModule(AModule):
+class AlignmentModule(torch.nn.Module):
     """
     This class implements the alignment module for the heliostat.
 
@@ -84,7 +82,7 @@ class AlignmentModule(AModule):
         Returns
         -------
         torch.Tensor
-            The aligned surface points.    
+            The aligned surface points.
         torch.Tensor
             The aligned surface normals.
         """

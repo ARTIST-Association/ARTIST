@@ -4,10 +4,8 @@ import typing
 
 import torch
 
-from artist.physics_objects.module import AModule
 
-
-class AKinematicModule(AModule):
+class AKinematicModule(torch.nn.Module):
     """
     Abstract base class for all kinematic modules.
 

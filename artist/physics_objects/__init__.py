@@ -9,10 +9,8 @@ from .facets_point_cloud import PointCloudFacetModule
 from .heliostat import HeliostatModule
 from .kinematic import AKinematicModule
 from .kinematic_rigid_body import RigidBodyModule
-from .module import AModule
 
 __all__ = [
-    "AModule",
     "AActuatorModule",
     "IdealActuator",
     "AlignmentModule",
