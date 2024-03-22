@@ -1,1 +1,1 @@
-"""This package bundles all classes that util functionality in ARTIST."""
+"""This package bundles all classes that implement util functionality in ARTIST."""
