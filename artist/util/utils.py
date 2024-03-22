@@ -181,10 +181,10 @@ def translate_enu(
     u: torch.Tensor,
 ) -> torch.Tensor:
     """
-    Trnslate in all directions.
+    Translate in all directions.
 
-    Translate a given point in the east, north and up direction. Note that the point must be multiplied as a column
-    vector from the right hand side of the resulting matrix.
+    Translate a given point in the east, north, and up direction. Note that the point must be multiplied as a column
+    vector from the right-hand side of the resulting matrix.
 
     Parameters
     ----------
