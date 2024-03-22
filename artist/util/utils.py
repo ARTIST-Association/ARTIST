@@ -90,7 +90,7 @@ def rotate_e(
         Corresponding rotation matrix.
     """
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat Convention
+    sin_e = -torch.sin(e)  # Heliostat convention
     zeros = torch.zeros(e.shape)
     ones = torch.ones(e.shape)
     return torch.stack(
