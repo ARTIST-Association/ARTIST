@@ -1,4 +1,4 @@
-"""This pytest considers loading a heliostat surface from a pointcloud."""
+"""This pytest considers loading a heliostat surface from a point cloud."""
 
 import pathlib
 from typing import Dict
