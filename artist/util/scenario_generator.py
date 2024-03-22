@@ -116,19 +116,18 @@ def _flatten_dict_gen(d: MutableMapping, parent_key: str, sep: str):
 
 def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
     """
-    Includes the parameters from the sun parameter dict.
+    Include the parameters from the sun parameter dictionary.
 
     Parameters
     ----------
-    file: h5py.File
-        The h5 file to write to.
+    file : h5py.File
+        The hdf5 file to write to.
 
-    prefix: str
+    prefix : str
         The prefix used for naming the parameters.
 
-    parameters: dict
-        The parameters to be included into the h5 file.
-
+    parameters : dict
+        The parameters to be included into the hdf5 file.
     """
     for key, value in parameters.items():
         file[f"{prefix}/{key}"] = value
