@@ -35,7 +35,7 @@ jobs:
       - name: Tests with pytest and no badge
         if: matrix.python-version == '3.12'
         run: |
-          pytest artist
+          pytest --cov=artist
 
       - name: Verify Changed files
         uses: tj-actions/verify-changed-files@v19
