@@ -29,7 +29,7 @@ class IdealActuator(AActuatorModule):
 
         Parameters
         ----------
-        motor_steps
+        motor_steps : torch.Tensor
             The motor steps.
 
         Returns
