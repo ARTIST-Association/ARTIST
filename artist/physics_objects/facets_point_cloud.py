@@ -18,7 +18,7 @@ class PointCloudFacetModule(AFacetModule):
 
     See Also
     --------
-    :class:AFacetModule : Reference to the parent class.
+    :class:`AFacetModule` : Reference to the parent class.
     """
 
     def __init__(
