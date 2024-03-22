@@ -139,7 +139,7 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
 
     Parameters
     ----------
-    scenario_name: str
+    scenario_name : str
         The name of the scenario being generated.
 
     version : float
