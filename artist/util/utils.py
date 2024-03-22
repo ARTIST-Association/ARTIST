@@ -82,7 +82,7 @@ def rotate_e(
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians
+        East rotation angle in radians.
 
     Returns
     -------
