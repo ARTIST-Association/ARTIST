@@ -12,7 +12,7 @@ from artist.util import artist_type_mapping_dict, config_dictionary
 
 class HeliostatModule(AModule):
     """
-    Implementation of the Heliostat as a module.
+    Implementation of the heliostat as a module.
 
     Attributes
     ----------
