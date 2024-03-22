@@ -98,7 +98,7 @@ class Sun(ALightSource):
         Parameters
         ----------
         config_file : h5py.File
-            The hdf5 file containing the information on the sun.
+            The hdf5 file containing the information about the sun.
 
         Returns
         -------
