@@ -141,7 +141,6 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
     ----------
     scenario_name : str
         The name of the scenario being generated.
-
     version : float
         The current version of the scenario generator being used. This must be updated if the names of
         the parameters are altered.
