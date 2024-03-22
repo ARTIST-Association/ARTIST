@@ -103,7 +103,7 @@ class Sun(ALightSource):
         Returns
         -------
         Sun
-            A sun initialized from a h5 file.
+            A sun initialized from an hdf5 file.
         """
         distribution_parameters = {
             config_dictionary.sun_distribution_type: config_file[
