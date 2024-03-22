@@ -24,7 +24,7 @@ def generate_data(
     This includes the position of the heliostat, the position of the receiver,
     the sun as a light source, and the point cloud as the heliostat surface.
 
-    The facets/points of the heliostat surface are loaded from a pointcloud.
+    The facets/points of the heliostat surface are loaded from a point cloud.
     The surface points and normals are aligned.
 
     Parameters
