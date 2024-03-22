@@ -72,7 +72,7 @@ class RigidBodyModule(AKinematicModule):
         position : torch.Tensor
             Position of the heliostat in the field.
         aim_point : torch.Tensor
-            The aim point
+            The aim point.
         actuator_type : str
             The type of the actuators of the heliostat.
         deviation_parameters : Dict[str, torch.Tensor]
