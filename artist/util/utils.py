@@ -117,7 +117,7 @@ def rotate_n(
     Parameters
     ----------
     n : torch.Tensor
-        North rotation angle in radians
+        North rotation angle in radians.
 
     Returns
     -------
