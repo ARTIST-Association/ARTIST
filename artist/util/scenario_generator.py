@@ -106,6 +106,8 @@ def flatten_dict(
 
 
 def _flatten_dict_gen(d: MutableMapping, parent_key: str, sep: str):
+    # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
+    # separated by a defined separator.
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
         if isinstance(v, MutableMapping):
