@@ -16,7 +16,7 @@ class ConcentratorModule(AModule):
 
     See Also
     --------
-    :class:AModule : Reference to the parent class.
+    :class:`AModule` : Reference to the parent class.
     """
 
     def __init__(
