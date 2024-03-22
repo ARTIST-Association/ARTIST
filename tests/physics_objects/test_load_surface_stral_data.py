@@ -22,7 +22,7 @@ def generate_data(
     Generate all the relevant data for this test.
 
     This includes the position of the heliostat, the position of the receiver,
-    the sun as a light source, and the pointcloud as the heliostat surface.
+    the sun as a light source, and the point cloud as the heliostat surface.
 
     The facets/points of the heliostat surface are loaded from a pointcloud.
     The surface points and normals are aligned.
