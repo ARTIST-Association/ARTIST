@@ -173,8 +173,5 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
 
 
 if __name__ == "__main__":
-    """
-    The main method that generates the scenario using the parameters defined above.
-
-    """
+    """The main method that generates the scenario using the parameters defined above."""
     generate_scenario(scenario_name=name)
