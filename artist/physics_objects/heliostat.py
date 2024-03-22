@@ -6,11 +6,10 @@ from typing_extensions import Self
 
 from artist.physics_objects.alignment import AlignmentModule
 from artist.physics_objects.concentrator import ConcentratorModule
-from artist.physics_objects.module import AModule
 from artist.util import artist_type_mapping_dict, config_dictionary
 
 
-class HeliostatModule(AModule):
+class HeliostatModule(torch.nn.Module):
     """
     Implementation of the heliostat as a module.
 

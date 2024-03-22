@@ -1,9 +1,7 @@
 import torch
 
-from artist.physics_objects.module import AModule
 
-
-class AActuatorModule(AModule):
+class AActuatorModule(torch.nn.Module):
     """
     This class implements the abstract behavior of an actuator.
 
