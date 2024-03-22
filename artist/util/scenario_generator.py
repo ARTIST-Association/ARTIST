@@ -150,7 +150,7 @@ def generate_scenario(scenario_name: str, version: float = 0.1):
         # Set scenario version as attribute.
         f.attrs["version"] = version
 
-        # Include parameters for the receiver
+        # Include parameters for the receiver.
         include_parameters(
             file=f,
             prefix=config_dictionary.receiver_prefix,
