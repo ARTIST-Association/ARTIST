@@ -91,16 +91,16 @@ def flatten_dict(
     dictionary : MutableMapping
         Original nested dictionary to flatten.
 
-    parent_key: str
-        The parent key of nested dictionaries. Should be empty upon initialisation.
+    parent_key : str
+        The parent key of nested dictionaries. Should be empty upon initialization.
 
-    sep: str
+    sep : str
         The separator used to separate keys in nested dictionaries.
 
     Returns
     -------
     Dict
-        A flattened version of the original dictionary
+        A flattened version of the original dictionary.
     """
     return dict(_flatten_dict_gen(dictionary, parent_key, sep))
 
