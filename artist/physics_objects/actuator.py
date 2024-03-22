@@ -16,10 +16,6 @@ class AActuatorModule(torch.nn.Module):
     -------
     forward()
         The forward kinematic.
-
-    See Also
-    --------
-    :class:`AModule` : The parent class.
     """
 
     def __init__(
