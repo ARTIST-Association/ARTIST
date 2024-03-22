@@ -99,7 +99,7 @@ class HeliostatModule(torch.nn.Module):
         heliostat_name: str,
     ) -> Self:
         """
-        Classmethod to initialize helisotat from an h5 file.
+        Class method to initialize heliostat from an hdf5 file.
 
         Parameters
         ----------
