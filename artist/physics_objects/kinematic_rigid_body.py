@@ -224,7 +224,7 @@ class RigidBodyModule(AKinematicModule):
                 )
             )
 
-            # Calculate joint 1 angle
+            # Calculate joint 1 angle.
             a = -torch.cos(
                 self.deviation_parameters[config_dictionary.second_joint_translation_e]
             ) * torch.cos(joint_2_angles) + torch.sin(
