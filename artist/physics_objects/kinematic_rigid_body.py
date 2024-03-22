@@ -34,7 +34,7 @@ class RigidBodyModule(AKinematicModule):
 
     See Also
     --------
-    :class: AKinematicModule : Reference to the parent class
+    :class:`AKinematicModule` : Reference to the parent class.
     """
 
     def __init__(
