@@ -26,7 +26,7 @@ def generate_data(
     This includes the deviation parameters of the kinematic module, the position of the heliostat, the position of the receiver,
     the sun as a light source, and five manually created surface points and normals.
 
-    The surface points and normals are aligned by the kinematic module of the Heliost module.
+    The surface points and normals are aligned by the kinematic module of the heliostat module.
 
     Parameters
     ----------
