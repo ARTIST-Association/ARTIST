@@ -93,7 +93,7 @@ class Sun(ALightSource):
     @classmethod
     def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
-        Class method that initializes a sun from a hdf5 file.
+        Class method that initializes a sun from an hdf5 file.
 
         Parameters
         ----------
