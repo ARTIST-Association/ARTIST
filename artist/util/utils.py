@@ -179,7 +179,7 @@ def translate_enu(
     e: torch.Tensor,
     n: torch.Tensor,
     u: torch.Tensor,
-):
+) -> torch.Tensor:
     """
     Trnslate in all directions.
 
