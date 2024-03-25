@@ -60,7 +60,12 @@ def generate_data(
         config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
         config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
     }
-    initial_orientation_offset: float = -math.pi / 2
+    initial_orientation_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: -math.pi / 2,
+        config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
+        config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
+    }
+    
     actuator_parameters = {
         config_dictionary.first_joint_increment: torch.tensor(0.0),
         config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
@@ -109,7 +114,7 @@ def generate_data(
         surface_normals=surface_normals,
         incident_ray_direction=incident_ray_direction,
         kinematic_deviation_parameters=deviation_parameters,
-        kinematic_initial_orientation_offset=initial_orientation_offset,
+        kinematic_initial_orientation_offsets=initial_orientation_offsets,
         actuator_parameters=actuator_parameters
     )
 
