@@ -21,7 +21,7 @@ extensions = [
 ]
 
 autoapi_dirs = ["../artist"]
-autoapi_python_class_content = "both"
+autoapi_python_class_content = "init"
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
