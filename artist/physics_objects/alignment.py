@@ -28,6 +28,7 @@ class AlignmentModule(torch.nn.Module):
         aim_point: torch.Tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
         kinematic_initial_orientation_offset: float,
+        actuator_parameters: Dict[str, torch.Tensor],
     ) -> None:
         """
         Initialize the alignment module.
@@ -46,6 +47,8 @@ class AlignmentModule(torch.nn.Module):
             The 18 deviation parameters of the kinematic module.
         kinematic_initial_orientation_offset : float
             The initial orientation-rotation angle of the heliostat.
+        actuator_parameters : Dict[str, torch.Tensor]
+            The parameters describing the imperfect actuator.
         """
         super().__init__()
 
@@ -55,6 +58,7 @@ class AlignmentModule(torch.nn.Module):
             aim_point=aim_point,
             deviation_parameters=kinematic_deviation_parameters,
             initial_orientation_offset=kinematic_initial_orientation_offset,
+            actuator_parameters=actuator_parameters,
         )
 
     def align_surface(
