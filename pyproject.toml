@@ -21,7 +21,6 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "yacs",
     "torch",
     "h5py",
 ]
