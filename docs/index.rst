@@ -5,12 +5,18 @@
 
 Welcome to ARTIST!
 ==================================
-Test text!
+This is the initial ARTIST Doc page it should include:
+
+* A brief description of ARTIST.
+* A quick install guide.
+* Some basic examples.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
+   quickstart
+   install
 
 
 Indices and tables
