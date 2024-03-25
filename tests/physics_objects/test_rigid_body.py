@@ -7,17 +7,34 @@ from artist.physics_objects.actuator_ideal import IdealActuator
 from artist.physics_objects.kinematic_rigid_body import (
     RigidBodyModule,
 )
-
+from artist.util import config_dictionary
 
 @pytest.fixture
-def kinematic_model_1():
+def initial_offsets_south():
+    initial_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(0.0)
+    }
+    return initial_offsets
+
+@pytest.fixture
+def initial_offsets_above():
+    initial_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(math.pi/2),
+        config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(0.0)
+    }
+    return initial_offsets
+
+@pytest.fixture
+def kinematic_model_1(initial_offsets_south):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBodyModule(
-        actuator_type=IdealActuator, position=position, aim_point=aim_point
+        actuator_type=IdealActuator, position=position, aim_point=aim_point, initial_orientation_offsets=initial_offsets_south
     )
-
 
 @pytest.fixture
 def kinematic_model_2():
@@ -28,6 +45,14 @@ def kinematic_model_2():
         actuator_type=IdealActuator, position=position, aim_point=aim_point
     )
 
+@pytest.fixture
+def kinematic_model_3(initial_offsets_above):
+    """Create a kinematic model to use in the test."""
+    position = torch.tensor([0.0, 0.0, 0.0, 1.0])
+    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
+    return RigidBodyModule(
+        actuator_type=IdealActuator, position=position, aim_point=aim_point, initial_orientation_offsets=initial_offsets_above
+    )
 
 @pytest.mark.parametrize(
     "kinematic_model_fixture, incident_ray_direction, expected",
@@ -100,6 +125,18 @@ def kinematic_model_2():
                     [1.0, 0.0, 0.0, 0.0],
                     [0.0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 1.0],
                     [0.0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([0.0, 0.0, 1.0, 0.0]),
+            torch.tensor(
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0],
+                    [0.0, math.sin(math.pi / 4), math.cos(math.pi / 4), 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
