@@ -61,6 +61,18 @@ def generate_data(
         config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
     }
     initial_orientation_offset: float = -math.pi / 2
+    actuator_parameters = {
+        config_dictionary.first_joint_increment: torch.tensor(0.0),
+        config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
+        config_dictionary.first_joint_actuator_offset: torch.tensor(0.0),
+        config_dictionary.first_joint_radius: torch.tensor(0.0),
+        config_dictionary.first_joint_phi_0: torch.tensor(0.0),
+        config_dictionary.second_joint_increment: torch.tensor(0.0),
+        config_dictionary.second_joint_initial_stroke_length: torch.tensor(0.0),
+        config_dictionary.second_joint_actuator_offset: torch.tensor(0.0),
+        config_dictionary.second_joint_radius: torch.tensor(0.0),
+        config_dictionary.second_joint_phi_0: torch.tensor(0.0),
+    }
 
     heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
     receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
@@ -98,6 +110,7 @@ def generate_data(
         incident_ray_direction=incident_ray_direction,
         kinematic_deviation_parameters=deviation_parameters,
         kinematic_initial_orientation_offset=initial_orientation_offset,
+        actuator_parameters=actuator_parameters
     )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
