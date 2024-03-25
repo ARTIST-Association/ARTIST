@@ -5,7 +5,7 @@
 
 Welcome to ARTIST!
 ==================================
-This is the initial ARTIST Doc page it should include:
+This is the initial ARTIST Doc page. It should include:
 
 * A brief description of ARTIST.
 * A quick install guide.
