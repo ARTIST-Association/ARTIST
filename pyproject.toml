@@ -21,7 +21,6 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "yacs",
     "torch",
     "h5py",
 ]
@@ -32,7 +31,9 @@ dev = [
     "black",
     "ruff",
     "pytest",
-    "pytest-cov",]
+    "pytest-cov",
+    "sphinx-autoapi",
+    "sphinx-rtd-theme",]
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
