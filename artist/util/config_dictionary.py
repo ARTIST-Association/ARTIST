@@ -70,3 +70,16 @@ concentrator_tilt_u = "concentrator_tilt_u"
 
 # Parameter for orientation offset for the kinematic
 kinematic_initial_orientation_offset_key = "initial_kinematic_orientation_offset"
+
+# Dict for actuator parameters
+actuator_parameters_key = "actuator_parameters_key"
+first_joint_increment = "first_joint_increment"
+first_joint_initial_stroke_length = "first_joint_initial_stroke_length"
+first_joint_actuator_offset = "first_joint_actuator_offset"
+first_joint_radius = "first_joint_radius"
+first_joint_phi_0 = "first_joint_phi_0"
+second_joint_increment = "second_joint_increment"
+second_joint_initial_stroke_length = "second_joint_initial_stroke_length"
+second_joint_actuator_offset = "second_joint_actuator_offset"
+second_joint_radius = "second_joint_radius"
+second_joint_phi_0 = "second_joint_phi_0"
