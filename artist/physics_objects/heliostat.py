@@ -44,7 +44,7 @@ class HeliostatModule(torch.nn.Module):
         surface_normals: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
-        kinematic_initial_orientation_offset: float,
+        kinematic_initial_orientation_offsets: float,
         actuator_parameters: Dict[str, torch.Tensor],
     ) -> None:
         """
@@ -72,8 +72,8 @@ class HeliostatModule(torch.nn.Module):
             The direction of the incident ray as seen from the heliostat.
         kinematic_deviation_parameters : Dict[str, torch.Tensor]
             The 18 deviation parameters of the kinematic module.
-        kinematic_initial_orientation_offset : float
-            The initial orientation-rotation angle of the heliostat.
+        kinematic_initial_orientation_offsets : Dict[str, torch.Tensor]
+            The initial orientation-rotation angles of the heliostat.
         actuator_parameters : Dict[str, torch.Tensor]
             Parameters describing the imperfect actuators.
         """
@@ -91,7 +91,7 @@ class HeliostatModule(torch.nn.Module):
             position=position,
             aim_point=aim_point,
             kinematic_deviation_parameters=kinematic_deviation_parameters,
-            kinematic_initial_orientation_offset=kinematic_initial_orientation_offset,
+            kinematic_initial_orientation_offsets=kinematic_initial_orientation_offsets,
             actuator_parameters=actuator_parameters,
         )
 
@@ -314,11 +314,26 @@ class HeliostatModule(torch.nn.Module):
             ),
         }
 
-        kinematic_initial_orientation_offset = float(
-            config_file[config_dictionary.heliostat_prefix][heliostat_name][
-                config_dictionary.kinematic_initial_orientation_offset_key
-            ][()]
-        )
+        kinematic_initial_orientation_offsets = {
+            config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                    config_dictionary.kinematic_initial_orientation_offset_key
+                ][config_dictionary.kinematic_initial_orientation_offset_e][()],
+                dtype=torch.float,
+            ),
+            config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                    config_dictionary.kinematic_initial_orientation_offset_key
+                ][config_dictionary.kinematic_initial_orientation_offset_n][()],
+                dtype=torch.float,
+            ),
+            config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(
+                config_file[config_dictionary.heliostat_prefix][heliostat_name][
+                    config_dictionary.kinematic_initial_orientation_offset_key
+                ][config_dictionary.kinematic_initial_orientation_offset_u][()],
+                dtype=torch.float,
+            ),
+        }
         actuator_parameters = {
             config_dictionary.first_joint_increment: torch.tensor(
                 config_file[config_dictionary.heliostat_prefix][heliostat_name][
@@ -393,7 +408,7 @@ class HeliostatModule(torch.nn.Module):
             surface_normals=surface_normals,
             incident_ray_direction=incident_ray_direction,
             kinematic_deviation_parameters=kinematic_deviation_parameters,
-            kinematic_initial_orientation_offset=kinematic_initial_orientation_offset,
+            kinematic_initial_orientation_offsets=kinematic_initial_orientation_offsets,
             actuator_parameters=actuator_parameters,
         )
 
