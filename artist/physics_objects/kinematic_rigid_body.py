@@ -62,7 +62,19 @@ class RigidBodyModule(AKinematicModule):
             config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
             config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
         },
-        initial_orientation_offset: float = 0.0,
+        initial_orientation_offset: float = 0.0,#
+        actuator_parameters: Dict[str, torch.Tensor] = {
+            config_dictionary.first_joint_increment: torch.tensor(0.0),
+            config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
+            config_dictionary.first_joint_actuator_offset: torch.tensor(0.0),
+            config_dictionary.first_joint_radius: torch.tensor(0.0),
+            config_dictionary.first_joint_phi_0: torch.tensor(0.0),
+            config_dictionary.second_joint_increment: torch.tensor(0.0),
+            config_dictionary.second_joint_initial_stroke_length: torch.tensor(0.0),
+            config_dictionary.second_joint_actuator_offset: torch.tensor(0.0),
+            config_dictionary.second_joint_radius: torch.tensor(0.0),
+            config_dictionary.second_joint_phi_0: torch.tensor(0.0),
+        }
     ) -> None:
         """
         Initialize the rigid body kinematic.
@@ -79,13 +91,29 @@ class RigidBodyModule(AKinematicModule):
             The 18 deviation parameters of the kinematic module.
         initial_orientation_offset : float
             The initial orientation-rotation angle of the heliostat.
+        actuator_parameters : Dict[str, torch.Tensor]
+            The parameters describing imperfections in the actuators.
         """
         super().__init__(position=position)
         self.position = position
         self.aim_point = aim_point
 
-        self.actuator_1 = actuator_type(joint_number=1, clockwise=False)
-        self.actuator_2 = actuator_type(joint_number=2, clockwise=True)
+        self.actuator_1 = actuator_type(joint_number=1, 
+                                        clockwise=False, 
+                                        increment=actuator_parameters[config_dictionary.first_joint_increment],
+                                        initial_stroke_length=actuator_parameters[config_dictionary.first_joint_initial_stroke_length],
+                                        actuator_offset=actuator_parameters[config_dictionary.first_joint_actuator_offset],
+                                        joint_radius=actuator_parameters[config_dictionary.first_joint_radius],
+                                        phi_0=actuator_parameters[config_dictionary.first_joint_phi_0]
+                                        )
+        self.actuator_2 = actuator_type(joint_number=2, 
+                                        clockwise=True,
+                                        increment=actuator_parameters[config_dictionary.second_joint_increment],
+                                        initial_stroke_length=actuator_parameters[config_dictionary.second_joint_initial_stroke_length],
+                                        actuator_offset=actuator_parameters[config_dictionary.second_joint_actuator_offset],
+                                        joint_radius=actuator_parameters[config_dictionary.second_joint_radius],
+                                        phi_0=actuator_parameters[config_dictionary.second_joint_phi_0]
+                                        )
 
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offset = initial_orientation_offset
