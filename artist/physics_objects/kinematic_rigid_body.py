@@ -103,7 +103,7 @@ class RigidBodyModule(AKinematicModule):
                                         increment=actuator_parameters[config_dictionary.first_joint_increment],
                                         initial_stroke_length=actuator_parameters[config_dictionary.first_joint_initial_stroke_length],
                                         actuator_offset=actuator_parameters[config_dictionary.first_joint_actuator_offset],
-                                        joint_radius=actuator_parameters[config_dictionary.first_joint_radius],
+                                        radius=actuator_parameters[config_dictionary.first_joint_radius],
                                         phi_0=actuator_parameters[config_dictionary.first_joint_phi_0]
                                         )
         self.actuator_2 = actuator_type(joint_number=2, 
@@ -111,7 +111,7 @@ class RigidBodyModule(AKinematicModule):
                                         increment=actuator_parameters[config_dictionary.second_joint_increment],
                                         initial_stroke_length=actuator_parameters[config_dictionary.second_joint_initial_stroke_length],
                                         actuator_offset=actuator_parameters[config_dictionary.second_joint_actuator_offset],
-                                        joint_radius=actuator_parameters[config_dictionary.second_joint_radius],
+                                        radius=actuator_parameters[config_dictionary.second_joint_radius],
                                         phi_0=actuator_parameters[config_dictionary.second_joint_phi_0]
                                         )
 

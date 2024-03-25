@@ -19,7 +19,7 @@ class LinearActuator(AActuatorModule):
         The initial_stroke_length.
     actuator_offset : torch.Tensor
         The actuator offset.
-    joint_radius : toorch.Tensor
+    radius : torch.Tensor
         The joint radius.
     phi_0 : torch.Tensor
         An initial angle.
@@ -45,7 +45,7 @@ class LinearActuator(AActuatorModule):
                  increment: torch.Tensor, 
                  initial_stroke_length: torch.Tensor,
                  actuator_offset: torch.Tensor,
-                 joint_radius: torch.Tensor,
+                 radius: torch.Tensor,
                  phi_0: torch.Tensor) -> None:
         """
         Parameters
@@ -60,18 +60,18 @@ class LinearActuator(AActuatorModule):
             The initial_stroke_length.
         actuator_offset : torch.Tensor
             The actuator offset.
-        joint_radius : toorch.Tensor
+        radius : torch.Tensor
             The joint radius.
         phi_0 : torch.Tensor
             An initial angle.
         """
-        super().__init__(joint_number, clockwise, increment, initial_stroke_length, actuator_offset, joint_radius, phi_0)
+        super().__init__(joint_number, clockwise, increment, initial_stroke_length, actuator_offset, radius, phi_0)
         self.joint_number = joint_number
         self.clockwise = clockwise
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.actuator_offset = actuator_offset
-        self.joint_radius = joint_radius
+        self.radius = radius
         self.phi_0 = phi_0
 
 
@@ -95,10 +95,10 @@ class LinearActuator(AActuatorModule):
         )
         calc_step_1 = (
             self.actuator_offset ** 2
-            + self.joint_radius ** 2
+            + self.radius ** 2
             - stroke_length**2
         )
-        calc_step_2 = 2.0 * self.actuator_offset * self.joint_radius
+        calc_step_2 = 2.0 * self.actuator_offset * self.radius
         calc_step_3 = calc_step_1 / calc_step_2
         angle = torch.arccos(calc_step_3)
         return angle
@@ -144,9 +144,9 @@ class LinearActuator(AActuatorModule):
         phi = phi_0 - delta_phi
         
         calc_step_3 = torch.cos(phi)
-        calc_step_2 = 2.0 * self.actuator_offset * self.joint_radius
+        calc_step_2 = 2.0 * self.actuator_offset * self.radius
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_length = torch.sqrt( self.actuator_offset ** 2  + self.joint_radius ** 2 - calc_step_1)
+        stroke_length = torch.sqrt( self.actuator_offset ** 2  + self.radius ** 2 - calc_step_1)
         actuator_steps = (stroke_length - self.initial_stroke_length) * self.increment
         return actuator_steps
 
