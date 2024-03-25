@@ -12,15 +12,15 @@ class AActuatorModule(torch.nn.Module):
     clockwise : bool
         Turning direction of the joint.
     increment : torch.Tensor
-        The increment of an actuator.
+        The stroke length change per motor step.
     initial_stroke_length : torch.Tensor
-        The initial_stroke_length.
+        The stroke length for a motor step of 0.
     actuator_offset : torch.Tensor
-        The actuator offset.
+        The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
     radius : torch.Tensor
-        The joint radius.
+        The actuator's pivoting radius.
     phi_0 : torch.Tensor
-        An initial angle.
+        The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
 
     Methods
     -------
