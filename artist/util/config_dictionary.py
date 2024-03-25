@@ -69,7 +69,10 @@ concentrator_tilt_n = "concentrator_tilt_n"
 concentrator_tilt_u = "concentrator_tilt_u"
 
 # Parameter for orientation offset for the kinematic
-kinematic_initial_orientation_offset_key = "initial_kinematic_orientation_offset"
+kinematic_initial_orientation_offset_key = "kinematic_initial_orientation_offset_key"
+kinematic_initial_orientation_offset_e = "initial_kinematic_orientation_offset_e"
+kinematic_initial_orientation_offset_n = "initial_kinematic_orientation_offset_n"
+kinematic_initial_orientation_offset_u = "initial_kinematic_orientation_offset_u"
 
 # Dict for actuator parameters
 actuator_parameters_key = "actuator_parameters_key"

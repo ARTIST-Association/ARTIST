@@ -24,8 +24,8 @@ class RigidBodyModule(AKinematicModule):
         Actuator number two of the heliostat.
     deviation_parameters : Dict[str, torch.Tensor]
         18 deviation parameters describing imperfections in the heliostat.
-    initial_orientation_offset : float
-        The initial orientation-rotation angle of the heliostat.
+    initial_orientation_offsets : Dict[str, torch.Tensor]
+        The initial orientation-rotation angles of the heliostat.
 
     Methods
     -------
@@ -62,7 +62,11 @@ class RigidBodyModule(AKinematicModule):
             config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
             config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
         },
-        initial_orientation_offset: float = 0.0,#
+        initial_orientation_offsets: Dict[str, torch.Tensor] = {
+            config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(0.0),
+            config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(0.0),
+            config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(0.0),
+        },
         actuator_parameters: Dict[str, torch.Tensor] = {
             config_dictionary.first_joint_increment: torch.tensor(0.0),
             config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
@@ -89,8 +93,8 @@ class RigidBodyModule(AKinematicModule):
             The type of the actuators of the heliostat.
         deviation_parameters : Dict[str, torch.Tensor]
             The 18 deviation parameters of the kinematic module.
-        initial_orientation_offset : float
-            The initial orientation-rotation angle of the heliostat.
+        initial_orientation_offsets : Dict[str, torch.Tensor]
+            The initial orientation-rotation angles of the heliostat.
         actuator_parameters : Dict[str, torch.Tensor]
             The parameters describing imperfections in the actuators.
         """
@@ -116,7 +120,7 @@ class RigidBodyModule(AKinematicModule):
                                         )
 
         self.deviation_parameters = deviation_parameters
-        self.initial_orientation_offset = initial_orientation_offset
+        self.initial_orientation_offsets = initial_orientation_offsets
 
     def align(
         self,
@@ -287,5 +291,9 @@ class RigidBodyModule(AKinematicModule):
 
         # Return orientation matrix multiplied by the initial orientation offset.
         return orientation @ utils.rotate_e(
-            e=torch.tensor([self.initial_orientation_offset])
+            e=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_e]])
+        ) @ utils.rotate_n(
+            n=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_n]])
+        ) @ utils.rotate_u(
+            u=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_u]])
         )
