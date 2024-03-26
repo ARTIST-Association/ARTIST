@@ -23,7 +23,7 @@ def initial_offsets_south():
 
 @pytest.fixture
 def initial_offsets_above():
-    """Define initial offsets for a up orientated heliostat."""
+    """Define initial offsets for an up orientated heliostat."""
     initial_offsets = {
         config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(
             math.pi / 2
