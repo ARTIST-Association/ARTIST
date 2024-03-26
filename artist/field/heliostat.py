@@ -4,12 +4,12 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.physics_objects.alignment import AlignmentModule
-from artist.physics_objects.concentrator import ConcentratorModule
+from artist.field.alignment import Alignment
+from artist.field.concentrator import Concentrator
 from artist.util import artist_type_mapping_dict, config_dictionary
 
 
-class HeliostatModule(torch.nn.Module):
+class Heliostat(torch.nn.Module):
     """
     Implementation of the heliostat as a module.
 
@@ -19,9 +19,9 @@ class HeliostatModule(torch.nn.Module):
         Unique ID of the heliostat.
     incident_ray_direction : torch.Tensor
         The direction of the rays.
-    concentrator : ConcentratorModule
+    concentrator : Concentrator
         The surface of the heliostat.
-    alignment : AlignmentModule
+    alignment : Alignment
         The alignment module of the heliostat.
 
     Methods
@@ -80,12 +80,12 @@ class HeliostatModule(torch.nn.Module):
         super().__init__()
         self.id = id
         self.incident_ray_direction = incident_ray_direction
-        self.concentrator = ConcentratorModule(
+        self.concentrator = Concentrator(
             facets_type=facet_type,
             surface_points=surface_points,
             surface_normals=surface_normals,
         )
-        self.alignment = AlignmentModule(
+        self.alignment = Alignment(
             alignment_type=alignment_type,
             actuator_type=actuator_type,
             position=position,
@@ -116,7 +116,7 @@ class HeliostatModule(torch.nn.Module):
 
         Returns
         -------
-        HeliostatModule
+        Heliostat
             A heliostat initialized from an h5 file.
         """
         heliostat_id = config_file[config_dictionary.heliostat_prefix][heliostat_name][

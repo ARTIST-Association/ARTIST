@@ -5,7 +5,7 @@ from typing import Any, Dict, Tuple
 import torch
 
 
-class AlignmentModule(torch.nn.Module):
+class Alignment(torch.nn.Module):
     """
     This class implements the alignment module for the heliostat.
 

@@ -1,16 +1,16 @@
-import math
-
 import pytest
 import torch
 
-from artist.physics_objects.actuator_linear import LinearActuator
-from artist.physics_objects.kinematic_rigid_body import (
-    RigidBodyModule,
+from artist.field.actuator_linear import LinearActuator
+from artist.field.kinematic_rigid_body import (
+    RigidBody,
 )
 from artist.util import config_dictionary
 
+
 @pytest.fixture
 def deviation_parameters():
+    """Define deviation parameters used in tests."""
     deviation_parameters = {
         config_dictionary.first_joint_translation_e: torch.tensor(0.0),
         config_dictionary.first_joint_translation_n: torch.tensor(0.0),
@@ -30,11 +30,13 @@ def deviation_parameters():
         config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
         config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
         config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
-        }
+    }
     return deviation_parameters
+
 
 @pytest.fixture
 def actuator_parameters():
+    """Define actuator parameters used in tests."""
     actuator_parameters = {
         config_dictionary.first_joint_increment: torch.tensor(154166.666),
         config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.075),
@@ -49,13 +51,18 @@ def actuator_parameters():
     }
     return actuator_parameters
 
+
 @pytest.fixture
 def kinematic_model_1(deviation_parameters, actuator_parameters):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
-    return RigidBodyModule(
-        actuator_type=LinearActuator, position=position, aim_point=aim_point, deviation_parameters=deviation_parameters, actuator_parameters=actuator_parameters
+    return RigidBody(
+        actuator_type=LinearActuator,
+        position=position,
+        aim_point=aim_point,
+        deviation_parameters=deviation_parameters,
+        actuator_parameters=actuator_parameters,
     )
 
 
@@ -64,8 +71,12 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
-    return RigidBodyModule(
-        actuator_type=LinearActuator, position=position, aim_point=aim_point, deviation_parameters=deviation_parameters, actuator_parameters=actuator_parameters
+    return RigidBody(
+        actuator_type=LinearActuator,
+        position=position,
+        aim_point=aim_point,
+        deviation_parameters=deviation_parameters,
+        actuator_parameters=actuator_parameters,
     )
 
 
@@ -77,10 +88,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [0.9999,  0.0104,  0.0000, -0.0019],
-                    [-0.0074,  0.7107,  0.7035, -0.1891],
-                    [0.0073, -0.7035,  0.7107,  0.0613],
-                    [0.0000,  0.0000,  0.0000,  1.0000],
+                    [0.9999, 0.0104, 0.0000, -0.0019],
+                    [-0.0074, 0.7107, 0.7035, -0.1891],
+                    [0.0073, -0.7035, 0.7107, 0.0613],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
                 ]
             ),
         ),
@@ -89,10 +100,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [0.7123, -0.7019,  0.0000,  0.1246],
-                    [0.7019,  0.7122, -0.0103, -0.1255],
-                    [0.0072,  0.0073,  0.9999, -0.0908],
-                    [0.0000,  0.0000,  0.0000,  1.0000],
+                    [0.7123, -0.7019, 0.0000, 0.1246],
+                    [0.7019, 0.7122, -0.0103, -0.1255],
+                    [0.0072, 0.0073, 0.9999, -0.0908],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
                 ]
             ),
         ),
@@ -101,10 +112,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [9.9997e-01,  7.3368e-03,  0.0000e+00, -1.3026e-03],
-                    [-7.3367e-03,  9.9996e-01, -5.1375e-03, -1.7708e-01],
-                    [-3.7693e-05,  5.1374e-03,  9.9999e-01, -9.0411e-02],
-                    [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00],
+                    [9.9997e-01, 7.3368e-03, 0.0000e00, -1.3026e-03],
+                    [-7.3367e-03, 9.9996e-01, -5.1375e-03, -1.7708e-01],
+                    [-3.7693e-05, 5.1374e-03, 9.9999e-01, -9.0411e-02],
+                    [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
                 ]
             ),
         ),
@@ -113,10 +124,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [ 0.7019,  0.7123,  0.0000, -0.1265],
-                    [-0.7122,  0.7019, -0.0103, -0.1237],
-                    [-0.0073,  0.0072,  0.9999, -0.0908],
-                    [ 0.0000,  0.0000,  0.0000,  1.0000],
+                    [0.7019, 0.7123, 0.0000, -0.1265],
+                    [-0.7122, 0.7019, -0.0103, -0.1237],
+                    [-0.0073, 0.0072, 0.9999, -0.0908],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
                 ]
             ),
         ),
@@ -125,10 +136,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, -1.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [ 1.0000,  0.0080,  0.0000, -0.0014],
-                    [-0.0074,  0.9258,  0.3780, -0.1982],
-                    [ 0.0030, -0.3779,  0.9258, -0.0158],
-                    [ 0.0000,  0.0000,  0.0000,  1.0000],
+                    [1.0000, 0.0080, 0.0000, -0.0014],
+                    [-0.0074, 0.9258, 0.3780, -0.1982],
+                    [0.0030, -0.3779, 0.9258, -0.0158],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
                 ]
             ),
         ),
@@ -137,10 +148,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [ 0.9999,  0.0104,  0.0000, -0.0019],
-                    [-0.0074,  0.7107,  0.7035,  0.8109],
-                    [ 0.0073, -0.7035,  0.7107,  0.0613],
-                    [ 0.0000,  0.0000,  0.0000,  1.0000],
+                    [0.9999, 0.0104, 0.0000, -0.0019],
+                    [-0.0074, 0.7107, 0.7035, 0.8109],
+                    [0.0073, -0.7035, 0.7107, 0.0613],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
                 ]
             ),
         ),

@@ -2,13 +2,13 @@ from typing import Any, Dict
 
 import torch
 
-from artist.physics_objects.kinematic import (
-    AKinematicModule,
+from artist.field.kinematic import (
+    Kinematic,
 )
 from artist.util import config_dictionary, utils
 
 
-class RigidBodyModule(AKinematicModule):
+class RigidBody(Kinematic):
     """
     This class implements a rigid body kinematic model.
 
@@ -34,7 +34,7 @@ class RigidBodyModule(AKinematicModule):
 
     See Also
     --------
-    :class:`AKinematicModule` : Reference to the parent class.
+    :class:`Kinematic` : Reference to the parent class.
     """
 
     def __init__(
@@ -78,7 +78,7 @@ class RigidBodyModule(AKinematicModule):
             config_dictionary.second_joint_actuator_offset: torch.tensor(0.0),
             config_dictionary.second_joint_radius: torch.tensor(0.0),
             config_dictionary.second_joint_phi_0: torch.tensor(0.0),
-        }
+        },
     ) -> None:
         """
         Initialize the rigid body kinematic.
@@ -102,22 +102,32 @@ class RigidBodyModule(AKinematicModule):
         self.position = position
         self.aim_point = aim_point
 
-        self.actuator_1 = actuator_type(joint_number=1, 
-                                        clockwise=False, 
-                                        increment=actuator_parameters[config_dictionary.first_joint_increment],
-                                        initial_stroke_length=actuator_parameters[config_dictionary.first_joint_initial_stroke_length],
-                                        actuator_offset=actuator_parameters[config_dictionary.first_joint_actuator_offset],
-                                        radius=actuator_parameters[config_dictionary.first_joint_radius],
-                                        phi_0=actuator_parameters[config_dictionary.first_joint_phi_0]
-                                        )
-        self.actuator_2 = actuator_type(joint_number=2, 
-                                        clockwise=True,
-                                        increment=actuator_parameters[config_dictionary.second_joint_increment],
-                                        initial_stroke_length=actuator_parameters[config_dictionary.second_joint_initial_stroke_length],
-                                        actuator_offset=actuator_parameters[config_dictionary.second_joint_actuator_offset],
-                                        radius=actuator_parameters[config_dictionary.second_joint_radius],
-                                        phi_0=actuator_parameters[config_dictionary.second_joint_phi_0]
-                                        )
+        self.actuator_1 = actuator_type(
+            joint_number=1,
+            clockwise=False,
+            increment=actuator_parameters[config_dictionary.first_joint_increment],
+            initial_stroke_length=actuator_parameters[
+                config_dictionary.first_joint_initial_stroke_length
+            ],
+            actuator_offset=actuator_parameters[
+                config_dictionary.first_joint_actuator_offset
+            ],
+            radius=actuator_parameters[config_dictionary.first_joint_radius],
+            phi_0=actuator_parameters[config_dictionary.first_joint_phi_0],
+        )
+        self.actuator_2 = actuator_type(
+            joint_number=2,
+            clockwise=True,
+            increment=actuator_parameters[config_dictionary.second_joint_increment],
+            initial_stroke_length=actuator_parameters[
+                config_dictionary.second_joint_initial_stroke_length
+            ],
+            actuator_offset=actuator_parameters[
+                config_dictionary.second_joint_actuator_offset
+            ],
+            radius=actuator_parameters[config_dictionary.second_joint_radius],
+            phi_0=actuator_parameters[config_dictionary.second_joint_phi_0],
+        )
 
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offsets = initial_orientation_offsets
@@ -290,10 +300,33 @@ class RigidBodyModule(AKinematicModule):
             )
 
         # Return orientation matrix multiplied by the initial orientation offset.
-        return orientation @ utils.rotate_e(
-            e=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_e]])
-        ) @ utils.rotate_n(
-            n=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_n]])
-        ) @ utils.rotate_u(
-            u=torch.tensor([self.initial_orientation_offsets[config_dictionary.kinematic_initial_orientation_offset_u]])
+        return (
+            orientation
+            @ utils.rotate_e(
+                e=torch.tensor(
+                    [
+                        self.initial_orientation_offsets[
+                            config_dictionary.kinematic_initial_orientation_offset_e
+                        ]
+                    ]
+                )
+            )
+            @ utils.rotate_n(
+                n=torch.tensor(
+                    [
+                        self.initial_orientation_offsets[
+                            config_dictionary.kinematic_initial_orientation_offset_n
+                        ]
+                    ]
+                )
+            )
+            @ utils.rotate_u(
+                u=torch.tensor(
+                    [
+                        self.initial_orientation_offsets[
+                            config_dictionary.kinematic_initial_orientation_offset_u
+                        ]
+                    ]
+                )
+            )
         )

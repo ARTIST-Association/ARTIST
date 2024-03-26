@@ -8,10 +8,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.physics_objects import HeliostatModule
-from artist.physics_objects.actuator_ideal import IdealActuator
-from artist.physics_objects.facets_point_cloud import PointCloudFacetModule
-from artist.physics_objects.kinematic_rigid_body import RigidBodyModule
+from artist.field import Heliostat
+from artist.field.actuator_ideal import IdealActuator
+from artist.field.facets_point_cloud import PointCloudFacet
+from artist.field.kinematic_rigid_body import RigidBody
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
@@ -65,7 +65,7 @@ def generate_data(
         config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
         config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
     }
-    
+
     actuator_parameters = {
         config_dictionary.first_joint_increment: torch.tensor(0.0),
         config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
@@ -103,19 +103,19 @@ def generate_data(
         ]
     )
 
-    heliostat = HeliostatModule(
+    heliostat = Heliostat(
         id=1,
         position=heliostat_position,
-        alignment_type=RigidBodyModule,
+        alignment_type=RigidBody,
         actuator_type=IdealActuator,
         aim_point=receiver_center,
-        facet_type=PointCloudFacetModule,
+        facet_type=PointCloudFacet,
         surface_points=surface_points,
         surface_normals=surface_normals,
         incident_ray_direction=incident_ray_direction,
         kinematic_deviation_parameters=deviation_parameters,
         kinematic_initial_orientation_offsets=initial_orientation_offsets,
-        actuator_parameters=actuator_parameters
+        actuator_parameters=actuator_parameters,
     )
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()

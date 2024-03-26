@@ -5,7 +5,7 @@ import typing
 import torch
 
 
-class AKinematicModule(torch.nn.Module):
+class Kinematic(torch.nn.Module):
     """
     Abstract base class for all kinematic modules.
 
