@@ -163,7 +163,7 @@ def test_orientation_matrix(
     incident_ray_direction,
     expected,
 ):
-    """Tests that the alignment is working as desired."""
+    """Test that the alignment works as desired."""
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
     )
