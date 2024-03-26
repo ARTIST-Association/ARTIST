@@ -90,8 +90,8 @@ heliostats = {
             config_dictionary.second_joint_initial_stroke_length: 0.0,
             config_dictionary.second_joint_actuator_offset: 0.0,
             config_dictionary.second_joint_radius: 0.0,
-            config_dictionary.second_joint_phi_0: 0.0
-        }
+            config_dictionary.second_joint_phi_0: 0.0,
+        },
     },
 }
 
