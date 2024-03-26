@@ -36,7 +36,7 @@ def deviation_parameters():
 
 @pytest.fixture
 def actuator_parameters():
-    """Define actuator parameters used in tests."""
+    """Define actuator parameters used in tests as measured experimentally."""
     actuator_parameters = {
         config_dictionary.first_joint_increment: torch.tensor(154166.666),
         config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.075),
