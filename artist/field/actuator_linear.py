@@ -37,7 +37,7 @@ class LinearActuator(Actuator):
 
     See Also
     --------
-    :class:`Actuator` : The parent class.
+    :class:`Actuator` : Reference to the parent class.
     """
 
     def __init__(
