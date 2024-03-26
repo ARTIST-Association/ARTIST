@@ -38,7 +38,7 @@ class Sun(LightSource):
 
     See Also
     --------
-    :class:LightSource : The parent class.
+    :class:`LightSource` : Reference to the parent class.
     """
 
     def __init__(
