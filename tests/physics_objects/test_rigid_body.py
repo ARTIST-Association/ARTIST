@@ -3,19 +3,47 @@ import math
 import pytest
 import torch
 
-from artist.physics_objects.actuator_ideal import IdealActuator
-from artist.physics_objects.kinematic_rigid_body import (
-    RigidBodyModule,
+from artist.field.actuator_ideal import IdealActuator
+from artist.field.kinematic_rigid_body import (
+    RigidBody,
 )
+from artist.util import config_dictionary
 
 
 @pytest.fixture
-def kinematic_model_1():
+def initial_offsets_south():
+    """Define initial offsets for a south orientated heliostat."""
+    initial_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(0.0),
+    }
+    return initial_offsets
+
+
+@pytest.fixture
+def initial_offsets_above():
+    """Define initial offsets for an up orientated heliostat."""
+    initial_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: torch.tensor(
+            math.pi / 2
+        ),
+        config_dictionary.kinematic_initial_orientation_offset_n: torch.tensor(0.0),
+        config_dictionary.kinematic_initial_orientation_offset_u: torch.tensor(0.0),
+    }
+    return initial_offsets
+
+
+@pytest.fixture
+def kinematic_model_1(initial_offsets_south):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
-    return RigidBodyModule(
-        actuator_type=IdealActuator, position=position, aim_point=aim_point
+    return RigidBody(
+        actuator_type=IdealActuator,
+        position=position,
+        aim_point=aim_point,
+        initial_orientation_offsets=initial_offsets_south,
     )
 
 
@@ -24,8 +52,21 @@ def kinematic_model_2():
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
-    return RigidBodyModule(
+    return RigidBody(
         actuator_type=IdealActuator, position=position, aim_point=aim_point
+    )
+
+
+@pytest.fixture
+def kinematic_model_3(initial_offsets_above):
+    """Create a kinematic model to use in the test."""
+    position = torch.tensor([0.0, 0.0, 0.0, 1.0])
+    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
+    return RigidBody(
+        actuator_type=IdealActuator,
+        position=position,
+        aim_point=aim_point,
+        initial_orientation_offsets=initial_offsets_above,
     )
 
 
@@ -100,6 +141,54 @@ def kinematic_model_2():
                     [1.0, 0.0, 0.0, 0.0],
                     [0.0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 1.0],
                     [0.0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([0.0, 0.0, 1.0, 0.0]),
+            torch.tensor(
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0],
+                    [0.0, math.sin(math.pi / 4), math.cos(math.pi / 4), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, math.cos(math.pi / 2), -math.sin(math.pi / 2), 0.0],
+                    [0.0, math.sin(math.pi / 2), math.cos(math.pi / 2), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [math.cos(math.pi / 4), 0.0, math.sin(math.pi / 4), 0.0],
+                    [math.sin(math.pi / 4), 0.0, -math.cos(math.pi / 4), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [math.cos(-math.pi / 4), 0.0, math.sin(-math.pi / 4), 0.0],
+                    [math.sin(-math.pi / 4), 0.0, -math.cos(-math.pi / 4), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),

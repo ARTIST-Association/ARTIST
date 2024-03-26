@@ -4,11 +4,11 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.scene.light_source import ALightSource
+from artist.scene.light_source import LightSource
 from artist.util import config_dictionary, utils
 
 
-class Sun(ALightSource):
+class Sun(LightSource):
     """
     This class implements the sun as a light source.
 
@@ -38,7 +38,7 @@ class Sun(ALightSource):
 
     See Also
     --------
-    :class:ALightSource : The parent class.
+    :class:`LightSource` : Reference to the parent class.
     """
 
     def __init__(
