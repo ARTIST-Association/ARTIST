@@ -8,7 +8,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.physics_objects.heliostat import HeliostatModule
+from artist.field.heliostat import Heliostat
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
@@ -49,7 +49,7 @@ def generate_data(
             dtype=torch.float,
         )
         sun = Sun.from_hdf5(config_file=config_h5)
-        heliostat = HeliostatModule.from_hdf5(
+        heliostat = Heliostat.from_hdf5(
             heliostat_name="Single_Heliostat",
             incident_ray_direction=incident_ray_direction,
             config_file=config_h5,

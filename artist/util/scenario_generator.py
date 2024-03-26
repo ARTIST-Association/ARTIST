@@ -75,7 +75,23 @@ heliostats = {
             config_dictionary.concentrator_tilt_n: 0.0,
             config_dictionary.concentrator_tilt_u: 0.0,
         },
-        config_dictionary.kinematic_initial_orientation_offset_key: math.pi / 2,
+        config_dictionary.kinematic_initial_orientation_offset_key: {
+            config_dictionary.kinematic_initial_orientation_offset_e: math.pi / 2,
+            config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
+            config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
+        },
+        config_dictionary.actuator_parameters_key: {
+            config_dictionary.first_joint_increment: 0.0,
+            config_dictionary.first_joint_initial_stroke_length: 0.0,
+            config_dictionary.first_joint_actuator_offset: 0.0,
+            config_dictionary.first_joint_radius: 0.0,
+            config_dictionary.first_joint_phi_0: 0.0,
+            config_dictionary.second_joint_increment: 0.0,
+            config_dictionary.second_joint_initial_stroke_length: 0.0,
+            config_dictionary.second_joint_actuator_offset: 0.0,
+            config_dictionary.second_joint_radius: 0.0,
+            config_dictionary.second_joint_phi_0: 0.0,
+        },
     },
 }
 
