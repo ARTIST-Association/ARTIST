@@ -3,13 +3,13 @@ from typing import Any
 import torch
 
 
-class ConcentratorModule(torch.nn.Module):
+class Concentrator(torch.nn.Module):
     """
     Implementation of the concentrator module.
 
     Attributes
     ----------
-    facets : List[AFacetModule]
+    facets : List[Facet]
         The facets of the concentrator.
     """
 

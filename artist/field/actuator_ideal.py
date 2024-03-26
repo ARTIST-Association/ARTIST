@@ -1,11 +1,11 @@
 import torch
 
-from artist.physics_objects.actuator import (
-    AActuatorModule,
+from artist.field.actuator import (
+    Actuator,
 )
 
 
-class IdealActuator(AActuatorModule):
+class IdealActuator(Actuator):
     """
     This class implements the behavior of an ideal actuator.
 
@@ -20,7 +20,7 @@ class IdealActuator(AActuatorModule):
 
     See Also
     --------
-    :class:`AActuatorModule` : The parent class.
+    :class:`Actuator` : The parent class.
     """
 
     def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:

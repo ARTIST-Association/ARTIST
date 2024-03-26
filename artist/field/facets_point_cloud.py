@@ -2,10 +2,10 @@
 
 import torch
 
-from artist.physics_objects.facets import AFacetModule
+from artist.field.facets import Facet
 
 
-class PointCloudFacetModule(AFacetModule):
+class PointCloudFacet(Facet):
     """
     Implementation of the heliostat surface loaded from a point cloud.
 
@@ -18,7 +18,7 @@ class PointCloudFacetModule(AFacetModule):
 
     See Also
     --------
-    :class:`AFacetModule` : Reference to the parent class.
+    :class:`Facet` : Reference to the parent class.
     """
 
     def __init__(

@@ -1,9 +1,9 @@
-
 import torch
-from artist.physics_objects.actuator import AActuatorModule
+
+from artist.field.actuator import Actuator
 
 
-class LinearActuator(AActuatorModule):
+class LinearActuator(Actuator):
     """
     This class implements the behavior of a linear actuator.
 
@@ -37,17 +37,22 @@ class LinearActuator(AActuatorModule):
 
     See Also
     --------
-    :class:`AActuatorModule` : The parent class.
+    :class:`Actuator` : The parent class.
     """
-    def __init__(self, 
-                 joint_number: int, 
-                 clockwise: bool, 
-                 increment: torch.Tensor, 
-                 initial_stroke_length: torch.Tensor,
-                 actuator_offset: torch.Tensor,
-                 radius: torch.Tensor,
-                 phi_0: torch.Tensor) -> None:
+
+    def __init__(
+        self,
+        joint_number: int,
+        clockwise: bool,
+        increment: torch.Tensor,
+        initial_stroke_length: torch.Tensor,
+        actuator_offset: torch.Tensor,
+        radius: torch.Tensor,
+        phi_0: torch.Tensor,
+    ) -> None:
         """
+        Initialize a linear actuator.
+
         Parameters
         ----------
         joint_number : int
@@ -65,7 +70,15 @@ class LinearActuator(AActuatorModule):
         phi_0 : torch.Tensor
             The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
-        super().__init__(joint_number, clockwise, increment, initial_stroke_length, actuator_offset, radius, phi_0)
+        super().__init__(
+            joint_number,
+            clockwise,
+            increment,
+            initial_stroke_length,
+            actuator_offset,
+            radius,
+            phi_0,
+        )
         self.joint_number = joint_number
         self.clockwise = clockwise
         self.increment = increment
@@ -73,7 +86,6 @@ class LinearActuator(AActuatorModule):
         self.actuator_offset = actuator_offset
         self.radius = radius
         self.phi_0 = phi_0
-
 
     def steps_to_phi(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
@@ -83,26 +95,19 @@ class LinearActuator(AActuatorModule):
         ----------
         actuator_pos : torch.Tensor
             The actuator position.
-        
+
         Returns
         -------
         torch.Tensor
             The calculated angle.
         """
-        stroke_length = (
-            actuator_pos / self.increment
-            + self.initial_stroke_length
-        )
-        calc_step_1 = (
-            self.actuator_offset ** 2
-            + self.radius ** 2
-            - stroke_length**2
-        )
+        stroke_length = actuator_pos / self.increment + self.initial_stroke_length
+        calc_step_1 = self.actuator_offset**2 + self.radius**2 - stroke_length**2
         calc_step_2 = 2.0 * self.actuator_offset * self.radius
         calc_step_3 = calc_step_1 / calc_step_2
         angle = torch.arccos(calc_step_3)
         return angle
-    
+
     def motor_steps_to_angles(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
         Calculate the angles given the motor steps.
@@ -111,7 +116,7 @@ class LinearActuator(AActuatorModule):
         ----------
         actuator_pos : torch.Tensor
             The actuator (motor) position.
-        
+
         Returns
         -------
         torch.Tensor
@@ -123,8 +128,8 @@ class LinearActuator(AActuatorModule):
 
         angles = self.phi_0 + delta_phi if self.clockwise else self.phi_0 - delta_phi
         return angles
-    
-    def angles_to_motor_steps(self, angles : torch.Tensor) -> torch.Tensor:
+
+    def angles_to_motor_steps(self, angles: torch.Tensor) -> torch.Tensor:
         """
         Calculate the motor steps given the angles.
 
@@ -132,21 +137,23 @@ class LinearActuator(AActuatorModule):
         ----------
         angles : torch.Tensor
             The angles.
-        
+
         Returns
         -------
         torch.Tensor
             The motor steps.
         """
         delta_phi = angles - self.phi_0 if self.clockwise else self.phi_0 - angles
-        
+
         phi_0 = self.steps_to_phi(actuator_pos=torch.zeros(angles.shape[0]))
         phi = phi_0 - delta_phi
-        
+
         calc_step_3 = torch.cos(phi)
         calc_step_2 = 2.0 * self.actuator_offset * self.radius
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_length = torch.sqrt( self.actuator_offset ** 2  + self.radius ** 2 - calc_step_1)
+        stroke_length = torch.sqrt(
+            self.actuator_offset**2 + self.radius**2 - calc_step_1
+        )
         actuator_steps = (stroke_length - self.initial_stroke_length) * self.increment
         return actuator_steps
 
@@ -158,7 +165,7 @@ class LinearActuator(AActuatorModule):
         ----------
         actuator_pos : torch.Tensor
             The actuator (motor) position.
-        
+
         Returns
         -------
         torch.Tensor

@@ -3,14 +3,8 @@ from typing import Tuple
 import torch
 
 
-class ALightSource(torch.nn.Module):
-    """
-    Abstract base class for all light sources.
-
-    See Also
-    --------
-    :class: torch.nn.Module : Reference to the parent class.
-    """
+class LightSource(torch.nn.Module):
+    """Abstract base class for all light sources."""
 
     def __init__(self):
         super().__init__()
