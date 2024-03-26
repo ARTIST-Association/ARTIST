@@ -141,6 +141,42 @@ def kinematic_model_3(initial_offsets_above):
                 ]
             ),
         ),
+        (
+            "kinematic_model_3",
+            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, math.cos(math.pi / 2), -math.sin(math.pi / 2), 0.0],
+                    [0.0, math.sin(math.pi / 2), math.cos(math.pi / 2), 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [math.cos(math.pi / 4), 0.0, math.sin(math.pi / 4), 0.0],
+                    [math.sin(math.pi / 4), 0.0, -math.cos(math.pi / 4), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
+        (
+            "kinematic_model_3",
+            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
+            torch.tensor(
+                [
+                    [math.cos(-math.pi / 4), 0.0, math.sin(-math.pi / 4), 0.0],
+                    [math.sin(-math.pi / 4), 0.0, -math.cos(-math.pi / 4), 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        ),
     ],
 )
 def test_orientation_matrix(
