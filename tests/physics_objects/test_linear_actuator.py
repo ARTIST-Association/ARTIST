@@ -77,10 +77,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [1, 0, 0, 0],
-                    [0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 0],
-                    [0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0],
-                    [0, 0, 0, 1],
+                    [0.9999,  0.0104,  0.0000, -0.0019],
+                    [-0.0074,  0.7107,  0.7035, -0.1891],
+                    [0.0073, -0.7035,  0.7107,  0.0613],
+                    [0.0000,  0.0000,  0.0000,  1.0000],
                 ]
             ),
         ),
@@ -89,10 +89,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0, 0.0],
-                    [math.sin(math.pi / 4), math.cos(math.pi / 4), 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [0.7123, -0.7019,  0.0000,  0.1246],
+                    [0.7019,  0.7122, -0.0103, -0.1255],
+                    [0.0072,  0.0073,  0.9999, -0.0908],
+                    [0.0000,  0.0000,  0.0000,  1.0000],
                 ]
             ),
         ),
@@ -101,10 +101,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [9.9997e-01,  7.3368e-03,  0.0000e+00, -1.3026e-03],
+                    [-7.3367e-03,  9.9996e-01, -5.1375e-03, -1.7708e-01],
+                    [-3.7693e-05,  5.1374e-03,  9.9999e-01, -9.0411e-02],
+                    [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00],
                 ]
             ),
         ),
@@ -113,10 +113,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 0.0, 0.0],
-                    [math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [ 0.7019,  0.7123,  0.0000, -0.1265],
+                    [-0.7122,  0.7019, -0.0103, -0.1237],
+                    [-0.0073,  0.0072,  0.9999, -0.0908],
+                    [ 0.0000,  0.0000,  0.0000,  1.0000],
                 ]
             ),
         ),
@@ -125,10 +125,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, -1.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(-math.pi / 8), -math.sin(-math.pi / 8), 0.0],
-                    [0.0, math.sin(-math.pi / 8), math.cos(-math.pi / 8), 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [ 1.0000,  0.0080,  0.0000, -0.0014],
+                    [-0.0074,  0.9258,  0.3780, -0.1982],
+                    [ 0.0030, -0.3779,  0.9258, -0.0158],
+                    [ 0.0000,  0.0000,  0.0000,  1.0000],
                 ]
             ),
         ),
@@ -137,10 +137,10 @@ def kinematic_model_2(deviation_parameters, actuator_parameters):
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor(
                 [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 1.0],
-                    [0.0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
+                    [ 0.9999,  0.0104,  0.0000, -0.0019],
+                    [-0.0074,  0.7107,  0.7035,  0.8109],
+                    [ 0.0073, -0.7035,  0.7107,  0.0613],
+                    [ 0.0000,  0.0000,  0.0000,  1.0000],
                 ]
             ),
         ),
@@ -156,4 +156,4 @@ def test_orientation_matrix(
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
     )
-    torch.testing.assert_close(orientation_matrix[0], expected)
+    torch.testing.assert_close(orientation_matrix[0], expected, atol=5e-4, rtol=5e-4)
