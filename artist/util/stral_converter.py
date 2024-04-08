@@ -1,7 +1,9 @@
 import logging
 import struct
+import sys
 from typing import List, Tuple, cast
 
+import colorlog
 import h5py
 import numpy as np
 import torch
@@ -12,17 +14,36 @@ from artist.util import config_dictionary
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
 Vector3d = List[np.floating]
 
-log = logging.getLogger("STRAL-to-h5-converter")  # Get logger instance.
 
-# Variables that must be set for the converter to work
-stral_file_path = f"{ARTIST_ROOT}/STRAL_data/stral_test_data"
-hdf_file_path = (
-    f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/stral_conversion_test"
-)
-concentrator_header_name = "=5f2I2f"
-facet_header_name = "=i9fI"
-ray_struct_name = "=7f"
-step_size = 2
+def get_logger(log_level: int = logging.INFO) -> logging.Logger:
+    """
+    Create a logger for the conversion process.
+
+    Returns
+    -------
+    logging.Logger
+        The logger for the conversion process
+    """
+    log = logging.getLogger("STRAL-to-h5-converter")  # Get logger instance.
+    log_formatter = colorlog.ColoredFormatter(
+        fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
+        "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "red,bg_white",
+        },
+        secondary_log_colors={},
+    )
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setFormatter(log_formatter)
+    log.addHandler(handler)
+    log.setLevel(log_level)
+    return log
 
 
 def convert_point_to_4d_format(point: torch.Tensor) -> torch.Tensor:
@@ -91,23 +112,27 @@ def convert_stral_to_h5(
     facet_header_name: str,
     ray_struct_name: str,
     step_size: int,
+    log: logging.Logger,
 ) -> None:
     """
-    Load a bpro file and extract information from it.
+    Extract information from a STRAL file saved as .binp and save this information as a HDF5 file.
 
     Parameters
     ----------
     stral_file_path : str
-        The file that contains the data.
-    concentrator_header_name : struct.Struct
-        The concentrator header.
-    facet_header_name : struct.Struct
-        The facet header.
-    ray_struct_name : struct.Struct
-        The ray struct.
-    verbose : bool
-        Print option.
-
+        The file path to the STRAL data file that will be converted
+    hdf5_file_path : str
+        The file path for the HDF5 file that will be saved
+    concentrator_header_name : str
+        The name for the concentrator header in the STRAL file
+    facet_header_name : str
+        The name for the facet header in the STRAL file
+    ray_struct_name : str
+        The name of the ray structure in the STRAL file
+    step_size : int
+        The size of the step used to reduce the number of considered points for compute efficiency
+    log : logging.Logger
+        The logger
     """
     log.info("Beginning STRAL to HDF5 conversion!")
 
@@ -221,7 +246,19 @@ def convert_stral_to_h5(
         f[config_dictionary.load_surface_ideal_vectors_key] = surface_ideal_vectors
 
 
+# Variables that must be set for the converter to work
+stral_file_path = f"{ARTIST_ROOT}/STRAL_data/stral_test_data"
+hdf_file_path = (
+    f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/stral_conversion_test"
+)
+concentrator_header_name = "=5f2I2f"
+facet_header_name = "=i9fI"
+ray_struct_name = "=7f"
+step_size = 2
+
 if __name__ == "__main__":
+    log = get_logger()
+
     convert_stral_to_h5(
         stral_file_path=stral_file_path,
         hdf5_file_path=hdf_file_path,
@@ -229,4 +266,5 @@ if __name__ == "__main__":
         facet_header_name=facet_header_name,
         ray_struct_name=ray_struct_name,
         step_size=step_size,
+        log=log,
     )
