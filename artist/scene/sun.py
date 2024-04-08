@@ -227,13 +227,20 @@ class Sun(LightSource):
         RuntimeError
             When there are no intersections between the line and the plane.
         """
-        ndotu = ray_directions @ plane_normal
+        # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
+        # the incoming rays
+        relative_distribution_strengths = ray_directions @ plane_normal
         assert (
-            torch.abs(ndotu) >= epsilon
+            torch.abs(relative_distribution_strengths) >= epsilon
         ).all(), "No intersection or line is within plane."
-        ds = (plane_point - surface_points) @ plane_normal / ndotu
+        # Calculate the final distribution strengths
+        distribution_strengths = (
+            (plane_point - surface_points)
+            @ plane_normal
+            / relative_distribution_strengths
+        )
 
-        return surface_points + ray_directions * ds.unsqueeze(-1)
+        return surface_points + ray_directions * distribution_strengths.unsqueeze(-1)
 
     @staticmethod
     def get_preferred_reflection_direction(
