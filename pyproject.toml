@@ -23,6 +23,7 @@ dependencies = [
     "numpy",
     "torch",
     "h5py",
+    "colorlog",
 ]
 
 [project.optional-dependencies]
