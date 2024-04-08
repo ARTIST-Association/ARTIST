@@ -1,6 +1,11 @@
 # Dictionary for loading measurement data
 load_normals_key = "surface_normals"
 load_points_key = "surface_points"
+load_surface_position_key = "surface_position"
+load_facet_positions_key = "facet_positions"
+load_facet_spans_n_key = "facet_spans_n"
+load_facet_spans_e_key = "facet_spans_e"
+load_surface_ideal_vectors_key = "surface_ideal_vectors"
 measurement_location = "measurement_data"
 
 # Dictionary for heliostats
