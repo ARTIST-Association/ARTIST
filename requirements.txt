@@ -2,3 +2,4 @@ numpy~=1.26.4
 yacs~=0.1.8
 torch~=2.2.0
 h5py
+colorlog
