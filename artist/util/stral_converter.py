@@ -21,30 +21,30 @@ class StralConverter:
     Attributes
     ----------
     stral_file_path : str
-        The file path to the STRAL data file that will be converted
+        The file path to the STRAL data file that will be converted.
     hdf5_file_path : str
-        The file path for the HDF5 file that will be saved
+        The file path for the HDF5 file that will be saved.
      concentrator_header_name : str
-        The name for the concentrator header in the STRAL file
+        The name for the concentrator header in the STRAL file.
     facet_header_name : str
-        The name for the facet header in the STRAL file
+        The name for the facet header in the STRAL file.
     ray_struct_name : str
-        The name of the ray structure in the STRAL file
+        The name of the ray structure in the STRAL file.
     step_size : int
-        The size of the step used to reduce the number of considered points for compute efficiency
+        The size of the step used to reduce the number of considered points for compute efficiency.
     log : logging.Logger
-        The logger
+        The logger.
 
     Methods
     -------
     convert_point_to_4d_format()
-        Converts a 3d point to a 4d point
+        Converts a 3d point to a 4d point.
     convert_direction_to_4d_format()
-        Converts a 3d direction vector to 4d format
+        Converts a 3d direction vector to 4d format.
     nwu_to_enu()
-        Casts from a nwu to enu coordinate system
+        Casts from a nwu to enu coordinate system.
     convert_stral_to_h5()
-        Converts the STRAL data to HDF5 data
+        Converts the STRAL data to HDF5 data.
 
     """
 
@@ -64,19 +64,19 @@ class StralConverter:
         Parameters
         ----------
         stral_file_path : str
-            The file path to the STRAL data file that will be converted
+            The file path to the STRAL data file that will be converted.
         hdf5_file_path : str
-            The file path for the HDF5 file that will be saved
+            The file path for the HDF5 file that will be saved.
         concentrator_header_name : str
-            The name for the concentrator header in the STRAL file
+            The name for the concentrator header in the STRAL file.
         facet_header_name : str
-            The name for the facet header in the STRAL file
+            The name for the facet header in the STRAL file.
         ray_struct_name : str
-            The name of the ray structure in the STRAL file
+            The name of the ray structure in the STRAL file.
         step_size : int
-            The size of the step used to reduce the number of considered points for compute efficiency
+            The size of the step used to reduce the number of considered points for compute efficiency.
         log_level : Optional[int]
-            The log level used for the logger
+            The log level used for the logger.
         """
         self.stral_file_path = stral_file_path
         self.hdf5_file_path = hdf5_file_path
