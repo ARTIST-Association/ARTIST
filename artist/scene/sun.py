@@ -69,21 +69,25 @@ class Sun(LightSource):
         self.ray_count = ray_count
 
         assert (
-            self.distribution_parameters["distribution_type"] == "normal"
+            self.distribution_parameters[config_dictionary.sun_distribution_type]
+            == config_dictionary.sun_distribution_is_normal
         ), "Unknown sunlight distribution type."
 
-        if self.distribution_parameters["distribution_type"] == "normal":
+        if (
+            self.distribution_parameters[config_dictionary.sun_distribution_type]
+            == config_dictionary.sun_distribution_is_normal
+        ):
             mean = torch.tensor(
                 [
-                    self.distribution_parameters["mean"],
-                    self.distribution_parameters["mean"],
+                    self.distribution_parameters[config_dictionary.sun_mean],
+                    self.distribution_parameters[config_dictionary.sun_mean],
                 ],
                 dtype=torch.float,
             )
             covariance = torch.tensor(
                 [
-                    [self.distribution_parameters["covariance"], 0],
-                    [0, self.distribution_parameters["covariance"]],
+                    [self.distribution_parameters[config_dictionary.sun_covariance], 0],
+                    [0, self.distribution_parameters[config_dictionary.sun_covariance]],
                 ],
                 dtype=torch.float,
             )
