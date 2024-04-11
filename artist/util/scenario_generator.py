@@ -637,11 +637,17 @@ class HeliostatListConfig:
             config_dictionary.general_surface_points: self.general_surface_points,
             config_dictionary.general_surface_normals: self.general_surface_normals,
         }
+        _heliostat_names = []
         for heliostat in self.heliostat_list:
             _heliostat_dict = {
                 heliostat.heliostat_name: heliostat.create_single_heliostat_config_dict()
             }
+            _heliostat_names.append(heliostat.heliostat_name)
             heliostat_list_dict.update(_heliostat_dict)
+
+        heliostat_list_dict.update(
+            {config_dictionary.heliostat_names: _heliostat_names}
+        )
 
         return heliostat_list_dict
 
