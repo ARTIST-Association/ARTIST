@@ -18,6 +18,16 @@ class ReceiverConfig:
     ----------
     receiver_center : torch.Tensor
         The center of the receiver.
+    plane_normal : torch.Tensor
+        The normal to the plane of the receiver.
+    plane_x : float
+        The x plane of the receiver.
+    plane_y : torch.Tensor
+        The y plane of the receiver
+    resolution_x : int
+        The resolution of the x plane of the receiver.
+    resolution_y : int
+        The resolution of the y plane of the receiver
 
     Methods
     -------
@@ -25,7 +35,15 @@ class ReceiverConfig:
        Create a dictionary containing the configuration parameters for the receiver.
     """
 
-    def __init__(self, receiver_center: torch.Tensor) -> None:
+    def __init__(
+        self,
+        receiver_center: torch.Tensor,
+        plane_normal: torch.Tensor,
+        plane_x: float,
+        plane_y: float,
+        resolution_x: int,
+        resolution_y: int,
+    ) -> None:
         """
         Initialize the receiver configuration.
 
@@ -33,13 +51,33 @@ class ReceiverConfig:
         ----------
         receiver_center : torch.Tensor
             The center of the receiver.
+        plane_normal : torch.Tensor
+            The normal to the plane of the receiver.
+        plane_x : float
+            The x plane of the receiver.
+        plane_y : torch.Tensor
+            The y plane of the receiver
+        resolution_x : int
+            The resolution of the x plane of the receiver.
+        resolution_y : int
+            The resolution of the y plane of the receiver
         """
         self.receiver_center = receiver_center
+        self.plane_normal = plane_normal
+        self.plane_x = plane_x
+        self.plane_y = plane_y
+        self.resolution_x = resolution_x
+        self.resolution_y = resolution_y
 
     def create_receiver_dict(self) -> Dict:
         """Create a dictionary containing the configuration parameters for the receiver."""
         return {
             config_dictionary.receiver_center: self.receiver_center,
+            config_dictionary.receiver_plane_normal: self.plane_normal,
+            config_dictionary.receiver_plane_x: self.plane_x,
+            config_dictionary.receiver_plane_y: self.plane_y,
+            config_dictionary.receiver_resolution_x: self.resolution_x,
+            config_dictionary.receiver_resolution_y: self.resolution_y,
         }
 
 
