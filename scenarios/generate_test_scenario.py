@@ -16,7 +16,14 @@ from artist.util.scenario_generator import (
 )
 
 # Include the receiver configuration
-receiver_config = ReceiverConfig(receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]))
+receiver_config = ReceiverConfig(
+    receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    plane_normal=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    plane_x=8.629666667,
+    plane_y=7.0,
+    resolution_x=256,
+    resolution_y=256,
+)
 
 # Include the light source configuration
 light_source_config = LightSourceConfig(
