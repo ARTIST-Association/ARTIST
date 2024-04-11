@@ -36,6 +36,11 @@ facet_span_east = "span_east"
 # Dictionary for receiver
 receiver_prefix = "receiver"
 receiver_center = "center"
+receiver_plane_normal = "plane_normal"
+receiver_plane_x = "plane_x"
+receiver_plane_y = "plane_y"
+receiver_resolution_x = "resolution_x"
+receiver_resolution_y = "resolution_y"
 
 # Dictionary for sun
 sun_prefix = "sun"
