@@ -46,11 +46,12 @@ def generate_data(
         sun = Sun.from_hdf5(config_file=config_h5)
         heliostat = Heliostat.from_hdf5(
             heliostat_name="Single_Heliostat",
-            incident_ray_direction=incident_ray_direction,
             config_file=config_h5,
         )
 
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
+    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(
+        incident_ray_direction=incident_ray_direction
+    )
 
     return {
         "sun": sun,

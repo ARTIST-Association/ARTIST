@@ -112,13 +112,14 @@ def generate_data(
         facet_type=PointCloudFacet,
         surface_points=surface_points,
         surface_normals=surface_normals,
-        incident_ray_direction=incident_ray_direction,
         kinematic_deviation_parameters=deviation_parameters,
         kinematic_initial_orientation_offsets=initial_orientation_offsets,
         actuator_parameters=actuator_parameters,
     )
 
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
+    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(
+        incident_ray_direction=incident_ray_direction
+    )
 
     return {
         "sun": sun,
