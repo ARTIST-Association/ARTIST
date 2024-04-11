@@ -17,8 +17,6 @@ class Heliostat(torch.nn.Module):
     ----------
     id : int
         Unique ID of the heliostat.
-    incident_ray_direction : torch.Tensor
-        The direction of the rays.
     concentrator : Concentrator
         The surface of the heliostat.
     alignment : Alignment
@@ -42,9 +40,8 @@ class Heliostat(torch.nn.Module):
         facet_type: Any,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        incident_ray_direction: torch.Tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
-        kinematic_initial_orientation_offsets: float,
+        kinematic_initial_orientation_offsets: Dict[str, float],
         actuator_parameters: Dict[str, torch.Tensor],
     ) -> None:
         """
@@ -61,15 +58,13 @@ class Heliostat(torch.nn.Module):
         actuator_type : Any
             The type of the actuators of the heliostat.
         aim_point : torch.Tensor
-            The aimpoint.
+            The aim point.
         facet_type : Any
             The type of the facets, for example point cloud facets or NURBS.
         surface_points : torch.Tensor
             The points on the surface of the heliostat.
         surface_normals : torch.Tensor
             The normals corresponding to the points on the surface.
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
         kinematic_deviation_parameters : Dict[str, torch.Tensor]
             The 18 deviation parameters of the kinematic module.
         kinematic_initial_orientation_offsets : Dict[str, torch.Tensor]
@@ -79,7 +74,7 @@ class Heliostat(torch.nn.Module):
         """
         super().__init__()
         self.id = id
-        self.incident_ray_direction = incident_ray_direction
+        self.position = position
         self.concentrator = Concentrator(
             facets_type=facet_type,
             surface_points=surface_points,
@@ -99,7 +94,6 @@ class Heliostat(torch.nn.Module):
     def from_hdf5(
         cls,
         config_file: h5py.File,
-        incident_ray_direction: torch.Tensor,
         heliostat_name: str,
     ) -> Self:
         """
@@ -109,8 +103,6 @@ class Heliostat(torch.nn.Module):
         ----------
         config_file : h5py.File
             The config file containing all the information about the heliostat and the environment.
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
         heliostat_name : str
             The name of the heliostat, for identification.
 
@@ -406,13 +398,14 @@ class Heliostat(torch.nn.Module):
             facet_type=facet_type,
             surface_points=surface_points,
             surface_normals=surface_normals,
-            incident_ray_direction=incident_ray_direction,
             kinematic_deviation_parameters=kinematic_deviation_parameters,
             kinematic_initial_orientation_offsets=kinematic_initial_orientation_offsets,
             actuator_parameters=actuator_parameters,
         )
 
-    def get_aligned_surface(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_aligned_surface(
+        self, incident_ray_direction
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
@@ -428,6 +421,6 @@ class Heliostat(torch.nn.Module):
             self.concentrator.facets.surface_normals,
         )
         aligned_surface_points, aligned_surface_normals = self.alignment.align_surface(
-            self.incident_ray_direction, surface_points, surface_normals
+            incident_ray_direction, surface_points, surface_normals
         )
         return aligned_surface_points, aligned_surface_normals
