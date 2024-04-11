@@ -9,8 +9,8 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.field.heliostat import Heliostat
+from artist.field.receiver import Receiver
 from artist.scene.sun import Sun
-from artist.util import config_dictionary
 
 
 def generate_data(
@@ -42,12 +42,7 @@ def generate_data(
         A dictionary containing all the data.
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
-        receiver_center = torch.tensor(
-            config_h5[config_dictionary.receiver_prefix][
-                config_dictionary.receiver_center
-            ][()],
-            dtype=torch.float,
-        )
+        receiver = Receiver.from_hdf5(config_file=config_h5)
         sun = Sun.from_hdf5(config_file=config_h5)
         heliostat = Heliostat.from_hdf5(
             heliostat_name="Single_Heliostat",
@@ -61,7 +56,7 @@ def generate_data(
         "sun": sun,
         "aligned_surface_points": aligned_surface_points,
         "aligned_surface_normals": aligned_surface_normals,
-        "receiver_center": receiver_center,
+        "receiver": receiver,
         "incident_ray_direction": incident_ray_direction,
         "expected_value": expected_value,
     }
@@ -111,15 +106,9 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     sun = environment_data["sun"]
     aligned_surface_points = environment_data["aligned_surface_points"]
     aligned_surface_normals = environment_data["aligned_surface_normals"]
-    receiver_center = environment_data["receiver_center"]
+    receiver = environment_data["receiver"]
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
-
-    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
-    receiver_plane_x = 8.629666667
-    receiver_plane_y = 7.0
-    receiver_resolution_x = 256
-    receiver_resolution_y = 256
 
     preferred_ray_directions = sun.get_preferred_reflection_direction(
         -incident_ray_direction, aligned_surface_normals
@@ -134,39 +123,39 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     )
 
     intersections = sun.line_plane_intersections(
-        receiver_plane_normal, receiver_center, rays, aligned_surface_points
+        receiver.plane_normal, receiver.center, rays, aligned_surface_points
     )
 
-    dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
-    dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
+    dx_ints = intersections[:, :, 0] + receiver.plane_x / 2 - receiver.center[0]
+    dy_ints = intersections[:, :, 2] + receiver.plane_y / 2 - receiver.center[2]
 
     indices = (
         (-1 <= dx_ints)
-        & (dx_ints < receiver_plane_x + 1)
+        & (dx_ints < receiver.plane_x + 1)
         & (-1 <= dy_ints)
-        & (dy_ints < receiver_plane_y + 1)
+        & (dy_ints < receiver.plane_y + 1)
     )
 
     total_bitmap = sun.sample_bitmap(
         dx_ints,
         dy_ints,
         indices,
-        receiver_plane_x,
-        receiver_plane_y,
-        receiver_resolution_x,
-        receiver_resolution_y,
+        receiver.plane_x,
+        receiver.plane_y,
+        receiver.resolution_x,
+        receiver.resolution_y,
     )
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
         distortions_n.numel(),
-        receiver_plane_x,
-        receiver_plane_y,
+        receiver.plane_x,
+        receiver.plane_y,
     )
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/physics_objects/test_bitmaps_load_surface_stral"
+        / "tests/field/test_bitmaps_load_surface_stral"
         / expected_value
     )
 
