@@ -41,7 +41,7 @@ class Heliostat(torch.nn.Module):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         kinematic_deviation_parameters: Dict[str, torch.Tensor],
-        kinematic_initial_orientation_offsets: Dict[str, float],
+        kinematic_initial_orientation_offsets: Dict[str, torch.Tensor],
         actuator_parameters: Dict[str, torch.Tensor],
     ) -> None:
         """
