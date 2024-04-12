@@ -7,16 +7,12 @@ class NURBSSurface(torch.nn.Module):
     which operate on Tensors.
     """
     def __init__(self, 
-                 number_of_control_points_x: int,
-                 number_of_control_points_y: int,
                  degree_x: int,
                  degree_y: int, 
                  output_dimension_x: int=32, 
                  output_dimension_y: int=32, 
                  dimension: int=3) -> torch.Tensor:
         super(NURBSSurface, self).__init__()
-        self.number_of_control_points_x = number_of_control_points_x
-        self.number_of_coontrol_points_y = number_of_control_points_y
         self._dimension = dimension
         self.degree_x = degree_x
         self.degree_y = degree_y
@@ -32,6 +28,7 @@ class NURBSSurface(torch.nn.Module):
         objects for use in the backward pass using the ctx.save_for_backward method.
         """
         control_points, knot_vector_x, knot_vector_y = input
+        control_points = control_points.unsqueeze(dim=0)
 
         # normalize knot vector
         knot_vector_x_ = torch.cumsum(torch.where(knot_vector_x<0.0, knot_vector_x*0+1e-4, knot_vector_x), dim=1)
@@ -81,9 +78,7 @@ class NURBSSurface(torch.nn.Module):
 
         basis_values_y = torch.stack(basis_values).permute(1,0,2).unsqueeze(1).unsqueeze(-1).unsqueeze(-3)
         
-        control_points = control_points.unsqueeze(dim=0)
-
-        # added parentheses
+        # added parentheses to make it work
         pts = torch.stack([
             torch.stack([
                 torch.stack([
@@ -176,11 +171,11 @@ class NURBSSurface(torch.nn.Module):
 #         return Variable(U*0), Variable(dU), Variable(U*0), None
     
 
-control_points_shape = (3,3)                        
+control_points_shape = (3, 3)                        
 control_points = torch.empty(control_points_shape + (3,))   
 knots_x = torch.tensor([0, 0, 0.1, 0.2, 0.3, 1]).unsqueeze(dim=0)
 knots_y = torch.tensor([0, 0, 0.1, 0.2, 0.3, 1]).unsqueeze(dim=0)
-nurbs = NURBSSurface(3, 3, 2, 2, 6, 6)
+nurbs = NURBSSurface(2, 2, 3, 3)
 input = (control_points, knots_x, knots_y)
 output = nurbs(input)
 print(output)
