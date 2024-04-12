@@ -611,8 +611,8 @@ class HeliostatListConfig:
 
     def __init__(
         self,
-        general_surface_points: torch.Tensor,
-        general_surface_normals: torch.Tensor,
+        general_surface_points: Union[bool, torch.Tensor],
+        general_surface_normals: Union[bool, torch.Tensor],
         heliostat_list: List[SingleHeliostatConfig],
     ) -> None:
         """
@@ -620,10 +620,10 @@ class HeliostatListConfig:
 
         Parameters
         ----------
-        general_surface_points : torch.Tensor
-            The general surface points applicable for multiple heliostats.
-        general_surface_normals : torch.Tensor
-            The general surface normals applicable for multiple heliostats.
+        general_surface_points : Union[bool, torch.Tensor]
+            The general surface points applicable for multiple heliostats, if available.
+        general_surface_normals : Union[bool, torch.Tensor]
+            The general surface normals applicable for multiple heliostats, if available.
         heliostat_list : List[SingleHeliostatConfig]
             The list of heliostats to include.
         """
