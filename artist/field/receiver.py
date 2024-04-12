@@ -1,7 +1,6 @@
-from typing import Self
-
 import h5py
 import torch.nn
+from typing_extensions import Self
 
 from artist.util import config_dictionary
 
