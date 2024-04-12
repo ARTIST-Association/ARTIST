@@ -1,6 +1,7 @@
-from typing import List, Self
+from typing import List
 
 import h5py
+from typing_extensions import Self
 
 from artist.field import Heliostat
 from artist.field.receiver import Receiver
