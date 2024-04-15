@@ -7,10 +7,7 @@ import h5py
 import pytest
 import torch
 
-from artist import ARTIST_ROOT
-from artist.field.heliostat import Heliostat
-from artist.field.receiver import Receiver
-from artist.scene.sun import Sun
+from artist import ARTIST_ROOT, Scenario
 
 
 def generate_data(
@@ -42,12 +39,11 @@ def generate_data(
         A dictionary containing all the data.
     """
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
-        receiver = Receiver.from_hdf5(config_file=config_h5)
-        sun = Sun.from_hdf5(config_file=config_h5)
-        heliostat = Heliostat.from_hdf5(
-            heliostat_name="Single_Heliostat",
-            config_file=config_h5,
-        )
+        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
+
+    receiver = scenario.receiver
+    sun = scenario.light_source
+    heliostat = scenario.heliostats[0]
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(
         incident_ray_direction=incident_ray_direction
