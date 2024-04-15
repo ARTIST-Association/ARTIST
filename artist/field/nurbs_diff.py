@@ -171,7 +171,7 @@ class NURBSSurface(torch.nn.Module):
 #         return Variable(U*0), Variable(dU), Variable(U*0), None
     
 
-control_points_shape = (3, 3)                        
+control_points_shape = (4, 5)                        
 control_points = torch.empty(control_points_shape + (3,))   
 knots_x = torch.tensor([0, 0, 0.1, 0.2, 0.3, 1]).unsqueeze(dim=0)
 knots_y = torch.tensor([0, 0, 0.1, 0.2, 0.3, 1]).unsqueeze(dim=0)
