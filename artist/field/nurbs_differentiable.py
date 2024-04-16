@@ -21,10 +21,11 @@ class NURBSSurface(torch.nn.Module):
         control_points = control_points.unsqueeze(dim=0)
 
         # find span indices x direction (based on A2.1) 
+        # add -1
         span_indices_x = torch.empty(len(self.evaluation_points_x), dtype=torch.int64)
         for i, evaluation_point in enumerate(self.evaluation_points_x):
             if torch.isclose(evaluation_point, knot_vector_x[:, control_points.shape[1] + 1], atol=1e-5, rtol=1e-5):
-                span_indices_x[i] = control_points.shape[1]
+                span_indices_x[i] = control_points.shape[1] - 1
                 break
             low = self.degree_x
             high = control_points.shape[1] + 1
@@ -42,11 +43,12 @@ class NURBSSurface(torch.nn.Module):
         # find basis values x direction (based on A2.2)
         basis_values_x = BasisFunction.apply(evaluation_points_x, knot_vector_x, span_indices_x.unsqueeze(-1), self.degree_x).unsqueeze(2).unsqueeze(-1).unsqueeze(-1)
 
-        # find span indices y direction (based on A2.1) 
+        # find span indices y direction (based on A2.1)
+        # add - 1
         span_indices_y = torch.empty(len(self.evaluation_points_y), dtype=torch.int64)
         for i, evaluation_point in enumerate(self.evaluation_points_y):
             if torch.isclose(evaluation_point, knot_vector_x[:, control_points.shape[2] + 1], atol=1e-5, rtol=1e-5):
-                span_indices_y[i] = control_points.shape[2]
+                span_indices_y[i] = control_points.shape[2] - 1
                 break
             low = self.degree_y
             high = control_points.shape[2] + 1
@@ -82,8 +84,8 @@ class NURBSSurface(torch.nn.Module):
         # find derivatives of basis values in x and y direction (based on A2.3)
         nth_derivative = 1
         derivatives = torch.empty(len(evaluation_points_x), nth_derivative + 1, nth_derivative + 1, control_points.shape[-1])
-        basis_values_derivatives_x = BasisFunctionDerivatives.apply(evaluation_points_x, knot_vector_x, span_indices_x, self.degree_x, nth_derivative)
-        basis_values_derivatives_y = BasisFunctionDerivatives.apply(evaluation_points_y, knot_vector_y, span_indices_y, self.degree_y, nth_derivative)
+        basis_values_derivatives_x = BasisFunctionDerivatives.apply(evaluation_points_x, knot_vector_x.squeeze(0), span_indices_x, self.degree_x, nth_derivative)
+        basis_values_derivatives_y = BasisFunctionDerivatives.apply(evaluation_points_y, knot_vector_y.squeeze(0), span_indices_y, self.degree_y, nth_derivative)
         
         # find surface normals based on A3.6
         dx = min(nth_derivative, self.degree_x)
@@ -97,15 +99,20 @@ class NURBSSurface(torch.nn.Module):
         temp = [torch.empty((len(evaluation_points_x), control_points.shape[-1])) for _ in range(self.degree_y + 1)]
         for k in range(dx + 1): 
             for s in range(self.degree_y + 1):
-                temp[s] = torch.zeros_like(temp[s]).unsqueeze(0)
+                temp[s] = torch.zeros_like(temp[s])
                 for r in range(self.degree_x + 1):
-                    temp[s] += basis_values_derivatives_x[k][r].squeeze(0).unsqueeze(-1) * control_points.squeeze(0)[span_indices_x - (self.degree_x + r), span_indices_y - (self.degree_y + s)]
+                    temp[s] += (basis_values_derivatives_x[k][r].squeeze(0).squeeze(0).unsqueeze(-1) * control_points.squeeze(0)[span_indices_x - self.degree_x + r, span_indices_y - self.degree_y + s])
             dd = min(nth_derivative - k, dy)
             for l in range(dd + 1):
                 derivatives[:, k, l] = 0
                 for s in range(self.degree_y + 1):
-                    derivatives[:, k, l] += ((basis_values_derivatives_y[l][s].squeeze(0).unsqueeze(-1) * temp[s])).squeeze(0).squeeze(0)
-        return surfaces, derivatives
+                    derivatives[:, k, l] += ((basis_values_derivatives_y[l][s].squeeze(0).squeeze(0).unsqueeze(-1) * temp[s])).squeeze(0).squeeze(0)
+        
+        normals = []
+        for i in derivatives:
+            normals.append(torch.linalg.cross(i[0][1][:3], i[1][1][:3]))
+        torch.stack(normals)
+        return surfaces, normals
 
 
 class BasisFunction(torch.autograd.Function):
@@ -176,8 +183,8 @@ class BasisFunctionDerivatives(torch.autograd.Function):
         left = [torch.empty(num_evaluation_points) for _ in range(degree + 1)]
         right = [torch.empty(num_evaluation_points) for _ in range(degree + 1)]
         for j in range(1, degree + 1):
-            left[j] = evaluation_points - knot_vector[:, span + 1 - j]
-            right[j] = knot_vector[:, span + j] - evaluation_points
+            left[j] = evaluation_points - knot_vector[span + 1 - j]
+            right[j] = knot_vector[span + j] - evaluation_points
             saved = torch.zeros(num_evaluation_points)
             for r in range(j):
                 ndu[j][r] = right[r + 1] + left[j - r]
@@ -194,7 +201,7 @@ class BasisFunctionDerivatives(torch.autograd.Function):
             s2 = 1
             a[0][0] = torch.ones_like(a[0][0])
             for k in range(1, nth_derivative + 1):
-                d = torch.zeros(num_evaluation_points).unsqueeze(0).unsqueeze(0)
+                d = torch.zeros(num_evaluation_points)
                 rk = r - k
                 pk = degree - k
                 if r >= k:
@@ -242,7 +249,7 @@ knots_y = torch.zeros(control_points_shape[1] + degree_y + 1)
 knots_y[(degree_y+1):-(degree_y+1)] = 0.5                                               
 knots_y[-(degree_y+1):] = 1
 
-nurbs = NURBSSurface(degree_x, degree_y, num_control_points_x, num_control_points_y)
+nurbs = NURBSSurface(degree_x, degree_y, 10, 10)
 input = (control_points, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
 surface_points, surface_normals = nurbs(input)
 
