@@ -1,5 +1,4 @@
 import torch
-from torch.autograd import Variable
 
 class NURBSSurface(torch.nn.Module):
 
@@ -24,7 +23,7 @@ class NURBSSurface(torch.nn.Module):
         control_points, knot_vector_x, knot_vector_y = input
         control_points = control_points.unsqueeze(dim=0)
 
-        # find span indices x direction (based on A2.1) 
+        # find span indices x direction (based on A2.1, page 68) 
         # add -1
         span_indices_x = torch.zeros(len(self.evaluation_points_x), dtype=torch.int64)
         for i, evaluation_point in enumerate(self.evaluation_points_x):
@@ -44,10 +43,10 @@ class NURBSSurface(torch.nn.Module):
 
         evaluation_points_x = self.evaluation_points_x.squeeze(0)
 
-        # find basis values x direction (based on A2.2)
-        basis_values_x = BasisFunction.apply(evaluation_points_x, knot_vector_x, span_indices_x.unsqueeze(-1), self.degree_x)
+        # find basis values x direction (based on A2.2, page 70)
+        # basis_values_x = BasisFunction.apply(evaluation_points_x, knot_vector_x, span_indices_x.unsqueeze(-1), self.degree_x)
 
-        # find span indices y direction (based on A2.1)
+        # find span indices y direction (based on A2.1, page 68)
         # add - 1
         span_indices_y = torch.zeros(len(self.evaluation_points_y), dtype=torch.int64)
         for i, evaluation_point in enumerate(self.evaluation_points_y):
@@ -67,8 +66,8 @@ class NURBSSurface(torch.nn.Module):
         
         evaluation_points_y = self.evaluation_points_y.squeeze(0)
         
-        # find basis values y direction (based on A2.2)
-        basis_values_y = BasisFunction.apply(evaluation_points_y, knot_vector_y, span_indices_y.unsqueeze(-1), self.degree_y)
+        # find basis values y direction (based on A2.2, page 70)
+        # basis_values_y = BasisFunction.apply(evaluation_points_y, knot_vector_y, span_indices_y.unsqueeze(-1), self.degree_y)
 
         # # added parentheses to make it work
         # pts = torch.stack([
@@ -88,11 +87,10 @@ class NURBSSurface(torch.nn.Module):
         control_point_weights = torch.zeros((control_points.shape[1],control_points.shape[2]) + (1,))
         control_points = torch.cat([control_points.squeeze(0), control_point_weights], dim=-1)
 
-        # find derivatives of basis values in x and y direction (based on A2.3)
         nth_derivative = 1
         derivatives = torch.zeros(len(evaluation_points_x), nth_derivative + 1, nth_derivative + 1, control_points.shape[-1])
 
-        # find surface normals based on A3.6
+        # find surface points and normals (based on A3.6, page 111)
         dx = min(nth_derivative, self.degree_x)
         for k in range(self.degree_x + 1, nth_derivative + 1):
             for l in range(nth_derivative - k + 1):
@@ -102,6 +100,7 @@ class NURBSSurface(torch.nn.Module):
             for k in range(nth_derivative - l + 1):
                 derivatives[:, k, l] = 0
         
+        # find derivatives of basis functions (based on A2.3, page 72)
         basis_values_derivatives_x = BasisFunctionDerivatives.apply(evaluation_points_x, knot_vector_x.squeeze(0), span_indices_x, self.degree_x, dx)
         basis_values_derivatives_y = BasisFunctionDerivatives.apply(evaluation_points_y, knot_vector_y.squeeze(0), span_indices_y, self.degree_y, dy)
         
@@ -117,9 +116,11 @@ class NURBSSurface(torch.nn.Module):
                 for s in range(self.degree_y + 1):
                     derivatives[:, k, l] += ((basis_values_derivatives_y[l][s].unsqueeze(-1) * temp[s])).squeeze(0).squeeze(0)
 
-        cross_prod = torch.linalg.cross(derivatives[:, 1, 1, :3], derivatives[:, 1, 1, :3])
-
-        return derivatives[:, 0, 0], cross_prod
+        normals = torch.linalg.cross(derivatives[:, 0, 1, :3], derivatives[:, 1, 0, :3])
+        #normals /=torch.linalg.norm(normals, dim=1).unsqueeze(1)
+        normals = torch.nn.functional.normalize(normals)
+        
+        return derivatives[:, 0, 0], normals
 
 
 class BasisFunction(torch.autograd.Function):
@@ -209,52 +210,52 @@ class BasisFunctionDerivatives(torch.autograd.Function):
 
 
 
-# receiver_plane_x = 8.629666667
-# receiver_plane_y = 7.0
+receiver_plane_x = 8.629666667
+receiver_plane_y = 7.0
 
-# degree_x = 2
-# degree_y = 2
-# num_control_points_x = 7
-# num_control_points_y = 7
+degree_x = 2
+degree_y = 2
+num_control_points_x = 7
+num_control_points_y = 7
 
-# next_degree_x = degree_x + 1                                                          
-# next_degree_y = degree_y + 1 
+next_degree_x = degree_x + 1                                                          
+next_degree_y = degree_y + 1 
 
-# origin = torch.tensor([0.0, 5.0, 0.0]) # heliostat position in field                                                                                    
+origin = torch.tensor([0.0, 5.0, 0.0]) # heliostat position in field                                                                                    
 
-# control_points_shape = (num_control_points_x, num_control_points_y)                       
-# control_points = torch.zeros(
-#     control_points_shape + (3,),                                                  
-# )
+control_points_shape = (num_control_points_x, num_control_points_y)                       
+control_points = torch.zeros(
+    control_points_shape + (3,),                                                  
+)
 
-# origin_offsets_x = torch.linspace(
-#     -receiver_plane_x / 2, receiver_plane_x / 2, num_control_points_x)
-# origin_offsets_y = torch.linspace(
-#     -receiver_plane_y / 2, receiver_plane_y / 2, num_control_points_y)
-# origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
-# origin_offsets = torch.hstack((
-#     origin_offsets,
-#     torch.zeros((len(origin_offsets), 1)),
-# ))
-# control_points = (origin + origin_offsets).reshape(control_points.shape)                      
+origin_offsets_x = torch.linspace(
+    -receiver_plane_x / 2, receiver_plane_x / 2, num_control_points_x)
+origin_offsets_y = torch.linspace(
+    -receiver_plane_y / 2, receiver_plane_y / 2, num_control_points_y)
+origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
+origin_offsets = torch.hstack((
+    origin_offsets,
+    torch.zeros((len(origin_offsets), 1)),
+))
+control_points = (origin + origin_offsets).reshape(control_points.shape)                      
 
-# knots_x = torch.zeros(num_control_points_x + next_degree_x)                                                                                              
-# num_knot_vals = len(knots_x[degree_x:-degree_x])
-# knot_vals = torch.linspace(0, 1, num_knot_vals)
-# knots_x[:degree_x] = 0
-# knots_x[degree_x:-degree_x] = knot_vals
-# knots_x[-degree_x:] = 1
+knots_x = torch.zeros(num_control_points_x + next_degree_x)                                                                                              
+num_knot_vals = len(knots_x[degree_x:-degree_x])
+knot_vals = torch.linspace(0, 1, num_knot_vals)
+knots_x[:degree_x] = 0
+knots_x[degree_x:-degree_x] = knot_vals
+knots_x[-degree_x:] = 1
 
-# knots_y = torch.zeros(num_control_points_y + next_degree_y)                                                                                        
-# num_knot_vals = len(knots_y[degree_y:-degree_y])
-# knot_vals = torch.linspace(0, 1, num_knot_vals)
-# knots_y[:degree_y] = 0
-# knots_y[degree_y:-degree_y] = knot_vals
-# knots_y[-degree_y:] = 1
+knots_y = torch.zeros(num_control_points_y + next_degree_y)                                                                                        
+num_knot_vals = len(knots_y[degree_y:-degree_y])
+knot_vals = torch.linspace(0, 1, num_knot_vals)
+knots_y[:degree_y] = 0
+knots_y[degree_y:-degree_y] = knot_vals
+knots_y[-degree_y:] = 1
 
-# nurbs = NURBSSurface(degree_x, degree_y, 2, 2)
-# input = (control_points, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
-# surface_points, surface_normals = nurbs(input)
+nurbs = NURBSSurface(degree_x, degree_y, 2, 2)
+input = (control_points, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
+surface_points, surface_normals = nurbs(input)
 
-# print('points', surface_points)
-# print(surface_normals)
+print('points', surface_points)
+print(surface_normals)
