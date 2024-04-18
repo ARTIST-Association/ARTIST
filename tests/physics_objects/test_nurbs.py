@@ -9,6 +9,9 @@ import torch
 import h5py
 
 from artist import ARTIST_ROOT
+from artist.field.actuator_ideal import IdealActuator
+from artist.field.facets_point_cloud import PointCloudFacet
+from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.nurbs import NURBSSurface
 from artist.field.heliostat import Heliostat
 from artist.scene.sun import Sun
@@ -95,12 +98,58 @@ def data(request):
 
 def test_nurbs(environment_data: Dict[str, torch.Tensor]):
     torch.manual_seed(7)
+    torch.autograd.set_detect_anomaly(True)
     sun = environment_data["sun"]
     receiver_center = environment_data["receiver_center"]
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
     aligned_surface_points = environment_data["aligned_surface_points"]
     aligned_surface_normals = environment_data["aligned_surface_normals"]
+
+
+    deviation_parameters = {
+        config_dictionary.first_joint_translation_e: torch.tensor(0.0),
+        config_dictionary.first_joint_translation_n: torch.tensor(0.0),
+        config_dictionary.first_joint_translation_u: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_e: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_n: torch.tensor(0.0),
+        config_dictionary.first_joint_tilt_u: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_e: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_n: torch.tensor(0.0),
+        config_dictionary.second_joint_translation_u: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_e: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_n: torch.tensor(0.0),
+        config_dictionary.second_joint_tilt_u: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_e: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_n: torch.tensor(0.0),
+        config_dictionary.concentrator_translation_u: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
+        config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
+    }
+    initial_orientation_offsets = {
+        config_dictionary.kinematic_initial_orientation_offset_e: -math.pi / 2,
+        config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
+        config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
+    }
+
+    actuator_parameters = {
+        config_dictionary.first_joint_increment: torch.tensor(0.0),
+        config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
+        config_dictionary.first_joint_actuator_offset: torch.tensor(0.0),
+        config_dictionary.first_joint_radius: torch.tensor(0.0),
+        config_dictionary.first_joint_phi_0: torch.tensor(0.0),
+        config_dictionary.second_joint_increment: torch.tensor(0.0),
+        config_dictionary.second_joint_initial_stroke_length: torch.tensor(0.0),
+        config_dictionary.second_joint_actuator_offset: torch.tensor(0.0),
+        config_dictionary.second_joint_radius: torch.tensor(0.0),
+        config_dictionary.second_joint_phi_0: torch.tensor(0.0),
+    }
+
+    heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
+    receiver_center = torch.tensor([0.0, -50.0, 0.0, 1.0])
+
+    sun = Sun(ray_count=10)
 
     receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
     receiver_plane_x = 8.629666667
@@ -113,17 +162,21 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
     num_control_points_x = 7
     num_control_points_y = 7
 
-    origin = torch.tensor([0.0, 5.0, 0.0]) # heliostat position in field                                                                                    
+    origin = torch.tensor([0.0, 0.0, 0.0]) # heliostat position in field                                                                                    
     
     control_points_shape = (num_control_points_x, num_control_points_y)                       
     control_points = torch.zeros(
         control_points_shape + (3,),                                                  
     )
 
+#    origin_offsets_x = torch.linspace(
+#         -receiver_plane_x / 2, receiver_plane_x / 2, num_control_points_x)
+#     origin_offsets_y = torch.linspace(
+#         -receiver_plane_y / 2, receiver_plane_y / 2, num_control_points_y)
     origin_offsets_x = torch.linspace(
-        -receiver_plane_x / 2, receiver_plane_x / 2, num_control_points_x)
+        -1, 1, num_control_points_x)
     origin_offsets_y = torch.linspace(
-        -receiver_plane_y / 2, receiver_plane_y / 2, num_control_points_y)
+        -1, 1, num_control_points_y)
     origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
     origin_offsets = torch.hstack((
         origin_offsets,
@@ -161,15 +214,29 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
 
     for epoch in range(10):
         points, normals = surface.calculate_surface_points_and_normals(control_points, knots_x, knots_y)
-        print(points)
-        print(normals)
 
         optimizer.zero_grad()
 
         normals = torch.cat((normals, torch.zeros(normals.shape[0], 1)), dim = 1)
+        heliostat = Heliostat(
+            id=1,
+            position=heliostat_position,
+            alignment_type=RigidBody,
+            actuator_type=IdealActuator,
+            aim_point=receiver_center,
+            facet_type=PointCloudFacet,
+            surface_points=points,
+            surface_normals=normals,
+            incident_ray_direction=incident_ray_direction,
+            kinematic_deviation_parameters=deviation_parameters,
+            kinematic_initial_orientation_offsets=initial_orientation_offsets,
+            actuator_parameters=actuator_parameters,
+        )
+
+        aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
         preferred_ray_directions = sun.get_preferred_reflection_direction(
-            -incident_ray_direction, normals
+            -incident_ray_direction, aligned_surface_normals
         )
 
         distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
@@ -181,7 +248,7 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
         )
 
         intersections = sun.line_plane_intersections(
-            receiver_plane_normal, receiver_center, rays, points
+            receiver_plane_normal, receiver_center, rays, aligned_surface_points
         )
 
         dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
