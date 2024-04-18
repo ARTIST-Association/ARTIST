@@ -9,7 +9,7 @@ import torch
 import h5py
 
 from artist import ARTIST_ROOT
-from artist.field.nurbs import NURBSSurface
+from artist.field.nurbs_differentiable import NURBSSurface
 from artist.field.heliostat import Heliostat
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
@@ -158,9 +158,11 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
                            100,)
     
     optimizer = torch.optim.Adam([control_points])
+    
+    input = (control_points, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
 
     for epoch in range(10):
-        points, normals = surface.calculate_surface_points_and_normals(control_points, knots_x, knots_y)
+        points, normals = surface(input)
         print(points)
         print(normals)
 
@@ -211,7 +213,7 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
             receiver_plane_y,
         )
 
-        plt.imshow(total_bitmap.detach().T, origin="lower")
+        plt.imshow(total_bitmap.detach())
         plt.show()
 
         expected_path = (
@@ -222,7 +224,7 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
 
         expected = torch.load(expected_path)
 
-        plt.imshow(expected.detach(), origin="lower")
+        plt.imshow(expected.detach())
         plt.show()
 
         loss = total_bitmap - expected
