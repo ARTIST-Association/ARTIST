@@ -11,7 +11,7 @@ class LightSource(torch.nn.Module):
 
     def get_distortions(
         self,
-        num_preferred_ray_directions: int,
+        number_of_points: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get distortions given the light source model.
