@@ -128,3 +128,9 @@ convention = "numpy"
 testpaths = [
     "tests",
 ]
+
+[tool.coverage.run]
+omit = [
+    "artist/util/scenario_generator.py",
+    "artist/util/stral_converter.py",
+    ]
