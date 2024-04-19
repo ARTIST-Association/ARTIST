@@ -64,16 +64,15 @@ class Scenario:
         """
         receiver = Receiver.from_hdf5(config_file=scenario_file)
         light_source = Sun.from_hdf5(config_file=scenario_file)
-        heliostat_list = []
-        for heliostat_name in scenario_file[config_dictionary.heliostat_prefix][
-            config_dictionary.heliostat_names
-        ]:
-            heliostat_list.append(
-                Heliostat.from_hdf5(
-                    config_file=scenario_file,
-                    heliostat_name=heliostat_name.decode("utf-8"),
-                )
+        heliostat_list = [
+            Heliostat.from_hdf5(
+                config_file=scenario_file,
+                heliostat_name=heliostat_name.decode("utf-8"),
             )
+            for heliostat_name in scenario_file[config_dictionary.heliostat_prefix][
+                config_dictionary.heliostat_names
+            ]
+        ]
 
         return cls(
             receiver=receiver, light_source=light_source, heliostats=heliostat_list
