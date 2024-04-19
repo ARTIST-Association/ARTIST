@@ -9,12 +9,15 @@ class LightSource(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def sample(
+    def get_distortions(
         self,
         num_preferred_ray_directions: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Sample rays from a given distribution.
+        Get distortions given the light source model.
+
+        This function gets the distortions that are later used to model possible rays that are being generated
+        from the light source. Depending on the model of the sun, the distortions are generated differently.
 
         Raises
         ------

@@ -128,12 +128,12 @@ class Sun(LightSource):
 
         return cls(distribution_parameters=distribution_parameters, ray_count=num_rays)
 
-    def sample(
+    def get_distortions(
         self,
         num_preferred_ray_directions: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Sample rays from a given distribution.
+        Get distortions given the selected model of the sun.
 
         Parameters
         ----------
