@@ -131,14 +131,14 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         -incident_ray_direction, aligned_surface_normals
     )
 
-    distortions_n, distortions_u = sun.get_distortions(
+    distortions_u, distortions_e = sun.get_distortions(
         preferred_ray_directions.shape[0]
     )
 
     rays = sun.scatter_rays(
         preferred_ray_directions,
-        distortions_n,
         distortions_u,
+        distortions_e,
     )
 
     intersections = sun.line_plane_intersections(
@@ -167,7 +167,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
-        distortions_n.numel(),
+        distortions_u.numel(),
         receiver.plane_x,
         receiver.plane_y,
     )
