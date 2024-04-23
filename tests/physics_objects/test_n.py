@@ -161,10 +161,13 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
         heliostat_points_shape + (3,),                                                  
     )
 
+    width = 3.22
+    height = 2.56
+
     heliostat_offsets_x = torch.linspace(
-        -receiver_plane_x / 2, receiver_plane_x / 2, heliostat_points_shape[0])
+        -width / 2, width / 2, heliostat_points_shape[0])
     heliostat_offsets_y = torch.linspace(
-        -receiver_plane_y / 2, receiver_plane_y / 2, heliostat_points_shape[1])
+        -height / 2, height / 2, heliostat_points_shape[1])
     heliostat_offsets = torch.cartesian_prod(heliostat_offsets_x, heliostat_offsets_y)
     heliostat_offsets = torch.hstack((
         heliostat_offsets,
@@ -207,7 +210,7 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
         control_points_shape + (3,),                                                  
     )
 
-    step_size = (aligned_surface_points.shape[0] // (num_control_points_x * num_control_points_y))-1
+    step_size = (aligned_surface_points.shape[0] // (num_control_points_x * num_control_points_y))
     control_points = aligned_surface_points[::step_size]
 
     control_points = torch.nn.parameter.Parameter((origin + origin_offsets).reshape(control_points.shape))

@@ -15,6 +15,8 @@ class NURBSSurface(torch.nn.Module):
         self.degree_y = degree_y
         self.evaluation_points_rows_x = torch.linspace(1e-5, 1.0-1e-5, steps=output_dimension_x, dtype=torch.float32)
         self.evaluation_points_columns_y = torch.linspace(1e-5, 1.0-1e-5, steps=output_dimension_y, dtype=torch.float32)
+        #self.evaluation_points_rows_x = torch.linspace(0.0+0.01, 1.0-0.01, steps=output_dimension_x, dtype=torch.float32)
+        #self.evaluation_points_columns_y = torch.linspace(0.0+0.01, 1.0-0.01, steps=output_dimension_y, dtype=torch.float32)
         self.evaluation_points =  torch.cartesian_prod(self.evaluation_points_rows_x, self.evaluation_points_columns_y)
         self.evaluation_points_x = self.evaluation_points[:, 0]
         self.evaluation_points_y = self.evaluation_points[:, 1]
@@ -22,7 +24,8 @@ class NURBSSurface(torch.nn.Module):
     def find_span(self, 
                   knot_vector: torch.Tensor,
                   evaluation_points: torch.Tensor,
-                  control_points: torch.Tensor) -> torch.Tensor:
+                  control_points: torch.Tensor,
+                  degree: int) -> torch.Tensor:
         """
         Determine the knot span index for given evaluation points.
 
@@ -48,13 +51,14 @@ class NURBSSurface(torch.nn.Module):
         torch.Tensor
             The knot span index.
         """
+        n = control_points.shape[1] - 1
         span_indices = torch.zeros(len(self.evaluation_points), dtype=torch.int64)
         for i, evaluation_point in enumerate(evaluation_points):
-            if torch.isclose(evaluation_point, knot_vector[control_points.shape[1] + 1], atol=1e-5, rtol=1e-5):
-                span_indices[i] = control_points.shape[1] - 1
+            if torch.isclose(evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5):
+                span_indices[i] = n
                 continue
             low = self.degree_x
-            high = control_points.shape[1] + 1
+            high = control_points.shape[1]
             mid = (low + high) // 2
             while evaluation_point < knot_vector[mid] or evaluation_point >= knot_vector[mid + 1]:           
                 if evaluation_point < knot_vector[mid]:
@@ -171,12 +175,12 @@ class NURBSSurface(torch.nn.Module):
             The surface points and normals.
         """
         # find span indices x direction (based on A2.1, page 68) 
-        span_indices_x = self.find_span(knot_vector_x, self.evaluation_points_x, control_points)
+        span_indices_x = self.find_span(knot_vector_x, self.evaluation_points_x, control_points, self.degree_x)
 
         # find span indices y direction (based on A2.1, page 68)
-        span_indices_y = self.find_span(knot_vector_y, self.evaluation_points_y, control_points)
+        span_indices_y = self.find_span(knot_vector_y, self.evaluation_points_y, control_points, self.degree_y)
         
-        control_point_weights = torch.zeros((control_points.shape[0],control_points.shape[1]) + (1,))
+        control_point_weights = torch.ones((control_points.shape[0],control_points.shape[1]) + (1,))
         control_points = torch.cat([control_points, control_point_weights], dim=-1)
 
         nth_derivative = 1
@@ -208,7 +212,7 @@ class NURBSSurface(torch.nn.Module):
                 for s in range(self.degree_y + 1):
                     derivatives[:, k, l] += ((basis_values_derivatives_y[l][s].unsqueeze(-1) * temp[s]))
 
-        normals = torch.linalg.cross(derivatives[:, 0, 1, :3], derivatives[:, 1, 0, :3])
+        normals = torch.linalg.cross(derivatives[:, 1, 0, :3], derivatives[:, 0, 1, :3])
         normals = torch.nn.functional.normalize(normals)
         
         return derivatives[:, 0, 0], normals
