@@ -6,10 +6,8 @@ from typing import Dict
 import h5py
 import pytest
 import torch
-from torch.utils.data import DataLoader
 
 from artist import ARTIST_ROOT, Scenario
-from artist.raytracing.distortions_dataset import DistortionsDataset
 
 
 def generate_data(
@@ -133,31 +131,15 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         -incident_ray_direction, aligned_surface_normals
     )
 
-    # Create data set
-    distortions_dataset = DistortionsDataset(
-        light_source=sun, number_of_points=preferred_ray_directions.shape[0]
+    distortions_u, distortions_e = sun.get_distortions(
+        preferred_ray_directions.shape[0]
     )
 
-    # Old code which could be deleted
-    # distortions_u, distortions_e = sun.get_distortions(
-    #     preferred_ray_directions.shape[0]
-    # )
-
-    # Create dataloader
-    distortions_loader = DataLoader(distortions_dataset, batch_size=5, shuffle=False)
-
-    # Iterate through data loader
-    ray_list = [
-        sun.scatter_rays(
-            preferred_ray_directions,
-            distortions_u,
-            distortions_e,
-        )
-        for distortions_u, distortions_e in distortions_loader
-    ]
-
-    # Concatenate rays for further calculation
-    rays = torch.cat(ray_list, dim=0)
+    rays = sun.scatter_rays(
+        preferred_ray_directions,
+        distortions_u,
+        distortions_e,
+    )
 
     intersections = sun.line_plane_intersections(
         receiver.plane_normal, receiver.center, rays, aligned_surface_points
@@ -185,7 +167,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     total_bitmap = sun.normalize_bitmap(
         total_bitmap,
-        distortions_dataset.distortions_u.numel(),
+        distortions_u.numel(),
         receiver.plane_x,
         receiver.plane_y,
     )
