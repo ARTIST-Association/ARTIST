@@ -18,7 +18,12 @@ class DistortionsDataset(Dataset):
         The distortions in the east direction
     """
 
-    def __init__(self, light_source: LightSource, number_of_points: int) -> None:
+    def __init__(
+        self,
+        light_source: LightSource,
+        number_of_points: int,
+        number_of_heliostats: int,
+    ) -> None:
         """
         Initialize the dataset.
 
@@ -29,9 +34,15 @@ class DistortionsDataset(Dataset):
          number_of_points : int
              The number of points on the heliostat for which distortions are created.
         """
-        self.distortions_u, self.distortions_e = light_source.get_distortions(
-            number_of_points=number_of_points
-        )
+        distortions_u_list = []
+        distortions_e_list = []
+        for _ in range(number_of_heliostats):
+            dist_u, dist_e = light_source.get_distortions(number_of_points)
+            distortions_u_list.append(dist_u)
+            distortions_e_list.append(dist_e)
+
+        self.distortions_u = torch.cat(distortions_u_list, dim=0)
+        self.distortions_e = torch.cat(distortions_e_list, dim=0)
 
     def __len__(self) -> int:
         """
