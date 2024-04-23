@@ -131,12 +131,12 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
     ))
     control_points = torch.nn.parameter.Parameter((origin + origin_offsets).reshape(control_points.shape))
 
-    # num_control_points_x = 401
-    # num_control_points_y = 401
-    # control_points_real = torch.reshape(aligned_surface_points[:160801], (num_control_points_x, num_control_points_y, 4))
-    # control_points_real = control_points_real[:,:, :3]
-    # control_points_shape = (num_control_points_x, num_control_points_y)      
-    # control_points_real = torch.nn.parameter.Parameter(control_points_real)                
+    num_control_points_x = 401
+    num_control_points_y = 401
+    control_points_real = torch.reshape(aligned_surface_points[:160801], (num_control_points_x, num_control_points_y, 4))
+    control_points_real = control_points_real[:,:, :3]
+    control_points_shape = (num_control_points_x, num_control_points_y)      
+    control_points_real = torch.nn.parameter.Parameter(control_points_real)                
   
     knots_x = torch.zeros(num_control_points_x + degree_x + 1)                                                                                              
     num_knot_vals = len(knots_x[degree_x:-degree_x])
@@ -159,7 +159,7 @@ def test_nurbs(environment_data: Dict[str, torch.Tensor]):
     
     optimizer = torch.optim.Adam([control_points])
     
-    input = (control_points, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
+    input = (control_points_real, knots_x.unsqueeze(0), knots_y.unsqueeze(0))
 
     for epoch in range(10):
         points, normals = surface(input)
