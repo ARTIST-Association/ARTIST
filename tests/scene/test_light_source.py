@@ -12,6 +12,7 @@ from artist.field import Heliostat
 from artist.field.actuator_ideal import IdealActuator
 from artist.field.facets_point_cloud import PointCloudFacet
 from artist.field.kinematic_rigid_body import RigidBody
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
@@ -117,14 +118,11 @@ def generate_data(
         actuator_parameters=actuator_parameters,
     )
 
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(
-        incident_ray_direction=incident_ray_direction
-    )
+    heliostat.set_aligned_surface(incident_ray_direction=incident_ray_direction)
 
     return {
         "sun": sun,
-        "aligned_surface_points": aligned_surface_points,
-        "aligned_surface_normals": aligned_surface_normals,
+        "heliostat": heliostat,
         "receiver_center": receiver_center,
         "incident_ray_direction": incident_ray_direction,
         "expected_value": expected_value,
@@ -173,8 +171,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     torch.manual_seed(7)
     sun = environment_data["sun"]
-    aligned_surface_points = environment_data["aligned_surface_points"]
-    aligned_surface_normals = environment_data["aligned_surface_normals"]
+    heliostat = environment_data["heliostat"]
     receiver_center = environment_data["receiver_center"]
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
@@ -185,22 +182,24 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     receiver_resolution_x = 256
     receiver_resolution_y = 256
 
-    preferred_ray_directions = sun.get_preferred_reflection_direction(
-        -incident_ray_direction, aligned_surface_normals
-    )
+    heliostat.set_preferred_reflection_direction(-incident_ray_direction)
 
     distortions_u, distortions_e = sun.get_distortions(
-        preferred_ray_directions.shape[0]
+        heliostat.preferred_reflection_direction.shape[0]
     )
 
-    rays = sun.scatter_rays(
-        preferred_ray_directions,
+    raytracer = HeliostatRayTracer()
+    rays = raytracer.scatter_rays(
+        heliostat.preferred_reflection_direction,
         distortions_u,
         distortions_e,
     )
 
-    intersections = sun.line_plane_intersections(
-        receiver_plane_normal, receiver_center, rays, aligned_surface_points
+    intersections = raytracer.line_plane_intersections(
+        receiver_plane_normal,
+        receiver_center,
+        rays,
+        heliostat.current_aligned_surface_points,
     )
 
     dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
@@ -213,7 +212,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         & (dy_ints < receiver_plane_y + 1)
     )
 
-    total_bitmap = sun.sample_bitmap(
+    total_bitmap = raytracer.sample_bitmap(
         dx_ints,
         dy_ints,
         indices,
@@ -223,7 +222,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         receiver_resolution_y,
     )
 
-    total_bitmap = sun.normalize_bitmap(
+    total_bitmap = raytracer.normalize_bitmap(
         total_bitmap,
         distortions_u.numel(),
         receiver_plane_x,
