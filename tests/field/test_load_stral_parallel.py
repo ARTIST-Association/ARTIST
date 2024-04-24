@@ -1,42 +1,17 @@
 """This pytest considers loading a heliostat surface from a point cloud."""
 
-import os
 import pathlib
 from typing import Dict
 
 import h5py
 import pytest
 import torch
-import torch.distributed as dist
-from matplotlib import pyplot as plt
 from mpi4py import MPI
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-
 from artist import ARTIST_ROOT, Scenario
 from artist.raytracing.heliostat_tracing import DistortionsDataset, HeliostatRayTracer
-
-
-def setup_mpi(rank, world_size):
-    os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "12355"
-
-    # initialize the process group
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
-
-
-def cleanup_mpi():
-    dist.destroy_process_group()
-
-
-def do_all_reduce(rank, world_size):
-    group = dist.new_group(list(range(world_size)))
-    tensor = torch.ones(1)
-    dist.all_reduce(tensor, op=dist.ReduceOp.SUM, group=group)
-    print(f"Rank: {rank}")
 
 
 def generate_data(
@@ -90,9 +65,9 @@ def generate_data(
             "south.pt",
             "parallel_test_scenario",
         ),
-        # (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "parallel_test_scenario"),
-        # (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "parallel_test_scenario"),
-        # (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "parallel_test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "parallel_test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "parallel_test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "parallel_test_scenario"),
     ],
     name="environment_data",
 )
@@ -133,7 +108,6 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     comm = MPI.COMM_WORLD
     world_size = comm.Get_size()
     rank = comm.Get_rank()
-    setup_mpi(rank=rank, world_size=world_size)
 
     sun = environment_data["sun"]
     heliostat = environment_data["heliostats"]
@@ -155,20 +129,18 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     )
 
     # Create distributed sampler
-    distortions_sampler = DistributedSampler(dataset=distortions_dataset, shuffle=False)
+    distortions_sampler = DistributedSampler(
+        dataset=distortions_dataset, shuffle=False, num_replicas=world_size, rank=rank
+    )
 
     # Create dataloader
     distortions_loader = DataLoader(
         distortions_dataset,
-        batch_size=1,
+        batch_size=50,
         shuffle=False,
         sampler=distortions_sampler,
-        num_workers=0,
-        pin_memory=False,
     )
 
-    # print(f"Distorations sampler world side: {distortions_sampler.num_replicas}")
-    # print(f"Distortions sampler rank: {distortions_sampler.rank}")
     # Create raytracer
     raytracer = HeliostatRayTracer()
 
@@ -217,17 +189,12 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
         receiver.plane_y,
     )
 
-    plt.imshow(final_bitmap.T.detach().numpy(), origin="lower", cmap="Reds")
-    plt.show()
+    if rank == 0:
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/field/test_bitmaps_load_surface_stral"
+            / expected_value
+        )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/field/test_bitmaps_load_surface_stral"
-        / expected_value
-    )
-
-    expected = torch.load(expected_path)
-
-    # torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
-
-    cleanup_mpi()
+        expected = torch.load(expected_path)
+        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
