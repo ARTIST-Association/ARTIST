@@ -6,9 +6,10 @@ from typing import Dict
 import h5py
 import pytest
 import torch
+from torch.utils.data import DataLoader
 
 from artist import ARTIST_ROOT, Scenario
-from artist.raytracing.heliostat_tracing import DistortionsDataset
+from artist.raytracing.heliostat_tracing import DistortionsDataset, HeliostatRayTracer
 
 
 def generate_data(
@@ -44,11 +45,11 @@ def generate_data(
 
     receiver = scenario.receiver
     sun = scenario.light_source
-    heliostats = scenario.heliostats
+    heliostat = scenario.heliostats.heliostat_list[0]
 
     return {
         "sun": sun,
-        "heliostats": heliostats,
+        "heliostats": heliostat,
         "receiver": receiver,
         "incident_ray_direction": incident_ray_direction,
         "expected_value": expected_value,
@@ -60,11 +61,11 @@ def generate_data(
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "south.pt",
-            "multiple_heliostat_scenario",
+            "test_scenario",
         ),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "multiple_heliostat_scenario"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "multiple_heliostat_scenario"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "multiple_heliostat_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
     ],
     name="environment_data",
 )
@@ -101,44 +102,43 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     """
     torch.manual_seed(7)
     sun = environment_data["sun"]
-    heliostats = environment_data["heliostats"]
+    heliostat = environment_data["heliostats"]
     receiver = environment_data["receiver"]
     incident_ray_direction = environment_data["incident_ray_direction"]
     expected_value = environment_data["expected_value"]
 
-    # TODO Save this in a cleaner manner
-    number_of_surface_points = heliostats[0].concentrator.facets.surface_points.size(0)
+    heliostat.set_aligned_surface(incident_ray_direction=incident_ray_direction)
+    heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
+
+    # Currently heliostat raytracing is only possible for heliostats with the same number of surface points/normals
+    number_of_surface_points = heliostat.preferred_reflection_direction.size(0)
 
     # Create data set
     distortions_dataset = DistortionsDataset(
         light_source=sun,
         number_of_points=number_of_surface_points,
-        number_of_heliostats=len(heliostats),
+        random_seed=7,
     )
 
     # Create dataloader
-    # distortions_loader = DataLoader(distortions_dataset, batch_size=10, shuffle=False)
+    distortions_loader = DataLoader(distortions_dataset, batch_size=5, shuffle=False)
 
-    for i, heliostat in enumerate(heliostats):
-        aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface(
-            incident_ray_direction=incident_ray_direction
-        )
-        preferred_ray_directions = sun.get_preferred_reflection_direction(
-            -incident_ray_direction, aligned_surface_normals
-        )
+    # Create raytracer
+    raytracer = HeliostatRayTracer()
 
-        rays = sun.scatter_rays(
-            preferred_ray_directions,
-            distortions_dataset.distortions_u[
-                i * sun.ray_count : (i + 1) * sun.ray_count, :
-            ],
-            distortions_dataset.distortions_e[
-                i * sun.ray_count : (i + 1) * sun.ray_count, :
-            ],
+    final_bitmap = torch.zeros((receiver.resolution_x, receiver.resolution_y))
+    for batch_u, batch_e in distortions_loader:
+        rays = raytracer.scatter_rays(
+            heliostat.preferred_reflection_direction,
+            batch_u,
+            batch_e,
         )
 
-        intersections = sun.line_plane_intersections(
-            receiver.plane_normal, receiver.center, rays, aligned_surface_points
+        intersections = raytracer.line_plane_intersections(
+            receiver.plane_normal,
+            receiver.center,
+            rays,
+            heliostat.current_aligned_surface_points,
         )
 
         dx_ints = intersections[:, :, 0] + receiver.plane_x / 2 - receiver.center[0]
@@ -151,7 +151,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
             & (dy_ints < receiver.plane_y + 1)
         )
 
-        total_bitmap = sun.sample_bitmap(
+        total_bitmap = raytracer.sample_bitmap(
             dx_ints,
             dy_ints,
             indices,
@@ -161,12 +161,14 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
             receiver.resolution_y,
         )
 
-        total_bitmap = sun.normalize_bitmap(
-            total_bitmap,
-            distortions_dataset.distortions_u.numel(),
-            receiver.plane_x,
-            receiver.plane_y,
-        )
+        final_bitmap += total_bitmap
+
+    final_bitmap = raytracer.normalize_bitmap(
+        final_bitmap,
+        distortions_dataset.distortions_u.numel(),
+        receiver.plane_x,
+        receiver.plane_y,
+    )
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
@@ -176,4 +178,4 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     expected = torch.load(expected_path)
 
-    torch.testing.assert_close(total_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
