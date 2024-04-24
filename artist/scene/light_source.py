@@ -4,9 +4,17 @@ import torch
 
 
 class LightSource(torch.nn.Module):
-    """Abstract base class for all light sources."""
+    """
+    Abstract base class for all light sources.
+
+    Methods
+    -------
+    get_distortions()
+        Get distortions given the light source model.
+    """
 
     def __init__(self):
+        """Initialize the light source."""
         super().__init__()
 
     def get_distortions(
@@ -36,19 +44,3 @@ class LightSource(torch.nn.Module):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must be overridden!")
-
-    def scatter_rays(
-        self,
-        ray_directions: torch.Tensor,
-        distortion_u: torch.Tensor,
-        distortion_e: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Compute the scattered rays for points on a surface.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called (abstract base class method).
-        """
-        raise NotImplementedError("Must Be Overridden!")
