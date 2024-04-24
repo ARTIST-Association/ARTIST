@@ -35,6 +35,7 @@ dev = [
     "pytest-cov",
     "sphinx-autoapi",
     "sphinx-rtd-theme",]
+mpi = ["mpi4py",]
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
