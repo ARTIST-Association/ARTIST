@@ -1,12 +1,9 @@
-from typing import List
-
 import h5py
 from typing_extensions import Self
 
-from artist.field import Heliostat
+from artist.field.heliostat_field import HeliostatField
 from artist.field.receiver import Receiver
 from artist.scene import LightSource, Sun
-from artist.util import config_dictionary
 
 
 class Scenario:
@@ -19,8 +16,8 @@ class Scenario:
         The receiver for the scenario.
     light_source : LightSource
         The light source for the scenario.
-    heliostats : List[Heliostat]
-        A list of heliostats included in the scenario.
+    heliostats : HeliostatField
+        The heliostat field for the scenario.
 
     Methods
     -------
@@ -29,7 +26,10 @@ class Scenario:
     """
 
     def __init__(
-        self, receiver: Receiver, light_source: LightSource, heliostats: List[Heliostat]
+        self,
+        receiver: Receiver,
+        light_source: LightSource,
+        heliostat_field: HeliostatField,
     ) -> None:
         """
         Initialize the scenario.
@@ -40,12 +40,12 @@ class Scenario:
             The receiver for the scenario.
         light_source : LightSource
             The light source for the scenario.
-        heliostats : List[Heliostat]
-            A list of heliostats included in the scenario.
+        heliostat_field : HeliostatField
+            A field of heliostats included in the scenario.
         """
         self.receiver = receiver
         self.light_source = light_source
-        self.heliostats = heliostats
+        self.heliostats = heliostat_field
 
     @classmethod
     def load_scenario_from_hdf5(cls, scenario_file: h5py.File) -> Self:
@@ -64,16 +64,10 @@ class Scenario:
         """
         receiver = Receiver.from_hdf5(config_file=scenario_file)
         light_source = Sun.from_hdf5(config_file=scenario_file)
-        heliostat_list = [
-            Heliostat.from_hdf5(
-                config_file=scenario_file,
-                heliostat_name=heliostat_name.decode("utf-8"),
-            )
-            for heliostat_name in scenario_file[config_dictionary.heliostat_prefix][
-                config_dictionary.heliostat_names
-            ]
-        ]
+        heliostat_field = HeliostatField.from_hdf5(config_file=scenario_file)
 
         return cls(
-            receiver=receiver, light_source=light_source, heliostats=heliostat_list
+            receiver=receiver,
+            light_source=light_source,
+            heliostat_field=heliostat_field,
         )
