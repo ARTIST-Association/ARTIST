@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import h5py
 import torch
@@ -6,7 +6,7 @@ from typing_extensions import Self
 
 from artist.field.alignment import Alignment
 from artist.field.concentrator import Concentrator
-from artist.util import artist_type_mapping_dict, config_dictionary
+from artist.util import artist_type_mapping_dict, config_dictionary, utils
 
 
 class Heliostat(torch.nn.Module):
@@ -17,6 +17,14 @@ class Heliostat(torch.nn.Module):
     ----------
     id : int
         Unique ID of the heliostat.
+    current_aligned_surface_points : torch.Tensor
+        The current aligned surface points for the heliostat.
+    current_aligned_surface_normals : torch.Tensor
+        The current aligned surface normals for the heliostat.
+    is_aligned : bool
+        Boolean indicating if the heliostat is aligned.
+    preferred_reflection_direction : torch.Tensor
+        The preferred reflection direction for rays reflecting off the heliostat.
     concentrator : Concentrator
         The surface of the heliostat.
     alignment : Alignment
@@ -26,8 +34,10 @@ class Heliostat(torch.nn.Module):
     -------
     from_hdf5()
         Class method to initialize heliostat from an hdf5 file.
-    get_aligned_surface()
+    set_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
+    set_preferred_reflection_direction()
+        Compute the preferred reflection direction for each normal vector given an incident ray direction.
     """
 
     def __init__(
@@ -75,6 +85,10 @@ class Heliostat(torch.nn.Module):
         super().__init__()
         self.id = id
         self.position = position
+        self.current_aligned_surface_points = None
+        self.current_aligned_surface_normals = None
+        self.is_aligned = False
+        self.preferred_reflection_direction = None
         self.concentrator = Concentrator(
             facets_type=facet_type,
             surface_points=surface_points,
@@ -403,24 +417,49 @@ class Heliostat(torch.nn.Module):
             actuator_parameters=actuator_parameters,
         )
 
-    def get_aligned_surface(
-        self, incident_ray_direction
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def set_aligned_surface(self, incident_ray_direction) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
-        Returns
-        -------
-        torch.Tensor
-            The aligned surface points.
-        torch.Tensor
-            The aligned surface normals.
+        Parameters
+        ----------
+        incident_ray_direction : torch.Tensor
+            The incident ray direction.
         """
         surface_points, surface_normals = (
             self.concentrator.facets.surface_points,
             self.concentrator.facets.surface_normals,
         )
-        aligned_surface_points, aligned_surface_normals = self.alignment.align_surface(
+        (
+            self.current_aligned_surface_points,
+            self.current_aligned_surface_normals,
+        ) = self.alignment.align_surface(
             incident_ray_direction, surface_points, surface_normals
         )
-        return aligned_surface_points, aligned_surface_normals
+        self.is_aligned = True
+
+    def set_preferred_reflection_direction(
+        self,
+        rays: torch.Tensor,
+    ) -> None:
+        """
+        Reflect incoming rays according to a normal vector.
+
+        Parameters
+        ----------
+        rays : torch.Tensor
+            The incoming rays (from the sun) to be reflected.
+
+        Raises
+        ------
+        AssertionError
+            If the heliostat has not yet been aligned.
+        """
+        assert self.is_aligned, "Heliostat has not yet been aligned"
+
+        self.preferred_reflection_direction = (
+            rays
+            - 2
+            * utils.batch_dot(rays, self.current_aligned_surface_normals)
+            * self.current_aligned_surface_normals
+        )
