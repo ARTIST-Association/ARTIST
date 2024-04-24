@@ -27,7 +27,7 @@ receiver_config = ReceiverConfig(
 
 # Include the light source configuration
 light_source_config = LightSourceConfig(
-    sun_number_of_rays=10,
+    sun_number_of_rays=200,
     sun_distribution_type=config_dictionary.sun_distribution_is_normal,
     sun_mean=0.0,
     sun_covariance=4.3681e-06,
