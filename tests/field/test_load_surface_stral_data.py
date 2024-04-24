@@ -44,7 +44,7 @@ def generate_data(
 
     receiver = scenario.receiver
     sun = scenario.light_source
-    heliostat = scenario.heliostats[0]
+    heliostat = scenario.heliostats.heliostat_list[0]
 
     heliostat.set_aligned_surface(incident_ray_direction=incident_ray_direction)
 
