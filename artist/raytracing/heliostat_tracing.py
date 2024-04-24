@@ -17,13 +17,15 @@ class DistortionsDataset(Dataset):
         The distortions in the up direction.
     distortions_e : torch.Tensor
         The distortions in the east direction
+    number_of_heliostats : int
+        The number of heliostats in the scenario
     """
 
     def __init__(
         self,
         light_source: LightSource,
         number_of_points: int,
-        number_of_heliostats: int,
+        number_of_heliostats: Optional[int] = 1,
         random_seed: Optional[int] = 7,
     ) -> None:
         """
@@ -35,11 +37,12 @@ class DistortionsDataset(Dataset):
             The light source used to model the distortions.
         number_of_points : int
             The number of points on the heliostat for which distortions are created.
-        number_of_heliostats : int
+        number_of_heliostats : Optional[int]
             The number of heliostats in the scenario.
         random_seed : Optional[int]
             The random seed used for generating the distortions.
         """
+        self.number_of_heliostats = number_of_heliostats
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points,
             number_of_heliostats=number_of_heliostats,
@@ -71,7 +74,10 @@ class DistortionsDataset(Dataset):
         Tuple[torch.Tensor, torch.Tensor]
             The distortions in the up and east direction for the given index.
         """
-        return self.distortions_u[idx, :], self.distortions_e[idx, :]
+        return (
+            self.distortions_u[idx, :],
+            self.distortions_e[idx, :],
+        )
 
 
 class HeliostatRayTracer:
