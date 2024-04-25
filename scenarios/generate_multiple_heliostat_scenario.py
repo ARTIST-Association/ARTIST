@@ -156,7 +156,6 @@ heliostats_list_config = HeliostatListConfig(
     heliostat_list=all_heliostats,
 )
 
-
 # The following parameter is the name of the scenario.
 file_path = "./multiple_heliostat_scenario"
 
