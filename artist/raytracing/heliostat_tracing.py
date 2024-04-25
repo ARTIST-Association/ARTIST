@@ -29,7 +29,7 @@ class DistortionsDataset(Dataset):
         random_seed: Optional[int] = 7,
     ) -> None:
         """
-        Initialize the dataset.
+        Initialize the data set.
 
         Parameters
         ----------
