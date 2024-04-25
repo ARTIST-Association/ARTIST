@@ -774,7 +774,7 @@ class ScenarioGenerator:
         Parameters
         ----------
         file : h5py.File
-            The hdf5 file to write to.
+            The HDF5 file to write to.
 
         prefix : str
             The prefix used for naming the parameters.
