@@ -23,7 +23,7 @@ class ReceiverConfig:
     plane_x : float
         The x plane of the receiver.
     plane_y : torch.Tensor
-        The y plane of the receiver
+        The y plane of the receiver.
     resolution_x : int
         The resolution of the x plane of the receiver.
     resolution_y : int
