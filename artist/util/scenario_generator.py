@@ -674,7 +674,7 @@ class ScenarioGenerator:
     Methods
     -------
     flatten_dict()
-        Flattens nested dictionaries to first level keys.
+        Flatten nested dictionaries to first-level keys.
     include_parameters()
         Include the parameters from a parameter dictionary.
     generate_scenario()
