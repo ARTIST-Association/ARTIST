@@ -4,7 +4,7 @@ from artist.util.stral_converter import StralConverter
 # Se this boolean to true
 USE_SCRIPT_VALUES = True
 # Set your values with the following variables
-STRAL_FILE_PATH = "../STRAL_data/stral_test_data"
+STRAL_FILE_PATH = "./stral_test_data"
 HDF_FILE_PATH = "./stral_conversion_test"
 CONCENTRATOR_HEADER_NAME = "=5f2I2f"
 FACET_HEADER_NAME = "=i9fI"
