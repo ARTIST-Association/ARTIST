@@ -12,7 +12,7 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 
 warnings.filterwarnings("always")
 
-# Attempt to import MPIT
+# Attempt to import MPI
 try:
     from mpi4py import MPI
 except ImportError:
