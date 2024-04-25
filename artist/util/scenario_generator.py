@@ -394,7 +394,7 @@ class ActuatorDeviations:
 
     Methods
     -------
-    create_actuator_deviations_dict():
+    create_actuator_deviations_dict()
         Create a dictionary containing the configuration parameters for the actuator deviations.
     """
 
