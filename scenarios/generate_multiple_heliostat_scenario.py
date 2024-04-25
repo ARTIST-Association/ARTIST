@@ -25,7 +25,7 @@ receiver_config = ReceiverConfig(
     resolution_y=256,
 )
 
-# Include the light source configuration
+# Include the light source configuration.
 light_source_config = LightSourceConfig(
     sun_number_of_rays=10,
     sun_distribution_type=config_dictionary.sun_distribution_is_normal,
