@@ -105,7 +105,7 @@ class HeliostatRayTracer:
             number_of_points=self.number_of_surface_points,
             random_seed=random_seed,
         )
-        # Create distributed sampler
+        # Create distributed sampler.
         distortions_sampler = DistributedSampler(
             dataset=self.distortions_dataset,
             shuffle=shuffle,
