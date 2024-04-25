@@ -108,7 +108,7 @@ class StralConverter:
     @staticmethod
     def convert_point_to_4d_format(point: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3d point to a 4d point.
+        Convert a 3D point to a 4D point.
 
         Parameters
         ----------
