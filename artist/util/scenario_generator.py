@@ -767,7 +767,7 @@ class ScenarioGenerator:
                 yield new_key, v
 
     @staticmethod
-    def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+    def include_parameters(file: h5py.File, prefix: str, parameters: Dict) -> None:
         """
         Include the parameters from a parameter dictionary.
 
