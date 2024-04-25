@@ -1,94 +1,49 @@
 """This pytest considers loading a heliostat surface from a point cloud."""
 
 import pathlib
-from typing import Dict
+import warnings
 
 import h5py
 import pytest
 import torch
-from mpi4py import MPI
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 from artist import ARTIST_ROOT, Scenario
 from artist.raytracing.heliostat_tracing import DistortionsDataset, HeliostatRayTracer
 
+warnings.filterwarnings("always")
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+    warnings.warn(
+        "MPI is not available and distributed computing not possible. ARTIST will run on a single machine!",
+        ImportWarning,
+    )
 
-def generate_data(
-    incident_ray_direction: torch.Tensor,
-    expected_value: str,
-    scenario_config: str,
-) -> Dict[str, torch.Tensor]:
-    """
-    Generate all the relevant data for this test.
-
-    This includes the position of the heliostat, the position of the receiver,
-    the sun as a light source, and the point cloud as the heliostat surface.
-
-    The facets/points of the heliostat surface are loaded from a point cloud.
-    The surface points and normals are aligned.
-
-    Parameters
-    ----------
-    incident_ray_direction : torch.Tensor
-        The direction of the light.
-    expected_value : str
-        The expected bitmaps for the given test-cases.
-    scenario_config : str
-        The name of the scenario config that should be loaded.
-
-    Returns
-    -------
-    Dict[str, torch.Tensor]
-        A dictionary containing all the data.
-    """
-    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
-        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
-
-    receiver = scenario.receiver
-    sun = scenario.light_source
-    heliostat = scenario.heliostats.heliostat_list[0]
-
-    return {
-        "sun": sun,
-        "heliostats": heliostat,
-        "receiver": receiver,
-        "incident_ray_direction": incident_ray_direction,
-        "expected_value": expected_value,
-    }
+if MPI is not None:
+    # Setup MPI
+    comm = MPI.COMM_WORLD
+    world_size = comm.Get_size()
+    rank = comm.Get_rank()
+else:
+    world_size = 1
+    rank = 0
 
 
-@pytest.fixture(
-    params=[
-        (
-            torch.tensor([0.0, -1.0, 0.0, 0.0]),
-            "south.pt",
-            "parallel_test_scenario",
-        ),
+@pytest.mark.parametrize(
+    "incident_ray_direction,expected_value, scenario_config",
+    [
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt", "parallel_test_scenario"),
         (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "parallel_test_scenario"),
         (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "parallel_test_scenario"),
         (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "parallel_test_scenario"),
     ],
-    name="environment_data",
 )
-def data(request):
-    """
-    Compute the data required for the test.
-
-    Parameters
-    ----------
-    request : Tuple[torch.Tensor, str, str]
-        The pytest.fixture request with the incident ray direction and bitmap name required for the test.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the data required for the test.
-    """
-    return generate_data(*request.param)
-
-
-def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
+def test_compute_bitmaps(
+    incident_ray_direction, expected_value, scenario_config
+) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
 
@@ -99,21 +54,21 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
     Parameters
     ----------
-    environment_data : dict[str, torch.Tensor]
-        The dictionary containing all the data to compute the bitmaps.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction used for the test.
+    expected_value : str
+        The path to the expected value bitmap.
+    scenario_config : str
+        The name of the scenario to be loaded.
     """
     torch.manual_seed(7)
 
-    # Setup MPI
-    comm = MPI.COMM_WORLD
-    world_size = comm.Get_size()
-    rank = comm.Get_rank()
+    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
+        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
 
-    sun = environment_data["sun"]
-    heliostat = environment_data["heliostats"]
-    receiver = environment_data["receiver"]
-    incident_ray_direction = environment_data["incident_ray_direction"]
-    expected_value = environment_data["expected_value"]
+    receiver = scenario.receiver
+    sun = scenario.light_source
+    heliostat = scenario.heliostats.heliostat_list[0]
 
     heliostat.set_aligned_surface(incident_ray_direction=incident_ray_direction)
     heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
@@ -136,7 +91,7 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
     # Create dataloader
     distortions_loader = DataLoader(
         distortions_dataset,
-        batch_size=50,
+        batch_size=2,
         shuffle=False,
         sampler=distortions_sampler,
     )
@@ -181,7 +136,8 @@ def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
 
         final_bitmap += total_bitmap
 
-    final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
+    if MPI is not None:
+        final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(
         final_bitmap,
         distortions_dataset.distortions_u.numel(),
