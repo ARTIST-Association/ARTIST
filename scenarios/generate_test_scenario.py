@@ -135,5 +135,5 @@ if __name__ == "__main__":
         heliostat_list_config=heliostats_list_config,
     )
 
-    # Generate the scenario
+    # Generate the scenario.
     scenario_object.generate_scenario()
