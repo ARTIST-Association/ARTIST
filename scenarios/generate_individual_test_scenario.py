@@ -92,7 +92,7 @@ individual_surface_normals = torch.tensor(
     )[config_dictionary.load_normals_key][()]
 )
 
-# Include the configuration for the first heliostat
+# Include the configuration for the first heliostat.
 heliostat_1 = SingleHeliostatConfig(
     heliostat_name="Single_Heliostat",
     heliostat_id=0,
