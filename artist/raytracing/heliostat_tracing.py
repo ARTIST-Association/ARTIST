@@ -138,16 +138,12 @@ class HeliostatRayTracer:
         )
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(
-                self.heliostat.preferred_reflection_direction,
                 batch_u,
                 batch_e,
             )
 
             intersections = self.line_plane_intersections(
-                self.receiver.plane_normal,
-                self.receiver.center,
                 rays,
-                self.heliostat.current_aligned_surface_points,
             )
 
             dx_ints = (
@@ -178,9 +174,8 @@ class HeliostatRayTracer:
 
         return final_bitmap
 
-    @staticmethod
     def scatter_rays(
-        ray_directions: torch.Tensor,
+        self,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
     ) -> torch.Tensor:
@@ -189,8 +184,6 @@ class HeliostatRayTracer:
 
         Parameters
         ----------
-        ray_directions : torch.Tensor
-            The preferred ray direction.
         distortion_u : torch.Tensor
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
@@ -201,8 +194,10 @@ class HeliostatRayTracer:
         torch.Tensor
             Scattered rays around the preferred direction.
         """
-        ray_directions = ray_directions[:, :3] / torch.linalg.norm(
-            ray_directions[:, :3], dim=1
+        ray_directions = self.heliostat.preferred_reflection_direction[
+            :, :3
+        ] / torch.linalg.norm(
+            self.heliostat.preferred_reflection_direction[:, :3], dim=1
         ).unsqueeze(-1)
         ray_directions = torch.cat(
             (ray_directions, torch.zeros(ray_directions.size(0), 1)), dim=1
@@ -214,12 +209,9 @@ class HeliostatRayTracer:
 
         return scattered_rays.squeeze(-1)
 
-    @staticmethod
     def line_plane_intersections(
-        plane_normal: torch.Tensor,
-        plane_point: torch.Tensor,
+        self,
         ray_directions: torch.Tensor,
-        surface_points: torch.Tensor,
         epsilon: float = 1e-6,
     ) -> torch.Tensor:
         """
@@ -227,14 +219,8 @@ class HeliostatRayTracer:
 
         Parameters
         ----------
-        plane_normal : torch.Tensor
-            The normal vector of the intersecting plane (normal vector of the receiver).
-        plane_point : torch.Tensor
-            Point on the plane (center point of the receiver).
         ray_directions : torch.Tensor
             The direction of the reflected sunlight.
-        surface_points : torch.Tensor
-            Points on which the rays are to be reflected.
         epsilon : float
             A small value corresponding to the upper limit.
 
@@ -250,18 +236,21 @@ class HeliostatRayTracer:
         """
         # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
         # the incoming rays
-        relative_distribution_strengths = ray_directions @ plane_normal
+        relative_distribution_strengths = ray_directions @ self.receiver.plane_normal
         assert (
             torch.abs(relative_distribution_strengths) >= epsilon
         ).all(), "No intersection or line is within plane."
         # Calculate the final distribution strengths
         distribution_strengths = (
-            (plane_point - surface_points)
-            @ plane_normal
+            (self.receiver.center - self.heliostat.current_aligned_surface_points)
+            @ self.receiver.plane_normal
             / relative_distribution_strengths
         )
 
-        return surface_points + ray_directions * distribution_strengths.unsqueeze(-1)
+        return (
+            self.heliostat.current_aligned_surface_points
+            + ray_directions * distribution_strengths.unsqueeze(-1)
+        )
 
     def sample_bitmap(
         self,
