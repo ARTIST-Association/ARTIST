@@ -744,7 +744,6 @@ class ScenarioGenerator:
         ----------
         dictionary : MutableMapping
             Original nested dictionary to flatten.
-
         parent_key : str
             The parent key of nested dictionaries. Should be empty upon initialization.
 
