@@ -17,7 +17,7 @@ class DistortionsDataset(Dataset):
     distortions_u : torch.Tensor
         The distortions in the up direction.
     distortions_e : torch.Tensor
-        The distortions in the east direction
+        The distortions in the east direction.
     number_of_heliostats : int
         The number of heliostats in the scenario
     """
