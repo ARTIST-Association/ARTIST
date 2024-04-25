@@ -99,7 +99,7 @@ class HeliostatRayTracer:
         self.number_of_surface_points = (
             self.heliostat.preferred_reflection_direction.size(0)
         )
-        # Create distortions dataset
+        # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=scenario.light_source,
             number_of_points=self.number_of_surface_points,
