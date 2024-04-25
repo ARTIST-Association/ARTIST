@@ -22,7 +22,7 @@ except ImportError:
         ImportWarning,
     )
 
-# Setup MPI
+# Set up MPI.
 if MPI is not None:
     comm = MPI.COMM_WORLD
     world_size = comm.Get_size()
