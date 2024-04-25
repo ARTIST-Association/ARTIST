@@ -71,7 +71,7 @@ def test_compute_bitmaps(
     calculate the preferred reflection direction.
     Then perform heliostat based raytracing. This uses distortions based on the model of the sun to generate additional
     rays, calculates the intersections on the receiver, and computes the bitmap.
-    Then normalise the bitmaps and compare them with the expected value.
+    Then normalize the bitmaps and compare them with the expected value.
 
     Parameters
     ----------
