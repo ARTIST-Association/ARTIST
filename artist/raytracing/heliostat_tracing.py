@@ -21,7 +21,6 @@ class DistortionsDataset(Dataset):
     number_of_heliostats : int
         The number of heliostats in the scenario.
     """
-
     def __init__(
         self,
         light_source: LightSource,
