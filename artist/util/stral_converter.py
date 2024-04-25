@@ -150,7 +150,7 @@ class StralConverter:
     @staticmethod
     def nwu_to_enu(vec: Tuple3d) -> Vector3d:
         """
-        Cast the coordinate system from nwu to enu.
+        Cast the coordinate system from NWU to ENU.
 
         Parameters
         ----------
