@@ -133,7 +133,7 @@ heliostat_3 = SingleHeliostatConfig(
 # Create a list of all the heliostats -- in this case only one.
 all_heliostats = [heliostat_1, heliostat_2, heliostat_3]
 
-# Load general surface points measurement
+# Load general surface points measurement.
 general_surface_points = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
