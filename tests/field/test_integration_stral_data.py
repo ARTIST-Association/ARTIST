@@ -84,7 +84,7 @@ def test_compute_bitmaps(
     """
     torch.manual_seed(7)
 
-    # Load the scenario
+    # Load the scenario.
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
 
