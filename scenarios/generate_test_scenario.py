@@ -94,7 +94,7 @@ heliostat_1 = SingleHeliostatConfig(
     actuator_deviations=actuator_deviations,
 )
 
-# Create a list of all the heliostats -- in this case only one
+# Create a list of all the heliostats -- in this case only one.
 all_heliostats = [heliostat_1]
 
 # Load general surface points measurement
