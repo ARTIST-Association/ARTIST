@@ -145,7 +145,7 @@ class LightSourceConfig:
                 config_dictionary.sun_covariance: self.sun_covariance,
             }
         else:
-            raise NotImplementedError("Unknown sun distribution type!")
+            raise NotImplementedError("Unknown sun distribution type.")
 
         # Return the desired dictionary
         return {
