@@ -150,7 +150,7 @@ def test_light_sources(
     further_parameters_fixture
         The pytest fixture containing the further test parameters.
     """
-    # Load further params dict
+    # Load further params dict.
     further_params_dict = request.getfixturevalue(further_parameters_fixture)
 
     # Run test if light source is a sun.
