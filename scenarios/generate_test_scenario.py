@@ -76,7 +76,7 @@ actuator_deviations = ActuatorDeviations(
     second_joint_phi_0=0.0,
 )
 
-# Include the configuration for the first heliostat
+# Include the configuration for the first heliostat.
 heliostat_1 = SingleHeliostatConfig(
     heliostat_name="Single_Heliostat",
     heliostat_id=0,
