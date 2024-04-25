@@ -56,7 +56,7 @@ class DistortionsDataset(Dataset):
         Returns
         -------
         int
-            The length of the dataset.
+            The length of the data set.
         """
         return self.distortions_u.size(0)
 
