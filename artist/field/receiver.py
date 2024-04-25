@@ -69,7 +69,7 @@ class Receiver(torch.nn.Module):
         Parameters
         ----------
         config_file : h5py.File
-            The hdf5 file containing the information about the receiver.
+            The HDF5 file containing the information about the receiver.
 
         Returns
         -------
