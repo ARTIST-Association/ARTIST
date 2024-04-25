@@ -147,7 +147,7 @@ class LightSourceConfig:
         else:
             raise NotImplementedError("Unknown sun distribution type.")
 
-        # Return the desired dictionary
+        # Return the desired dictionary.
         return {
             config_dictionary.sun_number_of_rays: self.sun_number_of_rays,
             config_dictionary.sun_distribution_parameters: sun_distribution_parameters_dict,
