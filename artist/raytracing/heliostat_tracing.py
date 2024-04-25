@@ -263,7 +263,7 @@ class HeliostatRayTracer:
         Parameters
         ----------
         dx_ints : torch.Tensor
-            x position of intersection with receiver. (N,1) where N is the resolution of the receiver along the x-axis.
+            x position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along the x-axis.
         dy_ints : torch.Tensor
             y position of intersection with receiver, (N,1) where N is the resolution of the receiver along the y-axis.
         indices : torch.Tensor
