@@ -114,7 +114,7 @@ heliostat_1 = SingleHeliostatConfig(
 # Create a list of all the heliostats -- in this case only one.
 all_heliostats = [heliostat_1]
 
-# Create the configuration for all heliostats
+# Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(
     general_surface_points=False,
     general_surface_normals=False,
