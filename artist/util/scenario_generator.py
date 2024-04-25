@@ -135,7 +135,7 @@ class LightSourceConfig:
 
     def create_light_source_dict(self) -> Dict:
         """Create a dictionary containing the configuration parameters for the light source."""
-        # Check if the distribution type is implemented
+        # Check if the distribution type is implemented.
         if self.sun_distribution_type == config_dictionary.sun_distribution_is_normal:
             sun_distribution_parameters_dict = {
                 config_dictionary.sun_distribution_type: str(
