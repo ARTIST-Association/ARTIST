@@ -60,7 +60,7 @@ class Scenario:
         Returns
         -------
         Scenario
-            The ARTIST scenario loaded from the hdf5 file.
+            The ARTIST scenario loaded from the HDF5 file.
         """
         receiver = Receiver.from_hdf5(config_file=scenario_file)
         light_source = Sun.from_hdf5(config_file=scenario_file)
