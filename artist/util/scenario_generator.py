@@ -23,11 +23,11 @@ class ReceiverConfig:
     plane_x : float
         The x plane of the receiver.
     plane_y : torch.Tensor
-        The y plane of the receiver
+        The y plane of the receiver.
     resolution_x : int
         The resolution of the x plane of the receiver.
     resolution_y : int
-        The resolution of the y plane of the receiver
+        The resolution of the y plane of the receiver.
 
     Methods
     -------
@@ -56,11 +56,11 @@ class ReceiverConfig:
         plane_x : float
             The x plane of the receiver.
         plane_y : torch.Tensor
-            The y plane of the receiver
+            The y plane of the receiver.
         resolution_x : int
             The resolution of the x plane of the receiver.
         resolution_y : int
-            The resolution of the y plane of the receiver
+            The resolution of the y plane of the receiver.
         """
         self.receiver_center = receiver_center
         self.plane_normal = plane_normal
@@ -98,7 +98,7 @@ class LightSourceConfig:
 
     Methods
     -------
-    create_light_source_dict():
+    create_light_source_dict()
         Create a dictionary containing the configuration parameters for the light source.
     """
 
@@ -135,7 +135,7 @@ class LightSourceConfig:
 
     def create_light_source_dict(self) -> Dict:
         """Create a dictionary containing the configuration parameters for the light source."""
-        # Check if the distribution type is implemented
+        # Check if the distribution type is implemented.
         if self.sun_distribution_type == config_dictionary.sun_distribution_is_normal:
             sun_distribution_parameters_dict = {
                 config_dictionary.sun_distribution_type: str(
@@ -145,9 +145,9 @@ class LightSourceConfig:
                 config_dictionary.sun_covariance: self.sun_covariance,
             }
         else:
-            raise NotImplementedError("Unknown sun distribution type!")
+            raise NotImplementedError("Unknown sun distribution type.")
 
-        # Return the desired dictionary
+        # Return the desired dictionary.
         return {
             config_dictionary.sun_number_of_rays: self.sun_number_of_rays,
             config_dictionary.sun_distribution_parameters: sun_distribution_parameters_dict,
@@ -199,7 +199,7 @@ class KinematicDeviations:
 
     Methods
     -------
-    create_kinematic_deviations_dict():
+    create_kinematic_deviations_dict()
         Create a dictionary containing the configuration parameters for the kinematic deviations.
     """
 
@@ -324,7 +324,7 @@ class KinematicOffsets:
 
     Methods
     -------
-    create_kinematic_offsets_dict():
+    create_kinematic_offsets_dict()
         Create a dictionary containing the configuration parameters for the kinematic offsets.
     """
 
@@ -394,7 +394,7 @@ class ActuatorDeviations:
 
     Methods
     -------
-    create_actuator_deviations_dict():
+    create_actuator_deviations_dict()
         Create a dictionary containing the configuration parameters for the actuator deviations.
     """
 
@@ -654,7 +654,7 @@ class HeliostatListConfig:
 
 class ScenarioGenerator:
     """
-    Generates an ARTIST scenario, saving it as an HDF5 file.
+    Generate an ARTIST scenario, saving it as an HDF5 file.
 
     Attributes
     ----------
@@ -674,7 +674,7 @@ class ScenarioGenerator:
     Methods
     -------
     flatten_dict()
-        Flattens nested dictionaries to first level keys.
+        Flatten nested dictionaries to first-level keys.
     include_parameters()
         Include the parameters from a parameter dictionary.
     generate_scenario()
@@ -744,10 +744,8 @@ class ScenarioGenerator:
         ----------
         dictionary : MutableMapping
             Original nested dictionary to flatten.
-
         parent_key : str
             The parent key of nested dictionaries. Should be empty upon initialization.
-
         sep : str
             The separator used to separate keys in nested dictionaries.
 
@@ -758,7 +756,7 @@ class ScenarioGenerator:
         """
         return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
 
-    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str):
+    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str) -> None:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():
@@ -769,20 +767,20 @@ class ScenarioGenerator:
                 yield new_key, v
 
     @staticmethod
-    def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+    def include_parameters(file: h5py.File, prefix: str, parameters: Dict) -> None:
         """
         Include the parameters from a parameter dictionary.
 
         Parameters
         ----------
         file : h5py.File
-            The hdf5 file to write to.
+            The HDF5 file to write to.
 
         prefix : str
             The prefix used for naming the parameters.
 
-        parameters : dict
-            The parameters to be included into the hdf5 file.
+        parameters : Dict
+            The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():
             file[f"{prefix}/{key}"] = value

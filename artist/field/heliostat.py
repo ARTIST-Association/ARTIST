@@ -455,7 +455,7 @@ class Heliostat(torch.nn.Module):
         AssertionError
             If the heliostat has not yet been aligned.
         """
-        assert self.is_aligned, "Heliostat has not yet been aligned"
+        assert self.is_aligned, "Heliostat has not yet been aligned."
 
         self.preferred_reflection_direction = (
             rays

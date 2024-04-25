@@ -22,7 +22,7 @@ class Sun(LightSource):
     Methods
     -------
     from_hdf5()
-        Class method to initialize heliostat from a h5 file.
+        Class method to initialize a sun from an HDF5 file.
     get_distortions()
         Returns distortions used to rotate rays.
 

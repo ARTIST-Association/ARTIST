@@ -22,7 +22,7 @@ class Scenario:
     Methods
     -------
     load_scenario_from_hdf5()
-        Class method to initialize the scenario from an hdf5 file.
+        Class method to initialize the scenario from an HDF5 file.
     """
 
     def __init__(
@@ -50,7 +50,7 @@ class Scenario:
     @classmethod
     def load_scenario_from_hdf5(cls, scenario_file: h5py.File) -> Self:
         """
-        Class method to load the scenario from an hdf5 file.
+        Class method to load the scenario from an HDF5 file.
 
         Parameters
         ----------
@@ -60,7 +60,7 @@ class Scenario:
         Returns
         -------
         Scenario
-            The ARTIST scenario loaded from the hdf5 file.
+            The ARTIST scenario loaded from the HDF5 file.
         """
         receiver = Receiver.from_hdf5(config_file=scenario_file)
         light_source = Sun.from_hdf5(config_file=scenario_file)
