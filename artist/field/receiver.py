@@ -50,7 +50,7 @@ class Receiver(torch.nn.Module):
         resolution_x : int
             The resolution of the x plane of the receiver.
         resolution_y : int
-            The resolution of the y plane of the receiver
+            The resolution of the y plane of the receiver.
         """
         super().__init__()
 
