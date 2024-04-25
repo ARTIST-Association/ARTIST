@@ -149,7 +149,7 @@ general_surface_normals = torch.tensor(
     )[config_dictionary.load_normals_key][()]
 )
 
-# Create the configuration for all heliostats
+# Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(
     general_surface_points=general_surface_points,
     general_surface_normals=general_surface_normals,
