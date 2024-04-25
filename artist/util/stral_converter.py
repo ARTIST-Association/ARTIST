@@ -165,7 +165,7 @@ class StralConverter:
         return [-vec[1], vec[0], vec[2]]
 
     def convert_stral_to_h5(self) -> None:
-        """Extract information from a STRAL file saved as .binp and save this information as a HDF5 file."""
+        """Extract information from a STRAL file saved as .binp and save this information as an HDF5 file."""
         self.log.info("Beginning STRAL to HDF5 conversion!")
 
         # Create structures for reading STRAL file correctly
