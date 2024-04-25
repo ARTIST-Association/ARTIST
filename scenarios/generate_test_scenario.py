@@ -33,7 +33,7 @@ light_source_config = LightSourceConfig(
     sun_covariance=4.3681e-06,
 )
 
-# Include the kinematic deviations
+# Include the kinematic deviations.
 kinematic_deviations = KinematicDeviations(
     first_joint_translation_e=0.0,
     first_joint_translation_n=0.0,
