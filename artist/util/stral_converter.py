@@ -38,11 +38,11 @@ class StralConverter:
     Methods
     -------
     convert_point_to_4d_format()
-        Converts a 3d point to a 4d point.
+        Converts a 3D point to a 4D point.
     convert_direction_to_4d_format()
-        Converts a 3d direction vector to 4d format.
+        Converts a 3D direction vector to 4D format.
     nwu_to_enu()
-        Casts from a nwu to enu coordinate system.
+        Casts from an NWU to an ENU coordinate system.
     convert_stral_to_h5()
         Converts the STRAL data to HDF5 data.
 
