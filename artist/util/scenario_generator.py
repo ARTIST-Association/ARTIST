@@ -779,7 +779,7 @@ class ScenarioGenerator:
         prefix : str
             The prefix used for naming the parameters.
 
-        parameters : dict
+        parameters : Dict
             The parameters to be included into the hdf5 file.
         """
         for key, value in parameters.items():
