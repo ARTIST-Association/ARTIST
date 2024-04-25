@@ -272,7 +272,7 @@ class HeliostatRayTracer:
         Returns
         -------
         torch.Tensor
-            The flux density distribution of the reflected rays on the receiver
+            The flux density distribution of the reflected rays on the receiver.
         """
         x_ints = dx_ints[indices] / self.receiver.plane_x * self.receiver.resolution_x
         y_ints = dy_ints[indices] / self.receiver.plane_y * self.receiver.resolution_y
