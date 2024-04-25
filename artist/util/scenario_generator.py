@@ -324,7 +324,7 @@ class KinematicOffsets:
 
     Methods
     -------
-    create_kinematic_offsets_dict():
+    create_kinematic_offsets_dict()
         Create a dictionary containing the configuration parameters for the kinematic offsets.
     """
 
