@@ -199,7 +199,7 @@ class KinematicDeviations:
 
     Methods
     -------
-    create_kinematic_deviations_dict():
+    create_kinematic_deviations_dict()
         Create a dictionary containing the configuration parameters for the kinematic deviations.
     """
 
