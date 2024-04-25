@@ -756,7 +756,7 @@ class ScenarioGenerator:
         """
         return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
 
-    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str):
+    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str) -> None:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():
