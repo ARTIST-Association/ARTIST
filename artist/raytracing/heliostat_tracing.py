@@ -1,8 +1,9 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
+from artist import Scenario
 from artist.scene import LightSource
 from artist.util import utils
 
@@ -82,6 +83,100 @@ class DistortionsDataset(Dataset):
 
 class HeliostatRayTracer:
     """This class contains the functionality for heliostat raytracing."""
+
+    def __init__(
+        self,
+        scenario: Scenario,
+        world_size: Optional[int] = 1,
+        rank: Optional[int] = 0,
+        batch_size: Optional[int] = 1,
+        random_seed: Optional[int] = 7,
+        shuffle: Optional[bool] = False,
+    ):
+        self.heliostat = scenario.heliostats.heliostat_list[0]
+        self.receiver = scenario.receiver
+        self.world_size = world_size
+        self.rank = rank
+        self.number_of_surface_points = (
+            self.heliostat.preferred_reflection_direction.size(0)
+        )
+        # Create distortions dataset
+        self.distortions_dataset = DistortionsDataset(
+            light_source=scenario.light_source,
+            number_of_points=self.number_of_surface_points,
+            random_seed=random_seed,
+        )
+        # Create distributed sampler
+        distortions_sampler = DistributedSampler(
+            dataset=self.distortions_dataset,
+            shuffle=shuffle,
+            num_replicas=self.world_size,
+            rank=self.rank,
+        )
+        # Create dataloader
+        self.distortions_loader = DataLoader(
+            self.distortions_dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            sampler=distortions_sampler,
+        )
+
+    def trace_rays(self) -> torch.Tensor:
+        """
+        Perform heliostat raytracing.
+
+        Scatter the rays according to the distortions, calculate the line plane intersection, and calculate the
+        resulting bitmap on the receiver.
+
+        Returns
+        -------
+        torch.Tensor
+            The resulting bitmap.
+        """
+        final_bitmap = torch.zeros(
+            (self.receiver.resolution_x, self.receiver.resolution_y)
+        )
+        for batch_u, batch_e in self.distortions_loader:
+            rays = self.scatter_rays(
+                self.heliostat.preferred_reflection_direction,
+                batch_u,
+                batch_e,
+            )
+
+            intersections = self.line_plane_intersections(
+                self.receiver.plane_normal,
+                self.receiver.center,
+                rays,
+                self.heliostat.current_aligned_surface_points,
+            )
+
+            dx_ints = (
+                intersections[:, :, 0]
+                + self.receiver.plane_x / 2
+                - self.receiver.center[0]
+            )
+            dy_ints = (
+                intersections[:, :, 2]
+                + self.receiver.plane_y / 2
+                - self.receiver.center[2]
+            )
+
+            indices = (
+                (-1 <= dx_ints)
+                & (dx_ints < self.receiver.plane_x + 1)
+                & (-1 <= dy_ints)
+                & (dy_ints < self.receiver.plane_y + 1)
+            )
+
+            total_bitmap = self.sample_bitmap(
+                dx_ints,
+                dy_ints,
+                indices,
+            )
+
+            final_bitmap += total_bitmap
+
+        return final_bitmap
 
     @staticmethod
     def scatter_rays(
@@ -168,44 +263,31 @@ class HeliostatRayTracer:
 
         return surface_points + ray_directions * distribution_strengths.unsqueeze(-1)
 
-    @staticmethod
     def sample_bitmap(
+        self,
         dx_ints: torch.Tensor,
         dy_ints: torch.Tensor,
         indices: torch.Tensor,
-        plane_x: float,
-        plane_y: float,
-        bitmap_height: int,
-        bitmap_width: int,
     ) -> torch.Tensor:
-        # TODO : Complete docstring.
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
 
         Parameters
         ----------
         dx_ints : torch.Tensor
-
+            x position of intersection with receiver. (N,1) where N is the resolution of the receiver along the x-axis.
         dy_ints : torch.Tensor
-
+            y position of intersection with receiver, (N,1) where N is the resolution of the receiver along the y-axis.
         indices : torch.Tensor
-
-        plane_x : float
-            x dimension of the receiver plane.
-        plane_y : float
-            y dimension of the receiver plane.
-        bitmap_height : int
-            Resolution of the resulting bitmap (x direction) -> height
-        bitmap_width : int
-            Resolution of the resulting bitmap (y direction) -> width
+            Index of pixel.
 
         Returns
         -------
         torch.Tensor
             The flux density distribution of the reflected rays on the receiver
         """
-        x_ints = dx_ints[indices] / plane_x * bitmap_height
-        y_ints = dy_ints[indices] / plane_y * bitmap_width
+        x_ints = dx_ints[indices] / self.receiver.plane_x * self.receiver.resolution_x
+        y_ints = dy_ints[indices] / self.receiver.plane_y * self.receiver.resolution_y
 
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
@@ -298,14 +380,14 @@ class HeliostatRayTracer:
         # prevent out-of-bounds access).
         indices = (
             (0 <= x_inds)
-            & (x_inds < bitmap_height)
+            & (x_inds < self.receiver.resolution_x)
             & (0 <= y_inds)
-            & (y_inds < bitmap_width)
+            & (y_inds < self.receiver.resolution_y)
         )
 
         # Flux density map for heliostat field
         total_bitmap = torch.zeros(
-            [bitmap_height, bitmap_width],
+            [self.receiver.resolution_x, self.receiver.resolution_y],
             dtype=dx_ints.dtype,
             device=dx_ints.device,
         )
@@ -318,12 +400,9 @@ class HeliostatRayTracer:
 
         return total_bitmap
 
-    @staticmethod
     def normalize_bitmap(
+        self,
         bitmap: torch.Tensor,
-        total_intensity: Union[float, torch.Tensor],
-        plane_x: float,
-        plane_y: float,
     ) -> torch.Tensor:
         """
         Normalize a bitmap.
@@ -332,12 +411,6 @@ class HeliostatRayTracer:
         ----------
         bitmap : torch.Tensor
             The bitmap to be normalized.
-        total_intensity : Union[float, torch.Tensor]
-            The total intensity of the bitmap.
-        plane_x : float
-            x dimension of the receiver plane.
-        plane_y : float
-            y dimension of the receiver plane.
 
         Returns
         -------
@@ -346,8 +419,10 @@ class HeliostatRayTracer:
         bitmap_height = bitmap.shape[0]
         bitmap_width = bitmap.shape[1]
 
-        plane_area = plane_x * plane_y
+        plane_area = self.receiver.plane_x * self.receiver.plane_y
         num_pixels = bitmap_height * bitmap_width
         plane_area_per_pixel = plane_area / num_pixels
 
-        return bitmap / (total_intensity * plane_area_per_pixel)
+        return bitmap / (
+            self.distortions_dataset.distortions_u.numel() * plane_area_per_pixel
+        )
