@@ -55,7 +55,7 @@ kinematic_deviations = KinematicDeviations(
     concentrator_tilt_u=0.0,
 )
 
-# Include the initial orientation offsets for the kinematic
+# Include the initial orientation offsets for the kinematic.
 kinematic_offsets = KinematicOffsets(
     kinematic_initial_orientation_offset_e=math.pi / 2,
     kinematic_initial_orientation_offset_n=0.0,
