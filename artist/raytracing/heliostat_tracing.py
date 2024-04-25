@@ -402,7 +402,8 @@ class HeliostatRayTracer:
 
         Returns
         -------
-        The normalized bitmap.
+        torch.Tensor
+            The normalized bitmap.
         """
         bitmap_height = bitmap.shape[0]
         bitmap_width = bitmap.shape[1]
