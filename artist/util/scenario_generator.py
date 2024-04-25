@@ -654,7 +654,7 @@ class HeliostatListConfig:
 
 class ScenarioGenerator:
     """
-    Generates an ARTIST scenario, saving it as an HDF5 file.
+    Generate an ARTIST scenario, saving it as an HDF5 file.
 
     Attributes
     ----------
