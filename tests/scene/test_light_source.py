@@ -153,7 +153,7 @@ def test_light_sources(
     # Load further params dict
     further_params_dict = request.getfixturevalue(further_parameters_fixture)
 
-    # Run test if light source is a sun
+    # Run test if light source is a sun.
     if light_source == "sun":
         sun = Sun(
             distribution_parameters=request.getfixturevalue(
