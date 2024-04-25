@@ -22,7 +22,7 @@ class Scenario:
     Methods
     -------
     load_scenario_from_hdf5()
-        Class method to initialize the scenario from an hdf5 file.
+        Class method to initialize the scenario from an HDF5 file.
     """
 
     def __init__(
