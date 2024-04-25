@@ -74,7 +74,7 @@ class Receiver(torch.nn.Module):
         Returns
         -------
         Receiver
-            A receiver initialized from an hdf5 file.
+            A receiver initialized from an HDF5 file.
         """
         center = torch.tensor(
             config_file[config_dictionary.receiver_prefix][
