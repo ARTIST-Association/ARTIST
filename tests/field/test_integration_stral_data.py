@@ -101,7 +101,7 @@ def test_compute_bitmaps(
         scenario=scenario, world_size=world_size, rank=rank, batch_size=5
     )
 
-    # Perform heliostat based raytracing
+    # Perform heliostat-based raytracing.
     final_bitmap = raytracer.trace_rays()
 
     # Apply all-reduce if MPI is used.
