@@ -129,7 +129,7 @@ class StralConverter:
     @staticmethod
     def convert_direction_to_4d_format(direction: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3d direction vector to a 4d direction vector.
+        Convert a 3D direction vector to a 4D direction vector.
 
         Parameters
         ----------
