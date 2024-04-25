@@ -18,11 +18,11 @@ class Receiver(torch.nn.Module):
     plane_x : float
         The x plane of the receiver.
     plane_y : torch.Tensor
-        The y plane of the receiver
+        The y plane of the receiver.
     resolution_x : int
         The resolution of the x plane of the receiver.
     resolution_y : int
-        The resolution of the y plane of the receiver
+        The resolution of the y plane of the receiver.
     """
 
     def __init__(
@@ -46,11 +46,11 @@ class Receiver(torch.nn.Module):
         plane_x : float
             The x plane of the receiver.
         plane_y : torch.Tensor
-            The y plane of the receiver
+            The y plane of the receiver.
         resolution_x : int
             The resolution of the x plane of the receiver.
         resolution_y : int
-            The resolution of the y plane of the receiver
+            The resolution of the y plane of the receiver.
         """
         super().__init__()
 
@@ -64,17 +64,17 @@ class Receiver(torch.nn.Module):
     @classmethod
     def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
-        Class method that initializes a receiver from an hdf5 file.
+        Class method that initializes a receiver from an HDF5 file.
 
         Parameters
         ----------
         config_file : h5py.File
-            The hdf5 file containing the information about the receiver.
+            The HDF5 file containing the information about the receiver.
 
         Returns
         -------
         Receiver
-            A receiver initialized from an hdf5 file.
+            A receiver initialized from an HDF5 file.
         """
         center = torch.tensor(
             config_file[config_dictionary.receiver_prefix][

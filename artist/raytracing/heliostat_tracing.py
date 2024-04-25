@@ -17,11 +17,10 @@ class DistortionsDataset(Dataset):
     distortions_u : torch.Tensor
         The distortions in the up direction.
     distortions_e : torch.Tensor
-        The distortions in the east direction
+        The distortions in the east direction.
     number_of_heliostats : int
-        The number of heliostats in the scenario
+        The number of heliostats in the scenario.
     """
-
     def __init__(
         self,
         light_source: LightSource,
@@ -30,7 +29,7 @@ class DistortionsDataset(Dataset):
         random_seed: Optional[int] = 7,
     ) -> None:
         """
-        Initialize the dataset.
+        Initialize the data set.
 
         Parameters
         ----------
@@ -52,18 +51,18 @@ class DistortionsDataset(Dataset):
 
     def __len__(self) -> int:
         """
-        Calculate the length of the dataset.
+        Calculate the length of the data set.
 
         Returns
         -------
         int
-            The length of the dataset.
+            The length of the data set.
         """
         return self.distortions_u.size(0)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Select an item from the dataset.
+        Select an item from the data set.
 
         Parameters
         ----------
@@ -100,20 +99,20 @@ class HeliostatRayTracer:
         self.number_of_surface_points = (
             self.heliostat.preferred_reflection_direction.size(0)
         )
-        # Create distortions dataset
+        # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=scenario.light_source,
             number_of_points=self.number_of_surface_points,
             random_seed=random_seed,
         )
-        # Create distributed sampler
+        # Create distributed sampler.
         distortions_sampler = DistributedSampler(
             dataset=self.distortions_dataset,
             shuffle=shuffle,
             num_replicas=self.world_size,
             rank=self.rank,
         )
-        # Create dataloader
+        # Create dataloader.
         self.distortions_loader = DataLoader(
             self.distortions_dataset,
             batch_size=batch_size,
@@ -264,16 +263,16 @@ class HeliostatRayTracer:
         Parameters
         ----------
         dx_ints : torch.Tensor
-            x position of intersection with receiver. (N,1) where N is the resolution of the receiver along the x-axis.
+            x position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along the x-axis.
         dy_ints : torch.Tensor
-            y position of intersection with receiver, (N,1) where N is the resolution of the receiver along the y-axis.
+            y position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along the y-axis.
         indices : torch.Tensor
             Index of pixel.
 
         Returns
         -------
         torch.Tensor
-            The flux density distribution of the reflected rays on the receiver
+            The flux density distribution of the reflected rays on the receiver.
         """
         x_ints = dx_ints[indices] / self.receiver.plane_x * self.receiver.resolution_x
         y_ints = dy_ints[indices] / self.receiver.plane_y * self.receiver.resolution_y
@@ -403,7 +402,8 @@ class HeliostatRayTracer:
 
         Returns
         -------
-        The normalized bitmap.
+        torch.Tensor
+            The normalized bitmap.
         """
         bitmap_height = bitmap.shape[0]
         bitmap_width = bitmap.shape[1]

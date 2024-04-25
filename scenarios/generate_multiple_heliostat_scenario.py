@@ -15,7 +15,7 @@ from artist.util.scenario_generator import (
     SingleHeliostatConfig,
 )
 
-# Include the receiver configuration
+# Include the receiver configuration.
 receiver_config = ReceiverConfig(
     receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
     plane_normal=torch.tensor([0.0, 1.0, 0.0, 0.0]),
@@ -25,7 +25,7 @@ receiver_config = ReceiverConfig(
     resolution_y=256,
 )
 
-# Include the light source configuration
+# Include the light source configuration.
 light_source_config = LightSourceConfig(
     sun_number_of_rays=10,
     sun_distribution_type=config_dictionary.sun_distribution_is_normal,
@@ -33,7 +33,7 @@ light_source_config = LightSourceConfig(
     sun_covariance=4.3681e-06,
 )
 
-# Include the kinematic deviations
+# Include the kinematic deviations.
 kinematic_deviations = KinematicDeviations(
     first_joint_translation_e=0.0,
     first_joint_translation_n=0.0,
@@ -55,14 +55,14 @@ kinematic_deviations = KinematicDeviations(
     concentrator_tilt_u=0.0,
 )
 
-# Include the initial orientation offsets for the kinematic
+# Include the initial orientation offsets for the kinematic.
 kinematic_offsets = KinematicOffsets(
     kinematic_initial_orientation_offset_e=math.pi / 2,
     kinematic_initial_orientation_offset_n=0.0,
     kinematic_initial_orientation_offset_u=0.0,
 )
 
-# Include the deviations for the actuator
+# Include the deviations for the actuator.
 actuator_deviations = ActuatorDeviations(
     first_joint_increment=0.0,
     first_joint_initial_stroke_length=0.0,
@@ -76,7 +76,7 @@ actuator_deviations = ActuatorDeviations(
     second_joint_phi_0=0.0,
 )
 
-# Include the configuration for the first heliostat
+# Include the configuration for the first heliostat.
 heliostat_1 = SingleHeliostatConfig(
     heliostat_name="heliostat1",
     heliostat_id=1,
@@ -93,7 +93,8 @@ heliostat_1 = SingleHeliostatConfig(
     kinematic_offsets=kinematic_offsets,
     actuator_deviations=actuator_deviations,
 )
-# Include the configuration for the second heliostat
+
+# Include the configuration for the second heliostat.
 heliostat_2 = SingleHeliostatConfig(
     heliostat_name="heliostat2",
     heliostat_id=2,
@@ -110,7 +111,8 @@ heliostat_2 = SingleHeliostatConfig(
     kinematic_offsets=kinematic_offsets,
     actuator_deviations=actuator_deviations,
 )
-# Include the configuration for the third heliostat
+
+# Include the configuration for the third heliostat.
 heliostat_3 = SingleHeliostatConfig(
     heliostat_name="heliostat3",
     heliostat_id=3,
@@ -128,11 +130,10 @@ heliostat_3 = SingleHeliostatConfig(
     actuator_deviations=actuator_deviations,
 )
 
-
-# Create a list of all the heliostats -- in this case only one
+# Create a list of all the heliostats -- in this case only one.
 all_heliostats = [heliostat_1, heliostat_2, heliostat_3]
 
-# Load general surface points measurement
+# Load general surface points measurement.
 general_surface_points = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
@@ -140,7 +141,7 @@ general_surface_points = torch.tensor(
     )[config_dictionary.load_points_key][()]
 )
 
-# Load general surface normals measurement
+# Load general surface normals measurement.
 general_surface_normals = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
@@ -148,13 +149,12 @@ general_surface_normals = torch.tensor(
     )[config_dictionary.load_normals_key][()]
 )
 
-# Create the configuration for all heliostats
+# Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(
     general_surface_points=general_surface_points,
     general_surface_normals=general_surface_normals,
     heliostat_list=all_heliostats,
 )
-
 
 # The following parameter is the name of the scenario.
 file_path = "./multiple_heliostat_scenario"
@@ -162,7 +162,7 @@ file_path = "./multiple_heliostat_scenario"
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
 
-    # Create a scenario object
+    # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
         receiver_config=receiver_config,
@@ -170,5 +170,5 @@ if __name__ == "__main__":
         heliostat_list_config=heliostats_list_config,
     )
 
-    # Generate the scenario
+    # Generate the scenario.
     scenario_object.generate_scenario()

@@ -15,7 +15,7 @@ from artist.util.scenario_generator import (
     SingleHeliostatConfig,
 )
 
-# Include the receiver configuration
+# Include the receiver configuration.
 receiver_config = ReceiverConfig(
     receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
     plane_normal=torch.tensor([0.0, 1.0, 0.0, 0.0]),
@@ -25,7 +25,7 @@ receiver_config = ReceiverConfig(
     resolution_y=256,
 )
 
-# Include the light source configuration
+# Include the light source configuration.
 light_source_config = LightSourceConfig(
     sun_number_of_rays=10,
     sun_distribution_type=config_dictionary.sun_distribution_is_normal,
@@ -33,7 +33,7 @@ light_source_config = LightSourceConfig(
     sun_covariance=4.3681e-06,
 )
 
-# Include the kinematic deviations
+# Include the kinematic deviations.
 kinematic_deviations = KinematicDeviations(
     first_joint_translation_e=0.0,
     first_joint_translation_n=0.0,
@@ -55,14 +55,14 @@ kinematic_deviations = KinematicDeviations(
     concentrator_tilt_u=0.0,
 )
 
-# Include the initial orientation offsets for the kinematic
+# Include the initial orientation offsets for the kinematic.
 kinematic_offsets = KinematicOffsets(
     kinematic_initial_orientation_offset_e=math.pi / 2,
     kinematic_initial_orientation_offset_n=0.0,
     kinematic_initial_orientation_offset_u=0.0,
 )
 
-# Include the deviations for the actuator
+# Include the deviations for the actuator.
 actuator_deviations = ActuatorDeviations(
     first_joint_increment=0.0,
     first_joint_initial_stroke_length=0.0,
@@ -76,7 +76,7 @@ actuator_deviations = ActuatorDeviations(
     second_joint_phi_0=0.0,
 )
 
-# Include the configuration for the first heliostat
+# Include the configuration for the first heliostat.
 heliostat_1 = SingleHeliostatConfig(
     heliostat_name="Single_Heliostat",
     heliostat_id=0,
@@ -94,11 +94,10 @@ heliostat_1 = SingleHeliostatConfig(
     actuator_deviations=actuator_deviations,
 )
 
-
-# Create a list of all the heliostats -- in this case only one
+# Create a list of all the heliostats -- in this case only one.
 all_heliostats = [heliostat_1]
 
-# Load general surface points measurement
+# Load general surface points measurement.
 general_surface_points = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
@@ -106,7 +105,7 @@ general_surface_points = torch.tensor(
     )[config_dictionary.load_points_key][()]
 )
 
-# Load general surface normals measurement
+# Load general surface normals measurement.
 general_surface_normals = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
@@ -136,5 +135,5 @@ if __name__ == "__main__":
         heliostat_list_config=heliostats_list_config,
     )
 
-    # Generate the scenario
+    # Generate the scenario.
     scenario_object.generate_scenario()

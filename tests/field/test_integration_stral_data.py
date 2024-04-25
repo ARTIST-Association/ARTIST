@@ -12,7 +12,7 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 
 warnings.filterwarnings("always")
 
-# Attempt to import MPI
+# Attempt to import MPI.
 try:
     from mpi4py import MPI
 except ImportError:
@@ -22,18 +22,18 @@ except ImportError:
         ImportWarning,
     )
 
-# Setup MPI
+# Set up MPI.
 if MPI is not None:
     comm = MPI.COMM_WORLD
-    world_size = comm.Get_size()
-    rank = comm.Get_rank()
+    world_size = comm.size
+    rank = comm.rank
 else:
     world_size = 1
     rank = 0
 
 
 @pytest.mark.parametrize(
-    "incident_ray_direction,expected_value, scenario_config",
+    "incident_ray_direction, expected_value, scenario_config",
     [
         (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt", "test_scenario"),
         (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "test_scenario"),
@@ -71,7 +71,7 @@ def test_compute_bitmaps(
     calculate the preferred reflection direction.
     Then perform heliostat based raytracing. This uses distortions based on the model of the sun to generate additional
     rays, calculates the intersections on the receiver, and computes the bitmap.
-    Then normalise the bitmaps and compare them with the expected value.
+    Then normalize the bitmaps and compare them with the expected value.
 
     Parameters
     ----------
@@ -84,11 +84,11 @@ def test_compute_bitmaps(
     """
     torch.manual_seed(7)
 
-    # Load the scenario
+    # Load the scenario.
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
 
-    # Align heliostat
+    # Align heliostat.
     scenario.heliostats.heliostat_list[0].set_aligned_surface(
         incident_ray_direction=incident_ray_direction
     )
@@ -96,15 +96,15 @@ def test_compute_bitmaps(
         rays=-incident_ray_direction
     )
 
-    # Create raytracer - currently only possible for one heliostat
+    # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
         scenario=scenario, world_size=world_size, rank=rank, batch_size=5
     )
 
-    # Perform heliostat based raytracing
+    # Perform heliostat-based raytracing.
     final_bitmap = raytracer.trace_rays()
 
-    # Apply allreduce if MPI is used
+    # Apply all-reduce if MPI is used.
     if MPI is not None:
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)

@@ -38,11 +38,11 @@ class StralConverter:
     Methods
     -------
     convert_point_to_4d_format()
-        Converts a 3d point to a 4d point.
+        Converts a 3D point to a 4D point.
     convert_direction_to_4d_format()
-        Converts a 3d direction vector to 4d format.
+        Converts a 3D direction vector to 4D format.
     nwu_to_enu()
-        Casts from a nwu to enu coordinate system.
+        Casts from an NWU to an ENU coordinate system.
     convert_stral_to_h5()
         Converts the STRAL data to HDF5 data.
 
@@ -108,7 +108,7 @@ class StralConverter:
     @staticmethod
     def convert_point_to_4d_format(point: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3d point to a 4d point.
+        Convert a 3D point to a 4D point.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class StralConverter:
     @staticmethod
     def convert_direction_to_4d_format(direction: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3d direction vector to a 4d direction vector.
+        Convert a 3D direction vector to a 4D direction vector.
 
         Parameters
         ----------
@@ -150,7 +150,7 @@ class StralConverter:
     @staticmethod
     def nwu_to_enu(vec: Tuple3d) -> Vector3d:
         """
-        Cast the coordinate system from nwu to enu.
+        Cast the coordinate system from NWU to ENU.
 
         Parameters
         ----------
@@ -160,12 +160,12 @@ class StralConverter:
         Returns
         -------
         Vector3d
-            The casted vector in the enu coordinate system.
+            The casted vector in the ENU coordinate system.
         """
         return [-vec[1], vec[0], vec[2]]
 
     def convert_stral_to_h5(self) -> None:
-        """Extract information from a STRAL file saved as .binp and save this information as a HDF5 file."""
+        """Extract information from a STRAL file saved as .binp and save this information as an HDF5 file."""
         self.log.info("Beginning STRAL to HDF5 conversion!")
 
         # Create structures for reading STRAL file correctly
