@@ -93,7 +93,8 @@ heliostat_1 = SingleHeliostatConfig(
     kinematic_offsets=kinematic_offsets,
     actuator_deviations=actuator_deviations,
 )
-# Include the configuration for the second heliostat
+
+# Include the configuration for the second heliostat.
 heliostat_2 = SingleHeliostatConfig(
     heliostat_name="heliostat2",
     heliostat_id=2,
