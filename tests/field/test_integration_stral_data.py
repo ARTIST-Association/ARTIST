@@ -96,7 +96,7 @@ def test_compute_bitmaps(
         rays=-incident_ray_direction
     )
 
-    # Create raytracer - currently only possible for one heliostat
+    # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
         scenario=scenario, world_size=world_size, rank=rank, batch_size=5
     )
