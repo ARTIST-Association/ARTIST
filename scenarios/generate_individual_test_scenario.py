@@ -84,7 +84,7 @@ individual_surface_points = torch.tensor(
     )[config_dictionary.load_points_key][()]
 )
 
-# Load individual surface normals measurement
+# Load individual surface normals measurement.
 individual_surface_normals = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
