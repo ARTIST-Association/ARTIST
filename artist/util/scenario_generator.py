@@ -98,7 +98,7 @@ class LightSourceConfig:
 
     Methods
     -------
-    create_light_source_dict():
+    create_light_source_dict()
         Create a dictionary containing the configuration parameters for the light source.
     """
 
