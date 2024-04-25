@@ -104,7 +104,7 @@ def test_compute_bitmaps(
     # Perform heliostat based raytracing
     final_bitmap = raytracer.trace_rays()
 
-    # Apply allreduce if MPI is used
+    # Apply all-reduce if MPI is used.
     if MPI is not None:
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
