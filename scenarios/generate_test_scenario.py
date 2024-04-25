@@ -15,7 +15,7 @@ from artist.util.scenario_generator import (
     SingleHeliostatConfig,
 )
 
-# Include the receiver configuration
+# Include the receiver configuration.
 receiver_config = ReceiverConfig(
     receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
     plane_normal=torch.tensor([0.0, 1.0, 0.0, 0.0]),
