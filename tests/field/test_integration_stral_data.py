@@ -88,7 +88,7 @@ def test_compute_bitmaps(
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
 
-    # Align heliostat
+    # Align heliostat.
     scenario.heliostats.heliostat_list[0].set_aligned_surface(
         incident_ray_direction=incident_ray_direction
     )
