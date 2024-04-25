@@ -51,7 +51,7 @@ class DistortionsDataset(Dataset):
 
     def __len__(self) -> int:
         """
-        Calculate the length of the dataset.
+        Calculate the length of the data set.
 
         Returns
         -------
