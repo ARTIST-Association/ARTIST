@@ -62,7 +62,7 @@ kinematic_offsets = KinematicOffsets(
     kinematic_initial_orientation_offset_u=0.0,
 )
 
-# Include the deviations for the actuator
+# Include the deviations for the actuator.
 actuator_deviations = ActuatorDeviations(
     first_joint_increment=0.0,
     first_joint_initial_stroke_length=0.0,
