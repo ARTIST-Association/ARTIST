@@ -162,7 +162,7 @@ file_path = "./multiple_heliostat_scenario"
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
 
-    # Create a scenario object
+    # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
         receiver_config=receiver_config,
