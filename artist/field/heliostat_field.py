@@ -38,7 +38,7 @@ class HeliostatField(torch.nn.Module):
     @classmethod
     def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
-        Load a heliostat field from a HDF5 file.
+        Load a heliostat field from an HDF5 file.
 
         Parameters
         ----------
