@@ -62,7 +62,7 @@ class DistortionsDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Select an item from the dataset.
+        Select an item from the data set.
 
         Parameters
         ----------
