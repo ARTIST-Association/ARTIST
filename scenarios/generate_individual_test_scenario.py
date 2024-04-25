@@ -76,7 +76,7 @@ actuator_deviations = ActuatorDeviations(
     second_joint_phi_0=0.0,
 )
 
-# Load individual surface point measurement
+# Load individual surface point measurement.
 individual_surface_points = torch.tensor(
     h5py.File(
         "../measurement_data/test_data.h5",
