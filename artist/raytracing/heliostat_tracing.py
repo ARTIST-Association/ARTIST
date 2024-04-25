@@ -112,7 +112,7 @@ class HeliostatRayTracer:
             num_replicas=self.world_size,
             rank=self.rank,
         )
-        # Create dataloader
+        # Create dataloader.
         self.distortions_loader = DataLoader(
             self.distortions_dataset,
             batch_size=batch_size,
