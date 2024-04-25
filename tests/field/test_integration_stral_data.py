@@ -25,8 +25,8 @@ except ImportError:
 # Set up MPI.
 if MPI is not None:
     comm = MPI.COMM_WORLD
-    world_size = comm.Get_size()
-    rank = comm.Get_rank()
+    world_size = comm.size
+    rank = comm.rank
 else:
     world_size = 1
     rank = 0
