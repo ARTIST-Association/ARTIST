@@ -746,7 +746,6 @@ class ScenarioGenerator:
             Original nested dictionary to flatten.
         parent_key : str
             The parent key of nested dictionaries. Should be empty upon initialization.
-
         sep : str
             The separator used to separate keys in nested dictionaries.
 
