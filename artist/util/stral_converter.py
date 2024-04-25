@@ -160,7 +160,7 @@ class StralConverter:
         Returns
         -------
         Vector3d
-            The casted vector in the enu coordinate system.
+            The casted vector in the ENU coordinate system.
         """
         return [-vec[1], vec[0], vec[2]]
 
