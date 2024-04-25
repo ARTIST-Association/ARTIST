@@ -50,7 +50,7 @@ class Scenario:
     @classmethod
     def load_scenario_from_hdf5(cls, scenario_file: h5py.File) -> Self:
         """
-        Class method to load the scenario from an hdf5 file.
+        Class method to load the scenario from an HDF5 file.
 
         Parameters
         ----------
