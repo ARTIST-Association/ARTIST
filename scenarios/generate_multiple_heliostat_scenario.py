@@ -111,7 +111,8 @@ heliostat_2 = SingleHeliostatConfig(
     kinematic_offsets=kinematic_offsets,
     actuator_deviations=actuator_deviations,
 )
-# Include the configuration for the third heliostat
+
+# Include the configuration for the third heliostat.
 heliostat_3 = SingleHeliostatConfig(
     heliostat_name="heliostat3",
     heliostat_id=3,
