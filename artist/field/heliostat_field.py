@@ -19,8 +19,8 @@ class HeliostatField(torch.nn.Module):
 
     Methods
     -------
-    from_hdf5
-        Load the list of heliostats from a HDF5 file.
+    from_hdf5()
+        Load the list of heliostats from an HDF5 file.
     """
 
     def __init__(self, heliostat_list: List[Heliostat]):
