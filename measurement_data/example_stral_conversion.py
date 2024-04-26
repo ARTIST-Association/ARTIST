@@ -1,9 +1,9 @@
 from artist.util.stral_converter import StralConverter
 
-# Set Variables in the script instead of using input function
-# Se this boolean to true
+# Set variables in the script instead of using input function.
+# Set this boolean to true.
 USE_SCRIPT_VALUES = True
-# Set your values with the following variables
+# Set your values with the following variables.
 STRAL_FILE_PATH = "./stral_test_data"
 HDF_FILE_PATH = "./stral_conversion_test"
 CONCENTRATOR_HEADER_NAME = "=5f2I2f"
