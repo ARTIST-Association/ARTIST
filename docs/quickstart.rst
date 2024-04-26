@@ -3,7 +3,7 @@
 Quick Start
 ===========
 
-To start using ``ARTIST`` we should include:
+To start using ``ARTIST``, we should include:
 
-* Installation from pyPI.
-* Minimal example (i.e. using a test_scenario that we include online).
+* Installation from ``PyPI`` with ``pip``
+* Minimal example (i.e. using a ``test_scenario`` that we include online)
