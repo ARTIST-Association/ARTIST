@@ -1,240 +1,174 @@
-"""This pytest tests the correctness of the light source."""
-
-import math
-import pathlib
 from typing import Any, Dict, Tuple
 
 import pytest
 import torch
 
-from artist import ARTIST_ROOT
-from artist.field import Heliostat
-from artist.field.actuator_ideal import IdealActuator
-from artist.field.facets_point_cloud import PointCloudFacet
-from artist.field.kinematic_rigid_body import RigidBody
-from artist.scene.sun import Sun
+from artist.scene import Sun
 from artist.util import config_dictionary
 
 
-def generate_data(
-    incident_ray_direction: torch.Tensor,
-    expected_value: str,
-) -> Dict[str, torch.Tensor]:
+def calculate_expected(
+    distribution_parameters_1: Dict[str, Any], further_parameters_1: Dict[str, int]
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Generate all the relevant data for this test.
-
-    This includes the deviation parameters of the kinematic module, the position of the heliostat, the position of the receiver,
-    the sun as a light source, and five manually created surface points and normals.
-
-    The surface points and normals are aligned by the kinematic module of the heliostat module.
+    Calculate the expected distortions given the parameters from the test fixtures.
 
     Parameters
     ----------
-    incident_ray_direction : torch.Tensor
-        The direction of the light.
-    expected_value : str
-        The expected bitmaps for the given test-cases.
+    distribution_parameters_1 : Dict[str, Any]
+        The distribution parameters for the sun.
+    further_parameters_1 : Dict[str, int]
+        The further parameters for the test: number of heliostats, number of rays, number of points, and random seed.
 
     Returns
     -------
-    Dict[str, torch.Tensor]
-        A dictionary containing all the data.
+    Tuple[torch.Tensor, torch.Tensor]
+        The expected distortions in the up and east direction.
     """
-    deviation_parameters = {
-        config_dictionary.first_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_u: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_u: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_e: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_n: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_u: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
-    }
-    initial_orientation_offsets = {
-        config_dictionary.kinematic_initial_orientation_offset_e: -math.pi / 2,
-        config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
-        config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
-    }
-
-    actuator_parameters = {
-        config_dictionary.first_joint_increment: torch.tensor(0.0),
-        config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.0),
-        config_dictionary.first_joint_actuator_offset: torch.tensor(0.0),
-        config_dictionary.first_joint_radius: torch.tensor(0.0),
-        config_dictionary.first_joint_phi_0: torch.tensor(0.0),
-        config_dictionary.second_joint_increment: torch.tensor(0.0),
-        config_dictionary.second_joint_initial_stroke_length: torch.tensor(0.0),
-        config_dictionary.second_joint_actuator_offset: torch.tensor(0.0),
-        config_dictionary.second_joint_radius: torch.tensor(0.0),
-        config_dictionary.second_joint_phi_0: torch.tensor(0.0),
-    }
-
-    heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
-    receiver_center = torch.tensor([0.0, -10.0, 0.0, 1.0])
-
-    sun = Sun(ray_count=10)
-
-    surface_normals = torch.tensor(
+    mean = torch.tensor(
         [
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-        ]
+            distribution_parameters_1[config_dictionary.sun_mean],
+            distribution_parameters_1[config_dictionary.sun_mean],
+        ],
+        dtype=torch.float,
     )
-    surface_points = torch.tensor(
+    covariance = torch.tensor(
         [
-            [-1.0, -1.0, 0.0, 1.0],
-            [1.0, 1.0, 0.0, 1.0],
-            [-1.0, 1.0, 0.0, 1.0],
-            [1.0, -1.0, 0.0, 1.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
+            [distribution_parameters_1[config_dictionary.sun_covariance], 0],
+            [0, distribution_parameters_1[config_dictionary.sun_covariance]],
+        ],
+        dtype=torch.float,
     )
+    torch.manual_seed(further_parameters_1["random_seed"])
+    distribute = torch.distributions.MultivariateNormal(mean, covariance)
+    distort_u, distort_e = distribute.sample(
+        (
+            int(
+                further_parameters_1["num_heliostats"]
+                * further_parameters_1["num_rays"]
+            ),
+            further_parameters_1["num_points"],
+        ),
+    ).permute(2, 0, 1)
+    return distort_u, distort_e
 
-    heliostat = Heliostat(
-        id=1,
-        position=heliostat_position,
-        alignment_type=RigidBody,
-        actuator_type=IdealActuator,
-        aim_point=receiver_center,
-        facet_type=PointCloudFacet,
-        surface_points=surface_points,
-        surface_normals=surface_normals,
-        incident_ray_direction=incident_ray_direction,
-        kinematic_deviation_parameters=deviation_parameters,
-        kinematic_initial_orientation_offsets=initial_orientation_offsets,
-        actuator_parameters=actuator_parameters,
-    )
 
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
-
+@pytest.fixture
+def distribution_parameters_1() -> Dict[str, Any]:
+    """Fixture that returns distribution parameters for the sun."""
     return {
-        "sun": sun,
-        "aligned_surface_points": aligned_surface_points,
-        "aligned_surface_normals": aligned_surface_normals,
-        "receiver_center": receiver_center,
-        "incident_ray_direction": incident_ray_direction,
-        "expected_value": expected_value,
+        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
+        config_dictionary.sun_mean: 0,
+        config_dictionary.sun_covariance: 1,
     }
 
 
-@pytest.fixture(
-    params=[
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt"),
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt"),
+@pytest.fixture
+def distribution_parameters_2() -> Dict[str, Any]:
+    """Fixture that returns distribution parameters for the sun."""
+    return {
+        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
+        config_dictionary.sun_mean: 0,
+        config_dictionary.sun_covariance: 0.004596,
+    }
+
+
+@pytest.fixture
+def distribution_parameters_3() -> Dict[str, Any]:
+    """Fixture that returns distribution parameters for the sun."""
+    return {
+        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
+        config_dictionary.sun_mean: 10,
+        config_dictionary.sun_covariance: 15,
+    }
+
+
+@pytest.fixture
+def further_parameters_1() -> Dict[str, int]:
+    """Fixture that returns further test parameters."""
+    return {
+        "num_rays": 100,
+        "num_points": 50,
+        "num_heliostats": 1,
+        "random_seed": 7,
+    }
+
+
+@pytest.fixture
+def further_parameters_2() -> Dict[str, int]:
+    """Fixture that returns further test parameters."""
+    return {
+        "num_rays": 100,
+        "num_points": 50,
+        "num_heliostats": 5,
+        "random_seed": 7,
+    }
+
+
+@pytest.fixture
+def further_parameters_3() -> Dict[str, int]:
+    """Fixture that returns further test parameters."""
+    return {
+        "num_rays": 20,
+        "num_points": 300,
+        "num_heliostats": 8,
+        "random_seed": 77,
+    }
+
+
+@pytest.mark.parametrize(
+    "light_source, distribution_parameters_fixture, further_parameters_fixture",
+    [
+        ("sun", "distribution_parameters_1", "further_parameters_1"),
+        ("sun", "distribution_parameters_2", "further_parameters_2"),
+        ("sun", "distribution_parameters_3", "further_parameters_3"),
+        ("sun", "distribution_parameters_1", "further_parameters_2"),
+        ("sun", "distribution_parameters_1", "further_parameters_3"),
+        ("sun", "distribution_parameters_2", "further_parameters_1"),
+        ("sun", "distribution_parameters_2", "further_parameters_3"),
+        ("sun", "distribution_parameters_3", "further_parameters_1"),
+        ("sun", "distribution_parameters_3", "further_parameters_2"),
     ],
-    name="environment_data",
 )
-def data(request: Tuple[torch.Tensor, str]) -> Dict[str, Any]:
+def test_light_sources(
+    request: Any,
+    light_source: str,
+    distribution_parameters_fixture: Dict[str, Any],
+    further_parameters_fixture: Dict[str, int],
+) -> None:
     """
-    Compute the data required for the test.
+    Test the light sources by generating distortions and ensuring these are as expected.
 
     Parameters
     ----------
-    request : Tuple[torch.Tensor, str]
-        The pytest.fixture request with the incident ray direction and bitmap name required for the test.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the data required for the test.
+    request : Any
+        The pytest request.
+    light_source : str
+        Indicates which light source is tested.
+    distribution_parameters_fixture : Dict[str, Any]
+        The pytest fixture containing the distribution parameters.
+    further_parameters_fixture : Dict[str, int]
+        The pytest fixture containing the further test parameters.
     """
-    return generate_data(*request.param)
+    # Load further params dict.
+    further_params_dict = request.getfixturevalue(further_parameters_fixture)
 
-
-def test_compute_bitmaps(environment_data: Dict[str, torch.Tensor]) -> None:
-    """
-    Compute resulting flux density distribution (bitmap) for the given test case.
-
-    With the aligned surface and the light direction, calculate the reflected rays on the heliostat surface.
-    Calculate the intersection on the receiver.
-    Compute the bitmaps and normalize them.
-    Compare the calculated bitmaps with the expected ones.
-
-    Parameters
-    ----------
-    environment_data : Dict[str, torch.Tensor]
-        The dictionary containing all the data to compute the bitmaps.
-    """
-    torch.manual_seed(7)
-    sun = environment_data["sun"]
-    aligned_surface_points = environment_data["aligned_surface_points"]
-    aligned_surface_normals = environment_data["aligned_surface_normals"]
-    receiver_center = environment_data["receiver_center"]
-    incident_ray_direction = environment_data["incident_ray_direction"]
-    expected_value = environment_data["expected_value"]
-
-    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
-    receiver_plane_x = 10
-    receiver_plane_y = 10
-    receiver_resolution_x = 256
-    receiver_resolution_y = 256
-
-    preferred_ray_directions = sun.get_preferred_reflection_direction(
-        -incident_ray_direction, aligned_surface_normals
-    )
-
-    distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
-
-    rays = sun.scatter_rays(
-        preferred_ray_directions,
-        distortions_n,
-        distortions_u,
-    )
-
-    intersections = sun.line_plane_intersections(
-        receiver_plane_normal, receiver_center, rays, aligned_surface_points
-    )
-
-    dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
-    dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
-
-    indices = (
-        (-1 <= dx_ints)
-        & (dx_ints < receiver_plane_x + 1)
-        & (-1 <= dy_ints)
-        & (dy_ints < receiver_plane_y + 1)
-    )
-
-    total_bitmap = sun.sample_bitmap(
-        dx_ints,
-        dy_ints,
-        indices,
-        receiver_plane_x,
-        receiver_plane_y,
-        receiver_resolution_x,
-        receiver_resolution_y,
-    )
-
-    total_bitmap = sun.normalize_bitmap(
-        total_bitmap,
-        distortions_n.numel(),
-        receiver_plane_x,
-        receiver_plane_y,
-    )
-
-    total_bitmap = total_bitmap.T
-
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/scene/test_bitmaps_light_source"
-        / expected_value
-    )
-
-    expected = torch.load(expected_path)
-
-    torch.testing.assert_close(total_bitmap, expected, atol=5e-3, rtol=5e-3)
+    # Run test if light source is a sun.
+    if light_source == "sun":
+        sun = Sun(
+            distribution_parameters=request.getfixturevalue(
+                distribution_parameters_fixture
+            ),
+            ray_count=further_params_dict["num_rays"],
+        )
+        distortions_u, distortions_e = sun.get_distortions(
+            number_of_points=further_params_dict["num_points"],
+            number_of_heliostats=further_params_dict["num_heliostats"],
+            random_seed=further_params_dict["random_seed"],
+        )
+        expected_u, expected_e = calculate_expected(
+            request.getfixturevalue(distribution_parameters_fixture),
+            request.getfixturevalue(further_parameters_fixture),
+        )
+        torch.testing.assert_close(distortions_u, expected_u)
+        torch.testing.assert_close(distortions_e, expected_e)

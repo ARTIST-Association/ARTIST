@@ -43,23 +43,24 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
    ```bash
    git clone https://github.com/ARTIST-Association/ARTIST.git
    ```
-2. Install the package from the main branch:
-   ```bash
-   pip install .
-   ```
+2. Install the package from the main branch. There are multiple installation options available:
+   - Install basic dependencies: ``pip install .``
+   - Install with ``mpi4py`` to enable distributed computing: ``pip install ".[mpi]"``
+   - Install an editable version with developer dependencies: ``pip install -e ".[dev]"``
+
 ## Structure
 ```
-├──artist # Parent package
-│   ├───physics_objects # Physical objects in raytracing environment, e.g., heliostats or receiver
-│   ├───raytracing
-│   ├───scene # Light sources and factors influencing the surroundings
-│   └───util
-└───measurement_data # Real measurements from a solar thermal power plant that can be used to create a scenario
-└───scenarios # Scenarios describing solar thermal power plants which can be loaded
-└───tests
-    ├───physics_objects # Tests for objects in the physics_objects package
-    ├───raytracing # Tests for objects in the raytracing package
-    └───scene # Tests for objects in the scene package
+├── artist # Parent package
+│   ├── field # Objects in the field, e.g. heliostats and receivers
+│   ├── raytracing
+│   ├── scene # Light sources and factors influencing the surroundings
+│   └── util
+├── measurement_data # Real measurements that can be used in ARTIST
+├── scenarios # Scenarios describing a field that can be loaded by ARTIST
+└── tests # Tests for ARTIST
+    ├── field
+    ├── raytracing
+    └── scene
 ```
 ## How to use ARTIST
 We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.

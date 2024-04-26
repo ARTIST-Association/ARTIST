@@ -1,195 +1,822 @@
-"""A util script for generating scenario h5 files to be used in ARTIST."""
-
-import math
+import logging
+import sys
 from collections.abc import MutableMapping
-from typing import Dict
+from typing import Any, Dict, List, Optional, Union
 
+import colorlog
 import h5py
+import torch
 
-from artist import ARTIST_ROOT
 from artist.util import config_dictionary
 
-# The following configurations can be adapted to define the required scenario.
 
-# The following parameter is the name of the scenario.
-name = "test_scenario"
-
-# The following parameters refer to the receiver.
-receiver_params = {
-    config_dictionary.receiver_center: [0.0, -50.0, 0.0, 1.0],
-}
-
-# The following parameters refer to the sun.
-sun_params = {
-    config_dictionary.sun_distribution_parameters: {
-        config_dictionary.sun_distribution_type: str(
-            config_dictionary.sun_distribution_is_normal
-        ),
-        config_dictionary.sun_mean: 0.0,
-        config_dictionary.sun_covariance: 4.3681e-06,
-    },
-    config_dictionary.sun_number_of_rays: 10,
-}
-
-# The following parameter is the name of the h5 file containing measurements that are general for a series of heliostats.
-general_surface_measurements = "test_data"
-
-# The following parameters refer to the heliostat list.
-heliostats = {
-    config_dictionary.general_surface_points: h5py.File(
-        f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/{general_surface_measurements}.h5",
-        "r",
-    )[config_dictionary.load_points_key][()],
-    config_dictionary.general_surface_normals: h5py.File(
-        f"{ARTIST_ROOT}/{config_dictionary.measurement_location}/{general_surface_measurements}.h5",
-        "r",
-    )[config_dictionary.load_normals_key][()],
-    "Single_Heliostat": {
-        config_dictionary.heliostat_id: 0,
-        config_dictionary.alignment_type_key: config_dictionary.rigid_body_key,
-        config_dictionary.actuator_type_key: config_dictionary.ideal_actuator_key,
-        config_dictionary.heliostat_position: [0.0, 5.0, 0.0, 1.0],
-        config_dictionary.heliostat_aim_point: [0.0, -50.0, 0.0, 1.0],
-        config_dictionary.facets_type_key: config_dictionary.point_cloud_facet_key,
-        config_dictionary.has_individual_surface_points: False,
-        config_dictionary.has_individual_surface_normals: False,
-        config_dictionary.heliostat_individual_surface_points: False,
-        config_dictionary.heliostat_individual_surface_normals: False,
-        config_dictionary.kinematic_deviation_key: {
-            config_dictionary.first_joint_translation_e: 0.0,
-            config_dictionary.first_joint_translation_n: 0.0,
-            config_dictionary.first_joint_translation_u: 0.0,
-            config_dictionary.first_joint_tilt_e: 0.0,
-            config_dictionary.first_joint_tilt_n: 0.0,
-            config_dictionary.first_joint_tilt_u: 0.0,
-            config_dictionary.second_joint_translation_e: 0.0,
-            config_dictionary.second_joint_translation_n: 0.0,
-            config_dictionary.second_joint_translation_u: 0.0,
-            config_dictionary.second_joint_tilt_e: 0.0,
-            config_dictionary.second_joint_tilt_n: 0.0,
-            config_dictionary.second_joint_tilt_u: 0.0,
-            config_dictionary.concentrator_translation_e: 0.0,
-            config_dictionary.concentrator_translation_n: 0.0,
-            config_dictionary.concentrator_translation_u: 0.0,
-            config_dictionary.concentrator_tilt_e: 0.0,
-            config_dictionary.concentrator_tilt_n: 0.0,
-            config_dictionary.concentrator_tilt_u: 0.0,
-        },
-        config_dictionary.kinematic_initial_orientation_offset_key: {
-            config_dictionary.kinematic_initial_orientation_offset_e: math.pi / 2,
-            config_dictionary.kinematic_initial_orientation_offset_n: 0.0,
-            config_dictionary.kinematic_initial_orientation_offset_u: 0.0,
-        },
-        config_dictionary.actuator_parameters_key: {
-            config_dictionary.first_joint_increment: 0.0,
-            config_dictionary.first_joint_initial_stroke_length: 0.0,
-            config_dictionary.first_joint_actuator_offset: 0.0,
-            config_dictionary.first_joint_radius: 0.0,
-            config_dictionary.first_joint_phi_0: 0.0,
-            config_dictionary.second_joint_increment: 0.0,
-            config_dictionary.second_joint_initial_stroke_length: 0.0,
-            config_dictionary.second_joint_actuator_offset: 0.0,
-            config_dictionary.second_joint_radius: 0.0,
-            config_dictionary.second_joint_phi_0: 0.0,
-        },
-    },
-}
-
-
-def flatten_dict(
-    dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
-) -> Dict:
+class ReceiverConfig:
     """
-    Flatten nested dictionaries to first-level keys.
+    Contains the receiver configuration parameters.
 
-    Parameters
+    Attributes
     ----------
-    dictionary : MutableMapping
-        Original nested dictionary to flatten.
+    receiver_center : torch.Tensor
+        The center of the receiver.
+    plane_normal : torch.Tensor
+        The normal to the plane of the receiver.
+    plane_x : float
+        The x plane of the receiver.
+    plane_y : torch.Tensor
+        The y plane of the receiver.
+    resolution_x : int
+        The resolution of the x plane of the receiver.
+    resolution_y : int
+        The resolution of the y plane of the receiver.
 
-    parent_key : str
-        The parent key of nested dictionaries. Should be empty upon initialization.
-
-    sep : str
-        The separator used to separate keys in nested dictionaries.
-
-    Returns
+    Methods
     -------
-    Dict
-        A flattened version of the original dictionary.
+    create_receiver_dict()
+       Create a dictionary containing the configuration parameters for the receiver.
     """
-    return dict(_flatten_dict_gen(dictionary, parent_key, sep))
+
+    def __init__(
+        self,
+        receiver_center: torch.Tensor,
+        plane_normal: torch.Tensor,
+        plane_x: float,
+        plane_y: float,
+        resolution_x: int,
+        resolution_y: int,
+    ) -> None:
+        """
+        Initialize the receiver configuration.
+
+        Parameters
+        ----------
+        receiver_center : torch.Tensor
+            The center of the receiver.
+        plane_normal : torch.Tensor
+            The normal to the plane of the receiver.
+        plane_x : float
+            The x plane of the receiver.
+        plane_y : torch.Tensor
+            The y plane of the receiver.
+        resolution_x : int
+            The resolution of the x plane of the receiver.
+        resolution_y : int
+            The resolution of the y plane of the receiver.
+        """
+        self.receiver_center = receiver_center
+        self.plane_normal = plane_normal
+        self.plane_x = plane_x
+        self.plane_y = plane_y
+        self.resolution_x = resolution_x
+        self.resolution_y = resolution_y
+
+    def create_receiver_dict(self) -> Dict[str, Any]:
+        """Create a dictionary containing the configuration parameters for the receiver."""
+        return {
+            config_dictionary.receiver_center: self.receiver_center,
+            config_dictionary.receiver_plane_normal: self.plane_normal,
+            config_dictionary.receiver_plane_x: self.plane_x,
+            config_dictionary.receiver_plane_y: self.plane_y,
+            config_dictionary.receiver_resolution_x: self.resolution_x,
+            config_dictionary.receiver_resolution_y: self.resolution_y,
+        }
 
 
-def _flatten_dict_gen(d: MutableMapping, parent_key: str, sep: str):
-    # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
-    # separated by a defined separator.
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, MutableMapping):
-            yield from flatten_dict(v, new_key, sep=sep).items()
+class LightSourceConfig:
+    """
+    Contains the light source configuration parameters.
+
+    Attributes
+    ----------
+    sun_number_of_rays : int
+        The number of rays generated by the sun.
+    sun_distribution_type : str
+        The distribution type used to model the sun.
+    sun_mean : Optional[float]
+        The mean used for modeling the sun.
+    sun_covariance : Optional[float]
+        The covariance used for modeling the sun.
+
+    Methods
+    -------
+    create_light_source_dict()
+        Create a dictionary containing the configuration parameters for the light source.
+    """
+
+    def __init__(
+        self,
+        sun_number_of_rays: int,
+        sun_distribution_type: str,
+        sun_mean: Optional[float],
+        sun_covariance: Optional[float],
+    ) -> None:
+        """
+        Initialize the light source configuration.
+
+        Parameters
+        ----------
+        sun_number_of_rays : int
+            The number of rays generated by the sun.
+        sun_distribution_type : str
+            The distribution type used to model the sun.
+        sun_mean : Optional[float]
+            The mean used for modeling the sun.
+        sun_covariance : Optional[float]
+            The covariance used for modeling the sun.
+        """
+        self.sun_number_of_rays = sun_number_of_rays
+        self.sun_distribution_type = sun_distribution_type
+        assert (
+            self.sun_distribution_type == config_dictionary.sun_distribution_is_normal
+        ), "Unknown sunlight distribution type."
+
+        if self.sun_distribution_type == config_dictionary.sun_distribution_is_normal:
+            self.sun_mean = sun_mean
+            self.sun_covariance = sun_covariance
+
+    def create_light_source_dict(self) -> Dict[str, Any]:
+        """Create a dictionary containing the configuration parameters for the light source."""
+        # Check if the distribution type is implemented.
+        if self.sun_distribution_type == config_dictionary.sun_distribution_is_normal:
+            sun_distribution_parameters_dict = {
+                config_dictionary.sun_distribution_type: str(
+                    self.sun_distribution_type
+                ),
+                config_dictionary.sun_mean: self.sun_mean,
+                config_dictionary.sun_covariance: self.sun_covariance,
+            }
         else:
-            yield new_key, v
+            raise NotImplementedError("Unknown sun distribution type.")
+
+        # Return the desired dictionary.
+        return {
+            config_dictionary.sun_number_of_rays: self.sun_number_of_rays,
+            config_dictionary.sun_distribution_parameters: sun_distribution_parameters_dict,
+        }
 
 
-def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+class KinematicDeviations:
     """
-    Include the parameters from the sun parameter dictionary.
+    Contains the kinematic deviations.
 
-    Parameters
+    Attributes
     ----------
-    file : h5py.File
-        The hdf5 file to write to.
+    first_joint_translation_e : float
+        The first joint translation in the east direction.
+    first_joint_translation_n : float
+        The first joint translation in the north direction.
+    first_joint_translation_u : float
+        The first joint translation in the up direction.
+    first_joint_tilt_e : float
+        The first joint tilt in the east direction.
+    first_joint_tilt_n : float
+        The first joint tilt in the north direction.
+    first_joint_tilt_u : float
+        The first joint tilt in the up direction.
+    second_joint_translation_e : float
+        The second joint translation in the east direction.
+    second_joint_translation_n : float
+        The second joint translation in the north direction.
+    second_joint_translation_u : float
+        The second joint translation in the up direction.
+    second_joint_tilt_e : float
+        The second joint tilt in the east direction.
+    second_joint_tilt_n : float
+        The second joint tilt in the north direction.
+    second_joint_tilt_u : float
+        The second joint tilt in the up direction.
+    concentrator_translation_e : float
+        The concentrator translation in the east direction.
+    concentrator_translation_n : float
+        The concentrator translation in the north direction.
+    concentrator_translation_u : float
+        The concentrator translation in the up direction.
+    concentrator_tilt_e : float
+        The concentrator tilt in the east direction.
+    concentrator_tilt_n : float
+        The concentrator tilt in the north direction.
+    concentrator_tilt_u : float
+        The concentrator tilt in the up direction.
 
-    prefix : str
-        The prefix used for naming the parameters.
-
-    parameters : dict
-        The parameters to be included into the hdf5 file.
+    Methods
+    -------
+    create_kinematic_deviations_dict()
+        Create a dictionary containing the configuration parameters for the kinematic deviations.
     """
-    for key, value in parameters.items():
-        file[f"{prefix}/{key}"] = value
+
+    def __init__(
+        self,
+        first_joint_translation_e: float,
+        first_joint_translation_n: float,
+        first_joint_translation_u: float,
+        first_joint_tilt_e: float,
+        first_joint_tilt_n: float,
+        first_joint_tilt_u: float,
+        second_joint_translation_e: float,
+        second_joint_translation_n: float,
+        second_joint_translation_u: float,
+        second_joint_tilt_e: float,
+        second_joint_tilt_n: float,
+        second_joint_tilt_u: float,
+        concentrator_translation_e: float,
+        concentrator_translation_n: float,
+        concentrator_translation_u: float,
+        concentrator_tilt_e: float,
+        concentrator_tilt_n: float,
+        concentrator_tilt_u: float,
+    ) -> None:
+        """
+        Initialize the kinematic deviations.
+
+        Parameters
+        ----------
+        first_joint_translation_e : float
+            The first joint translation in the east direction.
+        first_joint_translation_n : float
+            The first joint translation in the north direction.
+        first_joint_translation_u : float
+            The first joint translation in the up direction.
+        first_joint_tilt_e : float
+            The first joint tilt in the east direction.
+        first_joint_tilt_n : float
+            The first joint tilt in the north direction.
+        first_joint_tilt_u : float
+            The first joint tilt in the up direction.
+        second_joint_translation_e : float
+            The second joint translation in the east direction.
+        second_joint_translation_n : float
+            The second joint translation in the north direction.
+        second_joint_translation_u : float
+            The second joint translation in the up direction.
+        second_joint_tilt_e : float
+            The second joint tilt in the east direction.
+        second_joint_tilt_n : float
+            The second joint tilt in the north direction.
+        second_joint_tilt_u : float
+            The second joint tilt in the up direction.
+        concentrator_translation_e : float
+            The concentrator translation in the east direction.
+        concentrator_translation_n : float
+            The concentrator translation in the north direction.
+        concentrator_translation_u : float
+            The concentrator translation in the up direction.
+        concentrator_tilt_e : float
+            The concentrator tilt in the east direction.
+        concentrator_tilt_n : float
+            The concentrator tilt in the north direction.
+        concentrator_tilt_u : float
+            The concentrator tilt in the up direction.
+        """
+        self.first_joint_translation_e = first_joint_translation_e
+        self.first_joint_translation_n = first_joint_translation_n
+        self.first_joint_translation_u = first_joint_translation_u
+        self.first_joint_tilt_e = first_joint_tilt_e
+        self.first_joint_tilt_n = first_joint_tilt_n
+        self.first_joint_tilt_u = first_joint_tilt_u
+        self.second_joint_translation_e = second_joint_translation_e
+        self.second_joint_translation_n = second_joint_translation_n
+        self.second_joint_translation_u = second_joint_translation_u
+        self.second_joint_tilt_e = second_joint_tilt_e
+        self.second_joint_tilt_n = second_joint_tilt_n
+        self.second_joint_tilt_u = second_joint_tilt_u
+        self.concentrator_translation_e = concentrator_translation_e
+        self.concentrator_translation_n = concentrator_translation_n
+        self.concentrator_translation_u = concentrator_translation_u
+        self.concentrator_tilt_e = concentrator_tilt_e
+        self.concentrator_tilt_n = concentrator_tilt_n
+        self.concentrator_tilt_u = concentrator_tilt_u
+
+    def create_kinematic_deviations_dict(self) -> Dict[str, float]:
+        """Create a dictionary containing the configuration parameters for the kinematic deviations."""
+        return {
+            config_dictionary.first_joint_translation_e: self.first_joint_translation_e,
+            config_dictionary.first_joint_translation_n: self.first_joint_translation_n,
+            config_dictionary.first_joint_translation_u: self.first_joint_translation_u,
+            config_dictionary.first_joint_tilt_e: self.first_joint_tilt_e,
+            config_dictionary.first_joint_tilt_n: self.first_joint_tilt_n,
+            config_dictionary.first_joint_tilt_u: self.first_joint_tilt_u,
+            config_dictionary.second_joint_translation_e: self.second_joint_translation_e,
+            config_dictionary.second_joint_translation_n: self.second_joint_translation_n,
+            config_dictionary.second_joint_translation_u: self.second_joint_translation_u,
+            config_dictionary.second_joint_tilt_e: self.second_joint_tilt_e,
+            config_dictionary.second_joint_tilt_n: self.second_joint_tilt_n,
+            config_dictionary.second_joint_tilt_u: self.second_joint_tilt_u,
+            config_dictionary.concentrator_translation_e: self.concentrator_translation_e,
+            config_dictionary.concentrator_translation_n: self.concentrator_translation_n,
+            config_dictionary.concentrator_translation_u: self.concentrator_translation_u,
+            config_dictionary.concentrator_tilt_e: self.concentrator_tilt_e,
+            config_dictionary.concentrator_tilt_n: self.concentrator_tilt_n,
+            config_dictionary.concentrator_tilt_u: self.concentrator_tilt_u,
+        }
 
 
-def generate_scenario(scenario_name: str, version: float = 0.1):
+class KinematicOffsets:
     """
-    Generate the scenario according to the given parameters.
+    Contains the actuator deviations.
 
-    Parameters
+    Attributes
     ----------
-    scenario_name : str
-        The name of the scenario being generated.
+    kinematic_initial_orientation_offset_e : float
+        The initial orientation offset in the east direction.
+    kinematic_initial_orientation_offset_n : float
+        The initial orientation offset in the north direction.
+    kinematic_initial_orientation_offset_u : float
+        The initial orientation offset in the up direction.
+
+    Methods
+    -------
+    create_kinematic_offsets_dict()
+        Create a dictionary containing the configuration parameters for the kinematic offsets.
+    """
+
+    def __init__(
+        self,
+        kinematic_initial_orientation_offset_e: float,
+        kinematic_initial_orientation_offset_n: float,
+        kinematic_initial_orientation_offset_u: float,
+    ) -> None:
+        """
+        Initialize the initial orientation offsets.
+
+        Parameters
+        ----------
+        kinematic_initial_orientation_offset_e : float
+            The initial orientation offset in the east direction.
+        kinematic_initial_orientation_offset_n : float
+            The initial orientation offset in the north direction.
+        kinematic_initial_orientation_offset_u : float
+            The initial orientation offset in the up direction.
+        """
+        self.kinematic_initial_orientation_offset_e = (
+            kinematic_initial_orientation_offset_e
+        )
+        self.kinematic_initial_orientation_offset_n = (
+            kinematic_initial_orientation_offset_n
+        )
+        self.kinematic_initial_orientation_offset_u = (
+            kinematic_initial_orientation_offset_u
+        )
+
+    def create_kinematic_offsets_dict(self) -> Dict[str, float]:
+        """Create a dictionary containing the configuration parameters for the kinematic offsets."""
+        return {
+            config_dictionary.kinematic_initial_orientation_offset_e: self.kinematic_initial_orientation_offset_e,
+            config_dictionary.kinematic_initial_orientation_offset_n: self.kinematic_initial_orientation_offset_n,
+            config_dictionary.kinematic_initial_orientation_offset_u: self.kinematic_initial_orientation_offset_u,
+        }
+
+
+class ActuatorDeviations:
+    """
+    Contains the actuator deviations.
+
+    Attributes
+    ----------
+    first_joint_increment : float
+        The increment for the first joint.
+    first_joint_initial_stroke_length : float
+        The initial stroke length for the first joint.
+    first_joint_actuator_offset : float
+        The initial actuator offset for the first joint.
+    first_joint_radius : float
+        The radius of the first joint.
+    first_joint_phi_0 : float
+        The initial phi value of the first joint.
+    second_joint_increment : float
+        The increment for the second joint.
+    second_joint_initial_stroke_length : float
+        The initial stroke length for the second joint.
+    second_joint_actuator_offset : float
+        The initial actuator offset for the second joint.
+    second_joint_radius : float
+        The radius for the second joint.
+    second_joint_phi_0 : float
+        The initial phi value of the second joint.
+
+    Methods
+    -------
+    create_actuator_deviations_dict()
+        Create a dictionary containing the configuration parameters for the actuator deviations.
+    """
+
+    def __init__(
+        self,
+        first_joint_increment: float,
+        first_joint_initial_stroke_length: float,
+        first_joint_actuator_offset: float,
+        first_joint_radius: float,
+        first_joint_phi_0: float,
+        second_joint_increment: float,
+        second_joint_initial_stroke_length: float,
+        second_joint_actuator_offset: float,
+        second_joint_radius: float,
+        second_joint_phi_0: float,
+    ) -> None:
+        """
+        Initialize the actuator deviations.
+
+        Parameters
+        ----------
+        first_joint_increment : float
+            The increment for the first joint.
+        first_joint_initial_stroke_length : float
+            The initial stroke length for the first joint.
+        first_joint_actuator_offset : float
+            The initial actuator offset for the first joint.
+        first_joint_radius : float
+            The radius of the first joint.
+        first_joint_phi_0 : float
+            The initial phi value of the first joint.
+        second_joint_increment : float
+            The increment for the second joint.
+        second_joint_initial_stroke_length : float
+            The initial stroke length for the second joint.
+        second_joint_actuator_offset : float
+            The initial actuator offset for the second joint.
+        second_joint_radius : float
+            The radius for the second joint.
+        second_joint_phi_0 : float
+            The initial phi value of the second joint.
+        """
+        self.first_joint_increment = first_joint_increment
+        self.first_joint_initial_stroke_length = first_joint_initial_stroke_length
+        self.first_joint_actuator_offset = first_joint_actuator_offset
+        self.first_joint_radius = first_joint_radius
+        self.first_joint_phi_0 = first_joint_phi_0
+        self.second_joint_increment = second_joint_increment
+        self.second_joint_initial_stroke_length = second_joint_initial_stroke_length
+        self.second_joint_actuator_offset = second_joint_actuator_offset
+        self.second_joint_radius = second_joint_radius
+        self.second_joint_phi_0 = second_joint_phi_0
+
+    def create_actuator_deviations_dict(self) -> Dict[str, float]:
+        """Create a dictionary containing the configuration parameters for the actuator deviations."""
+        return {
+            config_dictionary.first_joint_increment: self.first_joint_increment,
+            config_dictionary.first_joint_initial_stroke_length: self.first_joint_initial_stroke_length,
+            config_dictionary.first_joint_actuator_offset: self.first_joint_actuator_offset,
+            config_dictionary.first_joint_radius: self.first_joint_radius,
+            config_dictionary.first_joint_phi_0: self.first_joint_phi_0,
+            config_dictionary.second_joint_increment: self.second_joint_increment,
+            config_dictionary.second_joint_initial_stroke_length: self.second_joint_initial_stroke_length,
+            config_dictionary.second_joint_actuator_offset: self.second_joint_actuator_offset,
+            config_dictionary.second_joint_radius: self.second_joint_radius,
+            config_dictionary.second_joint_phi_0: self.second_joint_phi_0,
+        }
+
+
+class SingleHeliostatConfig:
+    """
+    Contains the configurations for a single heliostat.
+
+    Attributes
+    ----------
+    heliostat_name : str
+        The name of the heliostat.
+    heliostat_id : int
+        The numerical ID of the heliostat.
+    alignment_type : str
+        The alignment type used for the heliostat.
+    actuator_type : str
+        The type of actuator used for the heliostat.
+    heliostat_position : torch.Tensor
+        The position of the heliostat.
+    heliostat_aim_point : torch.Tensor
+        The position of the heliostat aim point.
+    facets_type : str
+        The type of facets used by the heliostat.
+    has_individual_surface_points : bool
+        Whether the heliostat has individual surface points.
+    has_individual_surface_normals : bool
+        Whether the heliostat has individual surface normals.
+    heliostat_individual_surface_points : Union[bool, torch.Tensor]
+        If available, the individual surface points for the heliostat.
+    heliostat_individual_surface_normals : Union[bool, torch.Tensor]
+        If available, the individual surface normals for the heliostat.
+    kinematic_deviations : KinematicDeviations
+        The kinematic deviations required by the heliostat.
+    kinematic_offsets : KinematicOffsets
+        The kinematic offsets required by the heliostat.
+    actuator_deviations : ActuatorDeviations
+        The actuator deviations required by the heliostat.
+
+    Methods
+    -------
+    create_single_heliostat_config_dict()
+        Create a dictionary containing the configuration parameters for a single heliostat.
+    """
+
+    def __init__(
+        self,
+        heliostat_name: str,
+        heliostat_id: int,
+        alignment_type: str,
+        actuator_type: str,
+        heliostat_position: torch.Tensor,
+        heliostat_aim_point: torch.Tensor,
+        facets_type: str,
+        has_individual_surface_points: bool,
+        has_individual_surface_normals: bool,
+        heliostat_individual_surface_points: Union[bool, torch.Tensor],
+        heliostat_individual_surface_normals: Union[bool, torch.Tensor],
+        kinematic_deviations: KinematicDeviations,
+        kinematic_offsets: KinematicOffsets,
+        actuator_deviations: ActuatorDeviations,
+    ) -> None:
+        """
+        Initialize the single heliostat configuration.
+
+        Parameters
+        ----------
+        heliostat_name : str
+            The name of the heliostat.
+        heliostat_id : int
+            The numerical ID of the heliostat.
+        alignment_type : str
+            The alignment type used for the heliostat.
+        actuator_type : str
+            The type of actuator used for the heliostat.
+        heliostat_position : torch.Tensor
+            The position of the heliostat.
+        heliostat_aim_point : torch.Tensor
+            The position of the heliostat aim point.
+        facets_type : str
+            The type of facets used by the heliostat.
+        has_individual_surface_points : bool
+            Whether the heliostat has individual surface points.
+        has_individual_surface_normals : bool
+            Whether the heliostat has individual surface normals.
+        heliostat_individual_surface_points : Union[bool, torch.Tensor]
+            If available, the individual surface points for the heliostat.
+        heliostat_individual_surface_normals : Union[bool, torch.Tensor]
+            If available, the individual surface normals for the heliostat.
+        kinematic_deviations : KinematicDeviations
+            The kinematic deviations required by the heliostat.
+        kinematic_offsets : KinematicOffsets
+            The kinematic offsets required by the heliostat.
+        actuator_deviations : ActuatorDeviations
+            The actuator deviations required by the heliostat.
+        """
+        self.heliostat_name = heliostat_name
+        self.heliostat_id = heliostat_id
+        self.alignment_type = alignment_type
+        self.actuator_type = actuator_type
+        self.heliostat_position = heliostat_position
+        self.heliostat_aim_point = heliostat_aim_point
+        self.facets_type = facets_type
+        self.has_individual_surface_points = has_individual_surface_points
+        self.has_individual_surface_normals = has_individual_surface_normals
+        self.heliostat_individual_surface_points = heliostat_individual_surface_points
+        self.heliostat_individual_surface_normals = heliostat_individual_surface_normals
+        self.kinematic_deviations = kinematic_deviations
+        self.kinematic_offsets = kinematic_offsets
+        self.actuator_deviations = actuator_deviations
+
+    def create_single_heliostat_config_dict(self) -> Dict[str, Any]:
+        """Create a dictionary containing the configuration parameters for a single heliostat."""
+        return {
+            config_dictionary.heliostat_id: self.heliostat_id,
+            config_dictionary.alignment_type_key: self.alignment_type,
+            config_dictionary.actuator_type_key: self.actuator_type,
+            config_dictionary.heliostat_position: self.heliostat_position,
+            config_dictionary.heliostat_aim_point: self.heliostat_aim_point,
+            config_dictionary.facets_type_key: self.facets_type,
+            config_dictionary.has_individual_surface_points: self.has_individual_surface_points,
+            config_dictionary.has_individual_surface_normals: self.has_individual_surface_normals,
+            config_dictionary.heliostat_individual_surface_points: self.heliostat_individual_surface_points,
+            config_dictionary.heliostat_individual_surface_normals: self.heliostat_individual_surface_normals,
+            config_dictionary.kinematic_deviation_key: self.kinematic_deviations.create_kinematic_deviations_dict(),
+            config_dictionary.kinematic_initial_orientation_offset_key: self.kinematic_offsets.create_kinematic_offsets_dict(),
+            config_dictionary.actuator_parameters_key: self.actuator_deviations.create_actuator_deviations_dict(),
+        }
+
+
+class HeliostatListConfig:
+    """
+    Contains the configurations for the list of heliostats included in the scenario.
+
+    Attributes
+    ----------
+    general_surface_points : torch.Tensor
+        The general surface points applicable for multiple heliostats.
+    general_surface_normals : torch.Tensor
+        The general surface normals applicable for multiple heliostats.
+    heliostat_list : List[SingleHeliostatConfig]
+        The list of heliostats to include.
+
+    Methods
+    -------
+    create_heliostat_list_dict()
+        Create a dict containing the parameters for the heliostat list configuration.
+    """
+
+    def __init__(
+        self,
+        general_surface_points: Union[bool, torch.Tensor],
+        general_surface_normals: Union[bool, torch.Tensor],
+        heliostat_list: List[SingleHeliostatConfig],
+    ) -> None:
+        """
+        Initialize the heliostat list configuration.
+
+        Parameters
+        ----------
+        general_surface_points : Union[bool, torch.Tensor]
+            The general surface points applicable for multiple heliostats, if available.
+        general_surface_normals : Union[bool, torch.Tensor]
+            The general surface normals applicable for multiple heliostats, if available.
+        heliostat_list : List[SingleHeliostatConfig]
+            The list of heliostats to include.
+        """
+        self.general_surface_points = general_surface_points
+        self.general_surface_normals = general_surface_normals
+        self.heliostat_list = heliostat_list
+
+    def create_heliostat_list_dict(self) -> Dict[str, Any]:
+        """Create a dictionary containing the heliostat list configuration parameters."""
+        heliostat_list_dict = {
+            config_dictionary.general_surface_points: self.general_surface_points,
+            config_dictionary.general_surface_normals: self.general_surface_normals,
+        }
+        _heliostat_names = []
+        for heliostat in self.heliostat_list:
+            _heliostat_dict = {
+                heliostat.heliostat_name: heliostat.create_single_heliostat_config_dict()
+            }
+            _heliostat_names.append(heliostat.heliostat_name)
+            heliostat_list_dict.update(_heliostat_dict)
+
+        heliostat_list_dict.update(
+            {config_dictionary.heliostat_names: _heliostat_names}
+        )
+
+        return heliostat_list_dict
+
+
+class ScenarioGenerator:
+    """
+    Generate an ARTIST scenario, saving it as an HDF5 file.
+
+    Attributes
+    ----------
+    file_path : str
+        File path to the HDF5 to be saved.
+    receiver_config : ReceiverConfig
+        The receiver configuration object.
+    light_source_config : LightSourceConfig
+        The light source configuration object.
+    heliostat_list_config : HeliostatListConfig
+        The heliostat_list configuration object.
     version : float
-        The current version of the scenario generator being used. This must be updated if the names of
-        the parameters are altered.
+        The version of the scenario generator being used.
+    log : logging.Logger
+        The logger.
 
+    Methods
+    -------
+    flatten_dict()
+        Flatten nested dictionaries to first-level keys.
+    include_parameters()
+        Include the parameters from a parameter dictionary.
+    generate_scenario()
+        Generate the scenario according to the given parameters.
     """
-    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_name}.h5", "w") as f:
-        # Set scenario version as attribute.
-        f.attrs["version"] = version
 
-        # Include parameters for the receiver.
-        include_parameters(
-            file=f,
-            prefix=config_dictionary.receiver_prefix,
-            parameters=flatten_dict(receiver_params),
+    def __init__(
+        self,
+        file_path: str,
+        receiver_config: ReceiverConfig,
+        light_source_config: LightSourceConfig,
+        heliostat_list_config: HeliostatListConfig,
+        version: Optional[float] = 0.2,
+        log_level: Optional[int] = logging.INFO,
+    ) -> None:
+        """
+        Initialize the scenario generator.
+
+        Parameters
+        ----------
+        file_path : str
+            File path to the HDF5 to be saved.
+        receiver_config : ReceiverConfig
+            The receiver configuration object.
+        light_source_config : LightSourceConfig
+            The light source configuration object.
+        heliostat_list_config : HeliostatListConfig
+            The heliostat_list configuration object.
+        version : Optional[float]
+            The version of the scenario generator being used.
+        log_level : Optional[int]
+            The log level applied to the logger.
+        """
+        self.file_path = file_path
+        self.receiver_config = receiver_config
+        self.light_source_config = light_source_config
+        self.heliostat_list_config = heliostat_list_config
+        self.version = version
+        log = logging.getLogger("scenario-generator")  # Get logger instance.
+        log_formatter = colorlog.ColoredFormatter(
+            fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
+            "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
+            datefmt=None,
+            reset=True,
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red,bg_white",
+            },
+            secondary_log_colors={},
         )
+        handler = logging.StreamHandler(stream=sys.stdout)
+        handler.setFormatter(log_formatter)
+        log.addHandler(handler)
+        log.setLevel(log_level)
+        self.log = log
 
-        # Include parameters for the sun.
-        include_parameters(
-            file=f,
-            prefix=config_dictionary.sun_prefix,
-            parameters=flatten_dict(sun_params),
-        )
+    def flatten_dict(
+        self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
+    ) -> Dict[str, Any]:
+        """
+        Flatten nested dictionaries to first-level keys.
 
-        # Include heliostat parameters.
-        include_parameters(
-            file=f,
-            prefix=config_dictionary.heliostat_prefix,
-            parameters=flatten_dict(heliostats),
-        )
+        Parameters
+        ----------
+        dictionary : MutableMapping
+            Original nested dictionary to flatten.
+        parent_key : str
+            The parent key of nested dictionaries. Should be empty upon initialization.
+        sep : str
+            The separator used to separate keys in nested dictionaries.
 
+        Returns
+        -------
+        Dict
+            A flattened version of the original dictionary.
+        """
+        return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
 
-if __name__ == "__main__":
-    """The main method that generates the scenario using the parameters defined above."""
-    generate_scenario(scenario_name=name)
+    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str) -> None:
+        # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
+        # separated by a defined separator.
+        for k, v in d.items():
+            new_key = parent_key + sep + k if parent_key else k
+            if isinstance(v, MutableMapping):
+                yield from self.flatten_dict(v, new_key, sep=sep).items()
+            else:
+                yield new_key, v
+
+    @staticmethod
+    def include_parameters(file: h5py.File, prefix: str, parameters: Dict) -> None:
+        """
+        Include the parameters from a parameter dictionary.
+
+        Parameters
+        ----------
+        file : h5py.File
+            The HDF5 file to write to.
+        prefix : str
+            The prefix used for naming the parameters.
+        parameters : Dict
+            The parameters to be included into the HFD5 file.
+        """
+        for key, value in parameters.items():
+            file[f"{prefix}/{key}"] = value
+
+    def generate_scenario(self) -> None:
+        """Generate the scenario according to the given parameters."""
+        self.log.info(f"Generating a scenario saved to: {self.file_path}")
+        with h5py.File(f"{self.file_path}.h5", "w") as f:
+            # Set scenario version as attribute.
+            self.log.info(f"Using scenario generator version {self.version}")
+            f.attrs["version"] = self.version
+
+            # Include parameters for the receiver.
+            self.log.info("Including parameters for the receiver")
+            self.include_parameters(
+                file=f,
+                prefix=config_dictionary.receiver_prefix,
+                parameters=self.flatten_dict(
+                    self.receiver_config.create_receiver_dict()
+                ),
+            )
+
+            # Include parameters for the light source.
+            self.log.info("Including parameters for the light source")
+            self.include_parameters(
+                file=f,
+                prefix=config_dictionary.sun_prefix,
+                parameters=self.flatten_dict(
+                    self.light_source_config.create_light_source_dict()
+                ),
+            )
+
+            # Include heliostat parameters.
+            self.log.info("Including parameters for the heliostats")
+            self.include_parameters(
+                file=f,
+                prefix=config_dictionary.heliostat_prefix,
+                parameters=self.flatten_dict(
+                    self.heliostat_list_config.create_heliostat_list_dict()
+                ),
+            )
