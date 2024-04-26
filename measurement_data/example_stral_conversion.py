@@ -45,7 +45,7 @@ def main():
             step_size=step_size,
         )
 
-    converter.convert_stral_to_h5()
+    converter.convert_stral_to_hdf5()
 
 
 if __name__ == "__main__":
