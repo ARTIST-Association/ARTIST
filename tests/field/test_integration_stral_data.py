@@ -62,7 +62,7 @@ else:
     ],
 )
 def test_compute_bitmaps(
-    incident_ray_direction, expected_value, scenario_config
+    incident_ray_direction: torch.Tensor, expected_value: str, scenario_config: str
 ) -> None:
     """
     Compute resulting flux density distribution (bitmap) for the given test case.
