@@ -1,7 +1,7 @@
 import logging
 import sys
 from collections.abc import MutableMapping
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import colorlog
 import h5py
@@ -69,7 +69,7 @@ class ReceiverConfig:
         self.resolution_x = resolution_x
         self.resolution_y = resolution_y
 
-    def create_receiver_dict(self) -> Dict:
+    def create_receiver_dict(self) -> Dict[str, Any]:
         """Create a dictionary containing the configuration parameters for the receiver."""
         return {
             config_dictionary.receiver_center: self.receiver_center,
@@ -133,7 +133,7 @@ class LightSourceConfig:
             self.sun_mean = sun_mean
             self.sun_covariance = sun_covariance
 
-    def create_light_source_dict(self) -> Dict:
+    def create_light_source_dict(self) -> Dict[str, Any]:
         """Create a dictionary containing the configuration parameters for the light source."""
         # Check if the distribution type is implemented.
         if self.sun_distribution_type == config_dictionary.sun_distribution_is_normal:
@@ -285,7 +285,7 @@ class KinematicDeviations:
         self.concentrator_tilt_n = concentrator_tilt_n
         self.concentrator_tilt_u = concentrator_tilt_u
 
-    def create_kinematic_deviations_dict(self) -> Dict:
+    def create_kinematic_deviations_dict(self) -> Dict[str, float]:
         """Create a dictionary containing the configuration parameters for the kinematic deviations."""
         return {
             config_dictionary.first_joint_translation_e: self.first_joint_translation_e,
@@ -356,7 +356,7 @@ class KinematicOffsets:
             kinematic_initial_orientation_offset_u
         )
 
-    def create_kinematic_offsets_dict(self) -> Dict:
+    def create_kinematic_offsets_dict(self) -> Dict[str, float]:
         """Create a dictionary containing the configuration parameters for the kinematic offsets."""
         return {
             config_dictionary.kinematic_initial_orientation_offset_e: self.kinematic_initial_orientation_offset_e,
@@ -448,7 +448,7 @@ class ActuatorDeviations:
         self.second_joint_radius = second_joint_radius
         self.second_joint_phi_0 = second_joint_phi_0
 
-    def create_actuator_deviations_dict(self) -> Dict:
+    def create_actuator_deviations_dict(self) -> Dict[str, float]:
         """Create a dictionary containing the configuration parameters for the actuator deviations."""
         return {
             config_dictionary.first_joint_increment: self.first_joint_increment,
@@ -571,7 +571,7 @@ class SingleHeliostatConfig:
         self.kinematic_offsets = kinematic_offsets
         self.actuator_deviations = actuator_deviations
 
-    def create_single_heliostat_config_dict(self) -> Dict:
+    def create_single_heliostat_config_dict(self) -> Dict[str, Any]:
         """Create a dictionary containing the configuration parameters for a single heliostat."""
         return {
             config_dictionary.heliostat_id: self.heliostat_id,
@@ -631,7 +631,7 @@ class HeliostatListConfig:
         self.general_surface_normals = general_surface_normals
         self.heliostat_list = heliostat_list
 
-    def create_heliostat_list_dict(self) -> Dict:
+    def create_heliostat_list_dict(self) -> Dict[str, Any]:
         """Create a dictionary containing the heliostat list configuration parameters."""
         heliostat_list_dict = {
             config_dictionary.general_surface_points: self.general_surface_points,
@@ -736,7 +736,7 @@ class ScenarioGenerator:
 
     def flatten_dict(
         self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """
         Flatten nested dictionaries to first-level keys.
 
