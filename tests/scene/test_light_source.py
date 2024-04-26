@@ -8,16 +8,16 @@ from artist.util import config_dictionary
 
 
 def calculate_expected(
-    distribution_parameters_1: Dict, further_parameters_1: Dict
+    distribution_parameters_1: Dict[str, Any], further_parameters_1: Dict[str, int]
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate the expected distortions given the parameters from the test fixtures.
 
     Parameters
     ----------
-    distribution_parameters_1 : Dict
+    distribution_parameters_1 : Dict[str, Any]
         The distribution parameters for the sun.
-    further_parameters_1 : Dict
+    further_parameters_1 : Dict[str, int]
         The further parameters for the test: number of heliostats, number of rays, number of points, and random seed.
 
     Returns
@@ -141,13 +141,13 @@ def test_light_sources(
 
     Parameters
     ----------
-    request
+    request : Any
         The pytest request.
-    light_source
-        A string indicating which light source is tested.
-    distribution_parameters_fixture
+    light_source : str
+        Indicates which light source is tested.
+    distribution_parameters_fixture : Dict[str, Any]
         The pytest fixture containing the distribution parameters.
-    further_parameters_fixture
+    further_parameters_fixture : Dict[str, int]
         The pytest fixture containing the further test parameters.
     """
     # Load further params dict.
