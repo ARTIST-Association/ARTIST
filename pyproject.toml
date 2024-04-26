@@ -33,7 +33,10 @@ dev = [
     "pytest",
     "pytest-cov",
     "sphinx-autoapi",
-    "sphinx-rtd-theme",]
+    "sphinx-rtd-theme",
+    "sphinxcontrib-napoleon",
+    "sphinxemoji",
+]
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
