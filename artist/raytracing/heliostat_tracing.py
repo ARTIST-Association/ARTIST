@@ -21,6 +21,7 @@ class DistortionsDataset(Dataset):
     number_of_heliostats : int
         The number of heliostats in the scenario.
     """
+
     def __init__(
         self,
         light_source: LightSource,
@@ -91,7 +92,25 @@ class HeliostatRayTracer:
         batch_size: Optional[int] = 1,
         random_seed: Optional[int] = 7,
         shuffle: Optional[bool] = False,
-    ):
+    ) -> None:
+        """
+        Initialize the heliostat raytracer.
+
+        Parameters
+        ----------
+        scenario : Scenario
+            The scenario used to perform raytracing.
+        world_size : Optional[int]
+            The world size for MPI.
+        rank : Optional[int]
+            The rank for MPI.
+        batch_size : Optional[int]
+            The batch size used for raytracing.
+        random_seed : Optional[int]
+            The random seed used for generating the distortions.
+        shuffle : Optional[bool]
+            A boolean flag indicating whether to shuffle the data.
+        """
         self.heliostat = scenario.heliostats.heliostat_list[0]
         self.receiver = scenario.receiver
         self.world_size = world_size
