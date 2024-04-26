@@ -38,13 +38,13 @@ class StralConverter:
     Methods
     -------
     convert_point_to_4d_format()
-        Converts a 3D point to a 4D point.
+        Convert a 3D point to a 4D point.
     convert_direction_to_4d_format()
-        Converts a 3D direction vector to 4D format.
+        Convert a 3D direction vector to 4D format.
     nwu_to_enu()
-        Casts from an NWU to an ENU coordinate system.
-    convert_stral_to_h5()
-        Converts the STRAL data to HDF5 data.
+        Cast from an NWU to an ENU coordinate system.
+    convert_stral_to_hdf5()
+        Convert the STRAL data to HDF5 data.
 
     """
 
@@ -164,7 +164,7 @@ class StralConverter:
         """
         return [-vec[1], vec[0], vec[2]]
 
-    def convert_stral_to_h5(self) -> None:
+    def convert_stral_to_hdf5(self) -> None:
         """Extract information from a STRAL file saved as .binp and save this information as an HDF5 file."""
         self.log.info("Beginning STRAL to HDF5 conversion!")
 
