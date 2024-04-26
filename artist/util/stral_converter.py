@@ -168,7 +168,7 @@ class StralConverter:
         """Extract information from a STRAL file saved as .binp and save this information as an HDF5 file."""
         self.log.info("Beginning STRAL to HDF5 conversion!")
 
-        # Create structures for reading STRAL file correctly
+        # Create structures for reading STRAL file correctly.
         concentrator_header_struct = struct.Struct(self.concentrator_header_name)
         facet_header_struct = struct.Struct(self.facet_header_name)
         ray_struct = struct.Struct(self.ray_struct_name)
@@ -178,19 +178,19 @@ class StralConverter:
             concentrator_header_data = concentrator_header_struct.unpack_from(byte_data)
             self.log.info(f"Reading STRAL file located at: {self.stral_file_path}")
 
-            # Load surface position
+            # Load surface position.
             surface_position = self.nwu_to_enu(
                 cast(Tuple3d, concentrator_header_data[0:3])
             )
 
-            # Load width and height
+            # Load width and height.
             width, height = concentrator_header_data[3:5]
 
-            # Calculate number of facets
+            # Calculate number of facets.
             n_xy = concentrator_header_data[5:7]
             number_of_facets = n_xy[0] * n_xy[1]
 
-            # Create empty lists for storing data
+            # Create empty lists for storing data.
             facet_positions: List[Vector3d] = []
             facet_spans_n: List[Vector3d] = []
             facet_spans_e: List[Vector3d] = []
@@ -245,25 +245,25 @@ class StralConverter:
 
         self.log.info("Loading STRAL data complete")
 
-        # Stral uses two different coordinate systems, both use a west orientation and therefore, we dont need a nwu to enu
-        # cast here. However, to maintain consistency we cast the west direction to east direction.
+        # Stral uses two different coordinate systems, both use a west orientation and therefore, we don't need an NWU
+        # to ENU cast here. However, to maintain consistency we cast the west direction to east direction.
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
-        # Reshape and select only selected number of points to reduce compute
+        # Reshape and select only selected number of points to reduce compute.
         surface_points = torch.tensor(surface_points).view(-1, 3)[:: self.step_size]
         surface_normals = torch.tensor(surface_normals).view(-1, 3)[:: self.step_size]
         surface_ideal_vectors = torch.tensor(surface_ideal_vectors).view(-1, 3)[
             :: self.step_size
         ]
 
-        # Convert to torch tensor
+        # Convert to torch tensor.
         surface_position = torch.tensor(surface_position)
         facet_positions = torch.tensor(facet_positions)
         facet_spans_n = torch.tensor(facet_spans_n)
         facet_spans_e = torch.tensor(facet_spans_e)
 
-        # Convert to 4D Format
+        # Convert to 4D format.
         surface_position = self.convert_point_to_4d_format(surface_position)
         facet_positions = self.convert_point_to_4d_format(facet_positions)
         facet_spans_n = self.convert_direction_to_4d_format(facet_spans_n)
