@@ -417,7 +417,7 @@ class Heliostat(torch.nn.Module):
             actuator_parameters=actuator_parameters,
         )
 
-    def set_aligned_surface(self, incident_ray_direction) -> None:
+    def set_aligned_surface(self, incident_ray_direction: torch.Tensor) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
@@ -438,10 +438,7 @@ class Heliostat(torch.nn.Module):
         )
         self.is_aligned = True
 
-    def set_preferred_reflection_direction(
-        self,
-        rays: torch.Tensor,
-    ) -> None:
+    def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
         Reflect incoming rays according to a normal vector.
 
