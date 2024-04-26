@@ -113,7 +113,7 @@ general_surface_normals = torch.tensor(
     )[config_dictionary.load_normals_key][()]
 )
 
-# Create the configuration for all heliostats
+# Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(
     general_surface_points=general_surface_points,
     general_surface_normals=general_surface_normals,
@@ -127,7 +127,7 @@ file_path = "./test_scenario"
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
 
-    # Create a scenario object
+    # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
         receiver_config=receiver_config,
