@@ -45,8 +45,8 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
    ```
 2. Install the package from the main branch. There are multiple installation options available:
    - Install basic dependencies: ``pip install .``
-   - Install with ``mpi4py`` to enable distributed computing: ``pip install .[mpi]``
-   - Install an editable version with developer dependencies: ``pip install -e .[dev]``
+   - Install with ``mpi4py`` to enable distributed computing: ``pip install ".[mpi]"``
+   - Install an editable version with developer dependencies: ``pip install -e ".[dev]"``
 
 ## Structure
 ```
