@@ -5,14 +5,14 @@ import torch
 
 from artist.util import config_dictionary
 from artist.util.scenario_generator import (
-    ActuatorDeviations,
+    ActuatorParameters,
+    HeliostatConfig,
     HeliostatListConfig,
     KinematicDeviations,
     KinematicOffsets,
     LightSourceConfig,
     ReceiverConfig,
     ScenarioGenerator,
-    SingleHeliostatConfig,
 )
 
 # Include the receiver configuration.
@@ -63,7 +63,7 @@ kinematic_offsets = KinematicOffsets(
 )
 
 # Include the deviations for the actuator.
-actuator_deviations = ActuatorDeviations(
+actuator_deviations = ActuatorParameters(
     first_joint_increment=0.0,
     first_joint_initial_stroke_length=0.0,
     first_joint_actuator_offset=0.0,
@@ -77,7 +77,7 @@ actuator_deviations = ActuatorDeviations(
 )
 
 # Include the configuration for the first heliostat.
-heliostat_1 = SingleHeliostatConfig(
+heliostat_1 = HeliostatConfig(
     heliostat_name="heliostat1",
     heliostat_id=1,
     alignment_type=config_dictionary.rigid_body_key,
@@ -95,7 +95,7 @@ heliostat_1 = SingleHeliostatConfig(
 )
 
 # Include the configuration for the second heliostat.
-heliostat_2 = SingleHeliostatConfig(
+heliostat_2 = HeliostatConfig(
     heliostat_name="heliostat2",
     heliostat_id=2,
     alignment_type=config_dictionary.rigid_body_key,
@@ -113,7 +113,7 @@ heliostat_2 = SingleHeliostatConfig(
 )
 
 # Include the configuration for the third heliostat.
-heliostat_3 = SingleHeliostatConfig(
+heliostat_3 = HeliostatConfig(
     heliostat_name="heliostat3",
     heliostat_id=3,
     alignment_type=config_dictionary.rigid_body_key,
@@ -165,8 +165,8 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
-        receiver_config=receiver_config,
-        light_source_config=light_source_config,
+        receiver_list_config=receiver_config,
+        light_source_list_config=light_source_config,
         heliostat_list_config=heliostats_list_config,
     )
 

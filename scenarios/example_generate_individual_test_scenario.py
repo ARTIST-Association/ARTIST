@@ -5,14 +5,14 @@ import torch
 
 from artist.util import config_dictionary
 from artist.util.scenario_generator import (
-    ActuatorDeviations,
+    ActuatorParameters,
+    HeliostatConfig,
     HeliostatListConfig,
     KinematicDeviations,
     KinematicOffsets,
     LightSourceConfig,
     ReceiverConfig,
     ScenarioGenerator,
-    SingleHeliostatConfig,
 )
 
 # Include the receiver configuration.
@@ -63,7 +63,7 @@ kinematic_offsets = KinematicOffsets(
 )
 
 # Include the deviations for the actuator.
-actuator_deviations = ActuatorDeviations(
+actuator_deviations = ActuatorParameters(
     first_joint_increment=0.0,
     first_joint_initial_stroke_length=0.0,
     first_joint_actuator_offset=0.0,
@@ -93,7 +93,7 @@ individual_surface_normals = torch.tensor(
 )
 
 # Include the configuration for the first heliostat.
-heliostat_1 = SingleHeliostatConfig(
+heliostat_1 = HeliostatConfig(
     heliostat_name="Single_Heliostat",
     heliostat_id=0,
     alignment_type=config_dictionary.rigid_body_key,
@@ -130,8 +130,8 @@ if __name__ == "__main__":
     # Create a scenario object
     scenario_object = ScenarioGenerator(
         file_path=file_path,
-        receiver_config=receiver_config,
-        light_source_config=light_source_config,
+        receiver_list_config=receiver_config,
+        light_source_list_config=light_source_config,
         heliostat_list_config=heliostats_list_config,
     )
 
