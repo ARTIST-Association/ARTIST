@@ -38,6 +38,10 @@ dev = [
     "sphinxcontrib-napoleon",
     "sphinxemoji",
 ]
+    "sphinx-rtd-theme",
+    "sphinxcontrib-napoleon",
+    "sphinxemoji",
+]
 mpi = ["mpi4py",]
 tutorials = ['jupyter']
 
