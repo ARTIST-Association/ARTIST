@@ -2,12 +2,42 @@ from typing import Tuple
 import torch
 
 class NURBSSurface(torch.nn.Module):
+    """
+    This class implements differentiable NURBS for the heliostat surface.
 
+    Attributes
+    ----------
+    degree_e : int
+        The spline degree in east direction.
+    degree_n : int
+        The spline degree in north direction.
+    evaluation_points_e : torch.Tensor
+        The evaluation points in east direction.
+    evaluation_points_n : torch.Tensor
+        The evaluation points in north direction.
+    control_points : torch.Tensor
+        The control_points.
+    knot_vector_e
+        The knot vector in east direction.
+    knot_vector_n
+        The knot vector in north direction.
+
+    Methods
+    -------
+    calculate_knots()
+        Calculate the knot vectors in east and north direction.
+    find_span()
+        Determine the knot span index for given evaluation points.
+    basis_function_and_derivatives()
+        Compute the nonzero derivatives of the basis functions up to the nth-derivative.
+    calculate_surface_points_and_normals()
+        Calculate the surface points and normals of the NURBS surface.
+    """
     def __init__(self, 
-                 degree_x: int,
-                 degree_y: int, 
-                 evaluation_points_x: torch.Tensor,
-                 evaluation_points_y: torch.Tensor,
+                 degree_e: int,
+                 degree_n: int, 
+                 evaluation_points_e: torch.Tensor,
+                 evaluation_points_n: torch.Tensor,
                  control_points: torch.Tensor,
                  ) -> torch.Tensor:
         """
@@ -15,54 +45,54 @@ class NURBSSurface(torch.nn.Module):
 
         Parameters
         ----------
-        degree_x : int
-            The spline degree in x direction.
-        degree_y : int
-            The spline degree in y direction.
-        evaluation_points_x : torch.Tensor
-            The evaluation points in x direction.
-        evaluation_points_y : torch.Tensor
-            The evaluation points in y direction.
+        degree_e : int
+            The spline degree in east direction.
+        degree_n : int
+            The spline degree in north direction.
+        evaluation_points_e : torch.Tensor
+            The evaluation points in east direction.
+        evaluation_points_n : torch.Tensor
+            The evaluation points in north direction.
         control_points : torch.Tensor
             The control_points.
         """
         super(NURBSSurface, self).__init__()
-        self.degree_x = degree_x
-        self.degree_y = degree_y
-        self.evaluation_points_x = evaluation_points_x
-        self.evaluation_points_y = evaluation_points_y
+        self.degree_e = degree_e
+        self.degree_n = degree_n
+        self.evaluation_points_e = evaluation_points_e
+        self.evaluation_points_n = evaluation_points_n
         self.control_points = control_points
-        self.knot_vector_x, self.knot_vector_y = self.calculate_knots()
+        self.knot_vector_e, self.knot_vector_n = self.calculate_knots()
 
     def calculate_knots(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Calculate the knot vectors in x and y direction.
+        Calculate the knot vectors in east and north direction.
 
         Returns
         -------
         torch.Tensor
-            The knots in x direction.
+            The knots in east direction.
         torch.Tensor
-            The knots in y direction.
+            The knots in north direction.
         """
-        num_control_points_x = self.control_points.shape[0]
-        num_control_points_y = self.control_points.shape[1]
+        num_control_points_e = self.control_points.shape[0]
+        num_control_points_n = self.control_points.shape[1]
 
-        knots_x = torch.zeros(num_control_points_x + self.degree_x + 1)                                                                                              
-        num_knot_vals = len(knots_x[self.degree_x:-self.degree_x])
+        knots_e = torch.zeros(num_control_points_e + self.degree_e + 1)                                                                                              
+        num_knot_vals = len(knots_e[self.degree_e:-self.degree_e])
         knot_vals = torch.linspace(0, 1, num_knot_vals)
-        knots_x[:self.degree_x] = 0
-        knots_x[self.degree_x:-self.degree_x] = knot_vals
-        knots_x[-self.degree_x:] = 1
+        knots_e[:self.degree_e] = 0
+        knots_e[self.degree_e:-self.degree_e] = knot_vals
+        knots_e[-self.degree_e:] = 1
 
-        knots_y = torch.zeros(num_control_points_y + self.degree_x + 1)                                                                                        
-        num_knot_vals = len(knots_y[self.degree_y:-self.degree_y])
+        knots_n = torch.zeros(num_control_points_n + self.degree_n + 1)                                                                                        
+        num_knot_vals = len(knots_n[self.degree_n:-self.degree_n])
         knot_vals = torch.linspace(0, 1, num_knot_vals)
-        knots_y[:self.degree_y] = 0
-        knots_y[self.degree_y:-self.degree_y] = knot_vals
-        knots_y[-self.degree_y:] = 1
+        knots_n[:self.degree_n] = 0
+        knots_n[self.degree_n:-self.degree_n] = knot_vals
+        knots_n[-self.degree_n:] = 1
 
-        return knots_x, knots_y
+        return knots_e, knots_n
 
     def find_span(self, 
                   degree: int,
@@ -213,40 +243,40 @@ class NURBSSurface(torch.nn.Module):
         nth_derivative = 1
 
         # find span indices x direction (based on A2.1, page 68) 
-        span_indices_x = self.find_span(self.degree_x, self.evaluation_points_x, self.knot_vector_x, self.control_points)
+        span_indices_x = self.find_span(self.degree_e, self.evaluation_points_e, self.knot_vector_e, self.control_points)
 
         # find span indices y direction (based on A2.1, page 68)
-        span_indices_y = self.find_span(self.degree_y, self.evaluation_points_y, self.knot_vector_y, self.control_points)
+        span_indices_y = self.find_span(self.degree_n, self.evaluation_points_n, self.knot_vector_n, self.control_points)
         
         control_point_weights = torch.ones((self.control_points.shape[0], self.control_points.shape[1]) + (1,))
         control_points = torch.cat([self.control_points, control_point_weights], dim=-1)
 
-        derivatives = torch.zeros(len(self.evaluation_points_x), nth_derivative + 1, nth_derivative + 1, control_points.shape[-1])
+        derivatives = torch.zeros(len(self.evaluation_points_e), nth_derivative + 1, nth_derivative + 1, control_points.shape[-1])
 
         # find surface points and normals (based on A3.6, page 111)
-        dx = min(nth_derivative, self.degree_x)
-        for k in range(self.degree_x + 1, nth_derivative + 1):
+        de = min(nth_derivative, self.degree_e)
+        for k in range(self.degree_e + 1, nth_derivative + 1):
             for l in range(nth_derivative - k + 1):
                 derivatives[:, k, l] = 0
-        dy = min(nth_derivative, self.degree_y)
-        for l in range(self.degree_y + 1, nth_derivative + 1):
+        dn = min(nth_derivative, self.degree_n)
+        for l in range(self.degree_n + 1, nth_derivative + 1):
             for k in range(nth_derivative - l + 1):
                 derivatives[:, k, l] = 0
         
         # find derivatives of basis functions (based on A2.3, page 72)
-        basis_values_derivatives_x = self.basis_function_and_derivatives(self.evaluation_points_x, self.knot_vector_x, span_indices_x, self.degree_x, dx)
-        basis_values_derivatives_y = self.basis_function_and_derivatives(self.evaluation_points_y, self.knot_vector_y, span_indices_y, self.degree_y, dy)
+        basis_values_derivatives_x = self.basis_function_and_derivatives(self.evaluation_points_e, self.knot_vector_e, span_indices_x, self.degree_e, de)
+        basis_values_derivatives_y = self.basis_function_and_derivatives(self.evaluation_points_n, self.knot_vector_n, span_indices_y, self.degree_n, dn)
         
-        temp = [torch.zeros((len(self.evaluation_points_x), control_points.shape[-1])) for _ in range(self.degree_y + 1)]
-        for k in range(dx + 1): 
-            for s in range(self.degree_y + 1):
+        temp = [torch.zeros((len(self.evaluation_points_e), control_points.shape[-1])) for _ in range(self.degree_n + 1)]
+        for k in range(de + 1): 
+            for s in range(self.degree_n + 1):
                 temp[s] = torch.zeros_like(temp[s])
-                for r in range(self.degree_x + 1):
-                    temp[s] += (basis_values_derivatives_x[k][r].unsqueeze(-1) * control_points[span_indices_x - self.degree_x + r, span_indices_y - self.degree_y + s])
-            dd = min(nth_derivative - k, dy)
+                for r in range(self.degree_e + 1):
+                    temp[s] += (basis_values_derivatives_x[k][r].unsqueeze(-1) * control_points[span_indices_x - self.degree_e + r, span_indices_y - self.degree_n + s])
+            dd = min(nth_derivative - k, dn)
             for l in range(dd + 1):
                 derivatives[:, k, l] = 0
-                for s in range(self.degree_y + 1):
+                for s in range(self.degree_n + 1):
                     derivatives[:, k, l] += ((basis_values_derivatives_y[l][s].unsqueeze(-1) * temp[s]))
 
         normals = torch.linalg.cross(derivatives[:, 1, 0, :3], derivatives[:, 0, 1, :3])
