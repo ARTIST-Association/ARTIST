@@ -1,11 +1,29 @@
-from typing import Tuple
 from matplotlib import pyplot as plt
+
 import torch
-import torch.nn.functional as f
+
 from artist.field.nurbs import NURBSSurface
 
 def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.Tensor, width:torch.Tensor, height: torch.Tensor )-> NURBSSurface:
+    """
+    Convert deflectometry data to a NURBS surface.
+
+    Parameters
+    ----------
+    surface_points : torch.Tensor
+        The surface points from deflectometry data.
+    surface_normals : torch.Tensor
+        The surface normals from deflectometry data.
+    width : torch.Tensor
+        The width of the heliostat.
+    height : torch.Tensor
+        The height of the heliostat.
     
+    Returns
+    -------
+    NURBSSurface
+        A NURBS surface.
+    """
     evaluation_points = surface_points.clone()
     evaluation_points[:,2] = 0
 
@@ -34,12 +52,12 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
 
     control_points = torch.nn.parameter.Parameter((origin_offsets).reshape(control_points.shape))
     
-    nurbs = NURBSSurface(degree_x, degree_y, evaluation_points_x, evaluation_points_y, control_points)
+    nurbs_surface = NURBSSurface(degree_x, degree_y, evaluation_points_x, evaluation_points_y, control_points)
 
     optimizer = torch.optim.Adam([control_points], lr=5e-3)
 
     for epoch in range(1):
-        points, normals = nurbs.calculate_surface_points_and_normals()
+        points, normals = nurbs_surface.calculate_surface_points_and_normals()
 
         optimizer.zero_grad()
 
@@ -76,4 +94,4 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
     close_ = torch.isclose(points, surface_points)
     print(close_)
 
-    return nurbs
+    return nurbs_surface
