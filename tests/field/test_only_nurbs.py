@@ -1,18 +1,18 @@
-import math
 import torch
-from matplotlib import pyplot as plt
+
 from artist.field.nurbs import NURBSSurface
 
 
 def test_nurbs():
+    torch.manual_seed(7)
     x_range = torch.linspace(-5, 5, 40)
     y_range = torch.linspace(-5, 5, 40)
 
-    X, Y = torch.meshgrid(x_range, y_range)
+    X, Y = torch.meshgrid(x_range, y_range, indexing='ij')
 
     z_range = torch.linspace(-5, 5, 40) 
 
-    Z1, Z2 = torch.meshgrid(z_range, z_range)
+    Z1, Z2 = torch.meshgrid(z_range, z_range, indexing='ij')
 
     Z = torch.stack((Z1, Z2), dim=-1)
 
@@ -80,21 +80,5 @@ def test_nurbs():
 
         print(loss.abs().mean())
 
-    x = points[:, 0]
-    y = points[:, 1]
-    z = points[:, 2]
-
-    # Plot the 3D tensor
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    #ax.plot_trisurf(x.detach().numpy(), y.detach().numpy(), z.detach().numpy(), cmap='viridis', edgecolor="none")
-    ax.scatter(x.detach().numpy(), y.detach().numpy(), z.detach().numpy())
-    ax.set_xlim([-5, 5])
-    ax.set_ylim([-5, 5])
-    ax.set_zlim([-2, 2])
-
-    plt.show()
-
-    close_ = torch.isclose(points, surface_points)
-    print(close_)
+    torch.testing.assert_close(points, surface_points, atol=1e-2, rtol=1e-2)
 
