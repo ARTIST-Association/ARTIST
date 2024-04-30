@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 
 import torch
+import torch.optim.lr_scheduler as lr_scheduler
 
 from artist.field.nurbs import NURBSSurface
 
@@ -30,8 +31,8 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
     evaluation_points_x = (evaluation_points[:, 0]-min(evaluation_points[:, 0]) + 1e-5)/max((evaluation_points[:, 0]-min(evaluation_points[:, 0])) + 2e-5)
     evaluation_points_y = (evaluation_points[:, 1]-min(evaluation_points[:, 1]) + 1e-5)/max((evaluation_points[:, 1]-min(evaluation_points[:, 1])) + 2e-5)
 
-    num_control_points_x = 5
-    num_control_points_y = 5
+    num_control_points_x = 7
+    num_control_points_y = 7
 
     degree_x = 2
     degree_y = 2
@@ -54,9 +55,10 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
     
     nurbs_surface = NURBSSurface(degree_x, degree_y, evaluation_points_x, evaluation_points_y, control_points)
 
-    optimizer = torch.optim.Adam([control_points], lr=5e-3)
+    optimizer = torch.optim.Adam([control_points], lr=1e-2)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.4, patience=40, threshold=0.0001, threshold_mode='abs', verbose=True)
 
-    for epoch in range(1):
+    for epoch in range(500):
         points, normals = nurbs_surface.calculate_surface_points_and_normals()
 
         optimizer.zero_grad()
@@ -65,6 +67,7 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
         loss.abs().mean().backward()
 
         optimizer.step()
+        scheduler.step(loss.abs().mean())
 
         print(loss.abs().mean())
 
@@ -76,22 +79,7 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(x.detach().numpy(), y.detach().numpy(), c=z.detach().numpy())
-    #ax.quiver(x.detach().numpy(), y.detach().numpy(), z.detach().numpy(), normals[:, 0].detach().numpy(), normals[:, 1].detach().numpy(), normals[:, 2].detach().numpy(), length=0.5, normalize=True)
     
     plt.show()
-
-    x = surface_points[:, 0]
-    y = surface_points[:, 1]
-    z = surface_points[:, 2]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    ax.scatter(x.detach().numpy(), y.detach().numpy(), z.detach().numpy())
-    #.quiver(x.detach().numpy(), y.detach().numpy(), z.detach().numpy(), surface_normals[:, 0].detach().numpy(), surface_normals[:, 1].detach().numpy(), surface_normals[:, 2].detach().numpy(), length=1000, normalize=True)
-    ax.set_xlim([-5, 5])
-    ax.set_ylim([-5, 5])
-    ax.set_zlim([-2, 2])
-    plt.show()
-    close_ = torch.isclose(points, surface_points)
-    print(close_)
 
     return nurbs_surface
