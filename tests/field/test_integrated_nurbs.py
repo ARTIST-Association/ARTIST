@@ -9,17 +9,9 @@ from artist.util import config_dictionary
 from artist.util import nurbs_converters
 import pytest
 
-@pytest.mark.parametrize(
-        "incident_ray_direction, expected_value, scenario_config",
-        [
-            (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt", "test_scenario"),
-            (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "test_scenario"),
-            (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "test_scenario"),
-            (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
-        ]
-)
-def test_nurbs(incident_ray_direction, expected_value, scenario_config):
-    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
+@pytest.fixture(scope="module")
+def common_setup():
+    with h5py.File(f"{ARTIST_ROOT}/scenarios/test_scenario.h5", "r") as config_h5:
         receiver_center = torch.tensor(
             config_h5[config_dictionary.receiver_prefix][
                 config_dictionary.receiver_center
@@ -29,7 +21,7 @@ def test_nurbs(incident_ray_direction, expected_value, scenario_config):
         sun = Sun.from_hdf5(config_file=config_h5)
         heliostat = Heliostat.from_hdf5(
             heliostat_name="Single_Heliostat",
-            incident_ray_direction=incident_ray_direction,
+            incident_ray_direction=torch.tensor([0.0, 0.0, 0.0, 0.0]),
             config_file=config_h5,
         )
     
@@ -39,23 +31,26 @@ def test_nurbs(incident_ray_direction, expected_value, scenario_config):
     
     surface_points, surface_normals = nurbs_surface.calculate_surface_points_and_normals()
 
-    x = surface_points[:, 0]
-    y = surface_points[:, 1]
-    z = surface_points[:, 2]
-
-    # Plot the 3D tensor
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    #ax.plot_trisurf(x.detach().numpy(), y.detach().numpy(), z.detach().numpy(), cmap='viridis', edgecolor="none")
-    ax.scatter(x.detach().numpy(), y.detach().numpy(), z.detach().numpy())
-    #ax.quiver(x.detach().numpy(), y.detach().numpy(), z.detach().numpy(), normals[:, 0].detach().numpy(), normals[:, 1].detach().numpy(), normals[:, 2].detach().numpy(), length=0.5, normalize=True)
-    ax.set_xlim([-5, 5])
-    ax.set_ylim([-5, 5])
-    ax.set_zlim([-2, 2])
-    plt.show()
-
     heliostat.concentrator.facets.surface_points = surface_points
     heliostat.concentrator.facets.surface_normals = surface_normals
+
+    return receiver_center, sun, heliostat
+
+
+@pytest.mark.parametrize(
+        "incident_ray_direction, expected_value",
+        [
+            (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt"),
+            (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt"),
+            (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt"),
+            (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt"),
+        ]
+)
+def test_nurbs(common_setup, incident_ray_direction, expected_value):
+
+    receiver_center, sun, heliostat = common_setup
+    
+    heliostat.incident_ray_direction = incident_ray_direction
 
     aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
 
@@ -119,8 +114,10 @@ def test_nurbs(incident_ray_direction, expected_value, scenario_config):
     expected = torch.load(expected_path)
 
     plt.imshow(total_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
+    plt.title("bitmap with learned surface")
     plt.show()
     plt.imshow(expected.detach().numpy(), origin="lower", cmap="jet")
+    plt.title("bitmap from deflectometry")
     plt.show()
 
     torch.testing.assert_close(total_bitmap.T, expected, atol=5e-4, rtol=5e-4)
