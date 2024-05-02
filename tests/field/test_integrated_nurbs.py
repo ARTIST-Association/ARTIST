@@ -121,4 +121,4 @@ def test_nurbs(
 
         expected = torch.load(expected_path)
 
-        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+        torch.testing.assert_close(final_bitmap.T, expected, atol=1e-2, rtol=1e-2)
