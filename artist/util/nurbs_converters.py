@@ -1,7 +1,4 @@
-from matplotlib import pyplot as plt
-
 import torch
-import torch.optim.lr_scheduler as lr_scheduler
 
 from artist.field.nurbs import NURBSSurface
 
@@ -70,16 +67,5 @@ def deflectometry_to_nurbs(surface_points: torch.Tensor, surface_normals: torch.
         scheduler.step(loss.abs().mean())
 
         print(loss.abs().mean())
-
-    x = points[:, 0]
-    y = points[:, 1]
-    z = points[:, 2]
-
-    # Plot the 3D tensor
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(x.detach().numpy(), y.detach().numpy(), c=z.detach().numpy())
-    
-    plt.show()
 
     return nurbs_surface
