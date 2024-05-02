@@ -258,7 +258,7 @@ class LightSourceConfig:
 
         # Return the desired dictionary.
         return {
-            config_dictionary.light_source_distribution_type: self.light_source_type,
+            config_dictionary.light_source_type: self.light_source_type,
             config_dictionary.light_source_number_of_rays: self.number_of_rays,
             config_dictionary.light_source_distribution_parameters: light_source_distribution_parameters_dict,
         }
