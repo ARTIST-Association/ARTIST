@@ -1,4 +1,5 @@
 import pathlib
+from matplotlib import pyplot as plt
 import torch
 import h5py
 import pytest
@@ -82,6 +83,7 @@ def test_nurbs(common_setup, incident_ray_direction, expected_value):
         )
 
         expected = torch.load(expected_path)
+
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
 
 
