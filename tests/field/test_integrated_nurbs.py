@@ -5,9 +5,6 @@ import pytest
 import warnings
 
 from artist import ARTIST_ROOT
-from artist.field.heliostat import Heliostat
-from artist.scene.sun import Sun
-from artist.util import config_dictionary
 from artist.util import nurbs_converters
 from artist import Scenario
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
