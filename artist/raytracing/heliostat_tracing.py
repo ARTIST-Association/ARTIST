@@ -152,7 +152,7 @@ class HeliostatRayTracer:
             The resulting bitmap.
         """
         final_bitmap = torch.zeros(
-            (self.receiver.resolution_x, self.receiver.resolution_y)
+            (self.receiver.resolution_e, self.receiver.resolution_u)
         )
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(
@@ -166,20 +166,20 @@ class HeliostatRayTracer:
 
             dx_ints = (
                 intersections[:, :, 0]
-                + self.receiver.plane_x / 2
-                - self.receiver.center[0]
+                + self.receiver.plane_e / 2
+                - self.receiver.position_center[0]
             )
             dy_ints = (
                 intersections[:, :, 2]
-                + self.receiver.plane_y / 2
-                - self.receiver.center[2]
+                + self.receiver.plane_u / 2
+                - self.receiver.position_center[2]
             )
 
             indices = (
                 (-1 <= dx_ints)
-                & (dx_ints < self.receiver.plane_x + 1)
+                & (dx_ints < self.receiver.plane_e + 1)
                 & (-1 <= dy_ints)
-                & (dy_ints < self.receiver.plane_y + 1)
+                & (dy_ints < self.receiver.plane_u + 1)
             )
 
             total_bitmap = self.sample_bitmap(
@@ -254,14 +254,17 @@ class HeliostatRayTracer:
         """
         # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
         # the incoming rays
-        relative_distribution_strengths = ray_directions @ self.receiver.plane_normal
+        relative_distribution_strengths = ray_directions @ self.receiver.normal_vector
         assert (
             torch.abs(relative_distribution_strengths) >= epsilon
         ).all(), "No intersection or line is within plane."
         # Calculate the final distribution strengths
         distribution_strengths = (
-            (self.receiver.center - self.heliostat.current_aligned_surface_points)
-            @ self.receiver.plane_normal
+            (
+                self.receiver.position_center
+                - self.heliostat.current_aligned_surface_points
+            )
+            @ self.receiver.normal_vector
             / relative_distribution_strengths
         )
 
@@ -293,8 +296,8 @@ class HeliostatRayTracer:
         torch.Tensor
             The flux density distribution of the reflected rays on the receiver.
         """
-        x_ints = dx_ints[indices] / self.receiver.plane_x * self.receiver.resolution_x
-        y_ints = dy_ints[indices] / self.receiver.plane_y * self.receiver.resolution_y
+        x_ints = dx_ints[indices] / self.receiver.plane_e * self.receiver.resolution_e
+        y_ints = dy_ints[indices] / self.receiver.plane_u * self.receiver.resolution_u
 
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
@@ -387,14 +390,14 @@ class HeliostatRayTracer:
         # prevent out-of-bounds access).
         indices = (
             (0 <= x_inds)
-            & (x_inds < self.receiver.resolution_x)
+            & (x_inds < self.receiver.resolution_e)
             & (0 <= y_inds)
-            & (y_inds < self.receiver.resolution_y)
+            & (y_inds < self.receiver.resolution_u)
         )
 
         # Flux density map for heliostat field
         total_bitmap = torch.zeros(
-            [self.receiver.resolution_x, self.receiver.resolution_y],
+            [self.receiver.resolution_e, self.receiver.resolution_u],
             dtype=dx_ints.dtype,
             device=dx_ints.device,
         )
@@ -427,7 +430,7 @@ class HeliostatRayTracer:
         bitmap_height = bitmap.shape[0]
         bitmap_width = bitmap.shape[1]
 
-        plane_area = self.receiver.plane_x * self.receiver.plane_y
+        plane_area = self.receiver.plane_e * self.receiver.plane_u
         num_pixels = bitmap_height * bitmap_width
         plane_area_per_pixel = plane_area / num_pixels
 
