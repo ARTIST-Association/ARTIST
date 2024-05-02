@@ -1,13 +1,14 @@
 import pathlib
 import torch
-from matplotlib import pyplot as plt
 import h5py
+import pytest
+
 from artist import ARTIST_ROOT
 from artist.field.heliostat import Heliostat
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 from artist.util import nurbs_converters
-import pytest
+
 
 @pytest.fixture(scope="module")
 def common_setup():
@@ -107,18 +108,11 @@ def test_nurbs(common_setup, incident_ray_direction, expected_value):
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/physics_objects/test_bitmaps_load_surface_stral"
+        / "tests/physics_objects/test_bitmaps_integrated_nurbs"
         / expected_value
     )
 
     expected = torch.load(expected_path)
-
-    plt.imshow(total_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
-    plt.title("bitmap with learned surface")
-    plt.show()
-    plt.imshow(expected.detach().numpy(), origin="lower", cmap="jet")
-    plt.title("bitmap from deflectometry")
-    plt.show()
 
     torch.testing.assert_close(total_bitmap.T, expected, atol=5e-4, rtol=5e-4)
 
