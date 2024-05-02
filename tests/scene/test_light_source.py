@@ -159,7 +159,7 @@ def test_light_sources(
             distribution_parameters=request.getfixturevalue(
                 distribution_parameters_fixture
             ),
-            ray_count=further_params_dict["num_rays"],
+            number_of_rays=further_params_dict["num_rays"],
         )
         distortions_u, distortions_e = sun.get_distortions(
             number_of_points=further_params_dict["num_points"],
