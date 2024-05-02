@@ -1,11 +1,18 @@
 from typing import Optional, Tuple
 
+import h5py
 import torch
+from typing_extensions import Self
 
 
 class LightSource(torch.nn.Module):
     """
     Abstract base class for all light sources.
+
+    Attributes
+    ----------
+    number_of_rays : int
+        The number of sent-out rays sampled from the light source distribution.
 
     Methods
     -------
@@ -13,9 +20,39 @@ class LightSource(torch.nn.Module):
         Get distortions given the light source model.
     """
 
-    def __init__(self):
-        """Initialize the light source."""
+    def __init__(
+        self,
+        number_of_rays: int,
+    ) -> None:
+        """
+        Initialize the light source.
+
+        Parameters
+        ----------
+        number_of_rays : int
+            The number of sent-out rays sampled from the sun distribution.
+        """
         super().__init__()
+        self.number_of_rays = number_of_rays
+
+    @classmethod
+    def from_hdf5(cls, config_file: h5py.File, light_source_key: str) -> Self:
+        """
+        Load the light source from a hdf5 file.
+
+        Parameters
+        ----------
+        config_file : h5py.File
+            The hdf5 file containing the information about the light source.
+        light_source_key : str
+            The key identifying the light source to be loaded.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called (abstract base class method).
+        """
+        raise NotImplementedError("Must be overridden!")
 
     def get_distortions(
         self,
