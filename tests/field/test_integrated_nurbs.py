@@ -2,40 +2,53 @@ import pathlib
 import torch
 import h5py
 import pytest
+import warnings
 
 from artist import ARTIST_ROOT
 from artist.field.heliostat import Heliostat
 from artist.scene.sun import Sun
 from artist.util import config_dictionary
 from artist.util import nurbs_converters
+from artist import Scenario
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+
+warnings.filterwarnings("always")
+
+# Attempt to import MPI.
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+    warnings.warn(
+        "MPI is not available and distributed computing not possible. ARTIST will run on a single machine!",
+        ImportWarning,
+    )
+
+# Set up MPI.
+if MPI is not None:
+    comm = MPI.COMM_WORLD
+    world_size = comm.size
+    rank = comm.rank
+else:
+    world_size = 1
+    rank = 0
 
 
 @pytest.fixture(scope="module")
 def common_setup():
     with h5py.File(f"{ARTIST_ROOT}/scenarios/test_scenario.h5", "r") as config_h5:
-        receiver_center = torch.tensor(
-            config_h5[config_dictionary.receiver_prefix][
-                config_dictionary.receiver_center
-            ][()],
-            dtype=torch.float,
-        )
-        sun = Sun.from_hdf5(config_file=config_h5)
-        heliostat = Heliostat.from_hdf5(
-            heliostat_name="Single_Heliostat",
-            incident_ray_direction=torch.tensor([0.0, 0.0, 0.0, 0.0]),
-            config_file=config_h5,
-        )
+        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
     
     width = 2
     height = 2
-    nurbs_surface = nurbs_converters.deflectometry_to_nurbs(heliostat.concentrator.facets.surface_points[::100], heliostat.concentrator.facets.surface_normals[::100], width, height)
+    nurbs_surface = nurbs_converters.deflectometry_to_nurbs(scenario.heliostats.heliostat_list[0].concentrator.facets.surface_points[::100], scenario.heliostats.heliostat_list[0].concentrator.facets.surface_normals[::100], width, height)
     
     surface_points, surface_normals = nurbs_surface.calculate_surface_points_and_normals()
 
-    heliostat.concentrator.facets.surface_points = surface_points
-    heliostat.concentrator.facets.surface_normals = surface_normals
+    scenario.heliostats.heliostat_list[0].concentrator.facets.surface_points = surface_points
+    scenario.heliostats.heliostat_list[0].concentrator.facets.surface_normals = surface_normals
 
-    return receiver_center, sun, heliostat
+    return scenario
 
 
 @pytest.mark.parametrize(
@@ -48,71 +61,30 @@ def common_setup():
         ]
 )
 def test_nurbs(common_setup, incident_ray_direction, expected_value):
-
-    receiver_center, sun, heliostat = common_setup
-    
-    heliostat.incident_ray_direction = incident_ray_direction
-
-    aligned_surface_points, aligned_surface_normals = heliostat.get_aligned_surface()
-
     torch.manual_seed(7)
 
-    receiver_plane_normal = torch.tensor([0.0, 1.0, 0.0, 0.0])
-    receiver_plane_x = 8.629666667
-    receiver_plane_y = 7.0
-    receiver_resolution_x = 256
-    receiver_resolution_y = 256
+    scenario = common_setup
+    
+    scenario.heliostats.heliostat_list[0].set_aligned_surface(incident_ray_direction)
 
-    preferred_ray_directions = sun.get_preferred_reflection_direction(
-        -incident_ray_direction, aligned_surface_normals
+    scenario.heliostats.heliostat_list[0].set_preferred_reflection_direction(-incident_ray_direction)
+    raytracer = HeliostatRayTracer(
+        scenario=scenario, world_size=world_size, rank=rank, batch_size=5
     )
+    final_bitmap = raytracer.trace_rays()
 
-    distortions_n, distortions_u = sun.sample(preferred_ray_directions.shape[0])
+    if MPI is not None:
+        final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
+    final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
-    rays = sun.scatter_rays(
-        preferred_ray_directions,
-        distortions_n,
-        distortions_u,
-    )
+    if rank == 0:
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/field/test_bitmaps_integrated_nurbs"
+            / expected_value
+        )
 
-    intersections = sun.line_plane_intersections(
-        receiver_plane_normal, receiver_center, rays, aligned_surface_points
-    )
+        expected = torch.load(expected_path)
+        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
 
-    dx_ints = intersections[:, :, 0] + receiver_plane_x / 2 - receiver_center[0]
-    dy_ints = intersections[:, :, 2] + receiver_plane_y / 2 - receiver_center[2]
-
-    indices = (
-        (-1 <= dx_ints)
-        & (dx_ints < receiver_plane_x + 1)
-        & (-1 <= dy_ints)
-        & (dy_ints < receiver_plane_y + 1)
-    )
-
-    total_bitmap = sun.sample_bitmap(
-        dx_ints,
-        dy_ints,
-        indices,
-        receiver_plane_x,
-        receiver_plane_y,
-        receiver_resolution_x,
-        receiver_resolution_y,
-    )
-
-    total_bitmap = sun.normalize_bitmap(
-        total_bitmap,
-        distortions_n.numel(),
-        receiver_plane_x,
-        receiver_plane_y,
-    )
-
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/physics_objects/test_bitmaps_integrated_nurbs"
-        / expected_value
-    )
-
-    expected = torch.load(expected_path)
-
-    torch.testing.assert_close(total_bitmap.T, expected, atol=5e-4, rtol=5e-4)
 
