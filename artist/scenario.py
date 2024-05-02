@@ -2,8 +2,8 @@ import h5py
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
-from artist.field.receiver import Receiver
-from artist.scene import LightSource, Sun
+from artist.field.receiver_field import ReceiverField
+from artist.scene.light_source_array import LightSourceArray
 
 
 class Scenario:
@@ -12,10 +12,10 @@ class Scenario:
 
     Attributes
     ----------
-    receiver : Receiver
-        The receiver for the scenario.
-    light_source : LightSource
-        The light source for the scenario.
+    receivers : ReceiverField
+        A list of receivers included in the scenario.
+    light_sources : LightSourceArray
+        A list of light sources included in the scenario.
     heliostats : HeliostatField
         The heliostat field for the scenario.
 
@@ -27,8 +27,8 @@ class Scenario:
 
     def __init__(
         self,
-        receiver: Receiver,
-        light_source: LightSource,
+        receivers: ReceiverField,
+        light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
         """
@@ -36,15 +36,15 @@ class Scenario:
 
         Parameters
         ----------
-        receiver : Receiver
-            The receiver for the scenario.
-        light_source : LightSource
-            The light source for the scenario.
+        receivers : ReceiverField
+            A list of receivers included in the scenario.
+        light_sources : LightSourceArray
+            A list of light sources included in the scenario.
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
-        self.receiver = receiver
-        self.light_source = light_source
+        self.receivers = receivers
+        self.light_sources = light_sources
         self.heliostats = heliostat_field
 
     @classmethod
@@ -62,12 +62,12 @@ class Scenario:
         Scenario
             The ARTIST scenario loaded from the HDF5 file.
         """
-        receiver = Receiver.from_hdf5(config_file=scenario_file)
-        light_source = Sun.from_hdf5(config_file=scenario_file)
+        receivers = ReceiverField.from_hdf5(config_file=scenario_file)
+        light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)
         heliostat_field = HeliostatField.from_hdf5(config_file=scenario_file)
 
         return cls(
-            receiver=receiver,
-            light_source=light_source,
+            receivers=receivers,
+            light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
