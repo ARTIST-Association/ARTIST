@@ -1,5 +1,4 @@
 # Dictionary for receiver.
-receiver_prefix = "receiver"
 receiver_type = "type"
 receiver_position_center = "position_center"
 receiver_normal_vector = "normal_vector"
