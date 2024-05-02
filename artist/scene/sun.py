@@ -14,10 +14,10 @@ class Sun(LightSource):
 
     Attributes
     ----------
+    number_of_rays : int
+        The number of sent-out rays sampled from the sun distribution.
     distribution_parameters : Dict[str, Any]
         Parameters of the distribution used to model the sun.
-    ray_count : int
-        The number of sent-out rays sampled from the sun distribution.
 
     Methods
     -------
@@ -33,51 +33,65 @@ class Sun(LightSource):
 
     def __init__(
         self,
+        number_of_rays: int,
         distribution_parameters: Dict[str, Any] = dict(
             distribution_type="normal", mean=0.0, covariance=4.3681e-06
         ),
-        ray_count: int = 200,
     ) -> None:
         """
         Initialize the sun as a light source.
 
         Parameters
         ----------
+        number_of_rays : int
+            The number of sent-out rays sampled from the sun distribution.
         distribution_parameters
             Parameters of the distribution used to model the sun.
-        ray_count : int
-            The number of sent-out rays sampled from the sun distribution.
 
         Raises
         ------
         Union[ValueError, NotImplementedError]
             If the specified distribution type is unknown.
         """
-        super().__init__()
+        super().__init__(number_of_rays=number_of_rays)
 
         self.distribution_parameters = distribution_parameters
-        self.ray_count = ray_count
+        self.number_of_rays = number_of_rays
 
         assert (
-            self.distribution_parameters[config_dictionary.sun_distribution_type]
-            == config_dictionary.sun_distribution_is_normal
+            self.distribution_parameters[
+                config_dictionary.light_source_distribution_type
+            ]
+            == config_dictionary.light_source_distribution_is_normal
         ), "Unknown sunlight distribution type."
 
         if (
-            self.distribution_parameters[config_dictionary.sun_distribution_type]
-            == config_dictionary.sun_distribution_is_normal
+            self.distribution_parameters[
+                config_dictionary.light_source_distribution_type
+            ]
+            == config_dictionary.light_source_distribution_is_normal
         ):
             mean = torch.tensor(
                 [
-                    self.distribution_parameters[config_dictionary.sun_mean],
-                    self.distribution_parameters[config_dictionary.sun_mean],
+                    self.distribution_parameters[config_dictionary.light_source_mean],
+                    self.distribution_parameters[config_dictionary.light_source_mean],
                 ],
                 dtype=torch.float,
             )
             covariance = torch.tensor(
                 [
-                    [self.distribution_parameters[config_dictionary.sun_covariance], 0],
-                    [0, self.distribution_parameters[config_dictionary.sun_covariance]],
+                    [
+                        self.distribution_parameters[
+                            config_dictionary.light_source_covariance
+                        ],
+                        0,
+                    ],
+                    [
+                        0,
+                        self.distribution_parameters[
+                            config_dictionary.light_source_covariance
+                        ],
+                    ],
                 ],
                 dtype=torch.float,
             )
@@ -85,7 +99,7 @@ class Sun(LightSource):
             self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(cls, config_file: h5py.File, light_source_key: str) -> Self:
         """
         Class method that initializes a sun from an hdf5 file.
 
@@ -93,30 +107,68 @@ class Sun(LightSource):
         ----------
         config_file : h5py.File
             The hdf5 file containing the information about the sun.
+        light_source_key : str
+            The key identifying the light source to be loaded.
 
         Returns
         -------
         Sun
             A sun initialized from an hdf5 file.
         """
-        distribution_parameters = {
-            config_dictionary.sun_distribution_type: config_file[
-                config_dictionary.sun_prefix
-            ][config_dictionary.sun_distribution_parameters][
-                config_dictionary.sun_distribution_type
-            ][()].decode("utf-8"),
-            config_dictionary.sun_mean: config_file[config_dictionary.sun_prefix][
-                config_dictionary.sun_distribution_parameters
-            ][config_dictionary.sun_mean][()],
-            config_dictionary.sun_covariance: config_file[config_dictionary.sun_prefix][
-                config_dictionary.sun_distribution_parameters
-            ][config_dictionary.sun_covariance][()],
-        }
-        num_rays = config_file[config_dictionary.sun_prefix][
-            config_dictionary.sun_number_of_rays
-        ][()]
+        number_of_rays = int(
+            config_file[config_dictionary.light_source_key][light_source_key][
+                config_dictionary.light_source_number_of_rays
+            ][()]
+        )
 
-        return cls(distribution_parameters=distribution_parameters, ray_count=num_rays)
+        distribution_parameters = {
+            config_dictionary.light_source_distribution_type: config_file[
+                config_dictionary.light_source_key
+            ][light_source_key][config_dictionary.light_source_distribution_parameters][
+                config_dictionary.light_source_distribution_type
+            ][()].decode("utf-8")
+        }
+
+        if (
+            config_dictionary.light_source_mean
+            in config_file[config_dictionary.light_source_key][light_source_key][
+                config_dictionary.light_source_distribution_parameters
+            ].keys()
+        ):
+            distribution_parameters.update(
+                {
+                    config_dictionary.light_source_mean: float(
+                        config_file[config_dictionary.light_source_key][
+                            light_source_key
+                        ][config_dictionary.light_source_distribution_parameters][
+                            config_dictionary.light_source_mean
+                        ][()]
+                    )
+                }
+            )
+
+        if (
+            config_dictionary.light_source_covariance
+            in config_file[config_dictionary.light_source_key][light_source_key][
+                config_dictionary.light_source_distribution_parameters
+            ].keys()
+        ):
+            distribution_parameters.update(
+                {
+                    config_dictionary.light_source_covariance: float(
+                        config_file[config_dictionary.light_source_key][
+                            light_source_key
+                        ][config_dictionary.light_source_distribution_parameters][
+                            config_dictionary.light_source_covariance
+                        ][()]
+                    )
+                }
+            )
+
+        return cls(
+            number_of_rays=number_of_rays,
+            distribution_parameters=distribution_parameters,
+        )
 
     def get_distortions(
         self,
@@ -152,7 +204,7 @@ class Sun(LightSource):
             == config_dictionary.sun_distribution_is_normal
         ):
             distortions_u, distortions_e = self.distribution.sample(
-                (int(number_of_heliostats * self.ray_count), number_of_points),
+                (int(number_of_heliostats * self.number_of_rays), number_of_points),
             ).permute(2, 0, 1)
             return distortions_u, distortions_e
         else:
