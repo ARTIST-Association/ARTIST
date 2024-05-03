@@ -19,9 +19,9 @@ class NURBSSurface(torch.nn.Module):
         The evaluation points in north direction.
     control_points : torch.Tensor
         The control_points.
-    knot_vector_e
+    knot_vector_e : torch.Tensor
         The knot vector in east direction.
-    knot_vector_n
+    knot_vector_n : torch.Tensor
         The knot vector in north direction.
 
     Methods
