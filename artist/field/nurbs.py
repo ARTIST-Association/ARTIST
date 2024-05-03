@@ -272,7 +272,7 @@ class NURBSSurface(torch.nn.Module):
         nth_derivative = 1
 
         # find span indices x direction (based on A2.1, page 68)
-        span_indices_x = self.find_span(
+        span_indices_e = self.find_span(
             self.degree_e,
             self.evaluation_points_e,
             self.knot_vector_e,
@@ -280,7 +280,7 @@ class NURBSSurface(torch.nn.Module):
         )
 
         # find span indices y direction (based on A2.1, page 68)
-        span_indices_y = self.find_span(
+        span_indices_n = self.find_span(
             self.degree_n,
             self.evaluation_points_n,
             self.knot_vector_n,
@@ -313,14 +313,14 @@ class NURBSSurface(torch.nn.Module):
         basis_values_derivatives_x = self.basis_function_and_derivatives(
             self.evaluation_points_e,
             self.knot_vector_e,
-            span_indices_x,
+            span_indices_e,
             self.degree_e,
             de,
         )
         basis_values_derivatives_y = self.basis_function_and_derivatives(
             self.evaluation_points_n,
             self.knot_vector_n,
-            span_indices_y,
+            span_indices_n,
             self.degree_n,
             dn,
         )
@@ -338,8 +338,8 @@ class NURBSSurface(torch.nn.Module):
                     temp[s] += (
                         basis_values_derivatives_x[k][r].unsqueeze(-1)
                         * control_points[
-                            span_indices_x - self.degree_e + r,
-                            span_indices_y - self.degree_n + s,
+                            span_indices_e - self.degree_e + r,
+                            span_indices_n - self.degree_n + s,
                         ]
                     )
             dd = min(nth_derivative - k, dn)
