@@ -99,7 +99,7 @@ class Sun(LightSource):
             self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, light_source_key: str) -> Self:
+    def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
         Class method that initializes a sun from an hdf5 file.
 
@@ -107,8 +107,6 @@ class Sun(LightSource):
         ----------
         config_file : h5py.File
             The hdf5 file containing the information about the sun.
-        light_source_key : str
-            The key identifying the light source to be loaded.
 
         Returns
         -------
@@ -116,51 +114,43 @@ class Sun(LightSource):
             A sun initialized from an hdf5 file.
         """
         number_of_rays = int(
-            config_file[config_dictionary.light_source_key][light_source_key][
-                config_dictionary.light_source_number_of_rays
-            ][()]
+            config_file[config_dictionary.light_source_number_of_rays][()]
         )
 
         distribution_parameters = {
             config_dictionary.light_source_distribution_type: config_file[
-                config_dictionary.light_source_key
-            ][light_source_key][config_dictionary.light_source_distribution_parameters][
-                config_dictionary.light_source_distribution_type
-            ][()].decode("utf-8")
+                config_dictionary.light_source_distribution_parameters
+            ][config_dictionary.light_source_distribution_type][()].decode("utf-8")
         }
 
         if (
             config_dictionary.light_source_mean
-            in config_file[config_dictionary.light_source_key][light_source_key][
+            in config_file[
                 config_dictionary.light_source_distribution_parameters
             ].keys()
         ):
             distribution_parameters.update(
                 {
                     config_dictionary.light_source_mean: float(
-                        config_file[config_dictionary.light_source_key][
-                            light_source_key
-                        ][config_dictionary.light_source_distribution_parameters][
-                            config_dictionary.light_source_mean
-                        ][()]
+                        config_file[
+                            config_dictionary.light_source_distribution_parameters
+                        ][config_dictionary.light_source_mean][()]
                     )
                 }
             )
 
         if (
             config_dictionary.light_source_covariance
-            in config_file[config_dictionary.light_source_key][light_source_key][
+            in config_file[
                 config_dictionary.light_source_distribution_parameters
             ].keys()
         ):
             distribution_parameters.update(
                 {
                     config_dictionary.light_source_covariance: float(
-                        config_file[config_dictionary.light_source_key][
-                            light_source_key
-                        ][config_dictionary.light_source_distribution_parameters][
-                            config_dictionary.light_source_covariance
-                        ][()]
+                        config_file[
+                            config_dictionary.light_source_distribution_parameters
+                        ][config_dictionary.light_source_covariance][()]
                     )
                 }
             )
@@ -200,8 +190,10 @@ class Sun(LightSource):
         """
         torch.manual_seed(random_seed)
         if (
-            self.distribution_parameters[config_dictionary.sun_distribution_type]
-            == config_dictionary.sun_distribution_is_normal
+            self.distribution_parameters[
+                config_dictionary.light_source_distribution_type
+            ]
+            == config_dictionary.light_source_distribution_is_normal
         ):
             distortions_u, distortions_e = self.distribution.sample(
                 (int(number_of_heliostats * self.number_of_rays), number_of_points),
