@@ -73,7 +73,7 @@ class Receiver(torch.nn.Module):
         self.curvature_u = curvature_u
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, receiver_key: str) -> Self:
+    def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
         Class method that initializes a receiver from an HDF5 file.
 
@@ -81,71 +81,33 @@ class Receiver(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the receiver.
-        receiver_key : str
-            The name of the receiver to be initialized.
 
         Returns
         -------
         Receiver
             A receiver initialized from an HDF5 file.
         """
-        receiver_type = config_file[config_dictionary.receiver_key][receiver_key][
-            config_dictionary.receiver_type
-        ][()].decode("utf-8")
+        receiver_type = config_file[config_dictionary.receiver_type][()].decode("utf-8")
         position_center = torch.tensor(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_position_center
-            ][()],
+            config_file[config_dictionary.receiver_position_center][()],
             dtype=torch.float,
         )
         normal_vector = torch.tensor(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_normal_vector
-            ][()],
+            config_file[config_dictionary.receiver_normal_vector][()],
             dtype=torch.float,
         )
-        plane_e = float(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_plane_e
-            ][()]
-        )
-        plane_u = float(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_plane_u
-            ][()]
-        )
-        resolution_e = int(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_resolution_e
-            ][()]
-        )
-        resolution_u = int(
-            config_file[config_dictionary.receiver_key][receiver_key][
-                config_dictionary.receiver_resolution_u
-            ][()]
-        )
+        plane_e = float(config_file[config_dictionary.receiver_plane_e][()])
+        plane_u = float(config_file[config_dictionary.receiver_plane_u][()])
+        resolution_e = int(config_file[config_dictionary.receiver_resolution_e][()])
+        resolution_u = int(config_file[config_dictionary.receiver_resolution_u][()])
 
         curvature_e = None
         curvature_u = None
 
-        if (
-            config_dictionary.receiver_curvature_e
-            in config_file[config_dictionary.receiver_key][receiver_key].keys()
-        ):
-            curvature_e = float(
-                config_file[config_dictionary.receiver_key][receiver_key][
-                    config_dictionary.receiver_curvature_e
-                ][()]
-            )
-        if (
-            config_dictionary.receiver_curvature_u
-            in config_file[config_dictionary.receiver_key][receiver_key].keys()
-        ):
-            curvature_u = float(
-                config_file[config_dictionary.receiver_key][receiver_key][
-                    config_dictionary.receiver_curvature_u
-                ][()]
-            )
+        if config_dictionary.receiver_curvature_e in config_file.keys():
+            curvature_e = float(config_file[config_dictionary.receiver_curvature_e][()])
+        if config_dictionary.receiver_curvature_u in config_file.keys():
+            curvature_u = float(config_file[config_dictionary.receiver_curvature_u][()])
 
         return cls(
             receiver_type=receiver_type,
