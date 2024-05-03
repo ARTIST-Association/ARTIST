@@ -8,7 +8,7 @@ from artist.scene.light_source_array import LightSourceArray
 
 class Scenario:
     """
-    This class represents a scenario that is loaded by ARTIST.
+    This class represents a scenario loaded by ARTIST.
 
     Attributes
     ----------
