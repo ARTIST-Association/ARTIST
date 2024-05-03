@@ -47,6 +47,9 @@ def common_setup() -> Scenario:
 
     width = 2
     height = 2
+    num_control_points_e = 7
+    num_control_points_n = 7
+
     nurbs_surface = nurbs_converters.deflectometry_to_nurbs(
         scenario.heliostats.heliostat_list[0].concentrator.facets.surface_points[::100],
         scenario.heliostats.heliostat_list[0].concentrator.facets.surface_normals[
@@ -54,6 +57,9 @@ def common_setup() -> Scenario:
         ],
         width,
         height,
+        num_control_points_e,
+        num_control_points_n,
+        num_epochs=500,
     )
 
     (

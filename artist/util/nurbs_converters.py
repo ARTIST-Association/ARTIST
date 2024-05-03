@@ -8,6 +8,9 @@ def deflectometry_to_nurbs(
     surface_normals: torch.Tensor,
     width: torch.Tensor,
     height: torch.Tensor,
+    num_control_points_e: int,
+    num_control_points_n: int,
+    num_epochs: int = 500,
 ) -> NURBSSurface:
     """
     Convert deflectometry data to a NURBS surface.
@@ -39,9 +42,6 @@ def deflectometry_to_nurbs(
     evaluation_points_n = (
         evaluation_points[:, 1] - min(evaluation_points[:, 1]) + 1e-5
     ) / max((evaluation_points[:, 1] - min(evaluation_points[:, 1])) + 2e-5)
-
-    num_control_points_e = 7
-    num_control_points_n = 7
 
     degree_e = 2
     degree_n = 2
@@ -79,7 +79,7 @@ def deflectometry_to_nurbs(
         verbose=True,
     )
 
-    for epoch in range(500):
+    for epoch in range(num_epochs):
         points, normals = nurbs_surface.calculate_surface_points_and_normals()
 
         optimizer.zero_grad()
