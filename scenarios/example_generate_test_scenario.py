@@ -3,7 +3,9 @@ import math
 import torch
 
 from artist.util import config_dictionary
-from artist.util.scenario_generator import (
+from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorParameters,
     ActuatorPrototypeConfig,
     FacetConfig,
     HeliostatConfig,
@@ -15,9 +17,9 @@ from artist.util.scenario_generator import (
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
-    ScenarioGenerator,
     SurfacePrototypeConfig,
 )
+from artist.util.scenario_generator import ScenarioGenerator
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -120,7 +122,7 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_l
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=math.pi / 2
+    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
 )
 
 # Include the kinematic prototype configuration
@@ -129,13 +131,35 @@ kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
 )
 
-# Include the deviations for the actuator prototype.
-# actuator_prototype_parameters = ActuatorParameters() # Here commented due to ideal actuator without parameters
+# Include a ideal actuator
+actuator1 = ActuatorConfig(
+    actuator_key="actuator1",
+    actuator_type=config_dictionary.ideal_actuator_key,
+    actuator_clockwise=False,
+)
+
+# Include parameters for a linear actuator
+linear_actuator_parameters = ActuatorParameters(
+    increment=torch.tensor(0.0),
+    initial_stroke_length=torch.tensor(0.0),
+    offset=torch.tensor(0.0),
+    radius=torch.tensor(0.0),
+    phi_0=torch.tensor(0.0),
+)
+
+# Include a linear actuator
+actuator2 = ActuatorConfig(
+    actuator_key="actuator2",
+    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_clockwise=True,
+    actuator_parameters=linear_actuator_parameters,
+)
+
+# Create a list of actuators
+actuator_list = [actuator1, actuator2]
 
 # Include the Actuator prototype config.
-actuator_prototype_config = ActuatorPrototypeConfig(
-    actuator_type=config_dictionary.ideal_actuator_key
-)
+actuator_prototype_config = ActuatorPrototypeConfig(actuator_list=actuator_list)
 
 # Include the final prototype config.
 prototype_config = PrototypeConfig(
