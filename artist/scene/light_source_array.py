@@ -60,7 +60,9 @@ class LightSourceArray(torch.nn.Module):
                     mapping_key
                 ]
                 light_source_array.append(
-                    ls_object.from_hdf5(config_file=config_file, light_source_key=ls)
+                    ls_object.from_hdf5(
+                        config_file=config_file[config_dictionary.light_source_key][ls]
+                    )
                 )
             except KeyError:
                 raise KeyError(
