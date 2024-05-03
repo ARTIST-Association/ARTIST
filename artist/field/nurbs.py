@@ -312,10 +312,18 @@ class NURBSSurface(torch.nn.Module):
 
         # Find derivatives of basis functions (based on A2.3, p. 72).
         basis_values_derivatives_x = self.basis_function_and_derivatives(
-            self.knot_vector_e, span_indices_e, self.degree_e, de
+            self.evaluation_points_e,
+            self.knot_vector_e,
+            span_indices_e,
+            self.degree_e,
+            de,
         )
         basis_values_derivatives_y = self.basis_function_and_derivatives(
-            self.knot_vector_n, span_indices_n, self.degree_n, dn
+            self.evaluation_points_n,
+            self.knot_vector_n,
+            span_indices_n,
+            self.degree_n,
+            dn,
         )
 
         # Find surface points and normals (based on A3.6, p. 111).
