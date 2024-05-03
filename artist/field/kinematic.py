@@ -9,11 +9,6 @@ class Kinematic(torch.nn.Module):
     """
     Abstract base class for all kinematic modules.
 
-    Attributes
-    ----------
-    position : torch.Tensor
-        The position of the heliostat in the field.
-
     Methods
     -------
     align()
@@ -22,15 +17,38 @@ class Kinematic(torch.nn.Module):
         Implement the forward kinematics.
     """
 
-    def __init__(self, position: torch.Tensor) -> None:
+    def __init__(self, position: torch.Tensor, aim_point: torch.Tensor) -> None:
+        """
+        Initialize the kinematic.
+
+        Parameters
+        ----------
+        position : torch.Tensor
+            The position of the heliostat.
+        aim_point : torch.Tensor
+            The aim point of the heliostat.
+        """
         super().__init__()
         self.position = position
+        self.aim_point = aim_point
 
     def align(
         self,
+        incident_ray_direction: torch.Tensor,
+        max_num_iterations: int = 2,
+        min_eps: float = 0.0001,
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
-        Compute the orientation matrix to align the heliostat.
+        Compute the rotation matrix to align the concentrator along a desired orientation.
+
+        Parameters
+        ----------
+        incident_ray_direction : torch.Tensor
+            The direction of the incident ray as seen from the heliostat.
+        max_num_iterations : int
+            Maximum number of iterations (default 2).
+        min_eps : float
+            Convergence criterion (default 0.0001).
 
         Raises
         ------
