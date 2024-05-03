@@ -25,12 +25,41 @@ def test_nurbs():
 
     z = torch.stack((z1, z2), dim=-1)
 
-    def generate_random_coefficients():
+    def generate_random_coefficients() -> torch.Tensor:
+        """
+        Generate random coefficients for the surface.
+
+        Returns
+        -------
+        torch.Tensor
+            Random coefficients.
+        """
         return torch.randn(6)
 
     factor = 0.1
 
-    def random_surface(x, y, z, coefficients):
+    def random_surface(
+        x: torch.Tensor, y: torch.Tensor, z: torch.Tensor, coefficients: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Generate a random surface based on provided coefficients.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The x-coordinates.
+        y : torch.Tensor
+            The y-coordinates.
+        z : torch.Tensor
+            The z-coordinates.
+        coefficients : torch.Tensor
+            Coefficients to be used in generating the surface.
+
+        Returns
+        -------
+        torch.Tensor
+            Random surface generated from the coefficients.
+        """
         a, b, c, d, e, f = coefficients
         return (
             factor * a * torch.sin(x)
