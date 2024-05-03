@@ -190,6 +190,8 @@ class NURBSSurface(torch.nn.Module):
             The derivatives of the basis function.
         """
         num_evaluation_points = len(evaluation_points)
+
+        # introduce ndu to store the basis functions (called "n" in The NURBS book) and the knot differences (du)
         ndu = [
             [torch.zeros(num_evaluation_points) for _ in range(degree + 1)]
             for _ in range(degree + 1)
