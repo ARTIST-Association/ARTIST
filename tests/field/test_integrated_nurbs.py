@@ -45,8 +45,11 @@ def common_setup() -> Scenario:
     with h5py.File(f"{ARTIST_ROOT}/scenarios/test_scenario.h5", "r") as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
 
+    # The width and height of the heliostat
     width = 2
     height = 2
+
+    # The number of control points for the NURBS surface
     num_control_points_e = 7
     num_control_points_n = 7
 
