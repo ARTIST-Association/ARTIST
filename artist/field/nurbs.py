@@ -273,6 +273,7 @@ class NURBSSurface(torch.nn.Module):
 
         # Find span indices x direction (based on A2.1, p. 68).
         span_indices_e = self.find_span(
+            self.degree_e,
             self.evaluation_points_e,
             self.knot_vector_e,
             self.control_points,
@@ -280,6 +281,7 @@ class NURBSSurface(torch.nn.Module):
 
         # Find span indices y direction (based on A2.1, p. 68).
         span_indices_n = self.find_span(
+            self.degree_n,
             self.evaluation_points_n,
             self.knot_vector_n,
             self.control_points,
