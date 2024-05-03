@@ -9,6 +9,7 @@ from artist import ARTIST_ROOT, Scenario
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import nurbs_converters
 
+torch.manual_seed(7)
 warnings.filterwarnings("always")
 
 # Attempt to import MPI.
@@ -94,8 +95,6 @@ def test_nurbs(
     expected_value : str
         Path to the expected Bitmap.
     """
-    torch.manual_seed(7)
-
     scenario = common_setup
 
     scenario.heliostats.heliostat_list[0].set_aligned_surface(incident_ray_direction)
