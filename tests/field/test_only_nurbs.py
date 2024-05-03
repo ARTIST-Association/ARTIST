@@ -14,16 +14,16 @@ def test_nurbs():
     The control points of the NURBS surface are the parameters of the optimizer.
     """
     torch.manual_seed(7)
-    x_range = torch.linspace(-5, 5, 40)
-    y_range = torch.linspace(-5, 5, 40)
+    e_range = torch.linspace(-5, 5, 40)
+    n_range = torch.linspace(-5, 5, 40)
 
-    x, y = torch.meshgrid(x_range, y_range, indexing="ij")
+    e, n = torch.meshgrid(e_range, n_range, indexing="ij")
 
-    z_range = torch.linspace(-5, 5, 40)
+    u_range = torch.linspace(-5, 5, 40)
 
-    z1, z2 = torch.meshgrid(z_range, z_range, indexing="ij")
+    u1, u2 = torch.meshgrid(u_range, u_range, indexing="ij")
 
-    z = torch.stack((z1, z2), dim=-1)
+    u = torch.stack((u1, u2), dim=-1)
 
     def generate_random_coefficients() -> torch.Tensor:
         """
@@ -39,19 +39,19 @@ def test_nurbs():
     factor = 0.1
 
     def random_surface(
-        x: torch.Tensor, y: torch.Tensor, z: torch.Tensor, coefficients: torch.Tensor
+        e: torch.Tensor, n: torch.Tensor, u: torch.Tensor, coefficients: torch.Tensor
     ) -> torch.Tensor:
         """
         Generate a random surface based on provided coefficients.
 
         Parameters
         ----------
-        x : torch.Tensor
-            The x-coordinates.
-        y : torch.Tensor
-            The y-coordinates.
-        z : torch.Tensor
-            The z-coordinates.
+        e : torch.Tensor
+            The east-coordinates.
+        n : torch.Tensor
+            The north-coordinates.
+        u : torch.Tensor
+            The up-coordinates.
         coefficients : torch.Tensor
             Coefficients to be used in generating the surface.
 
@@ -62,40 +62,40 @@ def test_nurbs():
         """
         a, b, c, d, e, f = coefficients
         return (
-            factor * a * torch.sin(x)
-            + factor * b * torch.sin(y)
-            + factor * c * torch.sin(z[..., 0])
-            + factor * d * torch.cos(x)
-            + factor * e * torch.cos(y)
-            + factor * f * torch.cos(z[..., 1])
+            factor * a * torch.sin(e)
+            + factor * b * torch.sin(n)
+            + factor * c * torch.sin(u[..., 0])
+            + factor * d * torch.cos(e)
+            + factor * e * torch.cos(n)
+            + factor * f * torch.cos(u[..., 1])
         )
 
     surface_coefficients = generate_random_coefficients()
 
-    surface = random_surface(x, y, z, surface_coefficients)
-    surface_points = torch.stack((x.flatten(), y.flatten(), surface.flatten()), dim=-1)
+    surface = random_surface(e, n, u, surface_coefficients)
+    surface_points = torch.stack((e.flatten(), n.flatten(), surface.flatten()), dim=-1)
     ones = torch.ones(surface_points.shape[0], 1)
     surface_points = torch.cat((surface_points, ones), dim=1)
 
-    evaluation_points_x = torch.linspace(1e-5, 1 - 1e-5, 40)
-    evaluation_points_y = torch.linspace(1e-5, 1 - 1e-5, 40)
-    evaluation_points = torch.cartesian_prod(evaluation_points_x, evaluation_points_y)
-    evaluation_points_x = evaluation_points[:, 0]
-    evaluation_points_y = evaluation_points[:, 1]
+    evaluation_points_e = torch.linspace(1e-5, 1 - 1e-5, 40)
+    evaluation_points_n = torch.linspace(1e-5, 1 - 1e-5, 40)
+    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
+    evaluation_points_e = evaluation_points[:, 0]
+    evaluation_points_n = evaluation_points[:, 1]
 
-    num_control_points_x = 20
-    num_control_points_y = 20
+    num_control_points_e = 20
+    num_control_points_n = 20
 
-    degree_x = 2
-    degree_y = 2
+    degree_e = 2
+    degree_n = 2
 
-    control_points_shape = (num_control_points_x, num_control_points_y)
+    control_points_shape = (num_control_points_e, num_control_points_n)
     control_points = torch.zeros(
         control_points_shape + (3,),
     )
-    origin_offsets_x = torch.linspace(-5, 5, num_control_points_x)
-    origin_offsets_y = torch.linspace(-5, 5, num_control_points_y)
-    origin_offsets = torch.cartesian_prod(origin_offsets_x, origin_offsets_y)
+    origin_offsets_e = torch.linspace(-5, 5, num_control_points_e)
+    origin_offsets_n = torch.linspace(-5, 5, num_control_points_n)
+    origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
     origin_offsets = torch.hstack(
         (
             origin_offsets,
@@ -108,7 +108,7 @@ def test_nurbs():
     )
 
     nurbs = NURBSSurface(
-        degree_x, degree_y, evaluation_points_x, evaluation_points_y, control_points
+        degree_e, degree_n, evaluation_points_e, evaluation_points_n, control_points
     )
 
     optimizer = torch.optim.Adam([control_points], lr=5e-3)
