@@ -165,7 +165,7 @@ class NURBSSurface(torch.nn.Module):
         span: torch.Tensor,
         degree: int,
         nth_derivative: int = 1,
-    ) -> list[list[torch.Tensor]]:
+    ) -> torch.Tensor:
         """
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
 
@@ -186,7 +186,7 @@ class NURBSSurface(torch.nn.Module):
 
         Returns
         -------
-        list[list[torch.Tensor]]
+        torch.Tensor
             The derivatives of the basis function.
         """
         num_evaluation_points = len(evaluation_points)
