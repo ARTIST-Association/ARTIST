@@ -3,13 +3,13 @@ import torch
 from artist.field.nurbs import NURBSSurface
 
 
-def test_nurbs():
+def test_nurbs() -> None:
     """
     Test the NURBS surface only, without raytracing.
 
-    First a random surface is generated, it consists of surface_points.
-    Then all the nurbs parameters are initialized (evaluation points, control points, degree,...)
-    Next the NURBS surface is initialized accordingly and then it is fitted to the
+    First a random surface is generated, it consists of ``surface_points``.
+    Then, all the NURBS parameters are initialized (evaluation points, control points, degree,...)
+    Next, the NURBS surface is initialized accordingly and then it is fitted to the
     random surface that was created in the beginning.
     The control points of the NURBS surface are the parameters of the optimizer.
     """
@@ -25,7 +25,8 @@ def test_nurbs():
 
     z = torch.stack((z1, z2), dim=-1)
 
-    def generate_random_coefficients():
+    def generate_random_coefficients() -> torch.Tensor:
+        # Generate random coefficients.
         return torch.randn(6)
 
     factor = 0.1
