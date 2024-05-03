@@ -34,7 +34,7 @@ def deflectometry_to_nurbs(
     evaluation_points = surface_points.clone()
     evaluation_points[:, 2] = 0
 
-    # normalize evaluation points and shift them so that they correspond to the knots.
+    # Normalize evaluation points and shift them so that they correspond to the knots.
     # -> The evaluation points must also lie between 0 and 1 (like the knots).
     evaluation_points_e = (
         evaluation_points[:, 0] - min(evaluation_points[:, 0]) + 1e-5
