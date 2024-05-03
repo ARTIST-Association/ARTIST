@@ -191,7 +191,7 @@ class NURBSSurface(torch.nn.Module):
         """
         num_evaluation_points = len(evaluation_points)
 
-        # introduce ndu to store the basis functions (called "n" in The NURBS book) and the knot differences (du)
+        # introduce ndu to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
         ndu = [
             [torch.zeros(num_evaluation_points) for _ in range(degree + 1)]
             for _ in range(degree + 1)
@@ -205,6 +205,7 @@ class NURBSSurface(torch.nn.Module):
             saved = torch.zeros(num_evaluation_points)
             for r in range(j):
                 ndu[j][r] = right[r + 1] + left[j - r]
+                # introduce tmp to temporarily store result.
                 tmp = ndu[r][j - 1] / ndu[j][r]
                 ndu[r][j] = saved + right[r + 1] * tmp
                 saved = left[j - r] * tmp
@@ -215,6 +216,7 @@ class NURBSSurface(torch.nn.Module):
         ]
         for j in range(degree + 1):
             derivatives[0][j] = ndu[j][degree]
+        # a stores (in alternating fashion) the two most recently computed rows a_k,j and a_k-1,j
         a = [
             [torch.zeros(num_evaluation_points) for _ in range(degree + 1)]
             for _ in range(2)
