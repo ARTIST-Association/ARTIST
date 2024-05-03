@@ -3,6 +3,7 @@
 from artist.field.actuator_ideal import (
     IdealActuator,
 )
+from artist.field.actuator_linear import LinearActuator
 from artist.field.kinematic_rigid_body import (
     RigidBody,
 )
@@ -13,4 +14,7 @@ light_source_type_mapping = {config_dictionary.sun_key: Sun}
 
 kinematic_type_mapping = {config_dictionary.rigid_body_key: RigidBody}
 
-actuator_type_mapping = {config_dictionary.ideal_actuator_key: IdealActuator}
+actuator_type_mapping = {
+    config_dictionary.ideal_actuator_key: IdealActuator,
+    config_dictionary.linear_actuator_key: LinearActuator,
+}
