@@ -310,14 +310,14 @@ class NURBSSurface(torch.nn.Module):
                 derivatives[:, k, t] = 0
 
         # find derivatives of basis functions (based on A2.3, page 72)
-        basis_values_derivatives_x = self.basis_function_and_derivatives(
+        basis_values_derivatives_e = self.basis_function_and_derivatives(
             self.evaluation_points_e,
             self.knot_vector_e,
             span_indices_e,
             self.degree_e,
             de,
         )
-        basis_values_derivatives_y = self.basis_function_and_derivatives(
+        basis_values_derivatives_n = self.basis_function_and_derivatives(
             self.evaluation_points_n,
             self.knot_vector_n,
             span_indices_n,
@@ -336,7 +336,7 @@ class NURBSSurface(torch.nn.Module):
                 temp[s] = torch.zeros_like(temp[s])
                 for r in range(self.degree_e + 1):
                     temp[s] += (
-                        basis_values_derivatives_x[k][r].unsqueeze(-1)
+                        basis_values_derivatives_e[k][r].unsqueeze(-1)
                         * control_points[
                             span_indices_e - self.degree_e + r,
                             span_indices_n - self.degree_n + s,
@@ -347,7 +347,7 @@ class NURBSSurface(torch.nn.Module):
                 derivatives[:, k, t] = 0
                 for s in range(self.degree_n + 1):
                     derivatives[:, k, t] += (
-                        basis_values_derivatives_y[t][s].unsqueeze(-1) * temp[s]
+                        basis_values_derivatives_n[t][s].unsqueeze(-1) * temp[s]
                     )
 
         normals = torch.linalg.cross(derivatives[:, 1, 0, :3], derivatives[:, 0, 1, :3])
