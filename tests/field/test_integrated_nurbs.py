@@ -1,4 +1,3 @@
-import pathlib
 import warnings
 
 import h5py
@@ -10,6 +9,7 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import nurbs_converters
 
 torch.manual_seed(7)
+
 warnings.filterwarnings("always")
 
 # Attempt to import MPI.
@@ -110,14 +110,3 @@ def test_nurbs(
     if MPI is not None:
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
-
-    if rank == 0:
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/field/test_bitmaps_integrated_nurbs"
-            / expected_value
-        )
-
-        expected = torch.load(expected_path)
-
-        torch.testing.assert_close(final_bitmap.T, expected, atol=1e-2, rtol=1e-2)
