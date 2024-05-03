@@ -72,10 +72,10 @@ class NURBSSurface(torch.nn.Module):
         """
         Calculate the knot vectors in east and north direction.
 
-        For our application only uniform knot vectors are required.
+        For our application, only uniform knot vectors are required.
         The knots range from 0 to 1 and are distributed uniformly.
         The first knot (0) and the last knot (1) have full multiplicity,
-        this means they are repeated as often as specified by the degree.
+        i.e., they are repeated as often as specified by the degree.
         This means the NURBS start and end in a control point.
 
         Returns
