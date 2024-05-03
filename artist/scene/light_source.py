@@ -36,7 +36,7 @@ class LightSource(torch.nn.Module):
         self.number_of_rays = number_of_rays
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File, light_source_key: str) -> Self:
+    def from_hdf5(cls, config_file: h5py.File) -> Self:
         """
         Load the light source from a hdf5 file.
 
@@ -44,8 +44,6 @@ class LightSource(torch.nn.Module):
         ----------
         config_file : h5py.File
             The hdf5 file containing the information about the light source.
-        light_source_key : str
-            The key identifying the light source to be loaded.
 
         Raises
         ------
