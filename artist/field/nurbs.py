@@ -19,9 +19,9 @@ class NURBSSurface(torch.nn.Module):
         The evaluation points in north direction.
     control_points : torch.Tensor
         The control_points.
-    knot_vector_e
+    knot_vector_e : torch.Tensor
         The knot vector in east direction.
-    knot_vector_n
+    knot_vector_n : torch.Tensor
         The knot vector in north direction.
 
     Methods
@@ -43,9 +43,9 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points_e: torch.Tensor,
         evaluation_points_n: torch.Tensor,
         control_points: torch.Tensor,
-    ) -> torch.Tensor:
+    ) -> None:
         """
-        Initialize a nurbs surface.
+        Initialize a NURBS surface.
 
         Parameters
         ----------
@@ -60,7 +60,7 @@ class NURBSSurface(torch.nn.Module):
         control_points : torch.Tensor
             The control_points.
         """
-        super(NURBSSurface, self).__init__()
+        super().__init__()
         self.degree_e = degree_e
         self.degree_n = degree_n
         self.evaluation_points_e = evaluation_points_e
@@ -72,10 +72,10 @@ class NURBSSurface(torch.nn.Module):
         """
         Calculate the knot vectors in east and north direction.
 
-        For our application only uniform knot vectors are required.
+        For our application, only uniform knot vectors are required.
         The knots range from 0 to 1 and are distributed uniformly.
         The first knot (0) and the last knot (1) have full multiplicity,
-        this means they are repeated as often as specified by the degree.
+        i.e., they are repeated as often as specified by the degree.
         This means the NURBS start and end in a control point.
 
         Returns
@@ -104,8 +104,8 @@ class NURBSSurface(torch.nn.Module):
 
         return knots_e, knots_n
 
+    @staticmethod
     def find_span(
-        self,
         degree: int,
         evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
@@ -114,11 +114,11 @@ class NURBSSurface(torch.nn.Module):
         """
         Determine the knot span index for given evaluation points.
 
-        Later on the basis functions are evaluated, some of them are
+        Later on, the basis functions are evaluated, some of them are
         identical to zero and therefore it would be a waste to compute
         them. That is why first the knot span in which the evaluation
         point lies is computed using this function.
-        See `The NURBS Book` page 68 for reference.
+        See `The NURBS Book` p. 68 for reference.
 
         Parameters
         ----------
@@ -158,8 +158,8 @@ class NURBSSurface(torch.nn.Module):
 
         return span_indices
 
+    @staticmethod
     def basis_function_and_derivatives(
-        self,
         evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
         span: torch.Tensor,
@@ -169,7 +169,7 @@ class NURBSSurface(torch.nn.Module):
         """
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
 
-        See `The NURBS Book` page 72 for reference.
+        See `The NURBS Book` p. 72 for reference.
 
         Parameters
         ----------
@@ -191,7 +191,7 @@ class NURBSSurface(torch.nn.Module):
         """
         num_evaluation_points = len(evaluation_points)
 
-        # introduce ndu to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
+        # Introduce `ndu` to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
         ndu = [
             [torch.zeros(num_evaluation_points) for _ in range(degree + 1)]
             for _ in range(degree + 1)
@@ -205,7 +205,7 @@ class NURBSSurface(torch.nn.Module):
             saved = torch.zeros(num_evaluation_points)
             for r in range(j):
                 ndu[j][r] = right[r + 1] + left[j - r]
-                # introduce tmp to temporarily store result.
+                # Introduce `tmp` to temporarily store result.
                 tmp = ndu[r][j - 1] / ndu[j][r]
                 ndu[r][j] = saved + right[r + 1] * tmp
                 saved = left[j - r] * tmp
@@ -216,7 +216,7 @@ class NURBSSurface(torch.nn.Module):
         ]
         for j in range(degree + 1):
             derivatives[0][j] = ndu[j][degree]
-        # a stores (in alternating fashion) the two most recently computed rows a_k,j and a_k-1,j
+        # `a` stores (in alternating fashion) the two most recently computed rows a_k,j and a_k-1,j.
         a = [
             [torch.zeros(num_evaluation_points) for _ in range(degree + 1)]
             for _ in range(2)
@@ -271,7 +271,7 @@ class NURBSSurface(torch.nn.Module):
         """
         nth_derivative = 1
 
-        # find span indices x direction (based on A2.1, page 68)
+        # Find span indices x direction (based on A2.1, p. 68).
         span_indices_e = self.find_span(
             self.degree_e,
             self.evaluation_points_e,
@@ -279,7 +279,7 @@ class NURBSSurface(torch.nn.Module):
             self.control_points,
         )
 
-        # find span indices y direction (based on A2.1, page 68)
+        # Find span indices y direction (based on A2.1, p. 68).
         span_indices_n = self.find_span(
             self.degree_n,
             self.evaluation_points_n,
@@ -299,7 +299,8 @@ class NURBSSurface(torch.nn.Module):
             control_points.shape[-1],
         )
 
-        # find minimum of nth_derivative and degree, will be used to specifiy how many partial derivatives will be computed.
+        # Find minimum of `nth_derivative` and degree, will be used to specify how many partial derivatives will be
+        # computed.
         de = min(nth_derivative, self.degree_e)
         for k in range(self.degree_e + 1, nth_derivative + 1):
             for t in range(nth_derivative - k + 1):
@@ -309,7 +310,7 @@ class NURBSSurface(torch.nn.Module):
             for k in range(nth_derivative - t + 1):
                 derivatives[:, k, t] = 0
 
-        # find derivatives of basis functions (based on A2.3, page 72)
+        # Find derivatives of basis functions (based on A2.3, p. 72).
         basis_values_derivatives_e = self.basis_function_and_derivatives(
             self.evaluation_points_e,
             self.knot_vector_e,
@@ -325,8 +326,8 @@ class NURBSSurface(torch.nn.Module):
             dn,
         )
 
-        # find surface points and normals (based on A3.6, page 111)
-        # temp stores the vector/matrix product of the basis value derivatives and the control points.
+        # Find surface points and normals (based on A3.6, p. 111).
+        # `temp` stores the vector/matrix product of the basis value derivatives and the control points.
         temp = [
             torch.zeros((len(self.evaluation_points_e), control_points.shape[-1]))
             for _ in range(self.degree_n + 1)
