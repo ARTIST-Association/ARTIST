@@ -65,16 +65,12 @@ kinematic_offsets_key = "kinematic_offsets"
 kinematic_deviations_key = "kinematic_deviations"
 
 # Dictionary for actuator parameters.
-first_joint_increment = "first_joint_increment"
-first_joint_initial_stroke_length = "first_joint_initial_stroke_length"
-first_joint_actuator_offset = "first_joint_actuator_offset"
-first_joint_radius = "first_joint_radius"
-first_joint_phi_0 = "first_joint_phi_0"
-second_joint_increment = "second_joint_increment"
-second_joint_initial_stroke_length = "second_joint_initial_stroke_length"
-second_joint_actuator_offset = "second_joint_actuator_offset"
-second_joint_radius = "second_joint_radius"
-second_joint_phi_0 = "second_joint_phi_0"
+actuator_clockwise = "clockwise"
+actuator_increment = "actuator_increment"
+actuator_initial_stroke_length = "initial_stroke_length"
+actuator_offset = "offset"
+actuator_radius = "radius"
+actuator_phi_0 = "phi_0"
 
 # Dictionary for actuator config.
 actuator_type_key = "actuator_type"
