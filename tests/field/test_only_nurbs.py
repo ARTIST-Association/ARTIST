@@ -4,7 +4,15 @@ from artist.field.nurbs import NURBSSurface
 
 
 def test_nurbs():
-    """Test the NURBS surface only, without raytracing."""
+    """
+    Test the NURBS surface only, without raytracing.
+
+    First a random surface is generated, it consists of surface_points.
+    Then all the nurbs parameters are initialized (evaluation points, control points, degree,...)
+    Next the NURBS surface is initialized accordingly and then it is fitted to the
+    random surface that was created in the beginning.
+    The control points of the NURBS surface are the parameters of the optimizer.
+    """
     torch.manual_seed(7)
     x_range = torch.linspace(-5, 5, 40)
     y_range = torch.linspace(-5, 5, 40)
