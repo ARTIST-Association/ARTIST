@@ -1,0 +1,49 @@
+import torch
+
+from artist.util import artist_type_mapping_dict
+from artist.util.configuration_classes import ActuatorListConfig
+
+
+class ActuatorArray(torch.nn.Module):
+    """
+    This class wraps a list of actuators as a torch.nn.Module to allow gradient calculation.
+
+    Attributes
+    ----------
+    actuator_list : List[Actuator]
+
+    """
+
+    def __init__(self, actuator_list_config: ActuatorListConfig):
+        """
+        Initialize the heliostat field.
+
+        Parameters
+        ----------
+        actuator_list_config : ActuatorListConfig
+            The configuration parameters for the actuators
+        """
+        super(ActuatorArray, self).__init__()
+        actuator_array = []
+        for i, actuator_config in enumerate(actuator_list_config.actuator_list):
+            try:
+                actuator_object = artist_type_mapping_dict.actuator_type_mapping[
+                    actuator_config.actuator_type
+                ]
+                actuator_array.append(
+                    actuator_object(
+                        joint_number=i + 1,
+                        clockwise=actuator_config.actuator_clockwise,
+                        increment=actuator_config.actuator_parameters.increment,
+                        initial_stroke_length=actuator_config.actuator_parameters.initial_stroke_length,
+                        offset=actuator_config.actuator_parameters.offset,
+                        radius=actuator_config.actuator_parameters.radius,
+                        phi_0=actuator_config.actuator_parameters.phi_0,
+                    )
+                )
+            except KeyError:
+                raise KeyError(
+                    f"Currently the selected actuator type: {actuator_config.actuator_type} is not supported."
+                )
+
+        self.actuator_list = actuator_array
