@@ -299,7 +299,7 @@ class NURBSSurface(torch.nn.Module):
             control_points.shape[-1],
         )
 
-        # find surface points and normals (based on A3.6, page 111)
+        # find minimum of nth_derivative and degree, will be used to specifiy how many partial derivatives will be computed.
         de = min(nth_derivative, self.degree_e)
         for k in range(self.degree_e + 1, nth_derivative + 1):
             for t in range(nth_derivative - k + 1):
@@ -325,6 +325,8 @@ class NURBSSurface(torch.nn.Module):
             dn,
         )
 
+        # find surface points and normals (based on A3.6, page 111)
+        # temp stores the vector/matrix product of the basis value derivatives and the control points.
         temp = [
             torch.zeros((len(self.evaluation_points_e), control_points.shape[-1]))
             for _ in range(self.degree_n + 1)
