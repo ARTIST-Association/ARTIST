@@ -43,9 +43,9 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points_e: torch.Tensor,
         evaluation_points_n: torch.Tensor,
         control_points: torch.Tensor,
-    ) -> torch.Tensor:
+    ) -> None:
         """
-        Initialize a nurbs surface.
+        Initialize a NURBS surface.
 
         Parameters
         ----------
@@ -60,7 +60,7 @@ class NURBSSurface(torch.nn.Module):
         control_points : torch.Tensor
             The control_points.
         """
-        super(NURBSSurface, self).__init__()
+        super().__init__()
         self.degree_e = degree_e
         self.degree_n = degree_n
         self.evaluation_points_e = evaluation_points_e
