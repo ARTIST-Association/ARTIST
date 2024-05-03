@@ -93,7 +93,7 @@ def test_nurbs(
     common_setup: Scenario, incident_ray_direction: torch.Tensor, expected_value: str
 ):
     """
-    Test the nurbs surface and the raytracing process.
+    Test the NURBS surface and the raytracing process.
 
     Parameters
     ----------
@@ -102,7 +102,7 @@ def test_nurbs(
     incident_ray_direction : torch.Tensor
         The incident ray direction.
     expected_value : str
-        Path to the expected Bitmap.
+        Path to the expected bitmap.
     """
     scenario = common_setup
 
