@@ -143,7 +143,7 @@ class RigidBody(Kinematic):
                 utils.rotate_n(n=self.deviation_parameters.first_joint_tilt_n)
                 @ utils.rotate_u(u=self.deviation_parameters.first_joint_tilt_u)
                 @ utils.translate_enu(
-                    e=self.deviation_parametersfirst_joint_translation_e,
+                    e=self.deviation_parameters.first_joint_translation_e,
                     n=self.deviation_parameters.first_joint_translation_n,
                     u=self.deviation_parameters.first_joint_translation_u,
                 )
