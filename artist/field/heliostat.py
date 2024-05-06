@@ -4,8 +4,9 @@ import h5py
 import torch
 from typing_extensions import Self
 
+from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
-from artist.util import artist_type_mapping_dict, config_dictionary, utils
+from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -16,6 +17,8 @@ from artist.util.configuration_classes import (
     KinematicOffsets,
     SurfaceConfig,
 )
+
+kinematic_type_mapping = {config_dictionary.rigid_body_key: RigidBody}
 
 
 class Heliostat(torch.nn.Module):
@@ -86,9 +89,7 @@ class Heliostat(torch.nn.Module):
         self.aim_point = aim_point
         self.surface = Surface(surface_config=surface_config)
         try:
-            kinematic_object = artist_type_mapping_dict.kinematic_type_mapping[
-                kinematic_config.kinematic_type
-            ]
+            kinematic_object = kinematic_type_mapping[kinematic_config.kinematic_type]
         except KeyError:
             raise KeyError(
                 f"Currently the selected kinematic type: {kinematic_config.kinematic_type} is not supported."
