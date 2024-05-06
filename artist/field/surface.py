@@ -38,3 +38,25 @@ class Surface(torch.nn.Module):
             )
             for facet_config in surface_config.facets_list
         ]
+
+    def get_surface_points_and_normals(self)-> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Calculate all surface points and normals from all facets.
+
+        Returns
+        -------
+        torch.Tensor
+            The surface points.
+        torch.Tensor
+            The surface_normals.
+        """
+        surface_points = []
+        surface_normals = []
+        for facet in self.facets:
+            facet_surface = facet.create_nurbs_surface()
+            facet_points, facet_normals = facet_surface.calculate_surface_points_and_normals()
+            surface_points.append(facet_points)
+            surface_normals.append(facet_normals)
+        surface_points = torch.stack(surface_points, dim=1)
+        surface_normals = torch.stack(surface_points, dim=1)
+        return surface_points, surface_normals

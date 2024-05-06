@@ -1,5 +1,7 @@
 import torch
 
+from artist.field.nurbs import NURBSSurface
+
 
 class NurbsFacet(torch.nn.Module):
     """
@@ -73,3 +75,22 @@ class NurbsFacet(torch.nn.Module):
         self.position = position
         self.canting_e = canting_e
         self.canting_u = canting_u
+
+    def create_nurbs_surface(self) -> NURBSSurface:
+        """
+        Create a NURBS surface to model a facet.
+        
+        Returns
+        -------
+        NURBSSurface
+            The NURBS surface of one facet.
+        """
+        evaluation_points_e = torch.linspace(0, 1, self.number_eval_points_e)
+        evaluation_points_n = torch.linspace(0, 1, self.number_eval_points_n)
+
+        nurbs_surface = NURBSSurface(self.degree_e,
+                                     self.degree_n,
+                                     evaluation_points_e,
+                                     evaluation_points_n,
+                                     self.control_points)
+        return nurbs_surface
