@@ -81,16 +81,16 @@ def common_setup() -> Scenario:
 
 
 @pytest.mark.parametrize(
-    "incident_ray_direction, expected_value",
+    "incident_ray_direction",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0])),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0])),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0])),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0])),
     ],
 )
 def test_nurbs(
-    common_setup: Scenario, incident_ray_direction: torch.Tensor, expected_value: str
+    common_setup: Scenario, incident_ray_direction: torch.Tensor
 ):
     """
     Test the NURBS surface and the raytracing process.
@@ -101,8 +101,6 @@ def test_nurbs(
         The scenario shared across different tests.
     incident_ray_direction : torch.Tensor
         The incident ray direction.
-    expected_value : str
-        Path to the expected bitmap.
     """
     scenario = common_setup
 
