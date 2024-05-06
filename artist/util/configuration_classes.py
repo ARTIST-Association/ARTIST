@@ -307,15 +307,17 @@ class FacetConfig:
     Attributes
     ----------
     facet_key : str
-        The ID of the facet used to identify the facet in the HDF5 file.
-    control_points_e : torch.Tensor
-        The NURBS control points in the east direction.
-    control_points_u : torch.Tensor
-        The NURBS control points in the up direction.
-    knots_e : torch.Tensor
-        The NURBS knots in the east direction.
-    knots_u : torch.Tensor
-        The NURBS knots in the up direction.
+        The key used to identify the facet in the HDF5 file.
+    control_points : torch.Tensor
+        The NURBS control points.
+    degree_e : torch.Tensor
+        The NURBS degree in the east direction.
+    degree_n : torch.Tensor
+        The NURBS degree in the north direction.
+    number_eval_points_e : int
+        The number of evaluation points for the NUBRS surface in the east direction.
+    number_eval_points_n : int
+        The number of evaluation points for the NURBS surface in the north direction.
     width : float
         The width of the facet.
     height : float
@@ -324,8 +326,8 @@ class FacetConfig:
         The position of the facet.
     canting_e : torch.Tensor
         The canting vector in the east direction.
-    canting_u : torch.Tensor
-        The canting vector in the up direction.
+    canting_n : torch.Tensor
+        The canting vector in the north direction.
 
     Methods
     -------
@@ -336,15 +338,16 @@ class FacetConfig:
     def __init__(
         self,
         facet_key: str,
-        control_points_e: torch.Tensor,
-        control_points_u: torch.Tensor,
-        knots_e: torch.Tensor,
-        knots_u: torch.Tensor,
+        control_points: torch.Tensor,
+        degree_e: int,
+        degree_n: int,
+        number_eval_points_e: int,
+        number_eval_points_n: int,
         width: float,
         height: float,
         position: torch.Tensor,
         canting_e: torch.Tensor,
-        canting_u: torch.Tensor,
+        canting_n: torch.Tensor,
     ) -> None:
         """
         Initialize the facet configuration.
@@ -353,14 +356,16 @@ class FacetConfig:
         ----------
         facet_key : str
             The key used to identify the facet in the HDF5 file.
-        control_points_e : torch.Tensor
-            The NURBS control points in the east direction.
-        control_points_u : torch.Tensor
-            The NURBS control points in the up direction.
-        knots_e : torch.Tensor
-            The NURBS knots in the east direction.
-        knots_u : torch.Tensor
-            The NURBS knots in the up direction.
+        control_points : torch.Tensor
+            The NURBS control points.
+        degree_e : torch.Tensor
+            The NURBS degree in the east direction.
+        degree_n : torch.Tensor
+            The NURBS degree in the north direction.
+        number_eval_points_e : int
+            The number of evaluation points for the NUBRS surface in the east direction.
+        number_eval_points_n : int
+            The number of evaluation points for the NURBS surface in the north direction.
         width : float
             The width of the facet.
         height : float
@@ -369,19 +374,20 @@ class FacetConfig:
             The position of the facet.
         canting_e : torch.Tensor
             The canting vector in the east direction.
-        canting_u : torch.Tensor
-            The canting vector in the up direction.
+        canting_n : torch.Tensor
+            The canting vector in the north direction.
         """
         self.facet_key = facet_key
-        self.control_points_e = control_points_e
-        self.control_points_u = control_points_u
-        self.knots_e = knots_e
-        self.knots_u = knots_u
+        self.control_points = control_points
+        self.degree_e = degree_e
+        self.degree_n = degree_n
+        self.number_eval_points_e = number_eval_points_n
+        self.number_eval_points_n = number_eval_points_n
         self.width = width
         self.height = height
         self.position = position
         self.canting_e = canting_e
-        self.canting_u = canting_u
+        self.canting_n = canting_n
 
     def create_facet_dict(self) -> Dict[str, Any]:
         """
@@ -393,15 +399,16 @@ class FacetConfig:
             A dictionary containing the configuration parameters for the facet.
         """
         return {
-            config_dictionary.facet_control_points_e: self.control_points_e,
-            config_dictionary.facet_control_points_u: self.control_points_u,
-            config_dictionary.facet_knots_e: self.knots_e,
-            config_dictionary.facet_knots_u: self.knots_u,
+            config_dictionary.facet_control_points: self.control_points,
+            config_dictionary.facet_degree_e: self.degree_e,
+            config_dictionary.facet_degree_n: self.degree_n,
+            config_dictionary.facet_number_eval_e: self.number_eval_points_e,
+            config_dictionary.facet_number_eval_n: self.number_eval_points_n,
             config_dictionary.facets_width: self.width,
             config_dictionary.facets_height: self.height,
             config_dictionary.facets_position: self.position,
             config_dictionary.facets_canting_e: self.canting_e,
-            config_dictionary.facets_canting_u: self.canting_u,
+            config_dictionary.facets_canting_n: self.canting_n,
         }
 
 
