@@ -4,8 +4,11 @@ import h5py
 import torch.nn
 from typing_extensions import Self
 
-from artist.scene import LightSource
-from artist.util import artist_type_mapping_dict, config_dictionary
+from artist.scene.light_source import LightSource
+from artist.scene.sun import Sun
+from artist.util import config_dictionary
+
+light_source_type_mapping = {config_dictionary.sun_key: Sun}
 
 
 class LightSourceArray(torch.nn.Module):
@@ -56,9 +59,7 @@ class LightSourceArray(torch.nn.Module):
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
             try:
-                ls_object = artist_type_mapping_dict.light_source_type_mapping[
-                    mapping_key
-                ]
+                ls_object = light_source_type_mapping[mapping_key]
                 light_source_array.append(
                     ls_object.from_hdf5(
                         config_file=config_file[config_dictionary.light_source_key][ls]
