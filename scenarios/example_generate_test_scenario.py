@@ -52,11 +52,11 @@ light_source1_config = LightSourceConfig(
 # Create a list of light source configs - in this case only one.
 light_source_list = [light_source1_config]
 
-# Include the configuration fo the list of light sources.
+# Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
 
-# Include four facets for the surface prototype
+# Include four facets for the surface prototype.
 prototype_facet1_config = FacetConfig(
     facet_key="facet1",
     control_points_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
@@ -106,7 +106,7 @@ prototype_facet4_config = FacetConfig(
     canting_u=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
 )
 
-# Create a list of prototype facets
+# Create a list of prototype facets.
 prototype_facets_list = [
     prototype_facet1_config,
     prototype_facet2_config,
@@ -125,21 +125,21 @@ kinematic_prototype_offsets = KinematicOffsets(
     kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
 )
 
-# Include the kinematic prototype configuration
+# Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_type=config_dictionary.rigid_body_key,
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
 )
 
-# Include a ideal actuator
-actuator1 = ActuatorConfig(
+# Include a ideal actuator.
+actuator1_prototype = ActuatorConfig(
     actuator_key="actuator1",
     actuator_type=config_dictionary.ideal_actuator_key,
     actuator_clockwise=False,
 )
 
-# Include parameters for a linear actuator
-linear_actuator_parameters = ActuatorParameters(
+# Include parameters for a linear actuator.
+actuator2_prototype_parameters = ActuatorParameters(
     increment=torch.tensor(0.0),
     initial_stroke_length=torch.tensor(0.0),
     offset=torch.tensor(0.0),
@@ -147,19 +147,21 @@ linear_actuator_parameters = ActuatorParameters(
     phi_0=torch.tensor(0.0),
 )
 
-# Include a linear actuator
-actuator2 = ActuatorConfig(
+# Include a linear actuator.
+actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
     actuator_type=config_dictionary.linear_actuator_key,
     actuator_clockwise=True,
-    actuator_parameters=linear_actuator_parameters,
+    actuator_parameters=actuator2_prototype_parameters,
 )
 
-# Create a list of actuators
-actuator_list = [actuator1, actuator2]
+# Create a list of actuators.
+actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
 
 # Include the Actuator prototype config.
-actuator_prototype_config = ActuatorPrototypeConfig(actuator_list=actuator_list)
+actuator_prototype_config = ActuatorPrototypeConfig(
+    actuator_list=actuator_prototype_list
+)
 
 # Include the final prototype config.
 prototype_config = PrototypeConfig(
@@ -171,7 +173,7 @@ prototype_config = PrototypeConfig(
 # If heliostats had individual surface, kinematic, or actuator configs, these must be defined here. Otherwise, only
 # the parameters from the prototype are used.
 
-# Include the configuration for a heliostat
+# Include the configuration for a heliostat.
 heliostat_1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
