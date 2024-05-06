@@ -80,37 +80,41 @@ class Scenario:
         facets_list = [
             FacetConfig(
                 facet_key="",
-                control_points_e=torch.tensor(
+                control_points=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facet_control_points_e
+                        config_dictionary.facet_control_points
                     ][()],
                     dtype=torch.float,
                 ),
-                control_points_u=torch.tensor(
+                degree_e=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facet_control_points_u
-                    ][()],
-                    dtype=torch.float,
+                        config_dictionary.facet_degree_e
+                    ][()]
                 ),
-                knots_e=torch.tensor(
+                degree_n=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facet_knots_e
-                    ][()],
-                    dtype=torch.float,
+                        config_dictionary.facet_degree_n
+                    ][()]
                 ),
-                knots_u=torch.tensor(
+                number_eval_points_e=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facet_knots_u
-                    ][()],
-                    dtype=torch.float,
+                        config_dictionary.facet_number_eval_e
+                    ][()]
+                ),
+                number_eval_points_n=int(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_number_eval_n
+                    ][()]
                 ),
                 width=float(
                     scenario_file[config_dictionary.prototype_key][
@@ -142,11 +146,11 @@ class Scenario:
                     ][()],
                     dtype=torch.float,
                 ),
-                canting_u=torch.tensor(
+                canting_n=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facets_canting_u
+                        config_dictionary.facets_canting_n
                     ][()],
                     dtype=torch.float,
                 ),
@@ -158,357 +162,241 @@ class Scenario:
         surface_prototype = SurfaceConfig(facets_list=facets_list)
 
         # Create kinematic prototype
-        kinematic_initial_orientation_offset_e = torch.tensor(0.0)
-        kinematic_initial_orientation_offset_n = torch.tensor(0.0)
-        kinematic_initial_orientation_offset_u = torch.tensor(0.0)
-        if (
-            config_dictionary.kinematic_offsets_key
-            in scenario_file[config_dictionary.prototype_key][
-                config_dictionary.kinematic_prototype_key
-            ].keys()
-        ):
-            if (
-                config_dictionary.kinematic_initial_orientation_offset_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_offsets_key].keys()
-            ):
-                kinematic_initial_orientation_offset_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_offsets_key][
-                        config_dictionary.kinematic_initial_orientation_offset_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.kinematic_initial_orientation_offset_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_offsets_key].keys()
-            ):
-                kinematic_initial_orientation_offset_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_offsets_key][
-                        config_dictionary.kinematic_initial_orientation_offset_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.kinematic_initial_orientation_offset_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_offsets_key].keys()
-            ):
-                kinematic_initial_orientation_offset_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_offsets_key][
-                        config_dictionary.kinematic_initial_orientation_offset_u
-                    ][()],
-                    dtype=torch.float,
-                )
-        kinematic_offsets = KinematicOffsets(
-            kinematic_initial_orientation_offset_e=kinematic_initial_orientation_offset_e,
-            kinematic_initial_orientation_offset_n=kinematic_initial_orientation_offset_n,
-            kinematic_initial_orientation_offset_u=kinematic_initial_orientation_offset_u,
+        kinematic_initial_orientation_offset_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
         )
-        first_joint_translation_e = torch.tensor(0.0)
-        first_joint_translation_n = torch.tensor(0.0)
-        first_joint_translation_u = torch.tensor(0.0)
-        first_joint_tilt_e = torch.tensor(0.0)
-        first_joint_tilt_n = torch.tensor(0.0)
-        first_joint_tilt_u = torch.tensor(0.0)
-        second_joint_translation_e = torch.tensor(0.0)
-        second_joint_translation_n = torch.tensor(0.0)
-        second_joint_translation_u = torch.tensor(0.0)
-        second_joint_tilt_e = torch.tensor(0.0)
-        second_joint_tilt_n = torch.tensor(0.0)
-        second_joint_tilt_u = torch.tensor(0.0)
-        concentrator_translation_e = torch.tensor(0.0)
-        concentrator_translation_n = torch.tensor(0.0)
-        concentrator_translation_u = torch.tensor(0.0)
-        concentrator_tilt_e = torch.tensor(0.0)
-        concentrator_tilt_n = torch.tensor(0.0)
-        concentrator_tilt_u = torch.tensor(0.0)
-        if (
-            config_dictionary.kinematic_deviations_key
-            in scenario_file[config_dictionary.prototype_key][
-                config_dictionary.kinematic_prototype_key
-            ].keys()
-        ):
-            if (
-                config_dictionary.first_joint_translation_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_translation_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_translation_e
-                    ][()],
-                    dtype=torch.float,
+        kinematic_initial_orientation_offset_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
+        )
+        kinematic_initial_orientation_offset_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
+        )
+        kinematic_offsets = KinematicOffsets(
+            kinematic_initial_orientation_offset_e=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_e[()], dtype=torch.float
                 )
-            if (
-                config_dictionary.first_joint_translation_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_translation_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_translation_n
-                    ][()],
-                    dtype=torch.float,
+                if kinematic_initial_orientation_offset_e
+                else torch.tensor(0.0)
+            ),
+            kinematic_initial_orientation_offset_n=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_n[()], dtype=torch.float
                 )
-            if (
-                config_dictionary.first_joint_translation_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_translation_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_translation_u
-                    ][()],
-                    dtype=torch.float,
+                if kinematic_initial_orientation_offset_n
+                else torch.tensor(0.0)
+            ),
+            kinematic_initial_orientation_offset_u=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_u[()], dtype=torch.float
                 )
-            if (
-                config_dictionary.first_joint_tilt_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_tilt_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_tilt_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.first_joint_tilt_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_tilt_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_tilt_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.first_joint_tilt_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                first_joint_tilt_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.first_joint_tilt_u
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_translation_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_translation_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_translation_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_translation_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_translation_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_translation_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_translation_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_translation_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_translation_u
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_tilt_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_tilt_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_tilt_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_tilt_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_tilt_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_tilt_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.second_joint_tilt_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                second_joint_tilt_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.second_joint_tilt_u
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_translation_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_translation_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_translation_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_translation_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_translation_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_translation_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_translation_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_translation_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_translation_u
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_tilt_e
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_tilt_e = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_tilt_e
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_tilt_n
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_tilt_n = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_tilt_n
-                    ][()],
-                    dtype=torch.float,
-                )
-            if (
-                config_dictionary.concentrator_tilt_u
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.kinematic_prototype_key
-                ][config_dictionary.kinematic_deviations_key].keys()
-            ):
-                concentrator_tilt_u = torch.tensor(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.kinematic_prototype_key
-                    ][config_dictionary.kinematic_deviations_key][
-                        config_dictionary.concentrator_tilt_u
-                    ][()],
-                    dtype=torch.float,
-                )
+                if kinematic_initial_orientation_offset_u
+                else torch.tensor(0.0)
+            ),
+        )
+
+        first_joint_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_e}"
+        )
+        first_joint_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_n}"
+        )
+        first_joint_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_u}"
+        )
+        first_joint_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_e}"
+        )
+        first_joint_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_n}"
+        )
+        first_joint_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_u}"
+        )
+        second_joint_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_e}"
+        )
+        second_joint_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_n}"
+        )
+        second_joint_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_u}"
+        )
+        second_joint_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_e}"
+        )
+        second_joint_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_n}"
+        )
+        second_joint_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_u}"
+        )
+        concentrator_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_e}"
+        )
+        concentrator_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_n}"
+        )
+        concentrator_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_u}"
+        )
+        concentrator_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_e}"
+        )
+        concentrator_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_n}"
+        )
+        concentrator_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_u}"
+        )
         kinematic_deviations = KinematicDeviations(
-            first_joint_translation_e=first_joint_translation_e,
-            first_joint_translation_n=first_joint_translation_n,
-            first_joint_translation_u=first_joint_translation_u,
-            first_joint_tilt_e=first_joint_tilt_e,
-            first_joint_tilt_n=first_joint_tilt_n,
-            first_joint_tilt_u=first_joint_tilt_u,
-            second_joint_translation_e=second_joint_translation_e,
-            second_joint_translation_n=second_joint_translation_n,
-            second_joint_translation_u=second_joint_translation_u,
-            second_joint_tilt_e=second_joint_tilt_e,
-            second_joint_tilt_n=second_joint_tilt_n,
-            second_joint_tilt_u=second_joint_tilt_u,
-            concentrator_translation_e=concentrator_translation_e,
-            concentrator_translation_n=concentrator_translation_n,
-            concentrator_translation_u=concentrator_translation_u,
-            concentrator_tilt_e=concentrator_tilt_e,
-            concentrator_tilt_n=concentrator_tilt_n,
-            concentrator_tilt_u=concentrator_tilt_u,
+            first_joint_translation_e=(
+                torch.tensor(first_joint_translation_e[()], dtype=torch.float)
+                if first_joint_translation_e
+                else torch.tensor(0.0)
+            ),
+            first_joint_translation_n=(
+                torch.tensor(first_joint_translation_n[()], dtype=torch.float)
+                if first_joint_translation_n
+                else torch.tensor(0.0)
+            ),
+            first_joint_translation_u=(
+                torch.tensor(first_joint_translation_u[()], dtype=torch.float)
+                if first_joint_translation_u
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_e=(
+                torch.tensor(first_joint_tilt_e[()], dtype=torch.float)
+                if first_joint_tilt_e
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_n=(
+                torch.tensor(first_joint_tilt_n[()], dtype=torch.float)
+                if first_joint_tilt_n
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_u=(
+                torch.tensor(first_joint_tilt_u[()], dtype=torch.float)
+                if first_joint_tilt_u
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_e=(
+                torch.tensor(second_joint_translation_e[()], dtype=torch.float)
+                if second_joint_translation_e
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_n=(
+                torch.tensor(second_joint_translation_n[()], dtype=torch.float)
+                if second_joint_translation_n
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_u=(
+                torch.tensor(second_joint_translation_u[()], dtype=torch.float)
+                if second_joint_translation_u
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_e=(
+                torch.tensor(second_joint_tilt_e[()], dtype=torch.float)
+                if second_joint_tilt_e
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_n=(
+                torch.tensor(second_joint_tilt_n[()], dtype=torch.float)
+                if second_joint_tilt_n
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_u=(
+                torch.tensor(second_joint_tilt_u[()], dtype=torch.float)
+                if second_joint_tilt_u
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_e=(
+                torch.tensor(concentrator_translation_e[()], dtype=torch.float)
+                if concentrator_translation_e
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_n=(
+                torch.tensor(concentrator_translation_n[()], dtype=torch.float)
+                if concentrator_translation_n
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_u=(
+                torch.tensor(concentrator_translation_u[()], dtype=torch.float)
+                if concentrator_translation_u
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_e=(
+                torch.tensor(concentrator_tilt_e[()], dtype=torch.float)
+                if concentrator_tilt_e
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_n=(
+                torch.tensor(concentrator_tilt_n[()], dtype=torch.float)
+                if concentrator_tilt_n
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_u=(
+                torch.tensor(concentrator_tilt_u[()], dtype=torch.float)
+                if concentrator_tilt_u
+                else torch.tensor(0.0)
+            ),
         )
         kinematic_prototype = KinematicConfig(
             kinematic_type=str(
@@ -525,94 +413,62 @@ class Scenario:
         for ac in scenario_file[config_dictionary.prototype_key][
             config_dictionary.actuator_prototype_key
         ].keys():
-            increment = torch.tensor(0.0)
-            initial_stroke_length = torch.tensor(0.0)
-            offset = torch.tensor(0.0)
-            radius = torch.tensor(0.0)
-            phi_0 = torch.tensor(0.0)
-            if (
-                config_dictionary.actuator_parameters_key
-                in scenario_file[config_dictionary.prototype_key][
-                    config_dictionary.actuator_prototype_key
-                ][ac].keys()
-            ):
-                if (
-                    config_dictionary.actuator_increment
-                    in scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.actuator_prototype_key
-                    ][ac][config_dictionary.actuator_parameters_key].keys()
-                ):
-                    increment = torch.tensor(
-                        scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_parameters_key][
-                            config_dictionary.actuator_increment
-                        ][()],
-                        dtype=torch.float,
-                    )
-                if (
-                    config_dictionary.actuator_initial_stroke_length
-                    in scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.actuator_prototype_key
-                    ][ac][config_dictionary.actuator_parameters_key].keys()
-                ):
-                    initial_stroke_length = torch.tensor(
-                        scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_parameters_key][
-                            config_dictionary.actuator_initial_stroke_length
-                        ][()],
-                        dtype=torch.float,
-                    )
-                if (
-                    config_dictionary.actuator_offset
-                    in scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.actuator_prototype_key
-                    ][ac][config_dictionary.actuator_parameters_key].keys()
-                ):
-                    offset = torch.tensor(
-                        scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_parameters_key][
-                            config_dictionary.actuator_offset
-                        ][()],
-                        dtype=torch.float,
-                    )
-                if (
-                    config_dictionary.actuator_radius
-                    in scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.actuator_prototype_key
-                    ][ac][config_dictionary.actuator_parameters_key].keys()
-                ):
-                    radius = torch.tensor(
-                        scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_parameters_key][
-                            config_dictionary.actuator_radius
-                        ][()],
-                        dtype=torch.float,
-                    )
-                if (
-                    config_dictionary.actuator_phi_0
-                    in scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.actuator_prototype_key
-                    ][ac][config_dictionary.actuator_parameters_key].keys()
-                ):
-                    phi_0 = torch.tensor(
-                        scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_parameters_key][
-                            config_dictionary.actuator_phi_0
-                        ][()],
-                        dtype=torch.float,
-                    )
-
+            increment = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_increment}"
+            )
+            initial_stroke_length = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_initial_stroke_length}"
+            )
+            offset = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_offset}"
+            )
+            radius = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_radius}"
+            )
+            phi_0 = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_phi_0}"
+            )
             actuator_parameters = ActuatorParameters(
-                increment=increment,
-                initial_stroke_length=initial_stroke_length,
-                offset=offset,
-                radius=radius,
-                phi_0=phi_0,
+                increment=(
+                    torch.tensor(increment[()], dtype=torch.float)
+                    if increment
+                    else torch.tensor(0.0)
+                ),
+                initial_stroke_length=(
+                    torch.tensor(initial_stroke_length[()], dtype=torch.float)
+                    if initial_stroke_length
+                    else torch.tensor(0.0)
+                ),
+                offset=(
+                    torch.tensor(offset[()], dtype=torch.float)
+                    if offset
+                    else torch.tensor(0.0)
+                ),
+                radius=(
+                    torch.tensor(radius[()], dtype=torch.float)
+                    if radius
+                    else torch.tensor(0.0)
+                ),
+                phi_0=(
+                    torch.tensor(phi_0[()], dtype=torch.float)
+                    if phi_0
+                    else torch.tensor(0.0)
+                ),
             )
             actuator_list.append(
                 ActuatorConfig(
