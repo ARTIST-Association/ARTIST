@@ -79,7 +79,7 @@ class NurbsFacet(torch.nn.Module):
     def create_nurbs_surface(self) -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
-        
+
         Returns
         -------
         NURBSSurface
@@ -88,9 +88,11 @@ class NurbsFacet(torch.nn.Module):
         evaluation_points_e = torch.linspace(0, 1, self.number_eval_points_e)
         evaluation_points_n = torch.linspace(0, 1, self.number_eval_points_n)
 
-        nurbs_surface = NURBSSurface(self.degree_e,
-                                     self.degree_n,
-                                     evaluation_points_e,
-                                     evaluation_points_n,
-                                     self.control_points)
+        nurbs_surface = NURBSSurface(
+            self.degree_e,
+            self.degree_n,
+            evaluation_points_e,
+            evaluation_points_n,
+            self.control_points,
+        )
         return nurbs_surface
