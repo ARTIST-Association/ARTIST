@@ -1180,7 +1180,7 @@ class HeliostatConfig:
         An optional individual surface config for the heliostat.
     heliostat_kinematic : Optional[KinematicConfig]
         An optional kinematic config for the heliostat.
-    heliostat_actuator : Optional[ActuatorConfig]
+    heliostat_actuator : Optional[ActuatorListConfig]
         An optional actuator config for the heliostat.
 
     Methods
@@ -1197,7 +1197,7 @@ class HeliostatConfig:
         heliostat_aim_point: torch.Tensor,
         heliostat_surface: Optional[SurfaceConfig] = None,
         heliostat_kinematic: Optional[KinematicConfig] = None,
-        heliostat_actuator: Optional[ActuatorConfig] = None,
+        heliostat_actuator: Optional[ActuatorListConfig] = None,
     ) -> None:
         """
         Initialize the single heliostat configuration.
@@ -1216,7 +1216,7 @@ class HeliostatConfig:
             An optional individual surface config for the heliostat.
         heliostat_kinematic : Optional[KinematicConfig]
             An optional kinematic config for the heliostat.
-        heliostat_actuator : Optional[ActuatorConfig]
+        heliostat_actuator : Optional[ActuatorListConfig]
             An optional actuator config for the heliostat.
 
         """
@@ -1257,7 +1257,7 @@ class HeliostatConfig:
         if self.heliostat_actuator is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_actuator_key: self.heliostat_actuator.create_actuator_dict()
+                    config_dictionary.heliostat_actuator_key: self.heliostat_actuator.create_actuator_list_dict()
                 }
             )
 
