@@ -1,7 +1,14 @@
 import torch
 
-from artist.util import artist_type_mapping_dict
+from artist.field.actuator_ideal import IdealActuator
+from artist.field.actuator_linear import LinearActuator
+from artist.util import config_dictionary
 from artist.util.configuration_classes import ActuatorListConfig
+
+actuator_type_mapping = {
+    config_dictionary.ideal_actuator_key: IdealActuator,
+    config_dictionary.linear_actuator_key: LinearActuator,
+}
 
 
 class ActuatorArray(torch.nn.Module):
@@ -27,9 +34,7 @@ class ActuatorArray(torch.nn.Module):
         actuator_array = []
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):
             try:
-                actuator_object = artist_type_mapping_dict.actuator_type_mapping[
-                    actuator_config.actuator_type
-                ]
+                actuator_object = actuator_type_mapping[actuator_config.actuator_type]
                 actuator_array.append(
                     actuator_object(
                         joint_number=i + 1,
