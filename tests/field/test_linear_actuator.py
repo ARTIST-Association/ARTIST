@@ -1,82 +1,101 @@
 import pytest
 import torch
 
-from artist.field.actuator_linear import LinearActuator
 from artist.field.kinematic_rigid_body import (
     RigidBody,
 )
 from artist.util import config_dictionary
+from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorListConfig,
+    ActuatorParameters,
+    KinematicDeviations,
+)
 
 
 @pytest.fixture
 def deviation_parameters():
     """Define deviation parameters used in tests."""
-    deviation_parameters = {
-        config_dictionary.first_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.first_joint_translation_u: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.first_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_e: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_n: torch.tensor(0.0),
-        config_dictionary.second_joint_translation_u: torch.tensor(0.315),
-        config_dictionary.second_joint_tilt_e: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_n: torch.tensor(0.0),
-        config_dictionary.second_joint_tilt_u: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_e: torch.tensor(0.0),
-        config_dictionary.concentrator_translation_n: torch.tensor(-0.17755),
-        config_dictionary.concentrator_translation_u: torch.tensor(-0.4045),
-        config_dictionary.concentrator_tilt_e: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_n: torch.tensor(0.0),
-        config_dictionary.concentrator_tilt_u: torch.tensor(0.0),
-    }
+    deviation_parameters = KinematicDeviations(
+        first_joint_translation_e=torch.tensor(0.0),
+        first_joint_translation_n=torch.tensor(0.0),
+        first_joint_translation_u=torch.tensor(0.0),
+        first_joint_tilt_e=torch.tensor(0.0),
+        first_joint_tilt_n=torch.tensor(0.0),
+        first_joint_tilt_u=torch.tensor(0.0),
+        second_joint_translation_e=torch.tensor(0.0),
+        second_joint_translation_n=torch.tensor(0.0),
+        second_joint_translation_u=torch.tensor(0.315),
+        second_joint_tilt_e=torch.tensor(0.0),
+        second_joint_tilt_n=torch.tensor(0.0),
+        second_joint_tilt_u=torch.tensor(0.0),
+        concentrator_translation_e=torch.tensor(0.0),
+        concentrator_translation_n=torch.tensor(-0.17755),
+        concentrator_translation_u=torch.tensor(-0.4045),
+        concentrator_tilt_e=torch.tensor(0.0),
+        concentrator_tilt_n=torch.tensor(0.0),
+        concentrator_tilt_u=torch.tensor(0.0),
+    )
     return deviation_parameters
 
 
 @pytest.fixture
-def actuator_parameters():
+def actuator_configuration():
     """Define actuator parameters used in tests as measured experimentally."""
-    actuator_parameters = {
-        config_dictionary.first_joint_increment: torch.tensor(154166.666),
-        config_dictionary.first_joint_initial_stroke_length: torch.tensor(0.075),
-        config_dictionary.first_joint_actuator_offset: torch.tensor(0.34061),
-        config_dictionary.first_joint_radius: torch.tensor(0.3204),
-        config_dictionary.first_joint_phi_0: torch.tensor(-1.570796),
-        config_dictionary.second_joint_increment: torch.tensor(154166.666),
-        config_dictionary.second_joint_initial_stroke_length: torch.tensor(0.075),
-        config_dictionary.second_joint_actuator_offset: torch.tensor(0.3479),
-        config_dictionary.second_joint_radius: torch.tensor(0.309),
-        config_dictionary.second_joint_phi_0: torch.tensor(0.959931),
-    }
-    return actuator_parameters
+    actuator1_parameters = ActuatorParameters(
+        increment=torch.tensor(154166.666),
+        initial_stroke_length=torch.tensor(0.075),
+        offset=torch.tensor(0.34061),
+        radius=torch.tensor(0.3204),
+        phi_0=torch.tensor(-1.570796),
+    )
+
+    actuator2_parameters = ActuatorParameters(
+        increment=torch.tensor(154166.666),
+        initial_stroke_length=torch.tensor(0.075),
+        offset=torch.tensor(0.3479),
+        radius=torch.tensor(0.309),
+        phi_0=torch.tensor(0.959931),
+    )
+    actuator1_config = ActuatorConfig(
+        actuator_key="",
+        actuator_type=config_dictionary.linear_actuator_key,
+        actuator_clockwise=False,
+        actuator_parameters=actuator1_parameters,
+    )
+    actuator2_config = ActuatorConfig(
+        actuator_key="",
+        actuator_type=config_dictionary.linear_actuator_key,
+        actuator_clockwise=True,
+        actuator_parameters=actuator2_parameters,
+    )
+
+    return ActuatorListConfig(actuator_list=[actuator1_config, actuator2_config])
 
 
 @pytest.fixture
-def kinematic_model_1(deviation_parameters, actuator_parameters):
+def kinematic_model_1(actuator_configuration, deviation_parameters):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBody(
-        actuator_type=LinearActuator,
         position=position,
         aim_point=aim_point,
+        actuator_config=actuator_configuration,
         deviation_parameters=deviation_parameters,
-        actuator_parameters=actuator_parameters,
     )
 
 
 @pytest.fixture
-def kinematic_model_2(deviation_parameters, actuator_parameters):
+def kinematic_model_2(actuator_configuration, deviation_parameters):
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBody(
-        actuator_type=LinearActuator,
         position=position,
         aim_point=aim_point,
+        actuator_config=actuator_configuration,
         deviation_parameters=deviation_parameters,
-        actuator_parameters=actuator_parameters,
     )
 
 
