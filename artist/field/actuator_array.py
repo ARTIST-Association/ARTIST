@@ -35,17 +35,30 @@ class ActuatorArray(torch.nn.Module):
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):
             try:
                 actuator_object = actuator_type_mapping[actuator_config.actuator_type]
-                actuator_array.append(
-                    actuator_object(
-                        joint_number=i + 1,
-                        clockwise=actuator_config.actuator_clockwise,
-                        increment=actuator_config.actuator_parameters.increment,
-                        initial_stroke_length=actuator_config.actuator_parameters.initial_stroke_length,
-                        offset=actuator_config.actuator_parameters.offset,
-                        radius=actuator_config.actuator_parameters.radius,
-                        phi_0=actuator_config.actuator_parameters.phi_0,
+                if actuator_config.actuator_parameters is not None:
+                    actuator_array.append(
+                        actuator_object(
+                            joint_number=i + 1,
+                            clockwise=actuator_config.actuator_clockwise,
+                            increment=actuator_config.actuator_parameters.increment,
+                            initial_stroke_length=actuator_config.actuator_parameters.initial_stroke_length,
+                            offset=actuator_config.actuator_parameters.offset,
+                            radius=actuator_config.actuator_parameters.radius,
+                            phi_0=actuator_config.actuator_parameters.phi_0,
+                        )
                     )
-                )
+                else:
+                    actuator_array.append(
+                        actuator_object(
+                            joint_number=i + 1,
+                            clockwise=actuator_config.actuator_clockwise,
+                            increment=torch.tensor(0.0),
+                            initial_stroke_length=torch.tensor(0.0),
+                            offset=torch.tensor(0.0),
+                            radius=torch.tensor(0.0),
+                            phi_0=torch.tensor(0.0),
+                        )
+                    )
             except KeyError:
                 raise KeyError(
                     f"Currently the selected actuator type: {actuator_config.actuator_type} is not supported."

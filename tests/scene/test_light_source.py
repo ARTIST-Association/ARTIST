@@ -27,15 +27,15 @@ def calculate_expected(
     """
     mean = torch.tensor(
         [
-            distribution_parameters_1[config_dictionary.sun_mean],
-            distribution_parameters_1[config_dictionary.sun_mean],
+            distribution_parameters_1[config_dictionary.light_source_mean],
+            distribution_parameters_1[config_dictionary.light_source_mean],
         ],
         dtype=torch.float,
     )
     covariance = torch.tensor(
         [
-            [distribution_parameters_1[config_dictionary.sun_covariance], 0],
-            [0, distribution_parameters_1[config_dictionary.sun_covariance]],
+            [distribution_parameters_1[config_dictionary.light_source_covariance], 0],
+            [0, distribution_parameters_1[config_dictionary.light_source_covariance]],
         ],
         dtype=torch.float,
     )
@@ -57,9 +57,9 @@ def calculate_expected(
 def distribution_parameters_1() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 0,
-        config_dictionary.sun_covariance: 1,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 0,
+        config_dictionary.light_source_covariance: 1,
     }
 
 
@@ -67,9 +67,9 @@ def distribution_parameters_1() -> Dict[str, Any]:
 def distribution_parameters_2() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 0,
-        config_dictionary.sun_covariance: 0.004596,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 0,
+        config_dictionary.light_source_covariance: 0.004596,
     }
 
 
@@ -77,9 +77,9 @@ def distribution_parameters_2() -> Dict[str, Any]:
 def distribution_parameters_3() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 10,
-        config_dictionary.sun_covariance: 15,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 10,
+        config_dictionary.light_source_covariance: 15,
     }
 
 
