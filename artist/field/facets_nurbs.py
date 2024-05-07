@@ -91,8 +91,8 @@ class NurbsFacet(torch.nn.Module):
         NURBSSurface
             The NURBS surface of one facet.
         """
-        evaluation_points_e = torch.linspace(0, 1, self.number_eval_points_e)
-        evaluation_points_n = torch.linspace(0, 1, self.number_eval_points_n)
+        evaluation_points_e = torch.linspace(0 + 1e-5, 1 - 1e-5, self.number_eval_points_e)
+        evaluation_points_n = torch.linspace(0 + 1e-5, 1 - 1e-5, self.number_eval_points_n)
 
         nurbs_surface = NURBSSurface(
             self.degree_e,
