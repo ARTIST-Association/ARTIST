@@ -62,5 +62,5 @@ class Surface(torch.nn.Module):
             surface_points.append(facet_points)
             surface_normals.append(facet_normals)
         surface_points = torch.stack(surface_points, dim=1)
-        surface_normals = torch.stack(surface_points, dim=1)
+        surface_normals = torch.stack(surface_normals, dim=1)
         return surface_points, surface_normals
