@@ -23,15 +23,16 @@ light_source_covariance = "covariance"
 
 # Dictionary for facets.
 facets_key = "facets"
-facet_control_points_e = "control_points_e"
-facet_control_points_u = "control_points_u"
-facet_knots_e = "knots_e"
-facet_knots_u = "knots_u"
+facet_control_points = "control_points_e"
+facet_degree_e = "degree_e"
+facet_degree_n = "degree_n"
+facet_number_eval_e = "number_eval_e"
+facet_number_eval_n = "number_eval_n"
 facets_width = "width"
 facets_height = "height"
 facets_position = "position"
 facets_canting_e = "canting_e"
-facets_canting_u = "canting_u"
+facets_canting_n = "canting_n"
 
 # Dictionary for kinematic deviation parameters.
 first_joint_translation_e = "first_joint_translation_e"
