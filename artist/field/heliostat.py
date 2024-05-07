@@ -542,14 +542,11 @@ class Heliostat(torch.nn.Module):
         incident_ray_direction : torch.Tensor
             The incident ray direction.
         """
-        surface_points, surface_normals = (
-            self.concentrator.facets.surface_points,
-            self.concentrator.facets.surface_normals,
-        )
+        surface_points, surface_normals = self.surface.get_surface_points_and_normals()
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.alignment.align_surface(
+        ) = self.kinematic.align_surface(
             incident_ray_direction, surface_points, surface_normals
         )
         self.is_aligned = True
