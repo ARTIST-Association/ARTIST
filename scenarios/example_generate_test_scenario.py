@@ -20,6 +20,7 @@ from artist.util.configuration_classes import (
     SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
+from artist import ARTIST_ROOT
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -225,7 +226,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 
 # The following parameter is the name of the scenario.
-file_path = "./test_scenario"
+file_path = f"{ARTIST_ROOT}/scenarios/test_scenario"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
