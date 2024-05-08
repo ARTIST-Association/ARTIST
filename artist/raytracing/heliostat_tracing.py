@@ -219,15 +219,19 @@ class HeliostatRayTracer:
         #     self.heliostat.preferred_reflection_direction[:, :3], dim=1
         # ).unsqueeze(1)
 
-        ray_directions = self.heliostat.preferred_reflection_direction[:, :3] / torch.linalg.norm(self.heliostat.preferred_reflection_direction[0:, :3], ord=2, dim=-1, keepdim=True)
+        ray_directions = self.heliostat.preferred_reflection_direction[:, :, :3] / torch.linalg.norm(self.heliostat.preferred_reflection_direction[:, :, :3], ord=2, dim=-1, keepdim=True)
 
         ray_directions = torch.cat(
-            (ray_directions, torch.zeros(ray_directions.size(0), 1, 4)), dim=1
+            (ray_directions, torch.zeros(4, ray_directions.size(1), 1)), dim=-1
         )
 
-        scattered_rays = utils.rotate_distortions(
-            u=distortion_u, e=distortion_e
-        ) @ ray_directions.unsqueeze(0)
+        rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e)
+        scattered_rays = torch.einsum('qbij, bnj -> qbni', rotations, ray_directions)
+        #scattered_rays = torch.einsum('qbij, bnj -> qbnj', rotations, ray_directions)
+
+        # scattered_rays = utils.rotate_distortions(
+        #     u=distortion_u, e=distortion_e
+        # ) @ ray_directions.unsqueeze(0)
 
         return scattered_rays
 
