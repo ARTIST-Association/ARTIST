@@ -85,7 +85,7 @@ prototype_facet1_config = FacetConfig(
     number_eval_points_n=10,
     width=2.0,
     height=2.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    position=torch.tensor([-1.0, 1.0, 0.0, 0.0]),
     canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
     canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
@@ -116,7 +116,7 @@ prototype_facet2_config = FacetConfig(
     number_eval_points_n=10,
     width=2.0,
     height=2.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    position=torch.tensor([1.0, 1.0, 0.0, 0.0]),
     canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
     canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
@@ -147,7 +147,7 @@ prototype_facet3_config = FacetConfig(
     number_eval_points_n=10,
     width=2.0,
     height=2.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    position=torch.tensor([-1.0, -1.0, 0.0, 0.0]),
     canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
     canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
@@ -178,7 +178,7 @@ prototype_facet4_config = FacetConfig(
     number_eval_points_n=10,
     width=2.0,
     height=2.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    position=torch.tensor([1.0, -1.0, 0.0, 0.0]),
     canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
     canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )

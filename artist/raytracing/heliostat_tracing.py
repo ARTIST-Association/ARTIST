@@ -1,6 +1,7 @@
 from typing import Optional, Tuple
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
 from artist import Scenario
@@ -212,11 +213,13 @@ class HeliostatRayTracer:
         torch.Tensor
             Scattered rays around the preferred direction.
         """
-        ray_directions = self.heliostat.preferred_reflection_direction[
-            :, :3
-        ] / torch.linalg.norm(
-            self.heliostat.preferred_reflection_direction[:, :3], dim=1
-        ).unsqueeze(1)
+        # ray_directions = self.heliostat.preferred_reflection_direction[
+        #     :, :3
+        # ] / torch.linalg.norm(
+        #     self.heliostat.preferred_reflection_direction[:, :3], dim=1
+        # ).unsqueeze(1)
+
+        ray_directions = self.heliostat.preferred_reflection_direction[:, :3] / torch.linalg.norm(self.heliostat.preferred_reflection_direction[0:, :3], ord=2, dim=-1, keepdim=True)
 
         ray_directions = torch.cat(
             (ray_directions, torch.zeros(ray_directions.size(0), 1, 4)), dim=1
