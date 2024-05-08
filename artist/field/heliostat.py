@@ -6,7 +6,8 @@ from typing_extensions import Self
 
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
-from artist.util import config_dictionary, utils
+from artist.raytracing.raytracing_utils import reflect
+from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -570,9 +571,7 @@ class Heliostat(torch.nn.Module):
         """
         assert self.is_aligned, "Heliostat has not yet been aligned."
 
-        self.preferred_reflection_direction = (
-            rays
-            - 2
-            * utils.batch_dot(rays, self.current_aligned_surface_normals)
-            * self.current_aligned_surface_normals
+        self.preferred_reflection_direction = reflect(
+            incoming_ray_direction=rays,
+            reflection_surface_normals=self.current_aligned_surface_normals,
         )
