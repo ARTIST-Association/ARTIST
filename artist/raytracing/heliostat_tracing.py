@@ -4,6 +4,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
 from artist import Scenario
+from artist.raytracing import raytracing_utils
+from artist.raytracing.rays import Rays
 from artist.scene import LightSource
 from artist.util import utils
 
@@ -160,8 +162,11 @@ class HeliostatRayTracer:
                 batch_e,
             )
 
-            intersections = self.line_plane_intersections(
-                rays,
+            intersections = raytracing_utils.line_plane_intersections(
+                ray_directions=rays.ray_directions,
+                plane_normal_vectors=self.receiver.normal_vector,
+                plane_center=self.receiver.position_center,
+                points_at_ray_origin=self.heliostat.current_aligned_surface_points,
             )
 
             dx_ints = (
@@ -196,7 +201,7 @@ class HeliostatRayTracer:
         self,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
-    ) -> torch.Tensor:
+    ) -> Rays:
         """
         Scatter the reflected rays around the preferred ray direction.
 
@@ -209,7 +214,7 @@ class HeliostatRayTracer:
 
         Returns
         -------
-        torch.Tensor
+        Rays
             Scattered rays around the preferred direction.
         """
         ray_directions = self.heliostat.preferred_reflection_direction[
@@ -225,52 +230,10 @@ class HeliostatRayTracer:
             u=distortion_u, e=distortion_e
         ) @ ray_directions.unsqueeze(-1)
 
-        return scattered_rays.squeeze(-1)
-
-    def line_plane_intersections(
-        self,
-        ray_directions: torch.Tensor,
-        epsilon: float = 1e-6,
-    ) -> torch.Tensor:
-        """
-        Compute line-plane intersections of ray directions and the (receiver) plane.
-
-        Parameters
-        ----------
-        ray_directions : torch.Tensor
-            The direction of the reflected sunlight.
-        epsilon : float
-            A small value corresponding to the upper limit.
-
-        Returns
-        -------
-        torch.Tensor
-            The intersections of the lines and plane.
-
-        Raises
-        ------
-        RuntimeError
-            When there are no intersections between the line and the plane.
-        """
-        # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
-        # the incoming rays
-        relative_distribution_strengths = ray_directions @ self.receiver.normal_vector
-        assert (
-            torch.abs(relative_distribution_strengths) >= epsilon
-        ).all(), "No intersection or line is within plane."
-        # Calculate the final distribution strengths
-        distribution_strengths = (
-            (
-                self.receiver.position_center
-                - self.heliostat.current_aligned_surface_points
-            )
-            @ self.receiver.normal_vector
-            / relative_distribution_strengths
-        )
-
-        return (
-            self.heliostat.current_aligned_surface_points
-            + ray_directions * distribution_strengths.unsqueeze(-1)
+        # TODO: Include magnitude that is different from one
+        return Rays(
+            ray_directions=scattered_rays.squeeze(-1),
+            ray_magnitudes=torch.ones(len(scattered_rays.squeeze(-1))),
         )
 
     def sample_bitmap(
