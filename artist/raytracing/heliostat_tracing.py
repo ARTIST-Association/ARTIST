@@ -216,17 +216,17 @@ class HeliostatRayTracer:
             :, :3
         ] / torch.linalg.norm(
             self.heliostat.preferred_reflection_direction[:, :3], dim=1
-        ).unsqueeze(-1)
+        ).unsqueeze(1)
 
         ray_directions = torch.cat(
-            (ray_directions, torch.zeros(ray_directions.size(0), 1)), dim=1
+            (ray_directions, torch.zeros(ray_directions.size(0), 1, 4)), dim=1
         )
 
         scattered_rays = utils.rotate_distortions(
             u=distortion_u, e=distortion_e
-        ) @ ray_directions.unsqueeze(-1)
+        ) @ ray_directions.unsqueeze(0)
 
-        return scattered_rays.squeeze(-1)
+        return scattered_rays
 
     def line_plane_intersections(
         self,
