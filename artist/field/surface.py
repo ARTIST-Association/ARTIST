@@ -59,8 +59,8 @@ class Surface(torch.nn.Module):
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals()
-            surface_points.append(facet_points)
+            surface_points.append(facet_points + facet.position)
             surface_normals.append(facet_normals)
-        surface_points = torch.stack(surface_points, dim=1)
-        surface_normals = torch.stack(surface_normals, dim=1)
+        surface_points = torch.stack(surface_points, dim=1).permute(1, 0, 2)
+        surface_normals = torch.stack(surface_normals, dim=1).permute(1, 0, 2)
         return surface_points, surface_normals
