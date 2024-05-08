@@ -215,21 +215,11 @@ actuator1_prototype = ActuatorConfig(
     actuator_clockwise=False,
 )
 
-# Include parameters for a linear actuator.
-actuator2_prototype_parameters = ActuatorParameters(
-    increment=torch.tensor(0.0),
-    initial_stroke_length=torch.tensor(0.0),
-    offset=torch.tensor(0.0),
-    radius=torch.tensor(0.0),
-    phi_0=torch.tensor(0.0),
-)
-
 # Include a linear actuator.
 actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
-    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     actuator_clockwise=True,
-    actuator_parameters=actuator2_prototype_parameters,
 )
 
 # Create a list of actuators.
