@@ -112,7 +112,7 @@ class HeliostatRayTracer:
             A boolean flag indicating whether to shuffle the data.
         """
         self.heliostat = scenario.heliostats.heliostat_list[0]
-        self.receiver = scenario.receiver
+        self.receiver = scenario.receivers.receiver_list[0]
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
@@ -120,7 +120,7 @@ class HeliostatRayTracer:
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
-            light_source=scenario.light_source,
+            light_source=scenario.light_sources.light_source_list[0],
             number_of_points=self.number_of_surface_points,
             random_seed=random_seed,
         )
@@ -217,6 +217,7 @@ class HeliostatRayTracer:
         ] / torch.linalg.norm(
             self.heliostat.preferred_reflection_direction[:, :3], dim=1
         ).unsqueeze(-1)
+
         ray_directions = torch.cat(
             (ray_directions, torch.zeros(ray_directions.size(0), 1)), dim=1
         )
