@@ -4,6 +4,7 @@ import pathlib
 import warnings
 
 import h5py
+from matplotlib import pyplot as plt
 import pytest
 import torch
 
@@ -88,6 +89,9 @@ def test_compute_bitmaps(
     if MPI is not None:
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+
+    plt.imshow(final_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
+    plt.show()
 
     if rank == 0:
         expected_path = (
