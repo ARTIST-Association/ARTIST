@@ -8,8 +8,6 @@ import h5py
 import numpy as np
 import torch
 
-from artist.util import config_dictionary
-
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
 Vector3d = List[np.floating]
 
@@ -276,13 +274,14 @@ class StralConverter:
 
         self.log.info(f"Creating HDF5 file in location: {self.hdf5_file_path}")
 
+        # TODO: Adjust for new scenario structure
         with h5py.File(f"{self.hdf5_file_path}.h5", "w") as f:
-            f[config_dictionary.load_surface_position_key] = surface_position
-            f[config_dictionary.load_facet_positions_key] = facet_positions
-            f[config_dictionary.load_facet_spans_n_key] = facet_spans_n
-            f[config_dictionary.load_facet_spans_e_key] = facet_spans_e
-            f[config_dictionary.load_points_key] = surface_points
-            f[config_dictionary.load_normals_key] = surface_normals
-            f[config_dictionary.load_surface_ideal_vectors_key] = surface_ideal_vectors
+            f["surface_position"] = surface_position
+            f["facet_positions"] = facet_positions
+            f["facet_spans_n"] = facet_spans_n
+            f["facet_spans_e"] = facet_spans_e
+            f["surface_points"] = surface_points
+            f["surface_normals"] = surface_normals
+            f["surface_ideals"] = surface_ideal_vectors
 
         self.log.info("Conversion to HDF5 complete!")
