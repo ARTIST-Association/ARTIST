@@ -381,7 +381,7 @@ class FacetConfig:
         self.control_points = control_points
         self.degree_e = degree_e
         self.degree_n = degree_n
-        self.number_eval_points_e = number_eval_points_n
+        self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
         self.width = width
         self.height = height
