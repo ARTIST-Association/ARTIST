@@ -1,6 +1,7 @@
 import logging
 import sys
 from collections.abc import MutableMapping
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import colorlog
@@ -21,7 +22,7 @@ class ScenarioGenerator:
 
     Attributes
     ----------
-    file_path : str
+    file_path : Path
         File path to the HDF5 to be saved.
     receiver_list_config : ReceiverListConfig
         The receiver list configuration object.
@@ -76,7 +77,12 @@ class ScenarioGenerator:
         log_level : Optional[int]
             The log level applied to the logger.
         """
-        self.file_path = file_path
+        self.file_path = Path(file_path)
+        if not self.file_path.parent.is_file():
+            raise FileNotFoundError(
+                "The file path given to save the generated scenario does not exist. "
+                "Please create the folder or adjust the file bath before running again!"
+            )
         self.receiver_list_config = receiver_list_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
@@ -155,7 +161,8 @@ class ScenarioGenerator:
     def generate_scenario(self) -> None:
         """Generate the scenario according to the given parameters."""
         self.log.info(f"Generating a scenario saved to: {self.file_path}")
-        with h5py.File(f"{self.file_path}.h5", "w") as f:
+        save_name = self.file_path.parent / (self.file_path.name + ".h5")
+        with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
             self.log.info(f"Using scenario generator version {self.version}")
             f.attrs["version"] = self.version
