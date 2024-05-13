@@ -289,7 +289,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 
 # The following parameter is the name of the scenario.
-file_path = "./test_individual_measurements_scenario"
+file_path = "/path/to/scenario/scenario_name"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
