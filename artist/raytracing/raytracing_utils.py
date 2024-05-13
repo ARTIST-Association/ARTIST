@@ -45,9 +45,9 @@ def line_plane_intersections(
         The direction of the rays being considered for the intersection.
     plane_normal_vectors: torch.Tensor
         The normal vectors of the plane being considered for the intersection.
-    plane_center: torch.Tensor
+    plane_center : torch.Tensor
         The center of the plane being considered for the intersection.
-    points_at_ray_origin: torch.Tensor
+    points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
     epsilon : float
         A small value corresponding to the upper limit.
