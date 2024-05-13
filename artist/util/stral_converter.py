@@ -4,11 +4,10 @@ import sys
 from typing import List, Optional, Tuple, cast
 
 import colorlog
-import h5py
 import numpy as np
 import torch
 
-from artist.util import config_dictionary
+from artist.util.nurbs_converters import deflectometry_to_nurbs, point_cloud_to_nurbs
 
 Tuple3d = Tuple[np.floating, np.floating, np.floating]
 Vector3d = List[np.floating]
@@ -106,46 +105,74 @@ class StralConverter:
         self.log = log
 
     @staticmethod
-    def convert_point_to_4d_format(point: torch.Tensor) -> torch.Tensor:
+    def convert_3d_points_to_4d_format(point: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3D point to a 4D point.
+        Append ones to the last dimension of a PyTorch tensor.
+
+        Includes convention that points have a 1 and directions have 0 as 4th dimension
 
         Parameters
         ----------
-        point : torch.Tensor
-            Point in 3D format.
+        tensor : torch.Tensor
+            Input tensor of any shape.
 
         Returns
         -------
         torch.Tensor
-            The point in a 4D format, with an appended one.
+            Tensor with ones appended along the last dimension.
 
+        Examples
+        --------
+        >>> import torch
+        >>> tensor = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+        >>> new_tensor = convert_3d_points_to_4d_format(tensor)
+        >>> print(new_tensor)
+        tensor([[[1., 2., 1.],
+                [3., 4., 1.]],
+
+                [[5., 6., 1.],
+                [7., 8., 1.]]])
         """
-        if len(point.size()) == 1:
-            return torch.cat((point, torch.ones(1)), dim=0)
-        else:
-            return torch.cat((point, torch.ones(point.size(0), 1)), dim=1)
+        ones_shape = list(point.shape)
+        ones_shape[-1] = 1
+        ones_tensor = torch.ones(ones_shape, dtype=point.dtype, device=point.device)
+        return torch.cat((point, ones_tensor), dim=-1)
 
     @staticmethod
     def convert_direction_to_4d_format(direction: torch.Tensor) -> torch.Tensor:
         """
-        Convert a 3D direction vector to a 4D direction vector.
+        Append ones to the last dimension of a PyTorch tensor.
+
+        Includes convention that points have a 1 and directions have 0 as 4th dimension.
 
         Parameters
         ----------
-        direction : torch.Tensor
-            Direction vector in 3D format.
+        tensor : torch.Tensor
+            Input tensor of any shape.
 
         Returns
         -------
         torch.Tensor
-            The direction vector in a 4D format, with an appended zero.
+            Tensor with ones appended along the last dimension.
 
+        Examples
+        --------
+        >>> import torch
+        >>> tensor = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+        >>> new_tensor = convert_direction_to_4d_format(tensor)
+        >>> print(new_tensor)
+        tensor([[[1., 2., 0.],
+                [3., 4., 0.]],
+
+                [[5., 6., 0.],
+                [7., 8., 0.]]])
         """
-        if len(direction.size()) == 1:
-            return torch.cat((direction, torch.zeros(1)), dim=0)
-        else:
-            return torch.cat((direction, torch.zeros(direction.size(0), 1)), dim=1)
+        zeros_shape = list(direction.shape)
+        zeros_shape[-1] = 1
+        zeros_tensor = torch.zeros(
+            zeros_shape, dtype=direction.dtype, device=direction.device
+        )
+        return torch.cat((direction, zeros_tensor), dim=-1)
 
     @staticmethod
     def nwu_to_enu(vec: Tuple3d) -> Vector3d:
@@ -164,8 +191,30 @@ class StralConverter:
         """
         return [-vec[1], vec[0], vec[2]]
 
-    def convert_stral_to_hdf5(self) -> None:
-        """Extract information from a STRAL file saved as .binp and save this information as an HDF5 file."""
+    def convert_stral_file_to_nurbs(
+        self,
+        extraction_method: str,  # Not used at the moment, placeholder for future.
+        num_control_points_e: int,
+        num_control_points_n: int,
+        tolerance: float = 1.2e-6,
+        max_epoch: int = 10000,
+    ) -> List[torch.Tensor]:
+        """
+        Extract information from a STRAL file saved as .binp and save this information as an HDF5 file.
+
+        Parameters
+        ----------
+        extraction_method : str
+            Placeholder for future extraction methods.
+        num_control_points_e : int
+            Number of control points in the east direction.
+        num_control_points_n : int
+            Number of control points in the north direction.
+        tolerance : float
+            Tolerance to use when fitting NURBS surfaces.
+        max_epoch : int
+            Maximum number of epochs to use when fitting NURBS surfaces.
+        """
         self.log.info("Beginning STRAL to HDF5 conversion!")
 
         # Create structures for reading STRAL file correctly.
@@ -194,8 +243,10 @@ class StralConverter:
             facet_positions: List[Vector3d] = []
             facet_spans_n: List[Vector3d] = []
             facet_spans_e: List[Vector3d] = []
-            surface_points: List[List[Vector3d]] = [[] for _ in range(number_of_facets)]
-            surface_normals: List[List[Vector3d]] = [
+            surface_points_faceted: List[List[Vector3d]] = [
+                [] for _ in range(number_of_facets)
+            ]
+            surface_normals_faceted: List[List[Vector3d]] = [
                 [] for _ in range(number_of_facets)
             ]
             surface_ideal_vectors: List[List[Vector3d]] = [
@@ -239,8 +290,8 @@ class StralConverter:
                 ray_datas = ray_struct.iter_unpack(byte_data)
 
                 for ray_data in ray_datas:
-                    surface_points[f].append(cast(Tuple3d, ray_data[:3]))
-                    surface_normals[f].append(cast(Tuple3d, ray_data[3:6]))
+                    surface_points_faceted[f].append(cast(Tuple3d, ray_data[:3]))
+                    surface_normals_faceted[f].append(cast(Tuple3d, ray_data[3:6]))
                     surface_ideal_vectors[f].append(ideal_normal)
 
         self.log.info("Loading STRAL data complete")
@@ -250,11 +301,15 @@ class StralConverter:
         for span_e in facet_spans_e:
             span_e[0] = -span_e[0]
 
-        # Reshape and select only selected number of points to reduce compute.
-        surface_points = torch.tensor(surface_points).view(-1, 3)[:: self.step_size]
-        surface_normals = torch.tensor(surface_normals).view(-1, 3)[:: self.step_size]
-        surface_ideal_vectors = torch.tensor(surface_ideal_vectors).view(-1, 3)[
-            :: self.step_size
+        # Select only selected number of points to reduce compute.
+        surface_points_faceted = torch.tensor(surface_points_faceted)[
+            :, :: self.step_size
+        ]
+        surface_normals_faceted = torch.tensor(surface_normals_faceted)[
+            :, :: self.step_size
+        ]
+        surface_ideal_vectors = torch.tensor(surface_ideal_vectors)[
+            :, :: self.step_size
         ]
 
         # Convert to torch tensor.
@@ -264,25 +319,54 @@ class StralConverter:
         facet_spans_e = torch.tensor(facet_spans_e)
 
         # Convert to 4D format.
-        surface_position = self.convert_point_to_4d_format(surface_position)
-        facet_positions = self.convert_point_to_4d_format(facet_positions)
+        surface_position = self.convert_3d_points_to_4d_format(surface_position)
+        facet_positions = self.convert_3d_points_to_4d_format(facet_positions)
         facet_spans_n = self.convert_direction_to_4d_format(facet_spans_n)
         facet_spans_e = self.convert_direction_to_4d_format(facet_spans_e)
-        surface_points = self.convert_point_to_4d_format(surface_points)
-        surface_normals = self.convert_direction_to_4d_format(surface_normals)
+        surface_points_faceted = self.convert_3d_points_to_4d_format(
+            surface_points_faceted
+        )
+        surface_normals_faceted = self.convert_direction_to_4d_format(
+            surface_normals_faceted
+        )
         surface_ideal_vectors = self.convert_direction_to_4d_format(
             surface_ideal_vectors
         )
 
-        self.log.info(f"Creating HDF5 file in location: {self.hdf5_file_path}")
+        # Convert to NURBS surface.
+        self.log.info("Converting to NURBS surface")
+        facetted_nurbs = []
+        if extraction_method == "point_cloud":
+            self.log.info("Fit NURBS to point cloud")
+            for i, points_on_facet in enumerate(surface_points_faceted):
+                self.log.info(f"Optimize {i+1} of {number_of_facets} facets")
+                facetted_nurbs.append(
+                    point_cloud_to_nurbs(
+                        points_on_facet,
+                        num_control_points_e,
+                        num_control_points_n,
+                        tolerance,
+                        max_epoch,
+                    )
+                )
+        elif extraction_method == "deflectometry":
+            self.log.info("Fit NURBS to deflectometry measurement")
+            for i, (points_on_facet, normals_on_facet) in enumerate(
+                zip(surface_points_faceted, surface_normals_faceted)
+            ):
+                self.log.info(f"Optimize {i+1} of {number_of_facets} facets")
+                facetted_nurbs.append(
+                    deflectometry_to_nurbs(
+                        points_on_facet,
+                        normals_on_facet,
+                        num_control_points_e,
+                        num_control_points_n,
+                        tolerance,
+                        max_epoch,
+                    )
+                )
+        return facetted_nurbs
 
-        with h5py.File(f"{self.hdf5_file_path}.h5", "w") as f:
-            f[config_dictionary.load_surface_position_key] = surface_position
-            f[config_dictionary.load_facet_positions_key] = facet_positions
-            f[config_dictionary.load_facet_spans_n_key] = facet_spans_n
-            f[config_dictionary.load_facet_spans_e_key] = facet_spans_e
-            f[config_dictionary.load_points_key] = surface_points
-            f[config_dictionary.load_normals_key] = surface_normals
-            f[config_dictionary.load_surface_ideal_vectors_key] = surface_ideal_vectors
+        # self.log.info(f"Creating HDF5 file in location: {self.hdf5_file_path}")
 
-        self.log.info("Conversion to HDF5 complete!")
+        # with h5py.File(f"{self.hdf5_file_path}.h5", "w") as f:
