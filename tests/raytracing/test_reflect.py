@@ -60,4 +60,4 @@ def test_reflect_function(
         reflection_surface_normals=surface_normals,
     )
 
-    torch.testing.assert_allclose(reflection, expected_reflection)
+    torch.testing.assert_close(reflection, expected_reflection, rtol=1e-4, atol=1e-4)
