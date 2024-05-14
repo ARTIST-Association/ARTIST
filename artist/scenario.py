@@ -1,3 +1,5 @@
+import logging
+
 import h5py
 import torch
 from typing_extensions import Self
@@ -5,7 +7,7 @@ from typing_extensions import Self
 from artist.field.heliostat_field import HeliostatField
 from artist.field.receiver_field import ReceiverField
 from artist.scene.light_source_array import LightSourceArray
-from artist.util import config_dictionary
+from artist.util import config_dictionary, set_logger_config
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -16,6 +18,9 @@ from artist.util.configuration_classes import (
     KinematicOffsets,
     SurfaceConfig,
 )
+
+set_logger_config()
+log = logging.getLogger(__name__)
 
 
 class Scenario:
@@ -74,6 +79,9 @@ class Scenario:
         Scenario
             The ARTIST scenario loaded from the HDF5 file.
         """
+        log.info(
+            f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+        )
         receivers = ReceiverField.from_hdf5(config_file=scenario_file)
         light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)
 
@@ -180,21 +188,36 @@ class Scenario:
                     kinematic_initial_orientation_offset_e[()], dtype=torch.float
                 )
                 if kinematic_initial_orientation_offset_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic initial orientation offsets in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             kinematic_initial_orientation_offset_n=(
                 torch.tensor(
                     kinematic_initial_orientation_offset_n[()], dtype=torch.float
                 )
                 if kinematic_initial_orientation_offset_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic initial orientation offsets in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             kinematic_initial_orientation_offset_u=(
                 torch.tensor(
                     kinematic_initial_orientation_offset_u[()], dtype=torch.float
                 )
                 if kinematic_initial_orientation_offset_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic initial orientation offsets in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
         )
 
@@ -310,92 +333,182 @@ class Scenario:
             first_joint_translation_e=(
                 torch.tensor(first_joint_translation_e[()], dtype=torch.float)
                 if first_joint_translation_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint translation in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             first_joint_translation_n=(
                 torch.tensor(first_joint_translation_n[()], dtype=torch.float)
                 if first_joint_translation_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint translation in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             first_joint_translation_u=(
                 torch.tensor(first_joint_translation_u[()], dtype=torch.float)
                 if first_joint_translation_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint translation in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             first_joint_tilt_e=(
                 torch.tensor(first_joint_tilt_e[()], dtype=torch.float)
                 if first_joint_tilt_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint tilt in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             first_joint_tilt_n=(
                 torch.tensor(first_joint_tilt_n[()], dtype=torch.float)
                 if first_joint_tilt_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint tilt in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             first_joint_tilt_u=(
                 torch.tensor(first_joint_tilt_u[()], dtype=torch.float)
                 if first_joint_tilt_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic first joint tilt in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_translation_e=(
                 torch.tensor(second_joint_translation_e[()], dtype=torch.float)
                 if second_joint_translation_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint translation in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_translation_n=(
                 torch.tensor(second_joint_translation_n[()], dtype=torch.float)
                 if second_joint_translation_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint translation in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_translation_u=(
                 torch.tensor(second_joint_translation_u[()], dtype=torch.float)
                 if second_joint_translation_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint translation in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_tilt_e=(
                 torch.tensor(second_joint_tilt_e[()], dtype=torch.float)
                 if second_joint_tilt_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint tilt in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_tilt_n=(
                 torch.tensor(second_joint_tilt_n[()], dtype=torch.float)
                 if second_joint_tilt_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint tilt in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             second_joint_tilt_u=(
                 torch.tensor(second_joint_tilt_u[()], dtype=torch.float)
                 if second_joint_tilt_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic second joint tilt in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_translation_e=(
                 torch.tensor(concentrator_translation_e[()], dtype=torch.float)
                 if concentrator_translation_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator translation in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_translation_n=(
                 torch.tensor(concentrator_translation_n[()], dtype=torch.float)
                 if concentrator_translation_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator translation in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_translation_u=(
                 torch.tensor(concentrator_translation_u[()], dtype=torch.float)
                 if concentrator_translation_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator translation in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_tilt_e=(
                 torch.tensor(concentrator_tilt_e[()], dtype=torch.float)
                 if concentrator_tilt_e
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator tilt in the east direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_tilt_n=(
                 torch.tensor(concentrator_tilt_n[()], dtype=torch.float)
                 if concentrator_tilt_n
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator tilt in the north direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
             concentrator_tilt_u=(
                 torch.tensor(concentrator_tilt_u[()], dtype=torch.float)
                 if concentrator_tilt_u
-                else torch.tensor(0.0)
+                else (
+                    log.warning(
+                        "Setting prototype kinematic concentrator tilt in the up direction to zero!"
+                    ),
+                    torch.tensor(0.0),
+                )
             ),
         )
         kinematic_prototype = KinematicConfig(
@@ -447,27 +560,52 @@ class Scenario:
                 increment=(
                     torch.tensor(increment[()], dtype=torch.float)
                     if increment
-                    else torch.tensor(0.0)
+                    else (
+                        log.warning(
+                            f"Setting the increment for the prototype of {ac} to zero!"
+                        ),
+                        torch.tensor(0.0),
+                    )
                 ),
                 initial_stroke_length=(
                     torch.tensor(initial_stroke_length[()], dtype=torch.float)
                     if initial_stroke_length
-                    else torch.tensor(0.0)
+                    else (
+                        log.warning(
+                            f"Setting the initial stroke length for the prototype of {ac} to zero!"
+                        ),
+                        torch.tensor(0.0),
+                    )
                 ),
                 offset=(
                     torch.tensor(offset[()], dtype=torch.float)
                     if offset
-                    else torch.tensor(0.0)
+                    else (
+                        log.warning(
+                            f"Setting the offset for the prototype of {ac} to zero!"
+                        ),
+                        torch.tensor(0.0),
+                    )
                 ),
                 radius=(
                     torch.tensor(radius[()], dtype=torch.float)
                     if radius
-                    else torch.tensor(0.0)
+                    else (
+                        log.warning(
+                            f"Setting the radius for the prototype of {ac} to zero!"
+                        ),
+                        torch.tensor(0.0),
+                    )
                 ),
                 phi_0=(
                     torch.tensor(phi_0[()], dtype=torch.float)
                     if phi_0
-                    else torch.tensor(0.0)
+                    else (
+                        log.warning(
+                            f"Setting phi_0 for the prototype of {ac} to zero!"
+                        ),
+                        torch.tensor(0.0),
+                    )
                 ),
             )
             actuator_list.append(
@@ -499,4 +637,11 @@ class Scenario:
             receivers=receivers,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
+        )
+
+    def __repr__(self):
+        """Return a string representation of the scenario."""
+        return (
+            f"ARTIST Scenario containing:\n\tReceivers: {len(self.receivers.receiver_list)}, \tLight Sources: "
+            f"{len(self.light_sources.light_source_list)},\t Heliostats: {len(self.heliostats.heliostat_list)}"
         )
