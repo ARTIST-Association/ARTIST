@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import h5py
@@ -6,6 +7,8 @@ from typing_extensions import Self
 
 from artist.field.receiver import Receiver
 from artist.util import config_dictionary
+
+log = logging.getLogger(__name__)
 
 
 class ReceiverField(torch.nn.Module):
@@ -50,9 +53,15 @@ class ReceiverField(torch.nn.Module):
         ReceiverField
             The receiver field loaded from the HDF5 file.
         """
+        log.info("Loading a receiver field from an HDF5 file.")
         receiver_field = [
-            Receiver.from_hdf5(
-                config_file=config_file[config_dictionary.receiver_key][receiver_name]
+            (
+                log.info(f"Loading {receiver_name} from an HDF5 file."),
+                Receiver.from_hdf5(
+                    config_file=config_file[config_dictionary.receiver_key][
+                        receiver_name
+                    ]
+                ),
             )
             for receiver_name in config_file[config_dictionary.receiver_key].keys()
         ]
