@@ -65,7 +65,7 @@ def rotate_distortions(
             torch.stack([zeros, zeros, zeros, ones], dim=1),
         ],
         dim=1,
-    ).permute(0, 3, 1, 2)
+    ).permute(0, 3, 4, 1, 2)
 
 
 def rotate_e(
