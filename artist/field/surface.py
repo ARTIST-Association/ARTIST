@@ -51,16 +51,18 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface_normals.
         """
-        surface_points = []
-        surface_normals = []
-        for facet in self.facets:
+        # TODO: Assert that the number of evaluation points are the same for each facet
+        eval_point_per_facet = (
+            self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
+        )
+        surface_points = torch.empty(len(self.facets), eval_point_per_facet, 4)
+        surface_normals = torch.empty(len(self.facets), eval_point_per_facet, 4)
+        for i, facet in enumerate(self.facets):
             facet_surface = facet.create_nurbs_surface()
             (
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals()
-            surface_points.append(facet_points + facet.position)
-            surface_normals.append(facet_normals)
-        surface_points = torch.stack(surface_points, dim=1).permute(1, 0, 2)
-        surface_normals = torch.stack(surface_normals, dim=1).permute(1, 0, 2)
+            surface_points[i] = facet_points + facet.position
+            surface_normals[i] = facet_normals
         return surface_points, surface_normals
