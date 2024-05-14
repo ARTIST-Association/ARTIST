@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import h5py
@@ -11,6 +12,8 @@ from artist.util.configuration_classes import (
     KinematicConfig,
     SurfaceConfig,
 )
+
+log = logging.getLogger(__name__)
 
 
 class HeliostatField(torch.nn.Module):
@@ -67,14 +70,18 @@ class HeliostatField(torch.nn.Module):
         HeliostatField
             The heliostat field loaded from the HDF5 file.
         """
+        log.info("Loading a heliostat field from an HDF5 file.")
         heliostat_list = [
-            Heliostat.from_hdf5(
-                config_file=config_file[config_dictionary.heliostat_key][
-                    heliostat_name
-                ],
-                prototype_surface=prototype_surface,
-                prototype_kinematic=prototype_kinematic,
-                prototype_actuator=prototype_actuator,
+            (
+                log.info(f"Loading {heliostat_name} from an HDF5 file"),
+                Heliostat.from_hdf5(
+                    config_file=config_file[config_dictionary.heliostat_key][
+                        heliostat_name
+                    ],
+                    prototype_surface=prototype_surface,
+                    prototype_kinematic=prototype_kinematic,
+                    prototype_actuator=prototype_actuator,
+                ),
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]
