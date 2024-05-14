@@ -55,6 +55,7 @@ class LightSource(torch.nn.Module):
     def get_distortions(
         self,
         number_of_points: int,
+        number_of_facets: Optional[int] = 4,
         number_of_heliostats: Optional[int] = 1,
         random_seed: Optional[int] = 7,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -68,6 +69,8 @@ class LightSource(torch.nn.Module):
         ----------
         number_of_points : int
             The number of points on the heliostat.
+        number_of_facets : Optional[int]
+            The number of facets per heliostat.
         number_of_heliostats : Optional[int]
             The number of heliostats in the scenario.
         random_seed : Optional[int]

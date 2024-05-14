@@ -163,6 +163,7 @@ class Sun(LightSource):
     def get_distortions(
         self,
         number_of_points: int,
+        number_of_facets: Optional[int] = 4,
         number_of_heliostats: Optional[int] = 1,
         random_seed: Optional[int] = 7,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -173,6 +174,8 @@ class Sun(LightSource):
         ----------
         number_of_points : int
             The number of points on the heliostat from which rays are reflected.
+        number_of_facets : Optional[int]
+            The number of facets for each heliostat.       
         number_of_heliostats : Optional[int]
             The number of heliostats in the scenario.
         random_seed : Optional[int]
@@ -196,8 +199,8 @@ class Sun(LightSource):
             == config_dictionary.light_source_distribution_is_normal
         ):
             distortions_u, distortions_e = self.distribution.sample(
-                (int(number_of_heliostats * self.number_of_rays), number_of_points),
-            ).permute(2, 0, 1)
+                (int(number_of_heliostats * self.number_of_rays), number_of_facets, number_of_points),
+            ).permute(3, 0, 1, 2)
             return distortions_u, distortions_e
         else:
             raise ValueError("Unknown light distribution type.")
