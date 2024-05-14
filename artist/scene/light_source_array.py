@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import h5py
@@ -9,6 +10,8 @@ from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
 light_source_type_mapping = {config_dictionary.sun_key: Sun}
+
+log = logging.getLogger(__name__)
 
 
 class LightSourceArray(torch.nn.Module):
@@ -53,12 +56,14 @@ class LightSourceArray(torch.nn.Module):
         LightSourceArray
             The light source array loaded from the HDF5 file.
         """
+        log.info("Loading a light source array from an HDF5 file.")
         light_source_array = []
         for ls in config_file[config_dictionary.light_source_key].keys():
             mapping_key = config_file[config_dictionary.light_source_key][ls][
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
             try:
+                log.info(f"Loading {ls} from an HDF file.")
                 ls_object = light_source_type_mapping[mapping_key]
                 light_source_array.append(
                     ls_object.from_hdf5(
