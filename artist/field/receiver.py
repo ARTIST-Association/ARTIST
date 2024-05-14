@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 import h5py
@@ -5,6 +6,8 @@ import torch.nn
 from typing_extensions import Self
 
 from artist.util import config_dictionary
+
+log = logging.getLogger(__name__)
 
 
 class Receiver(torch.nn.Module):
@@ -106,8 +109,12 @@ class Receiver(torch.nn.Module):
 
         if config_dictionary.receiver_curvature_e in config_file.keys():
             curvature_e = float(config_file[config_dictionary.receiver_curvature_e][()])
+        else:
+            log.warning("No curvature in the east direction set for the receiver!")
         if config_dictionary.receiver_curvature_u in config_file.keys():
             curvature_u = float(config_file[config_dictionary.receiver_curvature_u][()])
+        else:
+            log.warning("No curvature in the up direction set for the receiver!")
 
         return cls(
             receiver_type=receiver_type,
