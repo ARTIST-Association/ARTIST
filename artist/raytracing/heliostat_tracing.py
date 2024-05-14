@@ -168,12 +168,12 @@ class HeliostatRayTracer:
             )
 
             dx_ints = (
-                intersections[:, :, 0]
+                intersections[:, :, :, 0]
                 + self.receiver.plane_e / 2
                 - self.receiver.position_center[0]
             )
             dy_ints = (
-                intersections[:, :, 2]
+                intersections[:, :, :, 2]
                 + self.receiver.plane_u / 2
                 - self.receiver.position_center[2]
             )
