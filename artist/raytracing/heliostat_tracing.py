@@ -27,6 +27,7 @@ class DistortionsDataset(Dataset):
         self,
         light_source: LightSource,
         number_of_points: int,
+        number_of_facets: Optional[int] = 4,
         number_of_heliostats: Optional[int] = 1,
         random_seed: Optional[int] = 7,
     ) -> None:
@@ -47,6 +48,7 @@ class DistortionsDataset(Dataset):
         self.number_of_heliostats = number_of_heliostats
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points,
+            number_of_facets=number_of_facets,
             number_of_heliostats=number_of_heliostats,
             random_seed=random_seed,
         )
@@ -117,7 +119,7 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
-            self.heliostat.preferred_reflection_direction.size(0)
+            self.heliostat.preferred_reflection_direction.size(1)
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -226,12 +228,8 @@ class HeliostatRayTracer:
         )
 
         rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e)
-        scattered_rays = torch.einsum('qbij, bnj -> qbni', rotations, ray_directions)
-        #scattered_rays = torch.einsum('qbij, bnj -> qbnj', rotations, ray_directions)
-
-        # scattered_rays = utils.rotate_distortions(
-        #     u=distortion_u, e=distortion_e
-        # ) @ ray_directions.unsqueeze(0)
+        
+        scattered_rays = (rotations @ ray_directions.unsqueeze(-1)).squeeze(-1)
 
         return scattered_rays
 
