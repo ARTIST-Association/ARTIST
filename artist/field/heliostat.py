@@ -1,6 +1,7 @@
 from typing import Optional
 
 import h5py
+from matplotlib import pyplot as plt
 import torch
 from typing_extensions import Self
 
@@ -550,6 +551,18 @@ class Heliostat(torch.nn.Module):
             incident_ray_direction, surface_points, surface_normals
         )
         self.is_aligned = True
+        
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # for facet in surface_points:
+        #     ax.scatter(facet[:, 0], facet[:, 1], facet[:, 2])
+        # plt.show()
+        
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # for facet in self.current_aligned_surface_points:
+        #     ax.scatter(facet[:, 0].detach().numpy(), facet[:, 1].detach().numpy(), facet[:, 2].detach().numpy())
+        # plt.show()
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """

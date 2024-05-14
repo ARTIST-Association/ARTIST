@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from matplotlib import pyplot as plt
 import torch
 
 from artist.field.actuator_array import ActuatorArray
@@ -293,7 +294,22 @@ class RigidBody(Kinematic):
             The aligned surface normals.
         """
         orientation = self.align(incident_ray_direction).squeeze()
-        aligned_surface_points = torch.einsum('ij, bnj->bni', orientation, surface_points)
-        aligned_surface_normals = torch.einsum('ij, bnj->bni', orientation, surface_normals)
+        #aligned_surface_points = torch.einsum('ij, bnj->bni', orientation, surface_points)
+        #aligned_surface_normals = torch.einsum('ij, bnj->bni', orientation, surface_normals)
+
+        aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(-1)
+        aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(-1)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for facet in surface_points:
+            ax.scatter(facet[:, 0], facet[:, 1], facet[:, 2])
+        plt.show()
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for facet in aligned_surface_points:
+            ax.scatter(facet[:, 0].detach().numpy(), facet[:, 1].detach().numpy(), facet[:, 2].detach().numpy())
+        plt.show()
 
         return aligned_surface_points, aligned_surface_normals
