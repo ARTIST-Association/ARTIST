@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Optional, Tuple
 
 import h5py
@@ -6,6 +7,8 @@ from typing_extensions import Self
 
 from artist.scene.light_source import LightSource
 from artist.util import config_dictionary
+
+log = logging.getLogger(__name__)
 
 
 class Sun(LightSource):
@@ -71,6 +74,9 @@ class Sun(LightSource):
             ]
             == config_dictionary.light_source_distribution_is_normal
         ):
+            log.info(
+                "Initializing a sun modelled with a multivariate normal distribution."
+            )
             mean = torch.tensor(
                 [
                     self.distribution_parameters[config_dictionary.light_source_mean],
