@@ -49,7 +49,7 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface points.
         torch.Tensor
-            The surface_normals.
+            The surface normals.
         """
         # TODO: Assert that the number of evaluation points are the same for each facet
         eval_point_per_facet = (
