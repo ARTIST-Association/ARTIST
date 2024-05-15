@@ -6,7 +6,6 @@ import warnings
 import h5py
 import pytest
 import torch
-from matplotlib import pyplot as plt
 
 from artist import ARTIST_ROOT, Scenario
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
@@ -89,9 +88,6 @@ def test_compute_bitmaps(
     if MPI is not None:
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
-
-    plt.imshow(final_bitmap.T.detach().numpy(), origin="lower", cmap="jet")
-    plt.show()
 
     if rank == 0:
         expected_path = (
