@@ -182,10 +182,10 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facets_height][()]
                     ),
-                    position=torch.tensor(
+                    translation_vector=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_position][()],
+                        ][facet][config_dictionary.facets_translation_vector][()],
                         dtype=torch.float,
                     ),
                     canting_e=torch.tensor(

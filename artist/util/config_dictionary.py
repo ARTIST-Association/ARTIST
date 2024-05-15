@@ -30,7 +30,7 @@ facet_number_eval_e = "number_eval_e"
 facet_number_eval_n = "number_eval_n"
 facets_width = "width"
 facets_height = "height"
-facets_position = "position"
+facets_translation_vector = "position"
 facets_canting_e = "canting_e"
 facets_canting_n = "canting_n"
 

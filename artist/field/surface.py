@@ -33,7 +33,7 @@ class Surface(torch.nn.Module):
                 number_eval_points_n=facet_config.number_eval_points_n,
                 width=facet_config.width,
                 height=facet_config.height,
-                position=facet_config.position,
+                translation_vector=facet_config.translation_vector,
                 canting_e=facet_config.canting_e,
                 canting_n=facet_config.canting_n,
             )
@@ -63,6 +63,6 @@ class Surface(torch.nn.Module):
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals()
-            surface_points[i] = facet_points + facet.position
+            surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals

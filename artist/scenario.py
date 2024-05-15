@@ -130,11 +130,11 @@ class Scenario:
                         config_dictionary.facets_height
                     ][()]
                 ),
-                position=torch.tensor(
+                translation_vector=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        config_dictionary.facets_position
+                        config_dictionary.facets_translation_vector
                     ][()],
                     dtype=torch.float,
                 ),
