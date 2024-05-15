@@ -23,8 +23,8 @@ class NurbsFacet(torch.nn.Module):
         The width of the facet.
     height : float
         The height of the facet.
-    position : torch.Tensor
-        The position of the facet.
+    translation_vector : torch.Tensor
+        The translation_vector of the facet.
     canting_e : torch.Tensor
         The canting vector in the east direction of the facet.
     canting_n : torch.Tensor
@@ -40,7 +40,7 @@ class NurbsFacet(torch.nn.Module):
         number_eval_points_n: int,
         width: float,
         height: float,
-        position: torch.Tensor,
+        translation_vector: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
     ) -> None:
@@ -63,8 +63,8 @@ class NurbsFacet(torch.nn.Module):
             The width of the facet.
         height : float
             The height of the facet.
-        position : torch.Tensor
-            The position of the facet.
+        translation_vector : torch.Tensor
+            The translation_vector of the facet.
         canting_e : torch.Tensor
             The canting vector in the east direction of the facet.
         canting_n : torch.Tensor
@@ -78,7 +78,7 @@ class NurbsFacet(torch.nn.Module):
         self.number_eval_points_n = number_eval_points_n
         self.width = width
         self.height = height
-        self.position = position
+        self.translation_vector = translation_vector
         self.canting_e = canting_e
         self.canting_n = canting_n
 
