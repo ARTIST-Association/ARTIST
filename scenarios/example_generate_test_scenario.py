@@ -5,7 +5,6 @@ import torch
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorConfig,
-    ActuatorParameters,
     ActuatorPrototypeConfig,
     FacetConfig,
     HeliostatConfig,
@@ -43,7 +42,7 @@ receiver_list_config = ReceiverListConfig(receiver_list=receiver_list)
 light_source1_config = LightSourceConfig(
     light_source_key="sun1",
     light_source_type=config_dictionary.sun_key,
-    number_of_rays=10,
+    number_of_rays=200,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
     mean=0.0,
     covariance=4.3681e-06,
@@ -59,55 +58,163 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 # Include four facets for the surface prototype.
 prototype_facet1_config = FacetConfig(
     facet_key="facet1",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor(
+        [
+            [
+                [-1.0000, -1.0000, 0.0000],
+                [-1.0000, -0.3333, 0.0000],
+                [-1.0000, 0.3333, 0.0000],
+                [-1.0000, 1.0000, 0.0000],
+            ],
+            [
+                [-0.3333, -1.0000, 0.0000],
+                [-0.3333, -0.3333, 0.0000],
+                [-0.3333, 0.3333, 0.0000],
+                [-0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [0.3333, -1.0000, 0.0000],
+                [0.3333, -0.3333, 0.0000],
+                [0.3333, 0.3333, 0.0000],
+                [0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [1.0000, -1.0000, 0.0000],
+                [1.0000, -0.3333, 0.0000],
+                [1.0000, 0.3333, 0.0000],
+                [1.0000, 1.0000, 0.0000],
+            ],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
-    number_eval_points_e=10,
-    number_eval_points_n=10,
-    width=25.0,
-    height=25.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    number_eval_points_e=50,
+    number_eval_points_n=50,
+    width=2.0,
+    height=2.0,
+    translation_vector=torch.tensor([-1.0, 1.0, 0.0, 0.0]),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
 prototype_facet2_config = FacetConfig(
     facet_key="facet2",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor(
+        [
+            [
+                [-1.0000, -1.0000, 0.0000],
+                [-1.0000, -0.3333, 0.0000],
+                [-1.0000, 0.3333, 0.0000],
+                [-1.0000, 1.0000, 0.0000],
+            ],
+            [
+                [-0.3333, -1.0000, 0.0000],
+                [-0.3333, -0.3333, 0.0000],
+                [-0.3333, 0.3333, 0.0000],
+                [-0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [0.3333, -1.0000, 0.0000],
+                [0.3333, -0.3333, 0.0000],
+                [0.3333, 0.3333, 0.0000],
+                [0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [1.0000, -1.0000, 0.0000],
+                [1.0000, -0.3333, 0.0000],
+                [1.0000, 0.3333, 0.0000],
+                [1.0000, 1.0000, 0.0000],
+            ],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
-    number_eval_points_e=10,
-    number_eval_points_n=10,
-    width=25.0,
-    height=25.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    number_eval_points_e=50,
+    number_eval_points_n=50,
+    width=2.0,
+    height=2.0,
+    translation_vector=torch.tensor([1.0, 1.0, 0.0, 0.0]),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
 prototype_facet3_config = FacetConfig(
     facet_key="facet3",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor(
+        [
+            [
+                [-1.0000, -1.0000, 0.0000],
+                [-1.0000, -0.3333, 0.0000],
+                [-1.0000, 0.3333, 0.0000],
+                [-1.0000, 1.0000, 0.0000],
+            ],
+            [
+                [-0.3333, -1.0000, 0.0000],
+                [-0.3333, -0.3333, 0.0000],
+                [-0.3333, 0.3333, 0.0000],
+                [-0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [0.3333, -1.0000, 0.0000],
+                [0.3333, -0.3333, 0.0000],
+                [0.3333, 0.3333, 0.0000],
+                [0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [1.0000, -1.0000, 0.0000],
+                [1.0000, -0.3333, 0.0000],
+                [1.0000, 0.3333, 0.0000],
+                [1.0000, 1.0000, 0.0000],
+            ],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
-    number_eval_points_e=10,
-    number_eval_points_n=10,
-    width=25.0,
-    height=25.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    number_eval_points_e=50,
+    number_eval_points_n=50,
+    width=2.0,
+    height=2.0,
+    translation_vector=torch.tensor([-1.0, -1.0, 0.0, 0.0]),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
 prototype_facet4_config = FacetConfig(
     facet_key="facet4",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor(
+        [
+            [
+                [-1.0000, -1.0000, 0.0000],
+                [-1.0000, -0.3333, 0.0000],
+                [-1.0000, 0.3333, 0.0000],
+                [-1.0000, 1.0000, 0.0000],
+            ],
+            [
+                [-0.3333, -1.0000, 0.0000],
+                [-0.3333, -0.3333, 0.0000],
+                [-0.3333, 0.3333, 0.0000],
+                [-0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [0.3333, -1.0000, 0.0000],
+                [0.3333, -0.3333, 0.0000],
+                [0.3333, 0.3333, 0.0000],
+                [0.3333, 1.0000, 0.0000],
+            ],
+            [
+                [1.0000, -1.0000, 0.0000],
+                [1.0000, -0.3333, 0.0000],
+                [1.0000, 0.3333, 0.0000],
+                [1.0000, 1.0000, 0.0000],
+            ],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
-    number_eval_points_e=10,
-    number_eval_points_n=10,
-    width=25.0,
-    height=25.0,
-    position=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    number_eval_points_e=50,
+    number_eval_points_n=50,
+    width=2.0,
+    height=2.0,
+    translation_vector=torch.tensor([1.0, -1.0, 0.0, 0.0]),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0]),
 )
 
 # Create a list of prototype facets.
@@ -142,21 +249,11 @@ actuator1_prototype = ActuatorConfig(
     actuator_clockwise=False,
 )
 
-# Include parameters for a linear actuator.
-actuator2_prototype_parameters = ActuatorParameters(
-    increment=torch.tensor(0.0),
-    initial_stroke_length=torch.tensor(0.0),
-    offset=torch.tensor(0.0),
-    radius=torch.tensor(0.0),
-    phi_0=torch.tensor(0.0),
-)
-
 # Include a linear actuator.
 actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
-    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     actuator_clockwise=True,
-    actuator_parameters=actuator2_prototype_parameters,
 )
 
 # Create a list of actuators.

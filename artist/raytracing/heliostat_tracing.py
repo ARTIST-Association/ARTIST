@@ -28,7 +28,8 @@ class DistortionsDataset(Dataset):
         self,
         light_source: LightSource,
         number_of_points: int,
-        number_of_heliostats: Optional[int] = 1,
+        number_of_facets: int = 4,
+        number_of_heliostats: int = 1,
         random_seed: Optional[int] = 7,
     ) -> None:
         """
@@ -40,7 +41,9 @@ class DistortionsDataset(Dataset):
             The light source used to model the distortions.
         number_of_points : int
             The number of points on the heliostat for which distortions are created.
-        number_of_heliostats : Optional[int]
+        number_of_facets : int
+            The number of facets per heliostat.
+        number_of_heliostats : int
             The number of heliostats in the scenario.
         random_seed : Optional[int]
             The random seed used for generating the distortions.
@@ -48,6 +51,7 @@ class DistortionsDataset(Dataset):
         self.number_of_heliostats = number_of_heliostats
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points,
+            number_of_facets=number_of_facets,
             number_of_heliostats=number_of_heliostats,
             random_seed=random_seed,
         )
@@ -118,7 +122,7 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
-            self.heliostat.preferred_reflection_direction.size(0)
+            self.heliostat.preferred_reflection_direction.size(1)
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -170,12 +174,12 @@ class HeliostatRayTracer:
             )
 
             dx_ints = (
-                intersections[:, :, 0]
+                intersections[:, :, :, 0]
                 + self.receiver.plane_e / 2
                 - self.receiver.position_center[0]
             )
             dy_ints = (
-                intersections[:, :, 2]
+                intersections[:, :, :, 2]
                 + self.receiver.plane_u / 2
                 - self.receiver.position_center[2]
             )
@@ -218,22 +222,75 @@ class HeliostatRayTracer:
             Scattered rays around the preferred direction.
         """
         ray_directions = self.heliostat.preferred_reflection_direction[
-            :, :3
+            :, :, :3
         ] / torch.linalg.norm(
-            self.heliostat.preferred_reflection_direction[:, :3], dim=1
-        ).unsqueeze(-1)
-        ray_directions = torch.cat(
-            (ray_directions, torch.zeros(ray_directions.size(0), 1)), dim=1
+            self.heliostat.preferred_reflection_direction[:, :, :3],
+            ord=2,
+            dim=-1,
+            keepdim=True,
         )
 
-        scattered_rays = utils.rotate_distortions(
-            u=distortion_u, e=distortion_e
-        ) @ ray_directions.unsqueeze(-1)
+        ray_directions = torch.cat(
+            (ray_directions, torch.zeros(4, ray_directions.size(1), 1)), dim=-1
+        )
 
-        # TODO: Include magnitude that is different from one
+        rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e)
+
+        scattered_rays = (rotations @ ray_directions.unsqueeze(-1)).squeeze(-1)
+
         return Rays(
-            ray_directions=scattered_rays.squeeze(-1),
-            ray_magnitudes=torch.ones(len(scattered_rays.squeeze(-1))),
+            ray_directions=scattered_rays,
+            ray_magnitudes=torch.ones(
+                scattered_rays.size(dim=0),
+                scattered_rays.size(dim=1),
+                scattered_rays.size(dim=2),
+            ),
+        )
+
+    def line_plane_intersections(
+        self,
+        ray_directions: torch.Tensor,
+        epsilon: float = 1e-6,
+    ) -> torch.Tensor:
+        """
+        Compute line-plane intersections of ray directions and the (receiver) plane.
+
+        Parameters
+        ----------
+        ray_directions : torch.Tensor
+            The direction of the reflected sunlight.
+        epsilon : float
+            A small value corresponding to the upper limit.
+
+        Returns
+        -------
+        torch.Tensor
+            The intersections of the lines and plane.
+
+        Raises
+        ------
+        RuntimeError
+            When there are no intersections between the line and the plane.
+        """
+        # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
+        # the incoming rays
+        relative_distribution_strengths = ray_directions @ self.receiver.normal_vector
+        assert (
+            torch.abs(relative_distribution_strengths) >= epsilon
+        ).all(), "No intersection or line is within plane."
+        # Calculate the final distribution strengths
+        distribution_strengths = (
+            (
+                self.receiver.position_center
+                - self.heliostat.current_aligned_surface_points
+            )
+            @ self.receiver.normal_vector
+            / relative_distribution_strengths
+        )
+
+        return (
+            self.heliostat.current_aligned_surface_points
+            + ray_directions * distribution_strengths.unsqueeze(-1)
         )
 
     def sample_bitmap(

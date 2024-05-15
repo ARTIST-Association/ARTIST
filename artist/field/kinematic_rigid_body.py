@@ -293,7 +293,12 @@ class RigidBody(Kinematic):
             The aligned surface normals.
         """
         orientation = self.align(incident_ray_direction).squeeze()
-        aligned_surface_points = (orientation @ surface_points.T).T
-        aligned_surface_normals = (orientation @ surface_normals.T).T
+
+        aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
+            -1
+        )
+        aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(
+            -1
+        )
 
         return aligned_surface_points, aligned_surface_normals

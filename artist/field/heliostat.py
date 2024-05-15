@@ -118,6 +118,7 @@ class Heliostat(torch.nn.Module):
         prototype_surface: Optional[SurfaceConfig] = None,
         prototype_kinematic: Optional[KinematicConfig] = None,
         prototype_actuator: Optional[ActuatorListConfig] = None,
+        heliostat_name: Optional[str] = None,
     ) -> Self:
         """
         Class method to initialize heliostat from an HDF5 file.
@@ -132,12 +133,16 @@ class Heliostat(torch.nn.Module):
             An optional prototype for the kinematic configuration.
         prototype_actuator : Optional[ActuatorListConfig]
             An optional prototype for the actuator configuration.
+        heliostat_name : Optional[str]
+            The name of the heliostat being loaded - used for logging.
 
         Returns
         -------
         Heliostat
             A heliostat initialized from an HDF5 file.
         """
+        if heliostat_name:
+            log.info(f"Loading {heliostat_name} from an HDF5 file.")
         heliostat_id = int(config_file[config_dictionary.heliostat_id][()])
         position = torch.tensor(
             config_file[config_dictionary.heliostat_position][()], dtype=torch.float
@@ -186,10 +191,10 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facets_height][()]
                     ),
-                    position=torch.tensor(
+                    translation_vector=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_position][()],
+                        ][facet][config_dictionary.facets_translation_vector][()],
                         dtype=torch.float,
                     ),
                     canting_e=torch.tensor(
@@ -232,42 +237,45 @@ class Heliostat(torch.nn.Module):
                 f"{config_dictionary.heliostat_kinematic_key}/"
                 f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
             )
+            if kinematic_initial_orientation_offset_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_e} for "
+                    f"{heliostat_name} set."
+                    f"Using default values!"
+                )
+            if kinematic_initial_orientation_offset_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n}for "
+                    f"{heliostat_name} set."
+                    f"Using default values!"
+                )
+            if kinematic_initial_orientation_offset_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_u} for "
+                    f"{heliostat_name} set."
+                    f"Using default values!"
+                )
             kinematic_offsets = KinematicOffsets(
                 kinematic_initial_orientation_offset_e=(
                     torch.tensor(
                         kinematic_initial_orientation_offset_e[()], dtype=torch.float
                     )
                     if kinematic_initial_orientation_offset_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic initial orientation offsets in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 kinematic_initial_orientation_offset_n=(
                     torch.tensor(
                         kinematic_initial_orientation_offset_n[()], dtype=torch.float
                     )
                     if kinematic_initial_orientation_offset_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic initial orientation offsets in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 kinematic_initial_orientation_offset_u=(
                     torch.tensor(
                         kinematic_initial_orientation_offset_u[()], dtype=torch.float
                     )
                     if kinematic_initial_orientation_offset_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic initial orientation offsets in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
             )
 
@@ -361,186 +369,186 @@ class Heliostat(torch.nn.Module):
                 f"{config_dictionary.kinematic_deviations_key}/"
                 f"{config_dictionary.concentrator_tilt_u}"
             )
+            if first_joint_translation_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if first_joint_translation_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if first_joint_translation_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if first_joint_tilt_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_tilt_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if first_joint_tilt_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if first_joint_tilt_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_translation_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_translation_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_translation_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_tilt_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_tilt_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if second_joint_tilt_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.second_joint_tilt_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_translation_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_translation_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_translation_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_tilt_e is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_tilt_e} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_tilt_n is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_tilt_n} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
+            if concentrator_tilt_u is None:
+                log.warning(
+                    f"No individual kinematic {config_dictionary.concentrator_tilt_u} for {heliostat_name} set. "
+                    f"Using default values!"
+                )
             kinematic_deviations = KinematicDeviations(
                 first_joint_translation_e=(
                     torch.tensor(first_joint_translation_e[()], dtype=torch.float)
                     if first_joint_translation_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint translation in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 first_joint_translation_n=(
                     torch.tensor(first_joint_translation_n[()], dtype=torch.float)
                     if first_joint_translation_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint translation in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 first_joint_translation_u=(
                     torch.tensor(first_joint_translation_u[()], dtype=torch.float)
                     if first_joint_translation_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint translation in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 first_joint_tilt_e=(
                     torch.tensor(first_joint_tilt_e[()], dtype=torch.float)
                     if first_joint_tilt_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint tilt in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 first_joint_tilt_n=(
                     torch.tensor(first_joint_tilt_n[()], dtype=torch.float)
                     if first_joint_tilt_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint tilt in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 first_joint_tilt_u=(
                     torch.tensor(first_joint_tilt_u[()], dtype=torch.float)
                     if first_joint_tilt_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic first joint tilt in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_translation_e=(
                     torch.tensor(second_joint_translation_e[()], dtype=torch.float)
                     if second_joint_translation_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint translation in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_translation_n=(
                     torch.tensor(second_joint_translation_n[()], dtype=torch.float)
                     if second_joint_translation_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint translation in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_translation_u=(
                     torch.tensor(second_joint_translation_u[()], dtype=torch.float)
                     if second_joint_translation_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint translation in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_tilt_e=(
                     torch.tensor(second_joint_tilt_e[()], dtype=torch.float)
                     if second_joint_tilt_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint tilt in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_tilt_n=(
                     torch.tensor(second_joint_tilt_n[()], dtype=torch.float)
                     if second_joint_tilt_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint tilt in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 second_joint_tilt_u=(
                     torch.tensor(second_joint_tilt_u[()], dtype=torch.float)
                     if second_joint_tilt_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic second joint tilt in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_translation_e=(
                     torch.tensor(concentrator_translation_e[()], dtype=torch.float)
                     if concentrator_translation_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator translation in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_translation_n=(
                     torch.tensor(concentrator_translation_n[()], dtype=torch.float)
                     if concentrator_translation_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator translation in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_translation_u=(
                     torch.tensor(concentrator_translation_u[()], dtype=torch.float)
                     if concentrator_translation_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator translation in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_tilt_e=(
                     torch.tensor(concentrator_tilt_e[()], dtype=torch.float)
                     if concentrator_tilt_e
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator tilt in the east direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_tilt_n=(
                     torch.tensor(concentrator_tilt_n[()], dtype=torch.float)
                     if concentrator_tilt_n
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator tilt in the north direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
                 concentrator_tilt_u=(
                     torch.tensor(concentrator_tilt_u[()], dtype=torch.float)
                     if concentrator_tilt_u
-                    else (
-                        log.warning(
-                            "Setting individual kinematic concentrator tilt in the up direction to zero!"
-                        ),
-                        torch.tensor(0.0),
-                    )
+                    else torch.tensor(0.0)
                 ),
             )
             kinematic_config = KinematicConfig(
@@ -589,56 +597,56 @@ class Heliostat(torch.nn.Module):
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_phi_0}"
                 )
+                if increment is None:
+                    log.warning(
+                        f"No individual {config_dictionary.actuator_increment} set for {ac}. Using default values!"
+                    )
+                if initial_stroke_length is None:
+                    log.warning(
+                        f"No individual {config_dictionary.actuator_initial_stroke_length} set for {ac} on "
+                        f"{heliostat_name}. "
+                        f"Using default values!"
+                    )
+                if offset is None:
+                    log.warning(
+                        f"No individual {config_dictionary.actuator_offset} set for {ac} on "
+                        f"{heliostat_name}. Using default values!"
+                    )
+                if radius is None:
+                    log.warning(
+                        f"No individual {config_dictionary.actuator_radius} set for {ac} on "
+                        f"{heliostat_name}. Using default values!"
+                    )
+                if phi_0 is None:
+                    log.warning(
+                        f"No individual {config_dictionary.actuator_phi_0} set for {ac} on "
+                        f"{heliostat_name}. Using default values!"
+                    )
                 actuator_parameters = ActuatorParameters(
                     increment=(
                         torch.tensor(increment[()], dtype=torch.float)
                         if increment
-                        else (
-                            log.warning(
-                                f"Setting the increment for the individual {ac} to zero!"
-                            ),
-                            torch.tensor(0.0),
-                        )
+                        else torch.tensor(0.0)
                     ),
                     initial_stroke_length=(
                         torch.tensor(initial_stroke_length[()], dtype=torch.float)
                         if initial_stroke_length
-                        else (
-                            log.warning(
-                                f"Setting the initial stroke length for the individual {ac} to zero!"
-                            ),
-                            torch.tensor(0.0),
-                        )
+                        else torch.tensor(0.0)
                     ),
                     offset=(
                         torch.tensor(offset[()], dtype=torch.float)
                         if offset
-                        else (
-                            log.warning(
-                                f"Setting the offset for the individual {ac} to zero!"
-                            ),
-                            torch.tensor(0.0),
-                        )
+                        else torch.tensor(0.0)
                     ),
                     radius=(
                         torch.tensor(radius[()], dtype=torch.float)
                         if radius
-                        else (
-                            log.warning(
-                                f"Setting the radius for the individual {ac} to zero!"
-                            ),
-                            torch.tensor(0.0),
-                        )
+                        else torch.tensor(0.0)
                     ),
                     phi_0=(
                         torch.tensor(phi_0[()], dtype=torch.float)
                         if phi_0
-                        else (
-                            log.warning(
-                                f"Setting phi_0 for the individual {ac} to zero!"
-                            ),
-                            torch.tensor(0.0),
-                        )
+                        else torch.tensor(0.0)
                     ),
                 )
                 actuator_list.append(
@@ -685,14 +693,11 @@ class Heliostat(torch.nn.Module):
         incident_ray_direction : torch.Tensor
             The incident ray direction.
         """
-        surface_points, surface_normals = (
-            self.concentrator.facets.surface_points,
-            self.concentrator.facets.surface_normals,
-        )
+        surface_points, surface_normals = self.surface.get_surface_points_and_normals()
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.alignment.align_surface(
+        ) = self.kinematic.align_surface(
             incident_ray_direction, surface_points, surface_normals
         )
         self.is_aligned = True

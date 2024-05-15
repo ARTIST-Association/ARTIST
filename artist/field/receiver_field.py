@@ -55,13 +55,9 @@ class ReceiverField(torch.nn.Module):
         """
         log.info("Loading a receiver field from an HDF5 file.")
         receiver_field = [
-            (
-                log.info(f"Loading {receiver_name} from an HDF5 file."),
-                Receiver.from_hdf5(
-                    config_file=config_file[config_dictionary.receiver_key][
-                        receiver_name
-                    ]
-                ),
+            Receiver.from_hdf5(
+                config_file=config_file[config_dictionary.receiver_key][receiver_name],
+                receiver_name=receiver_name,
             )
             for receiver_name in config_file[config_dictionary.receiver_key].keys()
         ]

@@ -1,5 +1,7 @@
 import torch
 
+from artist.field.nurbs import NURBSSurface
+
 
 class NurbsFacet(torch.nn.Module):
     """
@@ -21,8 +23,8 @@ class NurbsFacet(torch.nn.Module):
         The width of the facet.
     height : float
         The height of the facet.
-    position : torch.Tensor
-        The position of the facet.
+    translation_vector : torch.Tensor
+        The translation_vector of the facet.
     canting_e : torch.Tensor
         The canting vector in the east direction of the facet.
     canting_n : torch.Tensor
@@ -38,7 +40,7 @@ class NurbsFacet(torch.nn.Module):
         number_eval_points_n: int,
         width: float,
         height: float,
-        position: torch.Tensor,
+        translation_vector: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
     ) -> None:
@@ -61,8 +63,8 @@ class NurbsFacet(torch.nn.Module):
             The width of the facet.
         height : float
             The height of the facet.
-        position : torch.Tensor
-            The position of the facet.
+        translation_vector : torch.Tensor
+            The translation_vector of the facet.
         canting_e : torch.Tensor
             The canting vector in the east direction of the facet.
         canting_n : torch.Tensor
@@ -76,6 +78,36 @@ class NurbsFacet(torch.nn.Module):
         self.number_eval_points_n = number_eval_points_n
         self.width = width
         self.height = height
-        self.position = position
+        self.translation_vector = translation_vector
         self.canting_e = canting_e
         self.canting_n = canting_n
+
+    def create_nurbs_surface(self) -> NURBSSurface:
+        """
+        Create a NURBS surface to model a facet.
+
+        Returns
+        -------
+        NURBSSurface
+            The NURBS surface of one facet.
+        """
+        evaluation_points_rows = torch.linspace(
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_e
+        )
+        evaluation_points_cols = torch.linspace(
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_n
+        )
+        evaluation_points = torch.cartesian_prod(
+            evaluation_points_rows, evaluation_points_cols
+        )
+        evaluation_points_e = evaluation_points[:, 0]
+        evaluation_points_n = evaluation_points[:, 1]
+
+        nurbs_surface = NURBSSurface(
+            self.degree_e,
+            self.degree_n,
+            evaluation_points_e,
+            evaluation_points_n,
+            self.control_points,
+        )
+        return nurbs_surface
