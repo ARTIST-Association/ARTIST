@@ -4,9 +4,9 @@ import pathlib
 import warnings
 
 import h5py
-from matplotlib import pyplot as plt
 import pytest
 import torch
+from matplotlib import pyplot as plt
 
 from artist import ARTIST_ROOT, Scenario
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer

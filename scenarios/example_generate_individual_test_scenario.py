@@ -61,15 +61,13 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 # Include four facets for the surface prototype.
 prototype_facet1_config = FacetConfig(
     facet_key="facet1",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -82,15 +80,13 @@ prototype_facet1_config = FacetConfig(
 )
 prototype_facet2_config = FacetConfig(
     facet_key="facet2",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -103,15 +99,13 @@ prototype_facet2_config = FacetConfig(
 )
 prototype_facet3_config = FacetConfig(
     facet_key="facet3",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -124,15 +118,13 @@ prototype_facet3_config = FacetConfig(
 )
 prototype_facet4_config = FacetConfig(
     facet_key="facet4",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -211,15 +203,13 @@ prototype_config = PrototypeConfig(
 # Define facets for the individual heliostat.
 heliostat1_facet1_config = FacetConfig(
     facet_key="facet1",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -232,15 +222,13 @@ heliostat1_facet1_config = FacetConfig(
 )
 heliostat1_facet2_config = FacetConfig(
     facet_key="facet2",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                [-1.,  0.,  0.],
-                                [-1.,  1.,  0.]],
-                                [[ 0., -1.,  0.],
-                                [ 0.,  0.,  0.],
-                                [ 0.,  1.,  0.]],
-                                [[ 1., -1.,  0.],
-                                [ 1.,  0.,  0.],
-                                [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -253,15 +241,13 @@ heliostat1_facet2_config = FacetConfig(
 )
 heliostat1_facet3_config = FacetConfig(
     facet_key="facet3",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
@@ -274,15 +260,13 @@ heliostat1_facet3_config = FacetConfig(
 )
 heliostat1_facet4_config = FacetConfig(
     facet_key="facet4",
-    control_points=torch.Tensor([[[-1., -1.,  0.],
-                                  [-1.,  0.,  0.],
-                                  [-1.,  1.,  0.]],
-                                 [[ 0., -1.,  0.],
-                                  [ 0.,  0.,  0.],
-                                  [ 0.,  1.,  0.]],
-                                 [[ 1., -1.,  0.],
-                                  [ 1.,  0.,  0.],
-                                  [ 1.,  1.,  0.]]]),
+    control_points=torch.Tensor(
+        [
+            [[-1.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 1.0, 0.0]],
+            [[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, -1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        ]
+    ),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
