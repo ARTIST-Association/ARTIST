@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
@@ -40,7 +42,7 @@ class Surface(torch.nn.Module):
             for facet_config in surface_config.facets_list
         ]
 
-    def get_surface_points_and_normals(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_surface_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
