@@ -345,7 +345,7 @@ class FacetConfig:
         number_eval_points_n: int,
         width: float,
         height: float,
-        position: torch.Tensor,
+        translation_vector: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
     ) -> None:
@@ -370,8 +370,8 @@ class FacetConfig:
             The width of the facet.
         height : float
             The height of the facet.
-        position : torch.Tensor
-            The position of the facet.
+        translation_vector : torch.Tensor
+            The translation_vector of the facet.
         canting_e : torch.Tensor
             The canting vector in the east direction.
         canting_n : torch.Tensor
@@ -385,7 +385,7 @@ class FacetConfig:
         self.number_eval_points_n = number_eval_points_n
         self.width = width
         self.height = height
-        self.position = position
+        self.translation_vector = translation_vector
         self.canting_e = canting_e
         self.canting_n = canting_n
 
@@ -406,7 +406,7 @@ class FacetConfig:
             config_dictionary.facet_number_eval_n: self.number_eval_points_n,
             config_dictionary.facets_width: self.width,
             config_dictionary.facets_height: self.height,
-            config_dictionary.facets_position: self.position,
+            config_dictionary.facets_translation_vector: self.translation_vector,
             config_dictionary.facets_canting_e: self.canting_e,
             config_dictionary.facets_canting_n: self.canting_n,
         }

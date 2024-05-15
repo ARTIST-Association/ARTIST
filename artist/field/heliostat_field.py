@@ -72,16 +72,14 @@ class HeliostatField(torch.nn.Module):
         """
         log.info("Loading a heliostat field from an HDF5 file.")
         heliostat_list = [
-            (
-                log.info(f"Loading {heliostat_name} from an HDF5 file"),
-                Heliostat.from_hdf5(
-                    config_file=config_file[config_dictionary.heliostat_key][
-                        heliostat_name
-                    ],
-                    prototype_surface=prototype_surface,
-                    prototype_kinematic=prototype_kinematic,
-                    prototype_actuator=prototype_actuator,
-                ),
+            Heliostat.from_hdf5(
+                config_file=config_file[config_dictionary.heliostat_key][
+                    heliostat_name
+                ],
+                prototype_surface=prototype_surface,
+                prototype_kinematic=prototype_kinematic,
+                prototype_actuator=prototype_actuator,
+                heliostat_name=heliostat_name,
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]

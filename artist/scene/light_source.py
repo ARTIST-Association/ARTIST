@@ -36,7 +36,9 @@ class LightSource(torch.nn.Module):
         self.number_of_rays = number_of_rays
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(
+        cls, config_file: h5py.File, light_source_name: Optional[str] = None
+    ) -> Self:
         """
         Load the light source from a hdf5 file.
 
@@ -44,6 +46,8 @@ class LightSource(torch.nn.Module):
         ----------
         config_file : h5py.File
             The hdf5 file containing the information about the light source.
+        light_source_name : Optional[str]
+            The name of the light source - used for logging.
 
         Raises
         ------
@@ -55,7 +59,8 @@ class LightSource(torch.nn.Module):
     def get_distortions(
         self,
         number_of_points: int,
-        number_of_heliostats: Optional[int] = 1,
+        number_of_facets: int = 4,
+        number_of_heliostats: int = 1,
         random_seed: Optional[int] = 7,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -68,7 +73,9 @@ class LightSource(torch.nn.Module):
         ----------
         number_of_points : int
             The number of points on the heliostat.
-        number_of_heliostats : Optional[int]
+        number_of_facets : int
+            The number of facets per heliostat.
+        number_of_heliostats : int
             The number of heliostats in the scenario.
         random_seed : Optional[int]
             The random seed to enable result replication.

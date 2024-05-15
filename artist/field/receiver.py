@@ -76,7 +76,9 @@ class Receiver(torch.nn.Module):
         self.curvature_u = curvature_u
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(
+        cls, config_file: h5py.File, receiver_name: Optional[str] = None
+    ) -> Self:
         """
         Class method that initializes a receiver from an HDF5 file.
 
@@ -84,12 +86,16 @@ class Receiver(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the receiver.
+        receiver_name : Optional[str]
+            The name of the receiver - used for logging
 
         Returns
         -------
         Receiver
             A receiver initialized from an HDF5 file.
         """
+        if receiver_name:
+            log.info(f"Loading {receiver_name} from an HDF5 file.")
         receiver_type = config_file[config_dictionary.receiver_type][()].decode("utf-8")
         position_center = torch.tensor(
             config_file[config_dictionary.receiver_position_center][()],

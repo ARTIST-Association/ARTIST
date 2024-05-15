@@ -63,11 +63,11 @@ class LightSourceArray(torch.nn.Module):
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
             try:
-                log.info(f"Loading {ls} from an HDF file.")
                 ls_object = light_source_type_mapping[mapping_key]
                 light_source_array.append(
                     ls_object.from_hdf5(
-                        config_file=config_file[config_dictionary.light_source_key][ls]
+                        config_file=config_file[config_dictionary.light_source_key][ls],
+                        light_source_name=ls,
                     )
                 )
             except KeyError:
