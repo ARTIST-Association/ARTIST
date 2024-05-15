@@ -89,9 +89,7 @@ def common_setup() -> Scenario:
         (torch.tensor([0.0, 0.0, 1.0, 0.0])),
     ],
 )
-def test_nurbs(
-    common_setup: Scenario, incident_ray_direction: torch.Tensor
-):
+def test_nurbs(common_setup: Scenario, incident_ray_direction: torch.Tensor):
     """
     Test the NURBS surface and the raytracing process.
 

@@ -550,7 +550,7 @@ class Heliostat(torch.nn.Module):
             incident_ray_direction, surface_points, surface_normals
         )
         self.is_aligned = True
-        
+
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
         Reflect incoming rays according to a normal vector.
