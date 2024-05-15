@@ -78,15 +78,16 @@ class ScenarioGenerator:
             The log level applied to the logger.
         """
         self.file_path = Path(file_path)
-        if not self.file_path.parent.is_file():
+        if not self.file_path.parent.is_dir():
             raise FileNotFoundError(
-                "The file path given to save the generated scenario does not exist. "
-                "Please create the folder or adjust the file bath before running again!"
+                f"The folder ``{self.file_path.parent}`` selected to save the scenario does not exist. "
+                "Please create the folder or adjust the file path before running again!"
             )
         self.receiver_list_config = receiver_list_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
+        self.check_facet_and_point_size()
         self.version = version
         log = logging.getLogger("scenario-generator")  # Get logger instance.
         log_formatter = colorlog.ColoredFormatter(
@@ -108,6 +109,50 @@ class ScenarioGenerator:
         log.addHandler(handler)
         log.setLevel(log_level)
         self.log = log
+
+    def check_facet_and_point_size(self):
+        """
+        Check that each heliostat has the same number of facets and each facet the same number of evaluation points.
+
+        Raises
+        ------
+        AssertionError
+            If at least one heliostat has a different number of facets or one facet has a different number of evaluation
+            points.
+        """
+        # Define accepted number of facets based on the prototype
+        accepted_number_of_facets = len(
+            self.prototype_config.surface_prototype.facets_list
+        )
+        # Define accepted number of points based on the prototype
+        accepted_number_of_points = (
+            self.prototype_config.surface_prototype.facets_list[0].number_eval_points_e
+            * self.prototype_config.surface_prototype.facets_list[
+                0
+            ].number_eval_points_n
+        )
+        # Check that every facet in the prototype has the same number of evaluation points
+        assert all(
+            self.prototype_config.surface_prototype.facets_list[i].number_eval_points_e
+            * self.prototype_config.surface_prototype.facets_list[
+                i
+            ].number_eval_points_n
+            == accepted_number_of_points
+            for i in range(accepted_number_of_facets)
+        ), "The number of evaluation points for each facet is different in the surface prototype!"
+        # Check that every heliostat has the same number of facets and evaluation points
+        for heliostat in self.heliostat_list_config.heliostat_list:
+            if heliostat.heliostat_surface:
+                assert (
+                    len(heliostat.heliostat_surface.facets_list)
+                    == accepted_number_of_facets
+                ), "Individual heliostats must all have the same number of facets!"
+                assert all(
+                    heliostat.heliostat_surface.facets_list[i].number_eval_points_e
+                    * heliostat.heliostat_surface.facets_list[i].number_eval_points_n
+                    == accepted_number_of_points
+                    for i in range(accepted_number_of_facets)
+                ), "The number of evaluation points for each facet is different in the individual heliostat!"
 
     def flatten_dict(
         self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
