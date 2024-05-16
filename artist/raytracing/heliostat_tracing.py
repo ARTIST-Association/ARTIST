@@ -114,8 +114,6 @@ class HeliostatRayTracer:
         Perform heliostat raytracing.
     scatter_rays()
         Scatter the reflected rays around the preferred ray direction.
-    line_plane_intersections()
-        Compute line-plane intersections of ray directions and the (receiver) plane.
     sample_bitmap()
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
     normalize_bitmap()
@@ -277,52 +275,6 @@ class HeliostatRayTracer:
                 scattered_rays.size(dim=1),
                 scattered_rays.size(dim=2),
             ),
-        )
-
-    def line_plane_intersections(
-        self,
-        ray_directions: torch.Tensor,
-        epsilon: float = 1e-6,
-    ) -> torch.Tensor:
-        """
-        Compute line-plane intersections of ray directions and the (receiver) plane.
-
-        Parameters
-        ----------
-        ray_directions : torch.Tensor
-            The direction of the reflected sunlight.
-        epsilon : float
-            A small value corresponding to the upper limit.
-
-        Returns
-        -------
-        torch.Tensor
-            The intersections of the lines and plane.
-
-        Raises
-        ------
-        RuntimeError
-            When there are no intersections between the line and the plane.
-        """
-        # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
-        # the incoming rays
-        relative_distribution_strengths = ray_directions @ self.receiver.normal_vector
-        assert (
-            torch.abs(relative_distribution_strengths) >= epsilon
-        ).all(), "No intersection or line is within plane."
-        # Calculate the final distribution strengths
-        distribution_strengths = (
-            (
-                self.receiver.position_center
-                - self.heliostat.current_aligned_surface_points
-            )
-            @ self.receiver.normal_vector
-            / relative_distribution_strengths
-        )
-
-        return (
-            self.heliostat.current_aligned_surface_points
-            + ray_directions * distribution_strengths.unsqueeze(-1)
         )
 
     def sample_bitmap(
