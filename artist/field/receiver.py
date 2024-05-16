@@ -30,6 +30,11 @@ class Receiver(torch.nn.Module):
         The horizontal resolution in the east direction of the receiver.
     resolution_u : int
         The vertical resolution in the up direction of the receiver.
+
+    Methods
+    -------
+    from_hdf5()
+        Class method that initializes a receiver from an HDF5 file.
     """
 
     def __init__(
