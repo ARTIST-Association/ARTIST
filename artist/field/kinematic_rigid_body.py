@@ -31,6 +31,8 @@ class RigidBody(Kinematic):
     -------
     align()
         Compute the rotation matrix to align the concentrator along a desired orientation.
+    align_surface()
+        Align given surface points and surface normals according to a calculated orientation.
 
     See Also
     --------
