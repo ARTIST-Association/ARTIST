@@ -4,6 +4,7 @@ import pathlib
 import warnings
 
 import h5py
+import matplotlib.pyplot as plt
 import pytest
 import torch
 
@@ -100,8 +101,10 @@ def test_compute_bitmaps(
             / "tests/field/test_bitmaps_load_surface_stral"
             / expected_value
         )
-
+        plt.imshow(final_bitmap.detach().numpy(), cmap="twilight")
+        plt.show()
         expected = torch.load(expected_path)
-        print(expected)
+        plt.imshow(expected.detach().numpy(), cmap="twilight")
+        plt.show()
         # TODO: Include bitmap again once converter is included
         # torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
