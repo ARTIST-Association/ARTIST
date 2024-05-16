@@ -14,6 +14,11 @@ class Surface(torch.nn.Module):
     ----------
     facets : List[Facet]
         A list of facets that comprise the surface of the heliostat.
+
+    Methods
+    -------
+    get_surface_points_and_normals()
+        Calculate all surface points and normals from all facets.
     """
 
     def __init__(self, surface_config: SurfaceConfig) -> None:
