@@ -97,3 +97,7 @@ prototype_key = "prototypes"
 receiver_key = "receivers"
 light_source_key = "lightsources"
 heliostat_key = "heliostats"
+
+# Dictionary for NURBS converters.
+convert_nurbs_from_points = "point_cloud"
+convert_nurbs_from_normals = "deflectometry"
