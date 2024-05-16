@@ -1,24 +1,30 @@
 import pytest
 import torch
 
-from artist.field.nurbs import NURBSSurface
-from artist.util.stral_converter import StralConverter
+from artist import ARTIST_ROOT
+from artist.util import config_dictionary
+from artist.util.stral_converter import StralToSurfaceConverter
 
 # Set variables in the script instead of using input function.
 # Set this boolean to true.
 
 # Set your values with the following variables.
-STRAL_FILE_PATH = "tests\\field\\test_facetted_nurbs\\stral_test_data"
-HDF_FILE_PATH = "tests\\field\\test_facetted_nurbs\\stral_conversion_test"
+STRAL_FILE_PATH = f"{ARTIST_ROOT}/tests/field/test_facetted_nurbs/stral_test_data"
+HDF_FILE_PATH = "hi"
 CONCENTRATOR_HEADER_NAME = "=5f2I2f"
 FACET_HEADER_NAME = "=i9fI"
 RAY_STRUCT_NAME = "=7f"
 STEP_SIZE = 1000
 TOLERANCE = 5e-4
 
-pytest.mark.parametrize("extraction_method", ["deflectometry", "point cloud"])
 
-
+@pytest.mark.parametrize(
+    "extraction_method",
+    [
+        config_dictionary.convert_nurbs_from_points,
+        config_dictionary.convert_nurbs_from_normals,
+    ],
+)
 def test_facetted_nurbs(extraction_method: str) -> None:
     """
     Test the NURBS surface only, without raytracing.
@@ -31,23 +37,24 @@ def test_facetted_nurbs(extraction_method: str) -> None:
     """
     torch.manual_seed(7)
     """Run the main function to start the conversion."""
-    converter = StralConverter(
+    converter = StralToSurfaceConverter(
         stral_file_path=STRAL_FILE_PATH,
-        hdf5_file_path=HDF_FILE_PATH,
-        concentrator_header_name=CONCENTRATOR_HEADER_NAME,
+        surface_header_name=CONCENTRATOR_HEADER_NAME,
         facet_header_name=FACET_HEADER_NAME,
-        ray_struct_name=RAY_STRUCT_NAME,
+        points_on_facet_struct_name=RAY_STRUCT_NAME,
         step_size=STEP_SIZE,
     )
-    facetted_nurbs = converter.convert_stral_file_to_nurbs(
+    converter.generate_surface_config_from_stral(
         extraction_method,
-        num_control_points_e=10,
-        num_control_points_n=10,
+        number_eval_points_e=200,
+        number_eval_points_n=200,
+        number_control_points_e=10,
+        number_control_points_n=10,
         tolerance=TOLERANCE,
     )
 
-    AssertionError(
-        isinstance(facetted_nurbs, list)
-        and all(isinstance(item, NURBSSurface) for item in facetted_nurbs),
-        "The facetted NURBS is not a list of NURBS surfaces.",
-    )
+    # AssertionError(
+    #     isinstance(facetted_nurbs, list)
+    #     and all(isinstance(item, NURBSSurface) for item in facetted_nurbs),
+    #     "The facetted NURBS is not a list of NURBS surfaces.",
+    # )
