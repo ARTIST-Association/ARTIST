@@ -392,7 +392,7 @@ class StralToSurfaceConverter:
             number_of_facets = n_xy[0] * n_xy[1]
 
             # Create empty tensors for storing data.
-            facet_positions = torch.empty(number_of_facets, 3)
+            facet_translation_vectors = torch.empty(number_of_facets, 3)
             canting_e = torch.empty(number_of_facets, 3)
             canting_n = torch.empty(number_of_facets, 3)
             surface_points_with_facets = None
@@ -402,7 +402,7 @@ class StralToSurfaceConverter:
                     file.read(facet_header_struct.size)
                 )
 
-                facet_positions[f] = torch.tensor(
+                facet_translation_vectors[f] = torch.tensor(
                     facet_header_data[1:4], dtype=torch.float
                 )
                 canting_n[f] = self.nwu_to_enu(
@@ -448,7 +448,9 @@ class StralToSurfaceConverter:
         surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
 
         # Convert to 4D format.
-        facet_positions = self.convert_3d_points_to_4d_format(facet_positions)
+        facet_translation_vectors = self.convert_3d_points_to_4d_format(
+            facet_translation_vectors
+        )
         canting_n = self.convert_3d_direction_to_4d_format(canting_n)
         canting_e = self.convert_3d_direction_to_4d_format(canting_e)
         surface_points_with_facets = self.convert_3d_points_to_4d_format(
@@ -478,14 +480,14 @@ class StralToSurfaceConverter:
             facet_config_list.append(
                 FacetConfig(
                     facet_key=f"facet{i+1}",
-                    control_points=nurbs_surface.control_points,
+                    control_points=nurbs_surface.control_points.detach(),
                     degree_e=nurbs_surface.degree_e,
                     degree_n=nurbs_surface.degree_n,
                     number_eval_points_e=number_eval_points_e,
                     number_eval_points_n=number_eval_points_n,
                     width=width,
                     height=height,
-                    position=facet_positions[i],
+                    translation_vector=facet_translation_vectors[i],
                     canting_e=canting_e[i],
                     canting_n=canting_n[i],
                 )
