@@ -5,7 +5,6 @@ from artist.field.nurbs import NURBSSurface
 
 def deflectometry_to_nurbs(
     surface_points: torch.Tensor,
-    surface_normals: torch.Tensor,
     width: torch.Tensor,
     height: torch.Tensor,
     num_control_points_e: int,
@@ -79,8 +78,8 @@ def deflectometry_to_nurbs(
         verbose=True,
     )
 
-    for epoch in range(num_epochs):
-        points, normals = nurbs_surface.calculate_surface_points_and_normals()
+    for _ in range(num_epochs):
+        points, _ = nurbs_surface.calculate_surface_points_and_normals()
 
         optimizer.zero_grad()
 
