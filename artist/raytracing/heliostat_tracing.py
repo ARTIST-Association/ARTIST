@@ -88,7 +88,39 @@ class DistortionsDataset(Dataset):
 
 
 class HeliostatRayTracer:
-    """This class contains the functionality for heliostat raytracing."""
+    """
+    This class contains the functionality for heliostat raytracing.
+
+    Attributes
+    ----------
+    heliostat : Heliostat
+        The heliostat considered for raytracing.
+    receiver : Receiver
+        The receiver considered for raytracing.
+    world_size : int
+        The world size for MPI.
+    rank : int
+        The rank for MPI.
+    number_of_surface_points : int
+        The number of surface points on the heliostat.
+    distortions_dataset : DistortionsDataset
+        The dataset containing the distortions for ray scattering.
+    distortions_loader : DataLoader
+        The data loader that loads the distortions.
+
+    Methods
+    -------
+    trace_rays()
+        Perform heliostat raytracing.
+    scatter_rays()
+        Scatter the reflected rays around the preferred ray direction.
+    line_plane_intersections()
+        Compute line-plane intersections of ray directions and the (receiver) plane.
+    sample_bitmap()
+        Sample a bitmap (flux density distribution of the reflected rays on the receiver).
+    normalize_bitmap()
+        Normalize a bitmap.
+    """
 
     def __init__(
         self,
