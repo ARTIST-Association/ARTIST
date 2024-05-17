@@ -106,5 +106,5 @@ def test_compute_bitmaps(
         expected = torch.load(expected_path)
         plt.imshow(expected.detach().numpy(), cmap="twilight")
         plt.show()
-        # TODO: Include bitmap again once converter is included
-        # torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+
+        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
