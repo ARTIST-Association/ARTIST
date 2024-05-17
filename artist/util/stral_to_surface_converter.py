@@ -8,7 +8,6 @@ import colorlog
 import torch
 
 from artist.field.nurbs import NURBSSurface
-from artist.util import config_dictionary
 from artist.util.configuration_classes import FacetConfig
 
 log = logging.getLogger("STRAL-to-surface-converter")  # Get logger instance.
@@ -190,7 +189,6 @@ class StralToSurfaceConverter:
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        conversion_method: str = config_dictionary.convert_nurbs_from_points,
         number_control_points_e: int = 10,
         number_control_points_n: int = 10,
         degree_e: int = 2,
@@ -218,8 +216,6 @@ class StralToSurfaceConverter:
             The surface points given as a (N,4) tensor.
         surface_normals : torch.Tensor
             The surface normals given as a (N,4) tensor.
-        conversion_method : str
-            The conversion method used to learn the NURBS surface, e.g. from a point cloud.
         number_control_points_e : int
             Number of NURBS control points to be set in the east (first) direction.
         number_control_points_n : int
@@ -240,14 +236,6 @@ class StralToSurfaceConverter:
         NURBSSurface
             A NURBS surface.
         """
-        if conversion_method == config_dictionary.convert_nurbs_from_points:
-            log.info(
-                f"Converting NURBS using {config_dictionary.convert_nurbs_from_points} data."
-            )
-        elif conversion_method == config_dictionary.convert_nurbs_from_normals:
-            log.info(
-                f"Converting NURBS using {config_dictionary.convert_nurbs_from_normals} data."
-            )
         # Normalize evaluation points and shift them so that they correspond
         # to the knots.
         evaluation_points = surface_points.clone()
@@ -307,15 +295,6 @@ class StralToSurfaceConverter:
 
             optimizer.zero_grad()
 
-            # # Calculate loss depending on the conversion method
-            # if conversion_method == config_dictionary.convert_nurbs_from_points:
-            #     loss = (points - surface_points).abs().mean()
-            # elif conversion_method == config_dictionary.convert_nurbs_from_normals:
-            #     loss = (normals - surface_normals).abs().mean()
-            # else:
-            #     raise NotImplementedError(
-            #         f"The current conversion method {conversion_method} is not yet implemented in NURBS!"
-            #     )
             loss = (
                 (points - surface_points).abs().mean()
                 + (normals - surface_normals).abs().mean()
@@ -473,7 +452,6 @@ class StralToSurfaceConverter:
             nurbs_surface = self.fit_nurbs_surface(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
-                conversion_method=conversion_method,
                 number_control_points_e=number_control_points_e,
                 number_control_points_n=number_control_points_n,
                 degree_e=degree_e,
