@@ -67,7 +67,6 @@ stral_converter = StralToSurfaceConverter(
     step_size=1000,
 )
 list_of_facets = stral_converter.generate_surface_config_from_stral(
-    conversion_method=config_dictionary.convert_nurbs_from_normals,
     number_eval_points_e=100,
     number_eval_points_n=100,
     number_control_points_e=10,
