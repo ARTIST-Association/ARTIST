@@ -133,7 +133,6 @@ testpaths = [
 [tool.coverage.run]
 omit = [
     "artist/util/scenario_generator.py",
-    "artist/util/stral_converter.py",
-    "artist/util/nurbs_converters.py",
+    "artist/util/stral_to_surface_converter.py",
     "artist/util/configuration_classes.py"
     ]
