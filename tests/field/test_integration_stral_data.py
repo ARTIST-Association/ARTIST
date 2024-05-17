@@ -101,7 +101,7 @@ def test_compute_bitmaps(
             / "tests/field/test_bitmaps_load_surface_stral"
             / expected_value
         )
-        plt.imshow(final_bitmap.detach().numpy(), cmap="twilight")
+        plt.imshow(final_bitmap.T.detach().numpy(), cmap="twilight")
         plt.show()
         expected = torch.load(expected_path)
         plt.imshow(expected.detach().numpy(), cmap="twilight")
