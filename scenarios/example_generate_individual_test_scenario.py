@@ -73,8 +73,8 @@ list_of_facets = stral_converter.generate_surface_config_from_stral(
     number_control_points_n=15,
     degree_e=4,
     degree_n=4,
-    tolerance=1e-4,
-    max_epoch=2000,
+    tolerance=1e-7,
+    max_epoch=5000,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
