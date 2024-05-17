@@ -284,7 +284,7 @@ class StralToSurfaceConverter:
             optimizer,
             mode="min",
             factor=0.2,
-            patience=500,
+            patience=50,
             threshold=1e-7,
             threshold_mode="abs",
         )
@@ -305,7 +305,7 @@ class StralToSurfaceConverter:
             scheduler.step(loss.abs().mean())
             if epoch % 100 == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, # LR: {round(scheduler.get_last_lr()[0],4)}",
+                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}",
                 )
             epoch += 1
 
