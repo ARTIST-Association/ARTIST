@@ -7,8 +7,8 @@ from typing import List
 import colorlog
 import torch
 
-from artist.field.nurbs import NURBSSurface
 from artist.util.configuration_classes import FacetConfig
+from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger("STRAL-to-surface-converter")  # Get logger instance.
 log_formatter = colorlog.ColoredFormatter(

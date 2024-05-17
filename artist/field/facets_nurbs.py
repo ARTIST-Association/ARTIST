@@ -1,6 +1,6 @@
 import torch
 
-from artist.field.nurbs import NURBSSurface
+from artist.util.nurbs import NURBSSurface
 
 
 class NurbsFacet(torch.nn.Module):
