@@ -4,7 +4,6 @@ import pathlib
 import warnings
 
 import h5py
-import matplotlib.pyplot as plt
 import pytest
 import torch
 
@@ -42,7 +41,7 @@ else:
         (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
-            "south.pt",
+            "individual_south.pt",
             "test_individual_measurements_scenario",
         ),  # Test if loading with individual measurements works
     ],
@@ -84,7 +83,7 @@ def test_compute_bitmaps(
 
     # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=100
+        scenario=scenario, world_size=world_size, rank=rank, batch_size=10
     )
 
     # Perform heliostat-based raytracing.
@@ -95,17 +94,11 @@ def test_compute_bitmaps(
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
-    # torch.save(final_bitmap.T, pathlib.Path(ARTIST_ROOT)/ "tests/field/test_bitmaps_load_surface_stral"/ expected_value)
-
     if rank == 0:
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/field/test_bitmaps_load_surface_stral"
             / expected_value
         )
-        plt.imshow(final_bitmap.T.detach().numpy(), cmap="twilight")
-        plt.show()
         expected = torch.load(expected_path)
-        plt.imshow(expected.detach().numpy(), cmap="twilight")
-        plt.show()
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
