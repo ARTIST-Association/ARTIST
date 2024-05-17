@@ -64,16 +64,17 @@ stral_converter = StralToSurfaceConverter(
     surface_header_name="=5f2I2f",
     facet_header_name="=i9fI",
     points_on_facet_struct_name="=7f",
-    step_size=1000,
+    step_size=100,
 )
 list_of_facets = stral_converter.generate_surface_config_from_stral(
     number_eval_points_e=100,
     number_eval_points_n=100,
-    number_control_points_e=10,
-    number_control_points_n=10,
-    degree_e=2,
-    degree_n=2,
-    tolerance=5e-4,
+    number_control_points_e=15,
+    number_control_points_n=15,
+    degree_e=4,
+    degree_n=4,
+    tolerance=1e-4,
+    max_epoch=2000,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
