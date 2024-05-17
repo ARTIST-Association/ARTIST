@@ -18,6 +18,8 @@ from artist.util.configuration_classes import (
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
+    SurfaceConfig,
+    SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
@@ -64,7 +66,7 @@ stral_converter = StralToSurfaceConverter(
     points_on_facet_struct_name="=7f",
     step_size=1000,
 )
-surface_prototype_config = stral_converter.generate_surface_config_from_stral(
+list_of_facets = stral_converter.generate_surface_config_from_stral(
     conversion_method=config_dictionary.convert_nurbs_from_normals,
     number_eval_points_e=100,
     number_eval_points_n=100,
@@ -74,6 +76,8 @@ surface_prototype_config = stral_converter.generate_surface_config_from_stral(
     degree_n=2,
     tolerance=5e-4,
 )
+
+surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
@@ -116,7 +120,7 @@ prototype_config = PrototypeConfig(
 )
 
 # Include the heliostat surface config. In this case it is identical to the protoype.
-heliostat1_surface_config = surface_prototype_config
+heliostat1_surface_config = SurfaceConfig(facets_list=list_of_facets)
 
 # Include kinematic configuration for the heliostat.
 heliostat1_kinematic_offsets = KinematicOffsets(
@@ -163,7 +167,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 
 # The following parameter is the name of the scenario.
-file_path = "./test_individual_measurements_scenario"
+file_path = f"{ARTIST_ROOT}/scenarios/test_individual_measurements_scenario"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""

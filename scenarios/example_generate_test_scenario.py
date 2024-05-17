@@ -16,6 +16,7 @@ from artist.util.configuration_classes import (
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
+    SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
@@ -63,16 +64,19 @@ stral_converter = StralToSurfaceConverter(
     points_on_facet_struct_name="=7f",
     step_size=100,
 )
-surface_prototype_config = stral_converter.generate_surface_config_from_stral(
-    conversion_method=config_dictionary.convert_nurbs_from_points,
+facet_prototype_list = stral_converter.generate_surface_config_from_stral(
+    conversion_method=config_dictionary.convert_nurbs_from_normals,
     number_eval_points_e=100,
     number_eval_points_n=100,
-    number_control_points_e=10,
-    number_control_points_n=10,
-    degree_e=2,
-    degree_n=2,
-    tolerance=5e-4,
+    number_control_points_e=15,
+    number_control_points_n=15,
+    degree_e=4,
+    degree_n=4,
+    tolerance=1e-7,
+    max_epoch=5000,
 )
+
+surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
 # Include the kinematic deviations.
 # kinematic_prototype_deviations = KinematicDeviations() #Here there are no kinematic deviations!
@@ -136,7 +140,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 
 # The following parameter is the name of the scenario.
-file_path = "./test_scenario"
+file_path = f"{ARTIST_ROOT}/scenarios/test_scenario"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
