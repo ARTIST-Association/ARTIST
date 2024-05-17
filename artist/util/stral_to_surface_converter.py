@@ -2,13 +2,14 @@ import logging
 import struct
 import sys
 from pathlib import Path
+from typing import List
 
 import colorlog
 import torch
 
 from artist.field.nurbs import NURBSSurface
 from artist.util import config_dictionary
-from artist.util.configuration_classes import FacetConfig, SurfaceConfig
+from artist.util.configuration_classes import FacetConfig
 
 log = logging.getLogger("STRAL-to-surface-converter")  # Get logger instance.
 log_formatter = colorlog.ColoredFormatter(
@@ -295,7 +296,7 @@ class StralToSurfaceConverter:
             optimizer,
             mode="min",
             factor=0.2,
-            patience=100,
+            patience=500,
             threshold=1e-7,
             threshold_mode="abs",
         )
@@ -306,20 +307,24 @@ class StralToSurfaceConverter:
 
             optimizer.zero_grad()
 
-            # Calculate loss depending on the conversion method
-            if conversion_method == config_dictionary.convert_nurbs_from_points:
-                loss = (points - surface_points).abs().mean()
-            elif conversion_method == config_dictionary.convert_nurbs_from_normals:
-                loss = (normals - surface_normals).abs().mean()
-            else:
-                raise NotImplementedError(
-                    f"The current conversion method {conversion_method} is not yet implemented in NURBS!"
-                )
+            # # Calculate loss depending on the conversion method
+            # if conversion_method == config_dictionary.convert_nurbs_from_points:
+            #     loss = (points - surface_points).abs().mean()
+            # elif conversion_method == config_dictionary.convert_nurbs_from_normals:
+            #     loss = (normals - surface_normals).abs().mean()
+            # else:
+            #     raise NotImplementedError(
+            #         f"The current conversion method {conversion_method} is not yet implemented in NURBS!"
+            #     )
+            loss = (
+                (points - surface_points).abs().mean()
+                + (normals - surface_normals).abs().mean()
+            ).mean()
             loss.backward()
 
             optimizer.step()
             scheduler.step(loss.abs().mean())
-            if epoch % 20 == 0:
+            if epoch % 100 == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, # LR: {round(scheduler.get_last_lr()[0],4)}",
                 )
@@ -339,7 +344,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1.2e-6,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 10000,
-    ) -> SurfaceConfig:
+    ) -> List[FacetConfig]:
         """
         Generate a surface configuration from a STRAL file.
 
@@ -368,8 +373,8 @@ class StralToSurfaceConverter:
 
         Returns
         -------
-        SurfaceConfig
-            The surface configuration based on the STRAL data.
+        List[FacetConfig]
+            A list of facet configurations used to generate a surface.
         """
         log.info(
             "Beginning generation of the surface configuration based on STRAL data."
@@ -448,7 +453,7 @@ class StralToSurfaceConverter:
         surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
 
         # Convert to 4D format.
-        facet_translation_vectors = self.convert_3d_points_to_4d_format(
+        facet_translation_vectors = self.convert_3d_direction_to_4d_format(
             facet_translation_vectors
         )
         canting_n = self.convert_3d_direction_to_4d_format(canting_n)
@@ -493,4 +498,4 @@ class StralToSurfaceConverter:
                 )
             )
         log.info("Surface configuration based on STRAL data complete!")
-        return SurfaceConfig(facets_list=facet_config_list)
+        return facet_config_list
