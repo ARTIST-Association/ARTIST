@@ -313,7 +313,6 @@ class StralToSurfaceConverter:
 
     def generate_surface_config_from_stral(
         self,
-        conversion_method: str,
         number_eval_points_e: int,
         number_eval_points_n: int,
         number_control_points_e: int = 10,
@@ -329,8 +328,6 @@ class StralToSurfaceConverter:
 
         Parameters
         ----------
-        conversion_method : str
-            Method used to learn the NURBS surface from STRAL data, e.g. point cloud.
         number_eval_points_e : int
             The number of evaluation points in the east direction used to generate a discrete surface from NURBS.
         number_eval_points_n : int
