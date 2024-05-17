@@ -95,6 +95,8 @@ def test_compute_bitmaps(
         final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
+    # torch.save(final_bitmap.T, pathlib.Path(ARTIST_ROOT)/ "tests/field/test_bitmaps_load_surface_stral"/ expected_value)
+
     if rank == 0:
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
@@ -106,5 +108,4 @@ def test_compute_bitmaps(
         expected = torch.load(expected_path)
         plt.imshow(expected.detach().numpy(), cmap="twilight")
         plt.show()
-
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
