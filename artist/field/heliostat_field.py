@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class HeliostatField(torch.nn.Module):
     """
-    This class wraps the heliostat list as a torch.nn.Module to allow gradient calculation.
+    This class wraps the heliostat list as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -61,9 +61,9 @@ class HeliostatField(torch.nn.Module):
         prototype_surface  : SurfaceConfig
             The prototype for the surface configuration to be used if the heliostat has no individual surface.
         prototype_kinematic : KinematicConfig
-            The prototype for the kinematic configuration for when the heliostat has no individual kinematic.
+            The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
         prototype_actuator : ActuatorListConfig
-            The prototype for the actuator configuration for when the heliostat has no individual actuators.
+            The prototype for the actuator configuration to be used if the heliostat has no individual actuators.
 
         Returns
         -------
