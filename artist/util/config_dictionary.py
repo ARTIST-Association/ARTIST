@@ -59,7 +59,7 @@ kinematic_initial_orientation_offset_e = "initial_kinematic_orientation_offset_e
 kinematic_initial_orientation_offset_n = "initial_kinematic_orientation_offset_n"
 kinematic_initial_orientation_offset_u = "initial_kinematic_orientation_offset_u"
 
-# Dictionary for the kinematic configuration.
+# Dictionary for the kinematic config.
 kinematic_type = "type"
 rigid_body_key = "rigid_body"
 kinematic_offsets_key = "kinematic_offsets"
@@ -92,7 +92,7 @@ heliostat_surface_key = "surface"
 heliostat_kinematic_key = "kinematic"
 heliostat_actuator_key = "actuator"
 
-# Dictionary for Scenario
+# Dictionary for scenario.
 prototype_key = "prototypes"
 receiver_key = "receivers"
 light_source_key = "lightsources"
