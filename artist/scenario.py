@@ -169,7 +169,7 @@ class Scenario:
         ]
         surface_prototype = SurfaceConfig(facets_list=facets_list)
 
-        # Create kinematic prototype
+        # Create kinematic prototype.
         kinematic_initial_orientation_offset_e = scenario_file.get(
             f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
             f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
@@ -180,7 +180,7 @@ class Scenario:
         )
         kinematic_initial_orientation_offset_u = scenario_file.get(
             f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
-            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_u}"
         )
         if kinematic_initial_orientation_offset_e is None:
             log.warning(
@@ -503,7 +503,7 @@ class Scenario:
             kinematic_deviations=kinematic_deviations,
         )
 
-        # Create actuator prototype
+        # Create actuator prototype.
         actuator_list = []
         for ac in scenario_file[config_dictionary.prototype_key][
             config_dictionary.actuator_prototype_key
@@ -618,7 +618,7 @@ class Scenario:
             heliostat_field=heliostat_field,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the scenario."""
         return (
             f"ARTIST Scenario containing:\n\tReceivers: {len(self.receivers.receiver_list)}, \tLight Sources: "
