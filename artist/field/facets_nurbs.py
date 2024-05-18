@@ -16,9 +16,9 @@ class NurbsFacet(torch.nn.Module):
     degree_n : int
         The degree of the NURBS surface in the north direction.
     number_eval_points_e : int
-        The number of evaluation points for the NUBRS surface in the east direction.
+        The number of evaluation points for the NURBS surface in the east direction.
     number_eval_points_n : int
-        The number of evaluation points for the NUBRS surface in the north direction.
+        The number of evaluation points for the NURBS surface in the north direction.
     width : float
         The width of the facet.
     height : float
@@ -45,7 +45,7 @@ class NurbsFacet(torch.nn.Module):
         canting_n: torch.Tensor,
     ) -> None:
         """
-        Initialize a nurbs facet.
+        Initialize a NURBS facet.
 
         Parameters
         ----------
@@ -56,9 +56,9 @@ class NurbsFacet(torch.nn.Module):
         degree_n : int
             The degree of the NURBS surface in the north direction.
         number_eval_points_e : int
-            The number of evaluation points for the NUBRS surface in the east direction.
+            The number of evaluation points for the NURBS surface in the east direction.
         number_eval_points_n : int
-            The number of evaluation points for the NUBRS surface in the north direction.
+            The number of evaluation points for the NURBS surface in the north direction.
         width : float
             The width of the facet.
         height : float
@@ -70,7 +70,7 @@ class NurbsFacet(torch.nn.Module):
         canting_n : torch.Tensor
             The canting vector in the north direction of the facet.
         """
-        super(NurbsFacet, self).__init__()
+        super().__init__()
         self.control_points = control_points
         self.degree_e = degree_e
         self.degree_n = degree_n
