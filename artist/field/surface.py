@@ -30,7 +30,7 @@ class Surface(torch.nn.Module):
         surface_config : SurfaceConfig
             The surface configuration parameters used to construct the surface.
         """
-        super(Surface, self).__init__()
+        super().__init__()
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,
