@@ -21,16 +21,16 @@ class ActuatorArray(torch.nn.Module):
         The list of actuators to be wrapped.
     """
 
-    def __init__(self, actuator_list_config: ActuatorListConfig):
+    def __init__(self, actuator_list_config: ActuatorListConfig) -> None:
         """
         Initialize the heliostat field.
 
         Parameters
         ----------
         actuator_list_config : ActuatorListConfig
-            The configuration parameters for the actuators
+            The configuration parameters for the actuators.
         """
-        super(ActuatorArray, self).__init__()
+        super().__init__()
         actuator_array = []
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):
             try:
