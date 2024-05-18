@@ -122,7 +122,7 @@ prototype_facets_list = [
 surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_list)
 
 # Include the kinematic deviations.
-# kinematic_prototype_deviations = KinematicDeviations() #Here there are no kinematic deviations!
+# kinematic_prototype_deviations = KinematicDeviations() # Here, there are no kinematic deviations!
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
@@ -135,7 +135,7 @@ kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
 )
 
-# Include a ideal actuator.
+# Include an ideal actuator.
 actuator1_prototype = ActuatorConfig(
     actuator_key="actuator1",
     actuator_type=config_dictionary.ideal_actuator_key,
@@ -162,7 +162,7 @@ actuator2_prototype = ActuatorConfig(
 # Create a list of actuators.
 actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
 
-# Include the Actuator prototype config.
+# Include the actuator prototype config.
 actuator_prototype_config = ActuatorPrototypeConfig(
     actuator_list=actuator_prototype_list
 )
@@ -174,23 +174,23 @@ prototype_config = PrototypeConfig(
     actuator_prototype=actuator_prototype_config,
 )
 
-# If heliostats had individual surface, kinematic, or actuator configs, these must be defined here. Otherwise, only
+# If heliostats have individual surface, kinematic, or actuator configs, these must be defined here. Otherwise, only
 # the parameters from the prototype are used.
 
 # Include the configuration for three heliostats.
-heliostat_1 = HeliostatConfig(
+heliostat1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
     heliostat_position=torch.tensor([-50.0, 5.0, 0.0, 1.0]),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
 )
-heliostat_2 = HeliostatConfig(
+heliostat2 = HeliostatConfig(
     heliostat_key="heliostat2",
     heliostat_id=2,
     heliostat_position=torch.tensor([25.0, 0.0, 0.0, 1.0]),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
 )
-heliostat_3 = HeliostatConfig(
+heliostat3 = HeliostatConfig(
     heliostat_key="heliostat3",
     heliostat_id=3,
     heliostat_position=torch.tensor([50.0, 5.0, 0.0, 1.0]),
@@ -198,7 +198,7 @@ heliostat_3 = HeliostatConfig(
 )
 
 # Create a list of all the heliostats.
-heliostat_list = [heliostat_1, heliostat_2, heliostat_3]
+heliostat_list = [heliostat1, heliostat2, heliostat3]
 
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
