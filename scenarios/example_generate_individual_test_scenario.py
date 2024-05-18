@@ -90,7 +90,7 @@ kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
 )
 
-# Include a ideal actuator.
+# Include an ideal actuator.
 actuator1_prototype = ActuatorConfig(
     actuator_key="actuator1",
     actuator_type=config_dictionary.ideal_actuator_key,
@@ -107,7 +107,7 @@ actuator2_prototype = ActuatorConfig(
 # Create a list of actuators.
 actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
 
-# Include the Actuator prototype config.
+# Include the actuator prototype config.
 actuator_prototype_config = ActuatorPrototypeConfig(
     actuator_list=actuator_prototype_list
 )
@@ -119,7 +119,7 @@ prototype_config = PrototypeConfig(
     actuator_prototype=actuator_prototype_config,
 )
 
-# Include the heliostat surface config. In this case it is identical to the protoype.
+# Include the heliostat surface config. In this case, it is identical to the prototype.
 heliostat1_surface_config = SurfaceConfig(facets_list=list_of_facets)
 
 # Include kinematic configuration for the heliostat.
@@ -132,7 +132,7 @@ heliostat1_kinematic_config = KinematicConfig(
 )
 
 # Include actuators for the heliostat.
-# Include a ideal actuator.
+# Include an ideal actuator.
 actuator1_heliostat1 = ActuatorConfig(
     actuator_key="actuator1",
     actuator_type=config_dictionary.ideal_actuator_key,
@@ -164,7 +164,6 @@ heliostat_list = [heliostat_1]
 
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
-
 
 # The following parameter is the name of the scenario.
 file_path = f"{ARTIST_ROOT}/scenarios/test_individual_measurements_scenario"
