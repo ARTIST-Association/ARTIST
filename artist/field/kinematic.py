@@ -9,6 +9,13 @@ class Kinematic(torch.nn.Module):
     """
     Abstract base class for all kinematic modules.
 
+    Attributes
+    ----------
+    aim_point : torch.Tensor
+        The aim point of the heliostat.
+    position : torch.Tensor
+        The position of the heliostat.
+
     Methods
     -------
     align()
@@ -45,9 +52,9 @@ class Kinematic(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        max_num_iterations : int
+        max_num_iterations : int, optional
             Maximum number of iterations (default 2).
-        min_eps : float
+        min_eps : float, optional
             Convergence criterion (default 0.0001).
 
         Raises
