@@ -53,7 +53,7 @@ class Heliostat(torch.nn.Module):
     Methods
     -------
     from_hdf5()
-        Class method to initialize heliostat from an HDF5 file.
+        Class method to initialize a heliostat from an HDF5 file.
     set_aligned_surface()
         Compute the aligned surface points and aligned surface normals of the heliostat.
     set_preferred_reflection_direction()
@@ -121,7 +121,7 @@ class Heliostat(torch.nn.Module):
         heliostat_name: Optional[str] = None,
     ) -> Self:
         """
-        Class method to initialize heliostat from an HDF5 file.
+        Class method to initialize a heliostat from an HDF5 file.
 
         Parameters
         ----------
@@ -218,7 +218,7 @@ class Heliostat(torch.nn.Module):
         else:
             assert (
                 prototype_surface is not None
-            ), "If the heliostat does not have individual surface parameters a surface prototype must be provided!"
+            ), "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
             log.info(
                 "Individual surface parameters not provided - loading a heliostat with the surface prototype."
             )
@@ -245,7 +245,7 @@ class Heliostat(torch.nn.Module):
                 )
             if kinematic_initial_orientation_offset_n is None:
                 log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n}for "
+                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n} for "
                     f"{heliostat_name} set."
                     f"Using default values!"
                 )
@@ -563,7 +563,7 @@ class Heliostat(torch.nn.Module):
         else:
             assert (
                 prototype_kinematic is not None
-            ), "If the heliostat does not have an individual kinematic then a kinematic prototype must be provided!"
+            ), "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
             log.info(
                 "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
             )
@@ -669,7 +669,7 @@ class Heliostat(torch.nn.Module):
         else:
             assert (
                 prototype_actuator is not None
-            ), "If the heliostat does not have individual actuators then a actuator prototype must be provided!"
+            ), "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
             log.info(
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
