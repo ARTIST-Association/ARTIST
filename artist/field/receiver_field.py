@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class ReceiverField(torch.nn.Module):
     """
-    This class wraps the list of receivers as a torch.nn.Module to allow gradient calculation.
+    This class wraps the list of receivers as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
