@@ -9,25 +9,25 @@ from artist.util.utils import rotate_distortions
 @pytest.mark.parametrize(
     "e_distortions, u_distortions, rays_to_rotate, expected_distorted_rays",
     [
-        (  # Rotate single ray in the east direction
+        (  # Rotate single ray in the east direction.
             torch.tensor([[[math.pi / 2]]]),
             torch.tensor([[[0.0]]]),
             torch.tensor([[[1.0, 1.0, 1.0, 0.0]]]),
             torch.tensor([[[[1.0, -1.0, 1.0, 0.0]]]]),
         ),
-        (  # Rotate single ray in the up direction
+        (  # Rotate single ray in the up direction.
             torch.tensor([[[0.0]]]),
             torch.tensor([[[math.pi / 2]]]),
             torch.tensor([[[1.0, 1.0, 1.0, 0.0]]]),
             torch.tensor([[[[-1.0, 1.0, 1.0, 0.0]]]]),
         ),
-        (  # Rotate single ray in the east and then up direction
+        (  # Rotate single ray in the east and then up direction.
             torch.tensor([[[math.pi / 2]]]),
             torch.tensor([[[math.pi / 2]]]),
             torch.tensor([[[1.0, 1.0, 1.0, 0.0]]]),
             torch.tensor([[[[-1.0, -1.0, 1.0, 0.0]]]]),
         ),
-        (  # Consider multiple rotations for a single ray in the east direction
+        (  # Consider multiple rotations for a single ray in the east direction.
             torch.tensor(
                 [[[math.pi / 2]], [[math.pi]], [[math.pi / 4]], [[2 * math.pi]]]
             ),
@@ -42,7 +42,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for a single ray in the up direction
+        (  # Consider multiple rotations for a single ray in the up direction.
             torch.tensor([[[0]], [[0]], [[0]], [[0]]]),
             torch.tensor(
                 [[[math.pi / 2]], [[math.pi]], [[math.pi / 4]], [[2 * math.pi]]]
@@ -57,7 +57,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for a single ray in the east and then up direction
+        (  # Consider multiple rotations for a single ray in the east and then up direction.
             torch.tensor(
                 [[[math.pi / 2]], [[math.pi]], [[math.pi / 4]], [[2 * math.pi]]]
             ),
@@ -74,7 +74,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for multiple rays in the east direction
+        (  # Consider multiple rotations for multiple rays in the east direction.
             torch.tensor(
                 [
                     [[math.pi, math.pi / 2, math.pi / 4]],
@@ -104,7 +104,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for multiple rays in the up direction
+        (  # Consider multiple rotations for multiple rays in the up direction.
             torch.tensor([[[0, 0, 0]], [[0, 0, 0]]]),
             torch.tensor(
                 [
@@ -134,7 +134,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for multiple rays in the east and then up direction
+        (  # Consider multiple rotations for multiple rays in the east and then up direction.
             torch.tensor(
                 [
                     [[math.pi, math.pi / 2, math.pi / 4]],
@@ -169,7 +169,7 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
-        (  # Consider multiple rotations for multiple rays on four facets in the east and then up direction
+        (  # Consider multiple rotations for multiple rays on four facets in the east and then up direction.
             torch.tensor(
                 [
                     [
@@ -273,15 +273,14 @@ def test_distortion_rotations(
     Parameters
     ----------
     e_distortions : torch.Tensor
-        The distortions in the east direction used in the rotations matrix.
+        The distortions in the east direction used in the rotation matrix.
     u_distortions : torch.Tensor
-        The distortions in the upper direction used in the rotations matrix.
+        The distortions in the upper direction used in the rotation matrix.
     rays_to_rotate : torch.Tensor
         The rays to rotate given the distortions.
     expected_distorted_rays : torch.Tensor
         The expected distorted rays after rotation.
     """
-    print("HI")
     distorted_rays = (
         rotate_distortions(e=e_distortions, u=u_distortions)
         @ rays_to_rotate.unsqueeze(-1)
