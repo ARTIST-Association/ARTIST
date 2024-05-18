@@ -18,7 +18,7 @@ class ActuatorArray(torch.nn.Module):
     Attributes
     ----------
     actuator_list : List[Actuator]
-
+        The list of actuators to be wrapped.
     """
 
     def __init__(self, actuator_list_config: ActuatorListConfig):
