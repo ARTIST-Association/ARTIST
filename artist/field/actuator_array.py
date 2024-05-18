@@ -13,7 +13,7 @@ actuator_type_mapping = {
 
 class ActuatorArray(torch.nn.Module):
     """
-    This class wraps a list of actuators as a torch.nn.Module to allow gradient calculation.
+    This class wraps a list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
