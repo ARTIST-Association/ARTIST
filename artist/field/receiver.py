@@ -23,9 +23,9 @@ class Receiver(torch.nn.Module):
     normal_vector : torch.Tensor
         The normal to the plane of the receiver.
     plane_e : float
-        The e plane of the receiver.
+        The east plane of the receiver.
     plane_u : torch.Tensor
-        The u plane of the receiver.
+        The up plane of the receiver.
     resolution_e : int
         The horizontal resolution in the east direction of the receiver.
     resolution_u : int
@@ -61,9 +61,9 @@ class Receiver(torch.nn.Module):
         normal_vector : torch.Tensor
             The normal to the plane of the receiver.
         plane_e : float
-            The e plane of the receiver.
+            The east plane of the receiver.
         plane_u : torch.Tensor
-            The u plane of the receiver.
+            The up plane of the receiver.
         resolution_e : int
             The horizontal resolution in the east direction of the receiver.
         resolution_u : int
