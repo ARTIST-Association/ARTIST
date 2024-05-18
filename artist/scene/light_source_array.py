@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class LightSourceArray(torch.nn.Module):
     """
-    This class wraps the list of light sources as a torch.nn.Module to allow gradient calculation.
+    This class wraps the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -31,7 +31,7 @@ class LightSourceArray(torch.nn.Module):
 
     def __init__(self, light_source_list: List[LightSource]):
         """
-        Initialize the heliostat field.
+        Initialize the light sources included in the considered scenario.
 
         Parameters
         ----------
