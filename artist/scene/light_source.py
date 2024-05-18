@@ -40,13 +40,13 @@ class LightSource(torch.nn.Module):
         cls, config_file: h5py.File, light_source_name: Optional[str] = None
     ) -> Self:
         """
-        Load the light source from a hdf5 file.
+        Load the light source from an HDF5 file.
 
         Parameters
         ----------
         config_file : h5py.File
-            The hdf5 file containing the information about the light source.
-        light_source_name : Optional[str]
+            The HDF5 file containing the information about the light source.
+        light_source_name : str, optional
             The name of the light source - used for logging.
 
         Raises
@@ -73,12 +73,12 @@ class LightSource(torch.nn.Module):
         ----------
         number_of_points : int
             The number of points on the heliostat.
-        number_of_facets : int
-            The number of facets per heliostat.
-        number_of_heliostats : int
-            The number of heliostats in the scenario.
-        random_seed : Optional[int]
-            The random seed to enable result replication.
+        number_of_facets : int, optional
+            The number of facets per heliostat (default: 4).
+        number_of_heliostats : int, optional
+            The number of heliostats in the scenario (default: 1).
+        random_seed : int, optional
+            The random seed to enable result replication (default: 7).
 
         Raises
         ------
