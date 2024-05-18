@@ -15,7 +15,7 @@ from artist.util.configuration_classes import (
 
 
 @pytest.fixture
-def actuator_configuration():
+def actuator_configuration() -> ActuatorListConfig:
     """Define actuator parameters used in tests."""
     actuator1_config = ActuatorConfig(
         actuator_key="",
@@ -31,7 +31,7 @@ def actuator_configuration():
 
 
 @pytest.fixture
-def initial_offsets_south():
+def initial_offsets_south() -> KinematicOffsets:
     """Define initial offsets for a south-orientated heliostat."""
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(0.0),
@@ -42,7 +42,7 @@ def initial_offsets_south():
 
 
 @pytest.fixture
-def initial_offsets_above():
+def initial_offsets_above() -> KinematicOffsets:
     """Define initial offsets for an up-orientated heliostat."""
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2),
@@ -221,7 +221,7 @@ def test_orientation_matrix(
     kinematic_model_fixture,
     incident_ray_direction,
     expected,
-):
+) -> None:
     """Test that the alignment is working as desired."""
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
