@@ -13,7 +13,7 @@ def reflect(
     ----------
     incoming_ray_direction : torch.Tensor
         The direction of the incoming rays to be reflected.
-    reflection_surface_normals: torch.Tensor
+    reflection_surface_normals : torch.Tensor
         The normal of the reflective surface.
 
     Returns
@@ -43,7 +43,7 @@ def line_plane_intersections(
     ----------
     ray_directions : torch.Tensor
         The direction of the rays being considered for the intersection.
-    plane_normal_vectors: torch.Tensor
+    plane_normal_vectors : torch.Tensor
         The normal vectors of the plane being considered for the intersection.
     plane_center : torch.Tensor
         The center of the plane being considered for the intersection.
@@ -58,12 +58,13 @@ def line_plane_intersections(
         The intersections of the lines and plane.
     """
     # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
-    # the incoming rays
+    # the incoming rays.
     relative_distribution_strengths = ray_directions @ plane_normal_vectors
     assert (
         torch.abs(relative_distribution_strengths) >= epsilon
     ).all(), "No intersection or line is within plane."
-    # Calculate the final distribution strengths
+
+    # Calculate the final distribution strengths.
     distribution_strengths = (
         (plane_center - points_at_ray_origin)
         @ plane_normal_vectors
