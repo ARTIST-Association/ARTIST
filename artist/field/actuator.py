@@ -16,7 +16,8 @@ class Actuator(torch.nn.Module):
     initial_stroke_length : torch.Tensor
         The stroke length for a motor step of 0.
     offset : torch.Tensor
-        The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+        The offset between the linear actuator's pivoting point and the point
+        around which the actuator is allowed to pivot.
     radius : torch.Tensor
         The actuator's pivoting radius.
     phi_0 : torch.Tensor
@@ -56,7 +57,8 @@ class Actuator(torch.nn.Module):
         initial_stroke_length : torch.Tensor
             The stroke length for a motor step of 0.
         offset : torch.Tensor
-            The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+            The offset between the linear actuator's pivoting point and the point
+            around which the actuator is allowed to pivot.
         radius : torch.Tensor
             The actuator's pivoting radius.
         phi_0 : torch.Tensor
