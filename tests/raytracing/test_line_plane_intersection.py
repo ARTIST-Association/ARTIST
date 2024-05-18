@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 
 import pytest
 import torch
@@ -43,14 +43,14 @@ from artist.raytracing import raytracing_utils
                 [[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, -2.0, 0.0, 1.0]]
             ),
         ),
-        (  # AssertionError - no intersection since ray is parallel to plane
+        (  # AssertionError - no intersection since ray is parallel to plane.
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([0.0, 0.0, 0.0, 1.0]),
             torch.tensor([0.0, 0.0, 1.0, 1.0]),
             None,
         ),
-        (  # AssertionError - no intersection since ray is within the plane
+        (  # AssertionError - no intersection since ray is within the plane.
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([0.0, 0.0, 0.0, 1.0]),
@@ -64,7 +64,7 @@ def test_line_plane_intersection(
     plane_normal_vectors: torch.Tensor,
     plane_center: torch.Tensor,
     points_at_ray_origin: torch.Tensor,
-    expected_intersections: Union[torch.Tensor, None],
+    expected_intersections: Optional[torch.Tensor],
 ) -> None:
     """
     Test the line plane intersection function by computing the intersections between various rays and planes.
@@ -79,8 +79,8 @@ def test_line_plane_intersection(
         The center of the plane being considered for the intersection.
     points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
-    expected_intersections : Union[torch.Tensor, None]
-        The expected intersections between the rays and the plane, or None if no intersections are expected.
+    expected_intersections : Optional[torch.Tensor]
+        The expected intersections between the rays and the plane, or ``None`` if no intersections are expected.
 
     """
     if expected_intersections is None:
