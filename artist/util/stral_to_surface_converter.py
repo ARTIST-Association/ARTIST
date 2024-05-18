@@ -51,17 +51,17 @@ class StralToSurfaceConverter:
     Methods
     -------
     convert_3d_points_to_4d_format()
-        Convert a 3D point to a 4D point.
+        Convert a 3D point to 4D format.
     convert_3d_direction_to_4d_format()
         Convert a 3D direction vector to 4D format.
     nwu_to_enu()
         Cast from an NWU to an ENU coordinate system.
-    normalize_evaluation_points_for_nurbs
-        Normalize evaluation points for NURBS with minimum >0 and maximum < 1.
-    fit_nurbs_surface
-        Fits the nurbs surface given the conversion method.
-    generate_surface_config_from_stral
-        Generates a surface configuration based on the SRAL data.
+    normalize_evaluation_points_for_nurbs()
+        Normalize evaluation points for NURBS with minimum > 0 and maximum < 1.
+    fit_nurbs_surface()
+        Fit the nurbs surface given the conversion method.
+    generate_surface_config_from_stral()
+        Generate a surface configuration based on the STRAL data.
     """
 
     def __init__(
@@ -99,7 +99,7 @@ class StralToSurfaceConverter:
         """
         Append ones to the last dimension of a 3D point vector.
 
-        Includes convention that points have a 1 and directions have 0 as 4th dimension
+        Includes the convention that points have a 1 and directions have 0 as 4th dimension.
 
         Parameters
         ----------
@@ -124,7 +124,7 @@ class StralToSurfaceConverter:
         """
         Append zeros to the last dimension of a 3D direction vector.
 
-        Includes convention that points have a 1 and directions have 0 as 4th dimension.
+        Includes the convention that points have a 1 and directions have 0 as 4th dimension.
 
         Parameters
         ----------
@@ -168,17 +168,17 @@ class StralToSurfaceConverter:
     @staticmethod
     def normalize_evaluation_points_for_nurbs(points: torch.Tensor) -> torch.Tensor:
         """
-        Normalize evaluation points for NURBS with minimum >0 and maximum < 1 since NURBS are not defined for the edges.
+        Normalize evaluation points for NURBS with minimum > 0 and maximum < 1 as NURBS are not defined for the edges.
 
         Parameters
         ----------
         points : torch.Tensor
-            Evaluation points for NURBS.
+            The evaluation points for NURBS.
 
         Returns
         -------
         torch.Tensor
-            Normalized evaluation points for NURBS.
+            The normalized evaluation points for NURBS.
         """
         points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
             (points[:] - min(points[:])) + 2e-5
@@ -200,44 +200,39 @@ class StralToSurfaceConverter:
         """
         Generate a NURBS surface based on STRAL data.
 
-        The surface points are first normalized and shifted to the range [0,1]
-        to be compatible with the knot vector of the NURBS surface.
-        The NURBS surface is then initialized with the correct number of control
-        points, degrees, and knots, and the origin of the control points is set
-        based on the width and height of the point cloud.
-        The control points are then fitted to the surface points or surface normals using an Adam
-        optimizer.
-        The optimization is stopped when the loss is less than the tolerance
-        or the maximum number of epochs is reached.
+        The surface points are first normalized and shifted to the range [0,1] to be compatible with the knot vector of
+        the NURBS surface. The NURBS surface is then initialized with the correct number of control points, degrees, and
+        knots, and the origin of the control points is set based on the width and height of the point cloud. The control
+        points are then fitted to the surface points or surface normals using an Adam optimizer.
+        The optimization stops when the loss is less than the tolerance or the maximum number of epochs is reached.
 
         Parameters
         ----------
         surface_points : torch.Tensor
-            The surface points given as a (N,4) tensor.
+            The surface points given as an (N, 4) tensor.
         surface_normals : torch.Tensor
-            The surface normals given as a (N,4) tensor.
+            The surface normals given as an (N, 4) tensor.
         number_control_points_e : int
-            Number of NURBS control points to be set in the east (first) direction.
+            Number of NURBS control points to be set in the east (first) direction (default: 10).
         number_control_points_n : int
-            Number of NURBS control points to be set in the north (second) direction.
+            Number of NURBS control points to be set in the north (second) direction (default: 10).
         degree_e : int
-            Degree of the NURBS in the east (first) direction.
+            Degree of the NURBS in the east (first) direction (default: 2).
         degree_n : int
-            Degree of the NURBS in the north (second) direction.
+            Degree of the NURBS in the north (second) direction (default: 2).
         tolerance : float, optional
-            Tolerance value for convergence criteria (default is 1e-7).
+            Tolerance value for convergence criteria (default: 1e-7).
         initial_learning_rate : float
-            Initial learning rate for the learning rate scheduler (default is 1e-2).
+            Initial learning rate for the learning rate scheduler (default: 1e-2).
         max_epoch : int, optional
-            Maximum number of epochs for optimization (default is 2500).
+            Maximum number of epochs for optimization (default: 2500).
 
         Returns
         -------
         NURBSSurface
             A NURBS surface.
         """
-        # Normalize evaluation points and shift them so that they correspond
-        # to the knots.
+        # Normalize evaluation points and shift them so that they correspond to the knots.
         evaluation_points = surface_points.clone()
         evaluation_points[:, 2] = 0
         evaluation_points_e = self.normalize_evaluation_points_for_nurbs(
@@ -333,19 +328,19 @@ class StralToSurfaceConverter:
         number_eval_points_n : int
             The number of evaluation points in the north direction used to generate a discrete surface from NURBS.
         number_control_points_e : int
-            Number of NURBS control points in the east direction.
+            Number of NURBS control points in the east direction (default: 10).
         number_control_points_n : int
-            Number of NURBS control points in the north direction.
+            Number of NURBS control points in the north direction (default: 10).
         degree_e : int
-            Degree of the NURBS in the east (first) direction.
+            Degree of the NURBS in the east (first) direction (default: 2).
         degree_n : int
-            Degree of the NURBS in the north (second) direction.
+            Degree of the NURBS in the north (second) direction (default: 2).
         tolerance : float, optional
-            Tolerance value used for fitting NURBS surfaces.
+            Tolerance value used for fitting NURBS surfaces (default: 1.2e-6).
         initial_learning_rate : float
-            Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces.
+            Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
         max_epoch : int
-            Maximum number of epochs to use when fitting NURBS surfaces.
+            Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
 
         Returns
         -------
@@ -420,7 +415,7 @@ class StralToSurfaceConverter:
 
         log.info("Loading STRAL data complete")
 
-        # Stral uses two different coordinate systems, both use a west orientation and therefore, we don't need an NWU
+        # STRAL uses two different coordinate systems, both use a west orientation and therefore, we don't need an NWU
         # to ENU cast here. However, to maintain consistency we cast the west direction to east direction.
         canting_e[:, 0] = -canting_e[:, 0]
 
