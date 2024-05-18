@@ -53,7 +53,7 @@ class Sun(LightSource):
 
         Raises
         ------
-        Union[ValueError, NotImplementedError]
+        ValueError | NotImplementedError
             If the specified distribution type is unknown.
         """
         super().__init__(number_of_rays=number_of_rays)
@@ -75,7 +75,7 @@ class Sun(LightSource):
             == config_dictionary.light_source_distribution_is_normal
         ):
             log.info(
-                "Initializing a sun modelled with a multivariate normal distribution."
+                "Initializing a sun modeled with a multivariate normal distribution."
             )
             mean = torch.tensor(
                 [
@@ -109,19 +109,19 @@ class Sun(LightSource):
         cls, config_file: h5py.File, light_source_name: Optional[str] = None
     ) -> Self:
         """
-        Class method that initializes a sun from an hdf5 file.
+        Class method that initializes a sun from an HDF5 file.
 
         Parameters
         ----------
         config_file : h5py.File
-            The hdf5 file containing the information about the sun.
-        light_source_name : Optional[str]
+            The HDF5 file containing the information about the sun.
+        light_source_name : str, optional
             The name of the light source - used for logging.
 
         Returns
         -------
         Sun
-            A sun initialized from an hdf5 file.
+            A sun initialized from an HDF5 file.
         """
         if light_source_name:
             log.info(f"Loading {light_source_name} from an HDF5 file.")
@@ -187,11 +187,11 @@ class Sun(LightSource):
         number_of_points : int
             The number of points on the heliostat from which rays are reflected.
         number_of_facets : int
-            The number of facets for each heliostat.
+            The number of facets for each heliostat (default: 4).
         number_of_heliostats : int
-            The number of heliostats in the scenario.
-        random_seed : Optional[int]
-            The random seed to enable result replication.
+            The number of heliostats in the scenario (default: 1).
+        random_seed : int, optional
+            The random seed to enable result replication (default: 7).
 
         Returns
         -------
