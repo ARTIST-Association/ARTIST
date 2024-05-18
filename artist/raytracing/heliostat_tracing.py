@@ -12,7 +12,7 @@ from artist.util import utils
 
 class DistortionsDataset(Dataset):
     """
-    This class contains a data set of distortions based on the model of the light source.
+    This class contains a dataset of distortions based on the model of the light source.
 
     Attributes
     ----------
@@ -33,7 +33,7 @@ class DistortionsDataset(Dataset):
         random_seed: Optional[int] = 7,
     ) -> None:
         """
-        Initialize the data set.
+        Initialize the dataset.
 
         Parameters
         ----------
@@ -41,12 +41,12 @@ class DistortionsDataset(Dataset):
             The light source used to model the distortions.
         number_of_points : int
             The number of points on the heliostat for which distortions are created.
-        number_of_facets : int
-            The number of facets per heliostat.
-        number_of_heliostats : int
-            The number of heliostats in the scenario.
-        random_seed : Optional[int]
-            The random seed used for generating the distortions.
+        number_of_facets : int, optional
+            The number of facets per heliostat (default: 4).
+        number_of_heliostats : int, optional
+            The number of heliostats in the scenario (default: 1).
+        random_seed : int, optional
+            The random seed used for generating the distortions (default: 7).
         """
         self.number_of_heliostats = number_of_heliostats
         self.distortions_u, self.distortions_e = light_source.get_distortions(
@@ -58,18 +58,18 @@ class DistortionsDataset(Dataset):
 
     def __len__(self) -> int:
         """
-        Calculate the length of the data set.
+        Calculate the length of the dataset, i.e., the number of items contained.
 
         Returns
         -------
         int
-            The length of the data set.
+            The length of the dataset.
         """
         return self.distortions_u.size(0)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Select an item from the data set.
+        Select an item from the dataset.
 
         Parameters
         ----------
@@ -98,15 +98,15 @@ class HeliostatRayTracer:
     receiver : Receiver
         The receiver considered for raytracing.
     world_size : int
-        The world size for MPI.
+        The world size for MPI, i.e., the overall number of processors / ranks.
     rank : int
-        The rank for MPI.
+        The rank, i.e., individual process ID, for MPI.
     number_of_surface_points : int
         The number of surface points on the heliostat.
     distortions_dataset : DistortionsDataset
         The dataset containing the distortions for ray scattering.
     distortions_loader : DataLoader
-        The data loader that loads the distortions.
+        The dataloader that loads the distortions.
 
     Methods
     -------
@@ -136,16 +136,16 @@ class HeliostatRayTracer:
         ----------
         scenario : Scenario
             The scenario used to perform raytracing.
-        world_size : Optional[int]
-            The world size for MPI.
-        rank : Optional[int]
-            The rank for MPI.
-        batch_size : Optional[int]
-            The batch size used for raytracing.
-        random_seed : Optional[int]
-            The random seed used for generating the distortions.
-        shuffle : Optional[bool]
-            A boolean flag indicating whether to shuffle the data.
+        world_size : int, optional
+            The world size for MPI (default: 1).
+        rank : int, optional
+            The rank for MPI (default: 0).
+        batch_size : int, optional
+            The batch size used for raytracing (default: 1).
+        random_seed : int, optional
+            The random seed used for generating the distortions (default: 7).
+        shuffle : bool, optional
+            A boolean flag indicating whether to shuffle the data (default: False).
         """
         self.heliostat = scenario.heliostats.heliostat_list[0]
         self.receiver = scenario.receivers.receiver_list[0]
@@ -289,9 +289,11 @@ class HeliostatRayTracer:
         Parameters
         ----------
         dx_ints : torch.Tensor
-            x position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along the x-axis.
+            x position of intersection with receiver of shape (N, 1)
+            where N is the resolution of the receiver along the x-axis.
         dy_ints : torch.Tensor
-            y position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along the y-axis.
+            y position of intersection with receiver of shape (N, 1)
+            where N is the resolution of the receiver along the y-axis.
         indices : torch.Tensor
             Index of pixel.
 
