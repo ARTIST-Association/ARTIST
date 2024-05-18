@@ -1,3 +1,6 @@
+import torch
+
+
 class Rays:
     """
     This class models rays used for raytracing that have a direction vector and magnitude.
@@ -10,13 +13,15 @@ class Rays:
         The magnitudes of the rays.
     """
 
-    def __init__(self, ray_directions, ray_magnitudes) -> None:
+    def __init__(
+        self, ray_directions: torch.Tensor, ray_magnitudes: torch.Tensor
+    ) -> None:
         """
-        Initialize the Rays class.
+        Initialize the ``Rays`` class.
 
         Parameters
         ----------
-        ray_directions
+        ray_directions : torch.Tensor
             The direction of the rays, with each ray saved as a 4D vector.
         ray_magnitudes : torch.Tensor
             The magnitudes of the rays.
