@@ -105,9 +105,9 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        max_num_iterations : int
+        max_num_iterations : int, optional
             Maximum number of iterations (default 2).
-        min_eps : float
+        min_eps : float, optional
             Convergence criterion (default 0.0001).
 
         Returns
@@ -134,7 +134,7 @@ class RigidBody(Kinematic):
                 torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
             )
 
-            # Account for position
+            # Account for position.
             initial_orientations = initial_orientations @ utils.translate_enu(
                 e=self.position[0],
                 n=self.position[1],
