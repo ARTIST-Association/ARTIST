@@ -32,7 +32,7 @@ def actuator_configuration():
 
 @pytest.fixture
 def initial_offsets_south():
-    """Define initial offsets for a south orientated heliostat."""
+    """Define initial offsets for a south-orientated heliostat."""
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(0.0),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0),
@@ -43,7 +43,7 @@ def initial_offsets_south():
 
 @pytest.fixture
 def initial_offsets_above():
-    """Define initial offsets for an up orientated heliostat."""
+    """Define initial offsets for an up-orientated heliostat."""
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0),
@@ -53,7 +53,7 @@ def initial_offsets_above():
 
 
 @pytest.fixture
-def kinematic_model_1(actuator_configuration, initial_offsets_south):
+def kinematic_model_1(actuator_configuration, initial_offsets_south) -> RigidBody:
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
@@ -66,7 +66,7 @@ def kinematic_model_1(actuator_configuration, initial_offsets_south):
 
 
 @pytest.fixture
-def kinematic_model_2(actuator_configuration, initial_offsets_south):
+def kinematic_model_2(actuator_configuration, initial_offsets_south) -> RigidBody:
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
@@ -79,7 +79,7 @@ def kinematic_model_2(actuator_configuration, initial_offsets_south):
 
 
 @pytest.fixture
-def kinematic_model_3(actuator_configuration, initial_offsets_above):
+def kinematic_model_3(actuator_configuration, initial_offsets_above) -> RigidBody:
     """Create a kinematic model to use in the test."""
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
@@ -222,7 +222,7 @@ def test_orientation_matrix(
     incident_ray_direction,
     expected,
 ):
-    """Tests that the alignment is working as desired."""
+    """Test that the alignment is working as desired."""
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
     )
