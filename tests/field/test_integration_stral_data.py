@@ -1,4 +1,4 @@
-"""This pytest considers loading a heliostat surface from a point cloud."""
+"""This test considers loading a heliostat surface from a point cloud."""
 
 import pathlib
 import warnings
