@@ -50,7 +50,7 @@ def line_plane_intersections(
     points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
     epsilon : float
-        A small value corresponding to the upper limit.
+        A small value corresponding to the upper limit (default: 1e-6).
 
     Returns
     -------
