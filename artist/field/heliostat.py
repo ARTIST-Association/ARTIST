@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 class Heliostat(torch.nn.Module):
     """
-    This class realizes a heliostat.
+    Implements the behavior of a heliostat.
 
     Attributes
     ----------
@@ -127,13 +127,13 @@ class Heliostat(torch.nn.Module):
         ----------
         config_file : h5py.File
             The config file containing all the information about the heliostat.
-        prototype_surface  : Optional[SurfaceConfig]
+        prototype_surface  : SurfaceConfig, optional
             An optional prototype for the surface configuration.
-        prototype_kinematic : Optional[KinematicConfig]
+        prototype_kinematic : KinematicConfig, optional
             An optional prototype for the kinematic configuration.
-        prototype_actuator : Optional[ActuatorListConfig]
+        prototype_actuator : ActuatorConfig, optional
             An optional prototype for the actuator configuration.
-        heliostat_name : Optional[str]
+        heliostat_name : str, optional
             The name of the heliostat being loaded - used for logging.
 
         Returns
