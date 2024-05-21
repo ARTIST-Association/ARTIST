@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class LightSourceArray(torch.nn.Module):
     """
-    This class wraps the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
+    Wraps the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -58,10 +58,13 @@ class LightSourceArray(torch.nn.Module):
         """
         log.info("Loading a light source array from an HDF5 file.")
         light_source_array = []
+        # Iterate through each light source configuration in the list of light source configurations.
         for ls in config_file[config_dictionary.light_source_key].keys():
             mapping_key = config_file[config_dictionary.light_source_key][ls][
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
+            # Try to load a light source from the given configuration. This will fail, if ARTIST
+            # does not recognize the light source type defined in the configuration.
             try:
                 ls_object = light_source_type_mapping[mapping_key]
                 light_source_array.append(
