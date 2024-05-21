@@ -52,10 +52,10 @@ class Kinematic(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        max_num_iterations : int, optional
-            Maximum number of iterations (default 2).
-        min_eps : float, optional
-            Convergence criterion (default 0.0001).
+        max_num_iterations : int
+            Maximum number of iterations (default: 2).
+        min_eps : float
+            Convergence criterion (default: 0.0001).
 
         Raises
         ------
