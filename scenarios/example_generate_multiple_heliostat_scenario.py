@@ -121,8 +121,7 @@ prototype_facets_list = [
 # Include the facet prototype config.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_list)
 
-# Include the kinematic deviations.
-# kinematic_prototype_deviations = KinematicDeviations() # Here, there are no kinematic deviations!
+# Note, we do not include kinematic deviations in this scenario!
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
@@ -174,8 +173,7 @@ prototype_config = PrototypeConfig(
     actuator_prototype=actuator_prototype_config,
 )
 
-# If heliostats have individual surface, kinematic, or actuator configs, these must be defined here. Otherwise, only
-# the parameters from the prototype are used.
+# Note, we do not include individual heliostat parameters in this scenario.
 
 # Include the configuration for three heliostats.
 heliostat1 = HeliostatConfig(
