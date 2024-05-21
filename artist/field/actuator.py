@@ -3,7 +3,7 @@ import torch
 
 class Actuator(torch.nn.Module):
     """
-    This class implements the abstract behavior of an actuator.
+    Implements the abstract behavior of an actuator.
 
     Attributes
     ----------
