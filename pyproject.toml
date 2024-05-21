@@ -36,6 +36,7 @@ dev = [
     "sphinx-autoapi",
     "sphinx-rtd-theme",]
 mpi = ["mpi4py",]
+tutorials = ['jupyter']
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
