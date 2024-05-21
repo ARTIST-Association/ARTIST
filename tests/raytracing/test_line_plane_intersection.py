@@ -79,7 +79,7 @@ def test_line_plane_intersection(
         The center of the plane being considered for the intersection.
     points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
-    expected_intersections : Optional[torch.Tensor]
+    expected_intersections : torch.Tensor, None
         The expected intersections between the rays and the plane, or ``None`` if no intersections are expected.
 
     """
