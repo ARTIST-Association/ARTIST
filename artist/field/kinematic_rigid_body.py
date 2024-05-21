@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 
@@ -16,7 +16,7 @@ from artist.util.configuration_classes import (
 
 class RigidBody(Kinematic):
     """
-    This class implements a rigid body kinematic model.
+    Implements a rigid body kinematic model.
 
     Attributes
     ----------
@@ -44,12 +44,12 @@ class RigidBody(Kinematic):
         position: torch.Tensor,
         aim_point: torch.Tensor,
         actuator_config: ActuatorListConfig,
-        initial_orientation_offsets: Optional[KinematicOffsets] = KinematicOffsets(
+        initial_orientation_offsets: KinematicOffsets = KinematicOffsets(
             kinematic_initial_orientation_offset_e=torch.tensor(0.0),
             kinematic_initial_orientation_offset_n=torch.tensor(0.0),
             kinematic_initial_orientation_offset_u=torch.tensor(0.0),
         ),
-        deviation_parameters: Optional[KinematicDeviations] = KinematicDeviations(
+        deviation_parameters: KinematicDeviations = KinematicDeviations(
             first_joint_translation_e=torch.tensor(0.0),
             first_joint_translation_n=torch.tensor(0.0),
             first_joint_translation_u=torch.tensor(0.0),
@@ -81,10 +81,10 @@ class RigidBody(Kinematic):
             The aim point of the heliostat.
         actuator_config : ActuatorListConfig
             The actuator configuration parameters.
-        initial_orientation_offsets : Optional[KinematicOffsets]
-            The initial orientation offsets of the kinematic.
-        deviation_parameters : Optional[KinematicDeviations]
-            The deviation parameters for the kinematic.
+        initial_orientation_offsets : KinematicOffsets
+            The initial orientation offsets of the kinematic (default: 0.0 for each possible offset).
+        deviation_parameters : KinematicDeviations
+            The deviation parameters for the kinematic (default: 0.0 for each deviation).
         """
         super().__init__(position=position, aim_point=aim_point)
 
@@ -105,10 +105,10 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        max_num_iterations : int, optional
-            Maximum number of iterations (default 2).
-        min_eps : float, optional
-            Convergence criterion (default 0.0001).
+        max_num_iterations : int
+            Maximum number of iterations (default: 2).
+        min_eps : float
+            Convergence criterion (default: 0.0001).
 
         Returns
         -------
