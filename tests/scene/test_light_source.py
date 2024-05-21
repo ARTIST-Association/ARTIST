@@ -132,23 +132,23 @@ def further_parameters_3() -> Dict[str, int]:
     ],
 )
 def test_light_sources(
-    request: Any,
+    request: pytest.FixtureRequest,
     light_source: str,
-    distribution_parameters_fixture: Dict[str, Any],
-    further_parameters_fixture: Dict[str, int],
+    distribution_parameters_fixture: str,
+    further_parameters_fixture: str,
 ) -> None:
     """
     Test the light sources by generating distortions and ensuring these are as expected.
 
     Parameters
     ----------
-    request : Any
+    request : pytest.FixtureRequest
         The pytest request.
     light_source : str
         Indicates which light source is tested.
-    distribution_parameters_fixture : Dict[str, Any]
+    distribution_parameters_fixture : str
         The pytest fixture containing the distribution parameters.
-    further_parameters_fixture : Dict[str, int]
+    further_parameters_fixture : str
         The pytest fixture containing the further test parameters.
     """
     # Load further params dict.
