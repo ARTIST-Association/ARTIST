@@ -1,3 +1,5 @@
+import logging
+
 import torch
 
 from artist.field.actuator_ideal import IdealActuator
@@ -10,10 +12,12 @@ actuator_type_mapping = {
     config_dictionary.linear_actuator_key: LinearActuator,
 }
 
+log = logging.getLogger(__name__)
+
 
 class ActuatorArray(torch.nn.Module):
     """
-    This class wraps a list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
+    Wraps the list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -23,7 +27,7 @@ class ActuatorArray(torch.nn.Module):
 
     def __init__(self, actuator_list_config: ActuatorListConfig) -> None:
         """
-        Initialize the heliostat field.
+        Initialize the actuator array.
 
         Parameters
         ----------
@@ -32,9 +36,14 @@ class ActuatorArray(torch.nn.Module):
         """
         super().__init__()
         actuator_array = []
+        # Iterate through each actuator configuration in the list of actuator configurations.
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):
+            # Try to load an actuator from the given configuration. This will fail, if ARTIST
+            # does not recognize the actuator type defined in the configuration.
             try:
                 actuator_object = actuator_type_mapping[actuator_config.actuator_type]
+                # Check if the actuator configuration contains actuator parameters and initialize an actuator with
+                # these parameters.
                 if actuator_config.actuator_parameters is not None:
                     actuator_array.append(
                         actuator_object(
@@ -47,7 +56,12 @@ class ActuatorArray(torch.nn.Module):
                             phi_0=actuator_config.actuator_parameters.phi_0,
                         )
                     )
+                # If the actuator config does not contain actuator parameters, initialize an actuator with default
+                # values.
                 else:
+                    log.warning(
+                        "No actuator parameters provided. Loading an actuator with default parameters!"
+                    )
                     actuator_array.append(
                         actuator_object(
                             joint_number=i + 1,
