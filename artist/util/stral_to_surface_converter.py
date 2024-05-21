@@ -33,7 +33,7 @@ log.setLevel(logging.INFO)
 
 class StralToSurfaceConverter:
     """
-    This class implements a converter that converts STRAL data to HDF5 format.
+    Implements a converter that converts STRAL data to HDF5 format.
 
     Attributes
     ----------
@@ -114,9 +114,9 @@ class StralToSurfaceConverter:
         assert (
             point.size(dim=-1) == 3
         ), f"Expected a 3D point but got a point of shape {point.shape}!"
-        ones_shape = list(point.shape)
-        ones_shape[-1] = 1
-        ones_tensor = torch.ones(ones_shape, dtype=point.dtype, device=point.device)
+        ones_tensor = torch.ones(
+            point.shape[:-1] + (1,), dtype=point.dtype, device=point.device
+        )
         return torch.cat((point, ones_tensor), dim=-1)
 
     @staticmethod
@@ -139,10 +139,8 @@ class StralToSurfaceConverter:
         assert (
             direction.size(dim=-1) == 3
         ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
-        zeros_shape = list(direction.shape)
-        zeros_shape[-1] = 1
         zeros_tensor = torch.zeros(
-            zeros_shape, dtype=direction.dtype, device=direction.device
+            direction.shape[:-1] + (1,), dtype=direction.dtype, device=direction.device
         )
         return torch.cat((direction, zeros_tensor), dim=-1)
 
@@ -180,6 +178,8 @@ class StralToSurfaceConverter:
         torch.Tensor
             The normalized evaluation points for NURBS.
         """
+        # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
+        # defined evaluation points.
         points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
             (points[:] - min(points[:])) + 2e-5
         )
@@ -193,8 +193,8 @@ class StralToSurfaceConverter:
         number_control_points_n: int = 10,
         degree_e: int = 2,
         degree_n: int = 2,
-        tolerance: float = 1e-7,
-        initial_learning_rate: float = 1e-2,
+        tolerance: float = 1e-5,
+        initial_learning_rate: float = 1e-1,
         max_epoch: int = 2500,
     ) -> NURBSSurface:
         """
@@ -221,9 +221,9 @@ class StralToSurfaceConverter:
         degree_n : int
             Degree of the NURBS in the north (second) direction (default: 2).
         tolerance : float, optional
-            Tolerance value for convergence criteria (default: 1e-7).
+            Tolerance value for convergence criteria (default: 1e-5).
         initial_learning_rate : float
-            Initial learning rate for the learning rate scheduler (default: 1e-2).
+            Initial learning rate for the learning rate scheduler (default: 1e-1).
         max_epoch : int, optional
             Maximum number of epochs for optimization (default: 2500).
 
@@ -314,7 +314,7 @@ class StralToSurfaceConverter:
         number_control_points_n: int = 10,
         degree_e: int = 2,
         degree_n: int = 2,
-        tolerance: float = 1.2e-6,
+        tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 10000,
     ) -> List[FacetConfig]:
@@ -336,7 +336,7 @@ class StralToSurfaceConverter:
         degree_n : int
             Degree of the NURBS in the north (second) direction (default: 2).
         tolerance : float, optional
-            Tolerance value used for fitting NURBS surfaces (default: 1.2e-6).
+            Tolerance value used for fitting NURBS surfaces (default: 1e-5).
         initial_learning_rate : float
             Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
         max_epoch : int
