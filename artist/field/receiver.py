@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 class Receiver(torch.nn.Module):
     """
-    This class implements a receiver.
+    Implements a receiver.
 
     Attributes
     ----------
@@ -68,6 +68,10 @@ class Receiver(torch.nn.Module):
             The horizontal resolution in the east direction of the receiver.
         resolution_u : int
             The vertical resolution in the up direction of the receiver.
+        curvature_e : float, optional
+            The curvature of the receiver, in the east direction.
+        curvature_u : float, optional
+            The curvature of the receiver, in the up direction.
         """
         super().__init__()
         self.receiver_type = receiver_type
@@ -91,7 +95,7 @@ class Receiver(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the receiver.
-        receiver_name : Optional[str]
+        receiver_name : str, optional
             The name of the receiver - used for logging
 
         Returns
