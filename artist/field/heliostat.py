@@ -21,8 +21,10 @@ from artist.util.configuration_classes import (
 )
 
 kinematic_type_mapping = {config_dictionary.rigid_body_key: RigidBody}
+"""A type mapping dictionary that allows ARTIST to automatically infer the correct kinematic type."""
 
 log = logging.getLogger(__name__)
+"""A logger for the heliostat."""
 
 
 class Heliostat(torch.nn.Module):
@@ -70,7 +72,13 @@ class Heliostat(torch.nn.Module):
         actuator_config: ActuatorListConfig,
     ) -> None:
         """
-        Initialize the heliostat.
+        Implement the behavior of a heliostat.
+
+        A Heliostat is used to reflect light onto the receiver. A Heliostat has a position within the field and an
+        aim point where it aims to reflect the light. Furthermore, each heliostat must be initialized with a surface
+        configuration which contains information on the heliostat surface, a kinematic configuration containing
+        information on the applied kinematic, and an actuator configuration that contains the configurations of the
+        actuators used in the heliostat.
 
         Parameters
         ----------
