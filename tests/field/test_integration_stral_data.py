@@ -1,4 +1,4 @@
-"""This test considers loading a heliostat surface from a point cloud."""
+"""Tests loading a heliostat surface from STRAL data and performing ray tracing."""
 
 import pathlib
 import warnings
