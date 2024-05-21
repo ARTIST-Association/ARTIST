@@ -2,7 +2,7 @@ import logging
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import colorlog
 import h5py
@@ -54,8 +54,8 @@ class ScenarioGenerator:
         light_source_list_config: LightSourceListConfig,
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
-        version: Optional[float] = 1.0,
-        log_level: Optional[int] = logging.INFO,
+        version: float = 1.0,
+        log_level: int = logging.INFO,
     ) -> None:
         """
         Initialize the scenario generator.
@@ -72,10 +72,10 @@ class ScenarioGenerator:
             The heliostat_list configuration object.
         prototype_config : PrototypeConfig
             The prototype configuration object,
-        version : Optional[float]
-            The version of the scenario generator being used.
-        log_level : Optional[int]
-            The log level applied to the logger.
+        version : float
+            The version of the scenario generator being used (default: 1.0).
+        log_level : int
+            The log level applied to the logger (default: logging.INFO).
         """
         self.file_path = Path(file_path)
         if not self.file_path.parent.is_dir():
