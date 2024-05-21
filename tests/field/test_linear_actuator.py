@@ -74,8 +74,20 @@ def actuator_configuration():
 
 
 @pytest.fixture
-def kinematic_model_1(actuator_configuration, deviation_parameters):
-    """Create a kinematic model to use in the test."""
+def kinematic_model_1(
+    actuator_configuration: ActuatorListConfig,
+    deviation_parameters: KinematicDeviations,
+):
+    """
+    Create a kinematic model to use in the test.
+
+    Parameters
+    ----------
+    actuator_configuration : ActuatorListConfig
+        The configuration of the actuators.
+    deviation_parameters : KinematicDeviations
+        The kinematic deviations.
+    """
     position = torch.tensor([0.0, 0.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
     return RigidBody(
@@ -87,8 +99,20 @@ def kinematic_model_1(actuator_configuration, deviation_parameters):
 
 
 @pytest.fixture
-def kinematic_model_2(actuator_configuration, deviation_parameters):
-    """Create a kinematic model to use in the test."""
+def kinematic_model_2(
+    actuator_configuration: ActuatorListConfig,
+    deviation_parameters: KinematicDeviations,
+):
+    """
+    Create a kinematic model to use in the test.
+
+    Parameters
+    ----------
+    actuator_configuration : ActuatorListConfig
+        The configuration of the actuators.
+    deviation_parameters : KinematicDeviations
+        The kinematic deviations.
+    """
     position = torch.tensor([0.0, 1.0, 0.0, 1.0])
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
     return RigidBody(
@@ -177,12 +201,25 @@ def kinematic_model_2(actuator_configuration, deviation_parameters):
     ],
 )
 def test_orientation_matrix(
-    request,
-    kinematic_model_fixture,
-    incident_ray_direction,
-    expected,
+    request: pytest.FixtureRequest,
+    kinematic_model_fixture: str,
+    incident_ray_direction: torch.Tensor,
+    expected: torch.Tensor,
 ):
-    """Test that the alignment works as desired."""
+    """
+    Test that the alignment works as desired.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+    kinematic_model_fixture : str
+        The kinematic model fixture used to select the kinematic model used in the test case.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction considered.
+    expected : torch.Tensor
+        The expected orientation matrix.
+    """
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction
     )
