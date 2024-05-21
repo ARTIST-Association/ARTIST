@@ -25,7 +25,11 @@ log = logging.getLogger(__name__)
 
 class Scenario:
     """
-    This class represents a scenario loaded by ARTIST.
+    Represents a scenario loaded by ARTIST.
+
+    A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
+    one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
+    scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
 
     Attributes
     ----------
