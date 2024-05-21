@@ -21,7 +21,7 @@ If you need the latest updates, you can also install ``ARTIST`` directly from th
 
 .. code-block:: console
 
-    $ pip install https://github.com/Helmholtz-AI-Energy/propulate
+    $ pip install https://github.com/ARTIST-Association/ARTIST
 
 If you want to get the source code and modify it, you can clone the source code using ``git`` and install ``ARTIST``
 with ``pip``:
@@ -35,7 +35,7 @@ Alternatively, if you wish to install the developer dependencies:
 
 .. code-block:: console
 
-   $ pip install -e .[dev]
+   $ pip install -e ."[dev]"
 
 You can check whether your installation was successful by importing ``ARTIST`` in ``Python``:
 
