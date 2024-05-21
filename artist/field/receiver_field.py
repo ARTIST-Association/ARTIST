@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class ReceiverField(torch.nn.Module):
     """
-    This class wraps the list of receivers as a ``torch.nn.Module`` to allow gradient calculation.
+    Wraps the list of receivers as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -28,12 +28,12 @@ class ReceiverField(torch.nn.Module):
 
     def __init__(self, receiver_list: List[Receiver]):
         """
-        Initialize the heliostat field.
+        Initialize the receiver field.
 
         Parameters
         ----------
-        receiver_list : List[Heliostat]
-            The list of heliostats included in the scenario.
+        receiver_list : List[Receiver]
+            The list of receivers included in the scenario.
         """
         super(ReceiverField, self).__init__()
         self.receiver_list = receiver_list
