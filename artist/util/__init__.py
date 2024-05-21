@@ -1,4 +1,4 @@
-"""This package bundles all classes that implement util functionality in ARTIST."""
+"""Bundles all classes that implement util functionality in ARTIST."""
 
 import logging
 import sys
