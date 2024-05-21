@@ -91,6 +91,8 @@ class NurbsFacet(torch.nn.Module):
         NURBSSurface
             The NURBS surface of one facet.
         """
+        # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
+        # defined evaluation points.
         evaluation_points_rows = torch.linspace(
             0 + 1e-5, 1 - 1e-5, self.number_eval_points_e
         )
