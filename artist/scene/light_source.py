@@ -61,7 +61,7 @@ class LightSource(torch.nn.Module):
         number_of_points: int,
         number_of_facets: int = 4,
         number_of_heliostats: int = 1,
-        random_seed: Optional[int] = 7,
+        random_seed: int = 7,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get distortions given the light source model.
@@ -77,7 +77,7 @@ class LightSource(torch.nn.Module):
             The number of facets per heliostat (default: 4).
         number_of_heliostats : int, optional
             The number of heliostats in the scenario (default: 1).
-        random_seed : int, optional
+        random_seed : int
             The random seed to enable result replication (default: 7).
 
         Raises
