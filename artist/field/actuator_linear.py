@@ -5,7 +5,7 @@ from artist.field.actuator import Actuator
 
 class LinearActuator(Actuator):
     """
-    This class implements the behavior of a linear actuator.
+    Implements the behavior of a linear actuator.
 
     Attributes
     ----------
