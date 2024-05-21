@@ -1,4 +1,4 @@
-"""This package bundles ARTIST."""
+"""Bundles ARTIST as a package."""
 
 import os
 
