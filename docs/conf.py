@@ -18,6 +18,7 @@ release = "0.0.1"
 extensions = [
     "sphinx.ext.autodoc",
     "autoapi.extension",
+    "sphinxemoji.sphinxemoji",
 ]
 
 autoapi_dirs = ["../artist"]
@@ -32,4 +33,16 @@ language = "python"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ["_static/"]
+html_css_files = ["custom.css"]
+html_logo = "images/logo_transparent.png"
+
+html_theme_options = {
+    "logo_only": True,
+    "style_nav_header_background": "#e5eaec",
+    "style_external_links": True,
+}

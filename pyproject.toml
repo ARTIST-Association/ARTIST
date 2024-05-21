@@ -34,7 +34,10 @@ dev = [
     "pytest",
     "pytest-cov",
     "sphinx-autoapi",
-    "sphinx-rtd-theme",]
+    "sphinx-rtd-theme",
+    "sphinxcontrib-napoleon",
+    "sphinxemoji",
+]
 mpi = ["mpi4py",]
 tutorials = ['jupyter']
 
