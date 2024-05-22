@@ -15,101 +15,109 @@ way to store, manage, and access complex data structures, which is why they are 
 and data analysis applications.
 
 .. code-block:: console
-
-        .
-    ├── receivers [1,*]
-    │   ├── receiver1
-    │   │   ├── type [1,1] # e.g. planar
-    │   │   ├── position_center [1,1]
-    │   │   ├── curvature_e [0,1]
-    │   │   ├── curvature_u [0,1]
-    │   │   ├── normal_vector [1,1]
-    │   │   ├── plane_e [1,1]
-    │   │   ├── plane_u [1,1]
-    │   │   ├── resolution_e [1,1]
-    │   │   └── resolution_u [1,1]
-    │   ├── receiver2
-    │   │   └── ...
-    │   └── ...
-    ├── lightsources [1,*]
-    │   ├── lightsource1
-    │   │   ├── number_of_rays [1,1]
-    │   │   └── distribution_parameters [1,1]
-    │   │       ├── distribution_type [1,1]
-    │   │       ├── mean [0,1]
-    │   │       ├── variance [0,1]
-    │   │       └── ...
-    │   ├── lightsource2
-    │   │   └── ...
-    │   └── ...
-    ├── heliostats [1,*]
-    │   ├── heliostat1
-    │   │   ├── id [1,1]
-    │   │   ├── position [1,1]
-    │   │   ├── aim_point [1,1]
-    │   │   ├── surface [0,1]
-    │   │   │   └── facets [1,*]
-    │   │   │       ├── facet1
-    │   │   │       │   ├── control_points_e [1,1]
-    │   │   │       │   ├── control_points_u [1,1]
-    │   │   │       │   ├── knots_e [1,1]
-    │   │   │       │   ├── knots_u [1,1]
-    │   │   │       │   ├── width [1,1]
-    │   │   │       │   ├── height [1,1]
-    │   │   │       │   ├── position [1,1]
-    │   │   │       │   ├── canting_e [1,1]
-    │   │   │       │   └── canting_n [1,1]
-    │   │   │       ├── facet2
-    │   │   │       │   └── ...
-    │   │   │       └── ...
-    │   │   ├── kinematic [0,1]
-    │   │   │   ├── type [1,1]
-    │   │   │   ├── offsets [0,3]
-    │   │   │   │   ├── offset_e
-    │   │   │   │   ├── offset_n
-    │   │   │   │   └── offset_u
-    │   │   │   └── deviations [0,*]
-    │   │   │       ├── first_joint_translation [1,1]
-    │   │   │       ├── first_joint_tilt_e [1,1]
-    │   │   │       └── ...
-    │   │   └── actuator [0,1]
-    │   │       ├── type [1,1]
-    │   │       └── deviations [0,*]
-    │   │           ├── first_joint_increment [1,1]
-    │   │           ├── first_joint_radius [1,1]
-    │   │           └── ...
-    │   ├── heliostat2
-    │   │   └── ...
-    │   └── ...
-    └── prototypes [1,1]
-        ├── surface [1,1]
-        │   └── facets [1,*]
-        │       ├── facet1
-        │       │   ├── control_points_e [1,1]
-        │       │   ├── control_points_u [1,1]
-        │       │   ├── knots_e [1,1]
-        │       │   ├── knots_u [1,1]
-        │       │   ├── width [1,1]
-        │       │   ├── height [1,1]
-        │       │   ├── position [1,1]
-        │       │   ├── canting_e [1,1]
-        │       │   └── canting_n [1,1]
-        │       ├── facet2
-        │       │   └── ...
-        │       └── ...
-        ├── kinematic [1,1]
+   .
+├── receivers [1,*]
+│   ├── receiver1
+│   │   ├── type [1,1] # e.g. planar
+│   │   ├── position_center [1,1]
+│   │   ├── curvature_e [0,1]
+│   │   ├── curvature_u [0,1]
+│   │   ├── normal_vector [1,1]
+│   │   ├── plane_e [1,1]
+│   │   ├── plane_u [1,1]
+│   │   ├── resolution_e [1,1]
+│   │   └── resolution_u [1,1]
+│   ├── receiver2
+│   │   └── ...
+│   └── ...
+├── lightsources [1,*]
+│   ├── lightsource1
+│   │   ├── type [1,1]
+│   │   ├── number_of_rays [1,1]
+│   │   └── distribution_parameters [1,1]
+│   │       ├── distribution_type [1,1]
+│   │       ├── mean [0,1]
+│   │       ├── variance [0,1]
+│   │       └── ...
+│   ├── lightsource2
+│   │   └── ...
+│   └── ...
+├── heliostats [1,*]
+│   ├── heliostat1
+│   │   ├── id [1,1]
+│   │   ├── position [1,1]
+│   │   ├── aim_point [1,1]
+│   │   ├── surface [0,1]
+│   │   │   └── facets [1,*]
+│   │   │       ├── facet1
+│   │   │       │   ├── control_points [1,1]
+│   │   │       │   ├── degree_e [1,1]
+│   │   │       │   ├── degree_n [1,1]
+│   │   │       │   ├── number_of_eval_points_e [1,1]
+│   │   │       │   ├── number_of_eval_points_n [1,1]
+│   │   │       │   ├── width [1,1]
+│   │   │       │   ├── height [1,1]
+│   │   │       │   ├── position [1,1]
+│   │   │       │   ├── canting_e [1,1]
+│   │   │       │   └── canting_n [1,1]
+│   │   │       ├── facet2
+│   │   │       │   └── ...
+│   │   │       └── ...
+│   │   ├── kinematic [0,1]
+│   │   │   ├── type [1,1]
+│   │   │   ├── offsets [0,3]
+│   │   │   │   ├── offset_e
+│   │   │   │   ├── offset_n
+│   │   │   │   └── offset_u
+│   │   │   └── deviations [0,*]
+│   │   │       ├── first_joint_translation [0,1]
+│   │   │       ├── first_joint_tilt_e [0,1]
+│   │   │       └── ...
+│   │   └── actuators [0,*]
+│   │       ├── actuator1
+│   │       │   ├── type [1,1]
+│   │       │   └── parameters [0,*]
+│   │       │       ├── first_joint_increment [0,1]
+│   │       │       ├── first_joint_radius [0,1]
+│   │       │       └── ...
+│   │       └── actuator2
+│   │           └── ...
+│   ├── heliostat2
+│   │   └── ...
+│   └── ...
+└── prototypes [1,1]
+    ├── surface [1,1]
+    │   └── facets [1,*]
+    │       ├── facet1
+    │       │   ├── control_points [1,1]
+    │       │   ├── degree_e [1,1]
+    │       │   ├── degree_n [1,1]
+    │       │   ├── number_of_eval_points_e [1,1]
+    │       │   ├── number_of_eval_points_n [1,1]
+    │       │   ├── width [1,1]
+    │       │   ├── height [1,1]
+    │       │   ├── position [1,1]
+    │       │   ├── canting_e [1,1]
+    │       │   └── canting_n [1,1]
+    │       ├── facet2
+    │       │   └── ...
+    │       └── ...
+    ├── kinematic [1,1]
+    │   ├── type [1,1]
+    │   ├── offsets [0,3]
+    │   │   ├── offset_e
+    │   │   ├── offset_n
+    │   │   └── offset_u
+    │   └── deviations [0,*]
+    │       ├── first_joint_translation [0,1]
+    │       ├── first_joint_tilt_e [0,1]
+    │       └── ...
+    └── actuators [1,*]
+        ├── actuator1
         │   ├── type [1,1]
-        │   ├── offsets [0,3]
-        │   │   ├── offset_e
-        │   │   ├── offset_n
-        │   │   └── offset_u
-        │   └── deviations [0,*]
-        │       ├── first_joint_translation [1,1]
-        │       ├── first_joint_tilt_e [1,1]
+        │   └── parameters [0,*]
+        │       ├── first_joint_increment [0,1]
+        │       ├── first_joint_radius [0,1]
         │       └── ...
-        └── actuator [1,1]
-            ├── type [1,1]
-            └── deviations [0,*]
-                ├── first_joint_increment [1,1]
-                ├── first_joint_radius [1,1]
-                └── ...
+        └── actuator2
+            └── ...
