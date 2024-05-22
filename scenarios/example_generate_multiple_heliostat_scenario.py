@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import torch
 
@@ -21,6 +22,14 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 
+# The following parameter is the name of the scenario.
+file_path = "Pease/enter/your/file/path!"
+
+if not Path(file_path).parent.is_dir():
+    raise FileNotFoundError(
+        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        "Please create the folder or adjust the file path before running again!"
+    )
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
@@ -201,9 +210,6 @@ heliostat_list = [heliostat1, heliostat2, heliostat3]
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
-
-# The following parameter is the name of the scenario.
-file_path = "/path/to/scenario/scenario_name"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
