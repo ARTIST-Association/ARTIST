@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import torch
 
@@ -20,6 +21,16 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
+
+# The following parameter is the name of the scenario.
+file_path = "Pease/enter/your/file/path!"
+
+# This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
+if not Path(file_path).parent.is_dir():
+    raise FileNotFoundError(
+        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        "Please create the folder or adjust the file path before running again!"
+    )
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -55,7 +66,6 @@ light_source_list = [light_source1_config]
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
-
 # Generate surface configuration from STRAL data.
 stral_converter = StralToSurfaceConverter(
     stral_file_path=f"{ARTIST_ROOT}/measurement_data/stral_test_data",
@@ -65,16 +75,17 @@ stral_converter = StralToSurfaceConverter(
     step_size=100,
 )
 facet_prototype_list = stral_converter.generate_surface_config_from_stral(
-    number_eval_points_e=100,
-    number_eval_points_n=100,
-    number_control_points_e=15,
-    number_control_points_n=15,
-    degree_e=4,
-    degree_n=4,
-    tolerance=1e-7,
-    max_epoch=5000,
+    number_eval_points_e=200,
+    number_eval_points_n=200,
+    number_control_points_e=10,
+    number_control_points_n=10,
+    degree_e=2,
+    degree_n=2,
+    tolerance=1.2e-6,
+    max_epoch=10000,
 )
 
+# Generate the surface prototype configuration
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
 # Note, we do not include kinematic deviations in this scenario!
@@ -97,7 +108,7 @@ actuator1_prototype = ActuatorConfig(
     actuator_clockwise=False,
 )
 
-# Include a linear actuator.
+# Include a second ideal actuator.
 actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
     actuator_type=config_dictionary.ideal_actuator_key,
@@ -135,9 +146,6 @@ heliostat_list = [heliostat1]
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
-
-# The following parameter is the name of the scenario.
-file_path = f"{ARTIST_ROOT}/scenarios/tutorial_scenario"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
