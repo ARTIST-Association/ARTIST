@@ -7,7 +7,7 @@ from artist.field.actuator import (
 
 class IdealActuator(Actuator):
     """
-    This class implements the behavior of an ideal actuator.
+    Implements the behavior of an ideal actuator.
 
     Methods
     -------

@@ -3,7 +3,7 @@ import torch
 
 class Actuator(torch.nn.Module):
     """
-    This class implements the abstract behavior of an actuator.
+    Implements the abstract behavior of an actuator.
 
     Attributes
     ----------
@@ -15,8 +15,9 @@ class Actuator(torch.nn.Module):
         The stroke length change per motor step.
     initial_stroke_length : torch.Tensor
         The stroke length for a motor step of 0.
-    actuator_offset : torch.Tensor
-        The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+    offset : torch.Tensor
+        The offset between the linear actuator's pivoting point and the point
+        around which the actuator is allowed to pivot.
     radius : torch.Tensor
         The actuator's pivoting radius.
     phi_0 : torch.Tensor
@@ -38,7 +39,7 @@ class Actuator(torch.nn.Module):
         clockwise: bool,
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
-        actuator_offset: torch.Tensor,
+        offset: torch.Tensor,
         radius: torch.Tensor,
         phi_0: torch.Tensor,
     ) -> None:
@@ -55,8 +56,9 @@ class Actuator(torch.nn.Module):
             The stroke length change per motor step.
         initial_stroke_length : torch.Tensor
             The stroke length for a motor step of 0.
-        actuator_offset : torch.Tensor
-            The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+        offset : torch.Tensor
+            The offset between the linear actuator's pivoting point and the point
+            around which the actuator is allowed to pivot.
         radius : torch.Tensor
             The actuator's pivoting radius.
         phi_0 : torch.Tensor
@@ -67,7 +69,7 @@ class Actuator(torch.nn.Module):
         self.clockwise = clockwise
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
-        self.actuator_offset = actuator_offset
+        self.offset = offset
         self.radius = radius
         self.phi_0 = phi_0
 
@@ -103,9 +105,14 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self) -> torch.Tensor:
+    def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
         """
         Perform forward kinematic.
+
+        Parameters
+        ----------
+        actuator_pos : torch.Tensor
+            The position of the actuator.
 
         Raises
         ------

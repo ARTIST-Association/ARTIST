@@ -1,16 +1,51 @@
 import torch
 
-from artist.field.nurbs import NURBSSurface
+from artist.util.nurbs import NURBSSurface
+
+
+def random_surface(
+    e: torch.Tensor,
+    n: torch.Tensor,
+    u: torch.Tensor,
+    factor: float,
+) -> torch.Tensor:
+    """
+    Generate a random surface based on provided coefficients.
+
+    Parameters
+    ----------
+    e : torch.Tensor
+        The east coordinates.
+    n : torch.Tensor
+        The north coordinates.
+    u : torch.Tensor
+        The up coordinates.
+    factor : float
+        Factor determining how deformed the surface is.
+
+    Returns
+    -------
+    torch.Tensor
+        Random surface generated from the coefficients.
+    """
+    a, b, c, d, f, g = torch.randn(6)
+    return (
+        factor * a * torch.sin(e)
+        + factor * b * torch.sin(n)
+        + factor * c * torch.sin(u[..., 0])
+        + factor * d * torch.cos(e)
+        + factor * f * torch.cos(n)
+        + factor * g * torch.cos(u[..., 1])
+    )
 
 
 def test_nurbs() -> None:
     """
     Test the NURBS surface only, without raytracing.
 
-    First a random surface is generated, it consists of ``surface_points``.
+    First, a random surface is generated, it consists of ``surface_points``.
     Then, all the NURBS parameters are initialized (evaluation points, control points, degree,...)
-    Next, the NURBS surface is initialized accordingly and then it is fitted to the
-    random surface that was created in the beginning.
+    Next, the NURBS surface is initialized accordingly and fitted to the random surface created in the beginning.
     The control points of the NURBS surface are the parameters of the optimizer.
     """
     torch.manual_seed(7)
@@ -25,54 +60,9 @@ def test_nurbs() -> None:
 
     u = torch.stack((u1, u2), dim=-1)
 
-    def generate_random_coefficients() -> torch.Tensor:
-        """
-        Generate random coefficients for the surface.
-
-        Returns
-        -------
-        torch.Tensor
-            Random coefficients.
-        """
-        return torch.randn(6)
-
     factor = 0.1
 
-    def random_surface(
-        e: torch.Tensor, n: torch.Tensor, u: torch.Tensor, coefficients: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Generate a random surface based on provided coefficients.
-
-        Parameters
-        ----------
-        e : torch.Tensor
-            The east-coordinates.
-        n : torch.Tensor
-            The north-coordinates.
-        u : torch.Tensor
-            The up-coordinates.
-        coefficients : torch.Tensor
-            Coefficients to be used in generating the surface.
-
-        Returns
-        -------
-        torch.Tensor
-            Random surface generated from the coefficients.
-        """
-        a, b, c, d, e, f = coefficients
-        return (
-            factor * a * torch.sin(e)
-            + factor * b * torch.sin(n)
-            + factor * c * torch.sin(u[..., 0])
-            + factor * d * torch.cos(e)
-            + factor * e * torch.cos(n)
-            + factor * f * torch.cos(u[..., 1])
-        )
-
-    surface_coefficients = generate_random_coefficients()
-
-    surface = random_surface(e, n, u, surface_coefficients)
+    surface = random_surface(e=e, n=n, u=u, factor=factor)
     surface_points = torch.stack((e.flatten(), n.flatten(), surface.flatten()), dim=-1)
     ones = torch.ones(surface_points.shape[0], 1)
     surface_points = torch.cat((surface_points, ones), dim=1)
@@ -104,7 +94,7 @@ def test_nurbs() -> None:
     )
 
     control_points = torch.nn.parameter.Parameter(
-        (origin_offsets).reshape(control_points.shape)
+        origin_offsets.reshape(control_points.shape)
     )
 
     nurbs = NURBSSurface(

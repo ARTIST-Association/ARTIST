@@ -5,7 +5,7 @@ from artist.field.actuator import Actuator
 
 class LinearActuator(Actuator):
     """
-    This class implements the behavior of a linear actuator.
+    Implements the behavior of a linear actuator.
 
     Attributes
     ----------
@@ -17,8 +17,9 @@ class LinearActuator(Actuator):
         The stroke length change per motor step.
     initial_stroke_length : torch.Tensor
         The stroke length for a motor step of 0.
-    actuator_offset : torch.Tensor
-        The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+    offset : torch.Tensor
+        The offset between the linear actuator's pivoting point and the point
+        around which the actuator is allowed to pivot.
     radius : torch.Tensor
         The actuator's pivoting radius.
     phi_0 : torch.Tensor
@@ -46,7 +47,7 @@ class LinearActuator(Actuator):
         clockwise: bool,
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
-        actuator_offset: torch.Tensor,
+        offset: torch.Tensor,
         radius: torch.Tensor,
         phi_0: torch.Tensor,
     ) -> None:
@@ -63,8 +64,9 @@ class LinearActuator(Actuator):
             The stroke length change per motor step.
         initial_stroke_length : torch.Tensor
             The stroke length for a motor step of 0.
-        actuator_offset : torch.Tensor
-            The offset between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
+        offset : torch.Tensor
+            The offset between the linear actuator's pivoting point and the point
+            around which the actuator is allowed to pivot.
         radius : torch.Tensor
             The actuator's pivoting radius.
         phi_0 : torch.Tensor
@@ -75,7 +77,7 @@ class LinearActuator(Actuator):
             clockwise,
             increment,
             initial_stroke_length,
-            actuator_offset,
+            offset,
             radius,
             phi_0,
         )
@@ -83,7 +85,7 @@ class LinearActuator(Actuator):
         self.clockwise = clockwise
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
-        self.actuator_offset = actuator_offset
+        self.offset = offset
         self.radius = radius
         self.phi_0 = phi_0
 
@@ -102,8 +104,8 @@ class LinearActuator(Actuator):
             The calculated angle.
         """
         stroke_length = actuator_pos / self.increment + self.initial_stroke_length
-        calc_step_1 = self.actuator_offset**2 + self.radius**2 - stroke_length**2
-        calc_step_2 = 2.0 * self.actuator_offset * self.radius
+        calc_step_1 = self.offset**2 + self.radius**2 - stroke_length**2
+        calc_step_2 = 2.0 * self.offset * self.radius
         calc_step_3 = calc_step_1 / calc_step_2
         angle = torch.arccos(calc_step_3)
         return angle
@@ -149,11 +151,9 @@ class LinearActuator(Actuator):
         phi = phi_0 - delta_phi
 
         calc_step_3 = torch.cos(phi)
-        calc_step_2 = 2.0 * self.actuator_offset * self.radius
+        calc_step_2 = 2.0 * self.offset * self.radius
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_length = torch.sqrt(
-            self.actuator_offset**2 + self.radius**2 - calc_step_1
-        )
+        stroke_length = torch.sqrt(self.offset**2 + self.radius**2 - calc_step_1)
         actuator_steps = (stroke_length - self.initial_stroke_length) * self.increment
         return actuator_steps
 

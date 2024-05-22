@@ -1,0 +1,115 @@
+import torch
+
+from artist.util.nurbs import NURBSSurface
+
+
+class NurbsFacet(torch.nn.Module):
+    """
+    Facet modeled with a NURBS surface.
+
+    Attributes
+    ----------
+    control_points : torch.Tensor
+        The control points of the NURBS surface.
+    degree_e : int
+        The degree of the NURBS surface in the east direction.
+    degree_n : int
+        The degree of the NURBS surface in the north direction.
+    number_eval_points_e : int
+        The number of evaluation points for the NURBS surface in the east direction.
+    number_eval_points_n : int
+        The number of evaluation points for the NURBS surface in the north direction.
+    width : float
+        The width of the facet.
+    height : float
+        The height of the facet.
+    translation_vector : torch.Tensor
+        The translation_vector of the facet.
+    canting_e : torch.Tensor
+        The canting vector in the east direction of the facet.
+    canting_n : torch.Tensor
+        The canting vector in the north direction of the facet.
+    """
+
+    def __init__(
+        self,
+        control_points: torch.Tensor,
+        degree_e: int,
+        degree_n: int,
+        number_eval_points_e: int,
+        number_eval_points_n: int,
+        width: float,
+        height: float,
+        translation_vector: torch.Tensor,
+        canting_e: torch.Tensor,
+        canting_n: torch.Tensor,
+    ) -> None:
+        """
+        Initialize a NURBS facet.
+
+        Parameters
+        ----------
+        control_points : torch.Tensor
+            The control points of the NURBS surface.
+        degree_e : int
+            The degree of the NURBS surface in the east direction.
+        degree_n : int
+            The degree of the NURBS surface in the north direction.
+        number_eval_points_e : int
+            The number of evaluation points for the NURBS surface in the east direction.
+        number_eval_points_n : int
+            The number of evaluation points for the NURBS surface in the north direction.
+        width : float
+            The width of the facet.
+        height : float
+            The height of the facet.
+        translation_vector : torch.Tensor
+            The translation_vector of the facet.
+        canting_e : torch.Tensor
+            The canting vector in the east direction of the facet.
+        canting_n : torch.Tensor
+            The canting vector in the north direction of the facet.
+        """
+        super().__init__()
+        self.control_points = control_points
+        self.degree_e = degree_e
+        self.degree_n = degree_n
+        self.number_eval_points_e = number_eval_points_e
+        self.number_eval_points_n = number_eval_points_n
+        self.width = width
+        self.height = height
+        self.translation_vector = translation_vector
+        self.canting_e = canting_e
+        self.canting_n = canting_n
+
+    def create_nurbs_surface(self) -> NURBSSurface:
+        """
+        Create a NURBS surface to model a facet.
+
+        Returns
+        -------
+        NURBSSurface
+            The NURBS surface of one facet.
+        """
+        # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
+        # defined evaluation points.
+        evaluation_points_rows = torch.linspace(
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_e
+        )
+        evaluation_points_cols = torch.linspace(
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_n
+        )
+        evaluation_points = torch.cartesian_prod(
+            evaluation_points_rows, evaluation_points_cols
+        )
+        evaluation_points_e = evaluation_points[:, 0]
+        evaluation_points_n = evaluation_points[:, 1]
+
+        nurbs_surface = NURBSSurface(
+            self.degree_e,
+            self.degree_n,
+            evaluation_points_e,
+            evaluation_points_n,
+            self.control_points,
+        )
+        return nurbs_surface
