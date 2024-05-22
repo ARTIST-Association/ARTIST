@@ -58,7 +58,7 @@ class HeliostatField(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
-        prototype_surface  : SurfaceConfig
+        prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if the heliostat has no individual surface.
         prototype_kinematic : KinematicConfig
             The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
