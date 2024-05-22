@@ -1,163 +1,209 @@
 import math
 
-import h5py
 import torch
 
 from artist.util import config_dictionary
-from artist.util.scenario_generator import (
-    ActuatorDeviations,
+from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorParameters,
+    ActuatorPrototypeConfig,
+    FacetConfig,
+    HeliostatConfig,
     HeliostatListConfig,
-    KinematicDeviations,
     KinematicOffsets,
+    KinematicPrototypeConfig,
     LightSourceConfig,
+    LightSourceListConfig,
+    PrototypeConfig,
     ReceiverConfig,
-    ScenarioGenerator,
-    SingleHeliostatConfig,
+    ReceiverListConfig,
+    SurfacePrototypeConfig,
 )
+from artist.util.scenario_generator import ScenarioGenerator
 
 # Include the receiver configuration.
-receiver_config = ReceiverConfig(
-    receiver_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    plane_normal=torch.tensor([0.0, 1.0, 0.0, 0.0]),
-    plane_x=8.629666667,
-    plane_y=7.0,
-    resolution_x=256,
-    resolution_y=256,
+receiver1_config = ReceiverConfig(
+    receiver_key="receiver1",
+    receiver_type=config_dictionary.receiver_type_planar,
+    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    plane_e=8.629666667,
+    plane_u=7.0,
+    resolution_e=256,
+    resolution_u=256,
 )
+
+# Create list of receiver configs - in this case only one.
+receiver_list = [receiver1_config]
+
+# Include the configuration for the list of receivers.
+receiver_list_config = ReceiverListConfig(receiver_list=receiver_list)
 
 # Include the light source configuration.
-light_source_config = LightSourceConfig(
-    sun_number_of_rays=10,
-    sun_distribution_type=config_dictionary.sun_distribution_is_normal,
-    sun_mean=0.0,
-    sun_covariance=4.3681e-06,
+light_source1_config = LightSourceConfig(
+    light_source_key="sun1",
+    light_source_type=config_dictionary.sun_key,
+    number_of_rays=10,
+    distribution_type=config_dictionary.light_source_distribution_is_normal,
+    mean=0.0,
+    covariance=4.3681e-06,
 )
 
-# Include the kinematic deviations.
-kinematic_deviations = KinematicDeviations(
-    first_joint_translation_e=0.0,
-    first_joint_translation_n=0.0,
-    first_joint_translation_u=0.0,
-    first_joint_tilt_e=0.0,
-    first_joint_tilt_n=0.0,
-    first_joint_tilt_u=0.0,
-    second_joint_translation_e=0.0,
-    second_joint_translation_n=0.0,
-    second_joint_translation_u=0.0,
-    second_joint_tilt_e=0.0,
-    second_joint_tilt_n=0.0,
-    second_joint_tilt_u=0.0,
-    concentrator_translation_e=0.0,
-    concentrator_translation_n=0.0,
-    concentrator_translation_u=0.0,
-    concentrator_tilt_e=0.0,
-    concentrator_tilt_n=0.0,
-    concentrator_tilt_u=0.0,
+# Create a list of light source configs - in this case only one.
+light_source_list = [light_source1_config]
+
+# Include the configuration for the list of light sources.
+light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
+
+
+# Include four facets for the surface prototype.
+prototype_facet1_config = FacetConfig(
+    facet_key="facet1",
+    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    degree_e=2,
+    degree_n=2,
+    number_eval_points_e=10,
+    number_eval_points_n=10,
+    width=25.0,
+    height=25.0,
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
 )
+prototype_facet2_config = FacetConfig(
+    facet_key="facet2",
+    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    degree_e=2,
+    degree_n=2,
+    number_eval_points_e=10,
+    number_eval_points_n=10,
+    width=25.0,
+    height=25.0,
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+)
+prototype_facet3_config = FacetConfig(
+    facet_key="facet3",
+    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    degree_e=2,
+    degree_n=2,
+    number_eval_points_e=10,
+    number_eval_points_n=10,
+    width=25.0,
+    height=25.0,
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+)
+prototype_facet4_config = FacetConfig(
+    facet_key="facet4",
+    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    degree_e=2,
+    degree_n=2,
+    number_eval_points_e=10,
+    number_eval_points_n=10,
+    width=25.0,
+    height=25.0,
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+)
+
+# Create a list of prototype facets.
+prototype_facets_list = [
+    prototype_facet1_config,
+    prototype_facet2_config,
+    prototype_facet3_config,
+    prototype_facet4_config,
+]
+
+# Include the facet prototype config.
+surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_list)
+
+# Note, we do not include kinematic deviations in this scenario!
 
 # Include the initial orientation offsets for the kinematic.
-kinematic_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=math.pi / 2,
-    kinematic_initial_orientation_offset_n=0.0,
-    kinematic_initial_orientation_offset_u=0.0,
+kinematic_prototype_offsets = KinematicOffsets(
+    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
 )
 
-# Include the deviations for the actuator.
-actuator_deviations = ActuatorDeviations(
-    first_joint_increment=0.0,
-    first_joint_initial_stroke_length=0.0,
-    first_joint_actuator_offset=0.0,
-    first_joint_radius=0.0,
-    first_joint_phi_0=0.0,
-    second_joint_increment=0.0,
-    second_joint_initial_stroke_length=0.0,
-    second_joint_actuator_offset=0.0,
-    second_joint_radius=0.0,
-    second_joint_phi_0=0.0,
+# Include the kinematic prototype configuration.
+kinematic_prototype_config = KinematicPrototypeConfig(
+    kinematic_type=config_dictionary.rigid_body_key,
+    kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
 )
 
-# Include the configuration for the first heliostat.
-heliostat_1 = SingleHeliostatConfig(
-    heliostat_name="heliostat1",
-    heliostat_id=1,
-    alignment_type=config_dictionary.rigid_body_key,
+# Include an ideal actuator.
+actuator1_prototype = ActuatorConfig(
+    actuator_key="actuator1",
     actuator_type=config_dictionary.ideal_actuator_key,
+    actuator_clockwise=False,
+)
+
+# Include parameters for a linear actuator.
+actuator2_prototype_parameters = ActuatorParameters(
+    increment=torch.tensor(0.0),
+    initial_stroke_length=torch.tensor(0.0),
+    offset=torch.tensor(0.0),
+    radius=torch.tensor(0.0),
+    phi_0=torch.tensor(0.0),
+)
+
+# Include a linear actuator.
+actuator2_prototype = ActuatorConfig(
+    actuator_key="actuator2",
+    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_clockwise=True,
+    actuator_parameters=actuator2_prototype_parameters,
+)
+
+# Create a list of actuators.
+actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
+
+# Include the actuator prototype config.
+actuator_prototype_config = ActuatorPrototypeConfig(
+    actuator_list=actuator_prototype_list
+)
+
+# Include the final prototype config.
+prototype_config = PrototypeConfig(
+    surface_prototype=surface_prototype_config,
+    kinematic_prototype=kinematic_prototype_config,
+    actuator_prototype=actuator_prototype_config,
+)
+
+# Note, we do not include individual heliostat parameters in this scenario.
+
+# Include the configuration for three heliostats.
+heliostat1 = HeliostatConfig(
+    heliostat_key="heliostat1",
+    heliostat_id=1,
     heliostat_position=torch.tensor([-50.0, 5.0, 0.0, 1.0]),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    facets_type=config_dictionary.point_cloud_facet_key,
-    has_individual_surface_points=False,
-    has_individual_surface_normals=False,
-    heliostat_individual_surface_points=False,
-    heliostat_individual_surface_normals=False,
-    kinematic_deviations=kinematic_deviations,
-    kinematic_offsets=kinematic_offsets,
-    actuator_deviations=actuator_deviations,
 )
-
-# Include the configuration for the second heliostat.
-heliostat_2 = SingleHeliostatConfig(
-    heliostat_name="heliostat2",
+heliostat2 = HeliostatConfig(
+    heliostat_key="heliostat2",
     heliostat_id=2,
-    alignment_type=config_dictionary.rigid_body_key,
-    actuator_type=config_dictionary.ideal_actuator_key,
     heliostat_position=torch.tensor([25.0, 0.0, 0.0, 1.0]),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    facets_type=config_dictionary.point_cloud_facet_key,
-    has_individual_surface_points=False,
-    has_individual_surface_normals=False,
-    heliostat_individual_surface_points=False,
-    heliostat_individual_surface_normals=False,
-    kinematic_deviations=kinematic_deviations,
-    kinematic_offsets=kinematic_offsets,
-    actuator_deviations=actuator_deviations,
 )
-
-# Include the configuration for the third heliostat.
-heliostat_3 = SingleHeliostatConfig(
-    heliostat_name="heliostat3",
+heliostat3 = HeliostatConfig(
+    heliostat_key="heliostat3",
     heliostat_id=3,
-    alignment_type=config_dictionary.rigid_body_key,
-    actuator_type=config_dictionary.ideal_actuator_key,
     heliostat_position=torch.tensor([50.0, 5.0, 0.0, 1.0]),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    facets_type=config_dictionary.point_cloud_facet_key,
-    has_individual_surface_points=False,
-    has_individual_surface_normals=False,
-    heliostat_individual_surface_points=False,
-    heliostat_individual_surface_normals=False,
-    kinematic_deviations=kinematic_deviations,
-    kinematic_offsets=kinematic_offsets,
-    actuator_deviations=actuator_deviations,
 )
 
-# Create a list of all the heliostats -- in this case only one.
-all_heliostats = [heliostat_1, heliostat_2, heliostat_3]
-
-# Load general surface points measurement.
-general_surface_points = torch.tensor(
-    h5py.File(
-        "../measurement_data/test_data.h5",
-        "r",
-    )[config_dictionary.load_points_key][()]
-)
-
-# Load general surface normals measurement.
-general_surface_normals = torch.tensor(
-    h5py.File(
-        "../measurement_data/test_data.h5",
-        "r",
-    )[config_dictionary.load_normals_key][()]
-)
+# Create a list of all the heliostats.
+heliostat_list = [heliostat1, heliostat2, heliostat3]
 
 # Create the configuration for all heliostats.
-heliostats_list_config = HeliostatListConfig(
-    general_surface_points=general_surface_points,
-    general_surface_normals=general_surface_normals,
-    heliostat_list=all_heliostats,
-)
+heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
+
 
 # The following parameter is the name of the scenario.
-file_path = "./multiple_heliostat_scenario"
+file_path = "/path/to/scenario/scenario_name"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
@@ -165,8 +211,9 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
-        receiver_config=receiver_config,
-        light_source_config=light_source_config,
+        receiver_list_config=receiver_list_config,
+        light_source_list_config=light_source_list_config,
+        prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,
     )
 

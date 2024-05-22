@@ -1,21 +1,42 @@
+import logging
+
 import h5py
+import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
-from artist.field.receiver import Receiver
-from artist.scene import LightSource, Sun
+from artist.field.receiver_field import ReceiverField
+from artist.scene.light_source_array import LightSourceArray
+from artist.util import config_dictionary, set_logger_config
+from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorListConfig,
+    ActuatorParameters,
+    FacetConfig,
+    KinematicConfig,
+    KinematicDeviations,
+    KinematicOffsets,
+    SurfaceConfig,
+)
+
+set_logger_config()
+log = logging.getLogger(__name__)
 
 
 class Scenario:
     """
-    This class represents a scenario that is loaded by ARTIST.
+    Represents a scenario loaded by ARTIST.
+
+    A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
+    one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
+    scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
 
     Attributes
     ----------
-    receiver : Receiver
-        The receiver for the scenario.
-    light_source : LightSource
-        The light source for the scenario.
+    receivers : ReceiverField
+        A list of receivers included in the scenario.
+    light_sources : LightSourceArray
+        A list of light sources included in the scenario.
     heliostats : HeliostatField
         The heliostat field for the scenario.
 
@@ -27,8 +48,8 @@ class Scenario:
 
     def __init__(
         self,
-        receiver: Receiver,
-        light_source: LightSource,
+        receivers: ReceiverField,
+        light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
         """
@@ -36,15 +57,15 @@ class Scenario:
 
         Parameters
         ----------
-        receiver : Receiver
-            The receiver for the scenario.
-        light_source : LightSource
-            The light source for the scenario.
+        receivers : ReceiverField
+            A list of receivers included in the scenario.
+        light_sources : LightSourceArray
+            A list of light sources included in the scenario.
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
-        self.receiver = receiver
-        self.light_source = light_source
+        self.receivers = receivers
+        self.light_sources = light_sources
         self.heliostats = heliostat_field
 
     @classmethod
@@ -62,12 +83,548 @@ class Scenario:
         Scenario
             The ARTIST scenario loaded from the HDF5 file.
         """
-        receiver = Receiver.from_hdf5(config_file=scenario_file)
-        light_source = Sun.from_hdf5(config_file=scenario_file)
-        heliostat_field = HeliostatField.from_hdf5(config_file=scenario_file)
+        log.info(
+            f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+        )
+        receivers = ReceiverField.from_hdf5(config_file=scenario_file)
+        light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)
+
+        facets_list = [
+            FacetConfig(
+                facet_key="",
+                control_points=torch.tensor(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_control_points
+                    ][()],
+                    dtype=torch.float,
+                ),
+                degree_e=int(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_degree_e
+                    ][()]
+                ),
+                degree_n=int(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_degree_n
+                    ][()]
+                ),
+                number_eval_points_e=int(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_number_eval_e
+                    ][()]
+                ),
+                number_eval_points_n=int(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facet_number_eval_n
+                    ][()]
+                ),
+                width=float(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facets_width
+                    ][()]
+                ),
+                height=float(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facets_height
+                    ][()]
+                ),
+                translation_vector=torch.tensor(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facets_translation_vector
+                    ][()],
+                    dtype=torch.float,
+                ),
+                canting_e=torch.tensor(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facets_canting_e
+                    ][()],
+                    dtype=torch.float,
+                ),
+                canting_n=torch.tensor(
+                    scenario_file[config_dictionary.prototype_key][
+                        config_dictionary.surface_prototype_key
+                    ][config_dictionary.facets_key][facet][
+                        config_dictionary.facets_canting_n
+                    ][()],
+                    dtype=torch.float,
+                ),
+            )
+            for facet in scenario_file[config_dictionary.prototype_key][
+                config_dictionary.surface_prototype_key
+            ][config_dictionary.facets_key].keys()
+        ]
+        surface_prototype = SurfaceConfig(facets_list=facets_list)
+
+        # Create kinematic prototype.
+        kinematic_initial_orientation_offset_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
+        )
+        kinematic_initial_orientation_offset_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
+        )
+        kinematic_initial_orientation_offset_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_u}"
+        )
+        if kinematic_initial_orientation_offset_e is None:
+            log.warning(
+                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_e} set."
+                f"Using default values!"
+            )
+        if kinematic_initial_orientation_offset_n is None:
+            log.warning(
+                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_n} set."
+                f"Using default values!"
+            )
+        if kinematic_initial_orientation_offset_u is None:
+            log.warning(
+                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_u} set."
+                f"Using default values!"
+            )
+        kinematic_offsets = KinematicOffsets(
+            kinematic_initial_orientation_offset_e=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_e[()], dtype=torch.float
+                )
+                if kinematic_initial_orientation_offset_e
+                else torch.tensor(0.0)
+            ),
+            kinematic_initial_orientation_offset_n=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_n[()], dtype=torch.float
+                )
+                if kinematic_initial_orientation_offset_n
+                else torch.tensor(0.0)
+            ),
+            kinematic_initial_orientation_offset_u=(
+                torch.tensor(
+                    kinematic_initial_orientation_offset_u[()], dtype=torch.float
+                )
+                if kinematic_initial_orientation_offset_u
+                else torch.tensor(0.0)
+            ),
+        )
+
+        first_joint_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_e}"
+        )
+        first_joint_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_n}"
+        )
+        first_joint_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_translation_u}"
+        )
+        first_joint_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_e}"
+        )
+        first_joint_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_n}"
+        )
+        first_joint_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.first_joint_tilt_u}"
+        )
+        second_joint_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_e}"
+        )
+        second_joint_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_n}"
+        )
+        second_joint_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_translation_u}"
+        )
+        second_joint_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_e}"
+        )
+        second_joint_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_n}"
+        )
+        second_joint_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.second_joint_tilt_u}"
+        )
+        concentrator_translation_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_e}"
+        )
+        concentrator_translation_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_n}"
+        )
+        concentrator_translation_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_translation_u}"
+        )
+        concentrator_tilt_e = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_e}"
+        )
+        concentrator_tilt_n = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_n}"
+        )
+        concentrator_tilt_u = scenario_file.get(
+            f"{config_dictionary.prototype_key}/"
+            f"{config_dictionary.kinematic_prototype_key}/"
+            f"{config_dictionary.kinematic_deviations_key}/"
+            f"{config_dictionary.concentrator_tilt_u}"
+        )
+        if first_joint_translation_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_translation_e} set. Using default values!"
+            )
+        if first_joint_translation_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_translation_n} set. Using default values!"
+            )
+        if first_joint_translation_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_translation_u} set. Using default values!"
+            )
+        if first_joint_tilt_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_tilt_e} set. Using default values!"
+            )
+        if first_joint_tilt_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_tilt_n} set. Using default values!"
+            )
+        if first_joint_tilt_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.first_joint_tilt_u} set. Using default values!"
+            )
+        if second_joint_translation_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_translation_e} set. Using default values!"
+            )
+        if second_joint_translation_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_translation_n} set. Using default values!"
+            )
+        if second_joint_translation_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_translation_u} set. Using default values!"
+            )
+        if second_joint_tilt_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_tilt_e} set. Using default values!"
+            )
+        if second_joint_tilt_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_tilt_n} set. Using default values!"
+            )
+        if second_joint_tilt_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.second_joint_tilt_u} set. Using default values!"
+            )
+        if concentrator_translation_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_translation_e} set. Using default values!"
+            )
+        if concentrator_translation_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_translation_n} set. Using default values!"
+            )
+        if concentrator_translation_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_translation_u} set. Using default values!"
+            )
+        if concentrator_tilt_e is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_tilt_e} set. Using default values!"
+            )
+        if concentrator_tilt_n is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_tilt_n} set. Using default values!"
+            )
+        if concentrator_tilt_u is None:
+            log.warning(
+                f"No prototype kinematic {config_dictionary.concentrator_tilt_u} set. Using default values!"
+            )
+        kinematic_deviations = KinematicDeviations(
+            first_joint_translation_e=(
+                torch.tensor(first_joint_translation_e[()], dtype=torch.float)
+                if first_joint_translation_e
+                else torch.tensor(0.0)
+            ),
+            first_joint_translation_n=(
+                torch.tensor(first_joint_translation_n[()], dtype=torch.float)
+                if first_joint_translation_n
+                else torch.tensor(0.0)
+            ),
+            first_joint_translation_u=(
+                torch.tensor(first_joint_translation_u[()], dtype=torch.float)
+                if first_joint_translation_u
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_e=(
+                torch.tensor(first_joint_tilt_e[()], dtype=torch.float)
+                if first_joint_tilt_e
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_n=(
+                torch.tensor(first_joint_tilt_n[()], dtype=torch.float)
+                if first_joint_tilt_n
+                else torch.tensor(0.0)
+            ),
+            first_joint_tilt_u=(
+                torch.tensor(first_joint_tilt_u[()], dtype=torch.float)
+                if first_joint_tilt_u
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_e=(
+                torch.tensor(second_joint_translation_e[()], dtype=torch.float)
+                if second_joint_translation_e
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_n=(
+                torch.tensor(second_joint_translation_n[()], dtype=torch.float)
+                if second_joint_translation_n
+                else torch.tensor(0.0)
+            ),
+            second_joint_translation_u=(
+                torch.tensor(second_joint_translation_u[()], dtype=torch.float)
+                if second_joint_translation_u
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_e=(
+                torch.tensor(second_joint_tilt_e[()], dtype=torch.float)
+                if second_joint_tilt_e
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_n=(
+                torch.tensor(second_joint_tilt_n[()], dtype=torch.float)
+                if second_joint_tilt_n
+                else torch.tensor(0.0)
+            ),
+            second_joint_tilt_u=(
+                torch.tensor(second_joint_tilt_u[()], dtype=torch.float)
+                if second_joint_tilt_u
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_e=(
+                torch.tensor(concentrator_translation_e[()], dtype=torch.float)
+                if concentrator_translation_e
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_n=(
+                torch.tensor(concentrator_translation_n[()], dtype=torch.float)
+                if concentrator_translation_n
+                else torch.tensor(0.0)
+            ),
+            concentrator_translation_u=(
+                torch.tensor(concentrator_translation_u[()], dtype=torch.float)
+                if concentrator_translation_u
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_e=(
+                torch.tensor(concentrator_tilt_e[()], dtype=torch.float)
+                if concentrator_tilt_e
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_n=(
+                torch.tensor(concentrator_tilt_n[()], dtype=torch.float)
+                if concentrator_tilt_n
+                else torch.tensor(0.0)
+            ),
+            concentrator_tilt_u=(
+                torch.tensor(concentrator_tilt_u[()], dtype=torch.float)
+                if concentrator_tilt_u
+                else torch.tensor(0.0)
+            ),
+        )
+        kinematic_prototype = KinematicConfig(
+            kinematic_type=str(
+                scenario_file[config_dictionary.prototype_key][
+                    config_dictionary.kinematic_prototype_key
+                ][config_dictionary.kinematic_type][()].decode("utf-8")
+            ),
+            kinematic_initial_orientation_offsets=kinematic_offsets,
+            kinematic_deviations=kinematic_deviations,
+        )
+
+        # Create actuator prototype.
+        actuator_list = []
+        for ac in scenario_file[config_dictionary.prototype_key][
+            config_dictionary.actuator_prototype_key
+        ].keys():
+            increment = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_increment}"
+            )
+            initial_stroke_length = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_initial_stroke_length}"
+            )
+            offset = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_offset}"
+            )
+            radius = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_radius}"
+            )
+            phi_0 = scenario_file.get(
+                f"{config_dictionary.prototype_key}/"
+                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuator_parameters_key}/"
+                f"{config_dictionary.actuator_phi_0}"
+            )
+            if increment is None:
+                log.warning(
+                    f"No prototype {config_dictionary.actuator_increment} set for {ac}. Using default values!"
+                )
+            if initial_stroke_length is None:
+                log.warning(
+                    f"No prototype {config_dictionary.actuator_initial_stroke_length} set for {ac}. "
+                    f"Using default values!"
+                )
+            if offset is None:
+                log.warning(
+                    f"No prototype {config_dictionary.actuator_offset} set for {ac}. Using default values!"
+                )
+            if radius is None:
+                log.warning(
+                    f"No prototype {config_dictionary.actuator_radius} set for {ac}. Using default values!"
+                )
+            if phi_0 is None:
+                log.warning(
+                    f"No prototype {config_dictionary.actuator_phi_0} set for {ac}. Using default values!"
+                )
+
+            actuator_parameters = ActuatorParameters(
+                increment=(
+                    torch.tensor(increment[()], dtype=torch.float)
+                    if increment
+                    else torch.tensor(0.0)
+                ),
+                initial_stroke_length=(
+                    torch.tensor(initial_stroke_length[()], dtype=torch.float)
+                    if initial_stroke_length
+                    else torch.tensor(0.0)
+                ),
+                offset=(
+                    torch.tensor(offset[()], dtype=torch.float)
+                    if offset
+                    else torch.tensor(0.0)
+                ),
+                radius=(
+                    torch.tensor(radius[()], dtype=torch.float)
+                    if radius
+                    else torch.tensor(0.0)
+                ),
+                phi_0=(
+                    torch.tensor(phi_0[()], dtype=torch.float)
+                    if phi_0
+                    else torch.tensor(0.0)
+                ),
+            )
+            actuator_list.append(
+                ActuatorConfig(
+                    actuator_key="",
+                    actuator_type=str(
+                        scenario_file[config_dictionary.prototype_key][
+                            config_dictionary.actuator_prototype_key
+                        ][ac][config_dictionary.actuator_type_key][()].decode("utf-8")
+                    ),
+                    actuator_clockwise=bool(
+                        scenario_file[config_dictionary.prototype_key][
+                            config_dictionary.actuator_prototype_key
+                        ][ac][config_dictionary.actuator_clockwise][()]
+                    ),
+                    actuator_parameters=actuator_parameters,
+                )
+            )
+        actuator_prototype = ActuatorListConfig(actuator_list=actuator_list)
+
+        heliostat_field = HeliostatField.from_hdf5(
+            config_file=scenario_file,
+            prototype_surface=surface_prototype,
+            prototype_kinematic=kinematic_prototype,
+            prototype_actuator=actuator_prototype,
+        )
 
         return cls(
-            receiver=receiver,
-            light_source=light_source,
+            receivers=receivers,
+            light_sources=light_sources,
             heliostat_field=heliostat_field,
+        )
+
+    def __repr__(self) -> str:
+        """Return a string representation of the scenario."""
+        return (
+            f"ARTIST Scenario containing:\n\tReceivers: {len(self.receivers.receiver_list)}, \tLight Sources: "
+            f"{len(self.light_sources.light_source_list)},\t Heliostats: {len(self.heliostats.heliostat_list)}"
         )

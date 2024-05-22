@@ -8,16 +8,16 @@ from artist.util import config_dictionary
 
 
 def calculate_expected(
-    distribution_parameters_1: Dict[str, Any], further_parameters_1: Dict[str, int]
+    distribution_parameters: Dict[str, Any], further_parameters: Dict[str, int]
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate the expected distortions given the parameters from the test fixtures.
 
     Parameters
     ----------
-    distribution_parameters_1 : Dict[str, Any]
+    distribution_parameters : Dict[str, Any]
         The distribution parameters for the sun.
-    further_parameters_1 : Dict[str, int]
+    further_parameters : Dict[str, int]
         The further parameters for the test: number of heliostats, number of rays, number of points, and random seed.
 
     Returns
@@ -27,29 +27,27 @@ def calculate_expected(
     """
     mean = torch.tensor(
         [
-            distribution_parameters_1[config_dictionary.sun_mean],
-            distribution_parameters_1[config_dictionary.sun_mean],
+            distribution_parameters[config_dictionary.light_source_mean],
+            distribution_parameters[config_dictionary.light_source_mean],
         ],
         dtype=torch.float,
     )
     covariance = torch.tensor(
         [
-            [distribution_parameters_1[config_dictionary.sun_covariance], 0],
-            [0, distribution_parameters_1[config_dictionary.sun_covariance]],
+            [distribution_parameters[config_dictionary.light_source_covariance], 0],
+            [0, distribution_parameters[config_dictionary.light_source_covariance]],
         ],
         dtype=torch.float,
     )
-    torch.manual_seed(further_parameters_1["random_seed"])
+    torch.manual_seed(further_parameters["random_seed"])
     distribute = torch.distributions.MultivariateNormal(mean, covariance)
     distort_u, distort_e = distribute.sample(
         (
-            int(
-                further_parameters_1["num_heliostats"]
-                * further_parameters_1["num_rays"]
-            ),
-            further_parameters_1["num_points"],
+            int(further_parameters["num_heliostats"] * further_parameters["num_rays"]),
+            further_parameters["num_facets"],
+            further_parameters["num_points"],
         ),
-    ).permute(2, 0, 1)
+    ).permute(3, 0, 1, 2)
     return distort_u, distort_e
 
 
@@ -57,9 +55,9 @@ def calculate_expected(
 def distribution_parameters_1() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 0,
-        config_dictionary.sun_covariance: 1,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 0,
+        config_dictionary.light_source_covariance: 1,
     }
 
 
@@ -67,9 +65,9 @@ def distribution_parameters_1() -> Dict[str, Any]:
 def distribution_parameters_2() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 0,
-        config_dictionary.sun_covariance: 0.004596,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 0,
+        config_dictionary.light_source_covariance: 0.004596,
     }
 
 
@@ -77,9 +75,9 @@ def distribution_parameters_2() -> Dict[str, Any]:
 def distribution_parameters_3() -> Dict[str, Any]:
     """Fixture that returns distribution parameters for the sun."""
     return {
-        config_dictionary.sun_distribution_type: config_dictionary.sun_distribution_is_normal,
-        config_dictionary.sun_mean: 10,
-        config_dictionary.sun_covariance: 15,
+        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
+        config_dictionary.light_source_mean: 10,
+        config_dictionary.light_source_covariance: 15,
     }
 
 
@@ -89,6 +87,7 @@ def further_parameters_1() -> Dict[str, int]:
     return {
         "num_rays": 100,
         "num_points": 50,
+        "num_facets": 4,
         "num_heliostats": 1,
         "random_seed": 7,
     }
@@ -100,6 +99,7 @@ def further_parameters_2() -> Dict[str, int]:
     return {
         "num_rays": 100,
         "num_points": 50,
+        "num_facets": 7,
         "num_heliostats": 5,
         "random_seed": 7,
     }
@@ -111,6 +111,7 @@ def further_parameters_3() -> Dict[str, int]:
     return {
         "num_rays": 20,
         "num_points": 300,
+        "num_facets": 3,
         "num_heliostats": 8,
         "random_seed": 77,
     }
@@ -131,23 +132,23 @@ def further_parameters_3() -> Dict[str, int]:
     ],
 )
 def test_light_sources(
-    request: Any,
+    request: pytest.FixtureRequest,
     light_source: str,
-    distribution_parameters_fixture: Dict[str, Any],
-    further_parameters_fixture: Dict[str, int],
+    distribution_parameters_fixture: str,
+    further_parameters_fixture: str,
 ) -> None:
     """
     Test the light sources by generating distortions and ensuring these are as expected.
 
     Parameters
     ----------
-    request : Any
+    request : pytest.FixtureRequest
         The pytest request.
     light_source : str
         Indicates which light source is tested.
-    distribution_parameters_fixture : Dict[str, Any]
+    distribution_parameters_fixture : str
         The pytest fixture containing the distribution parameters.
-    further_parameters_fixture : Dict[str, int]
+    further_parameters_fixture : str
         The pytest fixture containing the further test parameters.
     """
     # Load further params dict.
@@ -159,11 +160,12 @@ def test_light_sources(
             distribution_parameters=request.getfixturevalue(
                 distribution_parameters_fixture
             ),
-            ray_count=further_params_dict["num_rays"],
+            number_of_rays=further_params_dict["num_rays"],
         )
         distortions_u, distortions_e = sun.get_distortions(
             number_of_points=further_params_dict["num_points"],
             number_of_heliostats=further_params_dict["num_heliostats"],
+            number_of_facets=further_params_dict["num_facets"],
             random_seed=further_params_dict["random_seed"],
         )
         expected_u, expected_e = calculate_expected(

@@ -1,65 +1,40 @@
-# Dictionary for loading measurement data
-load_normals_key = "surface_normals"
-load_points_key = "surface_points"
-load_surface_position_key = "surface_position"
-load_facet_positions_key = "facet_positions"
-load_facet_spans_n_key = "facet_spans_n"
-load_facet_spans_e_key = "facet_spans_e"
-load_surface_ideal_vectors_key = "surface_ideal_vectors"
-measurement_location = "measurement_data"
+# Dictionary for receiver.
+receiver_type = "type"
+receiver_position_center = "position_center"
+receiver_normal_vector = "normal_vector"
+receiver_plane_e = "plane_e"
+receiver_plane_u = "plane_u"
+receiver_resolution_e = "resolution_e"
+receiver_resolution_u = "resolution_u"
+receiver_curvature_e = "curvature_e"
+receiver_curvature_u = "curvature_u"
+receiver_type_planar = "planar"
 
-# Dictionary for heliostats
-heliostat_prefix = "heliostats"
-general_surface_points = "general_surface_points"
-general_surface_normals = "general_surface_normals"
-heliostat_names = "heliostat_names"
-heliostats_list = "heliostats_list"
-heliostat_id = "id"
-heliostat_position = "position"
-alignment_parameters_key = "alignment_parameters"
-heliostat_aim_point = "aim_point"
-alignment_type_key = "alignment_type"
-actuator_type_key = "actuator_type"
-concentrator_parameters_key = "concentrator_parameters"
-facets_type_key = "facets_type"
-heliostat_parameters = "parameters"
-has_individual_surface_points = "has_individual_surface_points"
-has_individual_surface_normals = "has_individual_surface_normals"
-heliostat_individual_surface_points = "individual_surface_points"
-heliostat_individual_surface_normals = "individual_surface_normals"
-heliostat_height = "height"
-heliostat_width = "width"
-facets_list = "facets_list"
-facet_position = "position"
-facet_span_north = "span_north"
-facet_span_east = "span_east"
+# Dictionary for light source.
+light_source_prefix = "lightsource"
+light_source_type = "type"
+sun_key = "sun"
+light_source_number_of_rays = "number_of_rays"
+light_source_distribution_parameters = "distribution_parameters"
+light_source_distribution_type = "distribution_type"
+light_source_distribution_is_normal = "normal"
+light_source_mean = "mean"
+light_source_covariance = "covariance"
 
-# Dictionary for receiver
-receiver_prefix = "receiver"
-receiver_center = "center"
-receiver_plane_normal = "plane_normal"
-receiver_plane_x = "plane_x"
-receiver_plane_y = "plane_y"
-receiver_resolution_x = "resolution_x"
-receiver_resolution_y = "resolution_y"
+# Dictionary for facets.
+facets_key = "facets"
+facet_control_points = "control_points_e"
+facet_degree_e = "degree_e"
+facet_degree_n = "degree_n"
+facet_number_eval_e = "number_eval_e"
+facet_number_eval_n = "number_eval_n"
+facets_width = "width"
+facets_height = "height"
+facets_translation_vector = "position"
+facets_canting_e = "canting_e"
+facets_canting_n = "canting_n"
 
-# Dictionary for sun
-sun_prefix = "sun"
-sun_distribution_parameters = "distribution_parameters"
-sun_distribution_type = "distribution_type"
-sun_distribution_is_normal = "normal"
-sun_mean = "mean"
-sun_covariance = "covariance"
-sun_number_of_rays = "number_of_rays"
-
-
-# Dict for type_mapping
-rigid_body_key = "rigid_body"
-point_cloud_facet_key = "point_cloud_facet"
-ideal_actuator_key = "ideal_actuator"
-
-# Dict for kinematic deviation parameters
-kinematic_deviation_key = "kinematic_deviation_parameters"
+# Dictionary for kinematic deviation parameters.
 first_joint_translation_e = "first_joint_translation_e"
 first_joint_translation_n = "first_joint_translation_n"
 first_joint_translation_u = "first_joint_translation_u"
@@ -79,21 +54,50 @@ concentrator_tilt_e = "concentrator_tilt_e"
 concentrator_tilt_n = "concentrator_tilt_n"
 concentrator_tilt_u = "concentrator_tilt_u"
 
-# Parameter for orientation offset for the kinematic
-kinematic_initial_orientation_offset_key = "kinematic_initial_orientation_offset_key"
+# Dictionary for the orientation offset for the kinematic.
 kinematic_initial_orientation_offset_e = "initial_kinematic_orientation_offset_e"
 kinematic_initial_orientation_offset_n = "initial_kinematic_orientation_offset_n"
 kinematic_initial_orientation_offset_u = "initial_kinematic_orientation_offset_u"
 
-# Dict for actuator parameters
-actuator_parameters_key = "actuator_parameters_key"
-first_joint_increment = "first_joint_increment"
-first_joint_initial_stroke_length = "first_joint_initial_stroke_length"
-first_joint_actuator_offset = "first_joint_actuator_offset"
-first_joint_radius = "first_joint_radius"
-first_joint_phi_0 = "first_joint_phi_0"
-second_joint_increment = "second_joint_increment"
-second_joint_initial_stroke_length = "second_joint_initial_stroke_length"
-second_joint_actuator_offset = "second_joint_actuator_offset"
-second_joint_radius = "second_joint_radius"
-second_joint_phi_0 = "second_joint_phi_0"
+# Dictionary for the kinematic config.
+kinematic_type = "type"
+rigid_body_key = "rigid_body"
+kinematic_offsets_key = "kinematic_offsets"
+kinematic_deviations_key = "kinematic_deviations"
+
+# Dictionary for actuator parameters.
+actuator_clockwise = "clockwise"
+actuator_increment = "actuator_increment"
+actuator_initial_stroke_length = "initial_stroke_length"
+actuator_offset = "offset"
+actuator_radius = "radius"
+actuator_phi_0 = "phi_0"
+
+# Dictionary for actuator config.
+actuator_type_key = "actuator_type"
+actuator_parameters_key = "actuator_parameters"
+ideal_actuator_key = "ideal_actuator"
+linear_actuator_key = "linear_actuator"
+
+# Dictionary for prototypes config.
+surface_prototype_key = "surface"
+kinematic_prototype_key = "kinematic"
+actuator_prototype_key = "actuator"
+
+# Dictionary for heliostats
+heliostat_id = "id"
+heliostat_position = "position"
+heliostat_aim_point = "aim_point"
+heliostat_surface_key = "surface"
+heliostat_kinematic_key = "kinematic"
+heliostat_actuator_key = "actuator"
+
+# Dictionary for scenario.
+prototype_key = "prototypes"
+receiver_key = "receivers"
+light_source_key = "lightsources"
+heliostat_key = "heliostats"
+
+# Dictionary for NURBS converters.
+convert_nurbs_from_points = "point_cloud"
+convert_nurbs_from_normals = "deflectometry"

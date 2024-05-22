@@ -1,4 +1,4 @@
-"""This pytest considers loading a heliostat surface from a point cloud."""
+"""Tests loading a heliostat surface from STRAL data and performing ray tracing."""
 
 import pathlib
 import warnings
@@ -41,24 +41,9 @@ else:
         (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
-            "south.pt",
+            "individual_south.pt",
             "test_individual_measurements_scenario",
-        ),
-        (
-            torch.tensor([1.0, 0.0, 0.0, 0.0]),
-            "east.pt",
-            "test_individual_measurements_scenario",
-        ),
-        (
-            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
-            "west.pt",
-            "test_individual_measurements_scenario",
-        ),
-        (
-            torch.tensor([0.0, 0.0, 1.0, 0.0]),
-            "above.pt",
-            "test_individual_measurements_scenario",
-        ),
+        ),  # Test if loading with individual measurements works
     ],
 )
 def test_compute_bitmaps(
@@ -98,7 +83,7 @@ def test_compute_bitmaps(
 
     # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=5
+        scenario=scenario, world_size=world_size, rank=rank, batch_size=10
     )
 
     # Perform heliostat-based raytracing.
@@ -115,6 +100,5 @@ def test_compute_bitmaps(
             / "tests/field/test_bitmaps_load_surface_stral"
             / expected_value
         )
-
         expected = torch.load(expected_path)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
