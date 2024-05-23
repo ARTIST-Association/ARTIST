@@ -23,7 +23,7 @@ from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
 # The following parameter is the name of the scenario.
-file_path = "Pease/enter/your/file/path!"
+file_path = "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
 if not Path(file_path).parent.is_dir():
@@ -77,12 +77,14 @@ stral_converter = StralToSurfaceConverter(
 facet_prototype_list = stral_converter.generate_surface_config_from_stral(
     number_eval_points_e=200,
     number_eval_points_n=200,
-    number_control_points_e=10,
-    number_control_points_n=10,
-    degree_e=2,
-    degree_n=2,
-    tolerance=1.2e-6,
+    conversion_method=config_dictionary.convert_nurbs_from_normals,
+    number_control_points_e=20,
+    number_control_points_n=20,
+    degree_e=3,
+    degree_n=3,
+    tolerance=3e-5,
     max_epoch=10000,
+    initial_learning_rate=1e-3,
 )
 
 # Generate the surface prototype configuration
