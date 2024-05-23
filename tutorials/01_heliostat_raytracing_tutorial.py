@@ -106,21 +106,11 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 # Show the plot
 plt.show()
 
-
-# Calculate the preferred reflection direction.
-single_heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction_south)
-
-# Inspect if the shape of the surface points and the preferred reflection direction is identical.
-print(
-    single_heliostat.current_aligned_surface_points.shape
-    == single_heliostat.preferred_reflection_direction.shape
-)
-
 # Define the raytracer.
 raytracer = HeliostatRayTracer(scenario=example_scenario, batch_size=100)
 
 # Perform heliostat-based raytracing.
-image_south = raytracer.trace_rays()
+image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south)
 image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
@@ -130,9 +120,9 @@ tight_layout()
 
 
 # Define helper functions to enable us to repeat the process!
-def align_reflect_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
+def align_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
     """
-    Align the heliostat, calculate the preferred reflection direction, and perform heliostat raytracing.
+    Align the heliostat and perform heliostat raytracing.
 
     Parameters
     ----------
@@ -145,8 +135,9 @@ def align_reflect_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
     single_heliostat.set_aligned_surface(incident_ray_direction=light_direction)
-    single_heliostat.set_preferred_reflection_direction(rays=-light_direction)
-    return raytracer.normalize_bitmap(raytracer.trace_rays())
+    return raytracer.normalize_bitmap(
+        raytracer.trace_rays(incident_ray_direction=light_direction)
+    )
 
 
 def plot_multiple_images(
@@ -202,9 +193,9 @@ incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0])
 incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0])
 
 # Perform alignment and raytracing to generate flux density images.
-image_east = align_reflect_and_trace_rays(light_direction=incident_ray_direction_east)
-image_west = align_reflect_and_trace_rays(light_direction=incident_ray_direction_west)
-image_above = align_reflect_and_trace_rays(light_direction=incident_ray_direction_above)
+image_east = align_and_trace_rays(light_direction=incident_ray_direction_east)
+image_west = align_and_trace_rays(light_direction=incident_ray_direction_west)
+image_above = align_and_trace_rays(light_direction=incident_ray_direction_above)
 
 # Plot the resulting images
 plot_multiple_images(
