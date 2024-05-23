@@ -1,4 +1,4 @@
-.. heliostat_raytracing:
+.. _heliostat_raytracing:
 
 ``ARTIST`` Tutorial: Heliostat Raytracing
 =========================================
@@ -17,9 +17,9 @@ will run through some basic concepts necessary to understanding ``ARTIST`` inclu
 Loading a Scenario
 ------------------
 Before we load the scenario you need to decide which scenario file to use. This tutorial is based on a simple scenario
-which you can create in the previous tutorial on generating a scenario. However, since generating a scenario involves
-training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided the scenario file online
-for your convenience.
+which you can create in the tutorial on :ref:`generating a scenario <generating_scenario>`. However, since generating a
+scenario involves training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided the
+scenario file online for your convenience.
 
 Therefore, the first step is to decide if you want to use your previously created scenario or the online version. If
 you want to use the online version you must adjust the boolean ``DOWNLOAD_DATA`` to ``True``. If not you need to adjust
@@ -162,7 +162,7 @@ We can compare the original surface and the aligned surface in the following plo
    :align: center
 
 Since both the receiver and the sun are directly to the south of the heliostat, this alignment is completely plausible.
-The heliostat is rotated 90 degrees along the North axis to reflect the sunlight back in the direction it is coming
+The heliostat is rotated 90 degrees along the east axis to reflect the sunlight back in the direction it is coming
 from.
 
 Raytracing
