@@ -1,7 +1,7 @@
-.. coordinates:
+.. _coordinates:
 
 An Important Note on ``ARTIST`` Coordinates
-=======================================
+===========================================
 
 ``ARTIST`` uses the East, North, Up (ENU) coordinate system in a **four-dimensional** format. To understand these
 implications let us consider two example tensors:
