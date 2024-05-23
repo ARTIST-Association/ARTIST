@@ -77,9 +77,6 @@ def test_compute_bitmaps(
     scenario.heliostats.heliostat_list[0].set_aligned_surface(
         incident_ray_direction=incident_ray_direction
     )
-    scenario.heliostats.heliostat_list[0].set_preferred_reflection_direction(
-        rays=-incident_ray_direction
-    )
 
     # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
@@ -87,7 +84,7 @@ def test_compute_bitmaps(
     )
 
     # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays()
+    final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction)
 
     # Apply all-reduce if MPI is used.
     if MPI is not None:
