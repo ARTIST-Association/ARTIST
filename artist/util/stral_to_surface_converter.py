@@ -7,6 +7,7 @@ from typing import List
 import colorlog
 import torch
 
+from artist.util import config_dictionary
 from artist.util.configuration_classes import FacetConfig
 from artist.util.nurbs import NURBSSurface
 
@@ -189,6 +190,7 @@ class StralToSurfaceConverter:
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        conversion_method: str,
         number_control_points_e: int = 10,
         number_control_points_n: int = 10,
         degree_e: int = 2,
@@ -212,6 +214,8 @@ class StralToSurfaceConverter:
             The surface points given as an (N, 4) tensor.
         surface_normals : torch.Tensor
             The surface normals given as an (N, 4) tensor.
+        conversion_method : str
+            The conversion method used to learn the NURBS.
         number_control_points_e : int
             Number of NURBS control points to be set in the east (first) direction (default: 10).
         number_control_points_n : int
@@ -290,17 +294,21 @@ class StralToSurfaceConverter:
 
             optimizer.zero_grad()
 
-            loss = (
-                (points - surface_points).abs().mean()
-                + (normals - surface_normals).abs().mean()
-            ).mean()
+            if conversion_method == config_dictionary.convert_nurbs_from_points:
+                loss = (points - surface_points).abs().mean()
+            elif conversion_method == config_dictionary.convert_nurbs_from_normals:
+                loss = (normals - surface_normals).abs().mean()
+            else:
+                raise NotImplementedError(
+                    f"Conversion method {conversion_method} not yet implemented!"
+                )
             loss.backward()
 
             optimizer.step()
             scheduler.step(loss.abs().mean())
             if epoch % 100 == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}",
+                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}",
                 )
             epoch += 1
 
@@ -310,6 +318,7 @@ class StralToSurfaceConverter:
         self,
         number_eval_points_e: int,
         number_eval_points_n: int,
+        conversion_method: str,
         number_control_points_e: int = 10,
         number_control_points_n: int = 10,
         degree_e: int = 2,
@@ -327,6 +336,8 @@ class StralToSurfaceConverter:
             The number of evaluation points in the east direction used to generate a discrete surface from NURBS.
         number_eval_points_n : int
             The number of evaluation points in the north direction used to generate a discrete surface from NURBS.
+        conversion_method : str
+            The conversion method used to learn the NURBS.
         number_control_points_e : int
             Number of NURBS control points in the east direction (default: 10).
         number_control_points_n : int
@@ -427,6 +438,10 @@ class StralToSurfaceConverter:
         facet_translation_vectors = self.convert_3d_direction_to_4d_format(
             facet_translation_vectors
         )
+        # If we are learning the surface points from STRAL we do not need to translate the facets.
+        if conversion_method == config_dictionary.convert_nurbs_from_points:
+            facet_translation_vectors = torch.zeros(facet_translation_vectors.shape)
+        # Convert to 4D format.
         canting_n = self.convert_3d_direction_to_4d_format(canting_n)
         canting_e = self.convert_3d_direction_to_4d_format(canting_e)
         surface_points_with_facets = self.convert_3d_points_to_4d_format(
@@ -444,6 +459,7 @@ class StralToSurfaceConverter:
             nurbs_surface = self.fit_nurbs_surface(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
+                conversion_method=conversion_method,
                 number_control_points_e=number_control_points_e,
                 number_control_points_n=number_control_points_n,
                 degree_e=degree_e,
