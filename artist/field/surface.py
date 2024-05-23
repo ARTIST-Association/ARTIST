@@ -69,6 +69,6 @@ class Surface(torch.nn.Module):
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals()
-            surface_points[i] = facet_points  # + facet.translation_vector
+            surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals
