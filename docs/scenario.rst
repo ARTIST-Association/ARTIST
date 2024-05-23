@@ -1,4 +1,4 @@
-.. scenario:
+.. _scenario:
 
 The Scenario HDF5 File Format
 =============================
@@ -15,7 +15,7 @@ way to store, manage, and access complex data structures, which is why they are 
 and data analysis applications.
 
 The Scenario structure of ``ARTIST`` has four main elements:
-Whilst this scenario structure seems complicated, the key elements are quite simple:
+
    - **Receivers:** Every scenario in ``ARTIST`` contains at least one receiver. The receiver is the object where the
      light is concentrated and resulting heat energy used to generate electricity or for industrial processes. A
      ``Receiver`` object contains information such as the position, the type, whether the receiver is curved or not etc.
