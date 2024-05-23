@@ -4,11 +4,11 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.field.heliostat_field import HeliostatField
-from artist.field.receiver_field import ReceiverField
-from artist.scene.light_source_array import LightSourceArray
-from artist.util import config_dictionary, set_logger_config
-from artist.util.configuration_classes import (
+from .field.heliostat_field import HeliostatField
+from .field.receiver_field import ReceiverField
+from .scene.light_source_array import LightSourceArray
+from .util import config_dictionary, set_logger_config
+from .util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorParameters,
