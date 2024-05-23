@@ -16,7 +16,7 @@ DOWNLOAD_DATA = False
 scenario_name = "please/insert/the/path/to/the/scenario/here/name.h5"
 
 if DOWNLOAD_DATA:
-    url = "https://drive.google.com/uc?export=download&id=1C3mG_RpatF27rZaWyUWcyUVlcTadT8FH"
+    url = "https://drive.google.com/uc?export=download&id=1WSJyabylkK8cMDgulymVP5nPNGNf_BzN"
     output_filename = "tutorial_scenario.h5"
     command = ["wget", "-O", output_filename, url]
     result = subprocess.run(command, capture_output=True, text=True)
