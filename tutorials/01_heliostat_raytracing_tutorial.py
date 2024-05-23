@@ -12,17 +12,19 @@ from artist.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be downloaded for this tutorial!
-USE_DOWNLOADED_DATA = False
+DOWNLOAD_DATA = False
+scenario_name = "please/insert/the/path/to/the/scenario/here/name.h5"
 
-if USE_DOWNLOADED_DATA:
+if DOWNLOAD_DATA:
     url = "https://drive.google.com/uc?export=download&id=1C3mG_RpatF27rZaWyUWcyUVlcTadT8FH"
     output_filename = "tutorial_scenario.h5"
     command = ["wget", "-O", output_filename, url]
     result = subprocess.run(command, capture_output=True, text=True)
+    scenario_name = output_filename
 
 
 # Load the scenario.
-with h5py.File("tutorial_scenario.h5", "r") as f:
+with h5py.File(scenario_name, "r") as f:
     example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f)
 
 # Inspect the secnario.
