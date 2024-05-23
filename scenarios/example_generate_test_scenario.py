@@ -23,7 +23,7 @@ from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
 # The following parameter is the name of the scenario.
-file_path = "Pease/enter/your/file/path!"
+file_path = "please/insert/the/file/path/here/name"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -77,12 +77,14 @@ stral_converter = StralToSurfaceConverter(
 facet_prototype_list = stral_converter.generate_surface_config_from_stral(
     number_eval_points_e=100,
     number_eval_points_n=100,
-    number_control_points_e=15,
-    number_control_points_n=15,
-    degree_e=4,
-    degree_n=4,
-    tolerance=1e-7,
-    max_epoch=5000,
+    conversion_method=config_dictionary.convert_nurbs_from_normals,
+    number_control_points_e=20,
+    number_control_points_n=20,
+    degree_e=3,
+    degree_n=3,
+    tolerance=3e-5,
+    max_epoch=10000,
+    initial_learning_rate=1e-3,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
