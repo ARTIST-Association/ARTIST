@@ -11,13 +11,8 @@ For best results, we recommend installing ``ARTIST`` in a separate virtual envir
    $ source ./ARTIST/bin/activate
    $ pip install --upgrade pip
 
-The latest stable release can easily be installed from `PyPI`_ using ``pip``:
-
-.. code-block:: console
-
-    $ pip install artist
-
-If you need the latest updates, you can also install ``ARTIST`` directly from the `Github main branch`_ at you own risk:
+Since ``ARTIST`` is still under development and therefore not yet available via `PyPI`_ we suggest installing ``ARTIST``
+directly from the `Github main branch`_ using ``pip``:
 
 .. code-block:: console
 
