@@ -152,7 +152,7 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
-            self.heliostat.preferred_reflection_direction.size(1)
+            self.heliostat.current_aligned_surface_points.size(1)
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -175,7 +175,7 @@ class HeliostatRayTracer:
             sampler=distortions_sampler,
         )
 
-    def trace_rays(self) -> torch.Tensor:
+    def trace_rays(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
         Perform heliostat raytracing.
 
@@ -190,6 +190,9 @@ class HeliostatRayTracer:
         final_bitmap = torch.zeros(
             (self.receiver.resolution_e, self.receiver.resolution_u)
         )
+
+        self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
+
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(
                 batch_u,
