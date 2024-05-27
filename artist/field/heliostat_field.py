@@ -14,6 +14,7 @@ from artist.util.configuration_classes import (
 )
 
 log = logging.getLogger(__name__)
+"""A logger for the heliostat field."""
 
 
 class HeliostatField(torch.nn.Module):
@@ -34,6 +35,10 @@ class HeliostatField(torch.nn.Module):
     def __init__(self, heliostat_list: List[Heliostat]):
         """
         Initialize the heliostat field.
+
+        A heliostat field consists of many heliostats that have a unique position in the field. The
+        helisotats in the field are aligned individually to reflect the incoming light in a way that
+        ensures maximum efficiency for the whole power plant.
 
         Parameters
         ----------
