@@ -54,15 +54,14 @@ class LinearActuator(Actuator):
         """
         Initialize a linear actuator.
 
-        A linear actuator describes movement within a 2D plane and is responsible for turning the heliostat
-        surface in such a way that the heliostat reflects the incoming light onto the aim point on the receiver.
-        As there can be multiple actuators for a single heliostat, each actuator is labled with a joint number.
-        The clockwise attribute describes the turning direction of the actuator. The linear actuator is further
-        parametrized by five parameters. These are the increment, which stores the information about the stroke
-        length change per motor step, the initial stroke length, and an offset that describes the difference
-        between the linear actuator's pivoting point and the point around which the actuator is allowed to pivot.
-        Next the actuator's pivoting radius is described by the radius and lastly phi 0 indicates the angle that
-        the actuator introduces to the manipulated coordinate system at the initial stroke length.
+        A linear actuator describes movement within a 2D plane. As there can be multiple actuators for a single
+        heliostat, each actuator is labled with a joint number. The clockwise attribute describes the turning
+        direction of the actuator. The linear actuator is further parametrized by five parameters. These are the
+        increment, which stores the information about the stroke length change per motor step, the initial stroke
+        length, and an offset that describes the difference between the linear actuator's pivoting point and the
+        point around which the actuator is allowed to pivot. Next the actuator's pivoting radius is described by
+        the radius and lastly phi 0 indicates the angle that the actuator introduces to the manipulated coordinate
+        system at the initial stroke length.
 
         Parameters
         ----------
