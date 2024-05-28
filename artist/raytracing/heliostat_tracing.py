@@ -35,6 +35,12 @@ class DistortionsDataset(Dataset):
         """
         Initialize the dataset.
 
+        This class implements a custom dataset according to the torch interface. The content of this
+        dataset are the distortions. The distortions are used in our version of "helisotat"-tracing to
+        indicate how each incoming ray must be multiplied and scattered on the heliostat. According to
+        torch this dataset must implement a function to return the length of the dataset and one function
+        to retrieve an element thorugh an index.
+
         Parameters
         ----------
         light_source : LightSource
@@ -131,6 +137,11 @@ class HeliostatRayTracer:
     ) -> None:
         """
         Initialize the heliostat raytracer.
+
+        "Heliostat"-tracing is one kind of raytracing applied in ARTIST. For this kind of raytracing,
+        the rays are initialized on the heliostat. The rays originate in the discrete surface points.
+        There they are mutliplied, distorted and scattered and then they are send to the receiver. Letting
+        the rays originate on the heliostat, drastically reduces the amount of rays that need to be traced.
 
         Parameters
         ----------

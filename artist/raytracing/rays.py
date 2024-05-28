@@ -19,6 +19,11 @@ class Rays:
         """
         Initialize the ``Rays`` class.
 
+        The rays in ARTIST have a direction vector and a magnitude. They are used for raytracing.
+        The direction vector determines where the rays come from and where they hit a surface while
+        the magnitude is important for considering atmospheric loses and cloud coverage. If a ray
+        travels through a cloud the magnitude changes.
+
         Parameters
         ----------
         ray_directions : torch.Tensor
