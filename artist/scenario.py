@@ -21,15 +21,12 @@ from artist.util.configuration_classes import (
 
 set_logger_config()
 log = logging.getLogger(__name__)
+"""A logger for the scenario."""
 
 
 class Scenario:
     """
     Represents a scenario loaded by ARTIST.
-
-    A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
-    one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
-    scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
 
     Attributes
     ----------
@@ -54,6 +51,10 @@ class Scenario:
     ) -> None:
         """
         Initialize the scenario.
+
+        A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
+        one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
+        scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
 
         Parameters
         ----------
