@@ -60,6 +60,11 @@ class ScenarioGenerator:
         """
         Initialize the scenario generator.
 
+        Scenarios in ARTIST describe the whole environment and all the components of a solar tower power
+        plant. The scenario generator creates the scenarios. A scenario encompasses the receier(s), the
+        light source(s), prototypes and the heliostat(s). The generated scenarios are then saved in HDF5
+        files.
+
         Parameters
         ----------
         file_path : str
