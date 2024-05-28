@@ -27,6 +27,11 @@ class LightSource(torch.nn.Module):
         """
         Initialize the light source.
 
+        The abstract light source implements a template for the construction of inheriting light sources
+        which can be of various types. The most apparent light source is the sun, however also drones could
+        carry artificial light sources and shine light on specific heliostats for calibration purposes.
+        Currently only the sun is implemented.
+
         Parameters
         ----------
         number_of_rays : int
