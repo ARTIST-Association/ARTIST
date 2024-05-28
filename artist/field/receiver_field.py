@@ -9,6 +9,7 @@ from artist.field.receiver import Receiver
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
+"""A logger for the receiver field."""
 
 
 class ReceiverField(torch.nn.Module):
@@ -29,6 +30,9 @@ class ReceiverField(torch.nn.Module):
     def __init__(self, receiver_list: List[Receiver]):
         """
         Initialize the receiver field.
+
+        A receiver field consists of one or more receivers that are positioned in front of the heliostats.
+        The receiver field is provided with a list of receivers to initialize the receivers.
 
         Parameters
         ----------
