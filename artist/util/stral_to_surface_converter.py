@@ -12,6 +12,8 @@ from artist.util.configuration_classes import FacetConfig
 from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger("STRAL-to-surface-converter")  # Get logger instance.
+"""A logger for the stral to surface converter."""
+
 log_formatter = colorlog.ColoredFormatter(
     fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
     "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
@@ -75,6 +77,11 @@ class StralToSurfaceConverter:
     ) -> None:
         """
         Initialize the converter.
+
+        Data about the heliostats and their facets and surfaces, is often times provided by so-called
+        stral-files as this is a predecessing software. To convert this data into a format that ARTIST
+        can use, this converter was implemented. The data about the surfaces is read and then NRUBS are
+        fitted as ARTIST only uses NURBS surfaces.
 
         Parameters
         ----------
