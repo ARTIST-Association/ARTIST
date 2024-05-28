@@ -73,6 +73,12 @@ class RigidBody(Kinematic):
         """
         Initialize the rigid body kinematic.
 
+        The rigid body kinematic determines a transformation matrix that is applied to the heliostat surface,
+        in a way that aligns the heliostat surface. The heliostat then reflects the incoming light according
+        to the provided aimpoint. The kinematic is equipped with an actuator array that encompasses one or
+        more actuators that turn the heliostat surface. Furthermore initial orientation offsets and deviation
+        parameters, both for the kinematic can be provided.
+
         Parameters
         ----------
         position : torch.Tensor
