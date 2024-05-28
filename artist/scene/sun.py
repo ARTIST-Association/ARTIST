@@ -9,7 +9,7 @@ from artist.scene.light_source import LightSource
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
-"""A logger for the heliostat."""
+"""A logger for the sun."""
 
 
 class Sun(LightSource):
