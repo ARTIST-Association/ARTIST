@@ -35,21 +35,21 @@ The following will go over the components and charateristics of NURBS curves.
 - More control points allows for better approximation of given curve
 - Representation in the code: List of points (length of list at least: degree + 1)
 - Connecting straight lines between control points form the control polygon
-![](https://s3.desy.de/hackmd/uploads/0d7dc15b-c021-4fc3-b6e0-91ca73dc1c81.png)
+![](NURBS_tutorial_pictures/ControlPoints.jpg)
     - Influence of the control points on the behavior of the NURBS curve
         - The only parameter that changed between the two curves is the location of control point B~7~
         - The change in the curve is limited to the local neighborhood of that control point
 - Each control point influences the part of the curve nearest to it but has little or no effect on parts of the curve that are farther away
 - **At any time t the particle´s position is a weighted average of all control points but the points closer to the particle are weighted more than those farther away**
 - This is expressed by the following formula:
-![](https://s3.desy.de/hackmd/uploads/55f9ac53-3ee6-47a7-8626-883afcaa5f39.png)
+![](NURBS_tutorial_pictures/Equation1.png)
     - where k = order (degree + 1), n = number of control points, B = control points, N = basis functions
 
 ### Basis functions
 - Basis functions are assigned to control points. Each control point has a corresponding basis function.
 - N~ik~(t) are the basis functions, they determine how strongly control point B~i~ influences the curve at time t
 - To come up with the basis functions consider the following image:
-    ![](https://s3.desy.de/hackmd/uploads/336bbdc3-6841-4762-955b-05b3e8997309.png)
+    ![](NURBS_tutorial_pictures/BasisFunction.jpg)
 
     - These are examplary basis functions for a NURBS curve with 5 control points. Each control point has one basis function. The red basis function is assigned to control point 2, it goes from t = 0 to t = 0.7. This is the time interval during which control point 2 controls the shape of the NURBS curve. For t = 0.8 only the basis functions of control point 3, 4 and 5 are activated thus only control points 3, 4 and 5 control the shape of the NURBS curve at that time. Since the green basis function that is assigned to control point 4 peaks at t = 0.8, this control point has the most influence on the NURBS curve at that point in time.
 - Further observations:
@@ -66,23 +66,23 @@ The following will go over the components and charateristics of NURBS curves.
 - By varying the relative lengths of the intervals, the amount of time each control point affects the particle is varied (knot spans)
 - Uniform knot vector = all knots are equidistant = all basis functions cover equal intervals of time
     - Example:
-![](https://s3.desy.de/hackmd/uploads/71e72c57-de33-4f87-aea4-f50ca4bb73ec.png)
+![](NURBS_tutorial_pictures/Uniform.jpg)
 - Non-uniform knot vector = knot spans of different sizes = basis functions cover different intervals of time
     - Example:
-![](https://s3.desy.de/hackmd/uploads/21db3e92-90c9-4043-bce6-12a2d71a05df.png)
+![](NURBS_tutorial_pictures/NonUniform.jpg)
     - Not all basis functions are the same. Some are taller and some are wider than others. This is because the knot spans vary. For smaller knot spans the basis functions become taller and narrower. For the corresponding control points, the curve is pulled more strongly to those control points.
 - This consideration allows for the definition of the basis functions
-![](https://s3.desy.de/hackmd/uploads/d306349d-f507-4f11-854e-89eb7c6bd6eb.png)
+![](NURBS_tutorial_pictures/Equation2.png)
     - where x~i~ is the *i*th knot in the knot vector
 
 ### Knot span
 - knot span of zero length: two consecutive knots have the same value (knot with **multiplicity**)
     - Full multiplicity knot: multiplicity = degree
     - Simple knot: multiplicity = 1
-- If the first and last knot have full multiplicity, the NURBS curve begins and ends in a controlpoint. Full multiplicity in the first and last knot doesnt affect the uniformity property.
+- If the first and last knot have full multiplicity, the NURBS curve begins and ends in a control point. Full multiplicity in the first and last knot does not affect the uniformity property.
 * **Uniformity:**
     * Example: [0,0,0,1,2,3,4,4,4]
-        * knot vector starts with full multiplicity knots, followed by simple knots, ends with full multiplicity knot and the knot spand inbetween have the same distances
+        * knot vector starts with full multiplicity knots, followed by simple knots, ends with full multiplicity knot and the knot spans inbetween have the same distances
 
 ### Control weights
 - The following explains the *rational* property. However this is not relevant for ARTIST as in ARTIST all control weights are always 1, thus they make no difference.
