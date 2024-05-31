@@ -9,6 +9,7 @@ Here, you can find an overview of how to use ``ARTIST``.
    :maxdepth: 1
 
    coordinates
+   nurbs_tutorial
    scenario
    generating_scenario
    heliostat_raytracing
