@@ -4,6 +4,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
+import artist.util
 # from .field.heliostat_field import HeliostatField
 # from .field.receiver_field import ReceiverField
 # from .scene.light_source_array import LightSourceArray
@@ -19,7 +20,7 @@ from typing_extensions import Self
 #     SurfaceConfig,
 # )
 
-set_logger_config()
+artist.util.set_logger_config()
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
 
