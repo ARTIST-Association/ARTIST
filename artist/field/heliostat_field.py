@@ -12,7 +12,7 @@ from artist.util.configuration_classes import (
     SurfaceConfig,
 )
 
-from .heliostat import Heliostat
+from . import Heliostat
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
