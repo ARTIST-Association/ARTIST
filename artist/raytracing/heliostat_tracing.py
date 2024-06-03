@@ -3,11 +3,12 @@ from typing import Tuple
 import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
-from artist.raytracing import raytracing_utils
-from artist.raytracing.rays import Rays
 from artist.scenario import Scenario
 from artist.scene import LightSource
 from artist.util import utils
+
+from . import raytracing_utils
+from .rays import Rays
 
 
 class DistortionsDataset(Dataset):
