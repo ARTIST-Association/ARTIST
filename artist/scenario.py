@@ -5,6 +5,7 @@ import torch
 from typing_extensions import Self
 
 import artist.util
+
 # from .field.heliostat_field import HeliostatField
 # from .field.receiver_field import ReceiverField
 # from .scene.light_source_array import LightSourceArray
@@ -99,7 +100,9 @@ class Scenario:
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facet_control_points
-                    ][()],
+                    ][
+                        ()
+                    ],
                     dtype=torch.float,
                 ),
                 degree_e=int(
@@ -107,49 +110,63 @@ class Scenario:
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facet_degree_e
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 degree_n=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facet_degree_n
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 number_eval_points_e=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facet_number_eval_e
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 number_eval_points_n=int(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facet_number_eval_n
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 width=float(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facets_width
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 height=float(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facets_height
-                    ][()]
+                    ][
+                        ()
+                    ]
                 ),
                 translation_vector=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facets_translation_vector
-                    ][()],
+                    ][
+                        ()
+                    ],
                     dtype=torch.float,
                 ),
                 canting_e=torch.tensor(
@@ -157,7 +174,9 @@ class Scenario:
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facets_canting_e
-                    ][()],
+                    ][
+                        ()
+                    ],
                     dtype=torch.float,
                 ),
                 canting_n=torch.tensor(
@@ -165,7 +184,9 @@ class Scenario:
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
                         config_dictionary.facets_canting_n
-                    ][()],
+                    ][
+                        ()
+                    ],
                     dtype=torch.float,
                 ),
             )
