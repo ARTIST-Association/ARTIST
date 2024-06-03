@@ -2,6 +2,8 @@
 
 import os
 
+from . import field, raytracing, scenario, scene, util
+
 ARTIST_ROOT = f"{os.sep}".join(__file__.split(os.sep)[:-2])
 
 __all__ = [
