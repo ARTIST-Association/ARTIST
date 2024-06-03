@@ -4,24 +4,22 @@ import h5py
 import torch
 from typing_extensions import Self
 
-import artist.util
+from .field.heliostat_field import HeliostatField
+from .field.receiver_field import ReceiverField
+from .scene.light_source_array import LightSourceArray
+from .util import config_dictionary, set_logger_config
+from .util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorListConfig,
+    ActuatorParameters,
+    FacetConfig,
+    KinematicConfig,
+    KinematicDeviations,
+    KinematicOffsets,
+    SurfaceConfig,
+)
 
-# from .field.heliostat_field import HeliostatField
-# from .field.receiver_field import ReceiverField
-# from .scene.light_source_array import LightSourceArray
-# from .util import config_dictionary, set_logger_config
-# from .util.configuration_classes import (
-#     ActuatorConfig,
-#     ActuatorListConfig,
-#     ActuatorParameters,
-#     FacetConfig,
-#     KinematicConfig,
-#     KinematicDeviations,
-#     KinematicOffsets,
-#     SurfaceConfig,
-# )
-
-artist.util.set_logger_config()
+set_logger_config()
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
 
