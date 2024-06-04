@@ -4,9 +4,9 @@
 
 [![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![](./coverage.svg)
 [![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
-
+[![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
+![](./coverage.svg)
 
 ## What ARTIST can do for you
 
@@ -71,7 +71,12 @@ The ``ARTIST`` pacakge is structured into four subpackages as shown below:
 ```
 
 ## Documentation
-Coming soon :rocket:!
+You can check out the full ``ARTIST`` documentation at[https://artist.readthedocs.io/en/latest/index.html](https://artist.readthedocs.io/en/latest/index.html) :rocket:!
+The ``ARTIST`` documentation includes:
+- Installation instructions.
+- Tutorials.
+- Some theoretical background information.
+- API Reference.
 
 ## How to contribute
 Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
