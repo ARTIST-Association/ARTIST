@@ -9,7 +9,7 @@ from artist.field.heliostat import Heliostat
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorListConfig,
-    KinematicConfig,
+    KinematicLoadConfig,
     SurfaceConfig,
 )
 
@@ -53,7 +53,7 @@ class HeliostatField(torch.nn.Module):
         cls,
         config_file: h5py.File,
         prototype_surface: SurfaceConfig,
-        prototype_kinematic: KinematicConfig,
+        prototype_kinematic: KinematicLoadConfig,
         prototype_actuator: ActuatorListConfig,
     ) -> Self:
         """
@@ -65,7 +65,7 @@ class HeliostatField(torch.nn.Module):
             The HDF5 file containing the configuration to be loaded.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if the heliostat has no individual surface.
-        prototype_kinematic : KinematicConfig
+        prototype_kinematic : KinematicLoadConfig
             The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
         prototype_actuator : ActuatorListConfig
             The prototype for the actuator configuration to be used if the heliostat has no individual actuators.
