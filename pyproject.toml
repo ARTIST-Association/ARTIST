@@ -43,7 +43,7 @@ dev = [
     "sphinxemoji",
 ]
 mpi = ["mpi4py",]
-tutorials = ['jupyter']
+tutorials = ['jupyter', 'matplotlib']
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"
