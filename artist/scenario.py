@@ -1,4 +1,3 @@
-print("STARTING SCENARIO IMPORT")
 import logging
 
 import h5py
@@ -19,8 +18,6 @@ from artist.util.configuration_classes import (
     KinematicOffsets,
     SurfaceConfig,
 )
-
-print("SCENARIO IMPORT")
 
 set_logger_config()
 log = logging.getLogger(__name__)
