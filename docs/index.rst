@@ -74,7 +74,6 @@ You can find more detailed installation instructions in :ref:`installation`.
    :maxdepth: 1
    :caption: Contents
 
-   quickstart
    install
    usage
 
