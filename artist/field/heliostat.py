@@ -113,11 +113,8 @@ class Heliostat(torch.nn.Module):
             initial_orientation_offsets=kinematic_config.kinematic_initial_orientation_offsets,
             deviation_parameters=kinematic_config.kinematic_deviations,
         )
-
-        (
-            self.current_aligned_surface_points,
-            self.current_aligned_surface_normals,
-        ) = self.surface.get_surface_points_and_normals()
+        self.current_aligned_surface_points = torch.empty(0)
+        self.current_aligned_surface_normals = torch.empty(0)
         self.is_aligned = False
         self.preferred_reflection_direction = torch.empty(0)
 
