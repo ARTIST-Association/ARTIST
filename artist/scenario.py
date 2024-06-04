@@ -4,6 +4,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
+print("SCENARIO IMPORT")
 from .field.heliostat_field import HeliostatField
 from .field.receiver_field import ReceiverField
 from .scene.light_source_array import LightSourceArray
@@ -13,10 +14,10 @@ from .util.configuration_classes import (
     ActuatorListConfig,
     ActuatorParameters,
     FacetConfig,
-    KinematicConfig,
     KinematicDeviations,
     KinematicOffsets,
     SurfaceConfig,
+    KinematicLoadConfig,
 )
 
 set_logger_config()
@@ -518,7 +519,7 @@ class Scenario:
                 else torch.tensor(0.0)
             ),
         )
-        kinematic_prototype = KinematicConfig(
+        kinematic_prototype = KinematicLoadConfig(
             kinematic_type=str(
                 scenario_file[config_dictionary.prototype_key][
                     config_dictionary.kinematic_prototype_key

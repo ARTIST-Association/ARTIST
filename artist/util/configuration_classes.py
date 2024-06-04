@@ -605,13 +605,13 @@ class KinematicDeviations:
         self.concentrator_tilt_n = concentrator_tilt_n
         self.concentrator_tilt_u = concentrator_tilt_u
 
-    def create_kinematic_deviations_dict(self) -> Dict[str, torch.Tensor]:
+    def create_kinematic_deviations_dict(self) -> Dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic deviations.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic deviations.
         """
         deviations_dict = {}
@@ -755,13 +755,13 @@ class KinematicOffsets:
             kinematic_initial_orientation_offset_u
         )
 
-    def create_kinematic_offsets_dict(self) -> Dict[str, torch.Tensor]:
+    def create_kinematic_offsets_dict(self) -> Dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic offsets.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic offsets.
         """
         offset_dict = {}
@@ -827,7 +827,6 @@ class KinematicConfig:
         self.kinematic_initial_orientation_offsets = (
             kinematic_initial_orientation_offsets
         )
-
         self.kinematic_deviations = kinematic_deviations
 
     def create_kinematic_dict(self) -> Dict[str, Any]:
@@ -839,7 +838,9 @@ class KinematicConfig:
         Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic.
         """
-        kinematic_dict = {config_dictionary.kinematic_type: self.kinematic_type}
+        kinematic_dict: Dict[str, Any] = {
+            config_dictionary.kinematic_type: self.kinematic_type
+        }
         if self.kinematic_initial_orientation_offsets is not None:
             kinematic_dict.update(
                 {
@@ -887,6 +888,45 @@ class KinematicPrototypeConfig(KinematicConfig):
             kinematic_initial_orientation_offsets=kinematic_initial_orientation_offsets,
             kinematic_deviations=kinematic_deviations,
         )
+
+
+class KinematicLoadConfig:
+    """
+    Contains the configuration parameters for the kinematic when loaded in ARTIST.
+
+    Attributes
+    ----------
+    kinematic_type : str
+        The type of kinematic used.
+    kinematic_initial_orientation_offsets : KinematicOffsets, optional
+        The initial orientation offsets of the kinematic configuration.
+    kinematic_deviations : KinematicDeviations, optional
+        The kinematic deviations.
+    """
+
+    def __init__(
+        self,
+        kinematic_type: str,
+        kinematic_initial_orientation_offsets: KinematicOffsets,
+        kinematic_deviations: KinematicDeviations,
+    ) -> None:
+        """
+        Initialize the kinematic configuration for loading in ARTIST.
+
+        Parameters
+        ----------
+        kinematic_type : str
+            The type of kinematic used.
+        kinematic_initial_orientation_offsets : KinematicOffsets, optional
+            The initial orientation offsets of the kinematic configuration.
+        kinematic_deviations : KinematicDeviations, optional
+            The kinematic deviations.
+        """
+        self.kinematic_type = kinematic_type
+        self.kinematic_initial_orientation_offsets = (
+            kinematic_initial_orientation_offsets
+        )
+        self.kinematic_deviations = kinematic_deviations
 
 
 class ActuatorParameters:
@@ -1211,7 +1251,7 @@ class HeliostatConfig:
 
         Parameters
         ----------
-         heliostat_key : str
+        heliostat_key : str
             The key used to identify the heliostat in the HDF5 file.
         heliostat_id : int
             The numerical ID of the heliostat.

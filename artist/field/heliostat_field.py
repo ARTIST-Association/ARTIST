@@ -5,14 +5,13 @@ import h5py
 import torch.nn
 from typing_extensions import Self
 
+from artist.field.heliostat import Heliostat
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorListConfig,
     KinematicConfig,
     SurfaceConfig,
 )
-
-from . import Heliostat
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
