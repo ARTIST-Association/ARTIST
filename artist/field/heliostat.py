@@ -14,8 +14,8 @@ from artist.util.configuration_classes import (
     ActuatorListConfig,
     ActuatorParameters,
     FacetConfig,
-    KinematicConfig,
     KinematicDeviations,
+    KinematicLoadConfig,
     KinematicOffsets,
     SurfaceConfig,
 )
@@ -68,7 +68,7 @@ class Heliostat(torch.nn.Module):
         position: torch.Tensor,
         aim_point: torch.Tensor,
         surface_config: SurfaceConfig,
-        kinematic_config: KinematicConfig,
+        kinematic_config: KinematicLoadConfig,
         actuator_config: ActuatorListConfig,
     ) -> None:
         """
@@ -90,7 +90,7 @@ class Heliostat(torch.nn.Module):
             The aim point of the heliostat.
         surface_config : SurfaceConfig
             The configuration parameters to use for the heliostat surface.
-        kinematic_config : KinematicConfig
+        kinematic_config : KinematicLoadConfig
             The configuration parameters to use for the heliostat kinematic.
         actuator_config : ActuatorListConfig
             The configuration parameters to use for the list of actuators.
@@ -114,17 +114,19 @@ class Heliostat(torch.nn.Module):
             deviation_parameters=kinematic_config.kinematic_deviations,
         )
 
-        self.current_aligned_surface_points = None
-        self.current_aligned_surface_normals = None
+        (
+            self.current_aligned_surface_points,
+            self.current_aligned_surface_normals,
+        ) = self.surface.get_surface_points_and_normals()
         self.is_aligned = False
-        self.preferred_reflection_direction = None
+        self.preferred_reflection_direction = torch.empty(0)
 
     @classmethod
     def from_hdf5(
         cls,
         config_file: h5py.File,
         prototype_surface: Optional[SurfaceConfig] = None,
-        prototype_kinematic: Optional[KinematicConfig] = None,
+        prototype_kinematic: Optional[KinematicLoadConfig] = None,
         prototype_actuator: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
     ) -> Self:
@@ -137,7 +139,7 @@ class Heliostat(torch.nn.Module):
             The config file containing all the information about the heliostat.
         prototype_surface  : SurfaceConfig, optional
             An optional prototype for the surface configuration.
-        prototype_kinematic : KinematicConfig, optional
+        prototype_kinematic : KinematicLoadConfig, optional
             An optional prototype for the kinematic configuration.
         prototype_actuator : ActuatorConfig, optional
             An optional prototype for the actuator configuration.
@@ -559,7 +561,7 @@ class Heliostat(torch.nn.Module):
                     else torch.tensor(0.0)
                 ),
             )
-            kinematic_config = KinematicConfig(
+            kinematic_config = KinematicLoadConfig(
                 kinematic_type=str(
                     config_file[config_dictionary.heliostat_kinematic_key][
                         config_dictionary.kinematic_type
