@@ -389,8 +389,8 @@ class StralToSurfaceConverter:
             facet_translation_vectors = torch.empty(number_of_facets, 3)
             canting_e = torch.empty(number_of_facets, 3)
             canting_n = torch.empty(number_of_facets, 3)
-            surface_points_with_facets = None
-            surface_normals_with_facets = None
+            surface_points_with_facets = torch.empty(0)
+            surface_normals_with_facets = torch.empty(0)
             for f in range(number_of_facets):
                 facet_header_data = facet_header_struct.unpack_from(
                     file.read(facet_header_struct.size)
