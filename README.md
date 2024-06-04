@@ -70,7 +70,7 @@ Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested i
 Please also carefully check our [code of conduct](CODE_OF_CONDUCT.md) :blue_heart:.
 
 ## License
-Hopefully MIT.
+``ARTIST`` is licensed with a MIT.
 
 ## Documentation
 Coming soon :rocket:!
