@@ -3,9 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-What ARTIST Can Do For You
-==========================
-ARTIST stands for **AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar
+Welcome to ``ARTIST``
+=====================
+``ARTIST`` stands for **AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar
 Tower Digital Twins**.
 The ``ARTIST`` package provides an implementation of a fully differentiable ray tracer using the `PyTorch`_
 machine-learning framework in ``Python``. Leveraging automatic differentiation and GPU computation, it facilitates the
@@ -42,14 +42,6 @@ methods with smooth parametric descriptions of heliostats.
   Optimization by Differentiable Raytracing. Under review at Nature Communications.*
   `https://doi.org/10.21203/rs.3.rs-2554998/v1`_
 
-* **Advanced data set sampling strategies:** ``ARTIST`` utilizes a time-independent data set sampling strategy based on
-  Euler angles to improve accuracy by minimizing the needed data for calibration. Check out this paper for more details
-  |:point_down:|:
-
-  *M. Pargmann, M. Leibauer, V. Nettelroth, D. M. Quinto, & R. Pitz-Paal (2023). It is Not About Time - A New Standard
-  for Open-Loop Heliostat Calibration Methods. Under review at Solar Energy.*
-  `https://doi.org/10.21203/rs.3.rs-2898838/v1`_
-
 * **Optimized flux density:** Coming soon, so stay tuned |:rocket:|!
 
 Quick Install
@@ -68,7 +60,7 @@ You can check whether your installation was successful by importing ``ARTIST`` i
 
 You can find more detailed installation instructions in :ref:`installation`.
 
-* Some basic examples.
+* To find out more about to how to use artist check out :ref:`usage`.
 
 .. toctree::
    :maxdepth: 1
