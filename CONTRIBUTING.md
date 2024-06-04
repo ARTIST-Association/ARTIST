@@ -141,7 +141,7 @@ as shown below. Do not include attributes and methods of the parent class explic
    git rebase main features/your-feature-name
    ```
 
-10. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request.
+9. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request.
 
 ## Code of Conduct
 
