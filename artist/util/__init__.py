@@ -1,14 +1,11 @@
 """Bundles all classes that implement util functionality in ARTIST."""
 
-print("UTIL IMPORT")
 import logging
 import sys
 from pathlib import Path
 from typing import Optional, Union
 
 import colorlog
-
-print("UTIL IMPORT FINISHED")
 
 
 def set_logger_config(

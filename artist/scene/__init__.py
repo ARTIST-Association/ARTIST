@@ -1,11 +1,8 @@
 """Bundles all classes that represent the environment in ARTIST."""
 
-print("SCENE IMPORT")
-from .light_source import LightSource
-from .light_source_array import LightSourceArray
-from .sun import Sun
-
-print("SCENE IMPORT FINISHED")
+from artist.scene.light_source import LightSource
+from artist.scene.light_source_array import LightSourceArray
+from artist.scene.sun import Sun
 
 __all__ = [
     "LightSourceArray",
