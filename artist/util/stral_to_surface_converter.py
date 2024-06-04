@@ -28,7 +28,9 @@ log_formatter = colorlog.ColoredFormatter(
     },
     secondary_log_colors={},
 )
+"""A formater for the logger for the stral to surface converter."""
 handler = logging.StreamHandler(stream=sys.stdout)
+"""A handler for the logger for the stral to surface converter."""
 handler.setFormatter(log_formatter)
 log.addHandler(handler)
 log.setLevel(logging.INFO)

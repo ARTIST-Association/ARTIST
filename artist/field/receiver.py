@@ -8,6 +8,7 @@ from typing_extensions import Self
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
+"""A logger for the receiver."""
 
 
 class Receiver(torch.nn.Module):
