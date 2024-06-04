@@ -1,9 +1,11 @@
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
+
+if TYPE_CHECKING:
+    from artist.scenario import Scenario
 
 import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
-from artist.scenario import Scenario
 from artist.scene import LightSource
 from artist.util import utils
 
@@ -129,7 +131,7 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
-        scenario: Scenario,
+        scenario: "Scenario",
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
