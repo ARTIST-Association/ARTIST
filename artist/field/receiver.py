@@ -53,11 +53,11 @@ class Receiver(torch.nn.Module):
         """
         Initialize the receiver.
 
-        The receiver is positioned on the solar tower and abosrbs the concentrated sunlight. This heats
+        The receiver is positioned on the solar tower and absorbs the concentrated sunlight. This heats
         up the receiver. Behind the receiver, the clean energy extraction processes begin. Different kinds
-        of receivers exist and they are specified in the receiver type. Further parameters are the position
+        of receivers exist, and they are specified in the receiver type. Further parameters are the position
         center which indicates the center of the receiver, the normal vector that is a normal to the receiver
-        plane, the plane width and height as well as the receiver resolution in both directions. Optionally
+        plane, the plane width and height as well as the receiver resolution in both directions. Optionally,
         the receiver can be provided with curvature parameters, indicating the curvature of the receiver.
 
         Parameters
