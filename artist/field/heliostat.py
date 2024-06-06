@@ -74,7 +74,7 @@ class Heliostat(torch.nn.Module):
         """
         Implement the behavior of a heliostat.
 
-        A Heliostat is used to reflect light onto the receiver. A Heliostat has a position within the field and an
+        A heliostat is used to reflect light onto the receiver. A heliostat has a position within the field and an
         aim point where it aims to reflect the light. Furthermore, each heliostat must be initialized with a surface
         configuration which contains information on the heliostat surface, a kinematic configuration containing
         information on the applied kinematic, and an actuator configuration that contains the configurations of the
