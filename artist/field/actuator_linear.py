@@ -59,8 +59,8 @@ class LinearActuator(Actuator):
         direction of the actuator. The linear actuator is further parametrized by five parameters. These are the
         increment, which stores the information about the stroke length change per motor step, the initial stroke
         length, and an offset that describes the difference between the linear actuator's pivoting point and the
-        point around which the actuator is allowed to pivot. Next the actuator's pivoting radius is described by
-        the radius and lastly phi 0 indicates the angle that the actuator introduces to the manipulated coordinate
+        point around which the actuator is allowed to pivot. Next, the actuator's pivoting radius is described by
+        the radius and lastly, phi_0 indicates the angle that the actuator introduces to the manipulated coordinate
         system at the initial stroke length.
 
         Parameters
