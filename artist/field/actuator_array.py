@@ -33,7 +33,7 @@ class ActuatorArray(torch.nn.Module):
 
         An actuator array is used to bundle all actuators for a specific heliostat. A heliostat can have one or
         more actuators. Different actuator types exist. The actuators are created according to their
-        `actuator_config`. If the actuator config does not contain actuator parameters, an actuator with default
+        ``actuator_config``. If the actuator config does not contain actuator parameters, an actuator with default
         values will be initialized.
 
         Parameters
