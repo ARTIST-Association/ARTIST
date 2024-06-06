@@ -36,7 +36,7 @@ class LightSourceArray(torch.nn.Module):
         Initialize the light sources included in the considered scenario.
 
         The light source array bundles all light sources considered in the scenario. The light source
-        sends out the rays that are then used for raytracing. The position of the lightsources can be
+        sends out the rays that are then used for raytracing. The position of the light sources can be
         dynamic throughout a time span.
 
         Parameters

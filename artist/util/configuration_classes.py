@@ -455,7 +455,7 @@ class SurfaceConfig:
 
 class SurfacePrototypeConfig(SurfaceConfig):
     """
-    Ccontains the configuration parameters for a surface prototype.
+    Contains the configuration parameters for a surface prototype.
 
     See Also
     --------
