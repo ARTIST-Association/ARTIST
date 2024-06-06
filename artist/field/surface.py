@@ -26,9 +26,9 @@ class Surface(torch.nn.Module):
         Initialize the surface.
 
         The heliostat surface consists of one or more facets. The surface only describes the mirrors
-        on the heliostat, not the whole heliostat. The surface can be aligned through the kinamtic and
+        on the heliostat, not the whole heliostat. The surface can be aligned through the kinematic and
         its actuators. Each surface and thus each facet is defined through NURBS, the discrete surface
-        points and surface normals can be retreived.
+        points and surface normals can be retrieved.
 
 
         Parameters
