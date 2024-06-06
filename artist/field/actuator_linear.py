@@ -55,7 +55,7 @@ class LinearActuator(Actuator):
         Initialize a linear actuator.
 
         A linear actuator describes movement within a 2D plane. As there can be multiple actuators for a single
-        heliostat, each actuator is labled with a joint number. The clockwise attribute describes the turning
+        heliostat, each actuator is labeled with a joint number. The clockwise attribute describes the turning
         direction of the actuator. The linear actuator is further parametrized by five parameters. These are the
         increment, which stores the information about the stroke length change per motor step, the initial stroke
         length, and an offset that describes the difference between the linear actuator's pivoting point and the
