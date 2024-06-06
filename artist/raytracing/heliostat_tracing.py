@@ -98,7 +98,7 @@ class DistortionsDataset(Dataset):
 
 class HeliostatRayTracer:
     """
-    Contains the functionality for heliostat raytracing.
+    Implement the functionality for heliostat raytracing.
 
     Attributes
     ----------
@@ -143,8 +143,8 @@ class HeliostatRayTracer:
 
         "Heliostat"-tracing is one kind of raytracing applied in ARTIST. For this kind of raytracing,
         the rays are initialized on the heliostat. The rays originate in the discrete surface points.
-        There they are multiplied, distorted, and scattered, and then they are send to the receiver. Letting
-        the rays originate on the heliostat, drastically reduces the amount of rays that need to be traced.
+        There they are multiplied, distorted, and scattered, and then they are sent to the receiver. Letting
+        the rays originate on the heliostat drastically reduces the number of rays that need to be traced.
 
         Parameters
         ----------
@@ -306,13 +306,13 @@ class HeliostatRayTracer:
         Parameters
         ----------
         dx_ints : torch.Tensor
-            x position of intersection with receiver of shape (N, 1)
-            where N is the resolution of the receiver along the x-axis.
+            x position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along
+            the x-axis.
         dy_ints : torch.Tensor
-            y position of intersection with receiver of shape (N, 1)
-            where N is the resolution of the receiver along the y-axis.
+            y position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along
+            the y-axis.
         indices : torch.Tensor
-            Index of pixel.
+            Index of the pixel.
 
         Returns
         -------

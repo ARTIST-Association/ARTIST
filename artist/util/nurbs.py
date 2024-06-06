@@ -29,7 +29,7 @@ class NURBSSurface(torch.nn.Module):
     calculate_knots()
         Calculate the knot vectors in east and north direction.
     find_span()
-        Determine the knot span index for given evaluation points.
+         Determine the knot span index for given evaluation points.
     basis_function_and_derivatives()
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
     calculate_surface_points_and_normals()
@@ -50,8 +50,7 @@ class NURBSSurface(torch.nn.Module):
         NURBS stand for Non-Uniform Rational B-Splines and allow for an efficient and precise reconstruction
         of the imperfect heliostat surfaces in the digital twin. This implementation of the NURBS is
         differentiable. The NURBS surfaces require a degree in two directions, evaluation_points and control
-        points. These parameters are used to derive others and then finally to create the NURBS surface.
-        For more details see the NURBS tutorial.
+        points. These parameters are used to create the NURBS surface. For more details, see the NURBS tutorial.
 
         Parameters
         ----------
@@ -76,10 +75,10 @@ class NURBSSurface(torch.nn.Module):
 
     def calculate_knots(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Calculate the knot vectors in east and north direction.
+        Calculate the knot vectors in the east and north direction.
 
         For our application, only uniform knot vectors are required.
-        The knots range from 0 to 1 and are distributed uniformly.
+        The knots range from zero to one and are distributed uniformly.
         The first knot (0) and the last knot (1) have full multiplicity,
         i.e., they are repeated as often as specified by the degree.
         This means the NURBS start and end in a control point.
@@ -120,10 +119,9 @@ class NURBSSurface(torch.nn.Module):
         """
         Determine the knot span index for given evaluation points.
 
-        Later on, the basis functions are evaluated, some of them are
-        identical to zero and therefore it would be a waste to compute
-        them. That is why first the knot span in which the evaluation
-        point lies is computed using this function.
+        To generate NURBS the basis functions must be evaluated. However, some basis functions may be zero. To improve
+        computational efficiency, basis functions that are zero are not computed. Therefore, the knot span in which the
+        evaluation point lies is first computed using this function.
         See `The NURBS Book` p. 68 for reference.
 
         Parameters

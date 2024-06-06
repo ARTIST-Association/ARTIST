@@ -52,9 +52,9 @@ class Scenario:
         """
         Initialize the scenario.
 
-        A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
-        one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
-        scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
+        A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
+        least one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also
+        supports scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
 
         Parameters
         ----------

@@ -51,7 +51,7 @@ def test_compute_bitmaps(
     incident_ray_direction: torch.Tensor, expected_value: str, scenario_config: str
 ) -> None:
     """
-    Compute resulting flux density distribution (bitmap) for the given test case.
+    Compute the resulting flux density distribution (bitmap) for the given test case.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
     calculate the preferred reflection direction.
