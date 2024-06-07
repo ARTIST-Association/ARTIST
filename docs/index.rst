@@ -75,7 +75,7 @@ You can find more detailed installation instructions in :ref:`installation`.
 .. _https://doi.org/10.21203/rs.3.rs-2554998/v1: https://doi.org/10.21203/rs.3.rs-2554998/v1
 .. _https://doi.org/10.21203/rs.3.rs-2898838/v1: https://doi.org/10.21203/rs.3.rs-2898838/v1
 
-Indices and tables
+Indices and Tables
 ==================
 
 * :ref:`genindex`
