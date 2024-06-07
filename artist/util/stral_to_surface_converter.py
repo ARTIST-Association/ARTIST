@@ -38,7 +38,7 @@ log.setLevel(logging.INFO)
 
 class StralToSurfaceConverter:
     """
-    Implements a converter that converts ``STRAL`` data to HDF5 format.
+    Implement a converter that converts ``STRAL`` data to HDF5 format.
 
     Attributes
     ----------
@@ -81,9 +81,9 @@ class StralToSurfaceConverter:
         Initialize the converter.
 
         Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
-        exported to a binary file. To convert this data into a surface configuration format for ``ARTIST``, this converter
-        first loads the data and then learns NURBS surfaces based on the data. Finally, the converter returns a
-        list of facets that can be used directly in an ``ARTIST`` scenario.
+        exported to a binary file. To convert this data into a surface configuration format suitable for ``ARTIST``,
+        this converter first loads the data and then learns NURBS surfaces based on the data. Finally, the converter
+        returns a list of facets that can be used directly in an ``ARTIST`` scenario.
 
         Parameters
         ----------
@@ -178,7 +178,7 @@ class StralToSurfaceConverter:
         """
         Normalize the evaluation points for NURBS.
 
-        This function normalizes the evaluation points for NURBS between the open interval of (0,1) since NURBS are not
+        This function normalizes the evaluation points for NURBS in the open interval of (0,1) since NURBS are not
         defined for the edges.
 
         Parameters
@@ -450,7 +450,7 @@ class StralToSurfaceConverter:
         facet_translation_vectors = self.convert_3d_direction_to_4d_format(
             facet_translation_vectors
         )
-        # If we are learning the surface points from STRAL we do not need to translate the facets.
+        # If we are learning the surface points from ``STRAL``, we do not need to translate the facets.
         if conversion_method == config_dictionary.convert_nurbs_from_points:
             facet_translation_vectors = torch.zeros(facet_translation_vectors.shape)
         # Convert to 4D format.
