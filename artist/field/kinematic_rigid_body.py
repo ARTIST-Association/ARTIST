@@ -74,7 +74,7 @@ class RigidBody(Kinematic):
         Initialize the rigid body kinematic.
 
         The rigid body kinematic determines a transformation matrix that is applied to the heliostat surface in order to
-        align it. The heliostat then reflects the incoming light according to the provided aimpoint. The kinematic is
+        align it. The heliostat then reflects the incoming light according to the provided aim point. The kinematic is
         equipped with an actuator array that encompasses one or more actuators that turn the heliostat surface.
         Furthermore, initial orientation offsets and deviation parameters, both for the kinematic, can be provided.
 
