@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class LightSourceArray(torch.nn.Module):
     """
-    Wraps the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
+    Wrap the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------

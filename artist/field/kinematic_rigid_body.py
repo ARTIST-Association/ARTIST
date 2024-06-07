@@ -16,7 +16,7 @@ from artist.util.configuration_classes import (
 
 class RigidBody(Kinematic):
     """
-    Implements a rigid body kinematic model.
+    Implement a rigid body kinematic model.
 
     Attributes
     ----------

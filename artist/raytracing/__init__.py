@@ -1,4 +1,4 @@
-"""Bundles all classes responsible for raytracing in ARTIST."""
+"""Bundle all classes responsible for raytracing in ARTIST."""
 
 from artist.raytracing.heliostat_tracing import DistortionsDataset, HeliostatRayTracer
 from artist.raytracing.rays import Rays

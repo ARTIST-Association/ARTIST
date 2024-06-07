@@ -8,7 +8,7 @@ from artist.util.configuration_classes import SurfaceConfig
 
 class Surface(torch.nn.Module):
     """
-    Implementation of the surface module which contains a list of facets.
+    Implement the surface module which contains a list of facets.
 
     Attributes
     ----------

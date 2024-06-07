@@ -5,7 +5,7 @@ from artist.util.nurbs import NURBSSurface
 
 class NurbsFacet(torch.nn.Module):
     """
-    Facet modeled with a NURBS surface.
+    Model a facet with a NURBS surface.
 
     Attributes
     ----------

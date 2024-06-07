@@ -5,7 +5,7 @@ import torch
 
 class NURBSSurface(torch.nn.Module):
     """
-    Implements differentiable NURBS for the heliostat surface.
+    Implement differentiable NURBS for the heliostat surface.
 
     Attributes
     ----------

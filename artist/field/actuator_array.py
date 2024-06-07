@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class ActuatorArray(torch.nn.Module):
     """
-    Wraps the list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
+    Wrap the list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
