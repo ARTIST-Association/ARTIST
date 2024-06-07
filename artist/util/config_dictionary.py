@@ -1,4 +1,3 @@
-# Dictionary for receiver.
 receiver_type = "type"
 """Key to access the receiver type."""
 receiver_position_center = "position_center"
@@ -20,7 +19,6 @@ receiver_curvature_u = "curvature_u"
 receiver_type_planar = "planar"
 """Key used to define that a planar receiver type is used."""
 
-# Dictionary for light source.
 light_source_prefix = "lightsource"
 """Key to access the light source."""
 light_source_type = "type"
@@ -40,7 +38,6 @@ light_source_mean = "mean"
 light_source_covariance = "covariance"
 """Key to access the covariance for the light source distribution."""
 
-# Dictionary for facets.
 facets_key = "facets"
 """Key to access the facets."""
 facet_control_points = "control_points_e"
@@ -64,7 +61,6 @@ facets_canting_e = "canting_e"
 facets_canting_n = "canting_n"
 """Key to access the facet canting in the north direction."""
 
-# Dictionary for kinematic deviation parameters.
 first_joint_translation_e = "first_joint_translation_e"
 """Key to access the kinematic first joint translation in the east direction."""
 first_joint_translation_n = "first_joint_translation_n"
@@ -102,7 +98,6 @@ concentrator_tilt_n = "concentrator_tilt_n"
 concentrator_tilt_u = "concentrator_tilt_u"
 """Key to access the kinematic concentrator tilt in the up direction."""
 
-# Dictionary for the orientation offset for the kinematic.
 kinematic_initial_orientation_offset_e = "initial_kinematic_orientation_offset_e"
 """Key to access the initial kinematic orientation offset in the east direction."""
 kinematic_initial_orientation_offset_n = "initial_kinematic_orientation_offset_n"
@@ -110,7 +105,6 @@ kinematic_initial_orientation_offset_n = "initial_kinematic_orientation_offset_n
 kinematic_initial_orientation_offset_u = "initial_kinematic_orientation_offset_u"
 """Key to access the initial kinematic orientation offset in the up direction."""
 
-# Dictionary for the kinematic config.
 kinematic_type = "type"
 """Key to access the kinematic type."""
 rigid_body_key = "rigid_body"
@@ -120,7 +114,6 @@ kinematic_offsets_key = "kinematic_offsets"
 kinematic_deviations_key = "kinematic_deviations"
 """Key to access the kinematic deviations."""
 
-# Dictionary for actuator parameters.
 actuator_clockwise = "clockwise"
 """Key to access the actuator clockwise parameter."""
 actuator_increment = "actuator_increment"
@@ -134,7 +127,6 @@ actuator_radius = "radius"
 actuator_phi_0 = "phi_0"
 """Key to access the actuator phi 0 parameter."""
 
-# Dictionary for actuator config.
 actuator_type_key = "actuator_type"
 """Key to access the actuator type."""
 actuator_parameters_key = "actuator_parameters"
@@ -144,7 +136,6 @@ ideal_actuator_key = "ideal_actuator"
 linear_actuator_key = "linear_actuator"
 """Key defining that the actuator used is a linear actuator."""
 
-# Dictionary for prototypes config.
 surface_prototype_key = "surface"
 """Key to access the surface prototype."""
 kinematic_prototype_key = "kinematic"
@@ -152,7 +143,6 @@ kinematic_prototype_key = "kinematic"
 actuator_prototype_key = "actuator"
 """Key to access the actuator prototype."""
 
-# Dictionary for heliostats
 heliostat_id = "id"
 """Key to access the heliostat ID."""
 heliostat_position = "position"
@@ -166,7 +156,6 @@ heliostat_kinematic_key = "kinematic"
 heliostat_actuator_key = "actuator"
 """Key to access the heliostat actuator."""
 
-# Dictionary for scenario.
 prototype_key = "prototypes"
 """Key to access the prototypes."""
 receiver_key = "receivers"
@@ -176,7 +165,6 @@ light_source_key = "lightsources"
 heliostat_key = "heliostats"
 """Key to access the heliostats."""
 
-# Dictionary for NURBS converters.
 convert_nurbs_from_points = "point_cloud"
 """Defines that the NURBS should be learnt using a point cloud."""
 convert_nurbs_from_normals = "deflectometry"
