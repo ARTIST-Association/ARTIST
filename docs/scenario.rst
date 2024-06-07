@@ -17,26 +17,26 @@ and data analysis applications.
 The Scenario structure of ``ARTIST`` has four main elements:
 
    - **Receivers:** Every scenario in ``ARTIST`` contains at least one receiver. The receiver is the object where the
-     light is concentrated and resulting heat energy used to generate electricity or for industrial processes. A
+     light is concentrated and the resulting heat energy is used to generate electricity or for industrial processes. A
      ``Receiver`` object contains information such as the position, the type, whether the receiver is curved or not etc.
-     Since large Concentrating Solar Power Plants (CSPs) may contain multiple receiver, ``ARTIST`` is modelled on a
-     scenario structure that also allows multiple receiver.
+     Since large Concentrating Solar Power Plants (CSPs) may contain multiple receivers, ``ARTIST`` makes use of a
+     scenario structure that allows for multiple receivers.
    - **Light Sources:** An ``ARTIST`` scenario also contains at least one light source. A light source models how the
-     light is generated, which is eventually reflected onto a receiver. A light source must have a type, for example, a
+     light, which is eventually reflected onto a receiver, is generated. A light source must have a type, for example, a
      ``Sun``, and defines how many rays are to be sampled from this light source for raytracing. Since it may be
      interesting to model multiple light sources for calibration purposes, the ``ARTIST`` scenario structure also
      supports more than one light source.
-   - **Heliostats:** A Concentrating Solar Power Plant (CSP) relies on mirrors, so-called *heliostats* to reflect the
-     light on to the receiver. Therefore, an ``ARTIST`` scenario must contain at least one (and usually multiple)
-     heliostats. As well as a unique ID, a position, and the aim point the heliostat is focusing on, a heliostat
+   - **Heliostats:** A Concentrating Solar Power Plant (CSP) relies on mirrors, so-called *heliostats*, to reflect the
+     light onto the receiver. Therefore, an ``ARTIST`` scenario must contain at least one (and usually multiple)
+     heliostats. Besides its unique ID, its position, and the aim point it is focusing on, a heliostat
      requires a *surface*, a *kinematic*, and at least one *actuator*. The surface is the reflective surface of the
-     heliostat and is made up of multiple *facets*. Each of these facets is modelled by Non-Uniform Rational B-Splines
+     heliostat and is made up of multiple *facets*. Each of these facets is modeled by Non-Uniform Rational B-Splines
      (NURBS) and, therefore, the parameters required to load the NURBS must be defined in the HDF5 file.
      These surfaces are often not ideal, and as a result, NURBS are required to learn the minute deformations. The
-     second important heliostat attribute is the kinematic, which defines how the heliostat can be orientated, i.e.
+     second important heliostat attribute is the kinematic, which defines how the heliostat can be orientated, i.e.,
      where are the axes of rotation, how many of these axes exist and what directions of movement are allowed. Each
      kinematic also contains at least one actuator which is responsible for performing the orientation.
-   - **Prototypes:** If we are considering a realistic CSP then typically, *almost all heliostats are identical!*. This
+   - **Prototypes:** Typically, *almost all heliostats are identical* for a realistic CSP. This
      is because CSP operators often source their heliostats from one manufacturer to reduce maintenance costs and
      simplify the acquisition process. In such a setting, it would be inefficient to save identical heliostat parameters
      for every heliostat in the scenario. Therefore, an ``ARTIST`` scenario also contains *prototypes* for the surface,
