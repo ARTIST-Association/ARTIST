@@ -16,13 +16,13 @@ will run through some basic concepts necessary to understanding ``ARTIST`` inclu
 
 Loading a Scenario
 ------------------
-Before we load the scenario you need to decide which scenario file to use. This tutorial is based on a simple scenario
+Before we load the scenario, you need to decide which scenario file to use. This tutorial is based on a simple scenario
 which you can create in the tutorial on :ref:`generating a scenario <generating_scenario>`. However, since generating a
 scenario involves training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided the
 scenario file online for your convenience.
 
 Therefore, the first step is to decide if you want to use your previously created scenario or the online version. If
-you want to use the online version you must adjust the boolean ``DOWNLOAD_DATA`` to ``True``. If not you need to adjust
+you want to use the online version, you must adjust the boolean ``DOWNLOAD_DATA`` to ``True``. If not, you need to adjust
 the path and name of the ``scenario_file`` variable:
 
 .. code-block::
@@ -30,9 +30,9 @@ the path and name of the ``scenario_file`` variable:
     USE_DOWNLOADED_DATA = False   # Select true if you want to use downloaded data.
     scenario_name = "please/insert/the/path/to/your/scenario/here/name.h5" # Adjust if you want to use your local scenario.
 
-Once you have adjusted these parameters we can load a scenario in ``ARTIST`` by simply calling the
-``load_scenario_from_hdf5()`` method, which is a python ``Classmethod`` that initializes a ``Scenario`` object based on
-the configuration contained in the HDF5 file.
+Once you have adjusted these parameters, you can load a scenario in ``ARTIST`` by simply calling the
+``load_scenario_from_hdf5()`` method, which is a ``Python`` ``classmethod`` that initializes a ``Scenario`` object based on
+the configuration contained in the HDF5 file:
 
 .. code-block::
 
@@ -40,7 +40,7 @@ the configuration contained in the HDF5 file.
     with h5py.File(scenario_name, "r") as f:
         example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f)
 
-When loading the scenario, a large number of log messages are generated:
+When loading the scenario, a large number of log messages is generated:
 
 .. code-block::
 
@@ -90,14 +90,14 @@ When loading the scenario, a large number of log messages are generated:
 
 These log messages consist of three brackets:
 
-   - The first bracket, e.g. ``[2024-05-22 18:10:21,397]`` displays the time stamp.
-   - The second bracket, e.g. ``[artist.scenario]`` displays the file that generated the log message.
-   - The third bracket, e.g. ``[INFO]`` or ``[WARNING]`` displays the level for which the log message is being generated.
+   - The first bracket, e.g., ``[2024-05-22 18:10:21,397]``, displays the time stamp.
+   - The second bracket, e.g., ``[artist.scenario]``, displays the file that generated the log message.
+   - The third bracket, e.g., ``[INFO]`` or ``[WARNING]``, displays the level for which the log message is being generated.
    - Finally, after the three brackets, the log message is printed.
 
-Whilst there are quite a few log messages, there are two important aspects we should note:
+Whilst there are quite a few log messages, there are two important aspects you should note:
 
-   1. The majority of the messages are warnings -- however, this is not a problem. We are considering a simplistic
+   1. The majority of the messages are warnings – however, this is not a problem. We are considering a simplistic
       scenario, and as a result do not include specific kinematic or actuator parameters or deviations. Therefore,
       ``ARTIST`` automatically uses the default values. In this case, this is the desired behavior, and we can ignore the
       warnings!
@@ -105,8 +105,8 @@ Whilst there are quite a few log messages, there are two important aspects we sh
       loaded from the HDF5 file, important information about these objects, and at the very end stating that the
       heliostat does not contain individual parameters and is (as we expect) being loaded using the prototypes.
 
-Before we start using this scenario we can inspect it, for example by printing the scenario properties or investigating
-what type of light source and receiver is included.
+Before we start using this scenario, we can inspect it, for example by printing the scenario properties or investigating
+what type of light source and receiver is included:
 
 .. code-block::
 
@@ -134,23 +134,23 @@ This code generates the following output:
 
 Aligning a Heliostat
 --------------------
-Before we can start raytracing we need to align the heliostat. In the current scenario our heliostat has been
+Before we can start raytracing, we need to align the heliostat. In the current scenario, our heliostat has been
 initialized pointing straight up at the sky. Unfortunately, this orientation is not very useful for reflecting
 sunlight from the sun onto the receiver that is located in the south (see aim point above).
 
 Therefore, we make use of our knowledge regarding the:
 
 - Position of the heliostat,
-- Aim point that,
+- Aim point, and
 - Kinematic model,
 
-to align the heliostat in a optimal position for reflection. To perform this orientation we need a *incident ray
-direction*, i.e. a direction vector pointing towards the sun with the origin at the heliostat. Given an *incident ray
-direction* we can align the heliostat with the following code.
+to align the heliostat in an optimal position for reflection. To perform this orientation, we need an *incident ray
+direction*, i.e., a direction vector pointing towards the sun with the origin at the heliostat. Given an *incident ray
+direction*, we can align the heliostat with the following code:
 
 .. code-block::
 
-    # Align the heliostat
+    # Align the heliostat.
     single_heliostat.set_aligned_surface(
         incident_ray_direction=incident_ray_direction_south
     )
@@ -175,18 +175,18 @@ and even a smaller portion of these rays would hit the receiver. Therefore, heli
 efficient. Concretely, the heliostat raytracing involves three main steps:
 
 1. We calculate the preferred reflection direction. This preferred reflection direction models the direction of a ray
-   coming directly from the sun to the heliostat, i.e. along the incident ray direction. Specifically, we reflect this
+   coming directly from the sun to the heliostat, i.e., along the incident ray direction. Specifically, we reflect this
    ray at every point on the heliostat to generate multiple *ideal* reflections.
 2. This single ray only models an *ideal* direction, but we need to account for all possible rays coming from the sun.
    Therefore, we use our model of the sun to create *distortions* which we then use to slightly alter the preferred
    reflection directions multiple times, thus generating many realistically reflected rays.
-3. We trace these rays onto the heliostat by performing a *line-plane-intersection* and determining the resulting flux
+3. We trace these rays onto the heliostat by performing a *line-plane intersection* and determining the resulting flux
    density image on the receiver.
 
 Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class! Therefore, raytracing
 with ``ARTIST`` involves two simple lines of code. First, we define the ``HeliostatRayTracer``. A ``HeliostatRayTracer``
 only requires a ``Scenario`` object as an argument, but in this tutorial we additionally define the ``batch_size``.
-The ``batch_size`` defines the number of rays that are traced at one.
+The ``batch_size`` defines the number of rays that are traced at once:
 
 .. code-block::
 
@@ -206,13 +206,13 @@ desired incident ray direction and finally normalizing the resulting image.
     image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south)
     image_south = raytracer.normalize_bitmap(image_south)
 
-If we plot the output we get the following flux density image!
+If we plot the output, we get the following flux density image!
 
 .. figure:: ./images/tutorial_south_flux.png
    :width: 80 %
    :align: center
 
-That's it - a simple example of heliostat raytracing with ``ARTIST``!
+That's it – a simple example of heliostat raytracing with ``ARTIST``!
 
 Of course, this one scenario is capable of performing raytracing for any incident ray direction. For example, we can consider
 three further incident ray directions and perform raytracing using a helper function that combines alignment and
@@ -230,7 +230,7 @@ raytracing with the following code:
     image_west = align_and_trace_rays(light_direction=incident_ray_direction_west)
     image_above = align_and_trace_rays(light_direction=incident_ray_direction_above)
 
-If we were to now plot the results of all four considered incident ray directions we get the following image:
+If we were to now plot the results of all four considered incident ray directions, we get the following image:
 
 .. figure:: ./images/tutorial_multiple_flux.png
    :width: 100 %
