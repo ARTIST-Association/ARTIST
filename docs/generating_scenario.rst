@@ -7,12 +7,12 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_generate_scenario_heliostat_raytracing.py
 
-In this tutorial we will guide you through the process of generating a simple ``ARTIST`` scenario HDF5 file. Before
-starting the tutorial make sure you have read the information regarding the structure of an ``ARTIST`` scenario file
+In this tutorial, we will guide you through the process of generating a simple ``ARTIST`` scenario HDF5 file. Before
+starting the tutorial, make sure you have read the information regarding the structure of an ``ARTIST`` scenario file
 :ref:`that you can find here <scenario>`!
 
-Before we start defining the scenario we need to determine where it will be saved. We define this by setting the
-``file_path`` variable. If this location does not exist the scenario generation will automatically fail.
+Before we start defining the scenario, we need to determine where it will be saved. We define this by setting the
+``file_path`` variable. If this location does not exist, the scenario generation will automatically fail.
 
 .. code-block::
 
@@ -26,11 +26,12 @@ As mentioned in the :ref:`information on a scenario <scenario>`, an ``ARTIST`` s
 - At least one (but usually more) heliostats.
 - A prototype which is used if the individual heliostats do not have individual parameters.
 
-In this tutorial we will develop a very simple ``ARTIST`` scenario that contains:
+In this tutorial, we will develop a very simple ``ARTIST`` scenario that contains:
+
 - One planar receiver.
 - One ``Sun`` as a light source.
 - One heliostat.
-- Uses the prototype to define the properties of the heliostat.
+- A corresponding prototype to define the properties of the heliostat.
 
 Now we can get started defining each of these elements and then generating the scenario!
 
@@ -56,20 +57,20 @@ The receiver is where the reflected light from the heliostats is concentrated. W
 This configuration defines the following properties:
 
 - A ``receiver_key`` used to identify the receiver when loading the ``ARTIST`` scenario.
-- The ``receiver_type`` currently modelled -- in this case a planar receiver.
-- The ``position_center`` which defines the position of the middle of the receiver. Note that because this is a position
-  tensor, the final element of the tensor in the 4D representation is a 1 - for more information see
+- The ``receiver_type`` currently modelled – in this case a planar receiver.
+- The ``position_center`` which defines the position of the receiver's middle. Note that because this is a position
+  tensor, the final element of the tensor in the 4D representation is a 1 – for more information see
   :ref:`our note on coordinates <coordinates>`.
 - A ``normal_vector`` defining the normal vector to the plane of the receiver. Note that because this is a direction
-  tensor, the final element of the tensor in the 4D representation is a 0 - for more information see
+  tensor, the final element of the tensor in the 4D representation is a 0 – for more information see
   :ref:`our note on coordinates <coordinates>`.
 - The ``plane_e`` which defines the receiver plane in the east direction.
 - The ``plane_u`` which defines the receiver plane in the up direction.
 - The resolution parameters, ``resolution_e`` and ``resolution_u`` defining the resolution of the receiver in the east
   and up directions.
 
-Since our scenario only contains one receiver but ``ARTIST`` scenario are designed to load multiple receivers, we have
-to wrap our receiver in a list and create a ``ReceiverListConfig`` object.
+Since our scenario only contains one receiver but ``ARTIST`` scenarios are designed to load multiple receivers, we have
+to wrap our receiver in a list and create a ``ReceiverListConfig`` object:
 
 .. code-block::
 
@@ -82,7 +83,7 @@ to wrap our receiver in a list and create a ``ReceiverListConfig`` object.
 
 Light Source
 ------------
-The light source is the object responsible for providing light that is then reflected by the heliostats. Typically this
+The light source is the object responsible for providing light that is then reflected by the heliostats. Typically, this
 light source is a ``Sun``, however in certain situations it may be beneficial to model multiple artificial light
 sources. We define the light source by creating a ``LightSourceConfig`` object as shown below:
 
@@ -101,15 +102,15 @@ sources. We define the light source by creating a ``LightSourceConfig`` object a
 This configuration defines the following light source properties:
 
 - The ``light_source_key`` used to identify the light source when loading the ``ARTIST`` scenario.
-- The ``light_source_type`` which defines what type of light source is used. In this case it is a ``Sun``.
+- The ``light_source_type`` which defines what type of light source is used. In this case, it is a ``Sun``.
 - The ``number_of_rays`` which defines how many rays are sampled from the light source for raytracing.
-- The ``distribution_type`` which models what distribution is used to model the light source. In this case we use a
+- The ``distribution_type`` which models what distribution is used to model the light source. In this case, we use a
   normal distribution.
-- The ``mean`` and the ``covariance``, which are the parameters of the previously defined normal distribution used to
+- The ``mean`` and the ``covariance`` which are the parameters of the previously defined normal distribution used to
   model the light source.
 
-Since our scenario only contains one light source but ``ARTIST`` scenario are designed to load multiple light sources,
-we have to wrap our light source in a list and create a ``LightSourceListConfig`` object.
+Since our scenario only contains one light source but ``ARTIST`` scenarios are designed to load multiple light sources,
+we have to wrap our light source in a list and create a ``LightSourceListConfig`` object:
 
 .. code-block::
 
@@ -124,10 +125,10 @@ Prototype
 ---------
 The next step in defining our scenario is to define our *prototype*. We define the prototype before defining the
 heliostat, since in this tutorial we load the heliostat based on the prototype parameters. A prototype always contains
-a *surface* prototype, a *kinematic* prototype, and a *actuator* prototype.
+a *surface* prototype, a *kinematic* prototype, and an *actuator* prototype.
 
-We start with the *surface* prototype. In this case we generate the surface based on a STRAL scenario using a
-``StralToSurfaceConverter``, as defined below:
+We start with the *surface* prototype. In this case, we generate the surface based on a STRAL scenario using a
+``StralToSurfaceConverter`` as defined below:
 
 .. code-block::
 
@@ -146,14 +147,14 @@ This converter requires:
 - A ``surface_header_name`` which is required to define the ``Struct`` used to load surface information from the STRAL
   file.
 - A ``facet_header_name`` used to define the ``Struct`` to load facet information from the STRAL file.
-- A ``points_on_facet_strct_name`` used to define the ``Struct`` to load the points from each facet defined in the STRAL
+- A ``points_on_facet_struct_name`` used to define the ``Struct`` to load the points from each facet defined in the STRAL
   file.
-- A ``step_size``, which is used to reduce the number of points considered from the STRAl file. Per default, STRAL files
-  contain an extremely large number of points which increases compute without improving accuracy. Therefore we only
+- A ``step_size`` which is used to reduce the number of points considered from the STRAl file. Per default, STRAL files
+  contain an extremely large number of points which increases compute without improving accuracy. Therefore, we only
   select one in 100 points (which still results in approximately 800 points per facet) to reduce this compute.
 
-A surface consists of multiple facets. Since we are using data from STRAL to recreate the surface for our prototype we
-can create this list of facets by calling the ``generate_surface_config_from_stral()`` function, as shown below:
+A surface consists of multiple facets. Since we are using data from STRAL to recreate the surface for our prototype, we
+can create this list of facets by calling the ``generate_surface_config_from_stral()`` function as shown below:
 
 .. code-block::
 
@@ -173,40 +174,40 @@ can create this list of facets by calling the ``generate_surface_config_from_str
 This function loads data from STRAL and then uses this data to learn a Non-Rational Uniform B-Spline (NURBS) surface
 for each of the facets. Therefore, this function requires:
 
-- The ``number_of_eval_points_e`` and ``number_of_eval_points_n``. This defines how many evaluation points will be used
+- The ``number_of_eval_points_e`` and ``number_of_eval_points_n``. These define how many evaluation points will be used
   when generating discrete points based on the NURBS surface after loading the ``ARTIST`` scenario.
-- The ``conversion_method`` used to learn the NURBS surface. In this case we are learning the surface based on the
+- The ``conversion_method`` used to learn the NURBS surface. In this case, we are learning the surface based on the
   surface normals from the STRAL data.
-- The ``number_control_points_e`` and ``number_control_points_n`` which defines the number of control points in the east
-  and north direction. These control points are the parameters that are optimised when learning the NURBS surface. As a
-  result a larger number of control points allows for finer adjustments but also increases training time.
-- The ``degree_e`` and ``degree_n``, which defines the degree of the splines used to model the NURBS in the east and
+- The ``number_control_points_e`` and ``number_control_points_n`` which define the number of control points in the east
+  and north direction. These control points are the parameters that are optimized when learning the NURBS surface. As a
+  result, a larger number of control points allows for finer adjustments but also increases training time.
+- The ``degree_e`` and ``degree_n`` which define the degree of the splines used to model the NURBS in the east and
   north direction.
-- The ``tolerance`` which is a threshold for training. Once the NURBS loss is under this threshold the training will
+- The ``tolerance`` which is a threshold for training. Once the NURBS loss is under this threshold, the training will
   automatically stop.
-- The ``max_epoch`` parameter, which defines the maximum number of epochs used for training. In this case it is 10000,
-  however due to the ``tolerance`` parameter the training should stop much earlier.
-- The ``initial_learning_rate`` used for learning the NURBS surface. In this case it is 0.001. The training makes use of
+- The ``max_epoch`` parameter which defines the maximum number of epochs used for training. In this case, it is 10000;
+  however, due to the ``tolerance`` parameter, the training should stop much earlier.
+- The ``initial_learning_rate`` used for learning the NURBS surface. In this case, it is 0.001. The training makes use of
   a learning rate scheduler which dynamically adjusts the learning rate during the training process.
 
 The output of this function is a list of ``FacetConfig`` objects, which define the parameters that enable ``ARTIST`` to
 recreate the learned NURBS facet surfaces when the scenario is loaded.
 
-Now the facet list has been created automatically by learning NURBS from STRAL data, we need to generate a
-``SurfacePrototypeConfig`` object to save the surface.
+Now that the facet list has been created automatically by learning NURBS from STRAL data, we need to generate a
+``SurfacePrototypeConfig`` object to save the surface:
 
 .. code-block::
 
     # Generate the surface prototype configuration
     surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
-The next prototype object we consider is the *kinematic* prototype. The first aspect of the kinematic prototype are the
-``KinematicOffsets``. The kinematic modelled in ``ARTIST`` assumes that all heliostats are initially pointing in the
-south direction, however depending on the CSP considered, the heliostats may initially be orientated in a different
+The next prototype object we consider is the *kinematic* prototype. The first aspect of the kinematic prototype is the
+``KinematicOffsets``. The kinematic modeled in ``ARTIST`` assumes that all heliostats are initially pointing in the
+south direction; however, depending on the CSP considered, the heliostats may initially be orientated in a different
 direction.
 
-For our scenario, we want the heliostats to initially be orientated upwards, i.e. they point directly at the sky.
-Therefore we need to include a rotation of 90 degrees along the east axis to adjust the initial orientation. We include
+For our scenario, we want the heliostats to initially be orientated upwards, i.e., they point directly at the sky.
+Therefore, we need to include a rotation of 90 degrees along the east axis to adjust the initial orientation. We include
 this by defining a ``KinematicOffset`` object as shown below:
 
 .. code-block::
@@ -219,12 +220,12 @@ this by defining a ``KinematicOffset`` object as shown below:
 This configuration defines:
 
 - A ``kinematic_initial_orientation_offset_e`` which is an initial orientation offset along the east axis.
-- It is also possible to set initial orientation offsets in the north and up direction, however we do not require these
+- It is also possible to set initial orientation offsets in the north and up direction; however, we do not require these
   offsets for our scenario.
 
-A further element of a kinematic configuration are ``KinematicDeviations`` which are small disturbance parameters to
-represent offsets caused by the three-joint kinematic modelled in ``ARTIST``. However, in this tutorial we ignore these
-deviations. Therefore, we can now create the kinematic prototype by generating a ``KinematicPrototypeConfig`` object.
+A further element of a kinematic configuration is ``KinematicDeviations`` which are small disturbance parameters to
+represent offsets caused by the three-joint kinematic modeled in ``ARTIST``. However, in this tutorial we ignore these
+deviations. Therefore, we can now create the kinematic prototype by generating a ``KinematicPrototypeConfig`` object:
 
 .. code-block::
 
@@ -236,12 +237,12 @@ deviations. Therefore, we can now create the kinematic prototype by generating a
 
 This object defines:
 
-- The ``kinematic_type`` applied in the scenario, in this case we are using a *rigid body kinematic*.
+- The ``kinematic_type`` applied in the scenario; in this case, we are using a *rigid body kinematic*.
 - The ``kinematic_initial_orientation_offsets`` which are the offsets we defined above.
-- If we have ``KinematicDeviations`` we would also include them in this definition.
+- If we have ``KinematicDeviations``, we would also include them in this definition.
 
 With the kinematic prototype defined, the final prototype we require is the *actuator* prototype. For the rigid body
-kinematic applied in this scenario we require **exactly two** actuators. We can define these actuators via `
+kinematic applied in this scenario, we require **exactly two** actuators. We can define these actuators via
 ``ActuatorConfig`` objects as shown below:
 
 .. code-block::
@@ -261,14 +262,14 @@ kinematic applied in this scenario we require **exactly two** actuators. We can 
 
 These configurations define:
 
-- The ``actuator_key`` used to when loading the actuator from an ``ARTIST`` scenario.
-- The ``actuator_type``, which in this case is an ideal actuator for both actuators.
-- The ``actuator_clockwise`` parameter, which defines if the actuator operates per default in a clockwise or
-  anti-clockwise direction.
+- The ``actuator_key`` used when loading the actuator from an ``ARTIST`` scenario.
+- The ``actuator_type`` which in this case is an ideal actuator for both actuators.
+- The ``actuator_clockwise`` parameter which defines if the actuator operates per default in a clockwise or
+  counter-clockwise direction.
 
-If we were considering different types of actuators, e.g. a *linear actuator* we would also have to define specific
-actuator parameters -- however we will stick to a simple configuration for this tutorial. To complete the actuator
-prototype we need to wrap both actuators in a list and generate an ``ActuatorPrototypeConfig`` object.
+If we were considering different types of actuators, e.g., a *linear actuator*, we would also have to define specific
+actuator parameters – however we will stick to a simple configuration for this tutorial. To complete the actuator
+prototype, we need to wrap both actuators in a list and generate an ``ActuatorPrototypeConfig`` object:
 
 .. code-block::
 
@@ -280,7 +281,7 @@ prototype we need to wrap both actuators in a list and generate an ``ActuatorPro
         actuator_list=actuator_prototype_list
     )
 
-Now that all the aspects of our prototype are defined we can create the final ``PrototypeConfig`` object, which simply
+Now that all the aspects of our prototype are defined, we can create the final ``PrototypeConfig`` object, which simply
 combines all the above configurations into one object, as shown below:
 
 .. code-block::
@@ -312,12 +313,12 @@ This heliostat configuration requires:
 - The ``heliostat_id``, a unique identifier that can be used to quickly identify the heliostat within the scenario.
 - The ``heliostat_position`` which defines the position of the heliostat in the field. Note the one in the fourth
   dimension according to the previously discussed :ref:'coordinate convention <coordinates>'.
-- The ``heliostat_aim_point`` which defines the desired aim point of the heliostat -- in this case the center of
+- The ``heliostat_aim_point`` which defines the desired aim point of the heliostat – in this case the center of
   the receiver. Note the one in the fourth dimension according to the previously discussed
   :ref:'coordinate convention <coordinates>'.
 
-Since the heliostat does not have any individual surface, kinematic, or actuator parameters we do not need to include
-them here. However, since ``ARTIST`` is designed to load multiple heliostats we do need to wrap our heliostat
+Since the heliostat does not have any individual surface, kinematic, or actuator parameters, we do not need to include
+them here. However, since ``ARTIST`` is designed to load multiple heliostats, we do need to wrap our heliostat
 configuration in a list and create a ``HeliostatListConfig`` object as shown below:
 
 .. code-block::
