@@ -31,7 +31,7 @@ class LightSource(torch.nn.Module):
         which can be of various types.
         The most noticeable light source is the sun, however, drones could carry artificial light sources and
         distribute this light on specific heliostats for calibration purposes.
-        Currently only the sun is implemented.
+        Currently, only the sun is implemented.
 
         Parameters
         ----------
