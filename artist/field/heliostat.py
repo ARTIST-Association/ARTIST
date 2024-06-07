@@ -21,7 +21,7 @@ from artist.util.configuration_classes import (
 )
 
 kinematic_type_mapping = {config_dictionary.rigid_body_key: RigidBody}
-"""A type mapping dictionary that allows ARTIST to automatically infer the correct kinematic type."""
+"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct kinematic type."""
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat."""
