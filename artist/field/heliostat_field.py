@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class HeliostatField(torch.nn.Module):
     """
-    Wraps the heliostat list as a ``torch.nn.Module`` to allow gradient calculation.
+    Wrap the heliostat list as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------

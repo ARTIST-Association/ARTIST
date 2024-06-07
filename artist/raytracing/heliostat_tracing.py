@@ -15,7 +15,7 @@ from .rays import Rays
 
 class DistortionsDataset(Dataset):
     """
-    Contains a dataset of distortions based on the model of the light source.
+    A dataset of distortions based on the model of the light source.
 
     Attributes
     ----------

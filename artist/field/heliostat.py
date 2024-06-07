@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 class Heliostat(torch.nn.Module):
     """
-    Implements the behavior of a heliostat.
+    Implement the behavior of a heliostat.
 
     Attributes
     ----------

@@ -3,7 +3,7 @@ import torch
 
 class Rays:
     """
-    Models rays used for raytracing that have a direction vector and magnitude.
+    Model rays used for raytracing that have a direction vector and magnitude.
 
     Attributes
     ----------

@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class Receiver(torch.nn.Module):
     """
-    Implements a receiver.
+    Implement a receiver.
 
     Attributes
     ----------

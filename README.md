@@ -52,7 +52,7 @@ Alternatively, you can install ``ARTIST`` locally. To achieve this, there are tw
    - Install an editable version with developer dependencies: ``pip install -e ."[dev]"``
 
 ## Structure
-The ``ARTIST`` pacakge is structured into four subpackages as shown below:
+The ``ARTIST`` repository is structured as shown below:
 ```
 .
 ├── artist # Parent package
@@ -71,12 +71,12 @@ The ``ARTIST`` pacakge is structured into four subpackages as shown below:
 ```
 
 ## Documentation
-You can check out the full ``ARTIST`` documentation at[https://artist.readthedocs.io/en/latest/index.html](https://artist.readthedocs.io/en/latest/index.html) :rocket:!
+You can check out the full ``ARTIST`` documentation at [https://artist.readthedocs.io/en/latest/index.html](https://artist.readthedocs.io/en/latest/index.html) :rocket:!
 The ``ARTIST`` documentation includes:
-- Installation instructions.
-- Tutorials.
-- Some theoretical background information.
-- API Reference.
+- Installation instructions
+- Tutorials
+- Some theoretical background information
+- API reference
 
 ## How to contribute
 Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
