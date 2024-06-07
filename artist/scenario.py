@@ -13,23 +13,20 @@ from artist.util.configuration_classes import (
     ActuatorListConfig,
     ActuatorParameters,
     FacetConfig,
-    KinematicConfig,
     KinematicDeviations,
+    KinematicLoadConfig,
     KinematicOffsets,
     SurfaceConfig,
 )
 
 set_logger_config()
 log = logging.getLogger(__name__)
+"""A logger for the scenario."""
 
 
 class Scenario:
     """
-    Represents a scenario loaded by ARTIST.
-
-    A scenario defines the physical objects and scene to be used by ARTISt. In this scene a scenario contains at least
-    one receiver, at least one light source and at least one heliostat in a heliostat field. ARTIST also supports
-    scenarios that contain multiple receivers, multiple light sources and multiple heliostats.
+    Define a scenario loaded by ARTIST.
 
     Attributes
     ----------
@@ -54,6 +51,10 @@ class Scenario:
     ) -> None:
         """
         Initialize the scenario.
+
+        A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
+        least one receiver, at least one light source and at least one heliostat in a heliostat field. ``ARTIST`` also
+        supports scenarios that contain multiple receivers, multiple light sources, and multiple heliostats.
 
         Parameters
         ----------
@@ -81,10 +82,10 @@ class Scenario:
         Returns
         -------
         Scenario
-            The ARTIST scenario loaded from the HDF5 file.
+            The ``ARTIST`` scenario loaded from the HDF5 file.
         """
         log.info(
-            f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+            f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
         receivers = ReceiverField.from_hdf5(config_file=scenario_file)
         light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)
@@ -497,7 +498,7 @@ class Scenario:
                 else torch.tensor(0.0)
             ),
         )
-        kinematic_prototype = KinematicConfig(
+        kinematic_prototype = KinematicLoadConfig(
             kinematic_type=str(
                 scenario_file[config_dictionary.prototype_key][
                     config_dictionary.kinematic_prototype_key

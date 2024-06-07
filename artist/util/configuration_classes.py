@@ -7,7 +7,7 @@ from artist.util import config_dictionary
 
 class ReceiverConfig:
     """
-    Contains the receiver configuration parameters.
+    Store the receiver configuration parameters.
 
     Attributes
     ----------
@@ -120,7 +120,7 @@ class ReceiverConfig:
 
 class ReceiverListConfig:
     """
-    Contains the receiver list configuration parameters.
+    Store the receiver list configuration parameters.
 
     Attributes
     ----------
@@ -161,7 +161,7 @@ class ReceiverListConfig:
 
 class LightSourceConfig:
     """
-    Contains the light source configuration parameters.
+    Store the light source configuration parameters.
 
     Attributes
     ----------
@@ -261,7 +261,7 @@ class LightSourceConfig:
 
 class LightSourceListConfig:
     """
-    Contains the light source list configuration parameters.
+    Store the light source list configuration parameters.
 
     Attributes
     ----------
@@ -302,7 +302,7 @@ class LightSourceListConfig:
 
 class FacetConfig:
     """
-    Contains the facet configuration parameters.
+    Store the facet configuration parameters.
 
     Attributes
     ----------
@@ -414,7 +414,7 @@ class FacetConfig:
 
 class SurfaceConfig:
     """
-    Contains the surface configuration parameters.
+    Store the surface configuration parameters.
 
     Attributes
     ----------
@@ -455,7 +455,7 @@ class SurfaceConfig:
 
 class SurfacePrototypeConfig(SurfaceConfig):
     """
-    Ccontains the configuration parameters for a surface prototype.
+    Store the configuration parameters for a surface prototype.
 
     See Also
     --------
@@ -476,7 +476,7 @@ class SurfacePrototypeConfig(SurfaceConfig):
 
 class KinematicDeviations:
     """
-    Contains the kinematic deviations.
+    Store the kinematic deviations.
 
     Attributes
     ----------
@@ -605,13 +605,13 @@ class KinematicDeviations:
         self.concentrator_tilt_n = concentrator_tilt_n
         self.concentrator_tilt_u = concentrator_tilt_u
 
-    def create_kinematic_deviations_dict(self) -> Dict[str, torch.Tensor]:
+    def create_kinematic_deviations_dict(self) -> Dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic deviations.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic deviations.
         """
         deviations_dict = {}
@@ -710,7 +710,7 @@ class KinematicDeviations:
 
 class KinematicOffsets:
     """
-    Contains the kinematic offsets.
+    Store the kinematic offsets.
 
     Attributes
     ----------
@@ -755,13 +755,13 @@ class KinematicOffsets:
             kinematic_initial_orientation_offset_u
         )
 
-    def create_kinematic_offsets_dict(self) -> Dict[str, torch.Tensor]:
+    def create_kinematic_offsets_dict(self) -> Dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic offsets.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic offsets.
         """
         offset_dict = {}
@@ -788,7 +788,7 @@ class KinematicOffsets:
 
 class KinematicConfig:
     """
-    Contains the configuration parameters for the kinematic.
+    Store the configuration parameters for the kinematic.
 
     Attributes
     ----------
@@ -827,7 +827,6 @@ class KinematicConfig:
         self.kinematic_initial_orientation_offsets = (
             kinematic_initial_orientation_offsets
         )
-
         self.kinematic_deviations = kinematic_deviations
 
     def create_kinematic_dict(self) -> Dict[str, Any]:
@@ -839,7 +838,9 @@ class KinematicConfig:
         Dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic.
         """
-        kinematic_dict = {config_dictionary.kinematic_type: self.kinematic_type}
+        kinematic_dict: Dict[str, Any] = {
+            config_dictionary.kinematic_type: self.kinematic_type
+        }
         if self.kinematic_initial_orientation_offsets is not None:
             kinematic_dict.update(
                 {
@@ -857,7 +858,7 @@ class KinematicConfig:
 
 class KinematicPrototypeConfig(KinematicConfig):
     """
-    Contains the configuration parameters for the kinematic prototype.
+    Store the configuration parameters for the kinematic prototype.
 
     See Also
     --------
@@ -889,9 +890,48 @@ class KinematicPrototypeConfig(KinematicConfig):
         )
 
 
+class KinematicLoadConfig:
+    """
+    Store the configuration parameters for the kinematic when loaded in ``ARTIST``.
+
+    Attributes
+    ----------
+    kinematic_type : str
+        The type of kinematic used.
+    kinematic_initial_orientation_offsets : KinematicOffsets, optional
+        The initial orientation offsets of the kinematic configuration.
+    kinematic_deviations : KinematicDeviations, optional
+        The kinematic deviations.
+    """
+
+    def __init__(
+        self,
+        kinematic_type: str,
+        kinematic_initial_orientation_offsets: KinematicOffsets,
+        kinematic_deviations: KinematicDeviations,
+    ) -> None:
+        """
+        Initialize the kinematic configuration for loading in ``ARTIST``.
+
+        Parameters
+        ----------
+        kinematic_type : str
+            The type of kinematic used.
+        kinematic_initial_orientation_offsets : KinematicOffsets, optional
+            The initial orientation offsets of the kinematic configuration.
+        kinematic_deviations : KinematicDeviations, optional
+            The kinematic deviations.
+        """
+        self.kinematic_type = kinematic_type
+        self.kinematic_initial_orientation_offsets = (
+            kinematic_initial_orientation_offsets
+        )
+        self.kinematic_deviations = kinematic_deviations
+
+
 class ActuatorParameters:
     """
-    Contains the actuator parameters.
+    Store the actuator parameters.
 
     Attributes
     ----------
@@ -979,7 +1019,7 @@ class ActuatorParameters:
 
 class ActuatorConfig:
     """
-    Contains the configuration parameters for the actuator.
+    Store the configuration parameters for the actuator.
 
     Attributes
     ----------
@@ -1044,7 +1084,7 @@ class ActuatorConfig:
 
 class ActuatorListConfig:
     """
-    Contains the configuration parameters for a list of actuators.
+    Store the configuration parameters for a list of actuators.
 
     Attributes
     ----------
@@ -1085,7 +1125,7 @@ class ActuatorListConfig:
 
 class ActuatorPrototypeConfig(ActuatorListConfig):
     """
-    Contains the configuration parameters for the actuator prototype.
+    Store the configuration parameters for the actuator prototype.
 
     Attributes
     ----------
@@ -1114,7 +1154,7 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
 class PrototypeConfig:
     """
-    Contains the prototype configuration.
+    Store the prototype configuration.
 
     Attributes
     ----------
@@ -1171,7 +1211,7 @@ class PrototypeConfig:
 
 class HeliostatConfig:
     """
-    Contains the configurations for a single heliostat.
+    Store the configurations for a single heliostat.
 
     Attributes
     ----------
@@ -1211,7 +1251,7 @@ class HeliostatConfig:
 
         Parameters
         ----------
-         heliostat_key : str
+        heliostat_key : str
             The key used to identify the heliostat in the HDF5 file.
         heliostat_id : int
             The numerical ID of the heliostat.
@@ -1272,7 +1312,7 @@ class HeliostatConfig:
 
 class HeliostatListConfig:
     """
-    Contains the configurations for the list of heliostats included in the scenario.
+    Store the configurations for the list of heliostats included in the scenario.
 
     Attributes
     ----------

@@ -11,17 +11,12 @@ For best results, we recommend installing ``ARTIST`` in a separate virtual envir
    $ source ./ARTIST/bin/activate
    $ pip install --upgrade pip
 
-The latest stable release can easily be installed from `PyPI`_ using ``pip``:
+Since ``ARTIST`` is still under development and therefore not yet available via `PyPI`_, we suggest installing ``ARTIST``
+directly from the `Github main branch`_ using ``pip``:
 
 .. code-block:: console
 
-    $ pip install artist
-
-If you need the latest updates, you can also install ``ARTIST`` directly from the `Github main branch`_ at you own risk:
-
-.. code-block:: console
-
-    $ pip install https://github.com/Helmholtz-AI-Energy/propulate
+    $ pip install https://github.com/ARTIST-Association/ARTIST
 
 If you want to get the source code and modify it, you can clone the source code using ``git`` and install ``ARTIST``
 with ``pip``:
@@ -35,7 +30,7 @@ Alternatively, if you wish to install the developer dependencies:
 
 .. code-block:: console
 
-   $ pip install -e .[dev]
+   $ pip install -e ."[dev]"
 
 You can check whether your installation was successful by importing ``ARTIST`` in ``Python``:
 

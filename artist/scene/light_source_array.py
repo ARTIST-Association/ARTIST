@@ -10,13 +10,15 @@ from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
 light_source_type_mapping = {config_dictionary.sun_key: Sun}
+"""A type mapping dictionary that allows ARTIST to automatically infer the correct light source type."""
 
 log = logging.getLogger(__name__)
+"""A logger for the light source array."""
 
 
 class LightSourceArray(torch.nn.Module):
     """
-    Wraps the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
+    Wrap the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -32,6 +34,10 @@ class LightSourceArray(torch.nn.Module):
     def __init__(self, light_source_list: List[LightSource]):
         """
         Initialize the light sources included in the considered scenario.
+
+        The light source array bundles all light sources considered in the scenario. The light source
+        sends out the rays that are then used for raytracing. The position of the light sources can be
+        dynamic throughout a time span.
 
         Parameters
         ----------

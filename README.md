@@ -4,13 +4,13 @@
 
 [![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![](./coverage.svg)
 [![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
+[![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
+![](./coverage.svg)
 
+## What ``ARTIST`` can do for you
 
-## What ARTIST can do for you
-
-The `ARTIST` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
+The ``ARTIST`` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
 framework in `Python`. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of
 heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization methods with
 smooth parametric descriptions of heliostats.
@@ -28,9 +28,6 @@ smooth parametric descriptions of heliostats.
   operational safety and efficiency. The reconstructed surfaces can be used for predicting unique heliostat flux densities
   with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.21203/rs.3.rs-2554998/v1) for more details.
 
-- **Advanced data set sampling strategies:** `ARTIST` utilizes a time-independent data set sampling strategy based on Euler
-  angles to improve accuracy by minimizing the needed data for calibration. Check out [this paper](https://doi.org/10.21203/rs.3.rs-2898838/v1) for more details.
-
 - **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation,
   allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
 
@@ -38,18 +35,26 @@ smooth parametric descriptions of heliostats.
 
 
 ## Installation
-We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+` virtual environment.
+We heavily recommend installing the `ARTIST` package in a dedicated `Python3.8+` virtual environment. You can
+install ``ARTIST`` directly from the GitHub repository via:
+```bash
+pip install git+https://github.com/ARTIST-Association/ARTIST
+```
+Alternatively, you can install ``ARTIST`` locally. To achieve this, there are two steps you need to follow:
 1. Clone the `ARTIST` repository:
    ```bash
    git clone https://github.com/ARTIST-Association/ARTIST.git
    ```
 2. Install the package from the main branch. There are multiple installation options available:
    - Install basic dependencies: ``pip install .``
-   - Install with ``mpi4py`` to enable distributed computing: ``pip install ".[mpi]"``
-   - Install an editable version with developer dependencies: ``pip install -e ".[dev]"``
+   - Install with ``mpi4py`` to enable distributed computing: ``pip install ."[mpi]"``
+   - Install with optional dependencies to run the tutorials:  ``pip install ."[tutorials]"``
+   - Install an editable version with developer dependencies: ``pip install -e ."[dev]"``
 
 ## Structure
+The ``ARTIST`` repository is structured as shown below:
 ```
+.
 ├── artist # Parent package
 │   ├── field # Objects in the field, e.g. heliostats and receivers
 │   ├── raytracing
@@ -57,23 +62,25 @@ We heavily recommend to install the `ARTIST` package in a dedicated `Python3.8+`
 │   └── util
 ├── measurement_data # Real measurements that can be used in ARTIST
 ├── scenarios # Scenarios describing a field that can be loaded by ARTIST
-└── tests # Tests for ARTIST
-    ├── field
-    ├── raytracing
-    └── scene
+├── tests/
+│   ├── field
+│   ├── raytracing
+│   ├── scene
+│   └── util
+└── tutorials # Tutorials to help you get started with ARTIST
 ```
-## How to use ARTIST
-We plan to provide an official *ReadTheDocs* documentation including exemplary usage scripts.
+
+## Documentation
+You can check out the full ``ARTIST`` documentation at [https://artist.readthedocs.io/en/latest/index.html](https://artist.readthedocs.io/en/latest/index.html) :rocket:!
+The ``ARTIST`` documentation includes:
+- Installation instructions
+- Tutorials
+- Some theoretical background information
+- API reference
 
 ## How to contribute
 Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
 Please also carefully check our [code of conduct](CODE_OF_CONDUCT.md) :blue_heart:.
-
-## License
-Hopefully MIT.
-
-## Documentation
-Coming soon :rocket:!
 
 ## Acknowledgments
 This work is supported by the [Helmholtz AI](https://www.helmholtz.ai/) platform grant.

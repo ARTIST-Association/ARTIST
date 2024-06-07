@@ -2,7 +2,7 @@ import logging
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 
 import colorlog
 import h5py
@@ -18,7 +18,7 @@ from artist.util.configuration_classes import (
 
 class ScenarioGenerator:
     """
-    Generate an ARTIST scenario, saving it as an HDF5 file.
+    Generate an ``ARTIST`` scenario, saving it as an HDF5 file.
 
     Attributes
     ----------
@@ -59,6 +59,11 @@ class ScenarioGenerator:
     ) -> None:
         """
         Initialize the scenario generator.
+
+        Scenarios in ``ARTIST`` describe the whole environment and all the components of a solar tower power
+        plant. The scenario generator creates the scenarios. A scenario encompasses the receiver(s), the
+        light source(s), prototypes, and the heliostat(s). The generated scenarios are then saved in HDF5
+        files.
 
         Parameters
         ----------
@@ -176,7 +181,9 @@ class ScenarioGenerator:
         """
         return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
 
-    def _flatten_dict_gen(self, d: MutableMapping, parent_key: str, sep: str) -> None:
+    def _flatten_dict_gen(
+        self, d: MutableMapping, parent_key: str, sep: str
+    ) -> Generator:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():

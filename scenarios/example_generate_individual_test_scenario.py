@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import torch
 
@@ -23,6 +24,15 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
+
+# The following parameter is the name of the scenario.
+file_path = "please/insert/the/file/path/here/name"
+
+if not Path(file_path).parent.is_dir():
+    raise FileNotFoundError(
+        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        "Please create the folder or adjust the file path before running again!"
+    )
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -69,12 +79,14 @@ stral_converter = StralToSurfaceConverter(
 list_of_facets = stral_converter.generate_surface_config_from_stral(
     number_eval_points_e=100,
     number_eval_points_n=100,
-    number_control_points_e=15,
-    number_control_points_n=15,
-    degree_e=4,
-    degree_n=4,
-    tolerance=1e-7,
-    max_epoch=5000,
+    conversion_method=config_dictionary.convert_nurbs_from_normals,
+    number_control_points_e=20,
+    number_control_points_n=20,
+    degree_e=3,
+    degree_n=3,
+    tolerance=3e-5,
+    max_epoch=10000,
+    initial_learning_rate=1e-3,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
@@ -164,9 +176,6 @@ heliostat_list = [heliostat_1]
 
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
-
-# The following parameter is the name of the scenario.
-file_path = f"{ARTIST_ROOT}/scenarios/test_individual_measurements_scenario"
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""

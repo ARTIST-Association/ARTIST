@@ -27,6 +27,12 @@ class LightSource(torch.nn.Module):
         """
         Initialize the light source.
 
+        The abstract light source implements a template for the construction of light sources
+        which can be of various types.
+        The most noticeable light source is the sun, however, drones could carry artificial light sources and
+        distribute this light on specific heliostats for calibration purposes.
+        Currently, only the sun is implemented.
+
         Parameters
         ----------
         number_of_rays : int
@@ -66,8 +72,8 @@ class LightSource(torch.nn.Module):
         """
         Get distortions given the light source model.
 
-        This function gets the distortions that are later used to model possible rays that are being generated
-        from the light source. Depending on the model of the sun, the distortions are generated differently.
+        This function gets the distortions that are later used to model possible ray directions that are being generated
+        from the light source. Depending on the model of the light source, the distortions are generated differently.
 
         Parameters
         ----------

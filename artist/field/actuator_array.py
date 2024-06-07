@@ -11,13 +11,15 @@ actuator_type_mapping = {
     config_dictionary.ideal_actuator_key: IdealActuator,
     config_dictionary.linear_actuator_key: LinearActuator,
 }
+"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct actuator type."""
 
 log = logging.getLogger(__name__)
+"""A logger for the actuators."""
 
 
 class ActuatorArray(torch.nn.Module):
     """
-    Wraps the list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
+    Wrap the list of actuators as a ``torch.nn.Module`` to allow gradient calculation.
 
     Attributes
     ----------
@@ -28,6 +30,11 @@ class ActuatorArray(torch.nn.Module):
     def __init__(self, actuator_list_config: ActuatorListConfig) -> None:
         """
         Initialize the actuator array.
+
+        An actuator array is used to bundle all actuators for a specific heliostat. A heliostat can have one or
+        more actuators. Different actuator types exist. The actuators are created according to their
+        ``actuator_config``. If the actuator config does not contain actuator parameters, an actuator with default
+        values will be initialized.
 
         Parameters
         ----------

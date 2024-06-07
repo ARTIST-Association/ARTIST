@@ -7,7 +7,7 @@ def reflect(
     incoming_ray_direction: torch.Tensor, reflection_surface_normals: torch.Tensor
 ) -> torch.Tensor:
     """
-    Reflects incoming rays given the normals of a reflective surface.
+    Reflect incoming rays given the normals of a reflective surface.
 
     Parameters
     ----------

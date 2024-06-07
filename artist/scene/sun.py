@@ -9,11 +9,12 @@ from artist.scene.light_source import LightSource
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
+"""A logger for the sun."""
 
 
 class Sun(LightSource):
     """
-    Implements the sun as a light source.
+    Implement the sun as a light source.
 
     Attributes
     ----------
@@ -31,7 +32,7 @@ class Sun(LightSource):
 
     See Also
     --------
-    :class:`LightSource` : Reference to the parent class.
+    :class:`LightSource`: Reference to the parent class.
     """
 
     def __init__(
@@ -43,6 +44,11 @@ class Sun(LightSource):
     ) -> None:
         """
         Initialize the sun as a light source.
+
+        The sun is one type of light source that can be implemented in ``ARTIST``. The number of rays sent out by the
+        light source per heliostat surface point must be specified. If more rays are sent out, the resulting flux
+        density distribution on the receiver is higher. Furthermore, each light source also implements the
+        ``get_distortions`` function required to scatter the light.
 
         Parameters
         ----------
