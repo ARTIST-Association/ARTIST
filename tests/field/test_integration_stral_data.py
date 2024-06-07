@@ -7,8 +7,9 @@ import h5py
 import pytest
 import torch
 
-from artist import ARTIST_ROOT, Scenario
+from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.scenario import Scenario
 
 warnings.filterwarnings("always")
 
@@ -50,7 +51,7 @@ def test_compute_bitmaps(
     incident_ray_direction: torch.Tensor, expected_value: str, scenario_config: str
 ) -> None:
     """
-    Compute resulting flux density distribution (bitmap) for the given test case.
+    Compute the resulting flux density distribution (bitmap) for the given test case.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
     calculate the preferred reflection direction.
@@ -77,9 +78,6 @@ def test_compute_bitmaps(
     scenario.heliostats.heliostat_list[0].set_aligned_surface(
         incident_ray_direction=incident_ray_direction
     )
-    scenario.heliostats.heliostat_list[0].set_preferred_reflection_direction(
-        rays=-incident_ray_direction
-    )
 
     # Create raytracer - currently only possible for one heliostat.
     raytracer = HeliostatRayTracer(
@@ -87,7 +85,7 @@ def test_compute_bitmaps(
     )
 
     # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays()
+    final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction)
 
     # Apply all-reduce if MPI is used.
     if MPI is not None:

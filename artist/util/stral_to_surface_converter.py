@@ -7,10 +7,13 @@ from typing import List
 import colorlog
 import torch
 
+from artist.util import config_dictionary
 from artist.util.configuration_classes import FacetConfig
 from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger("STRAL-to-surface-converter")  # Get logger instance.
+"""A logger for the ``STRAL`` to surface converter."""
+
 log_formatter = colorlog.ColoredFormatter(
     fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
     "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
@@ -25,7 +28,9 @@ log_formatter = colorlog.ColoredFormatter(
     },
     secondary_log_colors={},
 )
+"""A formatter for the logger for the ``STRAL`` to surface converter."""
 handler = logging.StreamHandler(stream=sys.stdout)
+"""A handler for the logger for the ``STRAL`` to surface converter."""
 handler.setFormatter(log_formatter)
 log.addHandler(handler)
 log.setLevel(logging.INFO)
@@ -33,18 +38,18 @@ log.setLevel(logging.INFO)
 
 class StralToSurfaceConverter:
     """
-    Implements a converter that converts STRAL data to HDF5 format.
+    Implement a converter that converts ``STRAL`` data to HDF5 format.
 
     Attributes
     ----------
     stral_file_path : str
-        The file path to the STRAL data file that will be converted.
+        The file path to the ``STRAL`` data file that will be converted.
     surface_header_name : str
-        The name for the concentrator header in the STRAL file.
+        The name for the concentrator header in the ``STRAL`` file.
     facet_header_name : str
-        The name for the facet header in the STRAL file.
+        The name for the facet header in the ``STRAL`` file.
     points_on_facet_struct_name : str
-        The name of the ray structure in the STRAL file.
+        The name of the ray structure in the ``STRAL`` file.
     step_size : int
         The size of the step used to reduce the number of considered points for compute efficiency.
 
@@ -61,7 +66,7 @@ class StralToSurfaceConverter:
     fit_nurbs_surface()
         Fit the nurbs surface given the conversion method.
     generate_surface_config_from_stral()
-        Generate a surface configuration based on the STRAL data.
+        Generate a surface configuration based on the ``STRAL`` data.
     """
 
     def __init__(
@@ -75,16 +80,21 @@ class StralToSurfaceConverter:
         """
         Initialize the converter.
 
+        Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
+        exported to a binary file. To convert this data into a surface configuration format suitable for ``ARTIST``,
+        this converter first loads the data and then learns NURBS surfaces based on the data. Finally, the converter
+        returns a list of facets that can be used directly in an ``ARTIST`` scenario.
+
         Parameters
         ----------
         stral_file_path : str
-            The file path to the STRAL data file that will be converted.
+            The file path to the ``STRAL`` data file that will be converted.
         surface_header_name : str
-            The name for the surface header in the STRAL file.
+            The name for the surface header in the ``STRAL`` file.
         facet_header_name : str
-            The name for the facet header in the STRAL file.
+            The name for the facet header in the ``STRAL`` file.
         points_on_facet_struct_name : str
-            The name of the point on facet structure in the STRAL file.
+            The name of the point on facet structure in the ``STRAL`` file.
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency.
         """
@@ -166,7 +176,10 @@ class StralToSurfaceConverter:
     @staticmethod
     def normalize_evaluation_points_for_nurbs(points: torch.Tensor) -> torch.Tensor:
         """
-        Normalize evaluation points for NURBS with minimum > 0 and maximum < 1 as NURBS are not defined for the edges.
+        Normalize the evaluation points for NURBS.
+
+        This function normalizes the evaluation points for NURBS in the open interval of (0,1) since NURBS are not
+        defined for the edges.
 
         Parameters
         ----------
@@ -189,6 +202,7 @@ class StralToSurfaceConverter:
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        conversion_method: str,
         number_control_points_e: int = 10,
         number_control_points_n: int = 10,
         degree_e: int = 2,
@@ -198,9 +212,9 @@ class StralToSurfaceConverter:
         max_epoch: int = 2500,
     ) -> NURBSSurface:
         """
-        Generate a NURBS surface based on STRAL data.
+        Generate a NURBS surface based on ``STRAL`` data.
 
-        The surface points are first normalized and shifted to the range [0,1] to be compatible with the knot vector of
+        The surface points are first normalized and shifted to the range (0,1) to be compatible with the knot vector of
         the NURBS surface. The NURBS surface is then initialized with the correct number of control points, degrees, and
         knots, and the origin of the control points is set based on the width and height of the point cloud. The control
         points are then fitted to the surface points or surface normals using an Adam optimizer.
@@ -212,6 +226,8 @@ class StralToSurfaceConverter:
             The surface points given as an (N, 4) tensor.
         surface_normals : torch.Tensor
             The surface normals given as an (N, 4) tensor.
+        conversion_method : str
+            The conversion method used to learn the NURBS.
         number_control_points_e : int
             Number of NURBS control points to be set in the east (first) direction (default: 10).
         number_control_points_n : int
@@ -290,17 +306,21 @@ class StralToSurfaceConverter:
 
             optimizer.zero_grad()
 
-            loss = (
-                (points - surface_points).abs().mean()
-                + (normals - surface_normals).abs().mean()
-            ).mean()
+            if conversion_method == config_dictionary.convert_nurbs_from_points:
+                loss = (points - surface_points).abs().mean()
+            elif conversion_method == config_dictionary.convert_nurbs_from_normals:
+                loss = (normals - surface_normals).abs().mean()
+            else:
+                raise NotImplementedError(
+                    f"Conversion method {conversion_method} not yet implemented!"
+                )
             loss.backward()
 
             optimizer.step()
             scheduler.step(loss.abs().mean())
             if epoch % 100 == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}",
+                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}",
                 )
             epoch += 1
 
@@ -310,6 +330,7 @@ class StralToSurfaceConverter:
         self,
         number_eval_points_e: int,
         number_eval_points_n: int,
+        conversion_method: str,
         number_control_points_e: int = 10,
         number_control_points_n: int = 10,
         degree_e: int = 2,
@@ -319,7 +340,7 @@ class StralToSurfaceConverter:
         max_epoch: int = 10000,
     ) -> List[FacetConfig]:
         """
-        Generate a surface configuration from a STRAL file.
+        Generate a surface configuration from a ``STRAL`` file.
 
         Parameters
         ----------
@@ -327,6 +348,8 @@ class StralToSurfaceConverter:
             The number of evaluation points in the east direction used to generate a discrete surface from NURBS.
         number_eval_points_n : int
             The number of evaluation points in the north direction used to generate a discrete surface from NURBS.
+        conversion_method : str
+            The conversion method used to learn the NURBS.
         number_control_points_e : int
             Number of NURBS control points in the east direction (default: 10).
         number_control_points_n : int
@@ -351,7 +374,7 @@ class StralToSurfaceConverter:
             "Beginning generation of the surface configuration based on STRAL data."
         )
 
-        # Create structures for reading STRAL file correctly.
+        # Create structures for reading ``STRAL`` file correctly.
         surface_header_struct = struct.Struct(self.surface_header_name)
         facet_header_struct = struct.Struct(self.facet_header_name)
         points_on_facet_struct = struct.Struct(self.points_on_facet_struct_name)
@@ -371,8 +394,8 @@ class StralToSurfaceConverter:
             facet_translation_vectors = torch.empty(number_of_facets, 3)
             canting_e = torch.empty(number_of_facets, 3)
             canting_n = torch.empty(number_of_facets, 3)
-            surface_points_with_facets = None
-            surface_normals_with_facets = None
+            surface_points_with_facets = torch.empty(0)
+            surface_normals_with_facets = torch.empty(0)
             for f in range(number_of_facets):
                 facet_header_data = facet_header_struct.unpack_from(
                     file.read(facet_header_struct.size)
@@ -427,6 +450,10 @@ class StralToSurfaceConverter:
         facet_translation_vectors = self.convert_3d_direction_to_4d_format(
             facet_translation_vectors
         )
+        # If we are learning the surface points from ``STRAL``, we do not need to translate the facets.
+        if conversion_method == config_dictionary.convert_nurbs_from_points:
+            facet_translation_vectors = torch.zeros(facet_translation_vectors.shape)
+        # Convert to 4D format.
         canting_n = self.convert_3d_direction_to_4d_format(canting_n)
         canting_e = self.convert_3d_direction_to_4d_format(canting_e)
         surface_points_with_facets = self.convert_3d_points_to_4d_format(
@@ -444,6 +471,7 @@ class StralToSurfaceConverter:
             nurbs_surface = self.fit_nurbs_surface(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
+                conversion_method=conversion_method,
                 number_control_points_e=number_control_points_e,
                 number_control_points_n=number_control_points_n,
                 degree_e=degree_e,

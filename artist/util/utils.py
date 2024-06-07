@@ -3,7 +3,7 @@ import torch
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
-    Batch-wise dot product.
+    Calculate the batch-wise dot product.
 
     Parameters
     ----------
@@ -28,16 +28,16 @@ def rotate_distortions(
     """
     Rotate the distortions for the sun.
 
-    Rotate around the up and then the east axis in this very order in a right-handed east north up
-    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
-    counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
+    Rotate around the up and then the east axis in this very order in a right-handed east-north-up
+    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.,
+    counter-clockwise. Points need to be multiplied as column vectors from the right-hand side with the
     resulting rotation matrix. Note that the order is fixed due to the non-commutative property of matrix-matrix
     multiplication.
 
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians
+        East rotation angle in radians.
     u : torch.Tensor
         Up rotation angle in radians.
 
@@ -74,9 +74,9 @@ def rotate_e(
     """
     Rotate around the east axis.
 
-    Rotate around the east axis in a right-handed east north up coordinate system. Positive angles result in a rotation
-    in the mathematical direction of rotation, i.e. counter-clockwise. Points need to be multiplied as column vectors
-    from the right hand side with the resulting rotation matrix.
+    Rotate around the east axis in a right-handed east-north-up coordinate system. Positive angles result in a rotation
+    in the mathematical direction of rotation, i.e., counter-clockwise. Points need to be multiplied as column vectors
+    from the right-hand side with the resulting rotation matrix.
 
 
     Parameters
@@ -109,10 +109,9 @@ def rotate_n(
     """
     Rotate around the north axis.
 
-    Rotate around the north axis in a right-handed east north up
-    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
-    counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
-    resulting rotation matrix.
+    Rotate around the north axis in a right-handed east-north-up coordinate system. Positive angles result in a rotation
+    in the mathematical direction of rotation, i.e., counter-clockwise. Points need to be multiplied as column vectors
+    from the right-hand side with the resulting rotation matrix.
 
     Parameters
     ----------
@@ -145,10 +144,9 @@ def rotate_u(
     """
     Rotate around the up axis.
 
-    Rotate around the up axis in a right-handed east north up
-    coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.
-    counter-clockwise. Points need to be multiplied as column vectors from the right hand side with the
-    resulting rotation matrix.
+    Rotate around the up axis in a right-handed east-north-up coordinate system. Positive angles result in a rotation in
+    the mathematical direction of rotation, i.e., counter-clockwise. Points need to be multiplied as column vectors from
+    the right-hand side with the resulting rotation matrix.
 
     Parameters
     ----------

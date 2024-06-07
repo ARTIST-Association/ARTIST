@@ -1,18 +1,21 @@
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
+
+if TYPE_CHECKING:
+    from artist.scenario import Scenario
 
 import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
-from artist import Scenario
-from artist.raytracing import raytracing_utils
-from artist.raytracing.rays import Rays
 from artist.scene import LightSource
 from artist.util import utils
+
+from . import raytracing_utils
+from .rays import Rays
 
 
 class DistortionsDataset(Dataset):
     """
-    Contains a dataset of distortions based on the model of the light source.
+    A dataset of distortions based on the model of the light source.
 
     Attributes
     ----------
@@ -34,6 +37,12 @@ class DistortionsDataset(Dataset):
     ) -> None:
         """
         Initialize the dataset.
+
+        This class implements a custom dataset according to the ``torch`` interface. The content of this
+        dataset is the distortions. The distortions are used in our version of "heliostat"-tracing to
+        indicate how each incoming ray must be multiplied and scattered on the heliostat. According to
+        ``torch``, this dataset must implement a function to return the length of the dataset and one function
+        to retrieve an element through an index.
 
         Parameters
         ----------
@@ -89,7 +98,7 @@ class DistortionsDataset(Dataset):
 
 class HeliostatRayTracer:
     """
-    Contains the functionality for heliostat raytracing.
+    Implement the functionality for heliostat raytracing.
 
     Attributes
     ----------
@@ -122,7 +131,7 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
-        scenario: Scenario,
+        scenario: "Scenario",
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -131,6 +140,11 @@ class HeliostatRayTracer:
     ) -> None:
         """
         Initialize the heliostat raytracer.
+
+        "Heliostat"-tracing is one kind of raytracing applied in ARTIST. For this kind of raytracing,
+        the rays are initialized on the heliostat. The rays originate in the discrete surface points.
+        There they are multiplied, distorted, and scattered, and then they are sent to the receiver. Letting
+        the rays originate on the heliostat drastically reduces the number of rays that need to be traced.
 
         Parameters
         ----------
@@ -152,7 +166,7 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
-            self.heliostat.preferred_reflection_direction.size(1)
+            self.heliostat.current_aligned_surface_points.size(1)
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -175,7 +189,7 @@ class HeliostatRayTracer:
             sampler=distortions_sampler,
         )
 
-    def trace_rays(self) -> torch.Tensor:
+    def trace_rays(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
         """
         Perform heliostat raytracing.
 
@@ -190,6 +204,9 @@ class HeliostatRayTracer:
         final_bitmap = torch.zeros(
             (self.receiver.resolution_e, self.receiver.resolution_u)
         )
+
+        self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
+
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(
                 batch_u,
@@ -289,13 +306,13 @@ class HeliostatRayTracer:
         Parameters
         ----------
         dx_ints : torch.Tensor
-            x position of intersection with receiver of shape (N, 1)
-            where N is the resolution of the receiver along the x-axis.
+            x position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along
+            the x-axis.
         dy_ints : torch.Tensor
-            y position of intersection with receiver of shape (N, 1)
-            where N is the resolution of the receiver along the y-axis.
+            y position of intersection with receiver of shape (N, 1) where N is the resolution of the receiver along
+            the y-axis.
         indices : torch.Tensor
-            Index of pixel.
+            Index of the pixel.
 
         Returns
         -------

@@ -3,7 +3,7 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["artist"]
+packages = ["artist","artist.field","artist.raytracing","artist.scene","artist.util"]
 
 [project]
 name = "artist"
@@ -34,8 +34,12 @@ dev = [
     "pytest",
     "pytest-cov",
     "sphinx-autoapi",
-    "sphinx-rtd-theme",]
+    "sphinx-rtd-theme",
+    "sphinxcontrib-napoleon",
+    "sphinxemoji",
+]
 mpi = ["mpi4py",]
+tutorials = ['jupyter', 'matplotlib']
 
 [project.urls]
 Homepage = "https://github.com/ARTIST-Association/ARTIST"

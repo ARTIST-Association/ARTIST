@@ -8,7 +8,7 @@ from artist.util.configuration_classes import SurfaceConfig
 
 class Surface(torch.nn.Module):
     """
-    Implementation of the surface module which contains a list of facets.
+    Implement the surface module which contains a list of facets.
 
     Attributes
     ----------
@@ -24,6 +24,12 @@ class Surface(torch.nn.Module):
     def __init__(self, surface_config: SurfaceConfig) -> None:
         """
         Initialize the surface.
+
+        The heliostat surface consists of one or more facets. The surface only describes the mirrors
+        on the heliostat, not the whole heliostat. The surface can be aligned through the kinematic and
+        its actuators. Each surface and thus each facet is defined through NURBS, the discrete surface
+        points and surface normals can be retrieved.
+
 
         Parameters
         ----------
@@ -69,6 +75,6 @@ class Surface(torch.nn.Module):
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals()
-            surface_points[i] = facet_points  # + facet.translation_vector
+            surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals

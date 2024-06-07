@@ -14,20 +14,22 @@ from artist.util.configuration_classes import (
     ActuatorListConfig,
     ActuatorParameters,
     FacetConfig,
-    KinematicConfig,
     KinematicDeviations,
+    KinematicLoadConfig,
     KinematicOffsets,
     SurfaceConfig,
 )
 
 kinematic_type_mapping = {config_dictionary.rigid_body_key: RigidBody}
+"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct kinematic type."""
 
 log = logging.getLogger(__name__)
+"""A logger for the heliostat."""
 
 
 class Heliostat(torch.nn.Module):
     """
-    Implements the behavior of a heliostat.
+    Implement the behavior of a heliostat.
 
     Attributes
     ----------
@@ -66,11 +68,17 @@ class Heliostat(torch.nn.Module):
         position: torch.Tensor,
         aim_point: torch.Tensor,
         surface_config: SurfaceConfig,
-        kinematic_config: KinematicConfig,
+        kinematic_config: KinematicLoadConfig,
         actuator_config: ActuatorListConfig,
     ) -> None:
         """
-        Initialize the heliostat.
+        Implement the behavior of a heliostat.
+
+        A heliostat is used to reflect light onto the receiver. A heliostat has a position within the field and an
+        aim point where it aims to reflect the light. Furthermore, each heliostat must be initialized with a surface
+        configuration which contains information on the heliostat surface, a kinematic configuration containing
+        information on the applied kinematic, and an actuator configuration that contains the configurations of the
+        actuators used in the heliostat.
 
         Parameters
         ----------
@@ -82,7 +90,7 @@ class Heliostat(torch.nn.Module):
             The aim point of the heliostat.
         surface_config : SurfaceConfig
             The configuration parameters to use for the heliostat surface.
-        kinematic_config : KinematicConfig
+        kinematic_config : KinematicLoadConfig
             The configuration parameters to use for the heliostat kinematic.
         actuator_config : ActuatorListConfig
             The configuration parameters to use for the list of actuators.
@@ -105,18 +113,17 @@ class Heliostat(torch.nn.Module):
             initial_orientation_offsets=kinematic_config.kinematic_initial_orientation_offsets,
             deviation_parameters=kinematic_config.kinematic_deviations,
         )
-
-        self.current_aligned_surface_points = None
-        self.current_aligned_surface_normals = None
+        self.current_aligned_surface_points = torch.empty(0)
+        self.current_aligned_surface_normals = torch.empty(0)
         self.is_aligned = False
-        self.preferred_reflection_direction = None
+        self.preferred_reflection_direction = torch.empty(0)
 
     @classmethod
     def from_hdf5(
         cls,
         config_file: h5py.File,
         prototype_surface: Optional[SurfaceConfig] = None,
-        prototype_kinematic: Optional[KinematicConfig] = None,
+        prototype_kinematic: Optional[KinematicLoadConfig] = None,
         prototype_actuator: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
     ) -> Self:
@@ -129,7 +136,7 @@ class Heliostat(torch.nn.Module):
             The config file containing all the information about the heliostat.
         prototype_surface  : SurfaceConfig, optional
             An optional prototype for the surface configuration.
-        prototype_kinematic : KinematicConfig, optional
+        prototype_kinematic : KinematicLoadConfig, optional
             An optional prototype for the kinematic configuration.
         prototype_actuator : ActuatorConfig, optional
             An optional prototype for the actuator configuration.
@@ -551,7 +558,7 @@ class Heliostat(torch.nn.Module):
                     else torch.tensor(0.0)
                 ),
             )
-            kinematic_config = KinematicConfig(
+            kinematic_config = KinematicLoadConfig(
                 kinematic_type=str(
                     config_file[config_dictionary.heliostat_kinematic_key][
                         config_dictionary.kinematic_type

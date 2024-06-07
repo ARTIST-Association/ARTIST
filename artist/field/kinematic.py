@@ -28,6 +28,11 @@ class Kinematic(torch.nn.Module):
         """
         Initialize the kinematic.
 
+        The abstract kinematic implements a template for the construction of inheriting kinematics which currently
+        can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostat
+        and its actuators. The abstract base class defines an align function that all kinematics need to overwrite
+        in order to align the heliostat surface according to a provided aim point.
+
         Parameters
         ----------
         position : torch.Tensor

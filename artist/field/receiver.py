@@ -8,11 +8,12 @@ from typing_extensions import Self
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
+"""A logger for the receiver."""
 
 
 class Receiver(torch.nn.Module):
     """
-    Implements a receiver.
+    Implement a receiver.
 
     Attributes
     ----------
@@ -52,6 +53,13 @@ class Receiver(torch.nn.Module):
         """
         Initialize the receiver.
 
+        The receiver is positioned on the solar tower and absorbs the concentrated sunlight. This heats
+        up the receiver. Behind the receiver, the clean energy extraction processes begin. Different kinds
+        of receivers exist, and they are specified in the receiver type. Further parameters are the position
+        center which indicates the center of the receiver, the normal vector that is a normal to the receiver
+        plane, the plane width and height as well as the receiver resolution in both directions. Optionally,
+        the receiver can be provided with curvature parameters, indicating the curvature of the receiver.
+
         Parameters
         ----------
         receiver_type : str
@@ -61,9 +69,9 @@ class Receiver(torch.nn.Module):
         normal_vector : torch.Tensor
             The normal to the plane of the receiver.
         plane_e : float
-            The east plane of the receiver.
+            The width of the receiver.
         plane_u : torch.Tensor
-            The up plane of the receiver.
+            The height of the receiver.
         resolution_e : int
             The horizontal resolution in the east direction of the receiver.
         resolution_u : int

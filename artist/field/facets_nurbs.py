@@ -5,7 +5,7 @@ from artist.util.nurbs import NURBSSurface
 
 class NurbsFacet(torch.nn.Module):
     """
-    Facet modeled with a NURBS surface.
+    Model a facet with a NURBS surface.
 
     Attributes
     ----------
@@ -46,6 +46,14 @@ class NurbsFacet(torch.nn.Module):
     ) -> None:
         """
         Initialize a NURBS facet.
+
+        The heliostat surface can be divided into facets. In ARTIST, the surfaces are modeled using
+        Non-Uniform Rational B-Splines (NURBS). Thus, each facet is an individual NURBS surface. The
+        NURBS surface is created by specifying several parameters. For a detailed description of these
+        parameters see the `NURBS-tutorial`. For now, note that the NURBS surfaces can be formed through
+        control points, two degrees, the number of evaluation points in east and north direction, the
+        width and height of the heliostat, a translation vector to match the facets to their position,
+        and canting vectors.
 
         Parameters
         ----------
