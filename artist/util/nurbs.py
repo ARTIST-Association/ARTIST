@@ -47,7 +47,7 @@ class NURBSSurface(torch.nn.Module):
         """
         Initialize a NURBS surface.
 
-        NURBS stand for Non-Uniform Rational B-Splines and allow for an efficient and precise reconstruction
+        NURBS stands for Non-Uniform Rational B-Splines and allow for an efficient and precise reconstruction
         of the imperfect heliostat surfaces in the digital twin. This implementation of the NURBS is
         differentiable. The NURBS surfaces require a degree in two directions, evaluation points, and control
         points. These parameters are used to create the NURBS surface. For more details, see the NURBS tutorial.
