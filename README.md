@@ -8,9 +8,9 @@
 [![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
 ![](./coverage.svg)
 
-## What ARTIST can do for you
+## What ``ARTIST`` can do for you
 
-The `ARTIST` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
+The ``ARTIST`` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
 framework in `Python`. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of
 heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization methods with
 smooth parametric descriptions of heliostats.
