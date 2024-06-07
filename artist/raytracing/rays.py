@@ -20,8 +20,8 @@ class Rays:
         Initialize the ``Rays`` class.
 
         The rays in ARTIST have a direction vector and a magnitude. They are used for raytracing.
-        The direction vector determines the direction of the rays, i.e. the path they are taking through space.
-        The magnitude is important for considering atmospheric loses and cloud coverage. If a ray
+        The direction vector determines the direction of the rays, i.e., the path they are taking through space.
+        The magnitude is important for considering atmospheric losses and cloud coverage. If a ray
         travels through a cloud, the magnitude changes.
 
         Parameters
