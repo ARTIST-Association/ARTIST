@@ -1,7 +1,7 @@
 .. _usage:
 
-How To Use ARTIST
-=================
+How To Use ``ARTIST``
+=====================
 
 Here, you can find an overview of how to use ``ARTIST``.
 
