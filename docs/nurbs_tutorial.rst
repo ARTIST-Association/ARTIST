@@ -19,7 +19,7 @@ NURBS Theory
 
 In this section of the tutorial, we consider the NURBS theory.
 
-Simplifications for the scope of this tutorial
+Simplifications for the Scope of this Tutorial
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For the scope of this tutorial and for the sake of simplicity, we only considers NURBS curves and not surfaces.
@@ -32,7 +32,7 @@ considered as a variable representing time. For a curve specifically, we can ima
 particle moving through space. In this case, :math:`Q(t)` gives the :math:`\{x, y\}` coordinates of the particle at
 time :math:`t`.
 
-Key components and characteristics of NURBS
+Key Components and Characteristics of NURBS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 NURBS are made up out of the following components:
@@ -62,7 +62,7 @@ For example, a third-order curve is represented by quadratic polynomial which re
 - It is possible to increase the degree of the NURBS curve without changing its form.
 - It is not possible to reduce the degree without changing its form.
 
-Control points
+Control Points
 """"""""""""""
 
 The shape of the NURBS is directly determined by the control points. The most important aspects to remember about
@@ -99,7 +99,7 @@ We can express this idea mathematically via
 where :math:`k = \text{order}` with :math:`\text{order} = \text{degree} + 1`, :math:`n = \text{number of control points}`,
 :math:`B` are the control points, and :math:`N` represents the basis functions.
 
-Basis functions
+Basis Functions
 """""""""""""""
 
 Basis functions are assigned to control points with each control point having a corresponding basis function.
@@ -172,7 +172,7 @@ Using our knowledge on knots, we can now formulate the following mathematical de
 
 where :math:`x_i` is the i-th knot in the knot vector.
 
-Knot span
+Knot Span
 """""""""
 
 We already discussed the knot span, however, there are a few important terms we need to define:
@@ -186,7 +186,7 @@ We already discussed the knot span, however, there are a few important terms we 
   knot spans of the same length inbetween. For example, the knot vector :math:`[0,0,0,1,2,3,4,4,4]` describes
   *uniformity* for a degree of 3.
 
-Control weights
+Control Weights
 """""""""""""""
 
 The last aspect of NURBS we want to consider is the control weights. The control weights are responsible for the
