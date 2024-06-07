@@ -87,10 +87,10 @@ facet_prototype_list = stral_converter.generate_surface_config_from_stral(
     initial_learning_rate=1e-3,
 )
 
-# Generate the surface prototype configuration
+# Generate the surface prototype configuration.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
-# Note, we do not include kinematic deviations in this scenario!
+# Note that we do not include kinematic deviations in this scenario!
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
