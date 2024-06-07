@@ -82,10 +82,10 @@ class Scenario:
         Returns
         -------
         Scenario
-            The ARTIST scenario loaded from the HDF5 file.
+            The ``ARTIST`` scenario loaded from the HDF5 file.
         """
         log.info(
-            f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+            f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
         receivers = ReceiverField.from_hdf5(config_file=scenario_file)
         light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)

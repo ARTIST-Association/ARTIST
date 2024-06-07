@@ -11,7 +11,7 @@ actuator_type_mapping = {
     config_dictionary.ideal_actuator_key: IdealActuator,
     config_dictionary.linear_actuator_key: LinearActuator,
 }
-"""A type mapping dictionary that allows ARTIST to automatically infer the correct actuator type."""
+"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct actuator type."""
 
 log = logging.getLogger(__name__)
 """A logger for the actuators."""

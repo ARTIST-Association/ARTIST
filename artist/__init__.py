@@ -1,4 +1,4 @@
-"""Bundle ARTIST as a package."""
+"""Bundle ``ARTIST`` as a package."""
 
 import os
 
