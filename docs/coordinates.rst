@@ -8,8 +8,8 @@ implications, let us consider two example tensors:
 
 .. code-block:: console
 
-    point_tensor = torch.Tensor([e,n,u,1])
-    direction_tensor = torch.Tensor([e,n,u,0])
+    point_tensor = torch.tensor([e, n, u, 1])
+    direction_tensor = torch.tensor([e, n, u, 0])
 
 Both of the above tensors are similar in their first three elements:
 
