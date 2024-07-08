@@ -1,5 +1,5 @@
 <p align="center">
-<img src="logo.svg" alt="logo" width="500"/>
+<img src="docs/images/logo_transparent.png" alt="logo" width="500"/>
 </p>
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
