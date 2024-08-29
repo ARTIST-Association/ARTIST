@@ -17,7 +17,12 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@main
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@main
         with:
@@ -37,18 +42,18 @@ jobs:
         run: |
           pytest --cov=artist
           coverage-badge -fo coverage.svg
+          coverage report -m --format markdown > cov_report.txt
+
+      - name: Post coverage report to PR
+        if: matrix.python-version == '3.11'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: cov_report.txt
 
       - name: Tests with pytest and no badge
         if: matrix.python-version == '3.12'
         run: |
           pytest --cov=artist
-          coverage report -m --format markdown > cov_report.txt
-      - name: Post coverage report to PR
-        if: matrix.python-version == '3.12'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: cov_report.txt
-
 
       - name: Verify Changed files
         uses: tj-actions/verify-changed-files@v19
@@ -69,4 +74,4 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.github_token }}
-          branch: ${{ github.ref }}
+          branch: ${{ github.head_ref }}
