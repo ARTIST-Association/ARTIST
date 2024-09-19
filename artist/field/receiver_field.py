@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import h5py
 import torch.nn
@@ -18,7 +17,7 @@ class ReceiverField(torch.nn.Module):
 
     Attributes
     ----------
-    receiver_list : List[Receiver]
+    receiver_list : list[Receiver]
         A list of receivers included in the scenario.
 
     Methods
@@ -27,7 +26,7 @@ class ReceiverField(torch.nn.Module):
         Load the list of receivers from an HDF5 file.
     """
 
-    def __init__(self, receiver_list: List[Receiver]):
+    def __init__(self, receiver_list: list[Receiver]):
         """
         Initialize the receiver field.
 

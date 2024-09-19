@@ -1,7 +1,4 @@
 """Kinematic modules in ARTIST."""
-
-import typing
-
 import torch
 
 
@@ -49,7 +46,7 @@ class Kinematic(torch.nn.Module):
         incident_ray_direction: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-    ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the rotation matrix to align the concentrator along a desired orientation.
 

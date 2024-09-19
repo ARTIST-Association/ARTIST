@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 from artist.field.actuator_array import ActuatorArray
@@ -279,7 +277,7 @@ class RigidBody(Kinematic):
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a calculated orientation.
 

@@ -1,6 +1,6 @@
 import math
 import subprocess
-from typing import List, Optional
+from typing import Optional
 
 import h5py
 import matplotlib.pyplot as plt
@@ -141,7 +141,7 @@ def align_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
 
 
 def plot_multiple_images(
-    *image_tensors: torch.Tensor, names: Optional[List[str]] = None
+    *image_tensors: torch.Tensor, names: Optional[list[str]] = None
 ) -> None:
     """
     Plot multiple receiver raytracing images in a grid.
@@ -154,7 +154,7 @@ def plot_multiple_images(
     ----------
     image_tensors : torch.Tensor
         An arbitrary number of image tensors to be plotted.
-    names : List[str], optional
+    names : list[str], optional
         The names of the images to be plotted.
     """
     # Calculate the number of images and determine the size of the grid based on the number of images.

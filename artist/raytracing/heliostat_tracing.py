@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from artist.scenario import Scenario
@@ -76,7 +76,7 @@ class DistortionsDataset(Dataset):
         """
         return self.distortions_u.size(0)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Select an item from the dataset.
 
@@ -87,7 +87,7 @@ class DistortionsDataset(Dataset):
 
         Returns
         -------
-        Tuple[torch.Tensor, torch.Tensor]
+        tuple[torch.Tensor, torch.Tensor]
             The distortions in the up and east direction for the given index.
         """
         return (
