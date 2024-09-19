@@ -2,7 +2,6 @@ import logging
 import struct
 import sys
 from pathlib import Path
-from typing import List
 
 import colorlog
 import torch
@@ -338,7 +337,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 10000,
-    ) -> List[FacetConfig]:
+    ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
 
@@ -367,7 +366,7 @@ class StralToSurfaceConverter:
 
         Returns
         -------
-        List[FacetConfig]
+        list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
         log.info(

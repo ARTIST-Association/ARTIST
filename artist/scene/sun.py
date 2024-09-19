@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import h5py
 import torch
@@ -20,7 +20,7 @@ class Sun(LightSource):
     ----------
     number_of_rays : int
         The number of sent-out rays sampled from the sun distribution.
-    distribution_parameters : Dict[str, Any]
+    distribution_parameters : dict[str, Any]
         Parameters of the distribution used to model the sun.
 
     Methods
@@ -38,7 +38,7 @@ class Sun(LightSource):
     def __init__(
         self,
         number_of_rays: int,
-        distribution_parameters: Dict[str, Any] = dict(
+        distribution_parameters: dict[str, Any] = dict(
             distribution_type="normal", mean=0.0, covariance=4.3681e-06
         ),
     ) -> None:
@@ -184,7 +184,7 @@ class Sun(LightSource):
         number_of_facets: int = 4,
         number_of_heliostats: int = 1,
         random_seed: int = 7,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get distortions given the selected model of the sun.
 
@@ -201,7 +201,7 @@ class Sun(LightSource):
 
         Returns
         -------
-        Tuple[torch.Tensor, torch.Tensor]
+        tuple[torch.Tensor, torch.Tensor]
             The distortion in north and up direction.
 
         Raises
