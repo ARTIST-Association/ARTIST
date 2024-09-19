@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import h5py
 import torch.nn
@@ -23,7 +22,7 @@ class HeliostatField(torch.nn.Module):
 
     Attributes
     ----------
-    heliostat_list : List[Heliostat]
+    heliostat_list : list[Heliostat]
         A list of heliostats included in the scenario.
 
     Methods
@@ -32,7 +31,7 @@ class HeliostatField(torch.nn.Module):
         Load the list of heliostats from an HDF5 file.
     """
 
-    def __init__(self, heliostat_list: List[Heliostat]):
+    def __init__(self, heliostat_list: list[Heliostat]):
         """
         Initialize the heliostat field.
 
@@ -42,7 +41,7 @@ class HeliostatField(torch.nn.Module):
 
         Parameters
         ----------
-        heliostat_list : List[Heliostat]
+        heliostat_list : list[Heliostat]
             The list of heliostats included in the scenario.
         """
         super(HeliostatField, self).__init__()
