@@ -30,7 +30,7 @@ By participating, you can help improve the project and make it even better :rais
 
 5. **Make Changes**: Make your desired changes to the codebase. Please stick to the following guidelines:
    * `ARTIST` uses [Black](https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html) code style and so should you if you would like to contribute.
-   * Please use type hints in all function definitions.
+   * Please use subscriptable lower-case type hints in all function definitions when possible.
    * Please use American English for all comments and docstrings in the code.
    * In the future, `ARTIST` will use [Sphinx AutoAPI](https://github.com/readthedocs/sphinx-autoapi) to automatically create API reference documentation from docstrings in the code.
      Please use the [NumPy Docstring Standard](https://numpydoc.readthedocs.io/en/latest/format.html) for your docstrings:
@@ -129,19 +129,7 @@ as shown below. Do not include attributes and methods of the parent class explic
    git push origin features/your-feature-name
    ```
 
-8. **Rebase Onto Current Main:** Rebase your feature branch onto the current main branch of the original repo.
-   This will include any changes that might have been pushed into the main in the meantime and resolve possible conflicts.
-   To sync your fork with the original upstream repo, check out [this page](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
-   or follow the steps below. Note that before you can sync your fork with an upstream repo, you must configure a remote that points to the upstream repository in Git.
-   ```
-   cd <path/to/your/local/project/fork>
-   git fetch upstream
-   git checkout main
-   git merge upstream/main
-   git rebase main features/your-feature-name
-   ```
-
-9. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request.
+8. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request. Resolve possible merge conflicts with the current main branch.
 
 ## Code of Conduct
 
