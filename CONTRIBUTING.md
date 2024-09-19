@@ -13,13 +13,17 @@ By participating, you can help improve the project and make it even better :rais
    ```
 
 3. **Install the Package with Development Options** in a separate virtual environment from the main branch of your repo.
-   This will put a number of pre-commit hooks for code linting and formatting with [Ruff](https://github.com/astral-sh/ruff)
-   into place, ensuring PEP-8 conformity and overall good code quality consistently.
-   The commands shown below work on Unix-based systems:
+   In addition, install the [pre-commit hooks](https://pre-commit.com/) for code linting and formatting with [Ruff](https://github.com/astral-sh/ruff), ensuring PEP-8 conformity
+   and overall good code quality consistently. The commands shown below work on Unix-based systems:
    ```bash
    python3 -m venv <insert/path/to/your/venv>
    source <insert/path/to/your/venv/bin/activate>
    python -m pip install -e ".[dev]"
+   pre-commit install
+   ```
+   Now `pre-commit` will run automatically on `git commit`! You can also run the hooks manually:
+   ```bash
+   pre-commit run --all-files
    ```
 
 4. **Create a Branch**: Create a new branch for your contribution. Choose a descriptive name. Depending on what you want
