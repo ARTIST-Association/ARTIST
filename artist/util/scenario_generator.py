@@ -2,7 +2,7 @@ import logging
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Dict, Generator
+from typing import Any, Generator
 
 import colorlog
 import h5py
@@ -161,7 +161,7 @@ class ScenarioGenerator:
 
     def flatten_dict(
         self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Flatten nested dictionaries to first-level keys.
 
@@ -176,7 +176,7 @@ class ScenarioGenerator:
 
         Returns
         -------
-        Dict
+        dict[str, Any]
             A flattened version of the original dictionary.
         """
         return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
@@ -194,7 +194,7 @@ class ScenarioGenerator:
                 yield new_key, v
 
     @staticmethod
-    def include_parameters(file: h5py.File, prefix: str, parameters: Dict) -> None:
+    def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
         """
         Include the parameters from a parameter dictionary.
 
@@ -204,7 +204,7 @@ class ScenarioGenerator:
             The HDF5 file to write to.
         prefix : str
             The prefix used for naming the parameters.
-        parameters : Dict
+        parameters : dict
             The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():

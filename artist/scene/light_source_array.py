@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import h5py
 import torch.nn
@@ -22,7 +21,7 @@ class LightSourceArray(torch.nn.Module):
 
     Attributes
     ----------
-    light_source_list : List[LightSource]
+    light_source_list : list[LightSource]
         A list of light sources included in the scenario.
 
     Methods
@@ -31,7 +30,7 @@ class LightSourceArray(torch.nn.Module):
         Load the list of light sources from an HDF5 file.
     """
 
-    def __init__(self, light_source_list: List[LightSource]):
+    def __init__(self, light_source_list: list[LightSource]):
         """
         Initialize the light sources included in the considered scenario.
 
@@ -41,7 +40,7 @@ class LightSourceArray(torch.nn.Module):
 
         Parameters
         ----------
-        light_source_list : List[LightSource]
+        light_source_list : list[LightSource]
             A list of light sources included in the scenario.
         """
         super(LightSourceArray, self).__init__()
