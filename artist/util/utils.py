@@ -213,3 +213,91 @@ def translate_enu(
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
+
+
+def azimuth_elevation_to_enu(
+        azimuth: torch.Tensor,
+        elevation: torch.Tensor,
+        srange: float = 1.0,
+        degree: bool = True,
+) -> torch.Tensor:
+    """
+    Azimuth, Elevation, Slant range to target to East, North, Up
+
+    Parameters
+    ----------
+    azimuth : torch.Tensor
+        Azimuth, clockwise from north (degrees)
+    elevation : torch.Tensor
+        Elevation angle above horizon, neglecting aberrations (degrees)
+    srange : float
+        slant range [meters]
+    degree : bool, optional
+        degrees input/output
+
+    Returns
+    --------
+    torch.Tensor
+        The enu coordinates.
+    """
+    if degree:
+        elevation = torch.deg2rad(elevation)
+        azimuth = torch.deg2rad(azimuth)
+
+    r = srange * torch.cos(elevation)
+
+    enu = torch.stack(
+        [r * torch.sin(azimuth), r * torch.cos(azimuth), srange * torch.sin(elevation)],
+        dim=1,
+    )
+    return enu
+
+
+def convert_3d_points_to_4d_format(point: torch.Tensor) -> torch.Tensor:
+    """
+    Append ones to the last dimension of a 3D point vector.
+
+    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+
+    Parameters
+    ----------
+    point : torch.Tensor
+        Input point in a 3D format.
+
+    Returns
+    -------
+    torch.Tensor
+        Point vector with ones appended at the last dimension.
+    """
+    assert (
+        point.size(dim=-1) == 3
+    ), f"Expected a 3D point but got a point of shape {point.shape}!"
+    ones_tensor = torch.ones(
+        point.shape[:-1] + (1,), dtype=point.dtype, device=point.device
+    )
+    return torch.cat((point, ones_tensor), dim=-1)
+
+
+def convert_3d_direction_to_4d_format(direction: torch.Tensor) -> torch.Tensor:
+    """
+    Append zeros to the last dimension of a 3D direction vector.
+
+    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+
+    Parameters
+    ----------
+    direction : torch.Tensor
+        Input direction in a 3D format.
+
+    Returns
+    -------
+    torch.Tensor
+        Direction vector with ones appended at the last dimension.
+    """
+    assert (
+        direction.size(dim=-1) == 3
+    ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
+    zeros_tensor = torch.zeros(
+        direction.shape[:-1] + (1,), dtype=direction.dtype, device=direction.device
+    )
+    return torch.cat((direction, zeros_tensor), dim=-1)
