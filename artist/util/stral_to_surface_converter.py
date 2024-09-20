@@ -404,17 +404,15 @@ class StralToSurfaceConverter:
                 facet_translation_vectors[f] = torch.tensor(
                     facet_header_data[1:4], dtype=torch.float
                 )
-                canting_n[f] = self.nwu_to_enu(
-                    torch.tensor(
-                        facet_header_data[4:7],
-                        dtype=torch.float,
-                    )
+
+                canting_e[f] = torch.tensor(
+                    facet_header_data[4:7],
+                    dtype=torch.float,
                 )
-                canting_e[f] = self.nwu_to_enu(
-                    torch.tensor(
-                        facet_header_data[7:10],
-                        dtype=torch.float,
-                    )
+
+                canting_n[f] = torch.tensor(
+                    facet_header_data[7:10],
+                    dtype=torch.float,
                 )
                 number_of_points = facet_header_data[10]
                 if f == 0:
@@ -437,10 +435,6 @@ class StralToSurfaceConverter:
                     )
 
         log.info("Loading STRAL data complete")
-
-        # STRAL uses two different coordinate systems, both use a west orientation and therefore, we don't need an NWU
-        # to ENU cast here. However, to maintain consistency we cast the west direction to east direction.
-        canting_e[:, 0] = -canting_e[:, 0]
 
         # Select only selected number of points to reduce compute.
         surface_points_with_facets = surface_points_with_facets[:, :: self.step_size]
