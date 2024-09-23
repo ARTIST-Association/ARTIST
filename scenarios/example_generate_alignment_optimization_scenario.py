@@ -2,6 +2,7 @@ import math
 from pathlib import Path
 
 import json
+from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
@@ -27,7 +28,7 @@ from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 from artist.util import utils
 
 # The following parameter is the name of the scenario.
-file_path = "test_alignment_optimization"
+file_path = "scenarios/test_alignment_optimization"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -35,10 +36,11 @@ if not Path(file_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
-# TODO eigentlich sollten hier ein paths zu PAINT sein.
+# TODO eigentlich sollten hier paths zu PAINT sein?
 tower_file = f"{ARTIST_ROOT}/measurement_data/juelich-tower-measurements.json"
 calibration_file = f"{ARTIST_ROOT}/measurement_data/AA39/Calibration/86500-calibration-properties.json"
 heliostat_file = f"{ARTIST_ROOT}/measurement_data/AA39/Properties/AA39-heliostat_properties.json"
+deflectometry_file = f"{ARTIST_ROOT}/measurement_data/AA39/Deflectometry/AA39-filled-2023-09-18Z08_49_09Z-deflectometry.h5"
 
 with open(calibration_file, 'r') as file:
     calibration_dict = json.load(file)
@@ -47,14 +49,17 @@ with open(calibration_file, 'r') as file:
 with open(tower_file, 'r') as file:
     tower_dict = json.load(file)
     target_type = tower_dict[target_name][config_dictionary.receiver_type]
-    position_center = tower_dict[target_name]["coordinates"]["center"]
+    power_plant_coordinates = tower_dict["power_plant_properties"]["coordinates"]
+    position_center_lat_lon = tower_dict[target_name]["coordinates"]["center"]
+    position_center_3d = utils.calculate_position_in_m_from_lat_lon(position_center_lat_lon, power_plant_coordinates)
+    position_center = utils.convert_3d_points_to_4d_format(position_center_3d)
     normal_vector = utils.convert_3d_direction_to_4d_format(torch.tensor(tower_dict[target_name]["normal_vector"]))
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=target_type,
-    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    position_center=position_center,
     normal_vector=normal_vector,
     plane_e=8.629666667,
     plane_u=7.0,
@@ -84,16 +89,14 @@ light_source_list = [light_source1_config]
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
-
 # Generate surface configuration from STRAL data.
-stral_converter = StralToSurfaceConverter(
-    stral_file_path=f"{ARTIST_ROOT}/measurement_data/alignment_optimization",
-    surface_header_name="=5f2I2f",
-    facet_header_name="=i9fI",
-    points_on_facet_struct_name="=7f",
+paint_converter = PAINTToSurfaceConverter(
+    deflectometry_file_path=deflectometry_file,
+    heliostat_file_path=heliostat_file,
     step_size=100,
 )
-facet_prototype_list = stral_converter.generate_surface_config_from_stral(
+
+facet_prototype_list = paint_converter.generate_surface_config_from_paint(
     number_eval_points_e=100,
     number_eval_points_n=100,
     conversion_method=config_dictionary.convert_nurbs_from_normals,
