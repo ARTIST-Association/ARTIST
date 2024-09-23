@@ -1134,7 +1134,7 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
     See Also
     --------
-    class:`ActuatorlistConfig` : Reference to the parent class.
+    class:`ActuatorListConfig` : Reference to the parent class.
     """
 
     def __init__(
@@ -1227,7 +1227,7 @@ class HeliostatConfig:
         An optional individual surface config for the heliostat.
     heliostat_kinematic : KinematicConfig, optional
         An optional kinematic config for the heliostat.
-    heliostat_actuator : ActuatorlistConfig, optional
+    heliostat_actuator : ActuatorListConfig, optional
         An optional actuator config for the heliostat.
 
     Methods
@@ -1263,7 +1263,7 @@ class HeliostatConfig:
             An optional individual surface config for the heliostat.
         heliostat_kinematic : KinematicConfig, optional
             An optional kinematic config for the heliostat.
-        heliostat_actuator : ActuatorlistConfig, optional
+        heliostat_actuator : ActuatorListConfig, optional
             An optional actuator config for the heliostat.
         """
         self.heliostat_key = heliostat_key
