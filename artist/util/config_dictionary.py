@@ -171,6 +171,8 @@ convert_nurbs_from_normals = "deflectometry"
 """Defines that the NURBS should be learnt using deflectometry data."""
 
 # Constants for WGS84
+# TODO 
+# Is this the right place to save this data?
 WGS84_A = 6378137.0  # Major axis in meters
 WGS84_B = 6356752.314245  # Minor axis in meters
 WGS84_E2 = (WGS84_A**2 - WGS84_B**2) / WGS84_A**2  # Eccentricity squared
