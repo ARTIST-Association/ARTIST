@@ -356,8 +356,8 @@ def calculate_position_in_m_from_lat_lon(
     east_offset_m = dlon_rad * rn1 * math.cos(lat_rad)
     return torch.tensor([-east_offset_m, -north_offset_m, alt])
 
-
-def get_center_of_mass(bitmap: torch.Tensor,
+# TODO remove
+def get_center_of_mass_scipy(bitmap: torch.Tensor,
                        target_center: torch.Tensor,
                        plane_e: torch.Tensor,
                        plane_u: torch.Tensor
@@ -370,3 +370,40 @@ def get_center_of_mass(bitmap: torch.Tensor,
     aimpoint = target_center - 0.5 * (de + du) + e * de + u * du
 
     return aimpoint
+
+def get_center_of_mass(bitmap: torch.Tensor,
+                       target_center: torch.Tensor,
+                       plane_e: torch.Tensor,
+                       plane_u: torch.Tensor
+) -> torch.Tensor:
+    """
+    Calculate the coordinates of the flux density center of mass.
+
+    First determine the indices of the bitmap center of mass.
+    Next determine the position (coordinates) of the center of mass on the target.
+
+    Parameters
+    ----------
+    bitmap : torch.Tensor
+        The flux density in form of a bitmap.
+    target_center : torch.Tensor
+        The position of the center of the target.
+    plane_e : torch.Tensor
+        The width of the target surface.
+    plane_u : torch.Tensor
+        The height of the target surface.
+
+    torch.Tensor
+        The coordinates of the flux density center of mass.
+    """
+    non_zero = torch.nonzero(bitmap)
+    center_of_mass_bitmap = non_zero.sum(0) / non_zero.size(0)
+
+    de = torch.tensor([plane_e, 0.0, 0.0, 0.0])
+    du = torch.tensor([0.0, 0.0, plane_u, 0.0])
+    sum = center_of_mass_bitmap / bitmap.size(-1)
+    e = sum[1]
+    u = 1 - sum[0]
+    center_coordinates = target_center - 0.5 * (de + du) + e * de + u * du
+
+    return center_coordinates
