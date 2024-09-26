@@ -44,7 +44,7 @@ class PAINTToSurfaceConverter:
 
     Attributes
     ----------
-    stral_file_path : str
+    deflectometry_file_path : str
         The file path to the ``PAINT`` deflectometry h5 data file that will be converted.
     heliostat_file_path : str
         The file path to the ``PAINT`` heliostat json file that will be converted.
@@ -304,6 +304,8 @@ class PAINTToSurfaceConverter:
                 canting_n[facet, :] = torch.tensor(heliostat_dict["facet_properties"]["facets"][facet]["canting_n"])
 
         # Reading ``PAINT`` deflectometry hdf5 file.
+        # TODO
+        # How to deal with different amount of points on different facets?
         log.info(f"Reading PAINT deflectometry file located at: {self.deflectometry_file_path}")
         with h5py.File(self.deflectometry_file_path, "r") as file:
             surface_points_with_facets = torch.empty(0)
@@ -323,7 +325,7 @@ class PAINTToSurfaceConverter:
                     surface_points_with_facets[f, i, :] = point_data
                 for i, normal_data in enumerate(normals_data):
                     surface_normals_with_facets[f, i, :] = normal_data
-
+        
         log.info("Loading PAINT data complete")
 
         # Select only selected number of points to reduce compute.
