@@ -1,3 +1,6 @@
+power_plant_position = "position"
+"""Key to access the power plant position."""
+
 receiver_type = "type"
 """Key to access the receiver type."""
 receiver_position_center = "position_center"
@@ -158,6 +161,8 @@ heliostat_actuator_key = "actuator"
 
 prototype_key = "prototypes"
 """Key to access the prototypes."""
+power_plant_key = "power_plant"
+"""Key to access the power plant."""
 receiver_key = "receivers"
 """Key to access the receivers."""
 light_source_key = "lightsources"
