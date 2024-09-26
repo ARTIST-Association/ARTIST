@@ -18,17 +18,17 @@ from artist.util.configuration_classes import (
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
     SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
-from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 from artist.util import utils
 
 # The following parameter is the name of the scenario.
-file_path = "scenarios/test_alignment_optimization"
+file_path = f"{ARTIST_ROOT}/scenarios/test_alignment_optimization_with_deviations"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -49,20 +49,47 @@ with open(calibration_file, 'r') as file:
 with open(tower_file, 'r') as file:
     tower_dict = json.load(file)
     target_type = tower_dict[target_name][config_dictionary.receiver_type]
-    power_plant_coordinates = tower_dict["power_plant_properties"]["coordinates"]
-    position_center_lat_lon = tower_dict[target_name]["coordinates"]["center"]
-    position_center_3d = utils.calculate_position_in_m_from_lat_lon(position_center_lat_lon, power_plant_coordinates)
-    position_center = utils.convert_3d_points_to_4d_format(position_center_3d)
+    power_plant_position = torch.tensor(tower_dict["power_plant_properties"]["coordinates"])
+    target_center_lat_lon = torch.tensor(tower_dict[target_name]["coordinates"]["center"])
+    target_center_3d = utils.calculate_position_in_m_from_lat_lon(target_center_lat_lon, power_plant_position)
+    target_center = utils.convert_3d_points_to_4d_format(target_center_3d)
     normal_vector = utils.convert_3d_direction_to_4d_format(torch.tensor(tower_dict[target_name]["normal_vector"]))
+    upper_left = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["upper_left"]), power_plant_position)
+    lower_left = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["lower_left"]), power_plant_position)
+    upper_right = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["upper_right"]), power_plant_position)
+    lower_right = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["lower_right"]), power_plant_position)
+    plane_e = (torch.abs(upper_right[0] - upper_left[0]) + torch.abs(lower_right[0] - lower_left[0])) / 2
+    plane_u = (torch.abs(upper_left[2] - lower_left[2]) + torch.abs(upper_right[2] - lower_right[2])) / 2
+
+with open(heliostat_file, 'r') as file:
+    heliostat_dict = json.load(file)
+    heliostat_position_3d = utils.calculate_position_in_m_from_lat_lon(torch.tensor(heliostat_dict["heliostat_position"]), power_plant_position)
+    heliostat_position = utils.convert_3d_points_to_4d_format(heliostat_position_3d)
+
+
+
+# TODO 
+# This must go
+target_center = torch.tensor([-17.59, -2.84, 51.98, 1.0])
+# target_center = torch.tensor([0.0, -50.0, 0.0, 1.0])
+# plane_e=8.629666667
+# plane_u=7.0
+# heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
+
+
+# Include the power plant configuration.
+power_plant_config = PowerPlantConfig(
+    power_plant_position=power_plant_position
+)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=target_type,
-    position_center=position_center,
+    position_center=target_center,
     normal_vector=normal_vector,
-    plane_e=8.629666667,
-    plane_u=7.0,
+    plane_e=plane_e,
+    plane_u=plane_u,
     resolution_e=256,
     resolution_u=256,
 )
@@ -121,13 +148,13 @@ kinematic_prototype_deviations = KinematicDeviations(
     first_joint_tilt_u=torch.tensor(0.0),
     second_joint_translation_e=torch.tensor(0.0),
     second_joint_translation_n=torch.tensor(0.0),
-    second_joint_translation_u=torch.tensor(0.0),
+    second_joint_translation_u=torch.tensor(0.315),
     second_joint_tilt_e=torch.tensor(0.0),
     second_joint_tilt_n=torch.tensor(0.0),
     second_joint_tilt_u=torch.tensor(0.0),
     concentrator_translation_e=torch.tensor(0.0),
-    concentrator_translation_n=torch.tensor(0.0),
-    concentrator_translation_u=torch.tensor(0.0),
+    concentrator_translation_n=torch.tensor(-0.17755),
+    concentrator_translation_u=torch.tensor(-0.4045),
     concentrator_tilt_e=torch.tensor(0.0),
     concentrator_tilt_n=torch.tensor(0.0),
     concentrator_tilt_u=torch.tensor(0.0),
@@ -147,19 +174,19 @@ kinematic_prototype_config = KinematicPrototypeConfig(
 
 # Include actuator parameters for both actuators.
 actuator1_parameters = ActuatorParameters(
-    increment=torch.tensor(0.0),
-    initial_stroke_length=torch.tensor(0.0),
-    offset=torch.tensor(0.0),
-    radius=torch.tensor(0.0),
-    phi_0=torch.tensor(0.0),
+    increment=torch.tensor(154166.666),
+    initial_stroke_length=torch.tensor(0.075),
+    offset=torch.tensor(0.34061),
+    radius=torch.tensor(0.3204),
+    phi_0=torch.tensor(-1.570796),
 )
 
 actuator2_parameters = ActuatorParameters(
-    increment=torch.tensor(0.0),
-    initial_stroke_length=torch.tensor(0.0),
-    offset=torch.tensor(0.0),
-    radius=torch.tensor(0.0),
-    phi_0=torch.tensor(0.0),
+    increment=torch.tensor(154166.666),
+    initial_stroke_length=torch.tensor(0.075),
+    offset=torch.tensor(0.3479),
+    radius=torch.tensor(0.309),
+    phi_0=torch.tensor(0.959931),
 )
 
 # Include a linear actuator.
@@ -199,8 +226,8 @@ prototype_config = PrototypeConfig(
 heliostat1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
-    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=heliostat_position,
+    heliostat_aim_point=target_center,
 )
 
 # Create a list of all the heliostats - in this case, only one.
@@ -216,6 +243,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,

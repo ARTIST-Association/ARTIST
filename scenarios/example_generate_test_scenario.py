@@ -23,7 +23,7 @@ from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
 # The following parameter is the name of the scenario.
-file_path = "please/insert/the/file/path/here/name"
+file_path = f"{ARTIST_ROOT}/scenarios/test_scenario"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
