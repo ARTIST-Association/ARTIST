@@ -1,7 +1,8 @@
 import math
-from typing import List
+from typing import List, Tuple
 from artist.util import config_dictionary
 import torch
+from scipy import ndimage
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -219,10 +220,10 @@ def translate_enu(
 
 
 def azimuth_elevation_to_enu(
-        azimuth: torch.Tensor,
-        elevation: torch.Tensor,
-        srange: float = 1.0,
-        degree: bool = True,
+    azimuth: torch.Tensor,
+    elevation: torch.Tensor,
+    srange: float = 1.0,
+    degree: bool = True,
 ) -> torch.Tensor:
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
@@ -328,7 +329,7 @@ def calculate_position_in_m_from_lat_lon(
     Returns
     -------
     torch.Tensor
-        The north offset in meters, east offset in meters, and the altitude difference from the power plant.
+        The east offset in meters, north offset in meters, and the altitude difference from the power plant.
     """
     # Convert latitude and longitude to radians
     lat_rad = math.radians(coordinates_to_transform[0])
@@ -353,4 +354,19 @@ def calculate_position_in_m_from_lat_lon(
     # Calculate north and east offsets in meters
     north_offset_m = dlat_rad * rm1
     east_offset_m = dlon_rad * rn1 * math.cos(lat_rad)
-    return torch.tensor([-north_offset_m, -east_offset_m, alt])
+    return torch.tensor([-east_offset_m, -north_offset_m, alt])
+
+
+def get_center_of_mass(bitmap: torch.Tensor,
+                       target_center: torch.Tensor,
+                       plane_e: torch.Tensor,
+                       plane_u: torch.Tensor
+) -> torch.Tensor:
+    de = torch.tensor([plane_e, 0.0, 0.0, 0.0])
+    du = torch.tensor([0.0, 0.0, plane_u, 0.0])
+    sum = torch.tensor(ndimage.center_of_mass(bitmap.detach().numpy())) / bitmap.size(-1)
+    e = sum[1]
+    u = 1 - sum[0]
+    aimpoint = target_center - 0.5 * (de + du) + e * de + u * du
+
+    return aimpoint
