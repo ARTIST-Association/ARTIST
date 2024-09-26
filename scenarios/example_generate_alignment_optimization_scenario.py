@@ -66,16 +66,9 @@ with open(heliostat_file, 'r') as file:
     heliostat_position_3d = utils.calculate_position_in_m_from_lat_lon(torch.tensor(heliostat_dict["heliostat_position"]), power_plant_position)
     heliostat_position = utils.convert_3d_points_to_4d_format(heliostat_position_3d)
 
-
-
 # TODO 
 # This must go
 target_center = torch.tensor([-17.59, -2.84, 51.98, 1.0])
-# target_center = torch.tensor([0.0, -50.0, 0.0, 1.0])
-# plane_e=8.629666667
-# plane_u=7.0
-# heliostat_position = torch.tensor([0.0, 5.0, 0.0, 1.0])
-
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
