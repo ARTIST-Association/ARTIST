@@ -1,4 +1,5 @@
 """Kinematic modules in ARTIST."""
+
 import torch
 
 
