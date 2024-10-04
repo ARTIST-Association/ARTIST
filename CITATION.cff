@@ -1,2 +1,68 @@
 # This CITATION.cff file was generated with cffinit.
 # Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: PAINT
+message: >-
+  If you use this dataset, please cite it using the metadata
+  from this file.
+type: dataset
+authors:
+  - given-names: Max
+    family-names: Pargmann
+    email: max.pargmann@dlr.de
+    affiliation: German Aerospace Center
+    orcid: 'https://orcid.org/0000-0002-4705-6285'
+  - given-names: Kaleb
+    family-names: Phipps
+    email: kaleb.phipps@kit.edu
+    affiliation: Karlruhe Institute of Technology
+    orcid: 'https://orcid.org/0000-0002-9197-1739'
+  - given-names: Marie
+    family-names: Weiel
+    email: marie.weiel@kit.edu
+    affiliation: Karlruhe Institute of Technology
+    orcid: 'https://orcid.org/0000-0001-9648-4385'
+  - given-names: Mathias
+    family-names: Kuhl
+    email: mathias.kuhl@dlr.de
+    affiliation: German Aerospace Center
+    orcid: 'https://orcid.org/0000-0003-0097-7260'
+  - given-names: Marlene
+    family-names: Busch
+    email: marlene.busch@dlr.de
+    affiliation: German Aerospace Center
+  - given-names: Fehlix
+    family-names: Göhring
+    email: Felix.Goehring@dlr.de
+    affiliation: German Aerospace Center
+  - given-names: 'Daniel '
+    family-names: Maldonado Quinto
+    email: Daniel.MaldonadoQuinto@dlr.de
+    affiliation: German Aerospace Center
+  - given-names: Robert
+    family-names: Pitz-Paal
+    orcid: 'https://orcid.org/0000-0002-3542-3391'
+    email: Robert.Pitz-Paal@dlr.de
+    affiliation: German Aerospace Center
+  - given-names: Moritz
+    family-names: Leibauer
+    email: Moritz.Leibauer@synhelion.com
+    affiliation: Synhelion Germany
+  - given-names: Markus
+    family-names: Götz
+    email: markus.goetz@kit.edu
+    affiliation: Karlruhe Institute of Technology
+    orcid: 'https://orcid.org/0000-0002-2233-1041'
+repository-code: 'https://github.com/ARTIST-Association/PAINT'
+url: 'https://www.paint-database.org'
+repository: 'https://github.com/ARTIST-Association'
+keywords:
+  - Solar Tower
+  - Concentrated Solar Energy
+  - Database
+  - Heliostat Calibration
+  - Deflectometry
+  - Surface Reconstruction
+  - Benchmark
+license: MIT
