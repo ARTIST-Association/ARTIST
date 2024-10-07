@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: PAINT
+title: ARTIST
 message: >-
   If you use this dataset, please cite it using the metadata
   from this file.
@@ -16,12 +16,12 @@ authors:
   - given-names: Kaleb
     family-names: Phipps
     email: kaleb.phipps@kit.edu
-    affiliation: Karlruhe Institute of Technology
+    affiliation: Karlsruhe Institute of Technology
     orcid: 'https://orcid.org/0000-0002-9197-1739'
   - given-names: Marie
     family-names: Weiel
     email: marie.weiel@kit.edu
-    affiliation: Karlruhe Institute of Technology
+    affiliation: Karlsruhe Institute of Technology
     orcid: 'https://orcid.org/0000-0001-9648-4385'
   - given-names: Mathias
     family-names: Kuhl
@@ -32,11 +32,11 @@ authors:
     family-names: Busch
     email: marlene.busch@dlr.de
     affiliation: German Aerospace Center
-  - given-names: Fehlix
+  - given-names: Felix
     family-names: Göhring
     email: Felix.Goehring@dlr.de
     affiliation: German Aerospace Center
-  - given-names: 'Daniel '
+  - given-names: Daniel
     family-names: Maldonado Quinto
     email: Daniel.MaldonadoQuinto@dlr.de
     affiliation: German Aerospace Center
@@ -52,7 +52,7 @@ authors:
   - given-names: Markus
     family-names: Götz
     email: markus.goetz@kit.edu
-    affiliation: Karlruhe Institute of Technology
+    affiliation: Karlsruhe Institute of Technology
     orcid: 'https://orcid.org/0000-0002-2233-1041'
 repository-code: 'https://github.com/ARTIST-Association/PAINT'
 url: 'https://www.paint-database.org'
