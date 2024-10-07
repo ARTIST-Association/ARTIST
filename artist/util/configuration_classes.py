@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 
@@ -88,13 +88,13 @@ class ReceiverConfig:
         self.curvature_e = curvature_e
         self.curvature_u = curvature_u
 
-    def create_receiver_dict(self) -> Dict[str, Any]:
+    def create_receiver_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the receiver.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the receiver.
         """
         receiver_dict = {
@@ -124,7 +124,7 @@ class ReceiverListConfig:
 
     Attributes
     ----------
-    receiver_list : List[ReceiverConfig]
+    receiver_list : list[ReceiverConfig]
         A list of receiver configurations to be included in the scenario.
 
     Methods
@@ -133,24 +133,24 @@ class ReceiverListConfig:
        Create a dictionary containing the configuration parameters for the list of receivers.
     """
 
-    def __init__(self, receiver_list: List[ReceiverConfig]) -> None:
+    def __init__(self, receiver_list: list[ReceiverConfig]) -> None:
         """
         Initialize the receiver list configuration.
 
         Parameters
         ----------
-        receiver_list : List[ReceiverConfig]
+        receiver_list : list[ReceiverConfig]
             The list of receiver configurations included in the scenario.
         """
         self.receiver_list = receiver_list
 
-    def create_receiver_list_dict(self) -> Dict[str, Any]:
+    def create_receiver_list_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the list of receivers.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the list of receivers.
         """
         return {
@@ -227,13 +227,13 @@ class LightSourceConfig:
             self.mean = mean
             self.covariance = covariance
 
-    def create_light_source_dict(self) -> Dict[str, Any]:
+    def create_light_source_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the light source.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the light source.
         """
         # Check if the distribution type is implemented.
@@ -265,7 +265,7 @@ class LightSourceListConfig:
 
     Attributes
     ----------
-    light_source_list : List[LightSourceConfig]
+    light_source_list : list[LightSourceConfig]
         The list of light source configs to be included in the scenario.
 
     Methods
@@ -274,24 +274,24 @@ class LightSourceListConfig:
        Create a dictionary containing the configuration parameters for the light source list.
     """
 
-    def __init__(self, light_source_list: List[LightSourceConfig]) -> None:
+    def __init__(self, light_source_list: list[LightSourceConfig]) -> None:
         """
         Initialize the light source list configuration.
 
         Parameters
         ----------
-        light_source_list : List[LightSourceConfig]
+        light_source_list : list[LightSourceConfig]
             The list of light source configs to be included in the scenario.
         """
         self.light_source_list = light_source_list
 
-    def create_light_source_list_dict(self) -> Dict[str, Any]:
+    def create_light_source_list_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the light source list.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the light source list.
         """
         return {
@@ -389,13 +389,13 @@ class FacetConfig:
         self.canting_e = canting_e
         self.canting_n = canting_n
 
-    def create_facet_dict(self) -> Dict[str, Any]:
+    def create_facet_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for a facet.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the facet.
         """
         return {
@@ -418,7 +418,7 @@ class SurfaceConfig:
 
     Attributes
     ----------
-    facets_list : List[FacetsConfiguration]
+    facets_list : list[FacetsConfiguration]
         The list of facets to be used for the surface of the heliostat.
 
     Methods
@@ -427,24 +427,24 @@ class SurfaceConfig:
        Create a dictionary containing the configuration parameters for the surface.
     """
 
-    def __init__(self, facets_list: List[FacetConfig]) -> None:
+    def __init__(self, facets_list: list[FacetConfig]) -> None:
         """
         Initialize the surface configuration.
 
         Parameters
         ----------
-        facets_list : List[FacetsConfig]
+        facets_list : list[FacetsConfig]
             The list of facets to be used for the surface of the heliostat.
         """
         self.facets_list = facets_list
 
-    def create_surface_dict(self) -> Dict[str, Any]:
+    def create_surface_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the surface.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the surface.
         """
         facets_dict = {
@@ -462,13 +462,13 @@ class SurfacePrototypeConfig(SurfaceConfig):
     :class:`SurfaceConfig` : Reference to the parent class.
     """
 
-    def __init__(self, facets_list: List[FacetConfig]) -> None:
+    def __init__(self, facets_list: list[FacetConfig]) -> None:
         """
         Initialize the surface prototype configuration.
 
         Parameters
         ----------
-        facets_list : List[FacetsConfig]
+        facets_list : list[FacetsConfig]
             The list of facets to be used for the surface of the heliostat prototype.
         """
         super().__init__(facets_list=facets_list)
@@ -605,13 +605,13 @@ class KinematicDeviations:
         self.concentrator_tilt_n = concentrator_tilt_n
         self.concentrator_tilt_u = concentrator_tilt_u
 
-    def create_kinematic_deviations_dict(self) -> Dict[str, Any]:
+    def create_kinematic_deviations_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic deviations.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic deviations.
         """
         deviations_dict = {}
@@ -755,13 +755,13 @@ class KinematicOffsets:
             kinematic_initial_orientation_offset_u
         )
 
-    def create_kinematic_offsets_dict(self) -> Dict[str, Any]:
+    def create_kinematic_offsets_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic offsets.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic offsets.
         """
         offset_dict = {}
@@ -829,16 +829,16 @@ class KinematicConfig:
         )
         self.kinematic_deviations = kinematic_deviations
 
-    def create_kinematic_dict(self) -> Dict[str, Any]:
+    def create_kinematic_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the configuration parameters for the kinematic.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the kinematic.
         """
-        kinematic_dict: Dict[str, Any] = {
+        kinematic_dict: dict[str, Any] = {
             config_dictionary.kinematic_type: self.kinematic_type
         }
         if self.kinematic_initial_orientation_offsets is not None:
@@ -982,13 +982,13 @@ class ActuatorParameters:
         self.radius = radius
         self.phi_0 = phi_0
 
-    def create_actuator_parameters_dict(self) -> Dict[str, torch.Tensor]:
+    def create_actuator_parameters_dict(self) -> dict[str, torch.Tensor]:
         """
         Create a dictionary containing the parameters for the actuator.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             A dictionary containing the configuration parameters for the actuator.
         """
         actuator_parameters_dict = {}
@@ -1060,13 +1060,13 @@ class ActuatorConfig:
         self.actuator_clockwise = actuator_clockwise
         self.actuator_parameters = actuator_parameters
 
-    def create_actuator_dict(self) -> Dict[str, Any]:
+    def create_actuator_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the actuator configuration.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the actuator configuration.
         """
         actuator_dict = {
@@ -1088,7 +1088,7 @@ class ActuatorListConfig:
 
     Attributes
     ----------
-    actuator_list : List[ActuatorConfig]
+    actuator_list : list[ActuatorConfig]
         A list of actuator configurations.
 
     Methods
@@ -1097,24 +1097,24 @@ class ActuatorListConfig:
         Creates a dictionary containing a list of actuator configurations.
     """
 
-    def __init__(self, actuator_list: List[ActuatorConfig]) -> None:
+    def __init__(self, actuator_list: list[ActuatorConfig]) -> None:
         """
         Initialize the actuator list configuration.
 
         Parameters
         ----------
-        actuator_list : List[ActuatorConfig]
+        actuator_list : list[ActuatorConfig]
             A list of actuator configurations.
         """
         self.actuator_list = actuator_list
 
-    def create_actuator_list_dict(self) -> Dict[str, Any]:
+    def create_actuator_list_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing a list of actuator configurations.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing a list of actuator configurations.
         """
         return {
@@ -1129,7 +1129,7 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
     Attributes
     ----------
-    actuator_list : List[ActuatorConfig]
+    actuator_list : list[ActuatorConfig]
         A list of actuator configurations.
 
     See Also
@@ -1139,14 +1139,14 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
     def __init__(
         self,
-        actuator_list: List[ActuatorConfig],
+        actuator_list: list[ActuatorConfig],
     ) -> None:
         """
         Initialize the actuator list prototype configuration.
 
         Parameters
         ----------
-        actuator_list : List[ActuatorConfig]
+        actuator_list : list[ActuatorConfig]
             A list of actuator configurations.
         """
         super().__init__(actuator_list=actuator_list)
@@ -1193,13 +1193,13 @@ class PrototypeConfig:
         self.kinematic_prototype = kinematic_prototype
         self.actuator_prototype = actuator_prototype
 
-    def create_prototype_dict(self) -> Dict[str, Any]:
+    def create_prototype_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the prototypes.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the prototypes.
         """
         return {
@@ -1274,13 +1274,13 @@ class HeliostatConfig:
         self.heliostat_kinematic = heliostat_kinematic
         self.heliostat_actuator = heliostat_actuator
 
-    def create_heliostat_config_dict(self) -> Dict[str, Any]:
+    def create_heliostat_config_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the heliostat configuration parameters.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the heliostat configuration parameters.
         """
         heliostat_dict = {
@@ -1316,7 +1316,7 @@ class HeliostatListConfig:
 
     Attributes
     ----------
-    heliostat_list : List[HeliostatConfig]
+    heliostat_list : list[HeliostatConfig]
         The list of heliostats to include.
 
     Methods
@@ -1327,25 +1327,25 @@ class HeliostatListConfig:
 
     def __init__(
         self,
-        heliostat_list: List[HeliostatConfig],
+        heliostat_list: list[HeliostatConfig],
     ) -> None:
         """
         Initialize the heliostat list configuration.
 
         Parameters
         ----------
-        heliostat_list : List[HeliostatConfig]
+        heliostat_list : list[HeliostatConfig]
             The list of heliostats to include.
         """
         self.heliostat_list = heliostat_list
 
-    def create_heliostat_list_dict(self) -> Dict[str, Any]:
+    def create_heliostat_list_dict(self) -> dict[str, Any]:
         """
         Create a dictionary containing the heliostat list configuration parameters.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the heliostat list configuration parameters.
         """
         return {

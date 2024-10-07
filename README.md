@@ -4,13 +4,12 @@
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
-[![](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-blue?label=Contact)](artist@lists.kit.edu)
+[![codecov](https://codecov.io/gh/ARTIST-Association/ARTIST/graph/badge.svg?token=AEUYvTNXz1)](https://codecov.io/gh/ARTIST-Association/ARTIST)
+[![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
 [![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
-![](./coverage.svg)
 [![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B-orange)](https://fair-software.eu)
-
 
 ## What ``ARTIST`` can do for you
 

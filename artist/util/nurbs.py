@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 
@@ -73,7 +71,7 @@ class NURBSSurface(torch.nn.Module):
         self.control_points = control_points
         self.knot_vector_e, self.knot_vector_n = self.calculate_knots()
 
-    def calculate_knots(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def calculate_knots(self) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the knot vectors in the east and north direction.
 
@@ -262,7 +260,7 @@ class NURBSSurface(torch.nn.Module):
             r *= degree - k
         return derivatives
 
-    def calculate_surface_points_and_normals(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def calculate_surface_points_and_normals(self) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the surface points and normals of the NURBS surface.
 
