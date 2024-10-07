@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import h5py
 import torch
@@ -68,7 +68,7 @@ class LightSource(torch.nn.Module):
         number_of_facets: int = 4,
         number_of_heliostats: int = 1,
         random_seed: int = 7,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get distortions given the light source model.
 
