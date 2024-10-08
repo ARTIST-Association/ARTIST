@@ -54,7 +54,7 @@ authors:
   - given-names: Markus
     family-names: Götz
     email: markus.goetz@kit.edu
-    affiliation: Karlsruhe Institute of Technology (DLR)
+    affiliation: Karlsruhe Institute of Technology (KIT)
     orcid: 'https://orcid.org/0000-0002-2233-1041'
 repository-code: 'https://github.com/ARTIST-Association/ARTIST'
 url: 'https://artist.readthedocs.io/en/latest/?badge=latest'
