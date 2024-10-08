@@ -10,8 +10,7 @@
 [![codecov](https://codecov.io/gh/ARTIST-Association/ARTIST/graph/badge.svg?token=AEUYvTNXz1)](https://codecov.io/gh/ARTIST-Association/ARTIST)
 [![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
 [![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
-[![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B-orange)](https://fair-software.eu)
-
+[![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange)](https://fair-software.eu)
 ## What ``ARTIST`` can do for you
 
 The ``ARTIST`` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
