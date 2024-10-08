@@ -63,7 +63,7 @@ abstract: >-
   differentiable ray tracer using the PyTorch
   machine-learning framework in Python. Leveraging automatic
   differentiation and GPU computation, it facilitates the
-  optimization of heliostats, towers, and camera parameters
+  optimization of heliostats, solar towers, and camera parameters
   within a solar field by combining gradient-based
   optimization methods with smooth parametric descriptions
   of heliostats.
