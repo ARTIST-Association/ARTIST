@@ -1,0 +1,25 @@
+name: Trigger GitLab CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  trigger_gitlab_ci:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+        
+    - name: Trigger GitLab Pipeline
+      id: trigger
+      env:
+        BRANCH: ${{ github.head_ref }}
+        SHA: ${{ github.event.pull_request.head.sha  }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        
