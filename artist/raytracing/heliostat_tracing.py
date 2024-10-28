@@ -166,7 +166,7 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
-            self.heliostat.current_aligned_surface_points.size(1)
+            self.heliostat.surface_points.size(1)
         )
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -202,7 +202,7 @@ class HeliostatRayTracer:
             The resulting bitmap.
         """
         final_bitmap = torch.zeros(
-            (self.receiver.resolution_e, self.receiver.resolution_u)
+            (self.receiver.resolution_e, self.receiver.resolution_u), requires_grad=True
         )
 
         self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
@@ -244,7 +244,7 @@ class HeliostatRayTracer:
                 indices,
             )
 
-            final_bitmap += total_bitmap
+            final_bitmap = final_bitmap + total_bitmap
 
         return final_bitmap
 
@@ -278,7 +278,7 @@ class HeliostatRayTracer:
         )
 
         ray_directions = torch.cat(
-            (ray_directions, torch.zeros(4, ray_directions.size(1), 1)), dim=-1
+            (ray_directions, torch.zeros(4, ray_directions.size(1), 1, requires_grad=True)), dim=-1
         )
 
         rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e)
@@ -291,6 +291,7 @@ class HeliostatRayTracer:
                 scattered_rays.size(dim=0),
                 scattered_rays.size(dim=1),
                 scattered_rays.size(dim=2),
+                requires_grad=True
             ),
         )
 
@@ -357,8 +358,8 @@ class HeliostatRayTracer:
         x_ints_high = x_ints - x_inds_low
         # y-value influence in 3 and 4
         y_ints_high = y_ints - y_inds_low
-        del x_ints
-        del y_ints
+        # del x_ints
+        # del y_ints
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
@@ -371,47 +372,47 @@ class HeliostatRayTracer:
         x_inds_2 = x_inds_high
         y_inds_2 = y_inds_low
         ints_2 = x_ints_high * y_ints_low
-        del y_inds_low
-        del y_ints_low
+        # del y_inds_low
+        # del y_ints_low
 
         x_inds_3 = x_inds_high
         y_inds_3 = y_inds_high
         ints_3 = x_ints_high * y_ints_high
-        del x_inds_high
-        del x_ints_high
+        # del x_inds_high
+        # del x_ints_high
 
         x_inds_4 = x_inds_low
         y_inds_4 = y_inds_high
         ints_4 = x_ints_low * y_ints_high
-        del x_inds_low
-        del y_inds_high
-        del x_ints_low
-        del y_ints_high
+        # del x_inds_low
+        # del y_inds_high
+        # del x_ints_low
+        # del y_ints_high
 
         # Combine all indices and intensities in the correct order.
         x_inds = torch.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
-        del x_inds_1
-        del x_inds_2
-        del x_inds_3
-        del x_inds_4
+        # del x_inds_1
+        # del x_inds_2
+        # del x_inds_3
+        # del x_inds_4
 
         y_inds = torch.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
-        del y_inds_1
-        del y_inds_2
-        del y_inds_3
-        del y_inds_4
+        # del y_inds_1
+        # del y_inds_2
+        # del y_inds_3
+        # del y_inds_4
 
         ints = torch.hstack([ints_1, ints_2, ints_3, ints_4]).ravel()
-        del ints_1
-        del ints_2
-        del ints_3
-        del ints_4
+        # del ints_1
+        # del ints_2
+        # del ints_3
+        # del ints_4
 
         # For distribution, we regard even those neighboring pixels that are
         # _not_ part of the image. That is why here, we set up a mask to
         # choose only those indices that are actually in the bitmap (i.e. we
         # prevent out-of-bounds access).
-        indices = (
+        indices_new = (
             (0 <= x_inds)
             & (x_inds < self.receiver.resolution_e)
             & (0 <= y_inds)
@@ -424,10 +425,11 @@ class HeliostatRayTracer:
             dtype=dx_ints.dtype,
             device=dx_ints.device,
         )
+        
         # Add up all distributed intensities in the corresponding indices.
         total_bitmap.index_put_(
-            (x_inds[indices], y_inds[indices]),
-            ints[indices],
+            (x_inds[indices_new], y_inds[indices_new]),
+            ints[indices_new],
             accumulate=True,
         )
 
