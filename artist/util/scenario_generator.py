@@ -15,6 +15,7 @@ from artist.util.configuration_classes import (
     PrototypeConfig,
     ReceiverListConfig,
 )
+import torch
 
 
 class ScenarioGenerator:
@@ -213,6 +214,8 @@ class ScenarioGenerator:
             The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():
+            if torch.is_tensor(value):
+                value = value.cpu()
             file[f"{prefix}/{key}"] = value
 
     def generate_scenario(self) -> None:
