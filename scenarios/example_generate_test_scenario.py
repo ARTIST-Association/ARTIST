@@ -14,6 +14,7 @@ from artist.util.configuration_classes import (
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
@@ -30,6 +31,11 @@ if not Path(file_path).parent.is_dir():
         f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
+
+# Include the power plant configuration.
+power_plant_config = PowerPlantConfig(
+    power_plant_position=torch.tensor([50.913296, 6.387515, 87.0])
+)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -154,6 +160,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,

@@ -27,8 +27,16 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util import utils
 
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# # if torch.cuda.is_available(): 
+# #     torch.set_default_device("cuda")
+# # else: 
+# #     torch.set_default_device("cpu")
+# torch.set_default_device(device)
+
+
 # The following parameter is the name of the scenario.
-file_path = f"{ARTIST_ROOT}/scenarios/test_alignment_optimization_with_deviations"
+file_path = f"{ARTIST_ROOT}/scenarios/test_alignment_optimization_ideal_actuators"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -165,37 +173,18 @@ kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_deviations=kinematic_prototype_deviations
 )
 
-# Include actuator parameters for both actuators.
-actuator1_parameters = ActuatorParameters(
-    increment=torch.tensor(154166.666),
-    initial_stroke_length=torch.tensor(0.075),
-    offset=torch.tensor(0.34061),
-    radius=torch.tensor(0.3204),
-    phi_0=torch.tensor(-1.570796),
-)
-
-actuator2_parameters = ActuatorParameters(
-    increment=torch.tensor(154166.666),
-    initial_stroke_length=torch.tensor(0.075),
-    offset=torch.tensor(0.3479),
-    radius=torch.tensor(0.309),
-    phi_0=torch.tensor(0.959931),
-)
-
 # Include a linear actuator.
 actuator1_prototype = ActuatorConfig(
     actuator_key="actuator1",
-    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     actuator_clockwise=False,
-    actuator_parameters=actuator1_parameters,
 )
 
 # Include a linear actuator.
 actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
-    actuator_type=config_dictionary.linear_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     actuator_clockwise=True,
-    actuator_parameters=actuator2_parameters,
 )
 
 # Create a list of actuators.
@@ -232,6 +221,13 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
+
+    # device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
+    # # if torch.cuda.is_available(): 
+    # #     torch.set_default_device("cuda")
+    # # else: 
+    # #     torch.set_default_device("cpu")
+    # torch.set_default_device(device)
 
     # Create a scenario object.
     scenario_object = ScenarioGenerator(

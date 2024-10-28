@@ -189,6 +189,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
