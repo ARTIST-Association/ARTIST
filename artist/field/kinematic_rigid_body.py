@@ -125,14 +125,14 @@ class RigidBody(Kinematic):
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
 
         actuator_steps = torch.zeros((1, 2), requires_grad=True)
-        orientation = None
+        # orientation = None
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angles = self.actuators.actuator_list[0](
-                actuator_pos=actuator_steps[:, 0]
+                actuator_pos=actuator_steps[:, 0] #torch.tensor([26370])
             )
             joint_2_angles = self.actuators.actuator_list[1](
-                actuator_pos=actuator_steps[:, 1]
+                actuator_pos=actuator_steps[:, 1] #torch.tensor([68271])
             )
 
             initial_orientations = (
@@ -187,10 +187,10 @@ class RigidBody(Kinematic):
 
             # Compute desired normal.
             desired_reflect_vec = self.aim_point - concentrator_origins
-            desired_reflect_vec /= desired_reflect_vec.norm()
-            incident_ray_direction /= incident_ray_direction.norm()
+            desired_reflect_vec = desired_reflect_vec / desired_reflect_vec.norm()
+            incident_ray_direction = incident_ray_direction / incident_ray_direction.norm()
             desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
-            desired_concentrator_normal /= desired_concentrator_normal.norm()
+            desired_concentrator_normal = desired_concentrator_normal / desired_concentrator_normal.norm()
 
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normals)
@@ -252,25 +252,13 @@ class RigidBody(Kinematic):
         return (
             orientation
             @ utils.rotate_e(
-                e=torch.tensor(
-                    [
-                        self.initial_orientation_offsets.kinematic_initial_orientation_offset_e
-                    ]
-                )
+                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e
             )
             @ utils.rotate_n(
-                n=torch.tensor(
-                    [
-                        self.initial_orientation_offsets.kinematic_initial_orientation_offset_n
-                    ]
-                )
+                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n
             )
             @ utils.rotate_u(
-                u=torch.tensor(
-                    [
-                        self.initial_orientation_offsets.kinematic_initial_orientation_offset_u
-                    ]
-                )
+                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u
             )
         )
 
