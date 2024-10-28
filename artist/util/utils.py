@@ -332,15 +332,15 @@ def calculate_position_in_m_from_lat_lon(
         The east offset in meters, north offset in meters, and the altitude difference from the power plant.
     """
     # Convert latitude and longitude to radians
-    lat_rad = math.radians(coordinates_to_transform[0])
-    lon_rad = math.radians(coordinates_to_transform[1])
+    lat_rad = torch.deg2rad(coordinates_to_transform[0])
+    lon_rad = torch.deg2rad(coordinates_to_transform[1])
     alt = coordinates_to_transform[2] - power_plant_coordinates[2]
-    lat_tower_rad = math.radians(power_plant_coordinates[0])
-    lon_tower_rad = math.radians(power_plant_coordinates[1])
+    lat_tower_rad = torch.deg2rad(power_plant_coordinates[0])
+    lon_tower_rad = torch.deg2rad(power_plant_coordinates[1])
 
     # Calculate meridional radius of curvature for the first latitude
-    sin_lat1 = math.sin(lat_rad)
-    rn1 = config_dictionary.WGS84_A / math.sqrt(1 - config_dictionary.WGS84_E2 * sin_lat1**2)
+    sin_lat1 = torch.sin(lat_rad)
+    rn1 = config_dictionary.WGS84_A / torch.sqrt(1 - config_dictionary.WGS84_E2 * sin_lat1**2)
 
     # Calculate transverse radius of curvature for the first latitude
     rm1 = (config_dictionary.WGS84_A * (1 - config_dictionary.WGS84_E2)) / (
@@ -353,23 +353,10 @@ def calculate_position_in_m_from_lat_lon(
 
     # Calculate north and east offsets in meters
     north_offset_m = dlat_rad * rm1
-    east_offset_m = dlon_rad * rn1 * math.cos(lat_rad)
+    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
+    
     return torch.tensor([-east_offset_m, -north_offset_m, alt])
 
-# TODO remove
-def get_center_of_mass_scipy(bitmap: torch.Tensor,
-                       target_center: torch.Tensor,
-                       plane_e: torch.Tensor,
-                       plane_u: torch.Tensor
-) -> torch.Tensor:
-    de = torch.tensor([plane_e, 0.0, 0.0, 0.0])
-    du = torch.tensor([0.0, 0.0, plane_u, 0.0])
-    sum = torch.tensor(ndimage.center_of_mass(bitmap.detach().numpy())) / bitmap.size(-1)
-    e = sum[1]
-    u = 1 - sum[0]
-    aimpoint = target_center - 0.5 * (de + du) + e * de + u * du
-
-    return aimpoint
 
 def get_center_of_mass(bitmap: torch.Tensor,
                        target_center: torch.Tensor,
@@ -396,8 +383,18 @@ def get_center_of_mass(bitmap: torch.Tensor,
     torch.Tensor
         The coordinates of the flux density center of mass.
     """
-    non_zero = torch.nonzero(bitmap)
-    center_of_mass_bitmap = non_zero.sum(0) / non_zero.size(0)
+    mask = bitmap > 0
+    x_indices = torch.arange(bitmap.shape[0])
+    y_indices = torch.arange(bitmap.shape[1])
+    x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing='ij')
+
+    non_zero_x_indices = x_indices[mask]
+    non_zero_y_indices = y_indices[mask]
+
+    center_of_mass_x = non_zero_x_indices.float().mean()
+    center_of_mass_y = non_zero_y_indices.float().mean()
+    center_of_mass_bitmap = torch.tensor([center_of_mass_x, center_of_mass_y])
+    center_of_mass_bitmap.requires_grad_()
 
     de = torch.tensor([plane_e, 0.0, 0.0, 0.0])
     du = torch.tensor([0.0, 0.0, plane_u, 0.0])
