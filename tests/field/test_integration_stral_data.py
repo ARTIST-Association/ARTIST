@@ -36,13 +36,13 @@ else:
 @pytest.mark.parametrize(
     "incident_ray_direction, expected_value, scenario_config",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south.pt", "test_scenario"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east.pt", "test_scenario"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west.pt", "test_scenario"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above.pt", "test_scenario"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario"),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
-            "individual_south.pt",
+            "individual_south",
             "test_individual_measurements_scenario",
         ),  # Test if loading with individual measurements works
     ],
@@ -68,15 +68,20 @@ def test_compute_bitmaps(
     scenario_config : str
         The name of the scenario to be loaded.
     """
+    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    torch.set_default_device(device)
+
     torch.manual_seed(7)
+    torch.cuda.manual_seed(7)
 
     # Load the scenario.
     with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
-        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5)
+        scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5, device=device)
 
     # Align heliostat.
     scenario.heliostats.heliostat_list[0].set_aligned_surface(
-        incident_ray_direction=incident_ray_direction
+        incident_ray_direction=incident_ray_direction.to(device),
+        device=device
     )
 
     # Create raytracer - currently only possible for one heliostat.
@@ -85,7 +90,7 @@ def test_compute_bitmaps(
     )
 
     # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction)
+    final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction.to(device), device=device)
 
     # Apply all-reduce if MPI is used.
     if MPI is not None:
@@ -93,10 +98,17 @@ def test_compute_bitmaps(
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
     if rank == 0:
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/field/test_bitmaps_load_surface_stral"
-            / expected_value
-        )
-        expected = torch.load(expected_path)
+        if device == "cpu":
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/field/test_bitmaps_load_surface_stral"
+                / f"{expected_value}_cpu.pt"
+            )
+        else:
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/field/test_bitmaps_load_surface_stral"
+                / f"{expected_value}_gpu.pt"
+            )
+        expected = torch.load(expected_path).to(device)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
