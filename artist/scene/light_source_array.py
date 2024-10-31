@@ -47,7 +47,9 @@ class LightSourceArray(torch.nn.Module):
         self.light_source_list = light_source_list
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(cls, 
+                  config_file: h5py.File,
+                  device: torch.device="cpu") -> Self:
         """
         Load a light source array from an HDF5 file.
 
@@ -55,6 +57,8 @@ class LightSourceArray(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -76,6 +80,7 @@ class LightSourceArray(torch.nn.Module):
                     ls_object.from_hdf5(
                         config_file=config_file[config_dictionary.light_source_key][ls],
                         light_source_name=ls,
+                        device=device
                     )
                 )
             except KeyError:

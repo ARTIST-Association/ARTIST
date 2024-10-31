@@ -54,6 +54,7 @@ class HeliostatField(torch.nn.Module):
         prototype_surface: SurfaceConfig,
         prototype_kinematic: KinematicLoadConfig,
         prototype_actuator: ActuatorListConfig,
+        device: torch.device="cpu"
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -68,6 +69,8 @@ class HeliostatField(torch.nn.Module):
             The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
         prototype_actuator : ActuatorListConfig
             The prototype for the actuator configuration to be used if the heliostat has no individual actuators.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -84,6 +87,7 @@ class HeliostatField(torch.nn.Module):
                 prototype_kinematic=prototype_kinematic,
                 prototype_actuator=prototype_actuator,
                 heliostat_name=heliostat_name,
+                device=device
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]

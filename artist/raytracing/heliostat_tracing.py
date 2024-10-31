@@ -189,12 +189,19 @@ class HeliostatRayTracer:
             sampler=distortions_sampler,
         )
 
-    def trace_rays(self, incident_ray_direction: torch.Tensor) -> torch.Tensor:
+    def trace_rays(self, incident_ray_direction: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
         """
         Perform heliostat raytracing.
 
         Scatter the rays according to the distortions, calculate the line plane intersection, and calculate the
         resulting bitmap on the receiver.
+
+        Parameters
+        ----------
+        incident_ray_direction : torch.Tensor
+            The direction of the incident ray as seen from the heliostat.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -202,7 +209,7 @@ class HeliostatRayTracer:
             The resulting bitmap.
         """
         final_bitmap = torch.zeros(
-            (self.receiver.resolution_e, self.receiver.resolution_u)
+            (self.receiver.resolution_e, self.receiver.resolution_u), device=device
         )
 
         self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
@@ -211,6 +218,7 @@ class HeliostatRayTracer:
             rays = self.scatter_rays(
                 batch_u,
                 batch_e,
+                device
             )
 
             intersections = raytracing_utils.line_plane_intersections(
@@ -242,6 +250,7 @@ class HeliostatRayTracer:
                 dx_ints,
                 dy_ints,
                 indices,
+                device=device
             )
 
             final_bitmap += total_bitmap
@@ -252,6 +261,7 @@ class HeliostatRayTracer:
         self,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
+        device: torch.device="cpu"
     ) -> Rays:
         """
         Scatter the reflected rays around the preferred ray direction.
@@ -262,6 +272,8 @@ class HeliostatRayTracer:
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -278,10 +290,10 @@ class HeliostatRayTracer:
         )
 
         ray_directions = torch.cat(
-            (ray_directions, torch.zeros(4, ray_directions.size(1), 1)), dim=-1
+            (ray_directions, torch.zeros(4, ray_directions.size(1), 1, device=device)), dim=-1
         )
 
-        rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e)
+        rotations = utils.rotate_distortions(u=distortion_u, e=distortion_e, device=device)
 
         scattered_rays = (rotations @ ray_directions.unsqueeze(-1)).squeeze(-1)
 
@@ -291,6 +303,7 @@ class HeliostatRayTracer:
                 scattered_rays.size(dim=0),
                 scattered_rays.size(dim=1),
                 scattered_rays.size(dim=2),
+                device=device
             ),
         )
 
@@ -299,6 +312,7 @@ class HeliostatRayTracer:
         dx_ints: torch.Tensor,
         dy_ints: torch.Tensor,
         indices: torch.Tensor,
+        device: torch.device="cpu"
     ) -> torch.Tensor:
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
@@ -313,6 +327,8 @@ class HeliostatRayTracer:
             the y-axis.
         indices : torch.Tensor
             Index of the pixel.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -422,7 +438,7 @@ class HeliostatRayTracer:
         total_bitmap = torch.zeros(
             [self.receiver.resolution_e, self.receiver.resolution_u],
             dtype=dx_ints.dtype,
-            device=dx_ints.device,
+            device=device,
         )
         # Add up all distributed intensities in the corresponding indices.
         total_bitmap.index_put_(

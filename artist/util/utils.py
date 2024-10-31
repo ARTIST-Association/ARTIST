@@ -24,6 +24,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 def rotate_distortions(
     e: torch.Tensor,
     u: torch.Tensor,
+    device: torch.device="cpu"
 ) -> torch.Tensor:
     """
     Rotate the distortions for the sun.
@@ -40,6 +41,8 @@ def rotate_distortions(
         East rotation angle in radians.
     u : torch.Tensor
         Up rotation angle in radians.
+    device : torch.device
+        The device on which to initialize tensors (default is CPU).
 
     Returns
     -------
@@ -54,8 +57,8 @@ def rotate_distortions(
     sin_e = -torch.sin(e)  # Heliostat convention
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(e.shape)
-    ones = torch.ones(e.shape)
+    zeros = torch.zeros(e.shape, device=device)
+    ones = torch.ones(e.shape, device=device)
 
     return torch.stack(
         [
@@ -70,6 +73,7 @@ def rotate_distortions(
 
 def rotate_e(
     e: torch.Tensor,
+    device: torch.device="cpu"
 ) -> torch.Tensor:
     """
     Rotate around the east axis.
@@ -83,6 +87,8 @@ def rotate_e(
     ----------
     e : torch.Tensor
         East rotation angle in radians.
+    device : torch.device
+        The device on which to initialize tensors (default is CPU).
 
     Returns
     -------
@@ -91,8 +97,8 @@ def rotate_e(
     """
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat convention
-    zeros = torch.zeros(e.shape)
-    ones = torch.ones(e.shape)
+    zeros = torch.zeros(e.shape, device=device)
+    ones = torch.ones(e.shape, device=device)
     return torch.stack(
         [
             torch.stack([ones, zeros, zeros, zeros]),
@@ -105,6 +111,7 @@ def rotate_e(
 
 def rotate_n(
     n: torch.Tensor,
+    device: torch.device="cpu"
 ) -> torch.Tensor:
     """
     Rotate around the north axis.
@@ -117,6 +124,8 @@ def rotate_n(
     ----------
     n : torch.Tensor
         North rotation angle in radians.
+    device : torch.device
+        The device on which to initialize tensors (default is CPU).
 
     Returns
     -------
@@ -125,8 +134,8 @@ def rotate_n(
     """
     cos_n = torch.cos(n)
     sin_n = torch.sin(n)
-    zeros = torch.zeros(n.shape)
-    ones = torch.ones(n.shape)
+    zeros = torch.zeros(n.shape, device=device)
+    ones = torch.ones(n.shape, device=device)
 
     return torch.stack(
         [
@@ -140,6 +149,7 @@ def rotate_n(
 
 def rotate_u(
     u: torch.Tensor,
+    device: torch.device="cpu"
 ) -> torch.Tensor:
     """
     Rotate around the up axis.
@@ -152,7 +162,9 @@ def rotate_u(
     ----------
     u : torch.Tensor
         Up rotation angle in radians.
-
+    device : torch.device
+        The device on which to initialize tensors (default is CPU).
+    
     Returns
     -------
     torch.Tensor
@@ -160,8 +172,8 @@ def rotate_u(
     """
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(u.shape)
-    ones = torch.ones(u.shape)
+    zeros = torch.zeros(u.shape, device=device)
+    ones = torch.ones(u.shape, device=device)
 
     return torch.stack(
         [
@@ -177,6 +189,7 @@ def translate_enu(
     e: torch.Tensor,
     n: torch.Tensor,
     u: torch.Tensor,
+    device: torch.device="cpu"
 ) -> torch.Tensor:
     """
     Translate in all directions.
@@ -192,6 +205,8 @@ def translate_enu(
         North translation.
     u : torch.Tensor
         Up translation.
+    device : torch.device
+        The device on which to initialize tensors (default is CPU).
 
     Returns
     -------
@@ -202,8 +217,8 @@ def translate_enu(
         e.shape == u.shape == n.shape
     ), "The three tensors containing the east, north, and up translations must have the same shape."
 
-    zeros = torch.zeros(e.shape)
-    ones = torch.ones(e.shape)
+    zeros = torch.zeros(e.shape, device=device)
+    ones = torch.ones(e.shape, device=device)
 
     return torch.stack(
         [

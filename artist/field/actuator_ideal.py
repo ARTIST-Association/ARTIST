@@ -23,7 +23,7 @@ class IdealActuator(Actuator):
     :class:`Actuator` : The parent class.
     """
 
-    def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:
+    def motor_steps_to_angles(self, motor_steps: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
         """
         Translate motor steps to a joint angle.
 
@@ -31,6 +31,8 @@ class IdealActuator(Actuator):
         ----------
         motor_steps : torch.Tensor
             The motor steps.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -39,7 +41,7 @@ class IdealActuator(Actuator):
         """
         return motor_steps
 
-    def angles_to_motor_steps(self, angles: torch.Tensor) -> torch.Tensor:
+    def angles_to_motor_steps(self, angles: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
         """
         Translate a joint angle to motor steps.
 
@@ -47,6 +49,8 @@ class IdealActuator(Actuator):
         ----------
         angles : torch.Tensor
             The joint angles.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -55,7 +59,7 @@ class IdealActuator(Actuator):
         """
         return angles
 
-    def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+    def forward(self, actuator_pos: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
         """
         Perform the forward kinematic for an ideal actuator.
 
@@ -63,6 +67,8 @@ class IdealActuator(Actuator):
         ----------
         actuator_pos : torch.Tensor
             The position of the actuator.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
