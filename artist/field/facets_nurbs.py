@@ -90,9 +90,14 @@ class NurbsFacet(torch.nn.Module):
         self.canting_e = canting_e
         self.canting_n = canting_n
 
-    def create_nurbs_surface(self) -> NURBSSurface:
+    def create_nurbs_surface(self, device: torch.device="cpu") -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
+
+        Parameters
+        ----------
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -102,14 +107,17 @@ class NurbsFacet(torch.nn.Module):
         # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
         # defined evaluation points.
         evaluation_points_rows = torch.linspace(
-            0 + 1e-5, 1 - 1e-5, self.number_eval_points_e
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_e, device=device
         )
         evaluation_points_cols = torch.linspace(
-            0 + 1e-5, 1 - 1e-5, self.number_eval_points_n
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points_n, device=device
         )
         evaluation_points = torch.cartesian_prod(
             evaluation_points_rows, evaluation_points_cols
         )
+
+        evaluation_points = evaluation_points.to(device)
+
         evaluation_points_e = evaluation_points[:, 0]
         evaluation_points_n = evaluation_points[:, 1]
 
@@ -119,5 +127,6 @@ class NurbsFacet(torch.nn.Module):
             evaluation_points_e,
             evaluation_points_n,
             self.control_points,
+            device
         )
         return nurbs_surface

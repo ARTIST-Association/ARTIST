@@ -67,6 +67,7 @@ class RigidBody(Kinematic):
             concentrator_tilt_n=torch.tensor(0.0),
             concentrator_tilt_u=torch.tensor(0.0),
         ),
+        device: torch.device="cpu",
     ) -> None:
         """
         Initialize the rigid body kinematic.
@@ -88,18 +89,21 @@ class RigidBody(Kinematic):
             The initial orientation offsets of the kinematic (default: 0.0 for each possible offset).
         deviation_parameters : KinematicDeviations
             The deviation parameters for the kinematic (default: 0.0 for each deviation).
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
         """
         super().__init__(position=position, aim_point=aim_point)
 
         self.deviation_parameters = deviation_parameters
         self.initial_orientation_offsets = initial_orientation_offsets
-        self.actuators = ActuatorArray(actuator_list_config=actuator_config)
+        self.actuators = ActuatorArray(actuator_list_config=actuator_config, device=device)
 
     def align(
         self,
         incident_ray_direction: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
+        device: torch.device="cpu"
     ) -> torch.Tensor:
         """
         Compute the rotation matrix to align the heliostat along a desired orientation.
@@ -112,6 +116,8 @@ class RigidBody(Kinematic):
             Maximum number of iterations (default: 2).
         min_eps : float
             Convergence criterion (default: 0.0001).
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -122,19 +128,21 @@ class RigidBody(Kinematic):
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
 
-        actuator_steps = torch.zeros((1, 2), requires_grad=True)
+        actuator_steps = torch.zeros((1, 2), requires_grad=True, device=device)
         orientation = None
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angles = self.actuators.actuator_list[0](
-                actuator_pos=actuator_steps[:, 0]
+                actuator_pos=actuator_steps[:, 0],
+                device=device
             )
             joint_2_angles = self.actuators.actuator_list[1](
-                actuator_pos=actuator_steps[:, 1]
+                actuator_pos=actuator_steps[:, 1],
+                device=device
             )
 
             initial_orientations = (
-                torch.eye(4).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
+                torch.eye(4, device=device).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
             )
 
             # Account for position.
@@ -142,27 +150,30 @@ class RigidBody(Kinematic):
                 e=self.position[0],
                 n=self.position[1],
                 u=self.position[2],
+                device=device
             )
 
             joint_1_rotations = (
-                utils.rotate_n(n=self.deviation_parameters.first_joint_tilt_n)
-                @ utils.rotate_u(u=self.deviation_parameters.first_joint_tilt_u)
+                utils.rotate_n(n=self.deviation_parameters.first_joint_tilt_n, device=device)
+                @ utils.rotate_u(u=self.deviation_parameters.first_joint_tilt_u, device=device)
                 @ utils.translate_enu(
                     e=self.deviation_parameters.first_joint_translation_e,
                     n=self.deviation_parameters.first_joint_translation_n,
                     u=self.deviation_parameters.first_joint_translation_u,
+                    device=device
                 )
-                @ utils.rotate_e(joint_1_angles)
+                @ utils.rotate_e(joint_1_angles, device=device)
             )
             joint_2_rotations = (
-                utils.rotate_e(e=self.deviation_parameters.second_joint_tilt_e)
-                @ utils.rotate_n(n=self.deviation_parameters.second_joint_tilt_n)
+                utils.rotate_e(e=self.deviation_parameters.second_joint_tilt_e, device=device)
+                @ utils.rotate_n(n=self.deviation_parameters.second_joint_tilt_n, device=device)
                 @ utils.translate_enu(
                     e=self.deviation_parameters.second_joint_translation_e,
                     n=self.deviation_parameters.second_joint_translation_n,
                     u=self.deviation_parameters.second_joint_translation_u,
+                    device=device
                 )
-                @ utils.rotate_u(joint_2_angles)
+                @ utils.rotate_u(joint_2_angles, device=device)
             )
 
             orientation = (
@@ -173,14 +184,15 @@ class RigidBody(Kinematic):
                     e=self.deviation_parameters.concentrator_translation_e,
                     n=self.deviation_parameters.concentrator_translation_n,
                     u=self.deviation_parameters.concentrator_translation_u,
+                    device=device
                 )
             )
 
             concentrator_normals = orientation @ torch.tensor(
-                [0, -1, 0, 0], dtype=torch.float32
+                [0, -1, 0, 0], dtype=torch.float32, device=device
             )
             concentrator_origins = orientation @ torch.tensor(
-                [0, 0, 0, 1], dtype=torch.float32
+                [0, 0, 0, 1], dtype=torch.float32, device=device
             )
 
             # Compute desired normal.
@@ -237,10 +249,10 @@ class RigidBody(Kinematic):
             actuator_steps = torch.stack(
                 (
                     self.actuators.actuator_list[0].angles_to_motor_steps(
-                        joint_1_angles
+                        joint_1_angles, device
                     ),
                     self.actuators.actuator_list[1].angles_to_motor_steps(
-                        joint_2_angles
+                        joint_2_angles, device
                     ),
                 ),
                 dim=-1,
@@ -253,22 +265,25 @@ class RigidBody(Kinematic):
                 e=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_e
-                    ]
-                )
+                    ], 
+                    device=device
+                ), device=device
             )
             @ utils.rotate_n(
                 n=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_n
-                    ]
-                )
+                    ],
+                    device=device
+                ), device=device
             )
             @ utils.rotate_u(
                 u=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_u
-                    ]
-                )
+                    ], 
+                    device=device
+                ), device=device
             )
         )
 
@@ -277,6 +292,7 @@ class RigidBody(Kinematic):
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        device: torch.device="cpu"
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a calculated orientation.
@@ -289,6 +305,8 @@ class RigidBody(Kinematic):
             Points on the surface of the heliostat that reflect the light.
         surface_normals : torch.Tensor
             Normals to the surface points.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -297,7 +315,7 @@ class RigidBody(Kinematic):
         torch.Tensor
             The aligned surface normals.
         """
-        orientation = self.align(incident_ray_direction).squeeze()
+        orientation = self.align(incident_ray_direction, device=device).squeeze()
 
         aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
             -1

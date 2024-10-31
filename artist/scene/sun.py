@@ -41,6 +41,7 @@ class Sun(LightSource):
         distribution_parameters: dict[str, Any] = dict(
             distribution_type="normal", mean=0.0, covariance=4.3681e-06
         ),
+        device: torch.device="cpu"
     ) -> None:
         """
         Initialize the sun as a light source.
@@ -56,6 +57,8 @@ class Sun(LightSource):
             The number of sent-out rays sampled from the sun distribution.
         distribution_parameters
             Parameters of the distribution used to model the sun.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Raises
         ------
@@ -89,6 +92,7 @@ class Sun(LightSource):
                     self.distribution_parameters[config_dictionary.light_source_mean],
                 ],
                 dtype=torch.float,
+                device=device
             )
             covariance = torch.tensor(
                 [
@@ -106,13 +110,17 @@ class Sun(LightSource):
                     ],
                 ],
                 dtype=torch.float,
+                device=device
             )
 
             self.distribution = torch.distributions.MultivariateNormal(mean, covariance)
 
     @classmethod
     def from_hdf5(
-        cls, config_file: h5py.File, light_source_name: Optional[str] = None
+        cls, 
+        config_file: h5py.File, 
+        light_source_name: Optional[str] = None,
+        device: torch.device="cpu"
     ) -> Self:
         """
         Class method that initializes a sun from an HDF5 file.
@@ -123,6 +131,8 @@ class Sun(LightSource):
             The HDF5 file containing the information about the sun.
         light_source_name : str, optional
             The name of the light source - used for logging.
+        device : torch.device
+            The device on which to initialize tensors (default is CPU).
 
         Returns
         -------
@@ -176,6 +186,7 @@ class Sun(LightSource):
         return cls(
             number_of_rays=number_of_rays,
             distribution_parameters=distribution_parameters,
+            device=device
         )
 
     def get_distortions(
