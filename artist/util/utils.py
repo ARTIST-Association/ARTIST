@@ -22,9 +22,7 @@ def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
 
 def rotate_distortions(
-    e: torch.Tensor,
-    u: torch.Tensor,
-    device: torch.device="cpu"
+    e: torch.Tensor, u: torch.Tensor, device: torch.device = "cpu"
 ) -> torch.Tensor:
     """
     Rotate the distortions for the sun.
@@ -71,10 +69,7 @@ def rotate_distortions(
     ).permute(0, 3, 4, 1, 2)
 
 
-def rotate_e(
-    e: torch.Tensor,
-    device: torch.device="cpu"
-) -> torch.Tensor:
+def rotate_e(e: torch.Tensor, device: torch.device = "cpu") -> torch.Tensor:
     """
     Rotate around the east axis.
 
@@ -109,10 +104,7 @@ def rotate_e(
     ).squeeze(-1)
 
 
-def rotate_n(
-    n: torch.Tensor,
-    device: torch.device="cpu"
-) -> torch.Tensor:
+def rotate_n(n: torch.Tensor, device: torch.device = "cpu") -> torch.Tensor:
     """
     Rotate around the north axis.
 
@@ -147,10 +139,7 @@ def rotate_n(
     ).squeeze(-1)
 
 
-def rotate_u(
-    u: torch.Tensor,
-    device: torch.device="cpu"
-) -> torch.Tensor:
+def rotate_u(u: torch.Tensor, device: torch.device = "cpu") -> torch.Tensor:
     """
     Rotate around the up axis.
 
@@ -164,7 +153,7 @@ def rotate_u(
         Up rotation angle in radians.
     device : torch.device
         The device on which to initialize tensors (default is CPU).
-    
+
     Returns
     -------
     torch.Tensor
@@ -186,10 +175,7 @@ def rotate_u(
 
 
 def translate_enu(
-    e: torch.Tensor,
-    n: torch.Tensor,
-    u: torch.Tensor,
-    device: torch.device="cpu"
+    e: torch.Tensor, n: torch.Tensor, u: torch.Tensor, device: torch.device = "cpu"
 ) -> torch.Tensor:
     """
     Translate in all directions.

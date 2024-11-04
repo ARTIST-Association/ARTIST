@@ -323,7 +323,7 @@ class FacetConfig:
     height : float
         The height of the facet.
     translation_vector : torch.Tensor
-            The translation_vector of the facet.
+        The translation_vector of the facet.
     canting_e : torch.Tensor
         The canting vector in the east direction.
     canting_n : torch.Tensor
