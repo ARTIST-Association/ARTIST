@@ -67,7 +67,7 @@ class RigidBody(Kinematic):
             concentrator_tilt_n=torch.tensor(0.0),
             concentrator_tilt_u=torch.tensor(0.0),
         ),
-        device: torch.device="cpu",
+        device: torch.device = "cpu",
     ) -> None:
         """
         Initialize the rigid body kinematic.
@@ -95,15 +95,27 @@ class RigidBody(Kinematic):
         super().__init__(position=position, aim_point=aim_point)
 
         self.deviation_parameters = deviation_parameters
+        for attr_name, attr_value in self.deviation_parameters.__dict__.items():
+            if isinstance(attr_value, torch.Tensor):
+                setattr(self.deviation_parameters, attr_name, attr_value.to(device))
+
         self.initial_orientation_offsets = initial_orientation_offsets
-        self.actuators = ActuatorArray(actuator_list_config=actuator_config, device=device)
+        for attr_name, attr_value in self.initial_orientation_offsets.__dict__.items():
+            if isinstance(attr_value, torch.Tensor):
+                setattr(
+                    self.initial_orientation_offsets, attr_name, attr_value.to(device)
+                )
+
+        self.actuators = ActuatorArray(
+            actuator_list_config=actuator_config, device=device
+        )
 
     def align(
         self,
         incident_ray_direction: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> torch.Tensor:
         """
         Compute the rotation matrix to align the heliostat along a desired orientation.
@@ -133,16 +145,16 @@ class RigidBody(Kinematic):
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angles = self.actuators.actuator_list[0](
-                actuator_pos=actuator_steps[:, 0],
-                device=device
+                actuator_pos=actuator_steps[:, 0], device=device
             )
             joint_2_angles = self.actuators.actuator_list[1](
-                actuator_pos=actuator_steps[:, 1],
-                device=device
+                actuator_pos=actuator_steps[:, 1], device=device
             )
 
             initial_orientations = (
-                torch.eye(4, device=device).unsqueeze(0).repeat(len(joint_1_angles), 1, 1)
+                torch.eye(4, device=device)
+                .unsqueeze(0)
+                .repeat(len(joint_1_angles), 1, 1)
             )
 
             # Account for position.
@@ -150,28 +162,36 @@ class RigidBody(Kinematic):
                 e=self.position[0],
                 n=self.position[1],
                 u=self.position[2],
-                device=device
+                device=device,
             )
 
             joint_1_rotations = (
-                utils.rotate_n(n=self.deviation_parameters.first_joint_tilt_n, device=device)
-                @ utils.rotate_u(u=self.deviation_parameters.first_joint_tilt_u, device=device)
+                utils.rotate_n(
+                    n=self.deviation_parameters.first_joint_tilt_n, device=device
+                )
+                @ utils.rotate_u(
+                    u=self.deviation_parameters.first_joint_tilt_u, device=device
+                )
                 @ utils.translate_enu(
                     e=self.deviation_parameters.first_joint_translation_e,
                     n=self.deviation_parameters.first_joint_translation_n,
                     u=self.deviation_parameters.first_joint_translation_u,
-                    device=device
+                    device=device,
                 )
                 @ utils.rotate_e(joint_1_angles, device=device)
             )
             joint_2_rotations = (
-                utils.rotate_e(e=self.deviation_parameters.second_joint_tilt_e, device=device)
-                @ utils.rotate_n(n=self.deviation_parameters.second_joint_tilt_n, device=device)
+                utils.rotate_e(
+                    e=self.deviation_parameters.second_joint_tilt_e, device=device
+                )
+                @ utils.rotate_n(
+                    n=self.deviation_parameters.second_joint_tilt_n, device=device
+                )
                 @ utils.translate_enu(
                     e=self.deviation_parameters.second_joint_translation_e,
                     n=self.deviation_parameters.second_joint_translation_n,
                     u=self.deviation_parameters.second_joint_translation_u,
-                    device=device
+                    device=device,
                 )
                 @ utils.rotate_u(joint_2_angles, device=device)
             )
@@ -184,7 +204,7 @@ class RigidBody(Kinematic):
                     e=self.deviation_parameters.concentrator_translation_e,
                     n=self.deviation_parameters.concentrator_translation_n,
                     u=self.deviation_parameters.concentrator_translation_u,
-                    device=device
+                    device=device,
                 )
             )
 
@@ -265,25 +285,28 @@ class RigidBody(Kinematic):
                 e=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_e
-                    ], 
-                    device=device
-                ), device=device
+                    ],
+                    device=device,
+                ),
+                device=device,
             )
             @ utils.rotate_n(
                 n=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_n
                     ],
-                    device=device
-                ), device=device
+                    device=device,
+                ),
+                device=device,
             )
             @ utils.rotate_u(
                 u=torch.tensor(
                     [
                         self.initial_orientation_offsets.kinematic_initial_orientation_offset_u
-                    ], 
-                    device=device
-                ), device=device
+                    ],
+                    device=device,
+                ),
+                device=device,
             )
         )
 
@@ -292,7 +315,7 @@ class RigidBody(Kinematic):
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a calculated orientation.

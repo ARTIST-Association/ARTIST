@@ -90,7 +90,7 @@ class NurbsFacet(torch.nn.Module):
         self.canting_e = canting_e
         self.canting_n = canting_n
 
-    def create_nurbs_surface(self, device: torch.device="cpu") -> NURBSSurface:
+    def create_nurbs_surface(self, device: torch.device = "cpu") -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
 
@@ -127,6 +127,6 @@ class NurbsFacet(torch.nn.Module):
             evaluation_points_e,
             evaluation_points_n,
             self.control_points,
-            device
+            device,
         )
         return nurbs_surface

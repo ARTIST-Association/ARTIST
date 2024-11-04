@@ -94,10 +94,10 @@ class Receiver(torch.nn.Module):
 
     @classmethod
     def from_hdf5(
-        cls, 
-        config_file: h5py.File, 
+        cls,
+        config_file: h5py.File,
         receiver_name: Optional[str] = None,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> Self:
         """
         Class method that initializes a receiver from an HDF5 file.
@@ -122,12 +122,12 @@ class Receiver(torch.nn.Module):
         position_center = torch.tensor(
             config_file[config_dictionary.receiver_position_center][()],
             dtype=torch.float,
-            device=device
+            device=device,
         )
         normal_vector = torch.tensor(
             config_file[config_dictionary.receiver_normal_vector][()],
             dtype=torch.float,
-            device=device
+            device=device,
         )
         plane_e = float(config_file[config_dictionary.receiver_plane_e][()])
         plane_u = float(config_file[config_dictionary.receiver_plane_u][()])
