@@ -54,7 +54,7 @@ class HeliostatField(torch.nn.Module):
         prototype_surface: SurfaceConfig,
         prototype_kinematic: KinematicLoadConfig,
         prototype_actuator: ActuatorListConfig,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -87,7 +87,7 @@ class HeliostatField(torch.nn.Module):
                 prototype_kinematic=prototype_kinematic,
                 prototype_actuator=prototype_actuator,
                 heliostat_name=heliostat_name,
-                device=device
+                device=device,
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]

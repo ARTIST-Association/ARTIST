@@ -70,7 +70,7 @@ class Heliostat(torch.nn.Module):
         surface_config: SurfaceConfig,
         kinematic_config: KinematicLoadConfig,
         actuator_config: ActuatorListConfig,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> None:
         """
         Implement the behavior of a heliostat.
@@ -115,7 +115,7 @@ class Heliostat(torch.nn.Module):
             actuator_config=actuator_config,
             initial_orientation_offsets=kinematic_config.kinematic_initial_orientation_offsets,
             deviation_parameters=kinematic_config.kinematic_deviations,
-            device=device
+            device=device,
         )
         self.current_aligned_surface_points = torch.empty(0, device=device)
         self.current_aligned_surface_normals = torch.empty(0, device=device)
@@ -130,7 +130,7 @@ class Heliostat(torch.nn.Module):
         prototype_kinematic: Optional[KinematicLoadConfig] = None,
         prototype_actuator: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
-        device: torch.device="cpu"
+        device: torch.device = "cpu",
     ) -> Self:
         """
         Class method to initialize a heliostat from an HDF5 file.
@@ -159,10 +159,14 @@ class Heliostat(torch.nn.Module):
             log.info(f"Loading {heliostat_name} from an HDF5 file.")
         heliostat_id = int(config_file[config_dictionary.heliostat_id][()])
         position = torch.tensor(
-            config_file[config_dictionary.heliostat_position][()], dtype=torch.float, device=device
+            config_file[config_dictionary.heliostat_position][()],
+            dtype=torch.float,
+            device=device,
         )
         aim_point = torch.tensor(
-            config_file[config_dictionary.heliostat_aim_point][()], dtype=torch.float, device=device
+            config_file[config_dictionary.heliostat_aim_point][()],
+            dtype=torch.float,
+            device=device,
         )
 
         if config_dictionary.heliostat_surface_key in config_file.keys():
@@ -174,7 +178,7 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facet_control_points][()],
                         dtype=torch.float,
-                        device=device
+                        device=device,
                     ),
                     degree_e=int(
                         config_file[config_dictionary.heliostat_surface_key][
@@ -211,21 +215,21 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facets_translation_vector][()],
                         dtype=torch.float,
-                        device=device
+                        device=device,
                     ),
                     canting_e=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facets_canting_e][()],
                         dtype=torch.float,
-                        device=device
+                        device=device,
                     ),
                     canting_n=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facets_canting_n][()],
                         dtype=torch.float,
-                        device=device
+                        device=device,
                     ),
                 )
                 for facet in config_file[config_dictionary.heliostat_surface_key][
@@ -276,21 +280,27 @@ class Heliostat(torch.nn.Module):
             kinematic_offsets = KinematicOffsets(
                 kinematic_initial_orientation_offset_e=(
                     torch.tensor(
-                        kinematic_initial_orientation_offset_e[()], dtype=torch.float, device=device
+                        kinematic_initial_orientation_offset_e[()],
+                        dtype=torch.float,
+                        device=device,
                     )
                     if kinematic_initial_orientation_offset_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 kinematic_initial_orientation_offset_n=(
                     torch.tensor(
-                        kinematic_initial_orientation_offset_n[()], dtype=torch.float, device=device
+                        kinematic_initial_orientation_offset_n[()],
+                        dtype=torch.float,
+                        device=device,
                     )
                     if kinematic_initial_orientation_offset_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 kinematic_initial_orientation_offset_u=(
                     torch.tensor(
-                        kinematic_initial_orientation_offset_u[()], dtype=torch.float, device=device
+                        kinematic_initial_orientation_offset_u[()],
+                        dtype=torch.float,
+                        device=device,
                     )
                     if kinematic_initial_orientation_offset_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -479,92 +489,128 @@ class Heliostat(torch.nn.Module):
                 )
             kinematic_deviations = KinematicDeviations(
                 first_joint_translation_e=(
-                    torch.tensor(first_joint_translation_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_translation_e[()], dtype=torch.float, device=device
+                    )
                     if first_joint_translation_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 first_joint_translation_n=(
-                    torch.tensor(first_joint_translation_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_translation_n[()], dtype=torch.float, device=device
+                    )
                     if first_joint_translation_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 first_joint_translation_u=(
-                    torch.tensor(first_joint_translation_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_translation_u[()], dtype=torch.float, device=device
+                    )
                     if first_joint_translation_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 first_joint_tilt_e=(
-                    torch.tensor(first_joint_tilt_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_tilt_e[()], dtype=torch.float, device=device
+                    )
                     if first_joint_tilt_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 first_joint_tilt_n=(
-                    torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_tilt_n[()], dtype=torch.float, device=device
+                    )
                     if first_joint_tilt_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 first_joint_tilt_u=(
-                    torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        first_joint_tilt_u[()], dtype=torch.float, device=device
+                    )
                     if first_joint_tilt_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_translation_e=(
-                    torch.tensor(second_joint_translation_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_translation_e[()], dtype=torch.float, device=device
+                    )
                     if second_joint_translation_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_translation_n=(
-                    torch.tensor(second_joint_translation_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_translation_n[()], dtype=torch.float, device=device
+                    )
                     if second_joint_translation_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_translation_u=(
-                    torch.tensor(second_joint_translation_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_translation_u[()], dtype=torch.float, device=device
+                    )
                     if second_joint_translation_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_tilt_e=(
-                    torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_tilt_e[()], dtype=torch.float, device=device
+                    )
                     if second_joint_tilt_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_tilt_n=(
-                    torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_tilt_n[()], dtype=torch.float, device=device
+                    )
                     if second_joint_tilt_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 second_joint_tilt_u=(
-                    torch.tensor(second_joint_tilt_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        second_joint_tilt_u[()], dtype=torch.float, device=device
+                    )
                     if second_joint_tilt_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_translation_e=(
-                    torch.tensor(concentrator_translation_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_translation_e[()], dtype=torch.float, device=device
+                    )
                     if concentrator_translation_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_translation_n=(
-                    torch.tensor(concentrator_translation_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_translation_n[()], dtype=torch.float, device=device
+                    )
                     if concentrator_translation_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_translation_u=(
-                    torch.tensor(concentrator_translation_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_translation_u[()], dtype=torch.float, device=device
+                    )
                     if concentrator_translation_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_tilt_e=(
-                    torch.tensor(concentrator_tilt_e[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_tilt_e[()], dtype=torch.float, device=device
+                    )
                     if concentrator_tilt_e
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_tilt_n=(
-                    torch.tensor(concentrator_tilt_n[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_tilt_n[()], dtype=torch.float, device=device
+                    )
                     if concentrator_tilt_n
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 concentrator_tilt_u=(
-                    torch.tensor(concentrator_tilt_u[()], dtype=torch.float, device=device)
+                    torch.tensor(
+                        concentrator_tilt_u[()], dtype=torch.float, device=device
+                    )
                     if concentrator_tilt_u
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
@@ -647,7 +693,9 @@ class Heliostat(torch.nn.Module):
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     initial_stroke_length=(
-                        torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
+                        torch.tensor(
+                            initial_stroke_length[()], dtype=torch.float, device=device
+                        )
                         if initial_stroke_length
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
@@ -700,11 +748,12 @@ class Heliostat(torch.nn.Module):
             surface_config=surface_config,
             kinematic_config=kinematic_config,
             actuator_config=actuator_list_config,
+            device=device,
         )
 
-    def set_aligned_surface(self,
-                            incident_ray_direction: torch.Tensor,
-                            device: torch.device="cpu") -> None:
+    def set_aligned_surface(
+        self, incident_ray_direction: torch.Tensor, device: torch.device = "cpu"
+    ) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
 
@@ -715,7 +764,9 @@ class Heliostat(torch.nn.Module):
         device : torch.device
             The device on which to initialize tensors (default is CPU).
         """
-        surface_points, surface_normals = self.surface.get_surface_points_and_normals(device=device)
+        surface_points, surface_normals = self.surface.get_surface_points_and_normals(
+            device=device
+        )
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,

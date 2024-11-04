@@ -42,10 +42,7 @@ class ReceiverField(torch.nn.Module):
         self.receiver_list = receiver_list
 
     @classmethod
-    def from_hdf5(cls, 
-                  config_file: h5py.File,
-                  device: torch.device="cpu" 
-                  ) -> Self:
+    def from_hdf5(cls, config_file: h5py.File, device: torch.device = "cpu") -> Self:
         """
         Load a receiver field from an HDF5 file.
 
@@ -66,7 +63,7 @@ class ReceiverField(torch.nn.Module):
             Receiver.from_hdf5(
                 config_file=config_file[config_dictionary.receiver_key][receiver_name],
                 receiver_name=receiver_name,
-                device=device
+                device=device,
             )
             for receiver_name in config_file[config_dictionary.receiver_key].keys()
         ]

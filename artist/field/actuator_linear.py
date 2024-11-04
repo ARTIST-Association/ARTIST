@@ -119,7 +119,9 @@ class LinearActuator(Actuator):
         angle = torch.arccos(calc_step_3)
         return angle
 
-    def motor_steps_to_angles(self, actuator_pos: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
+    def motor_steps_to_angles(
+        self, actuator_pos: torch.Tensor, device: torch.device = "cpu"
+    ) -> torch.Tensor:
         """
         Calculate the angles given the motor steps.
 
@@ -136,13 +138,17 @@ class LinearActuator(Actuator):
             The angles corresponding to the motor steps.
         """
         phi = self.steps_to_phi(actuator_pos=actuator_pos)
-        phi_0 = self.steps_to_phi(actuator_pos=torch.zeros(actuator_pos.shape, device=device))
+        phi_0 = self.steps_to_phi(
+            actuator_pos=torch.zeros(actuator_pos.shape, device=device)
+        )
         delta_phi = phi_0 - phi
 
         angles = self.phi_0 + delta_phi if self.clockwise else self.phi_0 - delta_phi
         return angles
 
-    def angles_to_motor_steps(self, angles: torch.Tensor, device: torch.device="cpu") -> torch.Tensor:
+    def angles_to_motor_steps(
+        self, angles: torch.Tensor, device: torch.device = "cpu"
+    ) -> torch.Tensor:
         """
         Calculate the motor steps given the angles.
 
@@ -160,7 +166,9 @@ class LinearActuator(Actuator):
         """
         delta_phi = angles - self.phi_0 if self.clockwise else self.phi_0 - angles
 
-        phi_0 = self.steps_to_phi(actuator_pos=torch.zeros(angles.shape[0], device=device))
+        phi_0 = self.steps_to_phi(
+            actuator_pos=torch.zeros(angles.shape[0], device=device)
+        )
         phi = phi_0 - delta_phi
 
         calc_step_3 = torch.cos(phi)
@@ -170,7 +178,9 @@ class LinearActuator(Actuator):
         actuator_steps = (stroke_length - self.initial_stroke_length) * self.increment
         return actuator_steps
 
-    def forward(self, actuator_pos: torch.Tensor, device: torch.device="cpu" ) -> torch.Tensor:
+    def forward(
+        self, actuator_pos: torch.Tensor, device: torch.device = "cpu"
+    ) -> torch.Tensor:
         """
         Perform the forward kinematic.
 

@@ -19,8 +19,7 @@ class Surface(torch.nn.Module):
         Calculate all surface points and normals from all facets.
     """
 
-    def __init__(self,
-                 surface_config: SurfaceConfig) -> None:
+    def __init__(self, surface_config: SurfaceConfig) -> None:
         """
         Initialize the surface.
 
@@ -51,7 +50,9 @@ class Surface(torch.nn.Module):
             for facet_config in surface_config.facets_list
         ]
 
-    def get_surface_points_and_normals(self, device: torch.device="cpu") -> tuple[torch.Tensor, torch.Tensor]:
+    def get_surface_points_and_normals(
+        self, device: torch.device = "cpu"
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
@@ -70,8 +71,12 @@ class Surface(torch.nn.Module):
         eval_point_per_facet = (
             self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
         )
-        surface_points = torch.empty(len(self.facets), eval_point_per_facet, 4, device=device)
-        surface_normals = torch.empty(len(self.facets), eval_point_per_facet, 4, device=device)
+        surface_points = torch.empty(
+            len(self.facets), eval_point_per_facet, 4, device=device
+        )
+        surface_normals = torch.empty(
+            len(self.facets), eval_point_per_facet, 4, device=device
+        )
         for i, facet in enumerate(self.facets):
             facet_surface = facet.create_nurbs_surface(device=device)
             (

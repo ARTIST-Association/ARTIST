@@ -80,7 +80,9 @@ class Actuator(torch.nn.Module):
         self.radius = radius
         self.phi_0 = phi_0
 
-    def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:
+    def motor_steps_to_angles(
+        self, motor_steps: torch.Tensor, device: torch.device = "cpu"
+    ) -> torch.Tensor:
         """
         Translate motor steps to a joint angle.
 
@@ -96,7 +98,9 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def angles_to_motor_steps(self, angles: torch.Tensor) -> torch.Tensor:
+    def angles_to_motor_steps(
+        self, angles: torch.Tensor, device: torch.device = "cpu"
+    ) -> torch.Tensor:
         """
         Translate a joint angle to motor steps.
 

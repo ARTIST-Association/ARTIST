@@ -27,10 +27,11 @@ class ActuatorArray(torch.nn.Module):
         The list of actuators to be wrapped.
     """
 
-    def __init__(self, 
-                 actuator_list_config: ActuatorListConfig,
-                 device: torch.device="cpu",
-                 ) -> None:
+    def __init__(
+        self,
+        actuator_list_config: ActuatorListConfig,
+        device: torch.device = "cpu",
+    ) -> None:
         """
         Initialize the actuator array.
 
