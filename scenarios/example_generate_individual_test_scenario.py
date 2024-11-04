@@ -25,8 +25,10 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+
 # The following parameter is the name of the scenario.
-file_path = "please/insert/the/file/path/here/name"
+file_path = "test_individual_measurements_scenario"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -38,8 +40,8 @@ if not Path(file_path).parent.is_dir():
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=config_dictionary.receiver_type_planar,
-    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,
     resolution_e=256,
@@ -87,13 +89,14 @@ list_of_facets = stral_converter.generate_surface_config_from_stral(
     tolerance=3e-5,
     max_epoch=10000,
     initial_learning_rate=1e-3,
+    device=device,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
+    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device)
 )
 
 # Include the kinematic prototype configuration.
@@ -136,7 +139,7 @@ heliostat1_surface_config = SurfaceConfig(facets_list=list_of_facets)
 
 # Include kinematic configuration for the heliostat.
 heliostat1_kinematic_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2),
+    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device),
 )
 heliostat1_kinematic_config = KinematicConfig(
     kinematic_type=config_dictionary.rigid_body_key,
@@ -164,8 +167,8 @@ heliostat1_actuator_config = ActuatorListConfig(actuator_list=actuator_heliostat
 heliostat_1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
-    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     heliostat_surface=heliostat1_surface_config,
     heliostat_kinematic=heliostat1_kinematic_config,
     heliostat_actuator=heliostat1_actuator_config,
@@ -179,10 +182,6 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    torch.set_default_device(device)
-
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
