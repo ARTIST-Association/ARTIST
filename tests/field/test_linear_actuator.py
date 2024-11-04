@@ -13,49 +13,55 @@ from artist.util.configuration_classes import (
 )
 
 
+@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+def device(request: pytest.FixtureRequest) -> torch.device:
+    """Return the device on which to initialize tensors."""
+    return torch.device(request.param)
+
+
 @pytest.fixture
-def deviation_parameters(request):
+def deviation_parameters(device: torch.device):
     """Define deviation parameters used in tests."""
     deviation_parameters = KinematicDeviations(
-        first_joint_translation_e=torch.tensor(0.0, device=request.param),
-        first_joint_translation_n=torch.tensor(0.0, device=request.param),
-        first_joint_translation_u=torch.tensor(0.0, device=request.param),
-        first_joint_tilt_e=torch.tensor(0.0, device=request.param),
-        first_joint_tilt_n=torch.tensor(0.0, device=request.param),
-        first_joint_tilt_u=torch.tensor(0.0, device=request.param),
-        second_joint_translation_e=torch.tensor(0.0, device=request.param),
-        second_joint_translation_n=torch.tensor(0.0, device=request.param),
-        second_joint_translation_u=torch.tensor(0.315, device=request.param),
-        second_joint_tilt_e=torch.tensor(0.0, device=request.param),
-        second_joint_tilt_n=torch.tensor(0.0, device=request.param),
-        second_joint_tilt_u=torch.tensor(0.0, device=request.param),
-        concentrator_translation_e=torch.tensor(0.0, device=request.param),
-        concentrator_translation_n=torch.tensor(-0.17755, device=request.param),
-        concentrator_translation_u=torch.tensor(-0.4045, device=request.param),
-        concentrator_tilt_e=torch.tensor(0.0, device=request.param),
-        concentrator_tilt_n=torch.tensor(0.0, device=request.param),
-        concentrator_tilt_u=torch.tensor(0.0, device=request.param),
+        first_joint_translation_e=torch.tensor(0.0, device=device),
+        first_joint_translation_n=torch.tensor(0.0, device=device),
+        first_joint_translation_u=torch.tensor(0.0, device=device),
+        first_joint_tilt_e=torch.tensor(0.0, device=device),
+        first_joint_tilt_n=torch.tensor(0.0, device=device),
+        first_joint_tilt_u=torch.tensor(0.0, device=device),
+        second_joint_translation_e=torch.tensor(0.0, device=device),
+        second_joint_translation_n=torch.tensor(0.0, device=device),
+        second_joint_translation_u=torch.tensor(0.315, device=device),
+        second_joint_tilt_e=torch.tensor(0.0, device=device),
+        second_joint_tilt_n=torch.tensor(0.0, device=device),
+        second_joint_tilt_u=torch.tensor(0.0, device=device),
+        concentrator_translation_e=torch.tensor(0.0, device=device),
+        concentrator_translation_n=torch.tensor(-0.17755, device=device),
+        concentrator_translation_u=torch.tensor(-0.4045, device=device),
+        concentrator_tilt_e=torch.tensor(0.0, device=device),
+        concentrator_tilt_n=torch.tensor(0.0, device=device),
+        concentrator_tilt_u=torch.tensor(0.0, device=device),
     )
     return deviation_parameters
 
 
 @pytest.fixture
-def actuator_configuration(request):
+def actuator_configuration(device: torch.device):
     """Define actuator parameters used in tests as measured experimentally."""
     actuator1_parameters = ActuatorParameters(
-        increment=torch.tensor(154166.666, device=request.param),
-        initial_stroke_length=torch.tensor(0.075, device=request.param),
-        offset=torch.tensor(0., device=request.param),
-        radius=torch.tensor(0.3204, device=request.param),
-        phi_0=torch.tensor(-1.570796, device=request.param),
+        increment=torch.tensor(154166.666, device=device),
+        initial_stroke_length=torch.tensor(0.075, device=device),
+        offset=torch.tensor(0.34061, device=device),
+        radius=torch.tensor(0.3204, device=device),
+        phi_0=torch.tensor(-1.570796, device=device),
     )
 
     actuator2_parameters = ActuatorParameters(
-        increment=torch.tensor(154166.666, device=request.param),
-        initial_stroke_length=torch.tensor(0.075, device=request.param),
-        offset=torch.tensor(0.3479, device=request.param),
-        radius=torch.tensor(0.309, device=request.param),
-        phi_0=torch.tensor(0.959931, device=request.param),
+        increment=torch.tensor(154166.666, device=device),
+        initial_stroke_length=torch.tensor(0.075, device=device),
+        offset=torch.tensor(0.3479, device=device),
+        radius=torch.tensor(0.309, device=device),
+        phi_0=torch.tensor(0.959931, device=device),
     )
     actuator1_config = ActuatorConfig(
         actuator_key="",
@@ -77,7 +83,7 @@ def actuator_configuration(request):
 def kinematic_model_1(
     actuator_configuration: ActuatorListConfig,
     deviation_parameters: KinematicDeviations,
-    device: torch.device
+    device: torch.device,
 ):
     """
     Create a kinematic model to use in the test.
@@ -98,7 +104,7 @@ def kinematic_model_1(
         aim_point=aim_point,
         actuator_config=actuator_configuration,
         deviation_parameters=deviation_parameters,
-        device=device
+        device=device,
     )
 
 
@@ -106,7 +112,7 @@ def kinematic_model_1(
 def kinematic_model_2(
     actuator_configuration: ActuatorListConfig,
     deviation_parameters: KinematicDeviations,
-    device: torch.device
+    device: torch.device,
 ):
     """
     Create a kinematic model to use in the test.
@@ -127,7 +133,7 @@ def kinematic_model_2(
         aim_point=aim_point,
         actuator_config=actuator_configuration,
         deviation_parameters=deviation_parameters,
-        device=device
+        device=device,
     )
 
 
@@ -213,6 +219,7 @@ def test_orientation_matrix(
     kinematic_model_fixture: str,
     incident_ray_direction: torch.Tensor,
     expected: torch.Tensor,
+    device: torch.device,
 ):
     """
     Test that the alignment works as desired.
@@ -227,11 +234,12 @@ def test_orientation_matrix(
         The incident ray direction considered.
     expected : torch.Tensor
         The expected orientation matrix.
+    device : torch.device
+        The device on which to initialize tensors.
     """
-    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
-    torch.set_default_device(device)
-
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction.to(device), device=device
     )
-    torch.testing.assert_close(orientation_matrix[0], expected.to(device), atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(
+        orientation_matrix[0], expected.to(device), atol=5e-4, rtol=5e-4
+    )

@@ -14,6 +14,12 @@ from artist.util.configuration_classes import (
 )
 
 
+@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+def device(request: pytest.FixtureRequest) -> torch.device:
+    """Return the device on which to initialize tensors."""
+    return torch.device(request.param)
+
+
 @pytest.fixture
 def actuator_configuration() -> ActuatorListConfig:
     """Define actuator parameters used in tests."""
@@ -31,30 +37,32 @@ def actuator_configuration() -> ActuatorListConfig:
 
 
 @pytest.fixture
-def initial_offsets_south() -> KinematicOffsets:
+def initial_offsets_south(device) -> KinematicOffsets:
     """Define initial offsets for a south-orientated heliostat."""
     initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(0.0),
-        kinematic_initial_orientation_offset_n=torch.tensor(0.0),
-        kinematic_initial_orientation_offset_u=torch.tensor(0.0),
+        kinematic_initial_orientation_offset_e=torch.tensor(0.0, device=device),
+        kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
+        kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
     )
     return initial_offsets
 
 
 @pytest.fixture
-def initial_offsets_above() -> KinematicOffsets:
+def initial_offsets_above(device) -> KinematicOffsets:
     """Define initial offsets for an up-orientated heliostat."""
     initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2),
-        kinematic_initial_orientation_offset_n=torch.tensor(0.0),
-        kinematic_initial_orientation_offset_u=torch.tensor(0.0),
+        kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device),
+        kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
+        kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
     )
     return initial_offsets
 
 
 @pytest.fixture
 def kinematic_model_1(
-    actuator_configuration: ActuatorListConfig, initial_offsets_south: KinematicOffsets
+    actuator_configuration: ActuatorListConfig,
+    initial_offsets_south: KinematicOffsets,
+    device: torch.device,
 ) -> RigidBody:
     """
     Create a kinematic model to use in the test.
@@ -65,20 +73,25 @@ def kinematic_model_1(
         The configuration of the actuators.
     initial_offsets_south : KinematicOffsets
         The kinematic initial orientation offsets.
+    device : torch.device
+        The device on which to initialize tensors.
     """
-    position = torch.tensor([0.0, 0.0, 0.0, 1.0])
-    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
+    position = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
+    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0], device=device)
     return RigidBody(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
         initial_orientation_offsets=initial_offsets_south,
+        device=device,
     )
 
 
 @pytest.fixture
 def kinematic_model_2(
-    actuator_configuration: ActuatorListConfig, initial_offsets_south: KinematicOffsets
+    actuator_configuration: ActuatorListConfig,
+    initial_offsets_south: KinematicOffsets,
+    device: torch.device,
 ) -> RigidBody:
     """
     Create a kinematic model to use in the test.
@@ -89,20 +102,25 @@ def kinematic_model_2(
         The configuration of the actuators.
     initial_offsets_south : KinematicOffsets
         The kinematic initial orientation offsets.
+    device : torch.device
+        The device on which to initialize tensors.
     """
-    position = torch.tensor([0.0, 1.0, 0.0, 1.0])
-    aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0])
+    position = torch.tensor([0.0, 1.0, 0.0, 1.0], device=device)
+    aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0], device=device)
     return RigidBody(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
         initial_orientation_offsets=initial_offsets_south,
+        device=device,
     )
 
 
 @pytest.fixture
 def kinematic_model_3(
-    actuator_configuration: ActuatorListConfig, initial_offsets_above: KinematicOffsets
+    actuator_configuration: ActuatorListConfig,
+    initial_offsets_above: KinematicOffsets,
+    device: torch.device,
 ) -> RigidBody:
     """
     Create a kinematic model to use in the test.
@@ -113,14 +131,17 @@ def kinematic_model_3(
         The configuration of the actuators.
     initial_offsets_above : KinematicOffsets
         The kinematic initial orientation offsets.
+    device : torch.device
+        The device on which to initialize tensors.
     """
-    position = torch.tensor([0.0, 0.0, 0.0, 1.0])
-    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0])
+    position = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
+    aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0], device=device)
     return RigidBody(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
         initial_orientation_offsets=initial_offsets_above,
+        device=device,
     )
 
 
@@ -254,6 +275,7 @@ def test_orientation_matrix(
     kinematic_model_fixture: str,
     incident_ray_direction: torch.Tensor,
     expected: torch.Tensor,
+    device: torch.device,
 ) -> None:
     """
     Test that the alignment is working as desired.
@@ -268,8 +290,10 @@ def test_orientation_matrix(
         The incident ray direction considered.
     expected : torch.Tensor
         The expected orientation matrix.
+    device : torch.device
+        The device on which to initialize tensors.
     """
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
-        incident_ray_direction
+        incident_ray_direction.to(device), device=device
     )
-    torch.testing.assert_close(orientation_matrix[0], expected)
+    torch.testing.assert_close(orientation_matrix[0], expected.to(device))
