@@ -6,6 +6,12 @@ import torch
 from artist.raytracing import raytracing_utils
 
 
+@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+def device(request: pytest.FixtureRequest) -> torch.device:
+    """Return the device on which to initialize tensors."""
+    return torch.device(request.param)
+
+
 @pytest.mark.parametrize(
     "ray_directions, plane_normal_vectors, plane_center, points_at_ray_origin, expected_intersections",
     [
@@ -65,6 +71,7 @@ def test_line_plane_intersection(
     plane_center: torch.Tensor,
     points_at_ray_origin: torch.Tensor,
     expected_intersections: Optional[torch.Tensor],
+    device: torch.device,
 ) -> None:
     """
     Test the line plane intersection function by computing the intersections between various rays and planes.
@@ -81,25 +88,26 @@ def test_line_plane_intersection(
         The surface points of the ray origin.
     expected_intersections : torch.Tensor, None
         The expected intersections between the rays and the plane, or ``None`` if no intersections are expected.
-
+    device : torch.device
+        The device on which to initialize tensors.
     """
     if expected_intersections is None:
         # Check if an AssertionError is thrown as expected.
         with pytest.raises(AssertionError):
             raytracing_utils.line_plane_intersections(
-                ray_directions=ray_directions,
-                plane_normal_vectors=plane_normal_vectors,
-                plane_center=plane_center,
-                points_at_ray_origin=points_at_ray_origin,
+                ray_directions=ray_directions.to(device),
+                plane_normal_vectors=plane_normal_vectors.to(device),
+                plane_center=plane_center.to(device),
+                points_at_ray_origin=points_at_ray_origin.to(device),
             )
     else:
         # Check if the intersections match the expected intersections.
         intersections = raytracing_utils.line_plane_intersections(
-            ray_directions=ray_directions,
-            plane_normal_vectors=plane_normal_vectors,
-            plane_center=plane_center,
-            points_at_ray_origin=points_at_ray_origin,
+            ray_directions=ray_directions.to(device),
+            plane_normal_vectors=plane_normal_vectors.to(device),
+            plane_center=plane_center.to(device),
+            points_at_ray_origin=points_at_ray_origin.to(device),
         )
         torch.testing.assert_close(
-            intersections, expected_intersections, rtol=1e-4, atol=1e-4
+            intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4
         )
