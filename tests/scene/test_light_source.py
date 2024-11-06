@@ -7,9 +7,21 @@ from artist.scene import Sun
 from artist.util import config_dictionary
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
-    """Return the device on which to initialize tensors."""
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
     return torch.device(request.param)
 
 
@@ -65,7 +77,14 @@ def calculate_expected(
 
 @pytest.fixture
 def distribution_parameters_1() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 0,
@@ -75,7 +94,14 @@ def distribution_parameters_1() -> Dict[str, Any]:
 
 @pytest.fixture
 def distribution_parameters_2() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 0,
@@ -85,7 +111,14 @@ def distribution_parameters_2() -> Dict[str, Any]:
 
 @pytest.fixture
 def distribution_parameters_3() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 10,
@@ -95,7 +128,14 @@ def distribution_parameters_3() -> Dict[str, Any]:
 
 @pytest.fixture
 def further_parameters_1() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 100,
         "num_points": 50,
@@ -107,7 +147,14 @@ def further_parameters_1() -> Dict[str, int]:
 
 @pytest.fixture
 def further_parameters_2() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 100,
         "num_points": 50,
@@ -119,7 +166,14 @@ def further_parameters_2() -> Dict[str, int]:
 
 @pytest.fixture
 def further_parameters_3() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 20,
         "num_points": 300,
@@ -165,6 +219,11 @@ def test_light_sources(
         The pytest fixture containing the further test parameters.
     device : torch.device
         The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     # Load further params dict.
     further_params_dict = request.getfixturevalue(further_parameters_fixture)

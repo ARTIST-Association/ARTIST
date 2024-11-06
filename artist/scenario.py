@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import h5py
 import torch
@@ -71,7 +72,7 @@ class Scenario:
 
     @classmethod
     def load_scenario_from_hdf5(
-        cls, scenario_file: h5py.File, device: torch.device = "cpu"
+        cls, scenario_file: h5py.File, device: Union[torch.device, str] = "cuda"
     ) -> Self:
         """
         Class method to load the scenario from an HDF5 file.
@@ -80,8 +81,8 @@ class Scenario:
         ----------
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -91,6 +92,7 @@ class Scenario:
         log.info(
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
+        device = torch.device(device)
         receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device

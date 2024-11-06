@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from artist.scenario import Scenario
@@ -190,7 +190,9 @@ class HeliostatRayTracer:
         )
 
     def trace_rays(
-        self, incident_ray_direction: torch.Tensor, device: torch.device = "cpu"
+        self,
+        incident_ray_direction: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Perform heliostat raytracing.
@@ -202,14 +204,15 @@ class HeliostatRayTracer:
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The resulting bitmap.
         """
+        device = torch.device(device)
         final_bitmap = torch.zeros(
             (self.receiver.resolution_e, self.receiver.resolution_u), device=device
         )
@@ -254,7 +257,7 @@ class HeliostatRayTracer:
         self,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> Rays:
         """
         Scatter the reflected rays around the preferred ray direction.
@@ -265,14 +268,15 @@ class HeliostatRayTracer:
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         Rays
             Scattered rays around the preferred direction.
         """
+        device = torch.device(device)
         ray_directions = self.heliostat.preferred_reflection_direction[
             :, :, :3
         ] / torch.linalg.norm(
@@ -308,7 +312,7 @@ class HeliostatRayTracer:
         dx_ints: torch.Tensor,
         dy_ints: torch.Tensor,
         indices: torch.Tensor,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Sample a bitmap (flux density distribution of the reflected rays on the receiver).
@@ -323,14 +327,16 @@ class HeliostatRayTracer:
             the y-axis.
         indices : torch.Tensor
             Index of the pixel.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The flux density distribution of the reflected rays on the receiver.
         """
+        device = torch.device(device)
+
         x_ints = dx_ints[indices] / self.receiver.plane_e * self.receiver.resolution_e
         y_ints = dy_ints[indices] / self.receiver.plane_u * self.receiver.resolution_u
 

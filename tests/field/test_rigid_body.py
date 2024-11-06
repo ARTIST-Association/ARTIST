@@ -14,15 +14,34 @@ from artist.util.configuration_classes import (
 )
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
-    """Return the device on which to initialize tensors."""
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
     return torch.device(request.param)
 
 
 @pytest.fixture
 def actuator_configuration() -> ActuatorListConfig:
-    """Define actuator parameters used in tests."""
+    """
+    Define actuator parameters used in tests.
+
+    Returns
+    -------
+    ActuatorListConfig
+        A List containing parameters for each actuator.
+    """
     actuator1_config = ActuatorConfig(
         actuator_key="",
         actuator_type=config_dictionary.ideal_actuator_key,
@@ -37,8 +56,20 @@ def actuator_configuration() -> ActuatorListConfig:
 
 
 @pytest.fixture
-def initial_offsets_south(device) -> KinematicOffsets:
-    """Define initial offsets for a south-orientated heliostat."""
+def initial_offsets_south(device: torch.device) -> KinematicOffsets:
+    """
+    Define initial offsets for a south-orientated heliostat.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    KinematicOffsets
+        Initial kinematic offsets for a south-orientated heliostat.
+    """
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(0.0, device=device),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
@@ -48,8 +79,20 @@ def initial_offsets_south(device) -> KinematicOffsets:
 
 
 @pytest.fixture
-def initial_offsets_above(device) -> KinematicOffsets:
-    """Define initial offsets for an up-orientated heliostat."""
+def initial_offsets_above(device: torch.device) -> KinematicOffsets:
+    """
+    Define initial offsets for an up-orientated heliostat.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    KinematicOffsets
+        Initial kinematic offsets for an up-orientated heliostat.
+    """
     initial_offsets = KinematicOffsets(
         kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
@@ -75,6 +118,11 @@ def kinematic_model_1(
         The kinematic initial orientation offsets.
     device : torch.device
         The device on which to initialize tensors.
+
+    Returns
+    -------
+    RigidBody
+        The kinematic model.
     """
     position = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0], device=device)
@@ -104,6 +152,11 @@ def kinematic_model_2(
         The kinematic initial orientation offsets.
     device : torch.device
         The device on which to initialize tensors.
+
+    Returns
+    -------
+    RigidBody
+        The kinematic model.
     """
     position = torch.tensor([0.0, 1.0, 0.0, 1.0], device=device)
     aim_point = torch.tensor([0.0, -9.0, 0.0, 1.0], device=device)
@@ -133,6 +186,11 @@ def kinematic_model_3(
         The kinematic initial orientation offsets.
     device : torch.device
         The device on which to initialize tensors.
+
+    Returns
+    -------
+    RigidBody
+        The kinematic model.
     """
     position = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
     aim_point = torch.tensor([0.0, -10.0, 0.0, 1.0], device=device)
@@ -292,6 +350,11 @@ def test_orientation_matrix(
         The expected orientation matrix.
     device : torch.device
         The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
         incident_ray_direction.to(device), device=device

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import h5py
 import torch
@@ -70,7 +70,7 @@ class Heliostat(torch.nn.Module):
         surface_config: SurfaceConfig,
         kinematic_config: KinematicLoadConfig,
         actuator_config: ActuatorListConfig,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Implement the behavior of a heliostat.
@@ -95,10 +95,11 @@ class Heliostat(torch.nn.Module):
             The configuration parameters to use for the heliostat kinematic.
         actuator_config : ActuatorListConfig
             The configuration parameters to use for the list of actuators.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
+        device = torch.device(device)
         self.heliostat_id = heliostat_id
         self.position = position
         self.aim_point = aim_point
@@ -130,7 +131,7 @@ class Heliostat(torch.nn.Module):
         prototype_kinematic: Optional[KinematicLoadConfig] = None,
         prototype_actuator: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> Self:
         """
         Class method to initialize a heliostat from an HDF5 file.
@@ -147,8 +148,8 @@ class Heliostat(torch.nn.Module):
             An optional prototype for the actuator configuration.
         heliostat_name : str, optional
             The name of the heliostat being loaded - used for logging.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -157,6 +158,7 @@ class Heliostat(torch.nn.Module):
         """
         if heliostat_name:
             log.info(f"Loading {heliostat_name} from an HDF5 file.")
+        device = torch.device(device)
         heliostat_id = int(config_file[config_dictionary.heliostat_id][()])
         position = torch.tensor(
             config_file[config_dictionary.heliostat_position][()],
@@ -752,7 +754,9 @@ class Heliostat(torch.nn.Module):
         )
 
     def set_aligned_surface(
-        self, incident_ray_direction: torch.Tensor, device: torch.device = "cpu"
+        self,
+        incident_ray_direction: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
@@ -761,9 +765,11 @@ class Heliostat(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The incident ray direction.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
+        device = torch.device(device)
+
         surface_points, surface_normals = self.surface.get_surface_points_and_normals(
             device=device
         )

@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.util.nurbs import NURBSSurface
@@ -90,20 +92,23 @@ class NurbsFacet(torch.nn.Module):
         self.canting_e = canting_e
         self.canting_n = canting_n
 
-    def create_nurbs_surface(self, device: torch.device = "cpu") -> NURBSSurface:
+    def create_nurbs_surface(
+        self, device: Union[torch.device, str] = "cuda"
+    ) -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
 
         Parameters
         ----------
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         NURBSSurface
             The NURBS surface of one facet.
         """
+        device = torch.device(device)
         # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
         # defined evaluation points.
         evaluation_points_rows = torch.linspace(

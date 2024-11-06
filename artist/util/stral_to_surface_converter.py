@@ -2,6 +2,7 @@ import logging
 import struct
 import sys
 from pathlib import Path
+from typing import Union
 
 import colorlog
 import torch
@@ -105,7 +106,7 @@ class StralToSurfaceConverter:
 
     @staticmethod
     def convert_3d_points_to_4d_format(
-        point: torch.Tensor, device: torch.device = "cpu"
+        point: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Append ones to the last dimension of a 3D point vector.
@@ -116,14 +117,15 @@ class StralToSurfaceConverter:
         ----------
         point : torch.Tensor
             Input point in a 3D format.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             Point vector with ones appended at the last dimension.
         """
+        device = torch.device(device)
         assert (
             point.size(dim=-1) == 3
         ), f"Expected a 3D point but got a point of shape {point.shape}!"
@@ -134,7 +136,7 @@ class StralToSurfaceConverter:
 
     @staticmethod
     def convert_3d_direction_to_4d_format(
-        direction: torch.Tensor, device: torch.device = "cpu"
+        direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Append zeros to the last dimension of a 3D direction vector.
@@ -145,14 +147,15 @@ class StralToSurfaceConverter:
         ----------
         direction : torch.Tensor
             Input direction in a 3D format.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             Direction vector with ones appended at the last dimension.
         """
+        device = torch.device(device)
         assert (
             direction.size(dim=-1) == 3
         ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
@@ -163,7 +166,7 @@ class StralToSurfaceConverter:
 
     @staticmethod
     def nwu_to_enu(
-        nwu_tensor: torch.Tensor, device: torch.device = "cpu"
+        nwu_tensor: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Cast the coordinate system from NWU to ENU.
@@ -172,14 +175,15 @@ class StralToSurfaceConverter:
         ----------
         nwu_tensor : torch.Tensor
             The tensor in the NWU coordinate system.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The converted tensor in the ENU coordinate system.
         """
+        device = torch.device(device)
         return torch.tensor(
             [-nwu_tensor[1], nwu_tensor[0], nwu_tensor[2]],
             dtype=torch.float,
@@ -223,7 +227,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 2500,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> NURBSSurface:
         """
         Generate a NURBS surface based on ``STRAL`` data.
@@ -256,14 +260,16 @@ class StralToSurfaceConverter:
             Initial learning rate for the learning rate scheduler (default: 1e-1).
         max_epoch : int, optional
             Maximum number of epochs for optimization (default: 2500).
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         NURBSSurface
             A NURBS surface.
         """
+        device = torch.device(device)
+
         # Normalize evaluation points and shift them so that they correspond to the knots.
         evaluation_points = surface_points.clone()
         evaluation_points[:, 2] = 0
@@ -365,7 +371,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 10000,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
@@ -392,8 +398,8 @@ class StralToSurfaceConverter:
             Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
         max_epoch : int
             Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -403,6 +409,7 @@ class StralToSurfaceConverter:
         log.info(
             "Beginning generation of the surface configuration based on STRAL data."
         )
+        device = torch.device(device)
 
         # Create structures for reading ``STRAL`` file correctly.
         surface_header_struct = struct.Struct(self.surface_header_name)

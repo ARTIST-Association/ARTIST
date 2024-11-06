@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.field.actuator import Actuator
@@ -120,7 +122,7 @@ class LinearActuator(Actuator):
         return angle
 
     def motor_steps_to_angles(
-        self, actuator_pos: torch.Tensor, device: torch.device = "cpu"
+        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the angles given the motor steps.
@@ -129,14 +131,15 @@ class LinearActuator(Actuator):
         ----------
         actuator_pos : torch.Tensor
             The actuator (motor) position.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The angles corresponding to the motor steps.
         """
+        device = torch.device(device)
         phi = self.steps_to_phi(actuator_pos=actuator_pos)
         phi_0 = self.steps_to_phi(
             actuator_pos=torch.zeros(actuator_pos.shape, device=device)
@@ -147,7 +150,7 @@ class LinearActuator(Actuator):
         return angles
 
     def angles_to_motor_steps(
-        self, angles: torch.Tensor, device: torch.device = "cpu"
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the motor steps given the angles.
@@ -156,14 +159,15 @@ class LinearActuator(Actuator):
         ----------
         angles : torch.Tensor
             The angles.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The motor steps.
         """
+        device = torch.device(device)
         delta_phi = angles - self.phi_0 if self.clockwise else self.phi_0 - angles
 
         phi_0 = self.steps_to_phi(
@@ -179,7 +183,7 @@ class LinearActuator(Actuator):
         return actuator_steps
 
     def forward(
-        self, actuator_pos: torch.Tensor, device: torch.device = "cpu"
+        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Perform the forward kinematic.
@@ -188,12 +192,14 @@ class LinearActuator(Actuator):
         ----------
         actuator_pos : torch.Tensor
             The actuator (motor) position.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The angles.
         """
-        return self.motor_steps_to_angles(actuator_pos=actuator_pos, device=device)
+        return self.motor_steps_to_angles(
+            actuator_pos=actuator_pos, device=torch.device(device)
+        )
