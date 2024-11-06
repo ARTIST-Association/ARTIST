@@ -4,9 +4,21 @@ import torch
 from artist.util.nurbs import NURBSSurface
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
-    """Return the device on which to initialize tensors."""
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
     return torch.device(request.param)
 
 
@@ -30,6 +42,8 @@ def random_surface(
         The up coordinates.
     factor : float
         Factor determining how deformed the surface is.
+    device : torch.device
+        The device on which to initialize tensors.
 
     Returns
     -------
@@ -60,6 +74,11 @@ def test_nurbs(device: torch.device) -> None:
     ----------
     device : torch.device
         The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)

@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import torch
 
@@ -30,7 +31,7 @@ class ActuatorArray(torch.nn.Module):
     def __init__(
         self,
         actuator_list_config: ActuatorListConfig,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Initialize the actuator array.
@@ -44,10 +45,11 @@ class ActuatorArray(torch.nn.Module):
         ----------
         actuator_list_config : ActuatorListConfig
             The configuration parameters for the actuators.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
+        device = torch.device(device)
         actuator_array = []
         # Iterate through each actuator configuration in the list of actuator configurations.
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):

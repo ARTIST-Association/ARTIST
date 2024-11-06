@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
@@ -51,15 +53,15 @@ class Surface(torch.nn.Module):
         ]
 
     def get_surface_points_and_normals(
-        self, device: torch.device = "cpu"
+        self, device: Union[torch.device, str] = "cuda"
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
         Parameters
         ----------
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -68,6 +70,7 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
+        device = torch.device(device)
         eval_point_per_facet = (
             self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
         )

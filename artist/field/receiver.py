@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import h5py
 import torch.nn
@@ -97,7 +97,7 @@ class Receiver(torch.nn.Module):
         cls,
         config_file: h5py.File,
         receiver_name: Optional[str] = None,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> Self:
         """
         Class method that initializes a receiver from an HDF5 file.
@@ -108,8 +108,8 @@ class Receiver(torch.nn.Module):
             The HDF5 file containing the information about the receiver.
         receiver_name : str, optional
             The name of the receiver - used for logging
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -118,6 +118,7 @@ class Receiver(torch.nn.Module):
         """
         if receiver_name:
             log.info(f"Loading {receiver_name} from an HDF5 file.")
+        device = torch.device(device)
         receiver_type = config_file[config_dictionary.receiver_type][()].decode("utf-8")
         position_center = torch.tensor(
             config_file[config_dictionary.receiver_position_center][()],

@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.field.actuator_array import ActuatorArray
@@ -67,7 +69,7 @@ class RigidBody(Kinematic):
             concentrator_tilt_n=torch.tensor(0.0),
             concentrator_tilt_u=torch.tensor(0.0),
         ),
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Initialize the rigid body kinematic.
@@ -89,11 +91,11 @@ class RigidBody(Kinematic):
             The initial orientation offsets of the kinematic (default: 0.0 for each possible offset).
         deviation_parameters : KinematicDeviations
             The deviation parameters for the kinematic (default: 0.0 for each deviation).
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super().__init__(position=position, aim_point=aim_point)
-
+        device = torch.device(device)
         self.deviation_parameters = deviation_parameters
         for attr_name, attr_value in self.deviation_parameters.__dict__.items():
             if isinstance(attr_value, torch.Tensor):
@@ -115,7 +117,7 @@ class RigidBody(Kinematic):
         incident_ray_direction: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Compute the rotation matrix to align the heliostat along a desired orientation.
@@ -128,8 +130,8 @@ class RigidBody(Kinematic):
             Maximum number of iterations (default: 2).
         min_eps : float
             Convergence criterion (default: 0.0001).
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -139,7 +141,7 @@ class RigidBody(Kinematic):
         assert (
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
-
+        device = torch.device(device)
         actuator_steps = torch.zeros((1, 2), requires_grad=True, device=device)
         orientation = None
         last_iteration_loss = None
@@ -315,7 +317,7 @@ class RigidBody(Kinematic):
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        device: torch.device = "cpu",
+        device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to a calculated orientation.
@@ -328,8 +330,8 @@ class RigidBody(Kinematic):
             Points on the surface of the heliostat that reflect the light.
         surface_normals : torch.Tensor
             Normals to the surface points.
-        device : torch.device
-            The device on which to initialize tensors (default is CPU).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -338,6 +340,8 @@ class RigidBody(Kinematic):
         torch.Tensor
             The aligned surface normals.
         """
+        device = torch.device(device)
+
         orientation = self.align(incident_ray_direction, device=device).squeeze()
 
         aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(

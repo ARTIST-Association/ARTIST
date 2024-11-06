@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 
@@ -81,7 +83,7 @@ class Actuator(torch.nn.Module):
         self.phi_0 = phi_0
 
     def motor_steps_to_angles(
-        self, motor_steps: torch.Tensor, device: torch.device = "cpu"
+        self, motor_steps: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Translate motor steps to a joint angle.
@@ -90,6 +92,8 @@ class Actuator(torch.nn.Module):
         ----------
         motor_steps : torch.Tensor
             The motor steps.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Raises
         ------
@@ -99,7 +103,7 @@ class Actuator(torch.nn.Module):
         raise NotImplementedError("Must be overridden!")
 
     def angles_to_motor_steps(
-        self, angles: torch.Tensor, device: torch.device = "cpu"
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Translate a joint angle to motor steps.
@@ -108,6 +112,8 @@ class Actuator(torch.nn.Module):
         ----------
         angles : torch.Tensor
             The joint angles.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Raises
         ------
@@ -116,7 +122,9 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Perform forward kinematic.
 
@@ -124,6 +132,8 @@ class Actuator(torch.nn.Module):
         ----------
         actuator_pos : torch.Tensor
             The position of the actuator.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Raises
         ------

@@ -6,9 +6,21 @@ import torch
 from artist.util.utils import rotate_distortions
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
-    """Return the device on which to initialize tensors."""
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
     return torch.device(request.param)
 
 
@@ -289,6 +301,11 @@ def test_distortion_rotations(
         The expected distorted rays after rotation.
     device : torch.device
         The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     distorted_rays = (
         rotate_distortions(
