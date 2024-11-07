@@ -7,8 +7,28 @@ from artist.scene import Sun
 from artist.util import config_dictionary
 
 
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
+def device(request: pytest.FixtureRequest) -> torch.device:
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
+    return torch.device(request.param)
+
+
 def calculate_expected(
-    distribution_parameters: Dict[str, Any], further_parameters: Dict[str, int]
+    distribution_parameters: Dict[str, Any],
+    further_parameters: Dict[str, int],
+    device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate the expected distortions given the parameters from the test fixtures.
@@ -19,6 +39,8 @@ def calculate_expected(
         The distribution parameters for the sun.
     further_parameters : Dict[str, int]
         The further parameters for the test: number of heliostats, number of rays, number of points, and random seed.
+    device : torch.device
+        The device on which to initialize tensors.
 
     Returns
     -------
@@ -31,6 +53,7 @@ def calculate_expected(
             distribution_parameters[config_dictionary.light_source_mean],
         ],
         dtype=torch.float,
+        device=device,
     )
     covariance = torch.tensor(
         [
@@ -38,6 +61,7 @@ def calculate_expected(
             [0, distribution_parameters[config_dictionary.light_source_covariance]],
         ],
         dtype=torch.float,
+        device=device,
     )
     torch.manual_seed(further_parameters["random_seed"])
     distribute = torch.distributions.MultivariateNormal(mean, covariance)
@@ -53,7 +77,14 @@ def calculate_expected(
 
 @pytest.fixture
 def distribution_parameters_1() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 0,
@@ -63,7 +94,14 @@ def distribution_parameters_1() -> Dict[str, Any]:
 
 @pytest.fixture
 def distribution_parameters_2() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 0,
@@ -73,7 +111,14 @@ def distribution_parameters_2() -> Dict[str, Any]:
 
 @pytest.fixture
 def distribution_parameters_3() -> Dict[str, Any]:
-    """Fixture that returns distribution parameters for the sun."""
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
     return {
         config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
         config_dictionary.light_source_mean: 10,
@@ -83,7 +128,14 @@ def distribution_parameters_3() -> Dict[str, Any]:
 
 @pytest.fixture
 def further_parameters_1() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 100,
         "num_points": 50,
@@ -95,7 +147,14 @@ def further_parameters_1() -> Dict[str, int]:
 
 @pytest.fixture
 def further_parameters_2() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 100,
         "num_points": 50,
@@ -107,7 +166,14 @@ def further_parameters_2() -> Dict[str, int]:
 
 @pytest.fixture
 def further_parameters_3() -> Dict[str, int]:
-    """Fixture that returns further test parameters."""
+    """
+    Fixture that returns further test parameters.
+
+    Returns
+    -------
+    Dict[str, int]
+        Further test parameters.
+    """
     return {
         "num_rays": 20,
         "num_points": 300,
@@ -136,6 +202,7 @@ def test_light_sources(
     light_source: str,
     distribution_parameters_fixture: str,
     further_parameters_fixture: str,
+    device: torch.device,
 ) -> None:
     """
     Test the light sources by generating distortions and ensuring these are as expected.
@@ -150,6 +217,13 @@ def test_light_sources(
         The pytest fixture containing the distribution parameters.
     further_parameters_fixture : str
         The pytest fixture containing the further test parameters.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     # Load further params dict.
     further_params_dict = request.getfixturevalue(further_parameters_fixture)
@@ -161,6 +235,7 @@ def test_light_sources(
                 distribution_parameters_fixture
             ),
             number_of_rays=further_params_dict["num_rays"],
+            device=device,
         )
         distortions_u, distortions_e = sun.get_distortions(
             number_of_points=further_params_dict["num_points"],
@@ -171,6 +246,7 @@ def test_light_sources(
         expected_u, expected_e = calculate_expected(
             request.getfixturevalue(distribution_parameters_fixture),
             request.getfixturevalue(further_parameters_fixture),
+            device=device,
         )
         torch.testing.assert_close(distortions_u, expected_u)
         torch.testing.assert_close(distortions_e, expected_e)

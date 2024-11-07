@@ -6,6 +6,7 @@ from typing import Any, Generator
 
 import colorlog
 import h5py
+import torch
 
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
@@ -208,6 +209,8 @@ class ScenarioGenerator:
             The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():
+            if torch.is_tensor(value):
+                value = value.cpu()
             file[f"{prefix}/{key}"] = value
 
     def generate_scenario(self) -> None:

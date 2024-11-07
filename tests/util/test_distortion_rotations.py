@@ -6,6 +6,24 @@ import torch
 from artist.util.utils import rotate_distortions
 
 
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
+def device(request: pytest.FixtureRequest) -> torch.device:
+    """
+    Return the device on which to initialize tensors.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+
+    Returns
+    -------
+    torch.device
+        The device on which to initialize tensors.
+    """
+    return torch.device(request.param)
+
+
 @pytest.mark.parametrize(
     "e_distortions, u_distortions, rays_to_rotate, expected_distorted_rays",
     [
@@ -266,6 +284,7 @@ def test_distortion_rotations(
     u_distortions: torch.Tensor,
     rays_to_rotate: torch.Tensor,
     expected_distorted_rays: torch.Tensor,
+    device: torch.device,
 ) -> None:
     """
     Test the rotation function used for scattering rays by considering various rotations.
@@ -280,10 +299,19 @@ def test_distortion_rotations(
         The rays to rotate given the distortions.
     expected_distorted_rays : torch.Tensor
         The expected distorted rays after rotation.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
     """
     distorted_rays = (
-        rotate_distortions(e=e_distortions, u=u_distortions)
-        @ rays_to_rotate.unsqueeze(-1)
+        rotate_distortions(
+            e=e_distortions.to(device), u=u_distortions.to(device), device=device
+        )
+        @ rays_to_rotate.to(device).unsqueeze(-1)
     ).squeeze(-1)
 
-    torch.testing.assert_close(distorted_rays, expected_distorted_rays)
+    torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))

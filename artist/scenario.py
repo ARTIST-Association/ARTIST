@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import h5py
 import torch
@@ -70,7 +71,9 @@ class Scenario:
         self.heliostats = heliostat_field
 
     @classmethod
-    def load_scenario_from_hdf5(cls, scenario_file: h5py.File) -> Self:
+    def load_scenario_from_hdf5(
+        cls, scenario_file: h5py.File, device: Union[torch.device, str] = "cuda"
+    ) -> Self:
         """
         Class method to load the scenario from an HDF5 file.
 
@@ -78,6 +81,8 @@ class Scenario:
         ----------
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -87,8 +92,11 @@ class Scenario:
         log.info(
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
-        receivers = ReceiverField.from_hdf5(config_file=scenario_file)
-        light_sources = LightSourceArray.from_hdf5(config_file=scenario_file)
+        device = torch.device(device)
+        receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
+        light_sources = LightSourceArray.from_hdf5(
+            config_file=scenario_file, device=device
+        )
 
         facets_list = [
             FacetConfig(
@@ -100,6 +108,7 @@ class Scenario:
                         config_dictionary.facet_control_points
                     ][()],
                     dtype=torch.float,
+                    device=device,
                 ),
                 degree_e=int(
                     scenario_file[config_dictionary.prototype_key][
@@ -150,6 +159,7 @@ class Scenario:
                         config_dictionary.facets_translation_vector
                     ][()],
                     dtype=torch.float,
+                    device=device,
                 ),
                 canting_e=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
@@ -158,6 +168,7 @@ class Scenario:
                         config_dictionary.facets_canting_e
                     ][()],
                     dtype=torch.float,
+                    device=device,
                 ),
                 canting_n=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
@@ -166,6 +177,7 @@ class Scenario:
                         config_dictionary.facets_canting_n
                     ][()],
                     dtype=torch.float,
+                    device=device,
                 ),
             )
             for facet in scenario_file[config_dictionary.prototype_key][
@@ -205,24 +217,30 @@ class Scenario:
         kinematic_offsets = KinematicOffsets(
             kinematic_initial_orientation_offset_e=(
                 torch.tensor(
-                    kinematic_initial_orientation_offset_e[()], dtype=torch.float
+                    kinematic_initial_orientation_offset_e[()],
+                    dtype=torch.float,
+                    device=device,
                 )
                 if kinematic_initial_orientation_offset_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             kinematic_initial_orientation_offset_n=(
                 torch.tensor(
-                    kinematic_initial_orientation_offset_n[()], dtype=torch.float
+                    kinematic_initial_orientation_offset_n[()],
+                    dtype=torch.float,
+                    device=device,
                 )
                 if kinematic_initial_orientation_offset_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             kinematic_initial_orientation_offset_u=(
                 torch.tensor(
-                    kinematic_initial_orientation_offset_u[()], dtype=torch.float
+                    kinematic_initial_orientation_offset_u[()],
+                    dtype=torch.float,
+                    device=device,
                 )
                 if kinematic_initial_orientation_offset_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
         )
 
@@ -408,94 +426,112 @@ class Scenario:
             )
         kinematic_deviations = KinematicDeviations(
             first_joint_translation_e=(
-                torch.tensor(first_joint_translation_e[()], dtype=torch.float)
+                torch.tensor(
+                    first_joint_translation_e[()], dtype=torch.float, device=device
+                )
                 if first_joint_translation_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             first_joint_translation_n=(
-                torch.tensor(first_joint_translation_n[()], dtype=torch.float)
+                torch.tensor(
+                    first_joint_translation_n[()], dtype=torch.float, device=device
+                )
                 if first_joint_translation_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             first_joint_translation_u=(
-                torch.tensor(first_joint_translation_u[()], dtype=torch.float)
+                torch.tensor(
+                    first_joint_translation_u[()], dtype=torch.float, device=device
+                )
                 if first_joint_translation_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             first_joint_tilt_e=(
-                torch.tensor(first_joint_tilt_e[()], dtype=torch.float)
+                torch.tensor(first_joint_tilt_e[()], dtype=torch.float, device=device)
                 if first_joint_tilt_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             first_joint_tilt_n=(
-                torch.tensor(first_joint_tilt_n[()], dtype=torch.float)
+                torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
                 if first_joint_tilt_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             first_joint_tilt_u=(
-                torch.tensor(first_joint_tilt_u[()], dtype=torch.float)
+                torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
                 if first_joint_tilt_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_translation_e=(
-                torch.tensor(second_joint_translation_e[()], dtype=torch.float)
+                torch.tensor(
+                    second_joint_translation_e[()], dtype=torch.float, device=device
+                )
                 if second_joint_translation_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_translation_n=(
-                torch.tensor(second_joint_translation_n[()], dtype=torch.float)
+                torch.tensor(
+                    second_joint_translation_n[()], dtype=torch.float, device=device
+                )
                 if second_joint_translation_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_translation_u=(
-                torch.tensor(second_joint_translation_u[()], dtype=torch.float)
+                torch.tensor(
+                    second_joint_translation_u[()], dtype=torch.float, device=device
+                )
                 if second_joint_translation_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_tilt_e=(
-                torch.tensor(second_joint_tilt_e[()], dtype=torch.float)
+                torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
                 if second_joint_tilt_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_tilt_n=(
-                torch.tensor(second_joint_tilt_n[()], dtype=torch.float)
+                torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
                 if second_joint_tilt_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             second_joint_tilt_u=(
-                torch.tensor(second_joint_tilt_u[()], dtype=torch.float)
+                torch.tensor(second_joint_tilt_u[()], dtype=torch.float, device=device)
                 if second_joint_tilt_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_translation_e=(
-                torch.tensor(concentrator_translation_e[()], dtype=torch.float)
+                torch.tensor(
+                    concentrator_translation_e[()], dtype=torch.float, device=device
+                )
                 if concentrator_translation_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_translation_n=(
-                torch.tensor(concentrator_translation_n[()], dtype=torch.float)
+                torch.tensor(
+                    concentrator_translation_n[()], dtype=torch.float, device=device
+                )
                 if concentrator_translation_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_translation_u=(
-                torch.tensor(concentrator_translation_u[()], dtype=torch.float)
+                torch.tensor(
+                    concentrator_translation_u[()], dtype=torch.float, device=device
+                )
                 if concentrator_translation_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_tilt_e=(
-                torch.tensor(concentrator_tilt_e[()], dtype=torch.float)
+                torch.tensor(concentrator_tilt_e[()], dtype=torch.float, device=device)
                 if concentrator_tilt_e
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_tilt_n=(
-                torch.tensor(concentrator_tilt_n[()], dtype=torch.float)
+                torch.tensor(concentrator_tilt_n[()], dtype=torch.float, device=device)
                 if concentrator_tilt_n
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
             concentrator_tilt_u=(
-                torch.tensor(concentrator_tilt_u[()], dtype=torch.float)
+                torch.tensor(concentrator_tilt_u[()], dtype=torch.float, device=device)
                 if concentrator_tilt_u
-                else torch.tensor(0.0)
+                else torch.tensor(0.0, dtype=torch.float, device=device)
             ),
         )
         kinematic_prototype = KinematicLoadConfig(
@@ -567,29 +603,31 @@ class Scenario:
 
             actuator_parameters = ActuatorParameters(
                 increment=(
-                    torch.tensor(increment[()], dtype=torch.float)
+                    torch.tensor(increment[()], dtype=torch.float, device=device)
                     if increment
-                    else torch.tensor(0.0)
+                    else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 initial_stroke_length=(
-                    torch.tensor(initial_stroke_length[()], dtype=torch.float)
+                    torch.tensor(
+                        initial_stroke_length[()], dtype=torch.float, device=device
+                    )
                     if initial_stroke_length
-                    else torch.tensor(0.0)
+                    else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 offset=(
-                    torch.tensor(offset[()], dtype=torch.float)
+                    torch.tensor(offset[()], dtype=torch.float, device=device)
                     if offset
-                    else torch.tensor(0.0)
+                    else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 radius=(
-                    torch.tensor(radius[()], dtype=torch.float)
+                    torch.tensor(radius[()], dtype=torch.float, device=device)
                     if radius
-                    else torch.tensor(0.0)
+                    else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
                 phi_0=(
-                    torch.tensor(phi_0[()], dtype=torch.float)
+                    torch.tensor(phi_0[()], dtype=torch.float, device=device)
                     if phi_0
-                    else torch.tensor(0.0)
+                    else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
             )
             actuator_list.append(
@@ -615,6 +653,7 @@ class Scenario:
             prototype_surface=surface_prototype,
             prototype_kinematic=kinematic_prototype,
             prototype_actuator=actuator_prototype,
+            device=device,
         )
 
         return cls(

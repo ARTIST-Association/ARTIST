@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
@@ -28,7 +30,6 @@ class Surface(torch.nn.Module):
         its actuators. Each surface and thus each facet is defined through NURBS, the discrete surface
         points and surface normals can be retrieved.
 
-
         Parameters
         ----------
         surface_config : SurfaceConfig
@@ -51,9 +52,16 @@ class Surface(torch.nn.Module):
             for facet_config in surface_config.facets_list
         ]
 
-    def get_surface_points_and_normals(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_surface_points_and_normals(
+        self, device: Union[torch.device, str] = "cuda"
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
+
+        Parameters
+        ----------
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -62,17 +70,22 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
+        device = torch.device(device)
         eval_point_per_facet = (
             self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
         )
-        surface_points = torch.empty(len(self.facets), eval_point_per_facet, 4)
-        surface_normals = torch.empty(len(self.facets), eval_point_per_facet, 4)
+        surface_points = torch.empty(
+            len(self.facets), eval_point_per_facet, 4, device=device
+        )
+        surface_normals = torch.empty(
+            len(self.facets), eval_point_per_facet, 4, device=device
+        )
         for i, facet in enumerate(self.facets):
-            facet_surface = facet.create_nurbs_surface()
+            facet_surface = facet.create_nurbs_surface(device=device)
             (
                 facet_points,
                 facet_normals,
-            ) = facet_surface.calculate_surface_points_and_normals()
+            ) = facet_surface.calculate_surface_points_and_normals(device=device)
             surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals

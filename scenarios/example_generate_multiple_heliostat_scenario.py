@@ -22,8 +22,10 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # The following parameter is the name of the scenario.
-file_path = "Pease/enter/your/file/path!"
+file_path = "multiple_heliostat_scenario"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -34,8 +36,8 @@ if not Path(file_path).parent.is_dir():
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=config_dictionary.receiver_type_planar,
-    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,
     resolution_e=256,
@@ -68,55 +70,55 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 # Include four facets for the surface prototype.
 prototype_facet1_config = FacetConfig(
     facet_key="facet1",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
     number_eval_points_n=10,
     width=25.0,
     height=25.0,
-    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
 )
 prototype_facet2_config = FacetConfig(
     facet_key="facet2",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
     number_eval_points_n=10,
     width=25.0,
     height=25.0,
-    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
 )
 prototype_facet3_config = FacetConfig(
     facet_key="facet3",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
     number_eval_points_n=10,
     width=25.0,
     height=25.0,
-    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
 )
 prototype_facet4_config = FacetConfig(
     facet_key="facet4",
-    control_points=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    control_points=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
     degree_e=2,
     degree_n=2,
     number_eval_points_e=10,
     number_eval_points_n=10,
     width=25.0,
     height=25.0,
-    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0]),
-    canting_e=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
-    canting_n=torch.Tensor([0.0, 0.0, 0.0, 0.0]),
+    translation_vector=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    canting_e=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
+    canting_n=torch.tensor([0.0, 0.0, 0.0, 0.0], device=device),
 )
 
 # Create a list of prototype facets.
@@ -134,7 +136,7 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_l
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
+    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device)
 )
 
 # Include the kinematic prototype configuration.
@@ -152,11 +154,11 @@ actuator1_prototype = ActuatorConfig(
 
 # Include parameters for a linear actuator.
 actuator2_prototype_parameters = ActuatorParameters(
-    increment=torch.tensor(0.0),
-    initial_stroke_length=torch.tensor(0.0),
-    offset=torch.tensor(0.0),
-    radius=torch.tensor(0.0),
-    phi_0=torch.tensor(0.0),
+    increment=torch.tensor(0.0, device=device),
+    initial_stroke_length=torch.tensor(0.0, device=device),
+    offset=torch.tensor(0.0, device=device),
+    radius=torch.tensor(0.0, device=device),
+    phi_0=torch.tensor(0.0, device=device),
 )
 
 # Include a linear actuator.
@@ -188,20 +190,20 @@ prototype_config = PrototypeConfig(
 heliostat1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
-    heliostat_position=torch.tensor([-50.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([-50.0, 5.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
 )
 heliostat2 = HeliostatConfig(
     heliostat_key="heliostat2",
     heliostat_id=2,
-    heliostat_position=torch.tensor([25.0, 0.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([25.0, 0.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
 )
 heliostat3 = HeliostatConfig(
     heliostat_key="heliostat3",
     heliostat_id=3,
-    heliostat_position=torch.tensor([50.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([50.0, 5.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
 )
 
 # Create a list of all the heliostats.
@@ -213,7 +215,6 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,

@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import h5py
 import torch.nn
@@ -54,6 +55,7 @@ class HeliostatField(torch.nn.Module):
         prototype_surface: SurfaceConfig,
         prototype_kinematic: KinematicLoadConfig,
         prototype_actuator: ActuatorListConfig,
+        device: Union[torch.device, str] = "cuda",
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -68,6 +70,8 @@ class HeliostatField(torch.nn.Module):
             The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
         prototype_actuator : ActuatorListConfig
             The prototype for the actuator configuration to be used if the heliostat has no individual actuators.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -75,6 +79,7 @@ class HeliostatField(torch.nn.Module):
             The heliostat field loaded from the HDF5 file.
         """
         log.info("Loading a heliostat field from an HDF5 file.")
+        device = torch.device(device)
         heliostat_list = [
             Heliostat.from_hdf5(
                 config_file=config_file[config_dictionary.heliostat_key][
@@ -84,6 +89,7 @@ class HeliostatField(torch.nn.Module):
                 prototype_kinematic=prototype_kinematic,
                 prototype_actuator=prototype_actuator,
                 heliostat_name=heliostat_name,
+                device=device,
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]
