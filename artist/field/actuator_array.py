@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import torch
 
@@ -27,7 +28,11 @@ class ActuatorArray(torch.nn.Module):
         The list of actuators to be wrapped.
     """
 
-    def __init__(self, actuator_list_config: ActuatorListConfig) -> None:
+    def __init__(
+        self,
+        actuator_list_config: ActuatorListConfig,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
         """
         Initialize the actuator array.
 
@@ -40,8 +45,11 @@ class ActuatorArray(torch.nn.Module):
         ----------
         actuator_list_config : ActuatorListConfig
             The configuration parameters for the actuators.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
+        device = torch.device(device)
         actuator_array = []
         # Iterate through each actuator configuration in the list of actuator configurations.
         for i, actuator_config in enumerate(actuator_list_config.actuator_list):
@@ -73,11 +81,11 @@ class ActuatorArray(torch.nn.Module):
                         actuator_object(
                             joint_number=i + 1,
                             clockwise=actuator_config.actuator_clockwise,
-                            increment=torch.tensor(0.0),
-                            initial_stroke_length=torch.tensor(0.0),
-                            offset=torch.tensor(0.0),
-                            radius=torch.tensor(0.0),
-                            phi_0=torch.tensor(0.0),
+                            increment=torch.tensor(0.0, device=device),
+                            initial_stroke_length=torch.tensor(0.0, device=device),
+                            offset=torch.tensor(0.0, device=device),
+                            radius=torch.tensor(0.0, device=device),
+                            phi_0=torch.tensor(0.0, device=device),
                         )
                     )
             except KeyError:

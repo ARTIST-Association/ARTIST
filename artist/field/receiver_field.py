@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import h5py
 import torch.nn
@@ -42,7 +43,9 @@ class ReceiverField(torch.nn.Module):
         self.receiver_list = receiver_list
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(
+        cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
+    ) -> Self:
         """
         Load a receiver field from an HDF5 file.
 
@@ -50,6 +53,8 @@ class ReceiverField(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -57,10 +62,12 @@ class ReceiverField(torch.nn.Module):
             The receiver field loaded from the HDF5 file.
         """
         log.info("Loading a receiver field from an HDF5 file.")
+        device = torch.device(device)
         receiver_field = [
             Receiver.from_hdf5(
                 config_file=config_file[config_dictionary.receiver_key][receiver_name],
                 receiver_name=receiver_name,
+                device=device,
             )
             for receiver_name in config_file[config_dictionary.receiver_key].keys()
         ]

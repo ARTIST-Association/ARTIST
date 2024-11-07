@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 
 from artist.field.actuator import (
@@ -23,7 +25,9 @@ class IdealActuator(Actuator):
     :class:`Actuator` : The parent class.
     """
 
-    def motor_steps_to_angles(self, motor_steps: torch.Tensor) -> torch.Tensor:
+    def motor_steps_to_angles(
+        self, motor_steps: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Translate motor steps to a joint angle.
 
@@ -31,6 +35,8 @@ class IdealActuator(Actuator):
         ----------
         motor_steps : torch.Tensor
             The motor steps.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -39,7 +45,9 @@ class IdealActuator(Actuator):
         """
         return motor_steps
 
-    def angles_to_motor_steps(self, angles: torch.Tensor) -> torch.Tensor:
+    def angles_to_motor_steps(
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Translate a joint angle to motor steps.
 
@@ -47,6 +55,8 @@ class IdealActuator(Actuator):
         ----------
         angles : torch.Tensor
             The joint angles.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -55,7 +65,9 @@ class IdealActuator(Actuator):
         """
         return angles
 
-    def forward(self, actuator_pos: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Perform the forward kinematic for an ideal actuator.
 
@@ -63,6 +75,8 @@ class IdealActuator(Actuator):
         ----------
         actuator_pos : torch.Tensor
             The position of the actuator.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------

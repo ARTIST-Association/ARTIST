@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import h5py
 import torch.nn
@@ -47,7 +48,9 @@ class LightSourceArray(torch.nn.Module):
         self.light_source_list = light_source_list
 
     @classmethod
-    def from_hdf5(cls, config_file: h5py.File) -> Self:
+    def from_hdf5(
+        cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
+    ) -> Self:
         """
         Load a light source array from an HDF5 file.
 
@@ -55,6 +58,8 @@ class LightSourceArray(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -62,6 +67,7 @@ class LightSourceArray(torch.nn.Module):
             The light source array loaded from the HDF5 file.
         """
         log.info("Loading a light source array from an HDF5 file.")
+        device = torch.device(device)
         light_source_array = []
         # Iterate through each light source configuration in the list of light source configurations.
         for ls in config_file[config_dictionary.light_source_key].keys():
@@ -76,6 +82,7 @@ class LightSourceArray(torch.nn.Module):
                     ls_object.from_hdf5(
                         config_file=config_file[config_dictionary.light_source_key][ls],
                         light_source_name=ls,
+                        device=device,
                     )
                 )
             except KeyError:

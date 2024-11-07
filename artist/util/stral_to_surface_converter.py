@@ -2,6 +2,7 @@ import logging
 import struct
 import sys
 from pathlib import Path
+from typing import Union
 
 import colorlog
 import torch
@@ -104,7 +105,9 @@ class StralToSurfaceConverter:
         self.step_size = step_size
 
     @staticmethod
-    def convert_3d_points_to_4d_format(point: torch.Tensor) -> torch.Tensor:
+    def convert_3d_points_to_4d_format(
+        point: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Append ones to the last dimension of a 3D point vector.
 
@@ -114,22 +117,27 @@ class StralToSurfaceConverter:
         ----------
         point : torch.Tensor
             Input point in a 3D format.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             Point vector with ones appended at the last dimension.
         """
+        device = torch.device(device)
         assert (
             point.size(dim=-1) == 3
         ), f"Expected a 3D point but got a point of shape {point.shape}!"
         ones_tensor = torch.ones(
-            point.shape[:-1] + (1,), dtype=point.dtype, device=point.device
+            point.shape[:-1] + (1,), dtype=point.dtype, device=device
         )
         return torch.cat((point, ones_tensor), dim=-1)
 
     @staticmethod
-    def convert_3d_direction_to_4d_format(direction: torch.Tensor) -> torch.Tensor:
+    def convert_3d_direction_to_4d_format(
+        direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Append zeros to the last dimension of a 3D direction vector.
 
@@ -139,22 +147,27 @@ class StralToSurfaceConverter:
         ----------
         direction : torch.Tensor
             Input direction in a 3D format.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             Direction vector with ones appended at the last dimension.
         """
+        device = torch.device(device)
         assert (
             direction.size(dim=-1) == 3
         ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
         zeros_tensor = torch.zeros(
-            direction.shape[:-1] + (1,), dtype=direction.dtype, device=direction.device
+            direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
         )
         return torch.cat((direction, zeros_tensor), dim=-1)
 
     @staticmethod
-    def nwu_to_enu(nwu_tensor: torch.Tensor) -> torch.Tensor:
+    def nwu_to_enu(
+        nwu_tensor: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
         """
         Cast the coordinate system from NWU to ENU.
 
@@ -162,14 +175,19 @@ class StralToSurfaceConverter:
         ----------
         nwu_tensor : torch.Tensor
             The tensor in the NWU coordinate system.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
             The converted tensor in the ENU coordinate system.
         """
+        device = torch.device(device)
         return torch.tensor(
-            [-nwu_tensor[1], nwu_tensor[0], nwu_tensor[2]], dtype=torch.float
+            [-nwu_tensor[1], nwu_tensor[0], nwu_tensor[2]],
+            dtype=torch.float,
+            device=device,
         )
 
     @staticmethod
@@ -209,6 +227,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 2500,
+        device: Union[torch.device, str] = "cuda",
     ) -> NURBSSurface:
         """
         Generate a NURBS surface based on ``STRAL`` data.
@@ -241,12 +260,16 @@ class StralToSurfaceConverter:
             Initial learning rate for the learning rate scheduler (default: 1e-1).
         max_epoch : int, optional
             Maximum number of epochs for optimization (default: 2500).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         NURBSSurface
             A NURBS surface.
         """
+        device = torch.device(device)
+
         # Normalize evaluation points and shift them so that they correspond to the knots.
         evaluation_points = surface_points.clone()
         evaluation_points[:, 2] = 0
@@ -259,9 +282,7 @@ class StralToSurfaceConverter:
 
         # Initialize the NURBS surface.
         control_points_shape = (number_control_points_e, number_control_points_n)
-        control_points = torch.zeros(
-            control_points_shape + (3,),
-        )
+        control_points = torch.zeros(control_points_shape + (3,), device=device)
         width_of_nurbs = torch.max(evaluation_points[:, 0]) - torch.min(
             evaluation_points[:, 0]
         )
@@ -269,23 +290,34 @@ class StralToSurfaceConverter:
             evaluation_points[:, 1]
         )
         origin_offsets_e = torch.linspace(
-            -width_of_nurbs / 2, width_of_nurbs / 2, number_control_points_e
+            -width_of_nurbs / 2,
+            width_of_nurbs / 2,
+            number_control_points_e,
+            device=device,
         )
         origin_offsets_n = torch.linspace(
-            -height_of_nurbs / 2, height_of_nurbs / 2, number_control_points_n
+            -height_of_nurbs / 2,
+            height_of_nurbs / 2,
+            number_control_points_n,
+            device=device,
         )
         origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
         origin_offsets = torch.hstack(
             (
                 origin_offsets,
-                torch.zeros((len(origin_offsets), 1)),
+                torch.zeros((len(origin_offsets), 1), device=device),
             )
         )
         control_points = torch.nn.parameter.Parameter(
             origin_offsets.reshape(control_points.shape)
         )
         nurbs_surface = NURBSSurface(
-            degree_e, degree_n, evaluation_points_e, evaluation_points_n, control_points
+            degree_e,
+            degree_n,
+            evaluation_points_e,
+            evaluation_points_n,
+            control_points,
+            device=device,
         )
 
         # Optimize the control points of the NURBS surface.
@@ -301,7 +333,9 @@ class StralToSurfaceConverter:
         loss = torch.inf
         epoch = 0
         while loss > tolerance and epoch <= max_epoch:
-            points, normals = nurbs_surface.calculate_surface_points_and_normals()
+            points, normals = nurbs_surface.calculate_surface_points_and_normals(
+                device=device
+            )
 
             optimizer.zero_grad()
 
@@ -337,6 +371,7 @@ class StralToSurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 10000,
+        device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
@@ -363,6 +398,8 @@ class StralToSurfaceConverter:
             Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
         max_epoch : int
             Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
@@ -372,6 +409,7 @@ class StralToSurfaceConverter:
         log.info(
             "Beginning generation of the surface configuration based on STRAL data."
         )
+        device = torch.device(device)
 
         # Create structures for reading ``STRAL`` file correctly.
         surface_header_struct = struct.Struct(self.surface_header_name)
@@ -390,38 +428,36 @@ class StralToSurfaceConverter:
             number_of_facets = n_xy[0] * n_xy[1]
 
             # Create empty tensors for storing data.
-            facet_translation_vectors = torch.empty(number_of_facets, 3)
-            canting_e = torch.empty(number_of_facets, 3)
-            canting_n = torch.empty(number_of_facets, 3)
-            surface_points_with_facets = torch.empty(0)
-            surface_normals_with_facets = torch.empty(0)
+            facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
+            canting_e = torch.empty(number_of_facets, 3, device=device)
+            canting_n = torch.empty(number_of_facets, 3, device=device)
+            surface_points_with_facets = torch.empty(0, device=device)
+            surface_normals_with_facets = torch.empty(0, device=device)
             for f in range(number_of_facets):
                 facet_header_data = facet_header_struct.unpack_from(
                     file.read(facet_header_struct.size)
                 )
 
                 facet_translation_vectors[f] = torch.tensor(
-                    facet_header_data[1:4], dtype=torch.float
+                    facet_header_data[1:4], dtype=torch.float, device=device
                 )
                 canting_n[f] = self.nwu_to_enu(
                     torch.tensor(
-                        facet_header_data[4:7],
-                        dtype=torch.float,
+                        facet_header_data[4:7], dtype=torch.float, device=device
                     )
                 )
                 canting_e[f] = self.nwu_to_enu(
                     torch.tensor(
-                        facet_header_data[7:10],
-                        dtype=torch.float,
+                        facet_header_data[7:10], dtype=torch.float, device=device
                     )
                 )
                 number_of_points = facet_header_data[10]
                 if f == 0:
                     surface_points_with_facets = torch.empty(
-                        number_of_facets, number_of_points, 3
+                        number_of_facets, number_of_points, 3, device=device
                     )
                     surface_normals_with_facets = torch.empty(
-                        number_of_facets, number_of_points, 3
+                        number_of_facets, number_of_points, 3, device=device
                     )
 
                 points_data = points_on_facet_struct.iter_unpack(
@@ -429,10 +465,10 @@ class StralToSurfaceConverter:
                 )
                 for i, point_data in enumerate(points_data):
                     surface_points_with_facets[f, i, :] = torch.tensor(
-                        point_data[:3], dtype=torch.float
+                        point_data[:3], dtype=torch.float, device=device
                     )
                     surface_normals_with_facets[f, i, :] = torch.tensor(
-                        point_data[3:6], dtype=torch.float
+                        point_data[3:6], dtype=torch.float, device=device
                     )
 
         log.info("Loading STRAL data complete")
@@ -447,19 +483,21 @@ class StralToSurfaceConverter:
 
         # Convert to 4D format.
         facet_translation_vectors = self.convert_3d_direction_to_4d_format(
-            facet_translation_vectors
+            facet_translation_vectors, device=device
         )
         # If we are learning the surface points from ``STRAL``, we do not need to translate the facets.
         if conversion_method == config_dictionary.convert_nurbs_from_points:
-            facet_translation_vectors = torch.zeros(facet_translation_vectors.shape)
+            facet_translation_vectors = torch.zeros(
+                facet_translation_vectors.shape, device=device
+            )
         # Convert to 4D format.
-        canting_n = self.convert_3d_direction_to_4d_format(canting_n)
-        canting_e = self.convert_3d_direction_to_4d_format(canting_e)
+        canting_n = self.convert_3d_direction_to_4d_format(canting_n, device=device)
+        canting_e = self.convert_3d_direction_to_4d_format(canting_e, device=device)
         surface_points_with_facets = self.convert_3d_points_to_4d_format(
-            surface_points_with_facets
+            surface_points_with_facets, device=device
         )
         surface_normals_with_facets = self.convert_3d_direction_to_4d_format(
-            surface_normals_with_facets
+            surface_normals_with_facets, device=device
         )
 
         # Convert to NURBS surface.
@@ -478,6 +516,7 @@ class StralToSurfaceConverter:
                 tolerance=tolerance,
                 initial_learning_rate=initial_learning_rate,
                 max_epoch=max_epoch,
+                device=device,
             )
             facet_config_list.append(
                 FacetConfig(
