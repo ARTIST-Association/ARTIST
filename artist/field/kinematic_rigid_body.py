@@ -296,4 +296,4 @@ class RigidBody(Kinematic):
             -1
         )
 
-        return aligned_surface_points, aligned_surface_normals
+        return aligned_surface_points, aligned_surface_normals, orientation

@@ -225,6 +225,7 @@ def azimuth_elevation_to_enu(
     srange: float = 1.0,
     degree: bool = True,
 ) -> torch.Tensor:
+    #TODO docstrings anpassen
     """
     Azimuth, Elevation, Slant range to target to East, North, Up
 
@@ -251,7 +252,7 @@ def azimuth_elevation_to_enu(
     r = srange * torch.cos(elevation)
 
     enu = torch.stack(
-        [r * torch.sin(azimuth), r * torch.cos(azimuth), srange * torch.sin(elevation)],
+        [r * torch.sin(azimuth), - r * torch.cos(azimuth), srange * torch.sin(elevation)],
         dim=0,
     )
     return enu
