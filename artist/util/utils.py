@@ -1,5 +1,6 @@
 from typing import Union
 
+from artist.util import config_dictionary
 import torch
 
 
@@ -233,3 +234,156 @@ def translate_enu(
             torch.stack([zeros, zeros, zeros, ones]),
         ],
     ).squeeze(-1)
+
+
+def azimuth_elevation_to_enu(
+    azimuth: torch.Tensor,
+    elevation: torch.Tensor,
+    srange: float = 1.0,
+    degree: bool = True,
+) -> torch.Tensor:
+    """
+    Coordinate transformation from azimuth and elevation to east, north, up.
+
+    Parameters
+    ----------
+    azimuth : torch.Tensor
+        Azimuth, clockwise from north (degrees).
+    elevation : torch.Tensor
+        Elevation angle above horizon, neglecting aberrations (degrees).
+    srange : float
+        Slant range (meters).
+    degree : bool
+        Specifies if input is given in degrees or radians.
+
+    Returns
+    --------
+    torch.Tensor
+        The east, north, up (enu) coordinates.
+    """
+    if degree:
+        elevation = torch.deg2rad(elevation)
+        azimuth = torch.deg2rad(azimuth)
+
+    r = srange * torch.cos(elevation)
+
+    enu = torch.stack(
+        [r * torch.sin(azimuth), - r * torch.cos(azimuth), srange * torch.sin(elevation)],
+        dim=0,
+    )
+    return enu
+
+
+def convert_3d_points_to_4d_format(
+    point: torch.Tensor, device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    """
+    Append ones to the last dimension of a 3D point vector.
+
+    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+
+    Parameters
+    ----------
+    point : torch.Tensor
+        Input point in a 3D format.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        Point vector with ones appended at the last dimension.
+    """
+    device = torch.device(device)
+    assert (
+        point.size(dim=-1) == 3
+    ), f"Expected a 3D point but got a point of shape {point.shape}!"
+    ones_tensor = torch.ones(
+        point.shape[:-1] + (1,), dtype=point.dtype, device=device
+    )
+    return torch.cat((point, ones_tensor), dim=-1)
+
+
+def convert_3d_direction_to_4d_format(
+    direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    """
+    Append zeros to the last dimension of a 3D direction vector.
+
+    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+
+    Parameters
+    ----------
+    direction : torch.Tensor
+        Input direction in a 3D format.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        Direction vector with ones appended at the last dimension.
+    """
+    device = torch.device(device)
+    assert (
+        direction.size(dim=-1) == 3
+    ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
+    zeros_tensor = torch.zeros(
+        direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
+    )
+    return torch.cat((direction, zeros_tensor), dim=-1)
+
+
+def calculate_position_in_m_from_lat_lon(
+    coordinates_to_transform: torch.Tensor,
+    power_plant_coordinates: torch.Tensor,
+    device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    """
+    Transform coordinates from latitude, longitude and altitude to meters.
+
+    This function calculates the north and east offsets in meters of a coordinate from the power plant location.
+    It converts the latitude and longitude to radians, calculates the radius of curvature values,
+    and then computes the offsets based on the differences between the coordinate and power plant center of origin.
+    Finally, it returns a tensor containing these offsets along with the altitude difference.
+
+    Parameters
+    ----------
+    coordinates_to_transform : torch.Tensor
+        The coordinates in lat, lon, alt that are to be transformed.
+    power_plant_coordinates : torch.Tensor
+        The center of origin of the power plant as a reference point.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        The east offset in meters, north offset in meters, and the altitude difference from the power plant.
+    """
+    device = torch.device(device)
+    # Convert latitude and longitude to radians
+    lat_rad = torch.deg2rad(coordinates_to_transform[0])
+    lon_rad = torch.deg2rad(coordinates_to_transform[1])
+    alt = coordinates_to_transform[2] - power_plant_coordinates[2]
+    lat_tower_rad = torch.deg2rad(power_plant_coordinates[0])
+    lon_tower_rad = torch.deg2rad(power_plant_coordinates[1])
+
+    # Calculate meridional radius of curvature for the first latitude
+    sin_lat1 = torch.sin(lat_rad)
+    rn1 = config_dictionary.WGS84_A / torch.sqrt(1 - config_dictionary.WGS84_E2 * sin_lat1**2)
+
+    # Calculate transverse radius of curvature for the first latitude
+    rm1 = (config_dictionary.WGS84_A * (1 - config_dictionary.WGS84_E2)) / (
+        (1 - config_dictionary.WGS84_E2 * sin_lat1**2) ** 1.5
+    )
+
+    # Calculate delta latitude and delta longitude in radians
+    dlat_rad = lat_tower_rad - lat_rad
+    dlon_rad = lon_tower_rad - lon_rad
+
+    # Calculate north and east offsets in meters
+    north_offset_m = dlat_rad * rm1
+    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
+    
+    return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
