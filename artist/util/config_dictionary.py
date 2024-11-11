@@ -1,3 +1,6 @@
+power_plant_position = "position"
+"""Key to access the power plant position."""
+
 receiver_type = "type"
 """Key to access the receiver type."""
 receiver_position_center = "position_center"
@@ -158,6 +161,8 @@ heliostat_actuator_key = "actuator"
 
 prototype_key = "prototypes"
 """Key to access the prototypes."""
+power_plant_key = "power_plant"
+"""Key to access the power plant."""
 receiver_key = "receivers"
 """Key to access the receivers."""
 light_source_key = "lightsources"
@@ -169,3 +174,10 @@ convert_nurbs_from_points = "point_cloud"
 """Defines that the NURBS should be learnt using a point cloud."""
 convert_nurbs_from_normals = "deflectometry"
 """Defines that the NURBS should be learnt using deflectometry data."""
+
+# Constants for WGS84
+# TODO 
+# Is this the right place to save this data?
+WGS84_A = 6378137.0  # Major axis in meters
+WGS84_B = 6356752.314245  # Minor axis in meters
+WGS84_E2 = (WGS84_A**2 - WGS84_B**2) / WGS84_A**2  # Eccentricity squared
