@@ -4,6 +4,49 @@ import torch
 
 from artist.util import config_dictionary
 
+class PowerPlantConfig:
+    """
+    Store the power plant configuration parameters.
+
+    Attributes
+    ----------
+    power_plant_position : torch.Tensor
+        The position of the power plant in lat, lon, alt.
+
+    Methods
+    -------
+    create_power_plant_dict
+       Create a dictionary containing the configuration parameters for the power plant.
+    """
+
+    def __init__(
+        self,
+        power_plant_position: torch.Tensor,
+    ) -> None:
+        """
+        Initialize the power plant configuration.
+
+        Parameters
+        ----------
+        power_plant_position : torch.Tensor
+            The position of the power plant in lat, lon, alt.
+        """
+        self.power_plant_position = power_plant_position
+
+    def create_power_plant_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the power plant.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary containing the configuration parameters for the power plant.
+        """
+        power_plant_dict = {
+            config_dictionary.power_plant_position: self.power_plant_position,
+        }
+        return power_plant_dict
+
 
 class ReceiverConfig:
     """
