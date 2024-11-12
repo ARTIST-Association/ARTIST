@@ -31,6 +31,8 @@ class Scenario:
 
     Attributes
     ----------
+    power_plant_position : torch.Tensor
+        The position of the power plant in lat, lon, alt.
     receivers : ReceiverField
         A list of receivers included in the scenario.
     light_sources : LightSourceArray
@@ -46,6 +48,7 @@ class Scenario:
 
     def __init__(
         self,
+        power_plant_position: torch.Tensor,
         receivers: ReceiverField,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
@@ -59,6 +62,8 @@ class Scenario:
 
         Parameters
         ----------
+        power_plant_position : torch.Tensor,
+            The position of the power plant in lat, lon, alt.
         receivers : ReceiverField
             A list of receivers included in the scenario.
         light_sources : LightSourceArray
@@ -66,6 +71,7 @@ class Scenario:
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
+        self.power_plant_position = power_plant_position
         self.receivers = receivers
         self.light_sources = light_sources
         self.heliostats = heliostat_field
@@ -93,6 +99,7 @@ class Scenario:
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
         device = torch.device(device)
+        power_plant_position = torch.tensor(scenario_file[config_dictionary.power_plant_key][config_dictionary.power_plant_position][()])
         receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
@@ -657,6 +664,7 @@ class Scenario:
         )
 
         return cls(
+            power_plant_position=power_plant_position,
             receivers=receivers,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
