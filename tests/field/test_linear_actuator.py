@@ -288,9 +288,9 @@ def test_orientation_matrix(
     AssertionError
         If test does not complete as expected.
     """
-    orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
+    orientation_matrix = request.getfixturevalue(kinematic_model_fixture).incident_ray_direction_to_orientation(
         incident_ray_direction.to(device), device=device
     )
     torch.testing.assert_close(
-        orientation_matrix[0], expected.to(device), atol=5e-4, rtol=5e-4
+        orientation_matrix, expected.to(device), atol=5e-4, rtol=5e-4
     )
