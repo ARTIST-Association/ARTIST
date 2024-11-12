@@ -12,6 +12,7 @@ from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     HeliostatListConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverListConfig,
 )
@@ -25,6 +26,8 @@ class ScenarioGenerator:
     ----------
     file_path : Path
         File path to the HDF5 to be saved.
+    power_plant_config : PowerPlantConfig
+        The power plant configuration object.
     receiver_list_config : ReceiverListConfig
         The receiver list configuration object.
     light_source_list_config : LightSourceListConfig
@@ -51,6 +54,7 @@ class ScenarioGenerator:
     def __init__(
         self,
         file_path: str,
+        power_plant_config: PowerPlantConfig,
         receiver_list_config: ReceiverListConfig,
         light_source_list_config: LightSourceListConfig,
         heliostat_list_config: HeliostatListConfig,
@@ -70,6 +74,8 @@ class ScenarioGenerator:
         ----------
         file_path : str
             File path to the HDF5 to be saved.
+        power_plant_config : PowerPlantConfig
+            The power plant configuration object.
         receiver_list_config : ReceiverListConfig
             The receiver list configuration object.
         light_source_list_config : LightSourceListConfig
@@ -89,6 +95,7 @@ class ScenarioGenerator:
                 f"The folder ``{self.file_path.parent}`` selected to save the scenario does not exist. "
                 "Please create the folder or adjust the file path before running again!"
             )
+        self.power_plant_config = power_plant_config
         self.receiver_list_config = receiver_list_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
@@ -221,6 +228,16 @@ class ScenarioGenerator:
             # Set scenario version as attribute.
             self.log.info(f"Using scenario generator version {self.version}")
             f.attrs["version"] = self.version
+
+            # Include parameters for the power plant.
+            self.log.info("Including parameters for the power plant")
+            self.include_parameters(
+                file=f,
+                prefix=config_dictionary.power_plant_key,
+                parameters=self.flatten_dict(
+                    self.power_plant_config.create_power_plant_dict()
+                ),
+            )
 
             # Include parameters for the receivers.
             self.log.info("Including parameters for the receivers")
