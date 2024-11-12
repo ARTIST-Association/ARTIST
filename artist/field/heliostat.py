@@ -780,6 +780,17 @@ class Heliostat(torch.nn.Module):
             incident_ray_direction, surface_points, surface_normals, device
         )
         self.is_aligned = True
+    
+    def get_orientation_from_motor_positions(self,
+                                             motor_positions: torch.Tensor,
+                                             device: Union[torch.device, str] = "cuda",
+    ) -> torch.Tensor:
+        """
+        TODO docstrings
+        """
+        device = torch.device(device)
+        orientation = self.kinematic.motor_positions_to_orientation(motor_positions, device)
+        return orientation
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
