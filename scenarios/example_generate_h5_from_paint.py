@@ -2,7 +2,6 @@ import json
 import math
 import pathlib
 
-from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
@@ -24,12 +23,10 @@ from artist.util.configuration_classes import (
     ReceiverListConfig,
     SurfacePrototypeConfig,
 )
+from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 from artist.util.scenario_generator import ScenarioGenerator
-from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
-#TODO change device
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario_paint"
@@ -40,40 +37,97 @@ if not pathlib.Path(file_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
-tower_file = pathlib.Path(ARTIST_ROOT) / "measurement_data/download_test/WRI1030197-tower-measurements.json"
-calibration_file = pathlib.Path(ARTIST_ROOT) / "measurement_data/download_test/AA39/Calibration/86500-calibration-properties.json"
-heliostat_file = pathlib.Path(ARTIST_ROOT) / "measurement_data/download_test/AA39/Properties/AA39-heliostat_properties.json"
-deflectometry_file = pathlib.Path(ARTIST_ROOT) / "measurement_data/download_test/AA39/Deflectometry/AA39-filled-2023-09-18Z08:49:09Z-deflectometry.h5"
+tower_file = (
+    pathlib.Path(ARTIST_ROOT)
+    / "measurement_data/download_test/WRI1030197-tower-measurements.json"
+)
+calibration_file = (
+    pathlib.Path(ARTIST_ROOT)
+    / "measurement_data/download_test/AA39/Calibration/86500-calibration-properties.json"
+)
+heliostat_file = (
+    pathlib.Path(ARTIST_ROOT)
+    / "measurement_data/download_test/AA39/Properties/AA39-heliostat_properties.json"
+)
+deflectometry_file = (
+    pathlib.Path(ARTIST_ROOT)
+    / "measurement_data/download_test/AA39/Deflectometry/AA39-filled-2023-09-18Z08:49:09Z-deflectometry.h5"
+)
 
-with open(calibration_file, 'r') as file:
+with open(calibration_file, "r") as file:
     calibration_dict = json.load(file)
     target_name = calibration_dict["target_name"]
 
-with open(tower_file, 'r') as file:
+with open(tower_file, "r") as file:
     tower_dict = json.load(file)
     target_type = tower_dict[target_name][config_dictionary.receiver_type]
-    power_plant_position = torch.tensor(tower_dict["power_plant_properties"]["coordinates"], device=device)
-    target_center_lat_lon = torch.tensor(tower_dict[target_name]["coordinates"]["center"], device=device)
-    target_center_3d = utils.calculate_position_in_m_from_lat_lon(target_center_lat_lon, power_plant_position, device=device)
-    target_center = utils.convert_3d_points_to_4d_format(target_center_3d, device=device)
-    normal_vector = utils.convert_3d_direction_to_4d_format(torch.tensor(tower_dict[target_name]["normal_vector"], device=device), device=device)
-    upper_left = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["upper_left"], device=device), power_plant_position, device=device)
-    lower_left = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["lower_left"], device=device), power_plant_position, device=device)
-    upper_right = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["upper_right"], device=device), power_plant_position, device=device)
-    lower_right = utils.calculate_position_in_m_from_lat_lon(torch.tensor(tower_dict[target_name]["coordinates"]["lower_right"], device=device), power_plant_position, device=device)
-    plane_e = (torch.abs(upper_right[0] - upper_left[0]) + torch.abs(lower_right[0] - lower_left[0])) / 2
-    plane_u = (torch.abs(upper_left[2] - lower_left[2]) + torch.abs(upper_right[2] - lower_right[2])) / 2
+    power_plant_position = torch.tensor(
+        tower_dict["power_plant_properties"]["coordinates"], device=device
+    )
+    target_center_lat_lon = torch.tensor(
+        tower_dict[target_name]["coordinates"]["center"], device=device
+    )
+    target_center_3d = utils.calculate_position_in_m_from_lat_lon(
+        target_center_lat_lon, power_plant_position, device=device
+    )
+    target_center = utils.convert_3d_points_to_4d_format(
+        target_center_3d, device=device
+    )
+    normal_vector = utils.convert_3d_direction_to_4d_format(
+        torch.tensor(tower_dict[target_name]["normal_vector"], device=device),
+        device=device,
+    )
+    upper_left = utils.calculate_position_in_m_from_lat_lon(
+        torch.tensor(
+            tower_dict[target_name]["coordinates"]["upper_left"], device=device
+        ),
+        power_plant_position,
+        device=device,
+    )
+    lower_left = utils.calculate_position_in_m_from_lat_lon(
+        torch.tensor(
+            tower_dict[target_name]["coordinates"]["lower_left"], device=device
+        ),
+        power_plant_position,
+        device=device,
+    )
+    upper_right = utils.calculate_position_in_m_from_lat_lon(
+        torch.tensor(
+            tower_dict[target_name]["coordinates"]["upper_right"], device=device
+        ),
+        power_plant_position,
+        device=device,
+    )
+    lower_right = utils.calculate_position_in_m_from_lat_lon(
+        torch.tensor(
+            tower_dict[target_name]["coordinates"]["lower_right"], device=device
+        ),
+        power_plant_position,
+        device=device,
+    )
+    plane_e = (
+        torch.abs(upper_right[0] - upper_left[0])
+        + torch.abs(lower_right[0] - lower_left[0])
+    ) / 2
+    plane_u = (
+        torch.abs(upper_left[2] - lower_left[2])
+        + torch.abs(upper_right[2] - lower_right[2])
+    ) / 2
 
-with open(heliostat_file, 'r') as file:
+with open(heliostat_file, "r") as file:
     heliostat_dict = json.load(file)
-    heliostat_position_3d = utils.calculate_position_in_m_from_lat_lon(torch.tensor(heliostat_dict["heliostat_position"], device=device), power_plant_position, device=device)
-    heliostat_position = utils.convert_3d_points_to_4d_format(heliostat_position_3d, device=device)
-    
+    heliostat_position_3d = utils.calculate_position_in_m_from_lat_lon(
+        torch.tensor(heliostat_dict["heliostat_position"], device=device),
+        power_plant_position,
+        device=device,
+    )
+    heliostat_position = utils.convert_3d_points_to_4d_format(
+        heliostat_position_3d, device=device
+    )
+
 
 # Include the power plant configuration.
-power_plant_config = PowerPlantConfig(
-    power_plant_position=power_plant_position
-)
+power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -164,7 +218,7 @@ kinematic_prototype_offsets = KinematicOffsets(
 kinematic_prototype_config = KinematicPrototypeConfig(
     kinematic_type=config_dictionary.rigid_body_key,
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
-    kinematic_deviations=kinematic_prototype_deviations
+    kinematic_deviations=kinematic_prototype_deviations,
 )
 
 # Include actuator parameters for both actuators.
@@ -189,7 +243,7 @@ actuator1_prototype = ActuatorConfig(
     actuator_key="actuator1",
     actuator_type=config_dictionary.linear_actuator_key,
     actuator_clockwise=False,
-    actuator_parameters=actuator1_parameters
+    actuator_parameters=actuator1_parameters,
 )
 
 # Include a linear actuator.
@@ -197,7 +251,7 @@ actuator2_prototype = ActuatorConfig(
     actuator_key="actuator2",
     actuator_type=config_dictionary.linear_actuator_key,
     actuator_clockwise=True,
-    actuator_parameters=actuator2_parameters
+    actuator_parameters=actuator2_parameters,
 )
 
 # Create a list of actuators.
