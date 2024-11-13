@@ -99,7 +99,11 @@ class Scenario:
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
         device = torch.device(device)
-        power_plant_position = torch.tensor(scenario_file[config_dictionary.power_plant_key][config_dictionary.power_plant_position][()])
+        power_plant_position = torch.tensor(
+            scenario_file[config_dictionary.power_plant_key][
+                config_dictionary.power_plant_position
+            ][()]
+        )
         receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
