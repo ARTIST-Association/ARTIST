@@ -123,6 +123,13 @@ class Heliostat(torch.nn.Module):
         self.is_aligned = False
         self.preferred_reflection_direction = torch.empty(0, device=device)
 
+        # TODO remove
+        #self.surface_points = torch.load("points.pt", weights_only=True)
+        #self.surface_normals = torch.load("normals.pt", weights_only=True)
+        self.surface_points, self.surface_normals = self.surface.get_surface_points_and_normals(device=device)
+        # torch.save(self.surface_points, "points.pt")
+        # torch.save(self.surface_normals, "normals.pt")
+
     @classmethod
     def from_hdf5(
         cls,
@@ -770,14 +777,14 @@ class Heliostat(torch.nn.Module):
         """
         device = torch.device(device)
 
-        surface_points, surface_normals = self.surface.get_surface_points_and_normals(
-            device=device
-        )
+        # surface_points, surface_normals = self.surface.get_surface_points_and_normals(
+        #     device=device
+        # )
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
         ) = self.kinematic.align_surface(
-            incident_ray_direction, surface_points, surface_normals, device
+            incident_ray_direction, self.surface_points, self.surface_normals, device
         )
         self.is_aligned = True
 
