@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+import pathlib
 
 import torch
 
@@ -14,6 +15,7 @@ from artist.util.configuration_classes import (
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
@@ -25,13 +27,18 @@ from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = "test_scenario"
+file_path = file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario"
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
         f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
+
+# Include the power plant configuration.
+power_plant_config = PowerPlantConfig(
+    power_plant_position=torch.tensor([0.0, 0.0, 0.0])
+)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
@@ -156,6 +163,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
