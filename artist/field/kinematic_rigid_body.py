@@ -33,6 +33,8 @@ class RigidBody(Kinematic):
         Compute the orientation matrix given an incident ray direction.
     align_surface()
         Align given surface points and surface normals according to a calculated orientation.
+    motor_positions_to_orientation()
+        Compute the orientation matrix based on motor positions.
 
     See Also
     --------
@@ -143,7 +145,7 @@ class RigidBody(Kinematic):
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
         
         device = torch.device(device)
-        motor_positions = torch.zeros(2, requires_grad=True, device=device)
+        motor_positions = torch.zeros(2, device=device)
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
@@ -345,7 +347,7 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute the rotation matrix to align the heliostat along a desired orientation.
+        Compute the orientation matrix based on motor positions.
 
         Parameters
         ----------
