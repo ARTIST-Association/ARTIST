@@ -394,6 +394,57 @@ def calculate_position_in_m_from_lat_lon(
     return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
 
 
+
+def get_center_of_mass(bitmap: torch.Tensor,
+                       target_center: torch.Tensor,
+                       plane_e: torch.Tensor,
+                       plane_u: torch.Tensor,
+                       device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Calculate the coordinates of the flux density center of mass.
+
+    First determine the indices of the bitmap center of mass.
+    Next determine the position (coordinates) of the center of mass on the target.
+
+    Parameters
+    ----------
+    bitmap : torch.Tensor
+        The flux density in form of a bitmap.
+    target_center : torch.Tensor
+        The position of the center of the target.
+    plane_e : torch.Tensor
+        The width of the target surface.
+    plane_u : torch.Tensor
+        The height of the target surface.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    torch.Tensor
+        The coordinates of the flux density center of mass.
+    """
+    mask = bitmap > 0
+    x_indices = torch.arange(bitmap.shape[0], device=device)
+    y_indices = torch.arange(bitmap.shape[1], device=device)
+    x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing='ij')
+
+    non_zero_x_indices = x_indices[mask]
+    non_zero_y_indices = y_indices[mask]
+
+    center_of_mass_x = non_zero_x_indices.float().mean()
+    center_of_mass_y = non_zero_y_indices.float().mean()
+    center_of_mass_bitmap = torch.tensor([center_of_mass_x, center_of_mass_y], device=device)
+
+    de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
+    du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
+    sum = center_of_mass_bitmap / bitmap.size(-1)
+    e = sum[1]
+    u = 1 - sum[0]
+    center_coordinates = target_center - 0.5 * (de + du) + e * de + u * du
+
+    return center_coordinates
+
+
 # Function to convert LLA to ECEF
 def lla_to_ecef(lat, lon, alt):
     a = 6378137.0  # WGS-84 Earth semimajor axis (meters)
