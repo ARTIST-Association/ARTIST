@@ -141,9 +141,7 @@ class LinearActuator(Actuator):
         """
         device = torch.device(device)
         phi = self.steps_to_phi(actuator_pos=actuator_pos)
-        phi_0 = self.steps_to_phi(
-            actuator_pos=torch.zeros(1, device=device)
-        )
+        phi_0 = self.steps_to_phi(actuator_pos=torch.zeros(1, device=device))
         delta_phi = phi_0 - phi
 
         angles = self.phi_0 + delta_phi if self.clockwise else self.phi_0 - delta_phi
@@ -170,9 +168,7 @@ class LinearActuator(Actuator):
         device = torch.device(device)
         delta_phi = angles - self.phi_0 if self.clockwise else self.phi_0 - angles
 
-        phi_0 = self.steps_to_phi(
-            actuator_pos=torch.zeros(1, device=device)
-        )
+        phi_0 = self.steps_to_phi(actuator_pos=torch.zeros(1, device=device))
         phi = phi_0 - delta_phi
 
         calc_step_3 = torch.cos(phi)
