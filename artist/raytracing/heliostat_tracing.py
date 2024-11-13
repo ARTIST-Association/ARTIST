@@ -249,7 +249,7 @@ class HeliostatRayTracer:
 
             total_bitmap = self.sample_bitmap(dx_ints, dy_ints, indices, device=device)
 
-            final_bitmap += total_bitmap
+            final_bitmap = final_bitmap + total_bitmap
 
         return final_bitmap
 
