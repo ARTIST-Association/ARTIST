@@ -387,3 +387,64 @@ def calculate_position_in_m_from_lat_lon(
     east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
     
     return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
+
+
+# Function to convert LLA to ECEF
+def lla_to_ecef(lat, lon, alt):
+    a = 6378137.0  # WGS-84 Earth semimajor axis (meters)
+    f = 1 / 298.257223563  # WGS-84 flattening factor
+    b = a * (1 - f)  # Semi-minor axis
+
+    # Convert to radians
+    lat = torch.deg2rad(lat)
+    lon = torch.deg2rad(lon)
+    
+    # Precompute trigonometric values
+    cos_lat = torch.cos(lat)
+    sin_lat = torch.sin(lat)
+    cos_lon = torch.cos(lon)
+    sin_lon = torch.sin(lon)
+
+    # Calculate N (radius of curvature in the prime vertical)
+    N = a / torch.sqrt(1 - f * (2 - f) * sin_lat**2)
+    
+    # Calculate ECEF coordinates
+    x = (N + alt) * cos_lat * cos_lon
+    y = (N + alt) * cos_lat * sin_lon
+    z = (N * (1 - f)**2 + alt) * sin_lat
+    return torch.stack((x, y, z), dim=-1)
+
+# Function to calculate the ENU transformation matrix
+def enu_matrix(lat_ref, lon_ref):
+    lat_ref = torch.deg2rad(lat_ref)
+    lon_ref = torch.deg2rad(lon_ref)
+    
+    # Precompute trigonometric values for rotation matrix
+    cos_lat_ref = torch.cos(lat_ref)
+    sin_lat_ref = torch.sin(lat_ref)
+    cos_lon_ref = torch.cos(lon_ref)
+    sin_lon_ref = torch.sin(lon_ref)
+
+    # Rotation matrix from ECEF to ENU
+    rot_matrix = torch.tensor([
+        [-sin_lon_ref, cos_lon_ref, 0],
+        [-sin_lat_ref * cos_lon_ref, -sin_lat_ref * sin_lon_ref, cos_lat_ref],
+        [cos_lat_ref * cos_lon_ref, cos_lat_ref * sin_lon_ref, sin_lat_ref]
+    ])
+    return rot_matrix
+
+# Function to convert LLA to ENU
+def lla_to_enu(lat, lon, alt, lat_ref, lon_ref, alt_ref):
+    # Convert the reference point and target point to ECEF
+    ref_ecef = lla_to_ecef(lat_ref, lon_ref, alt_ref)
+    target_ecef = lla_to_ecef(lat, lon, alt)
+    
+    # Calculate the ENU rotation matrix using the reference point
+    rot_matrix = enu_matrix(lat_ref, lon_ref)
+    
+    # Calculate the difference vector in ECEF
+    diff = target_ecef - ref_ecef
+    
+    # Reshape diff to (3, 1) for compatibility with torch.matmul, and apply the ENU rotation matrix
+    enu = torch.matmul(rot_matrix, diff.unsqueeze(1)).squeeze(1)
+    return enu
