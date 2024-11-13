@@ -126,17 +126,10 @@ def test_compute_bitmaps(
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
     if rank == 0:
-        if device.type == "cpu":
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/field/test_bitmaps_load_surface_stral"
-                / f"{expected_value}_cpu.pt"
-            )
-        else:
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/field/test_bitmaps_load_surface_stral"
-                / f"{expected_value}_gpu.pt"
-            )
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/field/test_bitmaps_load_surface_stral"
+            / f"{expected_value}_{device.type}.pt"
+        )
         expected = torch.load(expected_path).to(device)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
