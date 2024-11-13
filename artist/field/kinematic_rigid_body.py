@@ -121,7 +121,7 @@ class RigidBody(Kinematic):
     ) -> torch.Tensor:
         """
         Compute the orientation matrix given an incident ray direction.
-        
+
         Parameters
         ----------
         incident_ray_direction : torch.Tensor
@@ -143,7 +143,7 @@ class RigidBody(Kinematic):
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
         device = torch.device(device)
         actuator_steps = torch.zeros(2, requires_grad=True, device=device)
-        #orientation = None
+        # orientation = None
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angle = self.actuators.actuator_list[0](
@@ -153,9 +153,7 @@ class RigidBody(Kinematic):
                 actuator_pos=actuator_steps[1:2], device=device
             )
 
-            initial_orientation = (
-                torch.eye(4, device=device)
-            )
+            initial_orientation = torch.eye(4, device=device)
 
             # Account for position.
             initial_orientation = initial_orientation @ utils.translate_enu(
@@ -218,9 +216,13 @@ class RigidBody(Kinematic):
             # Compute desired normal.
             desired_reflect_vec = self.aim_point - concentrator_origin
             desired_reflect_vec = desired_reflect_vec / desired_reflect_vec.norm()
-            incident_ray_direction = incident_ray_direction / incident_ray_direction.norm()
+            incident_ray_direction = (
+                incident_ray_direction / incident_ray_direction.norm()
+            )
             desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
-            desired_concentrator_normal = desired_concentrator_normal / desired_concentrator_normal.norm()
+            desired_concentrator_normal = (
+                desired_concentrator_normal / desired_concentrator_normal.norm()
+            )
 
             # Compute epoch loss.
             loss = torch.abs(desired_concentrator_normal - concentrator_normal)
@@ -281,16 +283,18 @@ class RigidBody(Kinematic):
         return (
             orientation
             @ utils.rotate_e(
-                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e, device=device
+                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e,
+                device=device,
             )
             @ utils.rotate_n(
-                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n, device=device
+                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n,
+                device=device,
             )
             @ utils.rotate_u(
-                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u, device=device
+                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u,
+                device=device,
             )
         )
-    
 
     def align_surface(
         self,
@@ -322,7 +326,9 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        orientation = self.incident_ray_direction_to_orientation(incident_ray_direction, device=device).squeeze()
+        orientation = self.incident_ray_direction_to_orientation(
+            incident_ray_direction, device=device
+        ).squeeze()
 
         aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
             -1
@@ -332,7 +338,6 @@ class RigidBody(Kinematic):
         )
 
         return aligned_surface_points, aligned_surface_normals
-    
 
     def motor_positions_to_orientation(
         self,
@@ -366,9 +371,7 @@ class RigidBody(Kinematic):
             actuator_pos=motor_positions[1], device=device
         )
 
-        initial_orientation = (
-            torch.eye(4, device=device)
-        )
+        initial_orientation = torch.eye(4, device=device)
 
         # Account for position.
         initial_orientation = initial_orientation @ utils.translate_enu(
@@ -420,17 +423,20 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
-   
+
         # Return orientation matrix multiplied by the initial orientation offset.
         return (
             orientation
             @ utils.rotate_e(
-                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e, device=device
+                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e,
+                device=device,
             )
             @ utils.rotate_n(
-                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n, device=device
+                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n,
+                device=device,
             )
             @ utils.rotate_u(
-                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u, device=device
+                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u,
+                device=device,
             )
         )
