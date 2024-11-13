@@ -27,12 +27,10 @@ class Actuator(torch.nn.Module):
 
     Methods
     -------
-    forward()
-        The forward kinematic.
-    motor_steps_to_angles()
-        Translate motor steps to a joint angle.
-    angles_to_motor_steps()
-        Translate a joint angle to motor steps.
+    motor_position_to_angle()
+        Calculate the joint angle for a given motor position.
+    angle_to_motor_position()
+        Calculate the motor position for a given angle.
     """
 
     def __init__(
@@ -82,16 +80,16 @@ class Actuator(torch.nn.Module):
         self.radius = radius
         self.phi_0 = phi_0
 
-    def motor_steps_to_angles(
-        self, motor_steps: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def motor_position_to_angle(
+        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Translate motor steps to a joint angle.
+        Calculate the joint angle for a given motor position.
 
         Parameters
         ----------
-        motor_steps : torch.Tensor
-            The motor steps.
+        motor_position : torch.Tensor
+            The motor position.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -102,36 +100,16 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def angles_to_motor_steps(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def angle_to_motor_position(
+        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Translate a joint angle to motor steps.
+        Calculate the motor position for a given angle.
 
         Parameters
         ----------
-        angles : torch.Tensor
-            The joint angles.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Raises
-        ------
-        NotImplementedError
-            This abstract method must be overridden.
-        """
-        raise NotImplementedError("Must be overridden!")
-
-    def forward(
-        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
-    ) -> torch.Tensor:
-        """
-        Perform forward kinematic.
-
-        Parameters
-        ----------
-        actuator_pos : torch.Tensor
-            The position of the actuator.
+        angle : torch.Tensor
+            The joint angle.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
