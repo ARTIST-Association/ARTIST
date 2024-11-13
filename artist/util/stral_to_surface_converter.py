@@ -98,7 +98,6 @@ class StralToSurfaceConverter:
         self.points_on_facet_struct_name = points_on_facet_struct_name
         self.step_size = step_size
 
-
     @staticmethod
     def normalize_evaluation_points_for_nurbs(points: torch.Tensor) -> torch.Tensor:
         """
@@ -388,7 +387,7 @@ class StralToSurfaceConverter:
         if conversion_method == config_dictionary.convert_nurbs_from_points:
             facet_translation_vectors = torch.zeros(
                 facet_translation_vectors.shape, device=device
-        )
+            )
         # Convert to 4D format.
         canting_n = utils.convert_3d_direction_to_4d_format(canting_n, device=device)
         canting_e = utils.convert_3d_direction_to_4d_format(canting_e, device=device)

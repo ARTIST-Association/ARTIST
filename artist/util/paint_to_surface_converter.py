@@ -3,9 +3,9 @@ import logging
 import sys
 from pathlib import Path
 from typing import List, Union
-import h5py
 
 import colorlog
+import h5py
 import numpy
 import torch
 
@@ -307,25 +307,38 @@ class PAINTToSurfaceConverter:
         log.info(
             "Beginning generation of the surface configuration based on PAINT data."
         )
-        with open(self.heliostat_file_path, 'r') as file:
+        with open(self.heliostat_file_path, "r") as file:
             heliostat_dict = json.load(file)
             width = heliostat_dict["width"]
             height = heliostat_dict["height"]
             number_of_facets = heliostat_dict["facet_properties"]["number_of_facets"]
-            
+
             facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
             canting_e = torch.empty(number_of_facets, 3, device=device)
             canting_n = torch.empty(number_of_facets, 3, device=device)
-            
+
             for facet in range(number_of_facets):
-                facet_translation_vectors[facet, :] = torch.tensor(heliostat_dict["facet_properties"]["facets"][facet]["translation_vector"], device=device)
-                canting_e[facet, :] = torch.tensor(heliostat_dict["facet_properties"]["facets"][facet]["canting_e"], device=device)
-                canting_n[facet, :] = torch.tensor(heliostat_dict["facet_properties"]["facets"][facet]["canting_n"], device=device)
+                facet_translation_vectors[facet, :] = torch.tensor(
+                    heliostat_dict["facet_properties"]["facets"][facet][
+                        "translation_vector"
+                    ],
+                    device=device,
+                )
+                canting_e[facet, :] = torch.tensor(
+                    heliostat_dict["facet_properties"]["facets"][facet]["canting_e"],
+                    device=device,
+                )
+                canting_n[facet, :] = torch.tensor(
+                    heliostat_dict["facet_properties"]["facets"][facet]["canting_n"],
+                    device=device,
+                )
 
         # Reading ``PAINT`` deflectometry hdf5 file.
         # TODO
         # How to deal with different amount of points on different facets?
-        log.info(f"Reading PAINT deflectometry file located at: {self.deflectometry_file_path}")
+        log.info(
+            f"Reading PAINT deflectometry file located at: {self.deflectometry_file_path}"
+        )
         with h5py.File(self.deflectometry_file_path, "r") as file:
             surface_points_with_facets = torch.empty(0, device=device)
             surface_normals_with_facets = torch.empty(0, device=device)
@@ -338,13 +351,17 @@ class PAINTToSurfaceConverter:
                     surface_normals_with_facets = torch.empty(
                         number_of_facets, number_of_points, 3, device=device
                     )
-                points_data = torch.tensor(numpy.array(file[f"facet{f+1}"]["surface_points"]), device=device)
-                normals_data = torch.tensor(numpy.array(file[f"facet{f+1}"]["surface_normals"]), device=device)
+                points_data = torch.tensor(
+                    numpy.array(file[f"facet{f+1}"]["surface_points"]), device=device
+                )
+                normals_data = torch.tensor(
+                    numpy.array(file[f"facet{f+1}"]["surface_normals"]), device=device
+                )
                 for i, point_data in enumerate(points_data):
                     surface_points_with_facets[f, i, :] = point_data
                 for i, normal_data in enumerate(normals_data):
                     surface_normals_with_facets[f, i, :] = normal_data
-        
+
         log.info("Loading PAINT data complete")
 
         # Select only selected number of points to reduce compute.
@@ -358,8 +375,10 @@ class PAINTToSurfaceConverter:
 
         # If we are learning the surface points from ``PAINT``, we do not need to translate the facets.
         if conversion_method == config_dictionary.convert_nurbs_from_points:
-            facet_translation_vectors = torch.zeros(facet_translation_vectors.shape, device=device)
-        
+            facet_translation_vectors = torch.zeros(
+                facet_translation_vectors.shape, device=device
+            )
+
         # Convert to 4D format.
         canting_n = utils.convert_3d_direction_to_4d_format(canting_n, device=device)
         canting_e = utils.convert_3d_direction_to_4d_format(canting_e, device=device)
@@ -386,7 +405,7 @@ class PAINTToSurfaceConverter:
                 tolerance=tolerance,
                 initial_learning_rate=initial_learning_rate,
                 max_epoch=max_epoch,
-                device=device
+                device=device,
             )
             facet_config_list.append(
                 FacetConfig(

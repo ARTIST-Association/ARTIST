@@ -1,7 +1,8 @@
 from typing import Union
 
-from artist.util import config_dictionary
 import torch
+
+from artist.util import config_dictionary
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -257,7 +258,7 @@ def azimuth_elevation_to_enu(
         Specifies if input is given in degrees or radians.
 
     Returns
-    --------
+    -------
     torch.Tensor
         The east, north, up (enu) coordinates.
     """
@@ -268,7 +269,11 @@ def azimuth_elevation_to_enu(
     r = srange * torch.cos(elevation)
 
     enu = torch.stack(
-        [r * torch.sin(azimuth), - r * torch.cos(azimuth), srange * torch.sin(elevation)],
+        [
+            r * torch.sin(azimuth),
+            -r * torch.cos(azimuth),
+            srange * torch.sin(elevation),
+        ],
         dim=0,
     )
     return enu
@@ -298,9 +303,7 @@ def convert_3d_points_to_4d_format(
     assert (
         point.size(dim=-1) == 3
     ), f"Expected a 3D point but got a point of shape {point.shape}!"
-    ones_tensor = torch.ones(
-        point.shape[:-1] + (1,), dtype=point.dtype, device=device
-    )
+    ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
     return torch.cat((point, ones_tensor), dim=-1)
 
 
@@ -337,7 +340,7 @@ def convert_3d_direction_to_4d_format(
 def calculate_position_in_m_from_lat_lon(
     coordinates_to_transform: torch.Tensor,
     power_plant_coordinates: torch.Tensor,
-    device: Union[torch.device, str] = "cuda"
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Transform coordinates from latitude, longitude and altitude to meters.
@@ -371,7 +374,9 @@ def calculate_position_in_m_from_lat_lon(
 
     # Calculate meridional radius of curvature for the first latitude
     sin_lat1 = torch.sin(lat_rad)
-    rn1 = config_dictionary.WGS84_A / torch.sqrt(1 - config_dictionary.WGS84_E2 * sin_lat1**2)
+    rn1 = config_dictionary.WGS84_A / torch.sqrt(
+        1 - config_dictionary.WGS84_E2 * sin_lat1**2
+    )
 
     # Calculate transverse radius of curvature for the first latitude
     rm1 = (config_dictionary.WGS84_A * (1 - config_dictionary.WGS84_E2)) / (
@@ -385,7 +390,7 @@ def calculate_position_in_m_from_lat_lon(
     # Calculate north and east offsets in meters
     north_offset_m = dlat_rad * rm1
     east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
-    
+
     return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
 
 
@@ -398,7 +403,7 @@ def lla_to_ecef(lat, lon, alt):
     # Convert to radians
     lat = torch.deg2rad(lat)
     lon = torch.deg2rad(lon)
-    
+
     # Precompute trigonometric values
     cos_lat = torch.cos(lat)
     sin_lat = torch.sin(lat)
@@ -407,18 +412,19 @@ def lla_to_ecef(lat, lon, alt):
 
     # Calculate N (radius of curvature in the prime vertical)
     N = a / torch.sqrt(1 - f * (2 - f) * sin_lat**2)
-    
+
     # Calculate ECEF coordinates
     x = (N + alt) * cos_lat * cos_lon
     y = (N + alt) * cos_lat * sin_lon
-    z = (N * (1 - f)**2 + alt) * sin_lat
+    z = (N * (1 - f) ** 2 + alt) * sin_lat
     return torch.stack((x, y, z), dim=-1)
+
 
 # Function to calculate the ENU transformation matrix
 def enu_matrix(lat_ref, lon_ref):
     lat_ref = torch.deg2rad(lat_ref)
     lon_ref = torch.deg2rad(lon_ref)
-    
+
     # Precompute trigonometric values for rotation matrix
     cos_lat_ref = torch.cos(lat_ref)
     sin_lat_ref = torch.sin(lat_ref)
@@ -426,25 +432,28 @@ def enu_matrix(lat_ref, lon_ref):
     sin_lon_ref = torch.sin(lon_ref)
 
     # Rotation matrix from ECEF to ENU
-    rot_matrix = torch.tensor([
-        [-sin_lon_ref, cos_lon_ref, 0],
-        [-sin_lat_ref * cos_lon_ref, -sin_lat_ref * sin_lon_ref, cos_lat_ref],
-        [cos_lat_ref * cos_lon_ref, cos_lat_ref * sin_lon_ref, sin_lat_ref]
-    ])
+    rot_matrix = torch.tensor(
+        [
+            [-sin_lon_ref, cos_lon_ref, 0],
+            [-sin_lat_ref * cos_lon_ref, -sin_lat_ref * sin_lon_ref, cos_lat_ref],
+            [cos_lat_ref * cos_lon_ref, cos_lat_ref * sin_lon_ref, sin_lat_ref],
+        ]
+    )
     return rot_matrix
+
 
 # Function to convert LLA to ENU
 def lla_to_enu(lat, lon, alt, lat_ref, lon_ref, alt_ref):
     # Convert the reference point and target point to ECEF
     ref_ecef = lla_to_ecef(lat_ref, lon_ref, alt_ref)
     target_ecef = lla_to_ecef(lat, lon, alt)
-    
+
     # Calculate the ENU rotation matrix using the reference point
     rot_matrix = enu_matrix(lat_ref, lon_ref)
-    
+
     # Calculate the difference vector in ECEF
     diff = target_ecef - ref_ecef
-    
+
     # Reshape diff to (3, 1) for compatibility with torch.matmul, and apply the ENU rotation matrix
     enu = torch.matmul(rot_matrix, diff.unsqueeze(1)).squeeze(1)
     return enu
