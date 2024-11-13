@@ -4,6 +4,7 @@ import torch
 
 from artist.util import config_dictionary
 
+
 class PowerPlantConfig:
     """
     Store the power plant configuration parameters.
