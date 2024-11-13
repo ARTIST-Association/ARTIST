@@ -1,10 +1,10 @@
 import math
-from pathlib import Path
 import pathlib
+from pathlib import Path
 
-from artist import ARTIST_ROOT
 import torch
 
+from artist import ARTIST_ROOT
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorConfig,
@@ -25,12 +25,12 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 
-#TODO change device
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/multiple_heliostat_scenario"
+file_path = file_path = (
+    pathlib.Path(ARTIST_ROOT) / "scenarios/multiple_heliostat_scenario"
+)
 
 if not Path(file_path).parent.is_dir():
     raise FileNotFoundError(
