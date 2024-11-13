@@ -147,10 +147,10 @@ class RigidBody(Kinematic):
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angle = self.actuators.actuator_list[0](
-                actuator_pos=actuator_steps[0], device=device
+                actuator_pos=actuator_steps[0:1], device=device
             )
             joint_2_angle = self.actuators.actuator_list[1](
-                actuator_pos=actuator_steps[1], device=device
+                actuator_pos=actuator_steps[1:2], device=device
             )
 
             initial_orientation = (
@@ -236,7 +236,7 @@ class RigidBody(Kinematic):
 
             # Calculate joint 2 angle.
             joint_2_angle = -torch.arcsin(
-                -desired_concentrator_normal[0]
+                -desired_concentrator_normal[0:1]
                 / torch.cos(self.deviation_parameters.second_joint_translation_n)
             )
 
@@ -258,10 +258,10 @@ class RigidBody(Kinematic):
 
             joint_1_angle = (
                 torch.arctan2(
-                    a * -desired_concentrator_normal[2]
-                    - b * -desired_concentrator_normal[1],
-                    a * -desired_concentrator_normal[1]
-                    + b * -desired_concentrator_normal[2],
+                    a * -desired_concentrator_normal[2:3]
+                    - b * -desired_concentrator_normal[1:2],
+                    a * -desired_concentrator_normal[1:2]
+                    + b * -desired_concentrator_normal[2:3],
                 )
                 - torch.pi
             )
