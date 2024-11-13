@@ -141,16 +141,16 @@ class RigidBody(Kinematic):
         assert (
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
+        
         device = torch.device(device)
-        actuator_steps = torch.zeros(2, requires_grad=True, device=device)
-        # orientation = None
+        motor_positions = torch.zeros(2, requires_grad=True, device=device)
         last_iteration_loss = None
         for _ in range(max_num_iterations):
-            joint_1_angle = self.actuators.actuator_list[0](
-                actuator_pos=actuator_steps[0:1], device=device
+            joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
+                motor_position=motor_positions[0:1], device=device
             )
-            joint_2_angle = self.actuators.actuator_list[1](
-                actuator_pos=actuator_steps[1:2], device=device
+            joint_2_angle = self.actuators.actuator_list[1].motor_position_to_angle(
+                motor_position=motor_positions[1:2], device=device
             )
 
             initial_orientation = torch.eye(4, device=device)
@@ -268,12 +268,12 @@ class RigidBody(Kinematic):
                 - torch.pi
             )
 
-            actuator_steps = torch.cat(
+            motor_positions = torch.cat(
                 (
-                    self.actuators.actuator_list[0].angles_to_motor_steps(
+                    self.actuators.actuator_list[0].angle_to_motor_position(
                         joint_1_angle, device
                     ),
-                    self.actuators.actuator_list[1].angles_to_motor_steps(
+                    self.actuators.actuator_list[1].angle_to_motor_position(
                         joint_2_angle, device
                     ),
                 ),
@@ -362,13 +362,14 @@ class RigidBody(Kinematic):
         assert (
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
+        
         device = torch.device(device)
 
-        joint_1_angle = self.actuators.actuator_list[0](
-            actuator_pos=motor_positions[0], device=device
+        joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
+            motor_position=motor_positions[0], device=device
         )
-        joint_2_angle = self.actuators.actuator_list[1](
-            actuator_pos=motor_positions[1], device=device
+        joint_2_angle = self.actuators.actuator_list[1].motor_position_to_angle(
+            motor_position=motor_positions[1], device=device
         )
 
         initial_orientation = torch.eye(4, device=device)

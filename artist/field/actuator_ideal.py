@@ -13,48 +13,46 @@ class IdealActuator(Actuator):
 
     Methods
     -------
-    motor_steps_to_angles()
-        Calculate the angles given motor steps.
-    angles_to_motor_steps()
-        Calculate the motor steps given the angles.
-    forward()
-        Perform the forward kinematic.
+    motor_position_to_angle()
+        Calculate the joint angle for a given motor position.
+    angle_to_motor_position()
+        Calculate the motor position for a given angle.
 
     See Also
     --------
     :class:`Actuator` : The parent class.
     """
 
-    def motor_steps_to_angles(
-        self, motor_steps: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def motor_position_to_angle(
+        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Translate motor steps to a joint angle.
+        Calculate the joint angle for a given motor position.
 
         Parameters
         ----------
-        motor_steps : torch.Tensor
-            The motor steps.
+        motor_position : torch.Tensor
+            The motor position.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
+            The joint angle corresponding to the motor position.
+        """
+        return motor_position
+
+    def angle_to_motor_position(
+        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    ) -> torch.Tensor:
+        """
+        Calculate the motor position for a given angle.
+
+        Parameters
+        ----------
+        angle : torch.Tensor
             The joint angle.
-        """
-        return motor_steps
-
-    def angles_to_motor_steps(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
-    ) -> torch.Tensor:
-        """
-        Translate a joint angle to motor steps.
-
-        Parameters
-        ----------
-        angles : torch.Tensor
-            The joint angles.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -63,24 +61,5 @@ class IdealActuator(Actuator):
         torch.Tensor
             The motor steps.
         """
-        return angles
+        return angle
 
-    def forward(
-        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
-    ) -> torch.Tensor:
-        """
-        Perform the forward kinematic for an ideal actuator.
-
-        Parameters
-        ----------
-        actuator_pos : torch.Tensor
-            The position of the actuator.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        torch.Tensor
-            The required angles.
-        """
-        return actuator_pos
