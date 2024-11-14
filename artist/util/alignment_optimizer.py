@@ -139,10 +139,10 @@ class AlignmentOptimizer:
             loss.backward()
 
             optimizer.step()
-            scheduler.step(loss.abs().mean())
+            scheduler.step(loss)
 
             self.log.info(
-                f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {new_normal}",
+                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {new_normal}",
             )
 
             epoch += 1
@@ -160,7 +160,7 @@ class AlignmentOptimizer:
         max_epoch: int = 150,
         initial_learning_rate: float = 0.001,
         scheduler_factor: float = 0.1,
-        scheduler_patience: int = 30,
+        scheduler_patience: int = 3,
         scheduler_threshold: float = 0.1,
         device: Union[torch.device, str] = "cuda",
     ) -> list[torch.Tensor]:
@@ -226,29 +226,50 @@ class AlignmentOptimizer:
             patience=scheduler_patience,
             threshold=scheduler_threshold,
             threshold_mode="abs",
-        )  # -> 6.854534149169922e-07
+        )
 
         loss = torch.inf
         epoch = 0
 
         while loss > tolerance and epoch <= max_epoch:
-            # Align heliostqt
+            # Align heliostat
+            start_time = time.time()
             scenario.heliostats.heliostat_list[0].set_aligned_surface(
                     incident_ray_direction=incident_ray_direction, device=device
             )
+            end_time = time.time()
+            elapsed = end_time - start_time
+            self.log.critical(f"align heliostat: {elapsed}")
 
             # Create raytracer
+            start_time = time.time()
             raytracer = HeliostatRayTracer(
                 scenario=scenario
             )
+            end_time = time.time()
+            elapsed = end_time - start_time
+            self.log.critical(f"create raytracer: {elapsed}")
 
+            start_time = time.time()
             final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction, device=device)
+            end_time = time.time()
+            elapsed = end_time - start_time
+            self.log.critical(f"trace rays: {elapsed}")
+
+            start_time = time.time()
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+            end_time = time.time()
+            elapsed = end_time - start_time
+            self.log.critical(f"normalize bitmap: {elapsed}")
 
             # TODO
             # get_center_of_mass() zu receiver.py verschieben?
+            start_time = time.time()
             center = utils.get_center_of_mass(final_bitmap, target_center=target_center, plane_e=plane_e, plane_u=plane_u, device=device)
-            
+            end_time = time.time()
+            elapsed = end_time - start_time
+            self.log.critical(f"center of mass: {elapsed}")
+
             optimizer.zero_grad()
 
             loss = (center - center_calibration_image).abs().mean()
