@@ -29,8 +29,8 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     return torch.device(request.param)
 
 @pytest.mark.parametrize("optimizer_method, expected", [
-    ("optimize_kinematic_parameters_with_motor_positions", 12),
-    ("optimize_kinematic_parameters_with_raytracing", 15)
+    ("optimize_kinematic_parameters_with_motor_positions", 0),
+    ("optimize_kinematic_parameters_with_raytracing", 0)
 ])
 def test_alignment_optimizer(optimizer_method, device, expected):
     """
@@ -49,7 +49,7 @@ def test_alignment_optimizer(optimizer_method, device, expected):
 
     optimized_kinematic_parameters = getattr(alignment_optimizer, optimizer_method)(device=device)
 
-    assert True
+    #assert True
     # # Assertion
 
     # # Load the scenario.
@@ -111,9 +111,10 @@ def test_alignment_optimizer(optimizer_method, device, expected):
     # )
 
     # final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+    # torch.save(final_bitmap, "bitmap_test.pt")
 
-    # import matplotlib.pyplot as plt
-    # plt.imshow(final_bitmap.cpu().detach().numpy())
-    # plt.savefig("test1.png")
+    # # import matplotlib.pyplot as plt
+    # # plt.imshow(final_bitmap.cpu().detach().numpy())
+    # # plt.savefig("test1.png")
 
-    # assert True
+    # # assert True
