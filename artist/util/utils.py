@@ -394,12 +394,12 @@ def calculate_position_in_m_from_lat_lon(
     return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
 
 
-
-def get_center_of_mass(bitmap: torch.Tensor,
-                       target_center: torch.Tensor,
-                       plane_e: torch.Tensor,
-                       plane_u: torch.Tensor,
-                       device: Union[torch.device, str] = "cuda",
+def get_center_of_mass(
+    bitmap: torch.Tensor,
+    target_center: torch.Tensor,
+    plane_e: torch.Tensor,
+    plane_u: torch.Tensor,
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Calculate the coordinates of the flux density center of mass.
@@ -423,88 +423,25 @@ def get_center_of_mass(bitmap: torch.Tensor,
     torch.Tensor
         The coordinates of the flux density center of mass.
     """
-    mask = bitmap > 0
+    device = torch.device(device)
+    # Calculate center of mass of the bitmap
     x_indices = torch.arange(bitmap.shape[0], device=device)
     y_indices = torch.arange(bitmap.shape[1], device=device)
     x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing='ij')
+    
+    total_mass = bitmap.sum()
+    normalized_bitmap = bitmap / total_mass
 
-    non_zero_x_indices = x_indices[mask]
-    non_zero_y_indices = y_indices[mask]
+    center_of_mass_x = (normalized_bitmap * x_indices).sum()
+    center_of_mass_y = (normalized_bitmap * y_indices).sum()
+    center_of_mass_bitmap = torch.stack([center_of_mass_x, center_of_mass_y], dim=-1)
 
-    center_of_mass_x = non_zero_x_indices.float().mean()
-    center_of_mass_y = non_zero_y_indices.float().mean()
-    center_of_mass_bitmap = torch.tensor([center_of_mass_x, center_of_mass_y], device=device)
-
+    # Construct the coordinates relative to target center
     de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
     du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
-    sum = center_of_mass_bitmap / bitmap.size(-1)
-    e = sum[1]
-    u = 1 - sum[0]
+    normalized_center = center_of_mass_bitmap / bitmap.size(-1)
+    e = normalized_center[1]
+    u = 1 - normalized_center[0]
     center_coordinates = target_center - 0.5 * (de + du) + e * de + u * du
 
     return center_coordinates
-
-
-# Function to convert LLA to ECEF
-def lla_to_ecef(lat, lon, alt):
-    a = 6378137.0  # WGS-84 Earth semimajor axis (meters)
-    f = 1 / 298.257223563  # WGS-84 flattening factor
-    b = a * (1 - f)  # Semi-minor axis
-
-    # Convert to radians
-    lat = torch.deg2rad(lat)
-    lon = torch.deg2rad(lon)
-
-    # Precompute trigonometric values
-    cos_lat = torch.cos(lat)
-    sin_lat = torch.sin(lat)
-    cos_lon = torch.cos(lon)
-    sin_lon = torch.sin(lon)
-
-    # Calculate N (radius of curvature in the prime vertical)
-    N = a / torch.sqrt(1 - f * (2 - f) * sin_lat**2)
-
-    # Calculate ECEF coordinates
-    x = (N + alt) * cos_lat * cos_lon
-    y = (N + alt) * cos_lat * sin_lon
-    z = (N * (1 - f) ** 2 + alt) * sin_lat
-    return torch.stack((x, y, z), dim=-1)
-
-
-# Function to calculate the ENU transformation matrix
-def enu_matrix(lat_ref, lon_ref):
-    lat_ref = torch.deg2rad(lat_ref)
-    lon_ref = torch.deg2rad(lon_ref)
-
-    # Precompute trigonometric values for rotation matrix
-    cos_lat_ref = torch.cos(lat_ref)
-    sin_lat_ref = torch.sin(lat_ref)
-    cos_lon_ref = torch.cos(lon_ref)
-    sin_lon_ref = torch.sin(lon_ref)
-
-    # Rotation matrix from ECEF to ENU
-    rot_matrix = torch.tensor(
-        [
-            [-sin_lon_ref, cos_lon_ref, 0],
-            [-sin_lat_ref * cos_lon_ref, -sin_lat_ref * sin_lon_ref, cos_lat_ref],
-            [cos_lat_ref * cos_lon_ref, cos_lat_ref * sin_lon_ref, sin_lat_ref],
-        ]
-    )
-    return rot_matrix
-
-
-# Function to convert LLA to ENU
-def lla_to_enu(lat, lon, alt, lat_ref, lon_ref, alt_ref):
-    # Convert the reference point and target point to ECEF
-    ref_ecef = lla_to_ecef(lat_ref, lon_ref, alt_ref)
-    target_ecef = lla_to_ecef(lat, lon, alt)
-
-    # Calculate the ENU rotation matrix using the reference point
-    rot_matrix = enu_matrix(lat_ref, lon_ref)
-
-    # Calculate the difference vector in ECEF
-    diff = target_ecef - ref_ecef
-
-    # Reshape diff to (3, 1) for compatibility with torch.matmul, and apply the ENU rotation matrix
-    enu = torch.matmul(rot_matrix, diff.unsqueeze(1)).squeeze(1)
-    return enu
