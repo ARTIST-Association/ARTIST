@@ -72,7 +72,7 @@ class AlignmentOptimizer:
         # Load the calibration data (heliostat)
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.calculate_position_in_m_from_lat_lon(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
+            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
             center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device)
             motor_positions = torch.tensor([calibration_dict["motor_position"]["Axis1MotorPosition"], calibration_dict["motor_position"]["Axis2MotorPosition"]], device=device)
 
@@ -185,7 +185,7 @@ class AlignmentOptimizer:
         # Load the calibration data (heliostat)
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.calculate_position_in_m_from_lat_lon(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
+            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
             center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device).requires_grad_()
 
         # Set up optimizer
