@@ -337,40 +337,40 @@ def convert_3d_direction_to_4d_format(
     return torch.cat((direction, zeros_tensor), dim=-1)
 
 
-def calculate_position_in_m_from_lat_lon(
+def convert_WGS84_coordinates_to_local_enu(
     coordinates_to_transform: torch.Tensor,
-    power_plant_coordinates: torch.Tensor,
+    reference_point: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
-    Transform coordinates from latitude, longitude and altitude to meters.
+    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
 
-    This function calculates the north and east offsets in meters of a coordinate from the power plant location.
+    This function calculates the north and east offsets in meters of a coordinate from the reference point.
     It converts the latitude and longitude to radians, calculates the radius of curvature values,
-    and then computes the offsets based on the differences between the coordinate and power plant center of origin.
+    and then computes the offsets based on the differences between the coordinate and the refernce point.
     Finally, it returns a tensor containing these offsets along with the altitude difference.
 
     Parameters
     ----------
     coordinates_to_transform : torch.Tensor
         The coordinates in lat, lon, alt that are to be transformed.
-    power_plant_coordinates : torch.Tensor
-        The center of origin of the power plant as a reference point.
+    reference_point : torch.Tensor
+        The center of origin of the ENU coordinate system in WGS84 coordinates.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
     torch.Tensor
-        The east offset in meters, north offset in meters, and the altitude difference from the power plant.
+        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
     """
     device = torch.device(device)
     # Convert latitude and longitude to radians
     lat_rad = torch.deg2rad(coordinates_to_transform[0])
     lon_rad = torch.deg2rad(coordinates_to_transform[1])
-    alt = coordinates_to_transform[2] - power_plant_coordinates[2]
-    lat_tower_rad = torch.deg2rad(power_plant_coordinates[0])
-    lon_tower_rad = torch.deg2rad(power_plant_coordinates[1])
+    alt = coordinates_to_transform[2] - reference_point[2]
+    lat_tower_rad = torch.deg2rad(reference_point[0])
+    lon_tower_rad = torch.deg2rad(reference_point[1])
 
     # Calculate meridional radius of curvature for the first latitude
     sin_lat1 = torch.sin(lat_rad)
