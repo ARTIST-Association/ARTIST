@@ -67,7 +67,7 @@ with open(tower_file, "r") as file:
     target_center_lat_lon = torch.tensor(
         tower_dict[target_name]["coordinates"]["center"], device=device
     )
-    target_center_3d = utils.calculate_position_in_m_from_lat_lon(
+    target_center_3d = utils.convert_WGS84_coordinates_to_local_enu(
         target_center_lat_lon, power_plant_position, device=device
     )
     target_center = utils.convert_3d_points_to_4d_format(
@@ -77,28 +77,28 @@ with open(tower_file, "r") as file:
         torch.tensor(tower_dict[target_name]["normal_vector"], device=device),
         device=device,
     )
-    upper_left = utils.calculate_position_in_m_from_lat_lon(
+    upper_left = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
             tower_dict[target_name]["coordinates"]["upper_left"], device=device
         ),
         power_plant_position,
         device=device,
     )
-    lower_left = utils.calculate_position_in_m_from_lat_lon(
+    lower_left = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
             tower_dict[target_name]["coordinates"]["lower_left"], device=device
         ),
         power_plant_position,
         device=device,
     )
-    upper_right = utils.calculate_position_in_m_from_lat_lon(
+    upper_right = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
             tower_dict[target_name]["coordinates"]["upper_right"], device=device
         ),
         power_plant_position,
         device=device,
     )
-    lower_right = utils.calculate_position_in_m_from_lat_lon(
+    lower_right = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
             tower_dict[target_name]["coordinates"]["lower_right"], device=device
         ),
@@ -116,7 +116,7 @@ with open(tower_file, "r") as file:
 
 with open(heliostat_file, "r") as file:
     heliostat_dict = json.load(file)
-    heliostat_position_3d = utils.calculate_position_in_m_from_lat_lon(
+    heliostat_position_3d = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(heliostat_dict["heliostat_position"], device=device),
         power_plant_position,
         device=device,
