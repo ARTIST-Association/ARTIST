@@ -1,10 +1,11 @@
 import json
 import logging
+import pathlib
 import sys
-import time
 from typing import Union
 
 from artist import ARTIST_ROOT
+from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import colorlog
 import h5py
@@ -16,17 +17,46 @@ from artist.util import utils
 
 class AlignmentOptimizer:
     """
-    TODO Docstrings
+    Implements an alignment optimizer to find optimal kinematic parameters.
+
+    Attributes
+    ----------
+    log : logging.Logger
+        Logger used to display optimization progress.
+    scenario_path : pathlib.Path
+        The path to the scenario h5 file.
+    calibration_properties_path : pathlib.Path
+        The path to the calibration properties json file.
+
+    Methods
+    -------
+    optimize_kinematic_parameters_with_motor_positions()
+        Optimize the kinematic parameters using the motor positions.
+    optimize_kinematic_parameters_with_raytracing()
+        Optimize the kinematic parameters using raytracing (slower).    
     """
 
     def __init__(
         self,
-        scenario_path: str,
-        calibration_properties_path: str,
+        scenario_path: pathlib.Path,
+        calibration_properties_path: pathlib.Path,
         log_level: int = logging.INFO,
     ) -> None:
         """
-        TODO Docstrings
+        Initialize the alignment optimizer.
+
+        The alignment optimizer optimizes all 28 Parameters of the rigid body kinematics.
+        These parameters include the 18 kinematic deviations parameters as well as 5 actuator
+        parameters for each actuator.
+
+        Parameters
+        ----------
+        log : logging.Logger
+            Logger used to display optimization progress.
+        scenario_path : pathlib.Path
+            The path to the scenario h5 file.
+        calibration_properties_path : pathlib.Path
+            The path to the calibration properties json file.
         """
         log = logging.getLogger("alignment-optimizer")
         log_formatter = colorlog.ColoredFormatter(
@@ -54,26 +84,56 @@ class AlignmentOptimizer:
 
     def optimize_kinematic_parameters_with_motor_positions(
         self,
-        tolerance: float = 1e-10,
+        tolerance: float = 1e-7,
         max_epoch: int = 150,
         initial_learning_rate: float = 0.001,
         scheduler_factor: float = 0.1,
-        scheduler_patience: int = 30,
+        scheduler_patience: int = 20,
         scheduler_threshold: float = 0.1,
         device: Union[torch.device, str] = "cuda",
-    ) -> list[torch.Tensor]:
+    ) -> tuple[list[torch.Tensor], Scenario]:
         """
-        TODO Docstrings
+        Optimize the kinematic parameters using the motor positions.
+
+        This optimizer method optimizes the kinematic parameters by extracting the motor positions
+        and incident ray direction from a specific calibration and using the scence's geometry.
+
+        Parameters
+        ----------
+        tolerance : float
+            The tolerance indicating when to stop optimizing (default: 1e-7).
+        max_epoch : int
+            Maximum number of epochs for the optimizer (default: 150).
+        initial_learning_rate : float
+            The initial learning rate of the optimizer (default: 0.001).
+        scheduler_factor : float
+            Factor by which the learning rate will be reduced (default: 0.1).
+        scheduler_patience : int
+            The number of allowed epochs with no improvement after which the learning rate will be reduced (default: 20).
+        scheduler_threshold : float
+            The scheduler threshold (default: 0.1).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default: cuda).
+        
+        Returns
+        -------
+        list[torch.Tensor]
+            The list of optimized parameters.
+        Scenario
+            The scenario with aligned heliostat and optimized kinematic parameters.
         """
         # Load the scenario.
         with h5py.File(self.scenario_path, "r") as config_h5:
             scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5, device=device)
 
-        # Load the calibration data (heliostat)
+        # Load the calibration data
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
+            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], dtype=torch.float64, device=device), scenario.power_plant_position, device=device)
             center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device)
+            sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
+            sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
+            incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True), device=device)
             motor_positions = torch.tensor([calibration_dict["motor_position"]["Axis1MotorPosition"], calibration_dict["motor_position"]["Axis2MotorPosition"]], device=device)
 
         # Set up optimizer
@@ -114,15 +174,15 @@ class AlignmentOptimizer:
             patience=scheduler_patience,
             threshold=scheduler_threshold,
             threshold_mode="abs",
-        )  # -> 6.854534149169922e-07
+        )
 
         loss = torch.inf
         epoch = 0
 
-        normal_vector = (
+        preferred_reflection_direction_calibration  = (
             center_calibration_image - scenario.heliostats.heliostat_list[0].position
         )
-        normal = normal_vector / torch.norm(normal_vector)
+        preferred_reflection_direction_calibration  = preferred_reflection_direction_calibration / torch.norm(preferred_reflection_direction_calibration )
 
         while loss > tolerance and epoch <= max_epoch:
             orientation = scenario.heliostats.heliostat_list[
@@ -131,18 +191,18 @@ class AlignmentOptimizer:
                 motor_positions=motor_positions, device=device
             )
 
-            new_normal = orientation[0:4, 2]
+            preferred_reflection_direction = raytracing_utils.reflect(-incident_ray_direction, orientation[0:4,2])
 
             optimizer.zero_grad()
 
-            loss = (new_normal - normal).abs().mean()
+            loss = (preferred_reflection_direction - preferred_reflection_direction_calibration ).abs().mean()
             loss.backward()
 
             optimizer.step()
             scheduler.step(loss)
 
             self.log.info(
-                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {new_normal}",
+                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {preferred_reflection_direction}",
             )
 
             epoch += 1
@@ -151,21 +211,55 @@ class AlignmentOptimizer:
             f"parameters: {parameters_list}",
         )
 
-        return parameters_list
+        # Align heliostat, reason: scenario will be ready to use for raytracing.
+        # can be removed if we decide to only return the optimized paramters.
+        scenario.heliostats.heliostat_list[0].set_aligned_surface_with_motor_positions(
+            motor_positions=motor_positions.to(device), device=device
+        )
+
+        return parameters_list, scenario
 
 
     def optimize_kinematic_parameters_with_raytracing(
         self,
-        tolerance: float = 1e-10,
-        max_epoch: int = 150,
+        tolerance: float = 0.05,
+        max_epoch: int = 20,
         initial_learning_rate: float = 0.001,
         scheduler_factor: float = 0.1,
-        scheduler_patience: int = 3,
-        scheduler_threshold: float = 0.1,
+        scheduler_patience: int = 7,
+        scheduler_threshold: float = 0.5,
         device: Union[torch.device, str] = "cuda",
-    ) -> list[torch.Tensor]:
+    ) -> tuple[list[torch.Tensor], Scenario]:
         """
-        TODO Docstrings
+        Optimize the kinematic parameters using raytracing.
+
+        This optimizer method optimizes the kinematic parameters by extracting the focus point 
+        of a calibration image and using heliostat-tracing. This method is slower than the other
+        optimization method found in the alignment optimizer.
+
+        Parameters
+        ----------
+        tolerance : float
+            The tolerance indicating when to stop optimizing (default: 0.05).
+        max_epoch : int
+            Maximum number of epochs for the optimizer (default: 20).
+        initial_learning_rate : float
+            The initial learning rate of the optimizer (default: 0.001).
+        scheduler_factor : float
+            Factor by which the learning rate will be reduced (default: 0.1).
+        scheduler_patience : int
+            The number of allowed epochs with no improvement after which the learning rate will be reduced (default: 7).
+        scheduler_threshold : float
+            The scheduler threshold (default: 0.5).
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default: cuda).
+        
+        Returns
+        -------
+        list[torch.Tensor]
+            The list of optimized parameters.
+        Scenario
+            The scenario with aligned heliostat and optimized kinematic parameters.
         """
         # Load the scenario.
         with h5py.File(self.scenario_path, "r") as config_h5:
@@ -174,19 +268,17 @@ class AlignmentOptimizer:
             plane_e = scenario.receivers.receiver_list[0].plane_e
             plane_u = scenario.receivers.receiver_list[0].plane_u
         
-        # Load the calibration data.
-        calibration_item_stac_file = f"{ARTIST_ROOT}/measurement_data/download_test/AA39/Calibration/86500-calibration-item-stac.json"
-        with open(calibration_item_stac_file, 'r') as file:
-            calibration_dict = json.load(file)
-            sun_azimuth = torch.tensor(calibration_dict["view:sun_azimuth"], device=device)
-            sun_elevation = torch.tensor(calibration_dict["view:sun_elevation"], device=device)
-            incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=False), device=device)
+        # use less rays to make it faster
+        scenario.light_sources.light_source_list[0].number_of_rays = 1
 
-        # Load the calibration data (heliostat)
+        # Load the calibration data.
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], device=device), scenario.power_plant_position, device=device)
+            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], dtype=torch.float64, device=device), scenario.power_plant_position, device=device)
             center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device).requires_grad_()
+            sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
+            sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
+            incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True), device=device)
 
         # Set up optimizer
         parameters_list = [scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_e.requires_grad_(),
@@ -233,42 +325,19 @@ class AlignmentOptimizer:
 
         while loss > tolerance and epoch <= max_epoch:
             # Align heliostat
-            start_time = time.time()
-            scenario.heliostats.heliostat_list[0].set_aligned_surface(
+            scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
                     incident_ray_direction=incident_ray_direction, device=device
             )
-            end_time = time.time()
-            elapsed = end_time - start_time
-            self.log.critical(f"align heliostat: {elapsed}")
 
             # Create raytracer
-            start_time = time.time()
             raytracer = HeliostatRayTracer(
                 scenario=scenario
             )
-            end_time = time.time()
-            elapsed = end_time - start_time
-            self.log.critical(f"create raytracer: {elapsed}")
 
-            start_time = time.time()
             final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction, device=device)
-            end_time = time.time()
-            elapsed = end_time - start_time
-            self.log.critical(f"trace rays: {elapsed}")
-
-            start_time = time.time()
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
-            end_time = time.time()
-            elapsed = end_time - start_time
-            self.log.critical(f"normalize bitmap: {elapsed}")
 
-            # TODO
-            # get_center_of_mass() zu receiver.py verschieben?
-            start_time = time.time()
-            center = utils.get_center_of_mass(final_bitmap, target_center=target_center, plane_e=plane_e, plane_u=plane_u, device=device)
-            end_time = time.time()
-            elapsed = end_time - start_time
-            self.log.critical(f"center of mass: {elapsed}")
+            center = utils.get_center_of_mass(torch.flip(final_bitmap.T, dims=(0, 1)), target_center=target_center, plane_e=plane_e, plane_u=plane_u, device=device)
 
             optimizer.zero_grad()
 
@@ -279,7 +348,7 @@ class AlignmentOptimizer:
             scheduler.step(loss)
 
             self.log.info(
-                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {center}",
+                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, center of mass: {center}",
             )
 
             epoch += 1
@@ -288,4 +357,4 @@ class AlignmentOptimizer:
             f"parameters: {parameters_list}",
         )
 
-        return parameters_list
+        return parameters_list, scenario 
