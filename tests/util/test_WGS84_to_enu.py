@@ -23,9 +23,10 @@ def device(request: pytest.FixtureRequest) -> torch.device:
 @pytest.mark.parametrize(
     "WGS84_coordinates, reference_point, expected_enu_coordinates",
     [
-        ((torch.tensor([50.913394927979, 6.387574672699, 138.979751586914]), 
-          torch.tensor([50.913421630859, 6.387824535370, 87.000000000000]), 
-          torch.tensor([-17.562997817993, -3.039341926575, 51.979751586914])))
+        # Coordinates of Jülich power plant and multifocustower
+        ((torch.tensor([50.91339645088695, 6.387574436728054, 138.97975], dtype=torch.float64), 
+          torch.tensor([50.913421630859, 6.387824755874856, 87.000000000000], dtype=torch.float64), 
+          torch.tensor([-17.6045,  -2.8012,  51.9798]))),
     ]
 )
 def test_WGS84_to_enu_converter(
