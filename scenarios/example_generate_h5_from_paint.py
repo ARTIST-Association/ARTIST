@@ -1,5 +1,4 @@
 import json
-import math
 import pathlib
 
 import torch
@@ -26,7 +25,7 @@ from artist.util.configuration_classes import (
 from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 from artist.util.scenario_generator import ScenarioGenerator
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario_paint"
@@ -62,10 +61,10 @@ with open(tower_file, "r") as file:
     tower_dict = json.load(file)
     target_type = tower_dict[target_name][config_dictionary.receiver_type]
     power_plant_position = torch.tensor(
-        tower_dict["power_plant_properties"]["coordinates"], device=device
+        tower_dict["power_plant_properties"]["coordinates"], dtype=torch.float64, device=device
     )
     target_center_lat_lon = torch.tensor(
-        tower_dict[target_name]["coordinates"]["center"], device=device
+        tower_dict[target_name]["coordinates"]["center"], dtype=torch.float64, device=device
     )
     target_center_3d = utils.convert_WGS84_coordinates_to_local_enu(
         target_center_lat_lon, power_plant_position, device=device
@@ -79,28 +78,28 @@ with open(tower_file, "r") as file:
     )
     upper_left = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
-            tower_dict[target_name]["coordinates"]["upper_left"], device=device
+            tower_dict[target_name]["coordinates"]["upper_left"], dtype=torch.float64, device=device
         ),
         power_plant_position,
         device=device,
     )
     lower_left = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
-            tower_dict[target_name]["coordinates"]["lower_left"], device=device
+            tower_dict[target_name]["coordinates"]["lower_left"], dtype=torch.float64, device=device
         ),
         power_plant_position,
         device=device,
     )
     upper_right = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
-            tower_dict[target_name]["coordinates"]["upper_right"], device=device
+            tower_dict[target_name]["coordinates"]["upper_right"], dtype=torch.float64, device=device
         ),
         power_plant_position,
         device=device,
     )
     lower_right = utils.convert_WGS84_coordinates_to_local_enu(
         torch.tensor(
-            tower_dict[target_name]["coordinates"]["lower_right"], device=device
+            tower_dict[target_name]["coordinates"]["lower_right"], dtype=torch.float64, device=device
         ),
         power_plant_position,
         device=device,
@@ -117,7 +116,7 @@ with open(tower_file, "r") as file:
 with open(heliostat_file, "r") as file:
     heliostat_dict = json.load(file)
     heliostat_position_3d = utils.convert_WGS84_coordinates_to_local_enu(
-        torch.tensor(heliostat_dict["heliostat_position"], device=device),
+        torch.tensor(heliostat_dict["heliostat_position"], dtype=torch.float64, device=device),
         power_plant_position,
         device=device,
     )
@@ -211,7 +210,7 @@ kinematic_prototype_deviations = KinematicDeviations(
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
 )
 
 # Include the kinematic prototype configuration.
