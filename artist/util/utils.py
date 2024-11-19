@@ -391,7 +391,7 @@ def convert_WGS84_coordinates_to_local_enu(
     north_offset_m = dlat_rad * rm1
     east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
 
-    return torch.tensor([-east_offset_m, -north_offset_m, alt], device=device)
+    return torch.tensor([-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device)
 
 
 def get_center_of_mass(
