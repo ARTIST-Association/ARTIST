@@ -1,4 +1,3 @@
-import math
 import pathlib
 from pathlib import Path
 
@@ -25,7 +24,7 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = (
@@ -40,7 +39,7 @@ if not Path(file_path).parent.is_dir():
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
-    power_plant_position=torch.tensor([0.0, 0.0, 0.0])
+    power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
 # Include the receiver configuration.
@@ -147,7 +146,7 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=prototype_facets_l
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
 )
 
 # Include the kinematic prototype configuration.

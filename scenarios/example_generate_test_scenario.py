@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 import pathlib
 
@@ -24,7 +23,7 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario"
@@ -37,7 +36,7 @@ if not Path(file_path).parent.is_dir():
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
-    power_plant_position=torch.tensor([0.0, 0.0, 0.0])
+    power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
 # Include the receiver configuration.
@@ -97,13 +96,14 @@ facet_prototype_list = stral_converter.generate_surface_config_from_stral(
     device=device,
 )
 
+# Generate the surface prototype configuration.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
 # Note, we do not include kinematic deviations in this scenario!
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
 )
 
 # Include the kinematic prototype configuration.
