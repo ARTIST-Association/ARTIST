@@ -51,15 +51,23 @@ class Heliostat(torch.nn.Module):
         Boolean indicating if the heliostat is aligned.
     preferred_reflection_direction : torch.Tensor
         The preferred reflection direction for rays reflecting off the heliostat.
+    surface_points
+        The original, unaligned surface points.
+    surface_normals
+        The original, unaligned surface normals.
 
     Methods
     -------
     from_hdf5()
         Class method to initialize a heliostat from an HDF5 file.
-    set_aligned_surface()
+    set_aligned_surface_with_incident_ray_direction()
         Compute the aligned surface points and aligned surface normals of the heliostat.
+    set_aligned_surface_with_motor_positions()
+        Compute the aligned surface points and aligned surface normals of the heliostat.
+    get_orientation_from_motor_positions()
+        Compute the orientation for a heliostat given the desired motor positions.
     set_preferred_reflection_direction()
-        Compute the preferred reflection direction for each normal vector given an incident ray direction.
+        Reflect incoming rays according to a normal vector.
     """
 
     def __init__(
@@ -123,12 +131,7 @@ class Heliostat(torch.nn.Module):
         self.is_aligned = False
         self.preferred_reflection_direction = torch.empty(0, device=device)
 
-        # TODO remove
-        #self.surface_points = torch.load("points.pt", weights_only=True)
-        #self.surface_normals = torch.load("normals.pt", weights_only=True)
         self.surface_points, self.surface_normals = self.surface.get_surface_points_and_normals(device=device)
-        # torch.save(self.surface_points, "points.pt")
-        # torch.save(self.surface_normals, "normals.pt")
 
     @classmethod
     def from_hdf5(
@@ -760,13 +763,15 @@ class Heliostat(torch.nn.Module):
             device=device,
         )
 
-    def set_aligned_surface(
+    def set_aligned_surface_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
+
+        This method uses the incident ray direction to align the heliostat.
 
         Parameters
         ----------
@@ -776,15 +781,37 @@ class Heliostat(torch.nn.Module):
             The device on which to initialize tensors (default is cuda).
         """
         device = torch.device(device)
-
-        # surface_points, surface_normals = self.surface.get_surface_points_and_normals(
-        #     device=device
-        # )
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.kinematic.align_surface(
+        ) = self.kinematic.align_surface_with_incident_ray_direction(
             incident_ray_direction, self.surface_points, self.surface_normals, device
+        )
+        self.is_aligned = True
+
+    def set_aligned_surface_with_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
+        """
+        Compute the aligned surface points and aligned surface normals of the heliostat.
+
+        This method uses the motor positions to align the heliostat.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+        """
+        device = torch.device(device)
+        (
+            self.current_aligned_surface_points,
+            self.current_aligned_surface_normals,
+        ) = self.kinematic.align_surface_with_motor_positions(
+            motor_positions, self.surface_points, self.surface_normals, device
         )
         self.is_aligned = True
 
@@ -794,7 +821,19 @@ class Heliostat(torch.nn.Module):
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        TODO docstrings
+        Compute the orientation for a heliostat given the desired motor positions.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The desired motor positions.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+        
+        Returns
+        -------
+        torch.Tensor
+            The orientation for the given motor position.
         """
         device = torch.device(device)
         orientation = self.kinematic.motor_positions_to_orientation(
