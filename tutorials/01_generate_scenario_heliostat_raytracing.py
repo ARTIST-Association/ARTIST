@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 
 import torch
@@ -14,6 +13,7 @@ from artist.util.configuration_classes import (
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
@@ -21,6 +21,8 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = "please/insert/your/path/here/name"
@@ -32,12 +34,17 @@ if not Path(file_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
+# Include the power plant configuration.
+power_plant_config = PowerPlantConfig(
+    power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
+)
+
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=config_dictionary.receiver_type_planar,
-    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,
     resolution_e=256,
@@ -94,7 +101,7 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_li
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
+    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
 )
 
 # Include the kinematic prototype configuration.
@@ -138,8 +145,8 @@ prototype_config = PrototypeConfig(
 heliostat1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
-    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
 )
 
 # Create a list of all the heliostats - in this case, only one.
@@ -155,6 +162,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,

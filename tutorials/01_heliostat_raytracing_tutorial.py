@@ -1,6 +1,6 @@
 import math
 import subprocess
-from typing import Optional
+from typing import Optional, Union
 
 import h5py
 import matplotlib.pyplot as plt
@@ -22,10 +22,11 @@ if DOWNLOAD_DATA:
     result = subprocess.run(command, capture_output=True, text=True)
     scenario_name = output_filename
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_name, "r") as f:
-    example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f)
+    example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
 
 # Inspect the scenario.
 print(example_scenario)
@@ -38,14 +39,14 @@ print(f"The heliostat position is: {single_heliostat.position}")
 print(f"The heliostat is aiming at: {single_heliostat.aim_point}")
 
 # Define the incident ray direction for when the sun is in the south.
-incident_ray_direction_south = torch.tensor([0.0, -1.0, 0.0, 0.0])
+incident_ray_direction_south = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
 # Save original surface points.
-original_surface_points, _ = single_heliostat.surface.get_surface_points_and_normals()
+original_surface_points, _ = single_heliostat.surface.get_surface_points_and_normals(device=device)
 
 # Align the heliostat.
-single_heliostat.set_aligned_surface(
-    incident_ray_direction=incident_ray_direction_south
+single_heliostat.set_aligned_surface_with_incident_ray_direction(
+    incident_ray_direction=incident_ray_direction_south, device=device
 )
 
 # Define colors for each facet.
@@ -63,17 +64,17 @@ ax2 = fig.add_subplot(122, projection="3d")
 
 # Plot each facet
 for i in range(len(single_heliostat.surface.facets)):
-    e_origin = original_surface_points[i, :, 0].detach().numpy()
-    n_origin = original_surface_points[i, :, 1].detach().numpy()
-    u_origin = original_surface_points[i, :, 2].detach().numpy()
+    e_origin = original_surface_points[i, :, 0].cpu().detach().numpy()
+    n_origin = original_surface_points[i, :, 1].cpu().detach().numpy()
+    u_origin = original_surface_points[i, :, 2].cpu().detach().numpy()
     e_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 0].detach().numpy()
+        single_heliostat.current_aligned_surface_points[i, :, 0].cpu().detach().numpy()
     )
     n_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 1].detach().numpy()
+        single_heliostat.current_aligned_surface_points[i, :, 1].cpu().detach().numpy()
     )
     u_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 2].detach().numpy()
+        single_heliostat.current_aligned_surface_points[i, :, 2].cpu().detach().numpy()
     )
     ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i+1}")
     ax2.scatter(e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i+1}")
@@ -110,17 +111,17 @@ plt.show()
 raytracer = HeliostatRayTracer(scenario=example_scenario, batch_size=100)
 
 # Perform heliostat-based raytracing.
-image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south)
+image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south, device=device)
 image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
 fig, ax = plt.subplots(figsize=(6, 6))
-ax.imshow(image_south.T.detach().numpy(), cmap="inferno")
+ax.imshow(image_south.T.cpu().detach().numpy(), cmap="inferno")
 tight_layout()
 
 
 # Define helper functions to enable us to repeat the process!
-def align_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
+def align_and_trace_rays(light_direction: torch.Tensor, device: Union[torch.device, str] = "cuda") -> torch.Tensor:
     """
     Align the heliostat and perform heliostat raytracing.
 
@@ -128,15 +129,17 @@ def align_and_trace_rays(light_direction: torch.Tensor) -> torch.Tensor:
     ----------
     light_direction : torch.Tensor
         The direction of the incoming light on the heliostat.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default: cuda).
 
     Returns
     -------
     torch.Tensor
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
-    single_heliostat.set_aligned_surface(incident_ray_direction=light_direction)
+    single_heliostat.set_aligned_surface_with_incident_ray_direction(incident_ray_direction=light_direction, device=device)
     return raytracer.normalize_bitmap(
-        raytracer.trace_rays(incident_ray_direction=light_direction)
+        raytracer.trace_rays(incident_ray_direction=light_direction, device=device)
     )
 
 
@@ -173,7 +176,7 @@ def plot_multiple_images(
     # Plot each tensor.
     for i, image in enumerate(image_tensors):
         ax = axes[i]
-        ax.imshow(image.T.detach().numpy(), cmap="inferno")
+        ax.imshow(image.T.cpu().detach().numpy(), cmap="inferno")
         if names is not None and i < len(names):
             ax.set_title(names[i])
         else:
@@ -189,14 +192,14 @@ def plot_multiple_images(
 
 # Consider multiple incident ray directions and plot the result.
 # Define light directions.
-incident_ray_direction_east = torch.tensor([1.0, 0.0, 0.0, 0.0])
-incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0])
-incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0])
+incident_ray_direction_east = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
+incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
+incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
 
 # Perform alignment and raytracing to generate flux density images.
-image_east = align_and_trace_rays(light_direction=incident_ray_direction_east)
-image_west = align_and_trace_rays(light_direction=incident_ray_direction_west)
-image_above = align_and_trace_rays(light_direction=incident_ray_direction_above)
+image_east = align_and_trace_rays(light_direction=incident_ray_direction_east, device=device)
+image_west = align_and_trace_rays(light_direction=incident_ray_direction_west, device=device)
+image_above = align_and_trace_rays(light_direction=incident_ray_direction_above, device=device)
 
 # Plot the resulting images.
 plot_multiple_images(
