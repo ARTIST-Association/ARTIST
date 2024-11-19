@@ -31,10 +31,12 @@ class RigidBody(Kinematic):
     -------
     incident_ray_direction_to_orientation()
         Compute the orientation matrix given an incident ray direction.
-    align_surface()
-        Align given surface points and surface normals according to a calculated orientation.
+    align_surface_with_incident_ray_direction()
+        Align given surface points and surface normals according to an incident ray direction.
     motor_positions_to_orientation()
-        Compute the orientation matrix based on motor positions.
+        Compute the orientation matrix given the motor positions.
+    align_surface_with_motor_positions()
+        Align given surface points and surface normals according to motor positions.
 
     See Also
     --------
@@ -298,7 +300,7 @@ class RigidBody(Kinematic):
             )
         )
 
-    def align_surface(
+    def align_surface_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
@@ -306,7 +308,7 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Align given surface points and surface normals according to a calculated orientation.
+        Align given surface points and surface normals according to an incident ray direction.
 
         Parameters
         ----------
@@ -347,7 +349,7 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute the orientation matrix based on motor positions.
+        Compute the orientation matrix given the motor positions.
 
         Parameters
         ----------
@@ -443,3 +445,47 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
+
+
+    def align_surface_with_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Align given surface points and surface normals according to motor positions
+        
+        Parameters
+        ----------
+        incident_ray_direction : torch.Tensor
+            The direction of the rays.
+        surface_points : torch.Tensor
+            Points on the surface of the heliostat that reflect the light.
+        surface_normals : torch.Tensor
+            Normals to the surface points.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+
+        Returns
+        -------
+        torch.Tensor
+            The aligned surface points.
+        torch.Tensor
+            The aligned surface normals.
+        """
+        device = torch.device(device)
+
+        orientation = self.motor_positions_to_orientation(
+            motor_positions, device=device
+        ).squeeze()
+
+        aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
+            -1
+        )
+        aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(
+            -1
+        )
+
+        return aligned_surface_points, aligned_surface_normals
