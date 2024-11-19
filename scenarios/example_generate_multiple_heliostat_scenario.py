@@ -24,7 +24,7 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator import ScenarioGenerator
 
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = (

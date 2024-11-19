@@ -25,7 +25,7 @@ from artist.util.configuration_classes import (
 from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 from artist.util.scenario_generator import ScenarioGenerator
 
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario_paint"

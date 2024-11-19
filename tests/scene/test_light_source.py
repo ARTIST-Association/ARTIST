@@ -7,7 +7,7 @@ from artist.scene import Sun
 from artist.util import config_dictionary
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
