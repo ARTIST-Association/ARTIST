@@ -1,4 +1,4 @@
-from pathlib import Path
+import pathlib
 
 import torch
 
@@ -25,12 +25,12 @@ from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
+file_path = pathlib.Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
-if not Path(file_path).parent.is_dir():
+if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(
-        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        f"The folder ``{pathlib.Path(file_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
 
@@ -75,7 +75,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 stral_converter = StralToSurfaceConverter(
-    stral_file_path=f"{ARTIST_ROOT}/measurement_data/stral_test_data",
+    stral_file_path=pathlib.Path(ARTIST_ROOT) / "measurement_data/stral_test_data",
     surface_header_name="=5f2I2f",
     facet_header_name="=i9fI",
     points_on_facet_struct_name="=7f",

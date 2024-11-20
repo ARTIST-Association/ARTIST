@@ -1,5 +1,4 @@
 import pathlib
-from pathlib import Path
 
 import torch
 
@@ -31,9 +30,9 @@ file_path = file_path = (
     pathlib.Path(ARTIST_ROOT) / "scenarios/multiple_heliostat_scenario"
 )
 
-if not Path(file_path).parent.is_dir():
+if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(
-        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        f"The folder ``{pathlib.Path(file_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
 

@@ -50,7 +50,7 @@ heliostat_file = (
 )
 deflectometry_file = (
     pathlib.Path(ARTIST_ROOT)
-    / "measurement_data/download_test/AA39/Deflectometry/AA39-filled-2023-09-18Z08:49:09Z-deflectometry.h5"
+    / "measurement_data/download_test/AA39/Deflectometry/AA39-filled-2023-09-18Z08-49-09Z-deflectometry.h5"
 )
 
 with open(calibration_file, "r") as file:
