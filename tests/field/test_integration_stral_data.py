@@ -101,7 +101,7 @@ def test_compute_bitmaps(
 
     # Load the scenario.
     with h5py.File(
-        pathlib.Path(ARTIST_ROOT) / "scenarios" / f"{scenario_config}.h5", "r"
+        pathlib.Path(ARTIST_ROOT) / "tests/data" / f"{scenario_config}.h5", "r"
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=config_h5, device=device
@@ -132,8 +132,8 @@ def test_compute_bitmaps(
     if rank == 0:
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
-            / "tests/field/test_bitmaps_load_surface_stral"
+            / "tests/data/expected_bitmaps_integration"
             / f"{expected_value}_{device.type}.pt"
         )
-        expected = torch.load(expected_path, map_location=device)
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
