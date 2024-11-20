@@ -1,7 +1,7 @@
 import logging
+import pathlib
 import sys
 from collections.abc import MutableMapping
-from pathlib import Path
 from typing import Any, Generator
 
 import colorlog
@@ -24,7 +24,7 @@ class ScenarioGenerator:
 
     Attributes
     ----------
-    file_path : Path
+    file_path : pathlib.Path
         File path to the HDF5 to be saved.
     power_plant_config : PowerPlantConfig
         The power plant configuration object.
@@ -53,7 +53,7 @@ class ScenarioGenerator:
 
     def __init__(
         self,
-        file_path: Path,
+        file_path: pathlib.Path,
         power_plant_config: PowerPlantConfig,
         receiver_list_config: ReceiverListConfig,
         light_source_list_config: LightSourceListConfig,
@@ -72,7 +72,7 @@ class ScenarioGenerator:
 
         Parameters
         ----------
-        file_path : str
+        file_path : pathlib.Path
             File path to the HDF5 to be saved.
         power_plant_config : PowerPlantConfig
             The power plant configuration object.
@@ -89,7 +89,7 @@ class ScenarioGenerator:
         log_level : int
             The log level applied to the logger (default: logging.INFO).
         """
-        self.file_path = Path(file_path)
+        self.file_path = file_path
         if not self.file_path.parent.is_dir():
             raise FileNotFoundError(
                 f"The folder ``{self.file_path.parent}`` selected to save the scenario does not exist. "

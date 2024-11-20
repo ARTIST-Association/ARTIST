@@ -1,7 +1,7 @@
 import logging
+import pathlib
 import struct
 import sys
-from pathlib import Path
 from typing import Union
 
 import colorlog
@@ -42,7 +42,7 @@ class StralToSurfaceConverter:
 
     Attributes
     ----------
-    stral_file_path : str
+    stral_file_path : pathlib.Path
         The file path to the ``STRAL`` data file that will be converted.
     surface_header_name : str
         The name for the concentrator header in the ``STRAL`` file.
@@ -65,7 +65,7 @@ class StralToSurfaceConverter:
 
     def __init__(
         self,
-        stral_file_path: str,
+        stral_file_path: pathlib.Path,
         surface_header_name: str,
         facet_header_name: str,
         points_on_facet_struct_name: str,
@@ -92,7 +92,7 @@ class StralToSurfaceConverter:
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency.
         """
-        self.stral_file_path = Path(stral_file_path)
+        self.stral_file_path = stral_file_path
         self.surface_header_name = surface_header_name
         self.facet_header_name = facet_header_name
         self.points_on_facet_struct_name = points_on_facet_struct_name

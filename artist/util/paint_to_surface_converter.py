@@ -1,7 +1,7 @@
 import json
 import logging
+import pathlib
 import sys
-from pathlib import Path
 from typing import List, Union
 
 import colorlog
@@ -63,8 +63,8 @@ class PAINTToSurfaceConverter:
 
     def __init__(
         self,
-        deflectometry_file_path: Path,
-        heliostat_file_path: Path,
+        deflectometry_file_path: pathlib.Path,
+        heliostat_file_path: pathlib.Path,
         step_size: int,
     ) -> None:
         """
@@ -77,15 +77,15 @@ class PAINTToSurfaceConverter:
 
         Parameters
         ----------
-        deflectometry_file_path : Path
+        deflectometry_file_path : pathlib.Path
             The file path to the ``PAINT`` deflectometry h5 data file that will be converted.
-        heliostat_file_path : Path
+        heliostat_file_path : pathlib.Path
             The file path to the ``PAINT`` heliostat json file that will be converted.
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency.
         """
-        self.deflectometry_file_path = Path(deflectometry_file_path)
-        self.heliostat_file_path = Path(heliostat_file_path)
+        self.deflectometry_file_path = deflectometry_file_path
+        self.heliostat_file_path = heliostat_file_path
         self.step_size = step_size
 
     @staticmethod
