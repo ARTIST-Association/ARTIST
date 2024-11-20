@@ -106,7 +106,9 @@ def test_compute_bitmaps(
         )
 
     # Align heliostat.
-    scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
+    scenario.heliostats.heliostat_list[
+        0
+    ].set_aligned_surface_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
@@ -132,4 +134,4 @@ def test_compute_bitmaps(
             / f"{expected_value}_{device.type}.pt"
         )
         expected = torch.load(expected_path, map_location=device)
-        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4) 
+        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)

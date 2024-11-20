@@ -92,7 +92,9 @@ def initial_offsets_above(device: torch.device) -> KinematicOffsets:
         Initial kinematic offsets for an up-orientated heliostat.
     """
     initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(torch.pi / 2, device=device),
+        kinematic_initial_orientation_offset_e=torch.tensor(
+            torch.pi / 2, device=device
+        ),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
         kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
     )
@@ -210,8 +212,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1, 0, 0, 0],
-                    [0, torch.cos(torch.tensor(-torch.pi / 4)), -torch.sin(torch.tensor(-torch.pi / 4)), 0],
-                    [0, torch.sin(torch.tensor(-torch.pi / 4)), torch.cos(torch.tensor(-torch.pi / 4)), 0],
+                    [
+                        0,
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        0,
+                    ],
+                    [
+                        0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0,
+                    ],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -221,8 +233,18 @@ def kinematic_model_3(
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [torch.cos(torch.tensor(torch.pi / 4)), -torch.sin(torch.tensor(torch.pi / 4)), 0.0, 0.0],
-                    [torch.sin(torch.tensor(torch.pi / 4)), torch.cos(torch.tensor(torch.pi / 4)), 0.0, 0.0],
+                    [
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        -torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
                     [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -245,8 +267,18 @@ def kinematic_model_3(
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [torch.cos(torch.tensor(-torch.pi / 4)), -torch.sin(torch.tensor(-torch.pi / 4)), 0.0, 0.0],
-                    [torch.sin(torch.tensor(-torch.pi / 4)), torch.cos(torch.tensor(-torch.pi / 4)), 0.0, 0.0],
+                    [
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
                     [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -258,8 +290,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, torch.cos(torch.tensor(-torch.pi / 8)), -torch.sin(torch.tensor(-torch.pi / 8)), 0.0],
-                    [0.0, torch.sin(torch.tensor(-torch.pi / 8)), torch.cos(torch.tensor(-torch.pi / 8)), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(-torch.pi / 8)),
+                        -torch.sin(torch.tensor(-torch.pi / 8)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 8)),
+                        torch.cos(torch.tensor(-torch.pi / 8)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -270,8 +312,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, torch.cos(torch.tensor(-torch.pi / 4)), -torch.sin(torch.tensor(-torch.pi / 4)), 1.0],
-                    [0.0, torch.sin(torch.tensor(-torch.pi / 4)), torch.cos(torch.tensor(-torch.pi / 4)), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        1.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -282,8 +334,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, torch.cos(torch.tensor(torch.pi / 4)), -torch.sin(torch.tensor(torch.pi / 4)), 0.0],
-                    [0.0, torch.sin(torch.tensor(torch.pi / 4)), torch.cos(torch.tensor(torch.pi / 4)), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        -torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -294,8 +356,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, torch.cos(torch.tensor(torch.pi / 2)), -torch.sin(torch.tensor(torch.pi / 2)), 0.0],
-                    [0.0, torch.sin(torch.tensor(torch.pi / 2)), torch.cos(torch.tensor(torch.pi / 2)), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(torch.pi / 2)),
+                        -torch.sin(torch.tensor(torch.pi / 2)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 2)),
+                        torch.cos(torch.tensor(torch.pi / 2)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -305,8 +377,18 @@ def kinematic_model_3(
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [torch.cos(torch.tensor(torch.pi / 4)), 0.0, torch.sin(torch.tensor(torch.pi / 4)), 0.0],
-                    [torch.sin(torch.tensor(torch.pi / 4)), 0.0, -torch.cos(torch.tensor(torch.pi / 4)), 0.0],
+                    [
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        -torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -317,8 +399,18 @@ def kinematic_model_3(
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [torch.cos(torch.tensor(-torch.pi / 4)), 0.0, torch.sin(torch.tensor(-torch.pi / 4)), 0.0],
-                    [torch.sin(torch.tensor(-torch.pi / 4)), 0.0, -torch.cos(torch.tensor(-torch.pi / 4)), 0.0],
+                    [
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        -torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]

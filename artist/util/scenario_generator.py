@@ -53,7 +53,7 @@ class ScenarioGenerator:
 
     def __init__(
         self,
-        file_path: str,
+        file_path: Path,
         power_plant_config: PowerPlantConfig,
         receiver_list_config: ReceiverListConfig,
         light_source_list_config: LightSourceListConfig,

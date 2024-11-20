@@ -337,7 +337,7 @@ def convert_3d_direction_to_4d_format(
     return torch.cat((direction, zeros_tensor), dim=-1)
 
 
-def convert_WGS84_coordinates_to_local_enu(
+def convert_wgs84_coordinates_to_local_enu(
     coordinates_to_transform: torch.Tensor,
     reference_point: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
@@ -391,7 +391,9 @@ def convert_WGS84_coordinates_to_local_enu(
     north_offset_m = dlat_rad * rm1
     east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
 
-    return torch.tensor([-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device)
+    return torch.tensor(
+        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
+    )
 
 
 def get_center_of_mass(
@@ -427,8 +429,8 @@ def get_center_of_mass(
     # Calculate center of mass of the bitmap
     x_indices = torch.arange(bitmap.shape[0], device=device)
     y_indices = torch.arange(bitmap.shape[1], device=device)
-    x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing='ij')
-    
+    x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing="ij")
+
     total_mass = bitmap.sum()
     normalized_bitmap = bitmap / total_mass
 

@@ -104,7 +104,9 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(
+        torch.tensor(torch.pi / 2, device=device), device=device
+    )
 )
 
 # Include the kinematic prototype configuration.
@@ -147,7 +149,9 @@ heliostat1_surface_config = SurfaceConfig(facets_list=list_of_facets)
 
 # Include kinematic configuration for the heliostat.
 heliostat1_kinematic_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(
+        torch.tensor(torch.pi / 2, device=device), device=device
+    )
 )
 
 heliostat1_kinematic_config = KinematicConfig(

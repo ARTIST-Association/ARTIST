@@ -62,4 +62,3 @@ class IdealActuator(Actuator):
             The motor steps.
         """
         return angle
-
