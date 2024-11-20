@@ -79,10 +79,9 @@ def test_alignment_optimizer(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scenario_path = pathlib.Path(ARTIST_ROOT) / "scenarios/test_scenario_paint.h5"
+    scenario_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint.h5"
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "measurement_data/download_test/AA39/Calibration/86500-calibration-properties.json"
+        pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
     )
 
     # Load the calibration data.
@@ -121,8 +120,8 @@ def test_alignment_optimizer(
     if rank == 0:
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
-            / "tests/util/test_bitmaps_alignment_optimization"
+            / "tests/data/expected_bitmaps_alignment"
             / f"{optimizer_method}_{device.type}.pt"
         )
-        expected = torch.load(expected_path, map_location=device)
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)

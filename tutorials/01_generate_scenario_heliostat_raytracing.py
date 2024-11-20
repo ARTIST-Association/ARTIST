@@ -75,7 +75,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 stral_converter = StralToSurfaceConverter(
-    stral_file_path=pathlib.Path(ARTIST_ROOT) / "measurement_data/stral_test_data",
+    stral_file_path=pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_stral_data",
     surface_header_name="=5f2I2f",
     facet_header_name="=i9fI",
     points_on_facet_struct_name="=7f",
