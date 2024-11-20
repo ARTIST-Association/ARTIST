@@ -25,7 +25,7 @@ from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = "please/insert/your/path/here/name"
+file_path = Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
 if not Path(file_path).parent.is_dir():
@@ -101,7 +101,9 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_li
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(
+        torch.tensor(torch.pi / 2, device=device), device=device
+    )
 )
 
 # Include the kinematic prototype configuration.

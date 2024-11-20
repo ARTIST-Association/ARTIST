@@ -4,13 +4,12 @@ import pathlib
 import sys
 from typing import Union
 
-from artist import ARTIST_ROOT
-from artist.raytracing import raytracing_utils
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import colorlog
 import h5py
 import torch
 
+from artist.raytracing import raytracing_utils
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import utils
 
@@ -33,7 +32,7 @@ class AlignmentOptimizer:
     optimize_kinematic_parameters_with_motor_positions()
         Optimize the kinematic parameters using the motor positions.
     optimize_kinematic_parameters_with_raytracing()
-        Optimize the kinematic parameters using raytracing (slower).    
+        Optimize the kinematic parameters using raytracing (slower).
     """
 
     def __init__(
@@ -114,7 +113,7 @@ class AlignmentOptimizer:
             The scheduler threshold (default: 0.1).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
-        
+
         Returns
         -------
         list[torch.Tensor]
@@ -124,47 +123,132 @@ class AlignmentOptimizer:
         """
         # Load the scenario.
         with h5py.File(self.scenario_path, "r") as config_h5:
-            scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5, device=device)
+            scenario = Scenario.load_scenario_from_hdf5(
+                scenario_file=config_h5, device=device
+            )
 
         # Load the calibration data
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], dtype=torch.float64, device=device), scenario.power_plant_position, device=device)
-            center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device)
+            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
+                torch.tensor(
+                    calibration_dict["focal_spot"]["UTIS"],
+                    dtype=torch.float64,
+                    device=device,
+                ),
+                scenario.power_plant_position,
+                device=device,
+            )
+            center_calibration_image = utils.convert_3d_points_to_4d_format(
+                center_calibration_image, device=device
+            )
             sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-            sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
-            incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True), device=device)
-            motor_positions = torch.tensor([calibration_dict["motor_position"]["Axis1MotorPosition"], calibration_dict["motor_position"]["Axis2MotorPosition"]], device=device)
+            sun_elevation = torch.tensor(
+                calibration_dict["Sun_elevation"], device=device
+            )
+            incident_ray_direction = utils.convert_3d_direction_to_4d_format(
+                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
+                device=device,
+            )
+            motor_positions = torch.tensor(
+                [
+                    calibration_dict["motor_position"]["Axis1MotorPosition"],
+                    calibration_dict["motor_position"]["Axis2MotorPosition"],
+                ],
+                device=device,
+            )
 
         # Set up optimizer
-        parameters_list = [scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_e.requires_grad_(),                       
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].increment.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].initial_stroke_length.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].offset.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].radius.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].phi_0.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].increment.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].initial_stroke_length.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].offset.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].radius.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].phi_0.requires_grad_()]
+        parameters_list = [
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_u,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .increment,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .initial_stroke_length,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .offset,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .radius,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .phi_0,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .increment,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .initial_stroke_length,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .offset,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .radius,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .phi_0,
+        ]
+
+        for parameter in parameters_list:
+            if parameter is not None:
+                parameter.requires_grad_()
 
         optimizer = torch.optim.Adam(parameters_list, lr=initial_learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -179,10 +263,13 @@ class AlignmentOptimizer:
         loss = torch.inf
         epoch = 0
 
-        preferred_reflection_direction_calibration  = (
+        preferred_reflection_direction_calibration = (
             center_calibration_image - scenario.heliostats.heliostat_list[0].position
         )
-        preferred_reflection_direction_calibration  = preferred_reflection_direction_calibration / torch.norm(preferred_reflection_direction_calibration )
+        preferred_reflection_direction_calibration = (
+            preferred_reflection_direction_calibration
+            / torch.norm(preferred_reflection_direction_calibration)
+        )
 
         while loss > tolerance and epoch <= max_epoch:
             orientation = scenario.heliostats.heliostat_list[
@@ -191,11 +278,20 @@ class AlignmentOptimizer:
                 motor_positions=motor_positions, device=device
             )
 
-            preferred_reflection_direction = raytracing_utils.reflect(-incident_ray_direction, orientation[0:4,2])
+            preferred_reflection_direction = raytracing_utils.reflect(
+                -incident_ray_direction, orientation[0:4, 2]
+            )
 
             optimizer.zero_grad()
 
-            loss = (preferred_reflection_direction - preferred_reflection_direction_calibration ).abs().mean()
+            loss = (
+                (
+                    preferred_reflection_direction
+                    - preferred_reflection_direction_calibration
+                )
+                .abs()
+                .mean()
+            )
             loss.backward()
 
             optimizer.step()
@@ -219,7 +315,6 @@ class AlignmentOptimizer:
 
         return parameters_list, scenario
 
-
     def optimize_kinematic_parameters_with_raytracing(
         self,
         tolerance: float = 0.05,
@@ -233,7 +328,7 @@ class AlignmentOptimizer:
         """
         Optimize the kinematic parameters using raytracing.
 
-        This optimizer method optimizes the kinematic parameters by extracting the focus point 
+        This optimizer method optimizes the kinematic parameters by extracting the focus point
         of a calibration image and using heliostat-tracing. This method is slower than the other
         optimization method found in the alignment optimizer.
 
@@ -253,7 +348,7 @@ class AlignmentOptimizer:
             The scheduler threshold (default: 0.5).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
-        
+
         Returns
         -------
         list[torch.Tensor]
@@ -263,52 +358,133 @@ class AlignmentOptimizer:
         """
         # Load the scenario.
         with h5py.File(self.scenario_path, "r") as config_h5:
-            scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5, device=device)
-            target_center = scenario.receivers.receiver_list[0].position_center.requires_grad_()
+            scenario = Scenario.load_scenario_from_hdf5(
+                scenario_file=config_h5, device=device
+            )
+            target_center = scenario.receivers.receiver_list[
+                0
+            ].position_center.requires_grad_()
             plane_e = scenario.receivers.receiver_list[0].plane_e
             plane_u = scenario.receivers.receiver_list[0].plane_u
-        
+
         # use less rays to make it faster
         scenario.light_sources.light_source_list[0].number_of_rays = 1
 
         # Load the calibration data.
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_WGS84_coordinates_to_local_enu(torch.tensor(calibration_dict["focal_spot"]["UTIS"], dtype=torch.float64, device=device), scenario.power_plant_position, device=device)
-            center_calibration_image = utils.convert_3d_points_to_4d_format(center_calibration_image, device=device).requires_grad_()
+            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
+                torch.tensor(
+                    calibration_dict["focal_spot"]["UTIS"],
+                    dtype=torch.float64,
+                    device=device,
+                ),
+                scenario.power_plant_position,
+                device=device,
+            )
+            center_calibration_image = utils.convert_3d_points_to_4d_format(
+                center_calibration_image, device=device
+            ).requires_grad_()
             sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-            sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
-            incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True), device=device)
+            sun_elevation = torch.tensor(
+                calibration_dict["Sun_elevation"], device=device
+            )
+            incident_ray_direction = utils.convert_3d_direction_to_4d_format(
+                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
+                device=device,
+            )
 
         # Set up optimizer
-        parameters_list = [scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_e.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_e.requires_grad_(),                       
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_n.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_u.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].increment.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].initial_stroke_length.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].offset.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].radius.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].phi_0.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].increment.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].initial_stroke_length.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].offset.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].radius.requires_grad_(),
-                       scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].phi_0.requires_grad_()]
+        parameters_list = [
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.first_joint_tilt_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.second_joint_tilt_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_translation_u,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_e,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_n,
+            scenario.heliostats.heliostat_list[
+                0
+            ].kinematic.deviation_parameters.concentrator_tilt_u,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .increment,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .initial_stroke_length,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .offset,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .radius,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[0]
+            .phi_0,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .increment,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .initial_stroke_length,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .offset,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .radius,
+            scenario.heliostats.heliostat_list[0]
+            .kinematic.actuators.actuator_list[1]
+            .phi_0,
+        ]
+
+        for parameter in parameters_list:
+            if parameter is not None:
+                parameter.requires_grad_()
 
         optimizer = torch.optim.Adam(parameters_list, lr=initial_learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -325,19 +501,27 @@ class AlignmentOptimizer:
 
         while loss > tolerance and epoch <= max_epoch:
             # Align heliostat
-            scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
-                    incident_ray_direction=incident_ray_direction, device=device
+            scenario.heliostats.heliostat_list[
+                0
+            ].set_aligned_surface_with_incident_ray_direction(
+                incident_ray_direction=incident_ray_direction, device=device
             )
 
             # Create raytracer
-            raytracer = HeliostatRayTracer(
-                scenario=scenario
-            )
+            raytracer = HeliostatRayTracer(scenario=scenario)
 
-            final_bitmap = raytracer.trace_rays(incident_ray_direction=incident_ray_direction, device=device)
+            final_bitmap = raytracer.trace_rays(
+                incident_ray_direction=incident_ray_direction, device=device
+            )
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
-            center = utils.get_center_of_mass(torch.flip(final_bitmap.T, dims=(0, 1)), target_center=target_center, plane_e=plane_e, plane_u=plane_u, device=device)
+            center = utils.get_center_of_mass(
+                torch.flip(final_bitmap.T, dims=(0, 1)),
+                target_center=target_center,
+                plane_e=plane_e,
+                plane_u=plane_u,
+                device=device,
+            )
 
             optimizer.zero_grad()
 
@@ -357,4 +541,4 @@ class AlignmentOptimizer:
             f"parameters: {parameters_list}",
         )
 
-        return parameters_list, scenario 
+        return parameters_list, scenario

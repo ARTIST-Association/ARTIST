@@ -131,7 +131,9 @@ class Heliostat(torch.nn.Module):
         self.is_aligned = False
         self.preferred_reflection_direction = torch.empty(0, device=device)
 
-        self.surface_points, self.surface_normals = self.surface.get_surface_points_and_normals(device=device)
+        self.surface_points, self.surface_normals = (
+            self.surface.get_surface_points_and_normals(device=device)
+        )
 
     @classmethod
     def from_hdf5(
@@ -829,7 +831,7 @@ class Heliostat(torch.nn.Module):
             The desired motor positions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
-        
+
         Returns
         -------
         torch.Tensor

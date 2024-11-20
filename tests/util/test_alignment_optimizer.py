@@ -2,12 +2,12 @@ import json
 import pathlib
 import warnings
 
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.util import utils
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.util import utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
 warnings.filterwarnings("always")
@@ -31,6 +31,7 @@ else:
     world_size = 1
     rank = 0
 
+
 @pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
@@ -48,12 +49,17 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     """
     return torch.device(request.param)
 
-@pytest.mark.parametrize("optimizer_method", [
-    ("optimize_kinematic_parameters_with_motor_positions"),
-    ("optimize_kinematic_parameters_with_raytracing")
-])
-def test_alignment_optimizer(optimizer_method: str,
-                             device : torch.Tensor,
+
+@pytest.mark.parametrize(
+    "optimizer_method",
+    [
+        ("optimize_kinematic_parameters_with_motor_positions"),
+        ("optimize_kinematic_parameters_with_raytracing"),
+    ],
+)
+def test_alignment_optimizer(
+    optimizer_method: str,
+    device: torch.Tensor,
 ) -> None:
     """
     Test that the alignment optimizer is working as desired.
@@ -64,7 +70,7 @@ def test_alignment_optimizer(optimizer_method: str,
         Defines the optimization method.
     device : torch.device
         The device on which to initialize tensors.
-    
+
     Raises
     ------
     AssertionError
@@ -80,12 +86,15 @@ def test_alignment_optimizer(optimizer_method: str,
     )
 
     # Load the calibration data.
-    with open(calibration_properties_path, 'r') as file:
+    with open(calibration_properties_path, "r") as file:
         calibration_dict = json.load(file)
         sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
         sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
-        incident_ray_direction = utils.convert_3d_direction_to_4d_format(utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True), device=device)
-        
+        incident_ray_direction = utils.convert_3d_direction_to_4d_format(
+            utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
+            device=device,
+        )
+
     alignment_optimizer = AlignmentOptimizer(
         scenario_path=scenario_path,
         calibration_properties_path=calibration_properties_path,

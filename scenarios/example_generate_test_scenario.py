@@ -1,5 +1,5 @@
-from pathlib import Path
 import pathlib
+from pathlib import Path
 
 import torch
 
@@ -103,7 +103,9 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_li
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(torch.tensor(torch.pi / 2, device=device), device=device)
+    kinematic_initial_orientation_offset_e=torch.tensor(
+        torch.tensor(torch.pi / 2, device=device), device=device
+    )
 )
 
 # Include the kinematic prototype configuration.

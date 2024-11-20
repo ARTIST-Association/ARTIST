@@ -44,9 +44,9 @@ class PAINTToSurfaceConverter:
 
     Attributes
     ----------
-    deflectometry_file_path : str
+    deflectometry_file_path : Path
         The file path to the ``PAINT`` deflectometry h5 data file that will be converted.
-    heliostat_file_path : str
+    heliostat_file_path : Path
         The file path to the ``PAINT`` heliostat json file that will be converted.
     step_size : int
         The size of the step used to reduce the number of considered points for compute efficiency.
@@ -63,8 +63,8 @@ class PAINTToSurfaceConverter:
 
     def __init__(
         self,
-        deflectometry_file_path: str,
-        heliostat_file_path: str,
+        deflectometry_file_path: Path,
+        heliostat_file_path: Path,
         step_size: int,
     ) -> None:
         """
@@ -77,9 +77,9 @@ class PAINTToSurfaceConverter:
 
         Parameters
         ----------
-        deflectometry_file_path : str
+        deflectometry_file_path : Path
             The file path to the ``PAINT`` deflectometry h5 data file that will be converted.
-        heliostat_file_path : str
+        heliostat_file_path : Path
             The file path to the ``PAINT`` heliostat json file that will be converted.
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency.

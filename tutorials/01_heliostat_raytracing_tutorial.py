@@ -42,7 +42,9 @@ print(f"The heliostat is aiming at: {single_heliostat.aim_point}")
 incident_ray_direction_south = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
 # Save original surface points.
-original_surface_points, _ = single_heliostat.surface.get_surface_points_and_normals(device=device)
+original_surface_points, _ = single_heliostat.surface.get_surface_points_and_normals(
+    device=device
+)
 
 # Align the heliostat.
 single_heliostat.set_aligned_surface_with_incident_ray_direction(
@@ -111,7 +113,9 @@ plt.show()
 raytracer = HeliostatRayTracer(scenario=example_scenario, batch_size=100)
 
 # Perform heliostat-based raytracing.
-image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south, device=device)
+image_south = raytracer.trace_rays(
+    incident_ray_direction=incident_ray_direction_south, device=device
+)
 image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
@@ -121,7 +125,9 @@ tight_layout()
 
 
 # Define helper functions to enable us to repeat the process!
-def align_and_trace_rays(light_direction: torch.Tensor, device: Union[torch.device, str] = "cuda") -> torch.Tensor:
+def align_and_trace_rays(
+    light_direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat raytracing.
 
@@ -137,7 +143,9 @@ def align_and_trace_rays(light_direction: torch.Tensor, device: Union[torch.devi
     torch.Tensor
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
-    single_heliostat.set_aligned_surface_with_incident_ray_direction(incident_ray_direction=light_direction, device=device)
+    single_heliostat.set_aligned_surface_with_incident_ray_direction(
+        incident_ray_direction=light_direction, device=device
+    )
     return raytracer.normalize_bitmap(
         raytracer.trace_rays(incident_ray_direction=light_direction, device=device)
     )
@@ -197,9 +205,15 @@ incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
 incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
 
 # Perform alignment and raytracing to generate flux density images.
-image_east = align_and_trace_rays(light_direction=incident_ray_direction_east, device=device)
-image_west = align_and_trace_rays(light_direction=incident_ray_direction_west, device=device)
-image_above = align_and_trace_rays(light_direction=incident_ray_direction_above, device=device)
+image_east = align_and_trace_rays(
+    light_direction=incident_ray_direction_east, device=device
+)
+image_west = align_and_trace_rays(
+    light_direction=incident_ray_direction_west, device=device
+)
+image_above = align_and_trace_rays(
+    light_direction=incident_ray_direction_above, device=device
+)
 
 # Plot the resulting images.
 plot_multiple_images(

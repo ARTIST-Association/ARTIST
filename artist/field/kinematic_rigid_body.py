@@ -145,7 +145,7 @@ class RigidBody(Kinematic):
         assert (
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
-        
+
         device = torch.device(device)
         motor_positions = torch.zeros(2, device=device)
         last_iteration_loss = None
@@ -366,7 +366,7 @@ class RigidBody(Kinematic):
         assert (
             len(self.actuators.actuator_list) == 2
         ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
-        
+
         device = torch.device(device)
 
         joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
@@ -446,7 +446,6 @@ class RigidBody(Kinematic):
             )
         )
 
-
     def align_surface_with_motor_positions(
         self,
         motor_positions: torch.Tensor,
@@ -455,8 +454,8 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Align given surface points and surface normals according to motor positions
-        
+        Align given surface points and surface normals according to motor positions.
+
         Parameters
         ----------
         incident_ray_direction : torch.Tensor
