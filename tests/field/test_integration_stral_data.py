@@ -131,5 +131,5 @@ def test_compute_bitmaps(
             / "tests/field/test_bitmaps_load_surface_stral"
             / f"{expected_value}_{device.type}.pt"
         )
-        expected = torch.load(expected_path).to(device)
+        expected = torch.load(expected_path, map_location=device)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4) 
