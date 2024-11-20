@@ -1,12 +1,11 @@
-
 import pathlib
-
 
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
 from artist.util.alignment_optimizer import AlignmentOptimizer
+
 
 @pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
@@ -65,7 +64,9 @@ def test_alignment_optimizer_methods(
         calibration_properties_path=calibration_properties_path,
     )
 
-    optimized_parameters, _ = getattr(alignment_optimizer, optimizer_method)(device=device)
+    optimized_parameters, _ = getattr(alignment_optimizer, optimizer_method)(
+        device=device
+    )
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
@@ -73,5 +74,5 @@ def test_alignment_optimizer_methods(
         / f"{optimizer_method}_{device.type}.pt"
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
-    
+
     torch.testing.assert_close(optimized_parameters, expected, atol=0.01, rtol=0.01)
