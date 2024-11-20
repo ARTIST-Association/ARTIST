@@ -367,9 +367,6 @@ class AlignmentOptimizer:
             plane_e = scenario.receivers.receiver_list[0].plane_e
             plane_u = scenario.receivers.receiver_list[0].plane_u
 
-        # use less rays to make it faster
-        scenario.light_sources.light_source_list[0].number_of_rays = 1
-
         # Load the calibration data.
         with open(self.calibration_properties_path, "r") as file:
             calibration_dict = json.load(file)

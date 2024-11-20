@@ -28,7 +28,7 @@ from artist.util.scenario_generator import ScenarioGenerator
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint"
@@ -40,7 +40,7 @@ if not pathlib.Path(file_path).parent.is_dir():
     )
 
 tower_file = pathlib.Path(ARTIST_ROOT) / "tests/data/tower.json"
-calibration_file = pathlib.Path(ARTIST_ROOT) / "tests/data/calibration-properties.json"
+calibration_file = pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
 heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.json"
 deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/deflectometry.h5"
 
@@ -155,7 +155,7 @@ receiver_list_config = ReceiverListConfig(receiver_list=receiver_list)
 light_source1_config = LightSourceConfig(
     light_source_key="sun1",
     light_source_type=config_dictionary.sun_key,
-    number_of_rays=10,
+    number_of_rays=1,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
     mean=0.0,
     covariance=4.3681e-06,
