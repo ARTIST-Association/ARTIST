@@ -1,7 +1,7 @@
 """Tests loading a heliostat surface from STRAL data and performing ray tracing."""
 
 import pathlib
-import warnings
+from typing import Generator
 
 import h5py
 import pytest
@@ -10,30 +10,10 @@ import torch
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
-
-warnings.filterwarnings("always")
-
-# Attempt to import MPI.
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-    warnings.warn(
-        "MPI is not available and distributed computing not possible. ARTIST will run on a single machine!",
-        ImportWarning,
-    )
-
-# Set up MPI.
-if MPI is not None:
-    comm = MPI.COMM_WORLD
-    world_size = comm.size
-    rank = comm.rank
-else:
-    world_size = 1
-    rank = 0
+from scripts import utils
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
@@ -49,6 +29,31 @@ def device(request: pytest.FixtureRequest) -> torch.device:
         The device on which to initialize tensors.
     """
     return torch.device(request.param)
+
+
+@pytest.fixture
+def distributed_environment(
+    device: torch.device,
+) -> Generator[tuple[bool, int, int], None, None]:
+    """
+    Setup and destroy the distributed environment.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Yields
+    ------
+    Generator[tuple[bool, int, int], None, None]
+    ------
+
+    """
+    is_distributed, rank, world_size = utils.setup_distributed_environment(device)
+    yield is_distributed, rank, world_size
+    if is_distributed:
+        torch.distributed.barrier()
+        torch.distributed.destroy_process_group()
 
 
 @pytest.mark.parametrize(
@@ -70,6 +75,7 @@ def test_compute_bitmaps(
     expected_value: str,
     scenario_config: str,
     device: torch.device,
+    distributed_environment: tuple[bool, int, int],
 ) -> None:
     """
     Compute the resulting flux density distribution (bitmap) for the given test case.
@@ -90,6 +96,8 @@ def test_compute_bitmaps(
         The name of the scenario to be loaded.
     device : torch.device
         The device on which to initialize tensors.
+    distributed_environment : tuple[bool, int, int]
+        Fixture to setup and destroy the process group before and after each test.
 
     Raises
     ------
@@ -98,6 +106,11 @@ def test_compute_bitmaps(
     """
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
+
+    is_distributed, rank, world_size = distributed_environment
+
+    if device.type == "cuda":
+        torch.cuda.set_device(rank % torch.cuda.device_count())
 
     # Load the scenario.
     with h5py.File(
@@ -115,8 +128,9 @@ def test_compute_bitmaps(
     )
 
     # Create raytracer - currently only possible for one heliostat.
+    # TODO foind out if a bigger batch size runs faster?
     raytracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=10
+        scenario=scenario, world_size=world_size, rank=rank, batch_size=100
     )
 
     # Perform heliostat-based raytracing.
@@ -124,9 +138,11 @@ def test_compute_bitmaps(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    # Apply all-reduce if MPI is used.
-    if MPI is not None:
-        final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
+    if is_distributed:
+        final_bitmap = torch.distributed.all_reduce(
+            final_bitmap, op=torch.distributed.ReduceOp.SUM
+        )
+
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
     if rank == 0:
