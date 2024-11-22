@@ -1,7 +1,6 @@
 """Tests loading a heliostat surface from STRAL data and performing ray tracing."""
 
 import pathlib
-from typing import Generator
 
 import h5py
 import pytest
@@ -10,7 +9,6 @@ import torch
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
-from scripts import utils
 
 
 @pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
@@ -31,38 +29,13 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     return torch.device(request.param)
 
 
-@pytest.fixture
-def distributed_environment(
-    device: torch.device,
-) -> Generator[tuple[bool, int, int], None, None]:
-    """
-    Setup and destroy the distributed environment.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Yields
-    ------
-    Generator[tuple[bool, int, int], None, None]
-    ------
-
-    """
-    is_distributed, rank, world_size = utils.setup_distributed_environment(device)
-    yield is_distributed, rank, world_size
-    if is_distributed:
-        torch.distributed.barrier()
-        torch.distributed.destroy_process_group()
-
-
 @pytest.mark.parametrize(
     "incident_ray_direction, expected_value, scenario_config",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario_stral"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario_stral"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario_stral"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario_stral"),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "individual_south",
@@ -75,7 +48,6 @@ def test_compute_bitmaps(
     expected_value: str,
     scenario_config: str,
     device: torch.device,
-    distributed_environment: tuple[bool, int, int],
 ) -> None:
     """
     Compute the resulting flux density distribution (bitmap) for the given test case.
@@ -107,11 +79,6 @@ def test_compute_bitmaps(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    is_distributed, rank, world_size = distributed_environment
-
-    if device.type == "cuda":
-        torch.cuda.set_device(rank % torch.cuda.device_count())
-
     # Load the scenario.
     with h5py.File(
         pathlib.Path(ARTIST_ROOT) / "tests/data" / f"{scenario_config}.h5", "r"
@@ -127,10 +94,9 @@ def test_compute_bitmaps(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    # Create raytracer - currently only possible for one heliostat.
-    # TODO foind out if a bigger batch size runs faster?
+    # Create raytracer
     raytracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=100
+        scenario=scenario
     )
 
     # Perform heliostat-based raytracing.
@@ -138,18 +104,12 @@ def test_compute_bitmaps(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    if is_distributed:
-        final_bitmap = torch.distributed.all_reduce(
-            final_bitmap, op=torch.distributed.ReduceOp.SUM
-        )
-
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
-    if rank == 0:
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_bitmaps_integration"
-            / f"{expected_value}_{device.type}.pt"
-        )
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
-        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_bitmaps_integration"
+        / f"{expected_value}_{device.type}.pt"
+    )
+    expected = torch.load(expected_path, map_location=device, weights_only=True)
+    torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
