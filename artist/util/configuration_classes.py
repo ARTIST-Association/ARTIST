@@ -5,6 +5,125 @@ import torch
 from artist.util import config_dictionary
 
 
+class TargetAreaConfig:
+    """
+    Store the target area configuration parameters.
+
+    Attributes
+    ----------
+    target_area_key : str
+        Name of the target area.
+    target_area_type : str
+        The type of the target area surface, e.g., planar.
+    center : torch.Tensor
+        The position of the target area's center.
+    normal_vector : torch.Tensor
+        The normal vector to the target plane.
+    plane_e : float
+        The size of the target area in the east direction.
+    plane_u : float
+        The size of the target area in the up direction.
+
+    Methods
+    -------
+    create_target_area_dict()
+       Create a dictionary containing the configuration parameters for the target area.
+    """
+
+    def __init__(
+        self,
+        target_area_key: str,
+        target_area_type: str,
+        center: torch.Tensor,
+        normal_vector: torch.Tensor,
+        plane_e: float,
+        plane_u: float,
+    ) -> None:
+        """
+        Initialize the target area configuration.
+
+        Parameters
+        ----------
+        target_area_key : str
+            Name of the target area.
+        target_area_type : str
+            The type of the target area surface, e.g., planar.
+        center : torch.Tensor
+            The position of the target area's center.
+        normal_vector : torch.Tensor
+            The normal vector to the target plane.
+        plane_e : float
+            The size of the target area in the east direction.
+        plane_u : float
+            The size of the target area in the up direction.
+        """
+        self.target_area_key = target_area_key
+        self.target_area_type = target_area_type
+        self.center = center
+        self.normal_vector = normal_vector
+        self.plane_e = plane_e
+        self.plane_u = plane_u
+
+    def create_target_area_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the target area.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the target area.
+        """
+        target_area_dict = {
+            config_dictionary.target_area_type: self.target_area_type,
+            config_dictionary.target_area_center: self.center,
+            config_dictionary.target_area_normal_vector: self.normal_vector,
+            config_dictionary.target_area_plane_e: self.plane_e,
+            config_dictionary.target_area_plane_u: self.plane_u,
+        }
+
+        return target_area_dict
+
+class TargetAreaListConfig:
+    """
+    Store the target area list configuration parameters.
+
+    Attributes
+    ----------
+    target_area_list : list[TargetAreaConfig]
+        A list of target area configurations to be included in the scenario.
+
+    Methods
+    -------
+    create_target_area_list_dict()
+       Create a dictionary containing the configuration parameters for the list of target areas.
+    """
+
+    def __init__(self, target_area_list: list[TargetAreaConfig]) -> None:
+        """
+        Initialize the target area list configuration.
+
+        Parameters
+        ----------
+        target_area_list : list[TargetAreaConfig]
+            The list of target area configurations included in the scenario.
+        """
+        self.target_area_list = target_area_list
+
+    def create_target_area_list_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the list of target areas.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the list of target areas.
+        """
+        return {
+            target_area.target_area_key: target_area.create_target_area_dict()
+            for target_area in self.target_area_list
+        }
+
+
 class PowerPlantConfig:
     """
     Store the power plant configuration parameters.
@@ -13,6 +132,8 @@ class PowerPlantConfig:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant in lat, lon, alt.
+    target_areas_list : list[TargetAreaConfig]
+        The list of target areas contained in the power plant.
 
     Methods
     -------
@@ -23,6 +144,7 @@ class PowerPlantConfig:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
+        target_areas_configs_list: list[TargetAreaConfig],
     ) -> None:
         """
         Initialize the power plant configuration.
@@ -31,8 +153,11 @@ class PowerPlantConfig:
         ----------
         power_plant_position : torch.Tensor
             The position of the power plant in lat, lon, alt.
+        target_areas_list : list[TargetAreaConfig]
+            The list of target areas contained in the power plant.
         """
         self.power_plant_position = power_plant_position
+        self.target_areas_list = target_areas_configs_list
 
     def create_power_plant_dict(self) -> dict[str, Any]:
         """
@@ -43,8 +168,13 @@ class PowerPlantConfig:
         Dict[str, Any]
             A dictionary containing the configuration parameters for the power plant.
         """
+        target_areas_dict = {
+            target_area.target_area_key: target_area.create_target_area_dict()
+            for target_area in self.target_areas_list
+        }
         power_plant_dict = {
             config_dictionary.power_plant_position: self.power_plant_position,
+            config_dictionary.target_areas_key: target_areas_dict
         }
         return power_plant_dict
 
@@ -462,7 +592,7 @@ class SurfaceConfig:
 
     Attributes
     ----------
-    facets_list : list[FacetsConfiguration]
+    facets_list : list[FacetsConfig]
         The list of facets to be used for the surface of the heliostat.
 
     Methods
