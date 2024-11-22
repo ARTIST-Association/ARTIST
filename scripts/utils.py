@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from typing import Union
+from typing import Generator, Union
 import colorlog
 import torch
 
@@ -45,9 +45,9 @@ def setup_logging(name: str,
     
     return log
 
-def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> tuple[bool, int, int]:
+def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> Generator[tuple[bool, int, int], None, None]:
     """
-    Sets up the distributed environment.
+    Set up the distributed environment and destroy it in the end.
 
     Based on the available devices, the process group is initialized with the
     appropriate backend. For computation on GPUs the nccl backend optimized for
@@ -60,7 +60,7 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
     
-    Returns
+    Yields
     -------
     bool
         Distributed mode enabled or disabled.
@@ -97,4 +97,9 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
         world_size = 1
         log.info("Running in single-device mode.")
     
-    return is_distributed, rank, world_size
+    try: 
+        yield is_distributed, rank, world_size
+    finally:
+        if is_distributed:
+            torch.distributed.barrier()
+            torch.distributed.destroy_process_group()
