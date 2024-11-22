@@ -107,9 +107,9 @@ class HeliostatRayTracer:
     receiver : Receiver
         The receiver considered for raytracing.
     world_size : int
-        The world size for MPI, i.e., the overall number of processors / ranks.
+        The world size i.e., the overall number of processors / ranks.
     rank : int
-        The rank, i.e., individual process ID, for MPI.
+        The rank, i.e., individual process ID.
     number_of_surface_points : int
         The number of surface points on the heliostat.
     distortions_dataset : DistortionsDataset
@@ -151,9 +151,9 @@ class HeliostatRayTracer:
         scenario : Scenario
             The scenario used to perform raytracing.
         world_size : int
-            The world size for MPI (default: 1).
+            The world size (default: 1).
         rank : int
-            The rank for MPI (default: 0).
+            The rank (default: 0).
         batch_size : int
             The batch size used for raytracing (default: 1).
         random_seed : int
