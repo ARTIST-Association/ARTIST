@@ -105,7 +105,7 @@ class Scenario:
                 config_dictionary.coordinates
             ][()]
         )
-
+        tower_areas = 
         receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
