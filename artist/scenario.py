@@ -1,6 +1,7 @@
 import logging
 from typing import Union
 
+from artist.field.towers import Towers
 import h5py
 import torch
 from typing_extensions import Self
@@ -32,8 +33,8 @@ class Scenario:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant in lat, lon, alt.
-    receivers : ReceiverField
-        A list of receivers included in the scenario.
+    towers : Towers
+        A list of tower areas included in the scenario.
     light_sources : LightSourceArray
         A list of light sources included in the scenario.
     heliostats : HeliostatField
@@ -48,7 +49,7 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        receivers: ReceiverField,
+        towers: Towers,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -56,22 +57,23 @@ class Scenario:
         Initialize the scenario.
 
         A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
-        least one receiver, at least one light source and at least one heliostat in a heliostat field. ``ARTIST`` also
-        supports scenarios that contain multiple receivers, multiple light sources, and multiple heliostats.
+        least one tower with at least one tower area that is a receiver, at least one light source and at least one 
+        heliostat in a heliostat field. ``ARTIST`` also supports scenarios that contain multiple tower areas, multiple 
+        light sources, and multiple heliostats.
 
         Parameters
         ----------
         power_plant_position : torch.Tensor,
             The position of the power plant in lat, lon, alt.
-        receivers : ReceiverField
-            A list of receivers included in the scenario.
+        towers : Towers
+            A list of tower areas included in the scenario.
         light_sources : LightSourceArray
             A list of light sources included in the scenario.
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
-        self.receivers = receivers
+        self.towers = towers
         self.light_sources = light_sources
         self.heliostats = heliostat_field
 
@@ -100,9 +102,10 @@ class Scenario:
         device = torch.device(device)
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][
-                config_dictionary.power_plant_position
+                config_dictionary.coordinates
             ][()]
         )
+
         receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device

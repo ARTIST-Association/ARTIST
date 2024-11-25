@@ -399,5 +399,5 @@ class PAINTToSurfaceConverter:
                     canting_n=canting_n[i],
                 )
             )
-        log.info("Surface configuration based on STRAL data complete!")
+        log.info("Surface configuration based on PAINT data complete!")
         return facet_config_list
