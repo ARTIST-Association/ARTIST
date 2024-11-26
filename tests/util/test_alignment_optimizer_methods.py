@@ -1,5 +1,8 @@
 import pathlib
 
+from artist.scenario import Scenario
+from artist.util import utils
+import h5py
 import pytest
 import torch
 
@@ -26,10 +29,10 @@ def device(request: pytest.FixtureRequest) -> torch.device:
 
 
 @pytest.mark.parametrize(
-    "optimizer_method",
+    "optimizer_method", ,
     [
-        ("optimize_kinematic_parameters_with_motor_positions"),
-        ("optimize_kinematic_parameters_with_raytracing"),
+        ("motor_positions"),
+        ("raytracing"),
     ],
 )
 def test_alignment_optimizer_methods(
@@ -59,12 +62,45 @@ def test_alignment_optimizer_methods(
         pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
     )
 
-    alignment_optimizer = AlignmentOptimizer(
-        scenario_path=scenario_path,
-        calibration_properties_path=calibration_properties_path,
+    # Load the scenario.
+    with h5py.File(scenario_path, "r") as scenario_file:
+        scenario = Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+
+    # Get optimizable parameters. (This will choose all 28 kinematic parameters)
+    parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(scenario=scenario)
+
+    # Set up optimizer
+    optimizer = torch.optim.Adam(parameters, lr=0.001)
+
+    # Set up learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.1,
+        patience=20,
+        threshold=0.1,
+        threshold_mode="abs",
     )
 
-    optimized_parameters, _ = getattr(alignment_optimizer, optimizer_method)(
+    # Choose calibration data
+    calibration_properties_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_calibration_properties.json"
+
+    # Load the calibration data
+    center_calibration_image, incident_ray_direction, motor_positions = utils.get_calibration_properties(calibration_properties_path=calibration_properties_path, device=device)
+
+    # Create alignment optimizer
+    alignment_optimizer = AlignmentOptimizer(
+        scenario=scenario,
+        optimizer=optimizer,
+        scheduler=scheduler,
+    )
+
+    optimized_parameters, _ = alignment_optimizer.optimize(
+        tolerance=1e-7,
+        max_epoch=150,
+        center_calibration_image=center_calibration_image,
+        incident_ray_direction=incident_ray_direction,
+        motor_positions=motor_positions,
         device=device
     )
 
