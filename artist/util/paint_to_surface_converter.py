@@ -13,30 +13,8 @@ from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig
 from artist.util.nurbs import NURBSSurface
 
-log = logging.getLogger("PAINT-to-surface-converter")  # Get logger instance.
+log = logging.getLogger(__name__)
 """A logger for the ``PAINT`` to surface converter."""
-
-log_formatter = colorlog.ColoredFormatter(
-    fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
-    "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
-    datefmt=None,
-    reset=True,
-    log_colors={
-        "DEBUG": "cyan",
-        "INFO": "green",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "red,bg_white",
-    },
-    secondary_log_colors={},
-)
-"""A formatter for the logger for the ``PAINT`` to surface converter."""
-handler = logging.StreamHandler(stream=sys.stdout)
-"""A handler for the logger for the ``PAINT`` to surface converter."""
-handler.setFormatter(log_formatter)
-log.addHandler(handler)
-log.setLevel(logging.INFO)
-
 
 class PAINTToSurfaceConverter:
     """
