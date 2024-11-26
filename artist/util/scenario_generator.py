@@ -1,10 +1,8 @@
 import logging
 import pathlib
-import sys
 from collections.abc import MutableMapping
 from typing import Any, Generator
 
-import colorlog
 import h5py
 import torch
 
@@ -19,6 +17,7 @@ from artist.util.configuration_classes import (
 
 log = logging.getLogger(__name__)
 """A logger for the scenario_generator."""
+
 
 class ScenarioGenerator:
     """
