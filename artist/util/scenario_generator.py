@@ -17,6 +17,8 @@ from artist.util.configuration_classes import (
     ReceiverListConfig,
 )
 
+log = logging.getLogger(__name__)
+"""A logger for the scenario_generator."""
 
 class ScenarioGenerator:
     """
@@ -38,8 +40,6 @@ class ScenarioGenerator:
         The prototype configuration object,
     version : Optional[float]
         The version of the scenario generator being used.
-    log : logging.Logger
-        The logger.
 
     Methods
     -------
@@ -60,7 +60,6 @@ class ScenarioGenerator:
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
         version: float = 1.0,
-        log_level: int = logging.INFO,
     ) -> None:
         """
         Initialize the scenario generator.
@@ -86,8 +85,6 @@ class ScenarioGenerator:
             The prototype configuration object,
         version : float
             The version of the scenario generator being used (default: 1.0).
-        log_level : int
-            The log level applied to the logger (default: logging.INFO).
         """
         self.file_path = file_path
         if not self.file_path.parent.is_dir():
@@ -102,26 +99,6 @@ class ScenarioGenerator:
         self.prototype_config = prototype_config
         self.check_facet_and_point_size()
         self.version = version
-        log = logging.getLogger("scenario-generator")  # Get logger instance.
-        log_formatter = colorlog.ColoredFormatter(
-            fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
-            "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
-            datefmt=None,
-            reset=True,
-            log_colors={
-                "DEBUG": "cyan",
-                "INFO": "green",
-                "WARNING": "yellow",
-                "ERROR": "red",
-                "CRITICAL": "red,bg_white",
-            },
-            secondary_log_colors={},
-        )
-        handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setFormatter(log_formatter)
-        log.addHandler(handler)
-        log.setLevel(log_level)
-        self.log = log
 
     def check_facet_and_point_size(self):
         """
@@ -226,11 +203,11 @@ class ScenarioGenerator:
         save_name = self.file_path.parent / (self.file_path.name + ".h5")
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
-            self.log.info(f"Using scenario generator version {self.version}")
+            log.info(f"Using scenario generator version {self.version}")
             f.attrs["version"] = self.version
 
             # Include parameters for the power plant.
-            self.log.info("Including parameters for the power plant")
+            log.info("Including parameters for the power plant")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.power_plant_key,
@@ -240,7 +217,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the receivers.
-            self.log.info("Including parameters for the receivers")
+            log.info("Including parameters for the receivers")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.receiver_key,
@@ -250,7 +227,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the light sources.
-            self.log.info("Including parameters for the light sources")
+            log.info("Including parameters for the light sources")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.light_source_key,
@@ -260,7 +237,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the prototype.
-            self.log.info("Including parameters for the prototype")
+            log.info("Including parameters for the prototype")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.prototype_key,
@@ -270,7 +247,7 @@ class ScenarioGenerator:
             )
 
             # Include heliostat parameters.
-            self.log.info("Including parameters for the heliostats")
+            log.info("Including parameters for the heliostats")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.heliostat_key,
