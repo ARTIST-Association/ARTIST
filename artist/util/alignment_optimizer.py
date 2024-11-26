@@ -1,18 +1,17 @@
-import json
 import logging
-import pathlib
-import sys
-from typing import Union
+from typing import Optional, Union
 
-import colorlog
-import h5py
 import torch
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler, ReduceLROnPlateau
 
 from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import utils
 
+log = logging.getLogger(__name__)
+"""A logger for the alignment optimizer."""
 
 class AlignmentOptimizer:
     """
@@ -20,76 +19,114 @@ class AlignmentOptimizer:
 
     Attributes
     ----------
-    log : logging.Logger
-        Logger used to display optimization progress.
-    scenario_path : pathlib.Path
-        The path to the scenario h5 file.
-    calibration_properties_path : pathlib.Path
-        The path to the calibration properties json file.
+    scenario : Scenario
+        The scenario.
+    optimizer : Optimizer
+        The optimizer.
+    scheduler : Union[_LRScheduler, ReduceLROnPlateau]
+        The learning rate scheduler.
 
     Methods
     -------
-    optimize_kinematic_parameters_with_motor_positions()
+    optimize()
+        Optimize the kinematic parameters.
+    _optimize_kinematic_parameters_with_motor_positions()
         Optimize the kinematic parameters using the motor positions.
-    optimize_kinematic_parameters_with_raytracing()
+    _optimize_kinematic_parameters_with_raytracing()
         Optimize the kinematic parameters using raytracing (slower).
     """
-
     def __init__(
         self,
-        scenario_path: pathlib.Path,
-        calibration_properties_path: pathlib.Path,
-        log_level: int = logging.INFO,
+        scenario: Scenario,
+        optimizer: Optimizer,
+        scheduler: Union[_LRScheduler, ReduceLROnPlateau],
     ) -> None:
         """
         Initialize the alignment optimizer.
 
-        The alignment optimizer optimizes all 28 Parameters of the rigid body kinematics.
-        These parameters include the 18 kinematic deviations parameters as well as 5 actuator
+        The alignment optimizer optimizes parameters of the rigid body kinematics.
+        These parameters can include the 18 kinematic deviations parameters as well as 5 actuator
         parameters for each actuator.
 
         Parameters
         ----------
-        log : logging.Logger
-            Logger used to display optimization progress.
-        scenario_path : pathlib.Path
-            The path to the scenario h5 file.
-        calibration_properties_path : pathlib.Path
-            The path to the calibration properties json file.
+        scenario : Scenario
+            The scenario.
+        optimizer : Optimizer
+            The optimizer.
+        scheduler : Union[_LRScheduler, ReduceLROnPlateau]
+            The learning rate scheduler.
         """
-        log = logging.getLogger("alignment-optimizer")
-        log_formatter = colorlog.ColoredFormatter(
-            fmt="[%(cyan)s%(asctime)s%(reset)s][%(blue)s%(name)s%(reset)s]"
-            "[%(log_color)s%(levelname)s%(reset)s] - %(message)s",
-            datefmt=None,
-            reset=True,
-            log_colors={
-                "DEBUG": "cyan",
-                "INFO": "green",
-                "WARNING": "yellow",
-                "ERROR": "red",
-                "CRITICAL": "red,bg_white",
-            },
-            secondary_log_colors={},
-        )
-        handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setFormatter(log_formatter)
-        log.addHandler(handler)
-        log.setLevel(log_level)
-        self.log = log
+        log.info("Create alignment optimizer")
+        self.scenario = scenario
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
-        self.scenario_path = scenario_path
-        self.calibration_properties_path = calibration_properties_path
+    def optimize(self,
+                 tolerance: float,
+                 max_epoch: int,
+                 center_calibration_image: torch.Tensor,
+                 incident_ray_direction: torch.Tensor,
+                 motor_positions: Optional[torch.Tensor] = None,
+                 device: Union[torch.device, str] = "cuda"
+    ) -> tuple[list[torch.Tensor], Scenario]:
+        """
+        Optimize the kinematic parameters.
 
-    def optimize_kinematic_parameters_with_motor_positions(
+        Parameters
+        ----------
+        tolerance : float
+            The optimzer tolerance.
+        max_epoch : int
+            The maximum number of optimization epochs.
+        center_calibration_image: torch.Tensor
+            The center of the calibration flux density.
+        incident_ray_direction: torch.Tensor
+            The incident ray direction specified in the calibration.
+        motor_positions: Optional[torch.Tensor]
+            The motor positions specified in the calibration (default is None).
+        device: Union[torch.device, str] = "cuda"
+            The device on which to initialize tensors (default is cuda).
+        
+        Returns
+        -------
+        list[torch.Tensor]
+            The list of optimized kinematic parameters.
+        Scenario
+            The scenario with aligned heliostat and optimized kinematic parameters.
+        """
+        log.info("Start alignment optimization")
+        device = torch.device(device)
+
+        if motor_positions is not None:
+            optimized_parameters, self.scenario = self._optimize_kinematic_parameters_with_motor_positions(
+                tolerance,
+                max_epoch,
+                center_calibration_image=center_calibration_image,
+                incident_ray_direction=incident_ray_direction,
+                motor_positions=motor_positions,
+                device=device
+            )
+        else:
+            optimized_parameters, self.scenario = self._optimize_kinematic_parameters_with_raytracing(
+                tolerance,
+                max_epoch,
+                center_calibration_image=center_calibration_image,
+                incident_ray_direction=incident_ray_direction,
+                device=device
+            )
+        log.info("Alignment optimized.")
+        return optimized_parameters, self.scenario
+
+            
+    def _optimize_kinematic_parameters_with_motor_positions(
         self,
-        tolerance: float = 1e-7,
-        max_epoch: int = 150,
-        initial_learning_rate: float = 0.001,
-        scheduler_factor: float = 0.1,
-        scheduler_patience: int = 20,
-        scheduler_threshold: float = 0.1,
-        device: Union[torch.device, str] = "cuda",
+        tolerance: float,
+        max_epoch: int,
+        center_calibration_image: torch.Tensor,
+        incident_ray_direction: torch.Tensor,
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda"
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
         Optimize the kinematic parameters using the motor positions.
@@ -100,17 +137,15 @@ class AlignmentOptimizer:
         Parameters
         ----------
         tolerance : float
-            The tolerance indicating when to stop optimizing (default: 1e-7).
+            The optimzer tolerance.
         max_epoch : int
-            Maximum number of epochs for the optimizer (default: 150).
-        initial_learning_rate : float
-            The initial learning rate of the optimizer (default: 0.001).
-        scheduler_factor : float
-            Factor by which the learning rate will be reduced (default: 0.1).
-        scheduler_patience : int
-            The number of allowed epochs with no improvement after which the learning rate will be reduced (default: 20).
-        scheduler_threshold : float
-            The scheduler threshold (default: 0.1).
+            The maximum number of optimization epochs.
+        center_calibration_image: torch.Tensor
+            The center of the calibration flux density.
+        incident_ray_direction: torch.Tensor
+            The incident ray direction specified in the calibration.
+        motor_positions: torch.Tensor
+            The motor positions specified in the calibration.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
 
@@ -121,150 +156,13 @@ class AlignmentOptimizer:
         Scenario
             The scenario with aligned heliostat and optimized kinematic parameters.
         """
-        # Load the scenario.
-        with h5py.File(self.scenario_path, "r") as config_h5:
-            scenario = Scenario.load_scenario_from_hdf5(
-                scenario_file=config_h5, device=device
-            )
-
-        # Load the calibration data
-        with open(self.calibration_properties_path, "r") as file:
-            calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    calibration_dict["focal_spot"]["UTIS"],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                scenario.power_plant_position,
-                device=device,
-            )
-            center_calibration_image = utils.convert_3d_points_to_4d_format(
-                center_calibration_image, device=device
-            )
-            sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-            sun_elevation = torch.tensor(
-                calibration_dict["Sun_elevation"], device=device
-            )
-            incident_ray_direction = utils.convert_3d_direction_to_4d_format(
-                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
-                device=device,
-            )
-            motor_positions = torch.tensor(
-                [
-                    calibration_dict["motor_position"]["Axis1MotorPosition"],
-                    calibration_dict["motor_position"]["Axis2MotorPosition"],
-                ],
-                device=device,
-            )
-
-        # Set up optimizer
-        parameters_list = [
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_u,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .increment,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .initial_stroke_length,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .offset,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .radius,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .phi_0,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .increment,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .initial_stroke_length,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .offset,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .radius,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .phi_0,
-        ]
-
-        for parameter in parameters_list:
-            if parameter is not None:
-                parameter.requires_grad_()
-
-        optimizer = torch.optim.Adam(parameters_list, lr=initial_learning_rate)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=scheduler_factor,
-            patience=scheduler_patience,
-            threshold=scheduler_threshold,
-            threshold_mode="abs",
-        )
-
+        log.info("Alignment optimization with motor positions.")
+        device = torch.device(device)
         loss = torch.inf
         epoch = 0
 
         preferred_reflection_direction_calibration = (
-            center_calibration_image - scenario.heliostats.heliostat_list[0].position
+            center_calibration_image - self.scenario.heliostats.heliostat_list[0].position
         )
         preferred_reflection_direction_calibration = (
             preferred_reflection_direction_calibration
@@ -272,7 +170,7 @@ class AlignmentOptimizer:
         )
 
         while loss > tolerance and epoch <= max_epoch:
-            orientation = scenario.heliostats.heliostat_list[
+            orientation = self.scenario.heliostats.heliostat_list[
                 0
             ].get_orientation_from_motor_positions(
                 motor_positions=motor_positions, device=device
@@ -282,7 +180,7 @@ class AlignmentOptimizer:
                 -incident_ray_direction, orientation[0:4, 2]
             )
 
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             loss = (
                 (
@@ -294,35 +192,30 @@ class AlignmentOptimizer:
             )
             loss.backward()
 
-            optimizer.step()
-            scheduler.step(loss)
-
-            self.log.info(
-                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, normal: {preferred_reflection_direction}",
-            )
+            self.optimizer.step()
+            self.scheduler.step(loss)
+            
+            if epoch in [max_epoch // 4, 2 * (max_epoch // 4), 3 * (max_epoch // 4)]:
+                log.info(
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                )
 
             epoch += 1
 
-        self.log.info(
-            f"parameters: {parameters_list}",
-        )
-
         # Align heliostat, reason: scenario will be ready to use for raytracing.
         # can be removed if we decide to only return the optimized paramters.
-        scenario.heliostats.heliostat_list[0].set_aligned_surface_with_motor_positions(
+        self.scenario.heliostats.heliostat_list[0].set_aligned_surface_with_motor_positions(
             motor_positions=motor_positions.to(device), device=device
         )
 
-        return parameters_list, scenario
+        return self.optimizer.param_groups[0]["params"], self.scenario
 
-    def optimize_kinematic_parameters_with_raytracing(
+    def _optimize_kinematic_parameters_with_raytracing(
         self,
-        tolerance: float = 0.05,
-        max_epoch: int = 20,
-        initial_learning_rate: float = 0.001,
-        scheduler_factor: float = 0.1,
-        scheduler_patience: int = 7,
-        scheduler_threshold: float = 0.5,
+        tolerance: float,
+        max_epoch: int,
+        center_calibration_image: torch.Tensor,
+        incident_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
@@ -335,17 +228,13 @@ class AlignmentOptimizer:
         Parameters
         ----------
         tolerance : float
-            The tolerance indicating when to stop optimizing (default: 0.05).
+            The optimzer tolerance.
         max_epoch : int
-            Maximum number of epochs for the optimizer (default: 20).
-        initial_learning_rate : float
-            The initial learning rate of the optimizer (default: 0.001).
-        scheduler_factor : float
-            Factor by which the learning rate will be reduced (default: 0.1).
-        scheduler_patience : int
-            The number of allowed epochs with no improvement after which the learning rate will be reduced (default: 7).
-        scheduler_threshold : float
-            The scheduler threshold (default: 0.5).
+            The maximum number of optimization epochs.
+        center_calibration_image: torch.Tensor
+            The center of the calibration flux density.
+        incident_ray_direction: torch.Tensor
+            The incident ray direction specified in the calibration.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
 
@@ -356,186 +245,50 @@ class AlignmentOptimizer:
         Scenario
             The scenario with aligned heliostat and optimized kinematic parameters.
         """
-        # Load the scenario.
-        with h5py.File(self.scenario_path, "r") as config_h5:
-            scenario = Scenario.load_scenario_from_hdf5(
-                scenario_file=config_h5, device=device
-            )
-            target_center = scenario.receivers.receiver_list[
-                0
-            ].position_center.requires_grad_()
-            plane_e = scenario.receivers.receiver_list[0].plane_e
-            plane_u = scenario.receivers.receiver_list[0].plane_u
-
-        # Load the calibration data.
-        with open(self.calibration_properties_path, "r") as file:
-            calibration_dict = json.load(file)
-            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    calibration_dict["focal_spot"]["UTIS"],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                scenario.power_plant_position,
-                device=device,
-            )
-            center_calibration_image = utils.convert_3d_points_to_4d_format(
-                center_calibration_image, device=device
-            ).requires_grad_()
-            sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-            sun_elevation = torch.tensor(
-                calibration_dict["Sun_elevation"], device=device
-            )
-            incident_ray_direction = utils.convert_3d_direction_to_4d_format(
-                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
-                device=device,
-            )
-
-        # Set up optimizer
-        parameters_list = [
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.first_joint_tilt_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.second_joint_tilt_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_translation_u,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_e,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_n,
-            scenario.heliostats.heliostat_list[
-                0
-            ].kinematic.deviation_parameters.concentrator_tilt_u,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .increment,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .initial_stroke_length,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .offset,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .radius,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[0]
-            .phi_0,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .increment,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .initial_stroke_length,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .offset,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .radius,
-            scenario.heliostats.heliostat_list[0]
-            .kinematic.actuators.actuator_list[1]
-            .phi_0,
-        ]
-
-        for parameter in parameters_list:
-            if parameter is not None:
-                parameter.requires_grad_()
-
-        optimizer = torch.optim.Adam(parameters_list, lr=initial_learning_rate)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=scheduler_factor,
-            patience=scheduler_patience,
-            threshold=scheduler_threshold,
-            threshold_mode="abs",
-        )
-
+        log.info("Alignment optimization with raytracing.")
+        device = torch.device(device)
         loss = torch.inf
         epoch = 0
 
         while loss > tolerance and epoch <= max_epoch:
+            
             # Align heliostat
-            scenario.heliostats.heliostat_list[
+            self.scenario.heliostats.heliostat_list[
                 0
             ].set_aligned_surface_with_incident_ray_direction(
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
             # Create raytracer
-            raytracer = HeliostatRayTracer(scenario=scenario)
+            raytracer = HeliostatRayTracer(scenario=self.scenario)
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
             )
+            
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
             center = utils.get_center_of_mass(
                 torch.flip(final_bitmap.T, dims=(0, 1)),
-                target_center=target_center,
-                plane_e=plane_e,
-                plane_u=plane_u,
+                target_center=self.scenario.receivers.receiver_list[0].position_center,
+                plane_e=self.scenario.receivers.receiver_list[0].plane_e,
+                plane_u=self.scenario.receivers.receiver_list[0].plane_u,
                 device=device,
             )
 
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             loss = (center - center_calibration_image).abs().mean()
             loss.backward()
 
-            optimizer.step()
-            scheduler.step(loss)
+            self.optimizer.step()
+            self.scheduler.step(loss)
 
-            self.log.info(
-                f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}, center of mass: {center}",
-            )
+            if epoch in [max_epoch // 4, 2 * (max_epoch // 4), 3 * (max_epoch // 4)]:
+                log.info(
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                )
 
             epoch += 1
 
-        self.log.info(
-            f"parameters: {parameters_list}",
-        )
-
-        return parameters_list, scenario
+        return self.optimizer.param_groups[0]["params"], self.scenario
