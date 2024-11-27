@@ -2,7 +2,7 @@ import json
 import pathlib
 from typing import Any, Union
 
-#from artist.scenario import Scenario
+# from artist.scenario import Scenario
 import torch
 
 from artist.util import config_dictionary
@@ -451,8 +451,11 @@ def get_center_of_mass(
 
     return center_coordinates
 
+
 # The type hint for scenario should be Scenario, but Scenario cannot be imported due to circular imports.
-def get_rigid_body_kinematic_parameters_from_scenario(scenario: Any) -> list[torch.Tensor]:
+def get_rigid_body_kinematic_parameters_from_scenario(
+    scenario: Any,
+) -> list[torch.Tensor]:
     """
     Extract all kinematic deviation parameters and actuator parameters from a scenario.
 
@@ -460,41 +463,97 @@ def get_rigid_body_kinematic_parameters_from_scenario(scenario: Any) -> list[tor
     ----------
     scenario : Scenario
         The scenario from which to extract the kinematic parameters.
-    
+
     Returns
     -------
     list[torch.Tensor]
         The kinematic parameters from the scenario (requires_grad is True).
     """
     parameters_list = [
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_u,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_u,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_u,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_u,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_u,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_e,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_n,
-        scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_u,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].increment,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].initial_stroke_length,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].offset,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].radius,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].phi_0,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].increment,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].initial_stroke_length,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].offset,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].radius,
-        scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].phi_0,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_translation_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_translation_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_translation_u,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_tilt_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_tilt_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.first_joint_tilt_u,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_translation_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_translation_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_translation_u,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_tilt_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_tilt_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.second_joint_tilt_u,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_translation_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_translation_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_translation_u,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_tilt_e,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_tilt_n,
+        scenario.heliostats.heliostat_list[
+            0
+        ].kinematic.deviation_parameters.concentrator_tilt_u,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[0]
+        .increment,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[0]
+        .initial_stroke_length,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[0]
+        .offset,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[0]
+        .radius,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[0]
+        .phi_0,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[1]
+        .increment,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[1]
+        .initial_stroke_length,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[1]
+        .offset,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[1]
+        .radius,
+        scenario.heliostats.heliostat_list[0]
+        .kinematic.actuators.actuator_list[1]
+        .phi_0,
     ]
     for parameter in parameters_list:
         if parameter is not None:
@@ -502,10 +561,12 @@ def get_rigid_body_kinematic_parameters_from_scenario(scenario: Any) -> list[tor
 
     return parameters_list
 
+
 # The type hint for scenario should be Scenario, but Scenario cannot be imported due to circular imports.
-def get_calibration_properties(calibration_properties_path: pathlib.Path,
-                               scenario: Any,
-                               device: Union[torch.device, str] = "cuda"
+def get_calibration_properties(
+    calibration_properties_path: pathlib.Path,
+    scenario: Any,
+    device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Get the calibration properties.
@@ -518,7 +579,7 @@ def get_calibration_properties(calibration_properties_path: pathlib.Path,
         The given scenario.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Returns
     -------
     torch.Tensor
@@ -543,9 +604,7 @@ def get_calibration_properties(calibration_properties_path: pathlib.Path,
             center_calibration_image, device=device
         )
         sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-        sun_elevation = torch.tensor(
-            calibration_dict["Sun_elevation"], device=device
-        )
+        sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
         incident_ray_direction = convert_3d_direction_to_4d_format(
             azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
             device=device,
@@ -557,5 +616,5 @@ def get_calibration_properties(calibration_properties_path: pathlib.Path,
             ],
             device=device,
         )
-    
+
     return center_calibration_image, incident_ray_direction, motor_positions

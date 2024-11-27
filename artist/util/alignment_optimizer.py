@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 import torch
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler, ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, _LRScheduler
 
 from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
@@ -12,6 +12,7 @@ from artist.util import utils
 
 log = logging.getLogger(__name__)
 """A logger for the alignment optimizer."""
+
 
 class AlignmentOptimizer:
     """
@@ -35,6 +36,7 @@ class AlignmentOptimizer:
     _optimize_kinematic_parameters_with_raytracing()
         Optimize the kinematic parameters using raytracing (slower).
     """
+
     def __init__(
         self,
         scenario: Scenario,
@@ -62,13 +64,14 @@ class AlignmentOptimizer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-    def optimize(self,
-                 tolerance: float,
-                 max_epoch: int,
-                 center_calibration_image: torch.Tensor,
-                 incident_ray_direction: torch.Tensor,
-                 motor_positions: Optional[torch.Tensor] = None,
-                 device: Union[torch.device, str] = "cuda"
+    def optimize(
+        self,
+        tolerance: float,
+        max_epoch: int,
+        center_calibration_image: torch.Tensor,
+        incident_ray_direction: torch.Tensor,
+        motor_positions: Optional[torch.Tensor] = None,
+        device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
         Optimize the kinematic parameters.
@@ -87,7 +90,7 @@ class AlignmentOptimizer:
             The motor positions specified in the calibration (default is None).
         device: Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
-        
+
         Returns
         -------
         list[torch.Tensor]
@@ -99,26 +102,29 @@ class AlignmentOptimizer:
         device = torch.device(device)
 
         if motor_positions is not None:
-            optimized_parameters, self.scenario = self._optimize_kinematic_parameters_with_motor_positions(
-                tolerance,
-                max_epoch,
-                center_calibration_image=center_calibration_image,
-                incident_ray_direction=incident_ray_direction,
-                motor_positions=motor_positions,
-                device=device
+            optimized_parameters, self.scenario = (
+                self._optimize_kinematic_parameters_with_motor_positions(
+                    tolerance,
+                    max_epoch,
+                    center_calibration_image=center_calibration_image,
+                    incident_ray_direction=incident_ray_direction,
+                    motor_positions=motor_positions,
+                    device=device,
+                )
             )
         else:
-            optimized_parameters, self.scenario = self._optimize_kinematic_parameters_with_raytracing(
-                tolerance,
-                max_epoch,
-                center_calibration_image=center_calibration_image,
-                incident_ray_direction=incident_ray_direction,
-                device=device
+            optimized_parameters, self.scenario = (
+                self._optimize_kinematic_parameters_with_raytracing(
+                    tolerance,
+                    max_epoch,
+                    center_calibration_image=center_calibration_image,
+                    incident_ray_direction=incident_ray_direction,
+                    device=device,
+                )
             )
         log.info("Alignment optimized.")
         return optimized_parameters, self.scenario
 
-            
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
         tolerance: float,
@@ -126,7 +132,7 @@ class AlignmentOptimizer:
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda"
+        device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
         Optimize the kinematic parameters using the motor positions.
@@ -162,7 +168,8 @@ class AlignmentOptimizer:
         epoch = 0
 
         preferred_reflection_direction_calibration = (
-            center_calibration_image - self.scenario.heliostats.heliostat_list[0].position
+            center_calibration_image
+            - self.scenario.heliostats.heliostat_list[0].position
         )
         preferred_reflection_direction_calibration = (
             preferred_reflection_direction_calibration
@@ -194,7 +201,7 @@ class AlignmentOptimizer:
 
             self.optimizer.step()
             self.scheduler.step(loss)
-            
+
             if epoch in [max_epoch // 4, 2 * (max_epoch // 4), 3 * (max_epoch // 4)]:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
@@ -204,7 +211,9 @@ class AlignmentOptimizer:
 
         # Align heliostat, reason: scenario will be ready to use for raytracing.
         # can be removed if we decide to only return the optimized paramters.
-        self.scenario.heliostats.heliostat_list[0].set_aligned_surface_with_motor_positions(
+        self.scenario.heliostats.heliostat_list[
+            0
+        ].set_aligned_surface_with_motor_positions(
             motor_positions=motor_positions.to(device), device=device
         )
 
@@ -251,7 +260,6 @@ class AlignmentOptimizer:
         epoch = 0
 
         while loss > tolerance and epoch <= max_epoch:
-            
             # Align heliostat
             self.scenario.heliostats.heliostat_list[
                 0
@@ -265,7 +273,7 @@ class AlignmentOptimizer:
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
             )
-            
+
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
             center = utils.get_center_of_mass(

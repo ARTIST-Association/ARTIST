@@ -23,6 +23,7 @@ from artist.util.configuration_classes import (
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
 
+
 class Scenario:
     """
     Define a scenario loaded by ARTIST.
