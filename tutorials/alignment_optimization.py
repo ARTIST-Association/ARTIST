@@ -8,6 +8,15 @@ from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
+
+# Set up logger
+set_logger_config()
+
+# Set the device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be used for this tutorial!
 use_pre_generated_scenario = True
@@ -19,12 +28,6 @@ if use_pre_generated_scenario:
         pathlib.Path(ARTIST_ROOT)
         / "tutorials/data/test_scenario_alignment_optimization.h5"
     )
-
-# Set up logger
-set_logger_config()
-
-# Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_path, "r") as scenario_file:
