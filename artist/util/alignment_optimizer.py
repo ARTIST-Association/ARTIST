@@ -26,6 +26,14 @@ class AlignmentOptimizer:
         The optimizer.
     scheduler : Union[_LRScheduler, ReduceLROnPlateau]
         The learning rate scheduler.
+    world_size : int
+        The world size i.e., the overall number of processors / ranks (default: 1).
+    rank : int
+        The rank, i.e., individual process ID (default: 0).
+    batch_size : int
+        The batch size used for raytracing (default: 100).
+    is_distributed : bool
+        Distributed mode enabled or disabled. (default: False)
 
     Methods
     -------
@@ -42,6 +50,10 @@ class AlignmentOptimizer:
         scenario: Scenario,
         optimizer: Optimizer,
         scheduler: Union[_LRScheduler, ReduceLROnPlateau],
+        world_size: int = 1,
+        rank: int = 0,
+        batch_size: int = 100,
+        is_distributed: bool = False
     ) -> None:
         """
         Initialize the alignment optimizer.
@@ -58,11 +70,24 @@ class AlignmentOptimizer:
             The optimizer.
         scheduler : Union[_LRScheduler, ReduceLROnPlateau]
             The learning rate scheduler.
+        world_size : int
+            The world size i.e., the overall number of processors / ranks (default: 1).
+        rank : int
+            The rank, i.e., individual process ID (default: 0).
+        batch_size : int
+            The batch size used for raytracing (default: 100).
+        is_distributed : bool
+            Distributed mode enabled or disabled. (default: False)
+
         """
         log.info("Create alignment optimizer")
         self.scenario = scenario
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.world_size = world_size
+        self.rank = rank
+        self.batch_size = batch_size
+        self.is_distributed = is_distributed
 
     def optimize(
         self,
@@ -226,10 +251,6 @@ class AlignmentOptimizer:
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
-        world_size: int = 1,
-        rank: int = 0,
-        batch_size: int = 100,
-        is_distributed: bool = False
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
         Optimize the kinematic parameters using raytracing.
@@ -250,15 +271,6 @@ class AlignmentOptimizer:
             The incident ray direction specified in the calibration.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
-        world_size : int
-            The world size i.e., the overall number of processors / ranks (default: 1).
-        rank : int
-            The rank, i.e., individual process ID (default: 0).
-        batch_size : int
-            The batch size used for raytracing (default: 100).
-        is_distributed : bool
-            Distributed mode enabled or disabled. (default: False)
-
 
         Returns
         -------
@@ -281,13 +293,13 @@ class AlignmentOptimizer:
             )
 
             # Create raytracer
-            raytracer = HeliostatRayTracer(scenario=self.scenario, world_size=world_size, rank=rank, batch_size=batch_size)
+            raytracer = HeliostatRayTracer(scenario=self.scenario, world_size=self.world_size, rank=self.rank, batch_size=self.batch_size)
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
-            if is_distributed:
+            if self.is_distributed:
                 final_bitmap = torch.distributed.all_reduce(
                     final_bitmap, op=torch.distributed.ReduceOp.SUM
                 )
