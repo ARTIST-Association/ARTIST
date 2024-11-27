@@ -1,10 +1,8 @@
 import logging
 import pathlib
-import sys
 from collections.abc import MutableMapping
 from typing import Any, Generator
 
-import colorlog
 import h5py
 import torch
 
@@ -19,6 +17,7 @@ from artist.util.configuration_classes import (
 
 log = logging.getLogger(__name__)
 """A logger for the scenario_generator."""
+
 
 class ScenarioGenerator:
     """
@@ -199,7 +198,7 @@ class ScenarioGenerator:
 
     def generate_scenario(self) -> None:
         """Generate the scenario according to the given parameters."""
-        self.log.info(f"Generating a scenario saved to: {self.file_path}")
+        log.info(f"Generating a scenario saved to: {self.file_path}")
         save_name = self.file_path.parent / (self.file_path.name + ".h5")
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.

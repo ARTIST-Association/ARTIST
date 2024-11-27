@@ -1,10 +1,8 @@
 import logging
 import pathlib
 import struct
-import sys
 from typing import Union
 
-import colorlog
 import torch
 
 from artist.util import config_dictionary, utils
@@ -13,6 +11,7 @@ from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger(__name__)
 """A logger for the ``STRAL`` to surface converter."""
+
 
 class StralToSurfaceConverter:
     """

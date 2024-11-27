@@ -1,10 +1,8 @@
 import json
 import logging
 import pathlib
-import sys
 from typing import List, Union
 
-import colorlog
 import h5py
 import numpy
 import torch
@@ -15,6 +13,7 @@ from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger(__name__)
 """A logger for the ``PAINT`` to surface converter."""
+
 
 class PAINTToSurfaceConverter:
     """
