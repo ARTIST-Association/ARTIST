@@ -1,7 +1,7 @@
 import pathlib
 
 from artist.scenario import Scenario
-from artist.util import utils
+from artist.util import set_logger_config, utils
 import h5py
 import pytest
 import torch
@@ -9,6 +9,8 @@ import torch
 from artist import ARTIST_ROOT
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
+# Set up logger
+set_logger_config()
 
 @pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
@@ -27,28 +29,67 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     """
     return torch.device(request.param)
 
-
 @pytest.mark.parametrize(
-    "optimizer_method", ,
+    "optimizer_method, scenario_name, calibration_file, tolerance, max_epoch, initial_lr, lr_factor, lr_patience, lr_threshold",
     [
-        ("motor_positions"),
-        ("raytracing"),
-    ],
+        ("use_motor_positions",
+         "test_scenario_paint",
+         "calibration_properties",
+         1e-7,
+         150,
+         0.001,
+         0.1,
+         20,
+         0.1), 
+        ("use_raytracing",
+         "test_scenario_paint",
+         "calibration_properties",
+         1e-7,
+         27,
+         0.0002,
+         0.1,
+         18,
+         0.1),
+    ]
 )
 def test_alignment_optimizer_methods(
     optimizer_method: str,
-    device: torch.Tensor,
+    scenario_name: str,
+    calibration_file: str,
+    tolerance: float,
+    max_epoch: int,
+    initial_lr: float,
+    lr_factor: float,
+    lr_patience: int,
+    lr_threshold: float,
+    device: torch.device,
 ) -> None:
     """
-    Test that the alignment optimizer is working as desired.
+    Test the alignemnt optimization methods.
 
     Parameters
     ----------
     optimizer_method : str
-        Defines the optimization method.
+        The name of the optimizer method.
+    scenario_name : str
+        The name of the test scenario.
+    calibration_file : str
+        The file containing calibration data.
+    tolerance : float
+        Tolerance for the optimizer.
+    max_epoch : int
+        The maximum amount of epochs for the optimization loop.
+    initial_lr : float
+        The initial learning rate.
+    lr_factor : float
+        The scheduler factor.
+    lr_patience : int
+        The scheduler patience.
+    lr_threshold : float
+        The scheduler threshold.
     device : torch.device
         The device on which to initialize tensors.
-
+    
     Raises
     ------
     AssertionError
@@ -57,36 +98,24 @@ def test_alignment_optimizer_methods(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scenario_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint.h5"
-    calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
-    )
-
-    # Load the scenario.
+    scenario_path = pathlib.Path(ARTIST_ROOT) / f"tests/data/{scenario_name}.h5"
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+    optimizable_parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(scenario=scenario)
 
-    # Get optimizable parameters. (This will choose all 28 kinematic parameters)
-    parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(scenario=scenario)
-
-    # Set up optimizer
-    optimizer = torch.optim.Adam(parameters, lr=0.001)
-
-    # Set up learning rate scheduler
+    optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="min",
-        factor=0.1,
-        patience=20,
-        threshold=0.1,
+        factor=lr_factor,
+        patience=lr_patience,
+        threshold=lr_threshold,
         threshold_mode="abs",
     )
 
-    # Choose calibration data
-    calibration_properties_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_calibration_properties.json"
-
     # Load the calibration data
-    center_calibration_image, incident_ray_direction, motor_positions = utils.get_calibration_properties(calibration_properties_path=calibration_properties_path, device=device)
+    calibration_properties_path = pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
+    center_calibration_image, incident_ray_direction, motor_positions = utils.get_calibration_properties(calibration_properties_path=calibration_properties_path, scenario=scenario, device=device)
 
     # Create alignment optimizer
     alignment_optimizer = AlignmentOptimizer(
@@ -95,15 +124,18 @@ def test_alignment_optimizer_methods(
         scheduler=scheduler,
     )
 
+    if optimizer_method == "use_raytracing":
+        motor_positions = None
+
     optimized_parameters, _ = alignment_optimizer.optimize(
-        tolerance=1e-7,
-        max_epoch=150,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
         center_calibration_image=center_calibration_image,
         incident_ray_direction=incident_ray_direction,
         motor_positions=motor_positions,
         device=device
     )
-
+    
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_optimized_alignment_parameters"
