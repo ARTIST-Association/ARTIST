@@ -1,10 +1,12 @@
 import pathlib
+
+import h5py
+import torch
+
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
-import h5py
-import torch
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -29,10 +31,7 @@ scenario_path = (
     pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
 )
 if use_pre_generated_scenario:
-    scenario_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_stral.h5"
-    )
+    scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_scenario_stral.h5"
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:
@@ -43,15 +42,16 @@ with h5py.File(scenario_path) as scenario_file:
 incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
 # Align heliostat.
-scenario.heliostats.heliostat_list[
-    0
-].set_aligned_surface_with_incident_ray_direction(
+scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
     incident_ray_direction=incident_ray_direction, device=device
 )
 
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=scenario, world_size=world_size, rank=rank, batch_size=100,
+    scenario=scenario,
+    world_size=world_size,
+    rank=rank,
+    batch_size=100,
 )
 
 # Perform heliostat-based raytracing.

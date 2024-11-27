@@ -1,10 +1,12 @@
 import pathlib
+
+import h5py
+import torch
+
 from artist import ARTIST_ROOT
 from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
-import h5py
-import torch
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -89,7 +91,7 @@ alignment_optimizer = AlignmentOptimizer(
     world_size=world_size,
     rank=rank,
     batch_size=1000,
-    is_distributed=is_distributed
+    is_distributed=is_distributed,
 )
 
 optimized_parameters, optimized_scenario = alignment_optimizer.optimize(

@@ -1,9 +1,11 @@
 import pathlib
+
+import h5py
+import torch
+
 from artist import ARTIST_ROOT
 from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
-import h5py
-import torch
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -30,17 +32,14 @@ scenario_path = (
 )
 if use_pre_generated_scenario:
     scenario_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/four_heliostat_scenario.h5"
+        pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario.h5"
     )
 
 # Load the scenario.
 with h5py.File(scenario_path, "r") as config_h5:
-    scenario = Scenario.load_scenario_from_hdf5(
-        scenario_file=config_h5, device=device
-    )
+    scenario = Scenario.load_scenario_from_hdf5(scenario_file=config_h5, device=device)
 
-# Choose calibration data for all heliostats   
+# Choose calibration data for all heliostats
 calibration_properties_paths = []
 calibration_properties_path = (
     pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
