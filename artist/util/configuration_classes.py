@@ -1325,8 +1325,8 @@ class PrototypeConfig:
         The prototype for the surface.
     kinematic_prototype : KinematicPrototypeConfig
         The prototype for the kinematic.
-    actuator_prototype : ActuatorPrototypeConfig
-        The prototype for the actuator.
+    actuators_prototype : ActuatorPrototypeConfig
+        The prototype for the actuators.
 
     Methods
     -------
@@ -1338,7 +1338,7 @@ class PrototypeConfig:
         self,
         surface_prototype: SurfacePrototypeConfig,
         kinematic_prototype: KinematicPrototypeConfig,
-        actuator_prototype: ActuatorPrototypeConfig,
+        actuators_prototype: ActuatorPrototypeConfig,
     ) -> None:
         """
         Initialize the prototype configuration.
@@ -1349,12 +1349,12 @@ class PrototypeConfig:
             The prototype for the surface.
         kinematic_prototype : KinematicPrototypeConfig
             The prototype for the kinematic.
-        actuator_prototype : ActuatorPrototypeConfig
-            The prototype for the actuator.
+        actuators_prototype : ActuatorPrototypeConfig
+            The prototype for the actuators.
         """
         self.surface_prototype = surface_prototype
         self.kinematic_prototype = kinematic_prototype
-        self.actuator_prototype = actuator_prototype
+        self.actuators_prototype = actuators_prototype
 
     def create_prototype_dict(self) -> dict[str, Any]:
         """
@@ -1368,7 +1368,7 @@ class PrototypeConfig:
         return {
             config_dictionary.surface_prototype_key: self.surface_prototype.create_surface_dict(),
             config_dictionary.kinematic_prototype_key: self.kinematic_prototype.create_kinematic_dict(),
-            config_dictionary.actuator_prototype_key: self.actuator_prototype.create_actuator_list_dict(),
+            config_dictionary.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
         }
 
 
@@ -1390,8 +1390,8 @@ class HeliostatConfig:
         An optional individual surface config for the heliostat.
     heliostat_kinematic : KinematicConfig, optional
         An optional kinematic config for the heliostat.
-    heliostat_actuator : ActuatorListConfig, optional
-        An optional actuator config for the heliostat.
+    heliostat_actuators : ActuatorListConfig, optional
+        An optional actuator config list for the heliostat.
 
     Methods
     -------
@@ -1407,7 +1407,7 @@ class HeliostatConfig:
         heliostat_aim_point: torch.Tensor,
         heliostat_surface: Optional[SurfaceConfig] = None,
         heliostat_kinematic: Optional[KinematicConfig] = None,
-        heliostat_actuator: Optional[ActuatorListConfig] = None,
+        heliostat_actuators: Optional[ActuatorListConfig] = None,
     ) -> None:
         """
         Initialize the single heliostat configuration.
@@ -1426,8 +1426,8 @@ class HeliostatConfig:
             An optional individual surface config for the heliostat.
         heliostat_kinematic : KinematicConfig, optional
             An optional kinematic config for the heliostat.
-        heliostat_actuator : ActuatorListConfig, optional
-            An optional actuator config for the heliostat.
+        heliostat_actuators : ActuatorListConfig, optional
+            An optional actuator config list for the heliostat.
         """
         self.heliostat_key = heliostat_key
         self.heliostat_id = heliostat_id
@@ -1435,7 +1435,7 @@ class HeliostatConfig:
         self.heliostat_aim_point = heliostat_aim_point
         self.heliostat_surface = heliostat_surface
         self.heliostat_kinematic = heliostat_kinematic
-        self.heliostat_actuator = heliostat_actuator
+        self.heliostat_actuators = heliostat_actuators
 
     def create_heliostat_config_dict(self) -> dict[str, Any]:
         """
@@ -1463,10 +1463,10 @@ class HeliostatConfig:
                     config_dictionary.heliostat_kinematic_key: self.heliostat_kinematic.create_kinematic_dict()
                 }
             )
-        if self.heliostat_actuator is not None:
+        if self.heliostat_actuators is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_actuator_key: self.heliostat_actuator.create_actuator_list_dict()
+                    config_dictionary.heliostat_actuators_key: self.heliostat_actuators.create_actuator_list_dict()
                 }
             )
 
