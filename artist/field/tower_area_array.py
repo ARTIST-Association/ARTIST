@@ -1,4 +1,5 @@
 from logging import log
+import logging
 from typing import Union
 from artist.util import config_dictionary
 from typing_extensions import Self
@@ -6,7 +7,10 @@ from artist.field.tower_area import TowerArea
 import h5py
 import torch
 
-class Towers(torch.nn.Module):
+log = logging.getLogger(__name__)
+"""A logger for the tower area array."""
+
+class TowerAreaArray(torch.nn.Module):
     """
     Wrap the list of tower areas as a ``torch.nn.Module`` to allow gradient calculation.
 
@@ -23,16 +27,17 @@ class Towers(torch.nn.Module):
 
     def __init__(self, tower_area_list: list[TowerArea]):
         """
-        Initialize the Towers.
+        Initialize the tower areas included in the scenario.
 
-        The towers consist of one or more tower areas. The towers are positioned in front of the heliostats.
+        The tower area array consist of one or more tower areas. 
+        The tower areas are positioned in front of the heliostats.
 
         Parameters
         ----------
-        receiver_list : List[Receiver]
-            The list of receivers included in the scenario.
+        tower_area_list : List[TowerArea]
+            The list of tower areas included in the scenario.
         """
-        super(Towers, self).__init__()
+        super(TowerAreaArray, self).__init__()
         self.tower_area_list = tower_area_list
 
     @classmethod
@@ -40,7 +45,7 @@ class Towers(torch.nn.Module):
         cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
     ) -> Self:
         """
-        Load towers from an HDF5 file.
+        Load tower areas from an HDF5 file.
 
         Parameters
         ----------
@@ -51,10 +56,10 @@ class Towers(torch.nn.Module):
 
         Returns
         -------
-        Towers
-            The towers loaded from the HDF5 file.
+        TowerAreaArray
+            The tower areas loaded from the HDF5 file.
         """
-        log.info("Loading the towers from an HDF5 file.")
+        log.info("Loading the tower areas from an HDF5 file.")
         device = torch.device(device)
         tower_areas = [
             TowerArea.from_hdf5(
