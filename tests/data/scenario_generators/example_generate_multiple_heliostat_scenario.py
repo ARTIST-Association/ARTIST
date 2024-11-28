@@ -55,7 +55,7 @@ with open(tower_file, "r") as file:
     tower_areas_configs_list = []
     
     for tower_area_key in tower_areas:
-        area_type = tower_dict[tower_area_key][config_dictionary.tower_area_type]
+        area_type = tower_dict[tower_area_key]["type"]
 
         center_lat_lon = torch.tensor(
             tower_dict[tower_area_key][config_dictionary.coordinates]["center"],
