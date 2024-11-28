@@ -55,7 +55,7 @@ with open(tower_file, "r") as file:
     tower_areas_configs_list = []
     
     for tower_area_key in tower_areas:
-        area_type = tower_dict[tower_area_key]["type"]
+        area_type = tower_dict[tower_area_key][config_dictionary.paint_tower_area_type]
 
         center_lat_lon = torch.tensor(
             tower_dict[tower_area_key][config_dictionary.coordinates]["center"],
@@ -134,6 +134,7 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=power_plant_position
 )
 
+# Include the tower area configurations.
 tower_area_list_config = TowerAreaListConfig(tower_areas_configs_list)
 
 # Include the light source configuration.
@@ -160,12 +161,12 @@ actuator_prototype = None,
 heliostats_aimpoint_area = "receiver"
 heliostats_aimpoint = next(tower_area for tower_area in tower_areas_configs_list if tower_area.tower_area_key == heliostats_aimpoint_area).center
 
-heliostat_ids = ["AA31", "AA35", "AA39", "AB38"]
+heliostats = ["AA31", "AA35", "AA39", "AB38"]
 heliostat_list = []
 
-for id in heliostat_ids:
-    heliostat_file = pathlib.Path(ARTIST_ROOT) / f"tests/data/download_test/{id}/heliostat_properties.json"
-    deflectometry_file = pathlib.Path(ARTIST_ROOT) / f"tests/data/download_test/{id}/deflectometry.h5"
+for id, name in enumerate(heliostats):
+    heliostat_file = pathlib.Path(ARTIST_ROOT) / f"tests/data/download_test/{name}/heliostat_properties.json"
+    deflectometry_file = pathlib.Path(ARTIST_ROOT) / f"tests/data/download_test/{name}/deflectometry.h5"
 
     with open(heliostat_file, "r") as file:
         heliostat_dict = json.load(file)
@@ -205,21 +206,21 @@ for id in heliostat_ids:
     
     # Include kinematic deviations.
     kinematic_deviations = KinematicDeviations(
-        first_joint_translation_e=torch.tensor(0.0, device=device),
-        first_joint_translation_n=torch.tensor(0.0, device=device),
-        first_joint_translation_u=torch.tensor(0.0, device=device),
+        first_joint_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_e], device=device),
+        first_joint_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_n], device=device),
+        first_joint_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_u], device=device),
         first_joint_tilt_e=torch.tensor(0.0, device=device),
         first_joint_tilt_n=torch.tensor(0.0, device=device),
         first_joint_tilt_u=torch.tensor(0.0, device=device),
-        second_joint_translation_e=torch.tensor(0.0, device=device),
-        second_joint_translation_n=torch.tensor(0.0, device=device),
-        second_joint_translation_u=torch.tensor(0.315, device=device),
+        second_joint_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_e], device=device),
+        second_joint_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_n], device=device),
+        second_joint_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_u], device=device),
         second_joint_tilt_e=torch.tensor(0.0, device=device),
         second_joint_tilt_n=torch.tensor(0.0, device=device),
         second_joint_tilt_u=torch.tensor(0.0, device=device),
-        concentrator_translation_e=torch.tensor(0.0, device=device),
-        concentrator_translation_n=torch.tensor(-0.17755, device=device),
-        concentrator_translation_u=torch.tensor(-0.4045, device=device),
+        concentrator_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_e], device=device),
+        concentrator_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_n], device=device),
+        concentrator_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_u], device=device),
         concentrator_tilt_e=torch.tensor(0.0, device=device),
         concentrator_tilt_n=torch.tensor(0.0, device=device),
         concentrator_tilt_u=torch.tensor(0.0, device=device),
@@ -239,36 +240,36 @@ for id in heliostat_ids:
         kinematic_deviations=kinematic_deviations,
     )
 
-    # Include actuator parameters for both actuators.
+    # Include actuator parameters for actuator 1.
+    index = 1
     actuator1_parameters = ActuatorParameters(
-        increment=torch.tensor(heliostat_dict["kinematic_properties"]["PulseRatio_axis_1"], device=device),
-        initial_stroke_length=torch.tensor(heliostat_dict["kinematic_properties"]["B_axis_1"], device=device),
-        offset=torch.tensor(heliostat_dict["kinematic_properties"]["C_axis_1"], device=device),
-        radius=torch.tensor(heliostat_dict["kinematic_properties"]["D_axis_1"], device=device),
-        phi_0=torch.tensor(heliostat_dict["kinematic_properties"]["AngleK_axis_1"], device=device),
+        increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
+        initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
+        offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
+        radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_radius}_{index}"], device=device),
+        phi_0=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_phi_0}_{index}"], device=device),
     )
-
-    actuator2_parameters = ActuatorParameters(
-        increment=torch.tensor(heliostat_dict["kinematic_properties"]["PulseRatio_axis_2"], device=device),
-        initial_stroke_length=torch.tensor(heliostat_dict["kinematic_properties"]["B_axis_2"], device=device),
-        offset=torch.tensor(heliostat_dict["kinematic_properties"]["C_axis_2"], device=device),
-        radius=torch.tensor(heliostat_dict["kinematic_properties"]["D_axis_2"], device=device),
-        phi_0=torch.tensor(heliostat_dict["kinematic_properties"]["AngleK_axis_2"], device=device),
-    )
-
-    # Include an ideal actuator.
+    # Include an actuator 1.
     actuator1 = ActuatorConfig(
-        actuator_key="actuator1",
-        actuator_type=heliostat_dict["kinematic_properties"]["Type_axis_1"].lower(),
-        actuator_clockwise=heliostat_dict["kinematic_properties"]["Reversed_axis_1"],
+        actuator_key=f"{config_dictionary.actuator_key}_{index}",
+        actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
+        actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_clockwise}_{index}"],
         actuator_parameters=actuator1_parameters,
     )
 
-    # Include a linear actuator.
+    index = 2
+    actuator2_parameters = ActuatorParameters(
+        increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
+        initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
+        offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
+        radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_radius}_{index}"], device=device),
+        phi_0=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_phi_0}_{index}"], device=device),
+    )
+    # Include an actuator 1.
     actuator2 = ActuatorConfig(
-        actuator_key="actuator2",
-        actuator_type=heliostat_dict["kinematic_properties"]["Type_axis_2"].lower(),
-        actuator_clockwise=heliostat_dict["kinematic_properties"]["Reversed_axis_1"],
+        actuator_key=f"{config_dictionary.actuator_key}_{index}",
+        actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
+        actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_clockwise}_{index}"],
         actuator_parameters=actuator2_parameters,
     )
 
@@ -280,14 +281,14 @@ for id in heliostat_ids:
         actuator_list=actuator_list
     )
 
-    if id == "AA39":
+    if name == "AA39":
         surface_prototype = surface_config
         actuator_prototype = actuator_list_config
         kinematic_prototype = kinematic_config
 
     # Include the configuration for a heliostat.
     heliostat = HeliostatConfig(
-        heliostat_key=id,
+        heliostat_key=name,
         heliostat_id=id,
         heliostat_position=heliostat_position,
         heliostat_aim_point=heliostats_aimpoint,
