@@ -1,10 +1,13 @@
 from logging import log
+import logging
 from typing import Optional, Union
 from typing_extensions import Self
 from artist.util import config_dictionary
 import h5py
 import torch
 
+log = logging.getLogger(__name__)
+"""A logger for the tower area."""
 
 class TowerArea(torch.nn.Module):
     """
@@ -35,6 +38,7 @@ class TowerArea(torch.nn.Module):
 
     def __init__(
         self,
+        name: str,
         area_type: str,
         center: torch.Tensor,
         normal_vector: torch.Tensor,
@@ -57,6 +61,8 @@ class TowerArea(torch.nn.Module):
 
         Parameters
         ----------
+        name : str
+            The name of the tower area.
         area_type : str
             The type of the tower area, e.g., planar.
         center : torch.Tensor
@@ -73,6 +79,7 @@ class TowerArea(torch.nn.Module):
             The curvature of the tower area, in the up direction.
         """
         super().__init__()
+        self.name = name
         self.area_type = area_type
         self.center = center
         self.normal_vector = normal_vector
@@ -108,7 +115,7 @@ class TowerArea(torch.nn.Module):
         if area_name:
             log.info(f"Loading {area_name} from an HDF5 file.")
         device = torch.device(device)
-        tower_area_type = config_file[config_dictionary.tower_area_type][()].decode("utf-8")
+        area_type = config_file[config_dictionary.tower_area_type][()].decode("utf-8")
         center = torch.tensor(
             config_file[config_dictionary.tower_area_center][()],
             dtype=torch.float,
@@ -135,8 +142,9 @@ class TowerArea(torch.nn.Module):
             log.warning("No curvature in the up direction set for the tower area!")
 
         return cls(
-            tower_area_type=tower_area_type,
-            position_center=center,
+            name=area_name,
+            area_type=area_type,
+            center=center,
             normal_vector=normal_vector,
             plane_e=plane_e,
             plane_u=plane_u,
