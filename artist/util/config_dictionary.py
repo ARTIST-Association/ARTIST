@@ -1,12 +1,18 @@
+# TODO rename variables in paint or artist. I would prefer to rename paint.
+# For example:
+# In artist scenarios the heliostat_kinematic_key is "kinematic"
+# In paint the key is named "kinematic_properties"
+# once they are renamed, remove all entries starting paint_... 
+
+
 power_plant_properties_key = "power_plant_properties"
 """Key to access the power plant properties."""
 coordinates = "coordinates"
 """Key to access the coordinates."""
 
-"""Key to access the power plant position."""
-
 tower_area_type = "area_type"
 """Key to access the tower area type."""
+paint_tower_area_type = "type"
 tower_area_center = "center"
 """Key to access the tower area center position."""
 tower_area_normal_vector = "normal_vector"
@@ -137,6 +143,8 @@ kinematic_offsets_key = "kinematic_offsets"
 kinematic_deviations_key = "kinematic_deviations"
 """Key to access the kinematic deviations."""
 
+actuator_key = "actuator"
+"""Key to access a single actuator."""
 actuator_clockwise = "clockwise"
 """Key to access the actuator clockwise parameter."""
 actuator_increment = "actuator_increment"
@@ -149,6 +157,13 @@ actuator_radius = "radius"
 """Key to access the actuator radius parameter."""
 actuator_phi_0 = "phi_0"
 """Key to access the actuator phi 0 parameter."""
+paint_actuator_type = "Type_axis" # also make this lower case in paint?
+paint_clockwise = "Reversed_axis"
+paint_increment = "PulseRatio_axis"
+paint_initial_stroke_length = "B_axis"
+paint_offset = "C_axis"
+paint_radius = "D_axis"
+paint_phi_0 = "AngleK_axis"
 
 actuator_type_key = "actuator_type"
 """Key to access the actuator type."""
@@ -163,7 +178,7 @@ surface_prototype_key = "surface"
 """Key to access the surface prototype."""
 kinematic_prototype_key = "kinematic"
 """Key to access the kinematic prototype."""
-actuator_prototype_key = "actuator"
+actuators_prototype_key = "actuators"
 """Key to access the actuator prototype."""
 
 heliostat_id = "id"
@@ -176,7 +191,8 @@ heliostat_surface_key = "surface"
 """Key to access the heliostat surface."""
 heliostat_kinematic_key = "kinematic"
 """Key to access the heliostat kinematic."""
-heliostat_actuator_key = "actuators"
+paint_heliostat_kinematic_key = "kinematic_properties"
+heliostat_actuators_key = "actuators"
 """Key to access the heliostat actuators."""
 
 prototype_key = "prototypes"
