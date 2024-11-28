@@ -6,7 +6,6 @@ from typing import Any, Generator
 
 import colorlog
 import h5py
-from scripts import utils
 import torch
 
 from artist.util import config_dictionary
@@ -19,6 +18,9 @@ from artist.util.configuration_classes import (
     TowerAreaListConfig,
 )
 
+
+log = logging.getLogger(__name__)
+"""A logger for the scenario generator."""
 
 class ScenarioGenerator:
     """
@@ -62,7 +64,6 @@ class ScenarioGenerator:
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
         version: float = 1.0,
-        log_level: int = logging.INFO,
     ) -> None:
         """
         Initialize the scenario generator.
@@ -88,8 +89,6 @@ class ScenarioGenerator:
             The prototype configuration object,
         version : float
             The version of the scenario generator being used (default: 1.0).
-        log_level : int
-            The log level applied to the logger (default: logging.INFO).
         """
         self.file_path = file_path
         if not self.file_path.parent.is_dir():
@@ -105,7 +104,6 @@ class ScenarioGenerator:
         self.check_facet_and_point_size()
         self.version = version
 
-        self.log = utils.setup_logging("scenario-generator")
 
 
     def check_facet_and_point_size(self):
@@ -207,15 +205,15 @@ class ScenarioGenerator:
 
     def generate_scenario(self) -> None:
         """Generate the scenario according to the given parameters."""
-        self.log.info(f"Generating a scenario saved to: {self.file_path}")
+        log.info(f"Generating a scenario saved to: {self.file_path}")
         save_name = self.file_path.parent / (self.file_path.name + ".h5")
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
-            self.log.info(f"Using scenario generator version {self.version}")
+            log.info(f"Using scenario generator version {self.version}")
             f.attrs["version"] = self.version
 
             # Include parameters for the power plant.
-            self.log.info("Including parameters for the power plant")
+            log.info("Including parameters for the power plant")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.power_plant_key,
@@ -225,7 +223,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the tower areas.
-            self.log.info("Including parameters for the towers")
+            log.info("Including parameters for the towers")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.tower_areas_key,
@@ -235,7 +233,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the light sources.
-            self.log.info("Including parameters for the light sources")
+            log.info("Including parameters for the light sources")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.light_source_key,
@@ -245,7 +243,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the prototype.
-            self.log.info("Including parameters for the prototype")
+            log.info("Including parameters for the prototype")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.prototype_key,
@@ -255,7 +253,7 @@ class ScenarioGenerator:
             )
 
             # Include heliostat parameters.
-            self.log.info("Including parameters for the heliostats")
+            log.info("Including parameters for the heliostats")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.heliostat_key,
