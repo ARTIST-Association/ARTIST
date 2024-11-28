@@ -169,7 +169,7 @@ class Heliostat(torch.nn.Module):
             A heliostat initialized from an HDF5 file.
         """
         if heliostat_name:
-            log.info(f"Loading {heliostat_name} from an HDF5 file.")
+            log.info(f"Loading heliostat {heliostat_name} from an HDF5 file.")
         device = torch.device(device)
         heliostat_id = int(config_file[config_dictionary.heliostat_id][()])
         position = torch.tensor(
@@ -182,11 +182,12 @@ class Heliostat(torch.nn.Module):
             dtype=torch.float,
             device=device,
         )
-
+        #TODO: change str "control_points_e" back to config_dictionary.facet_control_points when updated scenario exists.
+        config_dictionary.facet_control_points = "control_points_e"
         if config_dictionary.heliostat_surface_key in config_file.keys():
             facets_list = [
                 FacetConfig(
-                    facet_key="",
+                    facet_key=facet,
                     control_points=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
@@ -261,374 +262,394 @@ class Heliostat(torch.nn.Module):
             surface_config = prototype_surface
 
         if config_dictionary.heliostat_kinematic_key in config_file.keys():
-            kinematic_initial_orientation_offset_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
-            )
-            kinematic_initial_orientation_offset_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            kinematic_initial_orientation_offset_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            if kinematic_initial_orientation_offset_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_e} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
+            if config_dictionary.kinematic_offsets_key in config_file[config_dictionary.heliostat_kinematic_key].keys():
+                kinematic_initial_orientation_offset_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
                 )
-            if kinematic_initial_orientation_offset_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
+                kinematic_initial_orientation_offset_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
                 )
-            if kinematic_initial_orientation_offset_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_u} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
+                kinematic_initial_orientation_offset_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
                 )
-            kinematic_offsets = KinematicOffsets(
-                kinematic_initial_orientation_offset_e=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_e[()],
-                        dtype=torch.float,
-                        device=device,
+                if kinematic_initial_orientation_offset_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_e} for "
+                        f"{heliostat_name} set."
+                        f"Using default values!"
                     )
-                    if kinematic_initial_orientation_offset_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_n=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_n[()],
-                        dtype=torch.float,
-                        device=device,
+                if kinematic_initial_orientation_offset_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n} for "
+                        f"{heliostat_name} set."
+                        f"Using default values!"
                     )
-                    if kinematic_initial_orientation_offset_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_u=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_u[()],
-                        dtype=torch.float,
-                        device=device,
+                if kinematic_initial_orientation_offset_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_u} for "
+                        f"{heliostat_name} set."
+                        f"Using default values!"
                     )
-                    if kinematic_initial_orientation_offset_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-            )
+                kinematic_offsets = KinematicOffsets(
+                    kinematic_initial_orientation_offset_e=(
+                        torch.tensor(
+                            kinematic_initial_orientation_offset_e[()],
+                            dtype=torch.float,
+                            device=device,
+                        )
+                        if kinematic_initial_orientation_offset_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    kinematic_initial_orientation_offset_n=(
+                        torch.tensor(
+                            kinematic_initial_orientation_offset_n[()],
+                            dtype=torch.float,
+                            device=device,
+                        )
+                        if kinematic_initial_orientation_offset_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    kinematic_initial_orientation_offset_u=(
+                        torch.tensor(
+                            kinematic_initial_orientation_offset_u[()],
+                            dtype=torch.float,
+                            device=device,
+                        )
+                        if kinematic_initial_orientation_offset_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                )
+            else:
+                assert (
+                    prototype_kinematic.kinematic_initial_orientation_offsets is not None
+                ), "If the heliostat kinematic does not have kinematic offsets, a kinematic offset prototype must be provided!"
+                log.info(
+                    "Kinematic offsets not provided - loading a heliostat with the kinematic offset prototype."
+                )
+                kinematic_offsets = prototype_kinematic.kinematic_initial_orientation_offsets
+                
+            if config_dictionary.kinematic_deviations_key in config_file[config_dictionary.heliostat_kinematic_key].keys():
+                first_joint_translation_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_translation_e}"
+                )
+                first_joint_translation_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_translation_n}"
+                )
+                first_joint_translation_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_translation_u}"
+                )
+                first_joint_tilt_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_tilt_e}"
+                )
+                first_joint_tilt_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_tilt_n}"
+                )
+                first_joint_tilt_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.first_joint_tilt_u}"
+                )
+                second_joint_translation_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_translation_e}"
+                )
+                second_joint_translation_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_translation_n}"
+                )
+                second_joint_translation_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_translation_u}"
+                )
+                second_joint_tilt_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_tilt_e}"
+                )
+                second_joint_tilt_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_tilt_n}"
+                )
+                second_joint_tilt_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.second_joint_tilt_u}"
+                )
+                concentrator_translation_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_translation_e}"
+                )
+                concentrator_translation_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_translation_n}"
+                )
+                concentrator_translation_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_translation_u}"
+                )
+                concentrator_tilt_e = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_tilt_e}"
+                )
+                concentrator_tilt_n = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_tilt_n}"
+                )
+                concentrator_tilt_u = config_file.get(
+                    f"{config_dictionary.heliostat_kinematic_key}/"
+                    f"{config_dictionary.kinematic_deviations_key}/"
+                    f"{config_dictionary.concentrator_tilt_u}"
+                )
+                if first_joint_translation_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if first_joint_translation_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if first_joint_translation_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if first_joint_tilt_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_tilt_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if first_joint_tilt_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if first_joint_tilt_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_translation_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_translation_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_translation_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_tilt_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_tilt_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if second_joint_tilt_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.second_joint_tilt_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_translation_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_translation_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_translation_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_tilt_e is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_tilt_e} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_tilt_n is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_tilt_n} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                if concentrator_tilt_u is None:
+                    log.warning(
+                        f"No individual kinematic {config_dictionary.concentrator_tilt_u} for {heliostat_name} set. "
+                        f"Using default values!"
+                    )
+                kinematic_deviations = KinematicDeviations(
+                    first_joint_translation_e=(
+                        torch.tensor(
+                            first_joint_translation_e[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_translation_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    first_joint_translation_n=(
+                        torch.tensor(
+                            first_joint_translation_n[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_translation_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    first_joint_translation_u=(
+                        torch.tensor(
+                            first_joint_translation_u[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_translation_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    first_joint_tilt_e=(
+                        torch.tensor(
+                            first_joint_tilt_e[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_tilt_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    first_joint_tilt_n=(
+                        torch.tensor(
+                            first_joint_tilt_n[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_tilt_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    first_joint_tilt_u=(
+                        torch.tensor(
+                            first_joint_tilt_u[()], dtype=torch.float, device=device
+                        )
+                        if first_joint_tilt_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_translation_e=(
+                        torch.tensor(
+                            second_joint_translation_e[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_translation_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_translation_n=(
+                        torch.tensor(
+                            second_joint_translation_n[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_translation_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_translation_u=(
+                        torch.tensor(
+                            second_joint_translation_u[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_translation_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_tilt_e=(
+                        torch.tensor(
+                            second_joint_tilt_e[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_tilt_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_tilt_n=(
+                        torch.tensor(
+                            second_joint_tilt_n[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_tilt_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    second_joint_tilt_u=(
+                        torch.tensor(
+                            second_joint_tilt_u[()], dtype=torch.float, device=device
+                        )
+                        if second_joint_tilt_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_translation_e=(
+                        torch.tensor(
+                            concentrator_translation_e[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_translation_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_translation_n=(
+                        torch.tensor(
+                            concentrator_translation_n[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_translation_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_translation_u=(
+                        torch.tensor(
+                            concentrator_translation_u[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_translation_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_tilt_e=(
+                        torch.tensor(
+                            concentrator_tilt_e[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_tilt_e
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_tilt_n=(
+                        torch.tensor(
+                            concentrator_tilt_n[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_tilt_n
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                    concentrator_tilt_u=(
+                        torch.tensor(
+                            concentrator_tilt_u[()], dtype=torch.float, device=device
+                        )
+                        if concentrator_tilt_u
+                        else torch.tensor(0.0, dtype=torch.float, device=device)
+                    ),
+                )
+            else:
+                assert (
+                    prototype_kinematic.kinematic_deviations is not None
+                ), "If the heliostat kinematic does not have kinematic devation parameters, a kinematic deviation parameter prototype must be provided!"
+                log.info(
+                    "Kinematic deviation parameters not provided - loading a heliostat with the kinematic deviation prototype."
+                )
+                kinematic_deviations = prototype_kinematic.kinematic_deviations
+             
 
-            first_joint_translation_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_translation_e}"
-            )
-            first_joint_translation_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_translation_n}"
-            )
-            first_joint_translation_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_translation_u}"
-            )
-            first_joint_tilt_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_tilt_e}"
-            )
-            first_joint_tilt_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_tilt_n}"
-            )
-            first_joint_tilt_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.first_joint_tilt_u}"
-            )
-            second_joint_translation_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_translation_e}"
-            )
-            second_joint_translation_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_translation_n}"
-            )
-            second_joint_translation_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_translation_u}"
-            )
-            second_joint_tilt_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_tilt_e}"
-            )
-            second_joint_tilt_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_tilt_n}"
-            )
-            second_joint_tilt_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.second_joint_tilt_u}"
-            )
-            concentrator_translation_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_translation_e}"
-            )
-            concentrator_translation_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_translation_n}"
-            )
-            concentrator_translation_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_translation_u}"
-            )
-            concentrator_tilt_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_tilt_e}"
-            )
-            concentrator_tilt_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_tilt_n}"
-            )
-            concentrator_tilt_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_deviations_key}/"
-                f"{config_dictionary.concentrator_tilt_u}"
-            )
-            if first_joint_translation_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if first_joint_translation_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if first_joint_translation_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if first_joint_tilt_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_tilt_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if first_joint_tilt_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if first_joint_tilt_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_translation_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_translation_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_translation_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_tilt_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_tilt_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if second_joint_tilt_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.second_joint_tilt_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_translation_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_translation_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_translation_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_tilt_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_tilt_e} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_tilt_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_tilt_n} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            if concentrator_tilt_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.concentrator_tilt_u} for {heliostat_name} set. "
-                    f"Using default values!"
-                )
-            kinematic_deviations = KinematicDeviations(
-                first_joint_translation_e=(
-                    torch.tensor(
-                        first_joint_translation_e[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_translation_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                first_joint_translation_n=(
-                    torch.tensor(
-                        first_joint_translation_n[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_translation_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                first_joint_translation_u=(
-                    torch.tensor(
-                        first_joint_translation_u[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_translation_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                first_joint_tilt_e=(
-                    torch.tensor(
-                        first_joint_tilt_e[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_tilt_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                first_joint_tilt_n=(
-                    torch.tensor(
-                        first_joint_tilt_n[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_tilt_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                first_joint_tilt_u=(
-                    torch.tensor(
-                        first_joint_tilt_u[()], dtype=torch.float, device=device
-                    )
-                    if first_joint_tilt_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_translation_e=(
-                    torch.tensor(
-                        second_joint_translation_e[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_translation_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_translation_n=(
-                    torch.tensor(
-                        second_joint_translation_n[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_translation_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_translation_u=(
-                    torch.tensor(
-                        second_joint_translation_u[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_translation_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_tilt_e=(
-                    torch.tensor(
-                        second_joint_tilt_e[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_tilt_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_tilt_n=(
-                    torch.tensor(
-                        second_joint_tilt_n[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_tilt_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                second_joint_tilt_u=(
-                    torch.tensor(
-                        second_joint_tilt_u[()], dtype=torch.float, device=device
-                    )
-                    if second_joint_tilt_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_translation_e=(
-                    torch.tensor(
-                        concentrator_translation_e[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_translation_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_translation_n=(
-                    torch.tensor(
-                        concentrator_translation_n[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_translation_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_translation_u=(
-                    torch.tensor(
-                        concentrator_translation_u[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_translation_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_tilt_e=(
-                    torch.tensor(
-                        concentrator_tilt_e[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_tilt_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_tilt_n=(
-                    torch.tensor(
-                        concentrator_tilt_n[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_tilt_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                concentrator_tilt_u=(
-                    torch.tensor(
-                        concentrator_tilt_u[()], dtype=torch.float, device=device
-                    )
-                    if concentrator_tilt_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-            )
             kinematic_config = KinematicLoadConfig(
                 kinematic_type=str(
                     config_file[config_dictionary.heliostat_kinematic_key][
@@ -647,57 +668,59 @@ class Heliostat(torch.nn.Module):
             )
             kinematic_config = prototype_kinematic
 
+        #TODO: change str "actuator" back to config_dictionary.heliostat_actuator_key when updated scenario exists.
+        config_dictionary.heliostat_actuator_key = "actuator"
         if config_dictionary.heliostat_actuator_key in config_file.keys():
             actuator_list = []
-            for ac in config_file[config_dictionary.heliostat_actuator_key].keys():
+            for actuator in config_file[config_dictionary.heliostat_actuator_key].keys():
                 increment = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_increment}"
                 )
                 initial_stroke_length = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_initial_stroke_length}"
                 )
                 offset = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_offset}"
                 )
                 radius = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_radius}"
                 )
                 phi_0 = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_phi_0}"
                 )
                 if increment is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_increment} set for {ac}. Using default values!"
+                        f"No individual {config_dictionary.actuator_increment} set for {actuator}. Using default values!"
                     )
                 if initial_stroke_length is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_initial_stroke_length} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_initial_stroke_length} set for {actuator} on "
                         f"{heliostat_name}. "
                         f"Using default values!"
                     )
                 if offset is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_offset} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_offset} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 if radius is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_radius} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_radius} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 if phi_0 is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_phi_0} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_phi_0} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 actuator_parameters = ActuatorParameters(
@@ -731,20 +754,31 @@ class Heliostat(torch.nn.Module):
                 )
                 actuator_list.append(
                     ActuatorConfig(
-                        actuator_key="",
+                        actuator_key=actuator,
                         actuator_type=str(
-                            config_file[config_dictionary.heliostat_actuator_key][ac][
+                            config_file[config_dictionary.heliostat_actuator_key][actuator][
                                 config_dictionary.actuator_type_key
                             ][()].decode("utf-8")
                         ),
                         actuator_clockwise=bool(
-                            config_file[config_dictionary.heliostat_actuator_key][ac][
+                            config_file[config_dictionary.heliostat_actuator_key][actuator][
                                 config_dictionary.actuator_clockwise
                             ][()]
                         ),
                         actuator_parameters=actuator_parameters,
                     )
                 )
+            if kinematic_config.kinematic_type == config_dictionary.rigid_body_key:
+                assert (
+                    len(actuator_list) == 2
+                ), "For the rigid body kinematic, two actuators need to be provided!"
+                log.info(
+                    "Not enough actuators provided - loading more actuator prototypes."
+                )
+                for actuator_prototype in reversed(prototype_actuator):
+                    actuator_list.append(actuator_prototype)
+                    if len(actuator_list) == 2:
+                        break  
             actuator_list_config = ActuatorListConfig(actuator_list=actuator_list)
         else:
             assert (
