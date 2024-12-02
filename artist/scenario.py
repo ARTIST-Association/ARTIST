@@ -109,8 +109,7 @@ class Scenario:
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
         )
-            
-        #TODO: change str "control_points_e" back to config_dictionary.facet_control_points when updated scenario exists.
+
         facets_list = [
             FacetConfig(
                 facet_key="",
@@ -118,7 +117,7 @@ class Scenario:
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
                     ][config_dictionary.facets_key][facet][
-                        "control_points_e"
+                        config_dictionary.facet_control_points
                     ][()],
                     dtype=torch.float,
                     device=device,
@@ -559,41 +558,39 @@ class Scenario:
         )
 
         # Create actuator prototypes.
-        #TODO: change str "actuator" back to config_dictionary.actuator_prototype_key when updated scenario exists.
-        config_dictionary.actuator_prototype_key = "actuator"
         actuator_list = []
         for actuator in scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuator_prototype_key
+            config_dictionary.actuators_prototype_key
         ].keys():
             increment = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{actuator}/"
+                f"{config_dictionary.actuators_prototype_key}/{actuator}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_increment}"
             )
             initial_stroke_length = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{actuator}/"
+                f"{config_dictionary.actuators_prototype_key}/{actuator}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_initial_stroke_length}"
             )
             offset = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{actuator}/"
+                f"{config_dictionary.actuators_prototype_key}/{actuator}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_offset}"
             )
-            radius = scenario_file.get(
+            pivot_radius = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{actuator}/"
+                f"{config_dictionary.actuators_prototype_key}/{actuator}/"
                 f"{config_dictionary.actuator_parameters_key}/"
-                f"{config_dictionary.actuator_radius}"
+                f"{config_dictionary.actuator_pivot_radius}"
             )
-            phi_0 = scenario_file.get(
+            initial_angle = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{actuator}/"
+                f"{config_dictionary.actuators_prototype_key}/{actuator}/"
                 f"{config_dictionary.actuator_parameters_key}/"
-                f"{config_dictionary.actuator_phi_0}"
+                f"{config_dictionary.actuator_initial_angle}"
             )
             if increment is None:
                 log.warning(
@@ -608,13 +605,13 @@ class Scenario:
                 log.warning(
                     f"No prototype {config_dictionary.actuator_offset} set for {actuator}. Using default values!"
                 )
-            if radius is None:
+            if pivot_radius is None:
                 log.warning(
-                    f"No prototype {config_dictionary.actuator_radius} set for {actuator}. Using default values!"
+                    f"No prototype {config_dictionary.actuator_pivot_radius} set for {actuator}. Using default values!"
                 )
-            if phi_0 is None:
+            if initial_angle is None:
                 log.warning(
-                    f"No prototype {config_dictionary.actuator_phi_0} set for {actuator}. Using default values!"
+                    f"No prototype {config_dictionary.actuator_initial_angle} set for {actuator}. Using default values!"
                 )
 
             actuator_parameters_prototype = ActuatorParameters(
@@ -635,14 +632,14 @@ class Scenario:
                     if offset
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
-                radius=(
-                    torch.tensor(radius[()], dtype=torch.float, device=device)
-                    if radius
+                pivot_radius=(
+                    torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
+                    if pivot_radius
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
-                phi_0=(
-                    torch.tensor(phi_0[()], dtype=torch.float, device=device)
-                    if phi_0
+                initial_angle=(
+                    torch.tensor(initial_angle[()], dtype=torch.float, device=device)
+                    if initial_angle
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
             )
@@ -651,12 +648,12 @@ class Scenario:
                     actuator_key="",
                     actuator_type=str(
                         scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
+                            config_dictionary.actuators_prototype_key
                         ][actuator][config_dictionary.actuator_type_key][()].decode("utf-8")
                     ),
                     actuator_clockwise=bool(
                         scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
+                            config_dictionary.actuators_prototype_key
                         ][actuator][config_dictionary.actuator_clockwise][()]
                     ),
                     actuator_parameters=actuator_parameters_prototype,
@@ -682,8 +679,8 @@ class Scenario:
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""
         return (
-            f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position}"
-            f"with {len(self.tower_areas.tower_area_list)} tower areas,"
-            f"{len(self.light_sources.light_source_list)} Light Sources,"
-            f"and {len(self.heliostats.heliostat_list)} Heliostats."
+            f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
+            f" with {len(self.tower_areas.tower_area_list)} Tower Areas,"
+            f" {len(self.light_sources.light_source_list)} Light Sources,"
+            f" and {len(self.heliostats.heliostat_list)} Heliostats."
         )
