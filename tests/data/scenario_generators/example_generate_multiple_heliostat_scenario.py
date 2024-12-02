@@ -5,7 +5,7 @@ from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -28,11 +28,17 @@ from artist.util.configuration_classes import (
 )
 from artist.util.scenario_generator2 import ScenarioGenerator
 
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
+
+# Set up logger
+set_logger_config()
+
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = (
-    pathlib.Path(ARTIST_ROOT) / "tests/data/four_heliostat_scenario"
+    pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario"
 )
 
 if not pathlib.Path(file_path).parent.is_dir():
@@ -52,7 +58,7 @@ with open(tower_file, "r") as file:
     )
     tower_areas = list(tower_dict.keys())[1:]
 
-    tower_areas_configs_list = []
+    tower_areas_config_list = []
     
     for tower_area_key in tower_areas:
         area_type = tower_dict[tower_area_key][config_dictionary.paint_tower_area_type]
@@ -127,7 +133,7 @@ with open(tower_file, "r") as file:
                                               plane_e=plane_e,
                                               plane_u=plane_u)
 
-        tower_areas_configs_list.append(tower_area_config)
+        tower_areas_config_list.append(tower_area_config)
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
@@ -135,11 +141,11 @@ power_plant_config = PowerPlantConfig(
 )
 
 # Include the tower area configurations.
-tower_area_list_config = TowerAreaListConfig(tower_areas_configs_list)
+tower_area_list_config = TowerAreaListConfig(tower_areas_config_list)
 
 # Include the light source configuration.
 light_source1_config = LightSourceConfig(
-    light_source_key="sun1",
+    light_source_key="sun_1",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -158,8 +164,10 @@ surface_prototype = None,
 kinematic_prototype = None,
 actuator_prototype = None,
 
+# Configure heliostats
+# Choose default aimpoint for heliostat
 heliostats_aimpoint_area = "receiver"
-heliostats_aimpoint = next(tower_area for tower_area in tower_areas_configs_list if tower_area.tower_area_key == heliostats_aimpoint_area).center
+heliostats_aimpoint = next(tower_area for tower_area in tower_areas_config_list if tower_area.tower_area_key == heliostats_aimpoint_area).center
 
 heliostats = ["AA31", "AA35", "AA39", "AB38"]
 heliostat_list = []
@@ -188,21 +196,21 @@ for id, name in enumerate(heliostats):
         step_size=100,
     )
 
-    facet_list = paint_converter.generate_surface_config_from_paint(
+    facets_list = paint_converter.generate_surface_config_from_paint(
         number_eval_points_e=100,
         number_eval_points_n=100,
         conversion_method=config_dictionary.convert_nurbs_from_normals,
-        number_control_points_e=10,
-        number_control_points_n=10,
+        number_control_points_e=20,
+        number_control_points_n=20,
         degree_e=3,
         degree_n=3,
         tolerance=3e-5,
-        max_epoch=400,
+        max_epoch=10000,
         initial_learning_rate=1e-3,
         device=device,
     )
 
-    surface_config = SurfaceConfig(facets_list=facet_list)
+    surface_config = SurfaceConfig(facets_list=facets_list)
     
     # Include kinematic deviations.
     kinematic_deviations = KinematicDeviations(
@@ -246,8 +254,8 @@ for id, name in enumerate(heliostats):
         increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
         initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
         offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-        radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_radius}_{index}"], device=device),
-        phi_0=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_phi_0}_{index}"], device=device),
+        pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
+        initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
     )
     # Include an actuator 1.
     actuator1 = ActuatorConfig(
@@ -262,8 +270,8 @@ for id, name in enumerate(heliostats):
         increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
         initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
         offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-        radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_radius}_{index}"], device=device),
-        phi_0=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_phi_0}_{index}"], device=device),
+        pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
+        initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
     )
     # Include an actuator 1.
     actuator2 = ActuatorConfig(
@@ -277,13 +285,14 @@ for id, name in enumerate(heliostats):
     actuator_list = [actuator1, actuator2]
 
     # Include the actuator prototype config.
-    actuator_list_config = ActuatorListConfig(
+    actuators_list_config = ActuatorListConfig(
         actuator_list=actuator_list
     )
 
+    # Choose that the prototype will be AA39 (should not be used anyways)
     if name == "AA39":
         surface_prototype = surface_config
-        actuator_prototype = actuator_list_config
+        actuators_prototype = actuators_list_config
         kinematic_prototype = kinematic_config
 
     # Include the configuration for a heliostat.
@@ -292,9 +301,9 @@ for id, name in enumerate(heliostats):
         heliostat_id=id,
         heliostat_position=heliostat_position,
         heliostat_aim_point=heliostats_aimpoint,
-        heliostat_surface = surface_config,
-        heliostat_kinematic = kinematic_config,
-        heliostat_actuator = actuator_list_config
+        heliostat_surface=surface_config,
+        heliostat_kinematic=kinematic_config,
+        heliostat_actuators=actuators_list_config
     )
 
     heliostat_list.append(heliostat)
@@ -306,7 +315,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 prototype_config = PrototypeConfig(
     surface_prototype=surface_prototype,
     kinematic_prototype=kinematic_prototype,
-    actuator_prototype=actuator_prototype,
+    actuators_prototype=actuators_prototype,
 )
 
 if __name__ == "__main__":
