@@ -14,7 +14,7 @@ torch.cuda.manual_seed(7)
 # Set up logger
 set_logger_config()
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_distributed_environment(device=device)
@@ -31,7 +31,8 @@ scenario_path = (
     pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
 )
 if use_pre_generated_scenario:
-    scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_scenario_stral.h5"
+    #scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario.h5"
+    scenario_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_heliostat_paint.h5"
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:
@@ -64,6 +65,12 @@ if is_distributed:
     )
 
 final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+
+import matplotlib.pyplot as plt
+plt.imshow(final_bitmap.cpu().detach().numpy())
+plt.savefig(pathlib.Path(ARTIST_ROOT) / f"distributed_test_new.png")
+
+
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.

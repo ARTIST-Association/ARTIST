@@ -34,7 +34,8 @@ scenario_path = (
 if use_pre_generated_scenario:
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_alignment_optimization.h5"
+        #/ "tutorials/data/test_scenario_alignment_optimization.h5"
+        / "tests/data/test_scenario_single_heliostat_paint.h5"
     )
 
 # Load the scenario.
