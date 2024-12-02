@@ -22,7 +22,7 @@ class LinearActuator(Actuator):
     offset : torch.Tensor
         The offset between the linear actuator's pivoting point and the point
         around which the actuator is allowed to pivot.
-    radius : torch.Tensor
+    pivot_radius : torch.Tensor
         The actuator's pivoting radius.
     phi_0 : torch.Tensor
         The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
@@ -48,8 +48,8 @@ class LinearActuator(Actuator):
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
         offset: torch.Tensor,
-        radius: torch.Tensor,
-        phi_0: torch.Tensor,
+        pivot_radius: torch.Tensor,
+        initial_angle: torch.Tensor,
     ) -> None:
         """
         Initialize a linear actuator.
@@ -60,8 +60,8 @@ class LinearActuator(Actuator):
         increment, which stores the information about the stroke length change per motor step, the initial stroke
         length, and an offset that describes the difference between the linear actuator's pivoting point and the
         point around which the actuator is allowed to pivot. Next, the actuator's pivoting radius is described by
-        the radius and lastly, phi_0 indicates the angle that the actuator introduces to the manipulated coordinate
-        system at the initial stroke length.
+        the pivot radius and lastly, the initial angle indicates the angle that the actuator introduces to the 
+        manipulated coordinate system at the initial stroke length.
 
         Parameters
         ----------
@@ -76,9 +76,9 @@ class LinearActuator(Actuator):
         offset : torch.Tensor
             The offset between the linear actuator's pivoting point and the point
             around which the actuator is allowed to pivot.
-        radius : torch.Tensor
+        pivot_radius : torch.Tensor
             The actuator's pivoting radius.
-        phi_0 : torch.Tensor
+        initial_angle : torch.Tensor
             The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
         super().__init__(
@@ -87,16 +87,16 @@ class LinearActuator(Actuator):
             increment,
             initial_stroke_length,
             offset,
-            radius,
-            phi_0,
+            pivot_radius,
+            initial_angle,
         )
         self.joint_number = joint_number
         self.clockwise = clockwise
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.offset = offset
-        self.radius = radius
-        self.phi_0 = phi_0
+        self.pivot_radius = pivot_radius
+        self.initial_angle = initial_angle
 
     def steps_to_phi(self, motor_position: torch.Tensor) -> torch.Tensor:
         """
@@ -113,8 +113,8 @@ class LinearActuator(Actuator):
             The calculated angle phi.
         """
         stroke_length = motor_position / self.increment + self.initial_stroke_length
-        calc_step_1 = self.offset**2 + self.radius**2 - stroke_length**2
-        calc_step_2 = 2.0 * self.offset * self.radius
+        calc_step_1 = self.offset**2 + self.pivot_radius**2 - stroke_length**2
+        calc_step_2 = 2.0 * self.offset * self.pivot_radius
         calc_step_3 = calc_step_1 / calc_step_2
         angle = torch.arccos(calc_step_3)
         return angle
@@ -142,7 +142,7 @@ class LinearActuator(Actuator):
         phi_0 = self.steps_to_phi(motor_position=torch.zeros(1, device=device))
         delta_phi = phi_0 - phi
 
-        angle = self.phi_0 + delta_phi if self.clockwise else self.phi_0 - delta_phi
+        angle = self.initial_angle + delta_phi if self.clockwise else self.initial_angle - delta_phi
         return angle
 
     def angle_to_motor_position(
@@ -164,14 +164,14 @@ class LinearActuator(Actuator):
             The motor steps.
         """
         device = torch.device(device)
-        delta_phi = angle - self.phi_0 if self.clockwise else self.phi_0 - angle
+        delta_phi = angle - self.initial_angle if self.clockwise else self.initial_angle - angle
 
         phi_0 = self.steps_to_phi(motor_position=torch.zeros(1, device=device))
         phi = phi_0 - delta_phi
 
         calc_step_3 = torch.cos(phi)
-        calc_step_2 = 2.0 * self.offset * self.radius
+        calc_step_2 = 2.0 * self.offset * self.pivot_radius
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_length = torch.sqrt(self.offset**2 + self.radius**2 - calc_step_1)
+        stroke_length = torch.sqrt(self.offset**2 + self.pivot_radius**2 - calc_step_1)
         motor_position = (stroke_length - self.initial_stroke_length) * self.increment
         return motor_position
