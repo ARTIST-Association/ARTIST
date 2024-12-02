@@ -2,7 +2,8 @@
 # For example:
 # In artist scenarios the heliostat_kinematic_key is "kinematic"
 # In paint the key is named "kinematic_properties"
-# once they are renamed, remove all entries starting paint_... 
+# For this example I would like to choose artist conventions and name it just "kinematic" because its clear that whatever follows are properties.
+# Once they are renamed, remove all entries starting with paint_... 
 
 
 power_plant_properties_key = "power_plant_properties"
@@ -153,25 +154,25 @@ actuator_initial_stroke_length = "initial_stroke_length"
 """Key to access the actuator initial stroke length parameter."""
 actuator_offset = "offset"
 """Key to access the actuator offset parameter."""
-actuator_radius = "radius"
-"""Key to access the actuator radius parameter."""
-actuator_phi_0 = "phi_0"
-"""Key to access the actuator phi 0 parameter."""
-paint_actuator_type = "Type_axis" # also make this lower case in paint?
+actuator_pivot_radius = "pivot_radius"
+"""Key to access the actuator pivot radius parameter."""
+actuator_initial_angle = "initial_angle"
+"""Key to access the actuator initial_angle parameter."""
+paint_actuator_type = "Type_axis" # also make this lower case in paint? -> linear instead of LINEAR
 paint_clockwise = "Reversed_axis"
 paint_increment = "PulseRatio_axis"
 paint_initial_stroke_length = "B_axis"
 paint_offset = "C_axis"
-paint_radius = "D_axis"
-paint_phi_0 = "AngleK_axis"
+paint_pivot_radius = "D_axis"
+paint_initial_angle = "AngleK_axis"
 
 actuator_type_key = "actuator_type"
 """Key to access the actuator type."""
 actuator_parameters_key = "actuator_parameters"
 """Key to access the actuator parameters."""
-ideal_actuator_key = "ideal_actuator"
+ideal_actuator_key = "ideal"
 """Key defining that the actuator used is an ideal actuator."""
-linear_actuator_key = "linear_actuator"
+linear_actuator_key = "linear"
 """Key defining that the actuator used is a linear actuator."""
 
 surface_prototype_key = "surface"

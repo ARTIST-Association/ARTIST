@@ -42,8 +42,6 @@ class ScenarioGenerator:
         The prototype configuration object,
     version : Optional[float]
         The version of the scenario generator being used.
-    log : logging.Logger
-        The logger.
 
     Methods
     -------

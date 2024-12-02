@@ -386,7 +386,7 @@ class PAINTToSurfaceConverter:
             )
             facet_config_list.append(
                 FacetConfig(
-                    facet_key=f"facet{i+1}",
+                    facet_key=f"facet_{i+1}",
                     control_points=nurbs_surface.control_points.detach(),
                     degree_e=nurbs_surface.degree_e,
                     degree_n=nurbs_surface.degree_n,
