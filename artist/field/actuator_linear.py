@@ -60,7 +60,7 @@ class LinearActuator(Actuator):
         increment, which stores the information about the stroke length change per motor step, the initial stroke
         length, and an offset that describes the difference between the linear actuator's pivoting point and the
         point around which the actuator is allowed to pivot. Next, the actuator's pivoting radius is described by
-        the pivot radius and lastly, the initial angle indicates the angle that the actuator introduces to the 
+        the pivot radius and lastly, the initial angle indicates the angle that the actuator introduces to the
         manipulated coordinate system at the initial stroke length.
 
         Parameters
@@ -98,12 +98,14 @@ class LinearActuator(Actuator):
         self.pivot_radius = pivot_radius
         self.initial_angle = initial_angle
 
-    def _motor_position_to_absolute_angle(self, motor_position: torch.Tensor) -> torch.Tensor:
+    def _motor_position_to_absolute_angle(
+        self, motor_position: torch.Tensor
+    ) -> torch.Tensor:
         """
         Convert motor steps into an angle using actuator geometry.
 
-        Calculate an absolute angle based solely on the motor's current position and the geometry 
-        of the actuator. This gives the angle of the actuator in a global sense. It  does not 
+        Calculate an absolute angle based solely on the motor's current position and the geometry
+        of the actuator. This gives the angle of the actuator in a global sense. It  does not
         consider the starting position of the motor.
 
         Parameters
@@ -130,7 +132,7 @@ class LinearActuator(Actuator):
         Calculate the joint angle for a given motor position.
 
         Using the absolute angle calculated with _motor_position_to_absolute_angle(), the
-        absolute angle is adjusted to be relative to an initial angle. It accounts for 
+        absolute angle is adjusted to be relative to an initial angle. It accounts for
         the initial angle and the motor's direction (clockwise or counterclockwise).
 
         Parameters
@@ -146,11 +148,19 @@ class LinearActuator(Actuator):
             The joint angle corresponding to the motor position.
         """
         device = torch.device(device)
-        absolute_angle = self._motor_position_to_absolute_angle(motor_position=motor_position)
-        absolute_initial_angle = self._motor_position_to_absolute_angle(motor_position=torch.zeros(1, device=device))
+        absolute_angle = self._motor_position_to_absolute_angle(
+            motor_position=motor_position
+        )
+        absolute_initial_angle = self._motor_position_to_absolute_angle(
+            motor_position=torch.zeros(1, device=device)
+        )
         delta_angle = absolute_initial_angle - absolute_angle
 
-        relative_angle = self.initial_angle + delta_angle if self.clockwise else self.initial_angle - delta_angle
+        relative_angle = (
+            self.initial_angle + delta_angle
+            if self.clockwise
+            else self.initial_angle - delta_angle
+        )
         return relative_angle
 
     def angle_to_motor_position(
@@ -160,7 +170,7 @@ class LinearActuator(Actuator):
         Calculate the motor position for a given angle.
 
         First the relative angular change is calculated based on the given angle.
-        Then the corresponding stroke length is determined using trigonometric 
+        Then the corresponding stroke length is determined using trigonometric
         relationships. This stroke length is converted into motor steps.
 
         Parameters
@@ -176,9 +186,13 @@ class LinearActuator(Actuator):
             The motor steps.
         """
         device = torch.device(device)
-        delta_angle = angle - self.initial_angle if self.clockwise else self.initial_angle - angle
+        delta_angle = (
+            angle - self.initial_angle if self.clockwise else self.initial_angle - angle
+        )
 
-        absolute_initial_angle = self._motor_position_to_absolute_angle(motor_position=torch.zeros(1, device=device))
+        absolute_initial_angle = self._motor_position_to_absolute_angle(
+            motor_position=torch.zeros(1, device=device)
+        )
         initial_angle = absolute_initial_angle - delta_angle
 
         calc_step_3 = torch.cos(initial_angle)
