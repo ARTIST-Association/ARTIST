@@ -29,8 +29,6 @@ class LinearActuator(Actuator):
 
     Methods
     -------
-    _motor_position_to_absolute_angle()
-        Convert motor steps into an angle using actuator geometry.
     motor_position_to_angle()
         Calculate the joint angle for a given motor position.
     angle_to_motor_position()
