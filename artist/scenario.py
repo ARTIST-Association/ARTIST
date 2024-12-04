@@ -31,7 +31,7 @@ class Scenario:
     Attributes
     ----------
     power_plant_position : torch.Tensor
-        The position of the power plant in lat, lon, alt.
+        The position of the power plant as latitude, longitude, altitude.
     receivers : ReceiverField
         A list of receivers included in the scenario.
     light_sources : LightSourceArray
@@ -62,7 +62,7 @@ class Scenario:
         Parameters
         ----------
         power_plant_position : torch.Tensor,
-            The position of the power plant in lat, lon, alt.
+            The position of the power plant as latitude, longitude, altitude.
         receivers : ReceiverField
             A list of receivers included in the scenario.
         light_sources : LightSourceArray
