@@ -13,7 +13,7 @@ from artist.util.configuration_classes import (
 )
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda:1"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
@@ -88,16 +88,16 @@ def actuator_configuration(device: torch.device) -> ActuatorListConfig:
         increment=torch.tensor(154166.666, device=device),
         initial_stroke_length=torch.tensor(0.075, device=device),
         offset=torch.tensor(0.34061, device=device),
-        radius=torch.tensor(0.3204, device=device),
-        phi_0=torch.tensor(-1.570796, device=device),
+        pivot_radius=torch.tensor(0.3204, device=device),
+        initial_angle=torch.tensor(-1.570796, device=device),
     )
 
     actuator2_parameters = ActuatorParameters(
         increment=torch.tensor(154166.666, device=device),
         initial_stroke_length=torch.tensor(0.075, device=device),
         offset=torch.tensor(0.3479, device=device),
-        radius=torch.tensor(0.309, device=device),
-        phi_0=torch.tensor(0.959931, device=device),
+        pivot_radius=torch.tensor(0.309, device=device),
+        initial_angle=torch.tensor(0.959931, device=device),
     )
     actuator1_config = ActuatorConfig(
         actuator_key="",
