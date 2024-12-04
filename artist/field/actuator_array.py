@@ -67,8 +67,8 @@ class ActuatorArray(torch.nn.Module):
                             increment=actuator_config.actuator_parameters.increment,
                             initial_stroke_length=actuator_config.actuator_parameters.initial_stroke_length,
                             offset=actuator_config.actuator_parameters.offset,
-                            radius=actuator_config.actuator_parameters.radius,
-                            phi_0=actuator_config.actuator_parameters.phi_0,
+                            pivot_radius=actuator_config.actuator_parameters.pivot_radius,
+                            initial_angle=actuator_config.actuator_parameters.initial_angle,
                         )
                     )
                 # If the actuator config does not contain actuator parameters, initialize an actuator with default
@@ -84,8 +84,8 @@ class ActuatorArray(torch.nn.Module):
                             increment=torch.tensor(0.0, device=device),
                             initial_stroke_length=torch.tensor(0.0, device=device),
                             offset=torch.tensor(0.0, device=device),
-                            radius=torch.tensor(0.0, device=device),
-                            phi_0=torch.tensor(0.0, device=device),
+                            pivot_radius=torch.tensor(0.0, device=device),
+                            initial_angle=torch.tensor(0.0, device=device),
                         )
                     )
             except KeyError:
