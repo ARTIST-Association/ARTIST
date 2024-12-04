@@ -577,17 +577,17 @@ class Scenario:
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_offset}"
             )
-            radius = scenario_file.get(
+            pivot_radius = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
                 f"{config_dictionary.actuator_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
-                f"{config_dictionary.actuator_radius}"
+                f"{config_dictionary.actuator_pivot_radius}"
             )
-            phi_0 = scenario_file.get(
+            initial_angle = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
                 f"{config_dictionary.actuator_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
-                f"{config_dictionary.actuator_phi_0}"
+                f"{config_dictionary.actuator_initial_angle}"
             )
             if increment is None:
                 log.warning(
@@ -602,13 +602,13 @@ class Scenario:
                 log.warning(
                     f"No prototype {config_dictionary.actuator_offset} set for {ac}. Using default values!"
                 )
-            if radius is None:
+            if pivot_radius is None:
                 log.warning(
-                    f"No prototype {config_dictionary.actuator_radius} set for {ac}. Using default values!"
+                    f"No prototype {config_dictionary.actuator_pivot_radius} set for {ac}. Using default values!"
                 )
-            if phi_0 is None:
+            if initial_angle is None:
                 log.warning(
-                    f"No prototype {config_dictionary.actuator_phi_0} set for {ac}. Using default values!"
+                    f"No prototype {config_dictionary.actuator_initial_angle} set for {ac}. Using default values!"
                 )
 
             actuator_parameters = ActuatorParameters(
@@ -629,14 +629,14 @@ class Scenario:
                     if offset
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
-                radius=(
-                    torch.tensor(radius[()], dtype=torch.float, device=device)
-                    if radius
+                pivot_radius=(
+                    torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
+                    if pivot_radius
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
-                phi_0=(
-                    torch.tensor(phi_0[()], dtype=torch.float, device=device)
-                    if phi_0
+                initial_angle=(
+                    torch.tensor(initial_angle[()], dtype=torch.float, device=device)
+                    if initial_angle
                     else torch.tensor(0.0, dtype=torch.float, device=device)
                 ),
             )

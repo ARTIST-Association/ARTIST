@@ -665,15 +665,15 @@ class Heliostat(torch.nn.Module):
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_offset}"
                 )
-                radius = config_file.get(
+                pivot_radius = config_file.get(
                     f"{config_dictionary.heliostat_actuator_key}/{ac}/"
                     f"{config_dictionary.actuator_parameters_key}/"
-                    f"{config_dictionary.actuator_radius}"
+                    f"{config_dictionary.actuator_pivot_radius}"
                 )
-                phi_0 = config_file.get(
+                initial_angle = config_file.get(
                     f"{config_dictionary.heliostat_actuator_key}/{ac}/"
                     f"{config_dictionary.actuator_parameters_key}/"
-                    f"{config_dictionary.actuator_phi_0}"
+                    f"{config_dictionary.actuator_initial_angle}"
                 )
                 if increment is None:
                     log.warning(
@@ -690,14 +690,14 @@ class Heliostat(torch.nn.Module):
                         f"No individual {config_dictionary.actuator_offset} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
-                if radius is None:
+                if pivot_radius is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_radius} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_pivot_radius} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
-                if phi_0 is None:
+                if initial_angle is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_phi_0} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_initial_angle} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 actuator_parameters = ActuatorParameters(
@@ -718,14 +718,14 @@ class Heliostat(torch.nn.Module):
                         if offset
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
-                    radius=(
-                        torch.tensor(radius[()], dtype=torch.float, device=device)
-                        if radius
+                    pivot_radius=(
+                        torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
+                        if pivot_radius
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
-                    phi_0=(
-                        torch.tensor(phi_0[()], dtype=torch.float, device=device)
-                        if phi_0
+                    initial_angle=(
+                        torch.tensor(initial_angle[()], dtype=torch.float, device=device)
+                        if initial_angle
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                 )
