@@ -724,7 +724,9 @@ class Heliostat(torch.nn.Module):
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     initial_angle=(
-                        torch.tensor(initial_angle[()], dtype=torch.float, device=device)
+                        torch.tensor(
+                            initial_angle[()], dtype=torch.float, device=device
+                        )
                         if initial_angle
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
@@ -838,9 +840,7 @@ class Heliostat(torch.nn.Module):
             The orientation for the given motor position.
         """
         device = torch.device(device)
-        return self.kinematic.motor_positions_to_orientation(
-            motor_positions, device
-        )
+        return self.kinematic.motor_positions_to_orientation(motor_positions, device)
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
