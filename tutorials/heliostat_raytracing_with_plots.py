@@ -111,9 +111,9 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 plt.show()
 
 # Define to which tower area the heliostat aims.
-aim_point_area = next(area for area in example_scenario.tower_areas.tower_area_list if area.name == "receiver")
+aim_point_area_name = "receiver"
 # Define the raytracer.
-raytracer = HeliostatRayTracer(scenario=example_scenario, aim_point_area=aim_point_area, batch_size=100)
+raytracer = HeliostatRayTracer(scenario=example_scenario, aim_point_area=aim_point_area_name, batch_size=100)
 
 # Perform heliostat-based raytracing.
 image_south = raytracer.trace_rays(

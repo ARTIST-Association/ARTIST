@@ -11,7 +11,7 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 
 
-@pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda:1"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
@@ -32,14 +32,14 @@ def device(request: pytest.FixtureRequest) -> torch.device:
 @pytest.mark.parametrize(
     "incident_ray_direction, expected_value, scenario_config",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario_stral"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario_stral"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario_stral"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario_stral"),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario_single_prototype_heliostat_stral"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario_single_prototype_heliostat_stral"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario_single_prototype_heliostat_stral"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario_single_prototype_heliostat_stral"),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "individual_south",
-            "test_individual_measurements_scenario",
+            "test_scenario_single_individual_heliostat_stral",
         ),  # Test if loading with individual measurements works
     ],
 )

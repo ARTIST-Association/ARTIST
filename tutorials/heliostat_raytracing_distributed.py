@@ -41,8 +41,9 @@ with h5py.File(scenario_path) as scenario_file:
 
 incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
-aim_point_area = next(area for area in scenario.tower_areas.tower_area_list if area.name == "receiver")
+aim_point_area_name = "receiver"
 # If the aim point area is not the receiver, the aim_point in the heliostat and kinematic have to be updated!!!
+#aim_point_area= next(area for area in scenario.tower_areas.tower_area_list if area.name == aim_point_area_name)
 #scenario.heliostats.heliostat_list[0].aim_point = aim_point_area.center
 #scenario.heliostats.heliostat_list[0].kinematic.aim_point = aim_point_area.center
 # Align heliostat.
@@ -53,7 +54,7 @@ scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_dire
 # Create raytracer
 raytracer = HeliostatRayTracer(
     scenario=scenario,
-    aim_point_area=aim_point_area,
+    aim_point_area=aim_point_area_name,
     world_size=world_size,
     rank=rank,
     batch_size=100,

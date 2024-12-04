@@ -13,7 +13,7 @@ from artist.util.alignment_optimizer import AlignmentOptimizer
 set_logger_config()
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
+@pytest.fixture(params=["cpu", "cuda:1"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
@@ -36,7 +36,7 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     [
         (
             "use_motor_positions",
-            "test_scenario_paint",
+            "test_scenario_single_heliostat_paint",
             "calibration_properties",
             1e-7,
             150,
@@ -47,7 +47,7 @@ def device(request: pytest.FixtureRequest) -> torch.device:
         ),
         (
             "use_raytracing",
-            "test_scenario_paint",
+            "test_scenario_single_heliostat_paint",
             "calibration_properties",
             1e-7,
             27,
@@ -125,9 +125,9 @@ def test_alignment_optimizer_methods(
 
     # Load the calibration data
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/download_test/AA39/{calibration_file}.json"
     )
-    center_calibration_image, incident_ray_direction, motor_positions = (
+    center_calibration_image, incident_ray_direction, calibration_target_name, motor_positions = (
         utils.get_calibration_properties(
             calibration_properties_path=calibration_properties_path,
             scenario=scenario,
@@ -150,6 +150,7 @@ def test_alignment_optimizer_methods(
         max_epoch=max_epoch,
         center_calibration_image=center_calibration_image,
         incident_ray_direction=incident_ray_direction,
+        calibration_target_name=calibration_target_name,
         motor_positions=motor_positions,
         device=device,
     )
