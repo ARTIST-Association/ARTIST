@@ -402,8 +402,8 @@ def convert_wgs84_coordinates_to_local_enu(
 def get_center_of_mass(
     bitmap: torch.Tensor,
     target_center: torch.Tensor,
-    plane_e: torch.Tensor,
-    plane_u: torch.Tensor,
+    plane_e: float,
+    plane_u: float,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
@@ -418,9 +418,9 @@ def get_center_of_mass(
         The flux density in form of a bitmap.
     target_center : torch.Tensor
         The position of the center of the target.
-    plane_e : torch.Tensor
+    plane_e : float
         The width of the target surface.
-    plane_u : torch.Tensor
+    plane_u : float
         The height of the target surface.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
