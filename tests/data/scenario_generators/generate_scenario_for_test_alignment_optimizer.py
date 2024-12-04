@@ -232,16 +232,16 @@ actuator1_parameters = ActuatorParameters(
     increment=torch.tensor(154166.666, device=device),
     initial_stroke_length=torch.tensor(0.075, device=device),
     offset=torch.tensor(0.34061, device=device),
-    radius=torch.tensor(0.3204, device=device),
-    phi_0=torch.tensor(-1.570796, device=device),
+    pivot_radius=torch.tensor(0.3204, device=device),
+    initial_angle=torch.tensor(-1.570796, device=device),
 )
 
 actuator2_parameters = ActuatorParameters(
     increment=torch.tensor(154166.666, device=device),
     initial_stroke_length=torch.tensor(0.075, device=device),
     offset=torch.tensor(0.3479, device=device),
-    radius=torch.tensor(0.309, device=device),
-    phi_0=torch.tensor(0.959931, device=device),
+    pivot_radius=torch.tensor(0.309, device=device),
+    initial_angle=torch.tensor(0.959931, device=device),
 )
 
 # Include an ideal actuator.

@@ -168,8 +168,8 @@ actuator2_prototype_parameters = ActuatorParameters(
     increment=torch.tensor(0.0, device=device),
     initial_stroke_length=torch.tensor(0.0, device=device),
     offset=torch.tensor(0.0, device=device),
-    radius=torch.tensor(0.0, device=device),
-    phi_0=torch.tensor(0.0, device=device),
+    pivot_radius=torch.tensor(0.0, device=device),
+    initial_angle=torch.tensor(0.0, device=device),
 )
 
 # Include a linear actuator.
