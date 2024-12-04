@@ -16,7 +16,11 @@ log = logging.getLogger(__name__)
 
 class AlignmentOptimizer:
     """
-    Implements an alignment optimizer to find optimal kinematic parameters.
+    Alignment optimizer to find optimal kinematic parameters.
+
+    The alignment optimizer optimizes parameters of the rigid body kinematics.
+    These parameters can include the 18 kinematic deviations parameters as well as five actuator
+    parameters for each actuator.
 
     Attributes
     ----------
@@ -31,10 +35,6 @@ class AlignmentOptimizer:
     -------
     optimize()
         Optimize the kinematic parameters.
-    _optimize_kinematic_parameters_with_motor_positions()
-        Optimize the kinematic parameters using the motor positions.
-    _optimize_kinematic_parameters_with_raytracing()
-        Optimize the kinematic parameters using raytracing (slower).
     """
 
     def __init__(
@@ -45,10 +45,6 @@ class AlignmentOptimizer:
     ) -> None:
         """
         Initialize the alignment optimizer.
-
-        The alignment optimizer optimizes parameters of the rigid body kinematics.
-        These parameters can include the 18 kinematic deviations parameters as well as 5 actuator
-        parameters for each actuator.
 
         Parameters
         ----------
@@ -79,16 +75,16 @@ class AlignmentOptimizer:
         Parameters
         ----------
         tolerance : float
-            The optimzer tolerance.
+            The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_image: torch.Tensor
+        center_calibration_image : torch.Tensor
             The center of the calibration flux density.
-        incident_ray_direction: torch.Tensor
+        incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
-        motor_positions: Optional[torch.Tensor]
+        motor_positions : Optional[torch.Tensor]
             The motor positions specified in the calibration (default is None).
-        device: Union[torch.device, str] = "cuda"
+        device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
 
         Returns
@@ -98,14 +94,14 @@ class AlignmentOptimizer:
         Scenario
             The scenario with aligned heliostat and optimized kinematic parameters.
         """
-        log.info("Start alignment optimization")
+        log.info("Start alignment optimization.")
         device = torch.device(device)
 
         if motor_positions is not None:
             optimized_parameters, self.scenario = (
                 self._optimize_kinematic_parameters_with_motor_positions(
-                    tolerance,
-                    max_epoch,
+                    tolerance=tolerance,
+                    max_epoch=max_epoch,
                     center_calibration_image=center_calibration_image,
                     incident_ray_direction=incident_ray_direction,
                     motor_positions=motor_positions,
@@ -115,8 +111,8 @@ class AlignmentOptimizer:
         else:
             optimized_parameters, self.scenario = (
                 self._optimize_kinematic_parameters_with_raytracing(
-                    tolerance,
-                    max_epoch,
+                    tolerance=tolerance,
+                    max_epoch=max_epoch,
                     center_calibration_image=center_calibration_image,
                     incident_ray_direction=incident_ray_direction,
                     device=device,
@@ -138,7 +134,7 @@ class AlignmentOptimizer:
         Optimize the kinematic parameters using the motor positions.
 
         This optimizer method optimizes the kinematic parameters by extracting the motor positions
-        and incident ray direction from a specific calibration and using the scence's geometry.
+        and incident ray direction from a specific calibration and using the scene's geometry.
 
         Parameters
         ----------
@@ -146,11 +142,11 @@ class AlignmentOptimizer:
             The optimzer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_image: torch.Tensor
+        center_calibration_image : torch.Tensor
             The center of the calibration flux density.
-        incident_ray_direction: torch.Tensor
+        incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
-        motor_positions: torch.Tensor
+        motor_positions : torch.Tensor
             The motor positions specified in the calibration.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
@@ -209,8 +205,6 @@ class AlignmentOptimizer:
 
             epoch += 1
 
-        # Align heliostat, reason: scenario will be ready to use for raytracing.
-        # can be removed if we decide to only return the optimized paramters.
         self.scenario.heliostats.heliostat_list[
             0
         ].set_aligned_surface_with_motor_positions(
@@ -240,9 +234,9 @@ class AlignmentOptimizer:
             The optimzer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_image: torch.Tensor
+        center_calibration_image : torch.Tensor
             The center of the calibration flux density.
-        incident_ray_direction: torch.Tensor
+        incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
@@ -260,14 +254,14 @@ class AlignmentOptimizer:
         epoch = 0
 
         while loss > tolerance and epoch <= max_epoch:
-            # Align heliostat
+            # Align heliostat.
             self.scenario.heliostats.heliostat_list[
                 0
             ].set_aligned_surface_with_incident_ray_direction(
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
-            # Create raytracer
+            # Create raytracer.
             raytracer = HeliostatRayTracer(scenario=self.scenario)
 
             final_bitmap = raytracer.trace_rays(
