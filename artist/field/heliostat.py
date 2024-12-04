@@ -51,9 +51,9 @@ class Heliostat(torch.nn.Module):
         Boolean indicating if the heliostat is aligned.
     preferred_reflection_direction : torch.Tensor
         The preferred reflection direction for rays reflecting off the heliostat.
-    surface_points
+    surface_points : torch.Tensor
         The original, unaligned surface points.
-    surface_normals
+    surface_normals : torch.Tensor
         The original, unaligned surface normals.
 
     Methods
@@ -838,10 +838,9 @@ class Heliostat(torch.nn.Module):
             The orientation for the given motor position.
         """
         device = torch.device(device)
-        orientation = self.kinematic.motor_positions_to_orientation(
+        return self.kinematic.motor_positions_to_orientation(
             motor_positions, device
         )
-        return orientation
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
