@@ -535,10 +535,10 @@ def get_rigid_body_kinematic_parameters_from_scenario(
         .offset,
         scenario.heliostats.heliostat_list[0]
         .kinematic.actuators.actuator_list[0]
-        .radius,
+        .pivot_radius,
         scenario.heliostats.heliostat_list[0]
         .kinematic.actuators.actuator_list[0]
-        .phi_0,
+        .initial_angle,
         scenario.heliostats.heliostat_list[0]
         .kinematic.actuators.actuator_list[1]
         .increment,
@@ -550,10 +550,10 @@ def get_rigid_body_kinematic_parameters_from_scenario(
         .offset,
         scenario.heliostats.heliostat_list[0]
         .kinematic.actuators.actuator_list[1]
-        .radius,
+        .pivot_radius,
         scenario.heliostats.heliostat_list[0]
         .kinematic.actuators.actuator_list[1]
-        .phi_0,
+        .initial_angle,
     ]
     for parameter in parameters_list:
         if parameter is not None:
