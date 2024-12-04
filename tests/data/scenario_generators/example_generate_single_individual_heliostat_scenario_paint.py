@@ -151,7 +151,7 @@ tower_area_list_config = TowerAreaListConfig(tower_areas_configs_list)
 light_source1_config = LightSourceConfig(
     light_source_key="sun_1",
     light_source_type=config_dictionary.sun_key,
-    number_of_rays=1,
+    number_of_rays=100,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
     mean=0.0,
     covariance=4.3681e-06,
@@ -201,7 +201,6 @@ facets_list = paint_converter.generate_surface_config_from_paint(
 # Generate the surface prototype configuration.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facets_list)
 
-# Include kinematic deviations.
 kinematic_prototype_deviations = KinematicDeviations(
     first_joint_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_e], device=device),
     first_joint_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_n], device=device),
@@ -239,21 +238,14 @@ kinematic_prototype_config = KinematicPrototypeConfig(
 
 # Include actuator parameters for actuator 1.
 index = 1
-# actuator1_parameters = ActuatorParameters(
-#     increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
-#     initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
-#     offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-#     pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
-#     initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
-# )
-# Include an actuator 1.
 actuator1_parameters = ActuatorParameters(
-    increment=torch.tensor(154166.666, device=device),
-    initial_stroke_length=torch.tensor(0.075, device=device),
-    offset=torch.tensor(0.34061, device=device),
-    pivot_radius=torch.tensor(0.3204, device=device),
-    initial_angle=torch.tensor(-1.570796, device=device),
+    increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
+    initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
+    offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
+    pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
+    initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
 )
+
 actuator1_prototype = ActuatorConfig(
     actuator_key=f"{config_dictionary.actuator_key}_{index}",
     actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
@@ -263,19 +255,12 @@ actuator1_prototype = ActuatorConfig(
 
 index = 2
 actuator2_parameters = ActuatorParameters(
-    increment=torch.tensor(154166.666, device=device),
-    initial_stroke_length=torch.tensor(0.075, device=device),
-    offset=torch.tensor(0.3479, device=device),
-    pivot_radius=torch.tensor(0.309, device=device),
-    initial_angle=torch.tensor(0.959931, device=device),
+    increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
+    initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
+    offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
+    pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
+    initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
 )
-# actuator2_parameters = ActuatorParameters(
-#     increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
-#     initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
-#     offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-#     pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
-#     initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
-# )
 # Include an actuator 2.
 actuator2_prototype = ActuatorConfig(
     actuator_key=f"{config_dictionary.actuator_key}_{index}",

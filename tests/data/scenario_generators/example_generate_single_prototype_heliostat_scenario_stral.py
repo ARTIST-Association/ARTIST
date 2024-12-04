@@ -33,7 +33,7 @@ set_logger_config()
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_prototype_heliostat_scenario_stral"
+file_path = file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_prototype_heliostat_stral"
 
 if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(

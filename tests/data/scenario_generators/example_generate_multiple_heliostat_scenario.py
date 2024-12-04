@@ -38,7 +38,7 @@ device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = (
-    pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario"
+    pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_scenario_multiple_heliostats_paint"
 )
 
 if not pathlib.Path(file_path).parent.is_dir():
@@ -205,7 +205,7 @@ for id, name in enumerate(heliostats):
         degree_e=3,
         degree_n=3,
         tolerance=3e-5,
-        max_epoch=10000,
+        max_epoch=400,
         initial_learning_rate=1e-3,
         device=device,
     )
