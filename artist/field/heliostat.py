@@ -838,9 +838,7 @@ class Heliostat(torch.nn.Module):
             The orientation for the given motor position.
         """
         device = torch.device(device)
-        return self.kinematic.motor_positions_to_orientation(
-            motor_positions, device
-        )
+        return self.kinematic.motor_positions_to_orientation(motor_positions, device)
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
