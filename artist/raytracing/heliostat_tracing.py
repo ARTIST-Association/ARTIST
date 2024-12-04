@@ -138,7 +138,7 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: "Scenario",
-        aim_point_area: TowerArea,
+        aim_point_area: str = "receiver",
         heliostat_index: int = 0,
         world_size: int = 1,
         rank: int = 0,
@@ -160,7 +160,7 @@ class HeliostatRayTracer:
         ----------
         scenario : Scenario
             The scenario used to perform raytracing.
-        aim_point_area : TowerArea
+        aim_point_area : str
             The tower area on in which the aimpoint is supposed to be.
         heliostat_index : int
             Index of heliostat from the heliostat list (default: 0).
@@ -180,7 +180,7 @@ class HeliostatRayTracer:
             The resolution of the bitmap in the up dimension (default: 256).
         """
         self.heliostat = scenario.heliostats.heliostat_list[heliostat_index]
-        self.tower_area = aim_point_area
+        self.tower_area = next(area for area in scenario.tower_areas.tower_area_list if area.name == aim_point_area)
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (

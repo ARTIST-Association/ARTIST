@@ -305,7 +305,7 @@ class AlignmentOptimizer:
             )
 
             # Create raytracer
-            raytracer = HeliostatRayTracer(scenario=self.scenario, aim_point_area=calibration_target, world_size=self.world_size, rank=self.rank, batch_size=self.batch_size)
+            raytracer = HeliostatRayTracer(scenario=self.scenario, aim_point_area=calibration_target_name, world_size=self.world_size, rank=self.rank, batch_size=self.batch_size)
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
