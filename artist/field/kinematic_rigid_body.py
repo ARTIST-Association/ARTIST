@@ -142,9 +142,10 @@ class RigidBody(Kinematic):
         torch.Tensor
             The orientation matrix.
         """
-        assert (
-            len(self.actuators.actuator_list) == 2
-        ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
+        if len(self.actuators.actuator_list) != 2:
+            raise ValueError(
+                f"The rigid body kinematic requires exactly two actuators but {len(self.actuators.actuator_list)} were specified, please check the configuration!"
+            )
 
         device = torch.device(device)
         motor_positions = torch.zeros(2, device=device)
@@ -332,14 +333,19 @@ class RigidBody(Kinematic):
 
         orientation = self.incident_ray_direction_to_orientation(
             incident_ray_direction, device=device
-        ).squeeze()
+        )
 
+        # Option 1:
         aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
             -1
         )
         aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(
             -1
         )
+
+        # Option 2:
+        # aligned_surface_points = surface_points @ orientation.T
+        # aligned_surface_normals = surface_normals @ orientation.T
 
         return aligned_surface_points, aligned_surface_normals
 
@@ -363,9 +369,10 @@ class RigidBody(Kinematic):
         torch.Tensor
             The orientation matrix.
         """
-        assert (
-            len(self.actuators.actuator_list) == 2
-        ), "The rigid body kinematic requires exactly two actuators, please check the configuration!"
+        if len(self.actuators.actuator_list) != 2:
+            raise ValueError(
+                f"The rigid body kinematic requires exactly two actuators but {len(self.actuators.actuator_list)} were specified, please check the configuration!"
+            )
 
         device = torch.device(device)
 
