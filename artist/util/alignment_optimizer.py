@@ -95,6 +95,7 @@ class AlignmentOptimizer:
         max_epoch: int,
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
+        calibration_target_name: Optional[str] = None,
         motor_positions: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
@@ -111,6 +112,8 @@ class AlignmentOptimizer:
             The center of the calibration flux density.
         incident_ray_direction: torch.Tensor
             The incident ray direction specified in the calibration.
+        calibration_target_name : Optional[str]
+            The name of the calibration target.
         motor_positions: Optional[torch.Tensor]
             The motor positions specified in the calibration (default is None).
         device: Union[torch.device, str] = "cuda"
@@ -142,6 +145,7 @@ class AlignmentOptimizer:
                 self._optimize_kinematic_parameters_with_raytracing(
                     tolerance,
                     max_epoch,
+                    calibration_target_name=calibration_target_name,
                     center_calibration_image=center_calibration_image,
                     incident_ray_direction=incident_ray_direction,
                     device=device,
@@ -248,6 +252,7 @@ class AlignmentOptimizer:
         self,
         tolerance: float,
         max_epoch: int,
+        calibration_target_name: str,
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
@@ -265,6 +270,8 @@ class AlignmentOptimizer:
             The optimzer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
+        calibration_target_name : str
+            The name of the calibration target or tower area.
         center_calibration_image: torch.Tensor
             The center of the calibration flux density.
         incident_ray_direction: torch.Tensor
@@ -284,6 +291,11 @@ class AlignmentOptimizer:
         loss = torch.inf
         epoch = 0
 
+        # Since the default heliostat and thereby kinematic aim point is in the receiver center, we have to update them to the calibration target center.
+        calibration_target = next((area for area in self.scenario.tower_areas.tower_area_list if area.name == calibration_target_name), None)
+        self.scenario.heliostats.heliostat_list[0].aim_point = calibration_target.center
+        self.scenario.heliostats.heliostat_list[0].kinematic.aim_point = calibration_target.center
+
         while loss > tolerance and epoch <= max_epoch:
             # Align heliostat
             self.scenario.heliostats.heliostat_list[
@@ -293,7 +305,7 @@ class AlignmentOptimizer:
             )
 
             # Create raytracer
-            raytracer = HeliostatRayTracer(scenario=self.scenario, world_size=self.world_size, rank=self.rank, batch_size=self.batch_size)
+            raytracer = HeliostatRayTracer(scenario=self.scenario, aim_point_area=calibration_target, world_size=self.world_size, rank=self.rank, batch_size=self.batch_size)
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
@@ -308,9 +320,9 @@ class AlignmentOptimizer:
 
             center = utils.get_center_of_mass(
                 torch.flip(final_bitmap.T, dims=(0, 1)),
-                target_center=self.scenario.receivers.receiver_list[0].position_center,
-                plane_e=self.scenario.receivers.receiver_list[0].plane_e,
-                plane_u=self.scenario.receivers.receiver_list[0].plane_u,
+                target_center=calibration_target.center,
+                plane_e=calibration_target.plane_e,
+                plane_u=calibration_target.plane_u,
                 device=device,
             )
 

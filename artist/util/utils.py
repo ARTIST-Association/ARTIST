@@ -568,7 +568,7 @@ def get_calibration_properties(
     calibration_properties_path: pathlib.Path,
     scenario: Any,
     device: Union[torch.device, str] = "cuda",
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, str, torch.Tensor]:
     """
     Get the calibration properties.
 
@@ -587,11 +587,14 @@ def get_calibration_properties(
         The calibration flux density center.
     torch.Tensor
         The incident ray direction.
+    str
+        The name of the calibration target.
     torch.Tensor
         The motor positions.
     """
     with open(calibration_properties_path, "r") as file:
         calibration_dict = json.load(file)
+        calibration_target = calibration_dict["target_name"]
         center_calibration_image = convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
                 calibration_dict["focal_spot"]["UTIS"],
@@ -618,7 +621,7 @@ def get_calibration_properties(
             device=device,
         )
 
-    return center_calibration_image, incident_ray_direction, motor_positions
+    return center_calibration_image, incident_ray_direction, calibration_target, motor_positions
 
 
 def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> Generator[tuple[bool, int, int], None, None]:

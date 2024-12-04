@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from artist.scenario import Scenario
 
+from artist.field.tower_area import TowerArea
 import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
@@ -137,8 +138,8 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: "Scenario",
-        index: int = 0,
-        aim_point_area: str = "receiver",
+        aim_point_area: TowerArea,
+        heliostat_index: int = 0,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -159,6 +160,10 @@ class HeliostatRayTracer:
         ----------
         scenario : Scenario
             The scenario used to perform raytracing.
+        aim_point_area : TowerArea
+            The tower area on in which the aimpoint is supposed to be.
+        heliostat_index : int
+            Index of heliostat from the heliostat list (default: 0).
         world_size : int
             The world size (default: 1).
         rank : int
@@ -174,8 +179,8 @@ class HeliostatRayTracer:
         bitmap_resolution_u : int = 256
             The resolution of the bitmap in the up dimension (default: 256).
         """
-        self.heliostat = scenario.heliostats.heliostat_list[index]
-        self.tower_area = next((area for area in scenario.tower_areas.tower_area_list if area.name == aim_point_area), None)
+        self.heliostat = scenario.heliostats.heliostat_list[heliostat_index]
+        self.tower_area = aim_point_area
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
