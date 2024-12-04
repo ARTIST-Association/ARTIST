@@ -31,8 +31,7 @@ scenario_path = (
     pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
 )
 if use_pre_generated_scenario:
-    #scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario.h5"
-    scenario_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_heliostat_paint.h5"
+    scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/test_scenario_single_heliostat_paint.h5"
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:
@@ -42,6 +41,10 @@ with h5py.File(scenario_path) as scenario_file:
 
 incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
+aim_point_area = next(area for area in scenario.tower_areas.tower_area_list if area.name == "receiver")
+# If the aim point area is not the receiver, the aim_point in the heliostat and kinematic have to be updated!!!
+#scenario.heliostats.heliostat_list[0].aim_point = aim_point_area.center
+#scenario.heliostats.heliostat_list[0].kinematic.aim_point = aim_point_area.center
 # Align heliostat.
 scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
     incident_ray_direction=incident_ray_direction, device=device
@@ -50,6 +53,7 @@ scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_dire
 # Create raytracer
 raytracer = HeliostatRayTracer(
     scenario=scenario,
+    aim_point_area=aim_point_area,
     world_size=world_size,
     rank=rank,
     batch_size=100,
@@ -68,9 +72,7 @@ final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
 import matplotlib.pyplot as plt
 plt.imshow(final_bitmap.cpu().detach().numpy())
-plt.savefig(pathlib.Path(ARTIST_ROOT) / f"distributed_test_new.png")
-
-
+plt.savefig(pathlib.Path(ARTIST_ROOT) / f"distributed_test_receiver.png")
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.

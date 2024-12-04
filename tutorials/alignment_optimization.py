@@ -1,3 +1,4 @@
+import json
 import pathlib
 
 import h5py
@@ -15,7 +16,7 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be used for this tutorial!
@@ -26,7 +27,8 @@ scenario_path = (
 if use_pre_generated_scenario:
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_alignment_optimization.h5"
+        # / "tutorials/test_scenario_single_heliostat_paint.h5"
+        / "tests/data/test_scenario_single_heliostat_paint.h5"
     )
 
 # Load the scenario.
@@ -41,7 +43,7 @@ calibration_properties_path = (
 )
 
 # Load the calibration data
-center_calibration_image, incident_ray_direction, motor_positions = (
+center_calibration_image, incident_ray_direction, calibration_target_name, motor_positions = (
     utils.get_calibration_properties(
         calibration_properties_path=calibration_properties_path,
         scenario=example_scenario,
@@ -95,6 +97,7 @@ optimized_parameters, optimized_scenario = alignment_optimizer.optimize(
     tolerance=tolerance,
     max_epoch=max_epoch,
     center_calibration_image=center_calibration_image,
+    calibration_target_name=calibration_target_name,
     incident_ray_direction=incident_ray_direction,
     motor_positions=motor_positions,
     device=device,

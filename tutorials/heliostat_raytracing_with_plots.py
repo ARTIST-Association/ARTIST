@@ -15,6 +15,7 @@ from artist.scenario import Scenario
 DOWNLOAD_DATA = False
 scenario_name = "please/insert/the/path/to/the/scenario/here/name.h5"
 
+# TODO this scenario needs to be updated in google drive, as this old file is not supported.
 if DOWNLOAD_DATA:
     url = "https://drive.google.com/uc?export=download&id=1WSJyabylkK8cMDgulymVP5nPNGNf_BzN"
     output_filename = "tutorial_scenario.h5"
@@ -32,7 +33,7 @@ with h5py.File(scenario_name, "r") as f:
 print(example_scenario)
 print(f"The light source is a {example_scenario.light_sources.light_source_list[0]}")
 print(
-    f"The receiver type is {example_scenario.receivers.receiver_list[0].receiver_type}"
+    f"The tower has the following areas (receivers and calibration targets) {[item.name for item in example_scenario.tower_areas.tower_area_list]}"
 )
 single_heliostat = example_scenario.heliostats.heliostat_list[0]
 print(f"The heliostat position is: {single_heliostat.position}")
@@ -109,8 +110,10 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 # Show the plot.
 plt.show()
 
+# Define to which tower area the heliostat aims.
+aim_point_area = next(area for area in example_scenario.tower_areas.tower_area_list if area.name == "receiver")
 # Define the raytracer.
-raytracer = HeliostatRayTracer(scenario=example_scenario, batch_size=100)
+raytracer = HeliostatRayTracer(scenario=example_scenario, aim_point_area=aim_point_area, batch_size=100)
 
 # Perform heliostat-based raytracing.
 image_south = raytracer.trace_rays(

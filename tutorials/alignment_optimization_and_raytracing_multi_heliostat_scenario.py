@@ -1,4 +1,6 @@
+from datetime import datetime, timezone
 import pathlib
+import time
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import h5py
@@ -33,7 +35,7 @@ scenario_path = (
 )
 if use_pre_generated_scenario:
     scenario_path = (
-        pathlib.Path(ARTIST_ROOT) / "tutorials/data/four_heliostat_scenario.h5"
+        pathlib.Path(ARTIST_ROOT) / ".h5"
     )
 
 # Load the scenario.
@@ -45,35 +47,44 @@ incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
 # Loop option:
 # Remove loop, align multiple heliostats at once
-for i in range(len(scenario.heliostats.heliostat_list)):
-    scenario.heliostats.heliostat_list[i].set_aligned_surface_with_incident_ray_direction(
+start_time = time.time()
+for i in range(1):
+    scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction, device=device
     )
+end_time = time.time()
+elapsed = end_time - start_time
+print(datetime.fromtimestamp(start_time, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z'))
+print(f"align heliostat: {elapsed}")
+print(datetime.fromtimestamp(end_time, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z'))
+
+
+######################################################################################
     
-    # Create raytracer
-    raytracer = HeliostatRayTracer(
-        scenario=scenario,
-        index = i,
-        world_size=world_size,
-        rank=rank,
-        batch_size=100,
-    )
+# # Create raytracer
+# raytracer = HeliostatRayTracer(
+#     scenario=scenario,
+#     index = i,
+#     world_size=world_size,
+#     rank=rank,
+#     batch_size=5,
+# )
 
-    # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays(
-        incident_ray_direction=incident_ray_direction, device=device
-    )
-    if is_distributed:
-        final_bitmap = torch.distributed.all_reduce(
-            final_bitmap, op=torch.distributed.ReduceOp.SUM
-        )
+# # Perform heliostat-based raytracing.
+# final_bitmap = raytracer.trace_rays(
+#     incident_ray_direction=incident_ray_direction, device=device
+# )
+# if is_distributed:
+#     final_bitmap = torch.distributed.all_reduce(
+#         final_bitmap, op=torch.distributed.ReduceOp.SUM
+#     )
 
-    final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+# final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
 
-    import matplotlib.pyplot as plt
-    plt.imshow(final_bitmap.cpu().detach().numpy())
-    plt.savefig(pathlib.Path(ARTIST_ROOT) / f"distributed_test_{i}.png")
+# import matplotlib.pyplot as plt
+# plt.imshow(final_bitmap.cpu().detach().numpy())
+# plt.savefig(pathlib.Path(ARTIST_ROOT) / f"distributed_test_{i}.png")
 
 
 
@@ -121,8 +132,8 @@ for i in range(len(scenario.heliostats.heliostat_list)):
 
 
 
-# Choose calibration data for all heliostats
-calibration_properties_paths = []
-calibration_properties_path = (
-    pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
-)
+# # Choose calibration data for all heliostats
+# calibration_properties_paths = []
+# calibration_properties_path = (
+#     pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json"
+# )
