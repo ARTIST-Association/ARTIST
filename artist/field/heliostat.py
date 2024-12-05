@@ -754,7 +754,7 @@ class Heliostat(torch.nn.Module):
             if prototype_actuator is None:
                 raise ValueError(
                     "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
-                )            
+                )
             log.info(
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
@@ -860,9 +860,7 @@ class Heliostat(torch.nn.Module):
             If the heliostat has not yet been aligned.
         """
         if self.is_aligned:
-            raise ValueError(
-                "Heliostat has not yet been aligned."
-            )         
+            raise ValueError("Heliostat has not yet been aligned.")
         self.preferred_reflection_direction = reflect(
             incoming_ray_direction=rays,
             reflection_surface_normals=self.current_aligned_surface_normals,

@@ -60,12 +60,10 @@ def line_plane_intersections(
     # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
     # the incoming rays.
     relative_distribution_strengths = ray_directions @ plane_normal_vectors
-    
+
     if (torch.abs(relative_distribution_strengths) <= epsilon).all():
-        raise ValueError(
-            "No intersection or line is within plane."
-        )
-    
+        raise ValueError("No intersection or line is within plane.")
+
     # Calculate the final distribution strengths.
     distribution_strengths = (
         (plane_center - points_at_ray_origin)
