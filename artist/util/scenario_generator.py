@@ -105,7 +105,7 @@ class ScenarioGenerator:
 
         Raises
         ------
-        AssertionError
+        ValueError
             If at least one heliostat has a different number of facets or one facet has a different number of evaluation
             points.
         """
@@ -121,27 +121,30 @@ class ScenarioGenerator:
             ].number_eval_points_n
         )
         # Check that every facet in the prototype has the same number of evaluation points
-        assert all(
+        if not all(
             self.prototype_config.surface_prototype.facets_list[i].number_eval_points_e
-            * self.prototype_config.surface_prototype.facets_list[
-                i
-            ].number_eval_points_n
+            * self.prototype_config.surface_prototype.facets_list[i].number_eval_points_n
             == accepted_number_of_points
             for i in range(accepted_number_of_facets)
-        ), "The number of evaluation points for each facet is different in the surface prototype!"
+        ):
+            raise ValueError("The number of evaluation points for each facet is different in the surface prototype!")
+        
         # Check that every heliostat has the same number of facets and evaluation points
         for heliostat in self.heliostat_list_config.heliostat_list:
             if heliostat.heliostat_surface:
-                assert (
-                    len(heliostat.heliostat_surface.facets_list)
-                    == accepted_number_of_facets
-                ), "Individual heliostats must all have the same number of facets!"
-                assert all(
+                if len(heliostat.heliostat_surface.facets_list) != accepted_number_of_facets:
+                    raise ValueError(
+                            "Individual heliostats must all have the same number of facets!"
+                        )
+                if not all(
                     heliostat.heliostat_surface.facets_list[i].number_eval_points_e
                     * heliostat.heliostat_surface.facets_list[i].number_eval_points_n
                     == accepted_number_of_points
                     for i in range(accepted_number_of_facets)
-                ), "The number of evaluation points for each facet is different in the individual heliostat!"
+                ):
+                    raise ValueError(
+                            "The number of evaluation points for each facet is different in the individual heliostat!"
+                        )
 
     def flatten_dict(
         self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"

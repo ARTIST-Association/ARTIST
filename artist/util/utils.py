@@ -54,9 +54,10 @@ def rotate_distortions(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    assert (
-        e.shape == u.shape
-    ), "The two tensors containing angles for the east and up rotation must have the same shape."
+    if e.shape != u.shape:
+        raise ValueError(
+            "The two tensors containing angles for the east and up rotation must have the same shape."
+        )
     device = torch.device(device)
 
     cos_e = torch.cos(e)
@@ -222,9 +223,11 @@ def translate_enu(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    assert (
-        e.shape == u.shape == n.shape
-    ), "The three tensors containing the east, north, and up translations must have the same shape."
+    if e.shape != u.shape != n.shape:
+        raise ValueError(
+            "The three tensors containing the east, north, and up translations must have the same shape."
+        )
+    
     device = torch.device(device)
 
     zeros = torch.zeros(e.shape, device=device)
@@ -303,9 +306,11 @@ def convert_3d_points_to_4d_format(
         Point vector with ones appended at the last dimension.
     """
     device = torch.device(device)
-    assert (
-        point.size(dim=-1) == 3
-    ), f"Expected a 3D point but got a point of shape {point.shape}!"
+    if point.size(dim=-1) != 3:
+        raise ValueError(
+            f"Expected a 3D point but got a point of shape {point.shape}!"
+        )
+    
     ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
     return torch.cat((point, ones_tensor), dim=-1)
 
@@ -331,9 +336,11 @@ def convert_3d_direction_to_4d_format(
         Direction vector with ones appended at the last dimension.
     """
     device = torch.device(device)
-    assert (
-        direction.size(dim=-1) == 3
-    ), f"Expected a 3D direction vector but got a director vector of shape {direction.shape}!"
+    if direction.size(dim=-1) != 3:
+        raise ValueError(
+            f"Expected a 3D point but got a point of shape {direction.shape}!"
+        )
+    
     zeros_tensor = torch.zeros(
         direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
     )
