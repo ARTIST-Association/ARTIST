@@ -254,7 +254,7 @@ class LightSourceConfig:
             The mean used for modeling the sun.
         covariance : float, optional
             The covariance used for modeling the sun.
-        
+
         Raises
         ------
         ValueError
@@ -264,11 +264,12 @@ class LightSourceConfig:
         self.light_source_type = light_source_type
         self.number_of_rays = number_of_rays
         self.distribution_type = distribution_type
-        
-        if self.distribution_type != config_dictionary.light_source_distribution_is_normal:
-            raise ValueError(
-                "Unknown light source distribution type."
-            )
+
+        if (
+            self.distribution_type
+            != config_dictionary.light_source_distribution_is_normal
+        ):
+            raise ValueError("Unknown light source distribution type.")
 
         if (
             self.distribution_type

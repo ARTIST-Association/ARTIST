@@ -70,10 +70,13 @@ class Sun(LightSource):
 
         self.distribution_parameters = distribution_parameters
         self.number_of_rays = number_of_rays
-        if self.distribution_parameters[config_dictionary.light_source_distribution_type] != config_dictionary.light_source_distribution_is_normal:
-            raise ValueError(
-                "Unknown sunlight distribution type."
-            )
+        if (
+            self.distribution_parameters[
+                config_dictionary.light_source_distribution_type
+            ]
+            != config_dictionary.light_source_distribution_is_normal
+        ):
+            raise ValueError("Unknown sunlight distribution type.")
 
         if (
             self.distribution_parameters[

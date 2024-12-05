@@ -227,7 +227,7 @@ def translate_enu(
         raise ValueError(
             "The three tensors containing the east, north, and up translations must have the same shape."
         )
-    
+
     device = torch.device(device)
 
     zeros = torch.zeros(e.shape, device=device)
@@ -307,10 +307,8 @@ def convert_3d_points_to_4d_format(
     """
     device = torch.device(device)
     if point.size(dim=-1) != 3:
-        raise ValueError(
-            f"Expected a 3D point but got a point of shape {point.shape}!"
-        )
-    
+        raise ValueError(f"Expected a 3D point but got a point of shape {point.shape}!")
+
     ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
     return torch.cat((point, ones_tensor), dim=-1)
 
@@ -340,7 +338,7 @@ def convert_3d_direction_to_4d_format(
         raise ValueError(
             f"Expected a 3D point but got a point of shape {direction.shape}!"
         )
-    
+
     zeros_tensor = torch.zeros(
         direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
     )
