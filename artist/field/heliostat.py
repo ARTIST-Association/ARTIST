@@ -252,9 +252,10 @@ class Heliostat(torch.nn.Module):
             ]
             surface_config = SurfaceConfig(facets_list=facets_list)
         else:
-            assert (
-                prototype_surface is not None
-            ), "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
+            if prototype_surface is None:
+                raise ValueError(
+                    "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
+                )
             log.info(
                 "Individual surface parameters not provided - loading a heliostat with the surface prototype."
             )
@@ -639,9 +640,10 @@ class Heliostat(torch.nn.Module):
                 kinematic_deviations=kinematic_deviations,
             )
         else:
-            assert (
-                prototype_kinematic is not None
-            ), "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
+            if prototype_kinematic is None:
+                raise ValueError(
+                    "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
+                )
             log.info(
                 "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
             )
@@ -749,9 +751,10 @@ class Heliostat(torch.nn.Module):
                 )
             actuator_list_config = ActuatorListConfig(actuator_list=actuator_list)
         else:
-            assert (
-                prototype_actuator is not None
-            ), "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
+            if prototype_actuator is None:
+                raise ValueError(
+                    "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
+                )            
             log.info(
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
@@ -853,11 +856,13 @@ class Heliostat(torch.nn.Module):
 
         Raises
         ------
-        AssertionError
+        ValueError
             If the heliostat has not yet been aligned.
         """
-        assert self.is_aligned, "Heliostat has not yet been aligned."
-
+        if self.is_aligned:
+            raise ValueError(
+                "Heliostat has not yet been aligned."
+            )         
         self.preferred_reflection_direction = reflect(
             incoming_ray_direction=rays,
             reflection_surface_normals=self.current_aligned_surface_normals,
