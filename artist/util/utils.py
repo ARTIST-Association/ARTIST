@@ -680,3 +680,18 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
         if is_distributed:
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
+
+
+def angle_between_vectors(u, v):
+    dot_product = torch.dot(u, v)
+    
+    norm_u = torch.norm(u)
+    norm_v = torch.norm(v)
+    
+    cos_theta = dot_product / (norm_u * norm_v)
+    
+    cos_theta = torch.clamp(cos_theta, -1.0, 1.0)
+    
+    angle_rad = torch.acos(cos_theta)
+    
+    return angle_rad

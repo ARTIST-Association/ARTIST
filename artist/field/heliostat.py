@@ -8,7 +8,7 @@ from typing_extensions import Self
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
 from artist.raytracing.raytracing_utils import reflect
-from artist.util import config_dictionary
+from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -786,6 +786,34 @@ class Heliostat(torch.nn.Module):
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
             actuator_list_config = prototype_actuator
+
+        # Adapt initial angle of actuator 1 according to kinematic initial orientation offset.
+        # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in enu)
+        # The first actuator always rotates along the east-axis.
+        # Since the actuator coordinate system is relative to the heliostat orientation, and the initial angle 
+        # is  
+        # first actuator must be transformed into the correct  
+        # 
+        initial_angle_actuator_1 = actuator_list_config.actuator_list[0].actuator_parameters.initial_angle
+        initial_angle_actuator_2 = actuator_list_config.actuator_list[1].actuator_parameters.initial_angle
+        # TODO
+        initial_angle_actuator_1 = torch.tensor([0.0389695375867206])
+        initial_angle_actuator_2 = torch.tensor([0.943870007981347])
+
+        # starte mit up ausrichtung: axis 1 dreht um ost-achse -> verkippung in nord/süd richtung
+        # 
+        paint_vector = torch.tensor([0.0, 0.0, 1.0, 0.0])
+        artist_standart = torch.tensor([0.0, -1.0, 0.0, 0.0])
+
+        rotated_paint_vector_1 = paint_vector @ utils.rotate_e(
+                e=initial_angle_actuator_1,
+                device=device,
+            )
+        new_initial_angle_1 = utils.angle_between_vectors(paint_vector[:-1], rotated_paint_vector_1[:-1]) - utils.angle_between_vectors(paint_vector[:-1], artist_standart[:-1])
+
+        
+
+
 
         return cls(
             heliostat_id=heliostat_id,

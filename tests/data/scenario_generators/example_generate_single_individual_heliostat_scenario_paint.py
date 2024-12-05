@@ -245,14 +245,14 @@ actuator1_parameters = ActuatorParameters(
     pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
     initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
 )
-
+# Include an actuator 1.
 actuator1_prototype = ActuatorConfig(
     actuator_key=f"{config_dictionary.actuator_key}_{index}",
     actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
     actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_clockwise}_{index}"],
     actuator_parameters=actuator1_parameters,
 )
-
+# Include actuator parameters for actuator 2.
 index = 2
 actuator2_parameters = ActuatorParameters(
     increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),

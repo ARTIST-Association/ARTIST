@@ -118,9 +118,9 @@ class HeliostatRayTracer:
         The dataset containing the distortions for ray scattering.
     distortions_loader : DataLoader
         The dataloader that loads the distortions.
-    bitmap_resolution_e : int = 256
+    bitmap_resolution_e : int
         The resolution of the bitmap in the east dimension (default: 256).
-    bitmap_resolution_u : int = 256
+    bitmap_resolution_u : int
         The resolution of the bitmap in the up dimension (default: 256).
 
     Methods
@@ -174,9 +174,9 @@ class HeliostatRayTracer:
             The random seed used for generating the distortions (default: 7).
         shuffle : bool
             A boolean flag indicating whether to shuffle the data (default: False).
-        bitmap_resolution_e : int = 256
+        bitmap_resolution_e : int
             The resolution of the bitmap in the east dimension (default: 256).
-        bitmap_resolution_u : int = 256
+        bitmap_resolution_u : int
             The resolution of the bitmap in the up dimension (default: 256).
         """
         self.heliostat = scenario.heliostats.heliostat_list[heliostat_index]
