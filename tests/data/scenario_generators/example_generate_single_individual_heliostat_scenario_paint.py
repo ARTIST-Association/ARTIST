@@ -20,8 +20,6 @@ from artist.util.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    ReceiverConfig,
-    ReceiverListConfig,
     SurfaceConfig,
     SurfacePrototypeConfig,
     TowerAreaConfig,
@@ -39,7 +37,9 @@ set_logger_config()
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_heliostat_paint"
+file_path = (
+    pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_single_heliostat_paint"
+)
 
 if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -49,21 +49,28 @@ if not pathlib.Path(file_path).parent.is_dir():
 
 heliostat_name = "AA39"
 tower_file = pathlib.Path(ARTIST_ROOT) / "tests/data/download_test/tower.json"
-heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/download_test/AA39/heliostat_properties.json"
-deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/download_test/AA39/deflectometry.h5"
+heliostat_file = (
+    pathlib.Path(ARTIST_ROOT)
+    / "tests/data/download_test/AA39/heliostat_properties.json"
+)
+deflectometry_file = (
+    pathlib.Path(ARTIST_ROOT) / "tests/data/download_test/AA39/deflectometry.h5"
+)
 
 # Extract all tower areas (calibration targets and receivers)
 with open(tower_file, "r") as file:
     tower_dict = json.load(file)
     power_plant_position = torch.tensor(
-        tower_dict[config_dictionary.power_plant_properties_key][config_dictionary.coordinates],
+        tower_dict[config_dictionary.power_plant_properties_key][
+            config_dictionary.coordinates
+        ],
         dtype=torch.float64,
         device=device,
     )
     tower_areas = list(tower_dict.keys())[1:]
 
     tower_areas_configs_list = []
-    
+
     for tower_area_key in tower_areas:
         area_type = tower_dict[tower_area_key][config_dictionary.paint_tower_area_type]
 
@@ -75,19 +82,22 @@ with open(tower_file, "r") as file:
         center_3d = utils.convert_wgs84_coordinates_to_local_enu(
             center_lat_lon, power_plant_position, device=device
         )
-        center = utils.convert_3d_points_to_4d_format(
-            center_3d, device=device
-        )
+        center = utils.convert_3d_points_to_4d_format(center_3d, device=device)
         normal_vector = utils.convert_3d_direction_to_4d_format(
-            torch.tensor(tower_dict[tower_area_key][config_dictionary.tower_area_normal_vector], device=device),
+            torch.tensor(
+                tower_dict[tower_area_key][config_dictionary.tower_area_normal_vector],
+                device=device,
+            ),
             device=device,
         )
-        prefix= ""
+        prefix = ""
         if tower_area_key == "receiver":
             prefix = "receiver_outer_"
         upper_left = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[tower_area_key][config_dictionary.coordinates][f"{prefix}upper_left"],
+                tower_dict[tower_area_key][config_dictionary.coordinates][
+                    f"{prefix}upper_left"
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -96,7 +106,9 @@ with open(tower_file, "r") as file:
         )
         lower_left = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[tower_area_key][config_dictionary.coordinates][f"{prefix}lower_left"],
+                tower_dict[tower_area_key][config_dictionary.coordinates][
+                    f"{prefix}lower_left"
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -105,7 +117,9 @@ with open(tower_file, "r") as file:
         )
         upper_right = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[tower_area_key][config_dictionary.coordinates][f"{prefix}upper_right"],
+                tower_dict[tower_area_key][config_dictionary.coordinates][
+                    f"{prefix}upper_right"
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -114,7 +128,9 @@ with open(tower_file, "r") as file:
         )
         lower_right = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[tower_area_key][config_dictionary.coordinates][f"{prefix}lower_right"],
+                tower_dict[tower_area_key][config_dictionary.coordinates][
+                    f"{prefix}lower_right"
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -130,19 +146,19 @@ with open(tower_file, "r") as file:
             + torch.abs(upper_right[2] - lower_right[2])
         ) / 2
 
-        tower_area_config = TowerAreaConfig(tower_area_key=tower_area_key,
-                                              area_type=area_type,
-                                              center=center,
-                                              normal_vector=normal_vector,
-                                              plane_e=plane_e,
-                                              plane_u=plane_u)
+        tower_area_config = TowerAreaConfig(
+            tower_area_key=tower_area_key,
+            area_type=area_type,
+            center=center,
+            normal_vector=normal_vector,
+            plane_e=plane_e,
+            plane_u=plane_u,
+        )
 
         tower_areas_configs_list.append(tower_area_config)
 
 # Include the power plant configuration.
-power_plant_config = PowerPlantConfig(
-    power_plant_position=power_plant_position
-)
+power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
 
 # Include the tower area configurations.
 tower_area_list_config = TowerAreaListConfig(tower_areas_configs_list)
@@ -168,7 +184,9 @@ with open(heliostat_file, "r") as file:
     heliostat_dict = json.load(file)
     heliostat_position_3d = utils.convert_wgs84_coordinates_to_local_enu(
         torch.tensor(
-            heliostat_dict[config_dictionary.heliostat_position], dtype=torch.float64, device=device
+            heliostat_dict[config_dictionary.heliostat_position],
+            dtype=torch.float64,
+            device=device,
         ),
         power_plant_position,
         device=device,
@@ -202,21 +220,66 @@ facets_list = paint_converter.generate_surface_config_from_paint(
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facets_list)
 
 kinematic_prototype_deviations = KinematicDeviations(
-    first_joint_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_e], device=device),
-    first_joint_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_n], device=device),
-    first_joint_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.first_joint_translation_u], device=device),
+    first_joint_translation_e=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.first_joint_translation_e
+        ],
+        device=device,
+    ),
+    first_joint_translation_n=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.first_joint_translation_n
+        ],
+        device=device,
+    ),
+    first_joint_translation_u=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.first_joint_translation_u
+        ],
+        device=device,
+    ),
     first_joint_tilt_e=torch.tensor(0.0, device=device),
     first_joint_tilt_n=torch.tensor(0.0, device=device),
     first_joint_tilt_u=torch.tensor(0.0, device=device),
-    second_joint_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_e], device=device),
-    second_joint_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_n], device=device),
-    second_joint_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.second_joint_translation_u], device=device),
+    second_joint_translation_e=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.second_joint_translation_e
+        ],
+        device=device,
+    ),
+    second_joint_translation_n=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.second_joint_translation_n
+        ],
+        device=device,
+    ),
+    second_joint_translation_u=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.second_joint_translation_u
+        ],
+        device=device,
+    ),
     second_joint_tilt_e=torch.tensor(0.0, device=device),
     second_joint_tilt_n=torch.tensor(0.0, device=device),
     second_joint_tilt_u=torch.tensor(0.0, device=device),
-    concentrator_translation_e=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_e], device=device),
-    concentrator_translation_n=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_n], device=device),
-    concentrator_translation_u=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][config_dictionary.concentrator_translation_u], device=device),
+    concentrator_translation_e=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.concentrator_translation_e
+        ],
+        device=device,
+    ),
+    concentrator_translation_n=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.concentrator_translation_n
+        ],
+        device=device,
+    ),
+    concentrator_translation_u=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            config_dictionary.concentrator_translation_u
+        ],
+        device=device,
+    ),
     concentrator_tilt_e=torch.tensor(0.0, device=device),
     concentrator_tilt_n=torch.tensor(0.0, device=device),
     concentrator_tilt_u=torch.tensor(0.0, device=device),
@@ -239,33 +302,91 @@ kinematic_prototype_config = KinematicPrototypeConfig(
 # Include actuator parameters for actuator 1.
 index = 1
 actuator1_parameters = ActuatorParameters(
-    increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
-    initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
-    offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-    pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
-    initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
+    increment=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_increment}_{index}"
+        ],
+        device=device,
+    ),
+    initial_stroke_length=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_initial_stroke_length}_{index}"
+        ],
+        device=device,
+    ),
+    offset=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_offset}_{index}"
+        ],
+        device=device,
+    ),
+    pivot_radius=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_pivot_radius}_{index}"
+        ],
+        device=device,
+    ),
+    initial_angle=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_initial_angle}_{index}"
+        ],
+        device=device,
+    ),
 )
 # Include an actuator 1.
 actuator1_prototype = ActuatorConfig(
     actuator_key=f"{config_dictionary.actuator_key}_{index}",
-    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
-    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_clockwise}_{index}"],
+    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+        f"{config_dictionary.paint_actuator_type}_{index}"
+    ].lower(),
+    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+        f"{config_dictionary.paint_clockwise}_{index}"
+    ],
     actuator_parameters=actuator1_parameters,
 )
 # Include actuator parameters for actuator 2.
 index = 2
 actuator2_parameters = ActuatorParameters(
-    increment=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_increment}_{index}"], device=device),
-    initial_stroke_length=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_stroke_length}_{index}"], device=device),
-    offset=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_offset}_{index}"], device=device),
-    pivot_radius=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_pivot_radius}_{index}"], device=device),
-    initial_angle=torch.tensor(heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_initial_angle}_{index}"], device=device),
+    increment=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_increment}_{index}"
+        ],
+        device=device,
+    ),
+    initial_stroke_length=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_initial_stroke_length}_{index}"
+        ],
+        device=device,
+    ),
+    offset=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_offset}_{index}"
+        ],
+        device=device,
+    ),
+    pivot_radius=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_pivot_radius}_{index}"
+        ],
+        device=device,
+    ),
+    initial_angle=torch.tensor(
+        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+            f"{config_dictionary.paint_initial_angle}_{index}"
+        ],
+        device=device,
+    ),
 )
 # Include an actuator 2.
 actuator2_prototype = ActuatorConfig(
     actuator_key=f"{config_dictionary.actuator_key}_{index}",
-    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_actuator_type}_{index}"].lower(),
-    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][f"{config_dictionary.paint_clockwise}_{index}"],
+    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+        f"{config_dictionary.paint_actuator_type}_{index}"
+    ].lower(),
+    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
+        f"{config_dictionary.paint_clockwise}_{index}"
+    ],
     actuator_parameters=actuator2_parameters,
 )
 
@@ -290,14 +411,18 @@ heliostat_surface_config = SurfaceConfig(facets_list=facets_list)
 heliostat_kinematic_config = KinematicConfig(
     kinematic_type=config_dictionary.rigid_body_key,
     kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
-    kinematic_deviations=kinematic_prototype_deviations
+    kinematic_deviations=kinematic_prototype_deviations,
 )
 heliostat_actuators_config = ActuatorListConfig(actuator_list=actuator_prototype_list)
 
 
 # Choose default aimpoint for heliostat
 heliostats_aimpoint_area = "receiver"
-heliostats_aimpoint = next(tower_area for tower_area in tower_areas_configs_list if tower_area.tower_area_key == heliostats_aimpoint_area).center
+heliostats_aimpoint = next(
+    tower_area
+    for tower_area in tower_areas_configs_list
+    if tower_area.tower_area_key == heliostats_aimpoint_area
+).center
 
 # Include the configuration for a heliostat.
 heliostat = HeliostatConfig(
@@ -305,9 +430,9 @@ heliostat = HeliostatConfig(
     heliostat_id=1,
     heliostat_position=heliostat_position,
     heliostat_aim_point=heliostats_aimpoint,
-    heliostat_surface = heliostat_surface_config,
-    heliostat_kinematic = heliostat_kinematic_config,
-    heliostat_actuators = heliostat_actuators_config
+    heliostat_surface=heliostat_surface_config,
+    heliostat_kinematic=heliostat_kinematic_config,
+    heliostat_actuators=heliostat_actuators_config,
 )
 
 # Create a list of all the heliostats - in this case, only one.

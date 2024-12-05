@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from artist.scenario import Scenario
 
-from artist.field.tower_area import TowerArea
 import torch
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
@@ -153,7 +152,7 @@ class HeliostatRayTracer:
 
         "Heliostat"-tracing is one kind of raytracing applied in ARTIST. For this kind of raytracing,
         the rays are initialized on the heliostat. The rays originate in the discrete surface points.
-        There they are multiplied, distorted, and scattered, and then they are sent to the tower area. 
+        There they are multiplied, distorted, and scattered, and then they are sent to the tower area.
         Letting the rays originate on the heliostat drastically reduces the number of rays that need to be traced.
 
         Parameters
@@ -180,7 +179,11 @@ class HeliostatRayTracer:
             The resolution of the bitmap in the up dimension (default: 256).
         """
         self.heliostat = scenario.heliostats.heliostat_list[heliostat_index]
-        self.tower_area = next(area for area in scenario.tower_areas.tower_area_list if area.name == aim_point_area)
+        self.tower_area = next(
+            area
+            for area in scenario.tower_areas.tower_area_list
+            if area.name == aim_point_area
+        )
         self.world_size = world_size
         self.rank = rank
         self.number_of_surface_points = (
@@ -209,7 +212,7 @@ class HeliostatRayTracer:
 
         self.bitmap_resolution_e = bitmap_resolution_e
         self.bitmap_resolution_u = bitmap_resolution_u
-        
+
     def trace_rays(
         self,
         incident_ray_direction: torch.Tensor,

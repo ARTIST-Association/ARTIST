@@ -621,10 +621,17 @@ def get_calibration_properties(
             device=device,
         )
 
-    return center_calibration_image, incident_ray_direction, calibration_target, motor_positions
+    return (
+        center_calibration_image,
+        incident_ray_direction,
+        calibration_target,
+        motor_positions,
+    )
 
 
-def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> Generator[tuple[bool, int, int], None, None]:
+def setup_distributed_environment(
+    device: Union[torch.device, str] = "cuda",
+) -> Generator[tuple[bool, int, int], None, None]:
     """
     Set up the distributed environment and destroy it in the end.
 
@@ -638,14 +645,14 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
     ----------
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Yields
-    -------
+    ------
     bool
         Distributed mode enabled or disabled.
     int
         The rank of the current process.
-    int 
+    int
         The world size or total number of processes.
     """
     # Choose backend depending on device type
@@ -654,13 +661,13 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
         backend = "nccl"
     else:
         backend = "gloo"
-    
+
     print(f"Using device type: {device.type} and backend: {backend}")
-    
+
     # Check if running in distributed mode
     is_distributed = "WORLD_SIZE" in os.environ and int(os.environ["WORLD_SIZE"]) > 1
     print(f"Distributed Mode: {'Enabled' if is_distributed else 'Disabled'}")
-    
+
     # Initialize the distributed process group if in distributed mode
     if is_distributed:
         rank = int(os.environ["RANK"])
@@ -668,13 +675,15 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
         print(f"Initializing distributed process group: Rank {rank}/{world_size}")
 
         torch.distributed.init_process_group(backend=backend, init_method="env://")
-        print(f"Distributed process group initialized: Rank {rank}, World Size {world_size}")
+        print(
+            f"Distributed process group initialized: Rank {rank}, World Size {world_size}"
+        )
     else:
         rank = 0
         world_size = 1
         print("Running in single-device mode.")
-    
-    try: 
+
+    try:
         yield is_distributed, rank, world_size
     finally:
         if is_distributed:
@@ -684,14 +693,14 @@ def setup_distributed_environment(device: Union[torch.device, str] = "cuda") -> 
 
 def angle_between_vectors(u, v):
     dot_product = torch.dot(u, v)
-    
+
     norm_u = torch.norm(u)
     norm_v = torch.norm(v)
-    
+
     cos_theta = dot_product / (norm_u * norm_v)
-    
+
     cos_theta = torch.clamp(cos_theta, -1.0, 1.0)
-    
+
     angle_rad = torch.acos(cos_theta)
-    
+
     return angle_rad

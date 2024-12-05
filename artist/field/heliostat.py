@@ -261,7 +261,10 @@ class Heliostat(torch.nn.Module):
             surface_config = prototype_surface
 
         if config_dictionary.heliostat_kinematic_key in config_file.keys():
-            if config_dictionary.kinematic_offsets_key in config_file[config_dictionary.heliostat_kinematic_key].keys():
+            if (
+                config_dictionary.kinematic_offsets_key
+                in config_file[config_dictionary.heliostat_kinematic_key].keys()
+            ):
                 kinematic_initial_orientation_offset_e = config_file.get(
                     f"{config_dictionary.heliostat_kinematic_key}/"
                     f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
@@ -323,14 +326,20 @@ class Heliostat(torch.nn.Module):
                 )
             else:
                 assert (
-                    prototype_kinematic.kinematic_initial_orientation_offsets is not None
+                    prototype_kinematic.kinematic_initial_orientation_offsets
+                    is not None
                 ), "If the heliostat kinematic does not have kinematic offsets, a kinematic offset prototype must be provided!"
                 log.info(
                     "Kinematic offsets not provided - loading a heliostat with the kinematic offset prototype."
                 )
-                kinematic_offsets = prototype_kinematic.kinematic_initial_orientation_offsets
-                
-            if config_dictionary.kinematic_deviations_key in config_file[config_dictionary.heliostat_kinematic_key].keys():
+                kinematic_offsets = (
+                    prototype_kinematic.kinematic_initial_orientation_offsets
+                )
+
+            if (
+                config_dictionary.kinematic_deviations_key
+                in config_file[config_dictionary.heliostat_kinematic_key].keys()
+            ):
                 first_joint_translation_e = config_file.get(
                     f"{config_dictionary.heliostat_kinematic_key}/"
                     f"{config_dictionary.kinematic_deviations_key}/"
@@ -514,21 +523,27 @@ class Heliostat(torch.nn.Module):
                 kinematic_deviations = KinematicDeviations(
                     first_joint_translation_e=(
                         torch.tensor(
-                            first_joint_translation_e[()], dtype=torch.float, device=device
+                            first_joint_translation_e[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if first_joint_translation_e
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     first_joint_translation_n=(
                         torch.tensor(
-                            first_joint_translation_n[()], dtype=torch.float, device=device
+                            first_joint_translation_n[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if first_joint_translation_n
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     first_joint_translation_u=(
                         torch.tensor(
-                            first_joint_translation_u[()], dtype=torch.float, device=device
+                            first_joint_translation_u[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if first_joint_translation_u
                         else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -556,21 +571,27 @@ class Heliostat(torch.nn.Module):
                     ),
                     second_joint_translation_e=(
                         torch.tensor(
-                            second_joint_translation_e[()], dtype=torch.float, device=device
+                            second_joint_translation_e[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if second_joint_translation_e
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     second_joint_translation_n=(
                         torch.tensor(
-                            second_joint_translation_n[()], dtype=torch.float, device=device
+                            second_joint_translation_n[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if second_joint_translation_n
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     second_joint_translation_u=(
                         torch.tensor(
-                            second_joint_translation_u[()], dtype=torch.float, device=device
+                            second_joint_translation_u[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if second_joint_translation_u
                         else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -598,21 +619,27 @@ class Heliostat(torch.nn.Module):
                     ),
                     concentrator_translation_e=(
                         torch.tensor(
-                            concentrator_translation_e[()], dtype=torch.float, device=device
+                            concentrator_translation_e[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if concentrator_translation_e
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     concentrator_translation_n=(
                         torch.tensor(
-                            concentrator_translation_n[()], dtype=torch.float, device=device
+                            concentrator_translation_n[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if concentrator_translation_n
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     concentrator_translation_u=(
                         torch.tensor(
-                            concentrator_translation_u[()], dtype=torch.float, device=device
+                            concentrator_translation_u[()],
+                            dtype=torch.float,
+                            device=device,
                         )
                         if concentrator_translation_u
                         else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -647,7 +674,6 @@ class Heliostat(torch.nn.Module):
                     "Kinematic deviation parameters not provided - loading a heliostat with the kinematic deviation prototype."
                 )
                 kinematic_deviations = prototype_kinematic.kinematic_deviations
-             
 
             kinematic_config = KinematicLoadConfig(
                 kinematic_type=str(
@@ -669,7 +695,9 @@ class Heliostat(torch.nn.Module):
 
         if config_dictionary.heliostat_actuators_key in config_file.keys():
             actuator_list = []
-            for actuator in config_file[config_dictionary.heliostat_actuators_key].keys():
+            for actuator in config_file[
+                config_dictionary.heliostat_actuators_key
+            ].keys():
                 increment = config_file.get(
                     f"{config_dictionary.heliostat_actuators_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
@@ -744,7 +772,9 @@ class Heliostat(torch.nn.Module):
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                     initial_angle=(
-                        torch.tensor(initial_angle[()], dtype=torch.float, device=device)
+                        torch.tensor(
+                            initial_angle[()], dtype=torch.float, device=device
+                        )
                         if initial_angle
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
@@ -753,14 +783,14 @@ class Heliostat(torch.nn.Module):
                     ActuatorConfig(
                         actuator_key=actuator,
                         actuator_type=str(
-                            config_file[config_dictionary.heliostat_actuators_key][actuator][
-                                config_dictionary.actuator_type_key
-                            ][()].decode("utf-8")
+                            config_file[config_dictionary.heliostat_actuators_key][
+                                actuator
+                            ][config_dictionary.actuator_type_key][()].decode("utf-8")
                         ),
                         actuator_clockwise=bool(
-                            config_file[config_dictionary.heliostat_actuators_key][actuator][
-                                config_dictionary.actuator_clockwise
-                            ][()]
+                            config_file[config_dictionary.heliostat_actuators_key][
+                                actuator
+                            ][config_dictionary.actuator_clockwise][()]
                         ),
                         actuator_parameters=actuator_parameters,
                     )
@@ -773,10 +803,12 @@ class Heliostat(torch.nn.Module):
                     log.info(
                         "Not enough actuators provided - loading more actuator prototypes."
                     )
-                    for actuator_prototype in reversed(prototype_actuator.actuator_list):
+                    for actuator_prototype in reversed(
+                        prototype_actuator.actuator_list
+                    ):
                         actuator_list.append(actuator_prototype)
                         if len(actuator_list) == 2:
-                            break  
+                            break
             actuator_list_config = ActuatorListConfig(actuator_list=actuator_list)
         else:
             assert (
@@ -790,30 +822,32 @@ class Heliostat(torch.nn.Module):
         # Adapt initial angle of actuator 1 according to kinematic initial orientation offset.
         # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in enu)
         # The first actuator always rotates along the east-axis.
-        # Since the actuator coordinate system is relative to the heliostat orientation, and the initial angle 
-        # is  
-        # first actuator must be transformed into the correct  
-        # 
-        initial_angle_actuator_1 = actuator_list_config.actuator_list[0].actuator_parameters.initial_angle
-        initial_angle_actuator_2 = actuator_list_config.actuator_list[1].actuator_parameters.initial_angle
+        # Since the actuator coordinate system is relative to the heliostat orientation, and the initial angle
+        # is
+        # first actuator must be transformed into the correct
+        #
+        initial_angle_actuator_1 = actuator_list_config.actuator_list[
+            0
+        ].actuator_parameters.initial_angle
+        initial_angle_actuator_2 = actuator_list_config.actuator_list[
+            1
+        ].actuator_parameters.initial_angle
         # TODO
         initial_angle_actuator_1 = torch.tensor([0.0389695375867206])
         initial_angle_actuator_2 = torch.tensor([0.943870007981347])
 
         # starte mit up ausrichtung: axis 1 dreht um ost-achse -> verkippung in nord/süd richtung
-        # 
+        #
         paint_vector = torch.tensor([0.0, 0.0, 1.0, 0.0])
         artist_standart = torch.tensor([0.0, -1.0, 0.0, 0.0])
 
         rotated_paint_vector_1 = paint_vector @ utils.rotate_e(
-                e=initial_angle_actuator_1,
-                device=device,
-            )
-        new_initial_angle_1 = utils.angle_between_vectors(paint_vector[:-1], rotated_paint_vector_1[:-1]) - utils.angle_between_vectors(paint_vector[:-1], artist_standart[:-1])
-
-        
-
-
+            e=initial_angle_actuator_1,
+            device=device,
+        )
+        new_initial_angle_1 = utils.angle_between_vectors(
+            paint_vector[:-1], rotated_paint_vector_1[:-1]
+        ) - utils.angle_between_vectors(paint_vector[:-1], artist_standart[:-1])
 
         return cls(
             heliostat_id=heliostat_id,
