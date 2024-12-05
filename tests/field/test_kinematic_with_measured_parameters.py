@@ -1,10 +1,13 @@
 import pathlib
-from artist import ARTIST_ROOT
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
+
 import h5py
 import pytest
 import torch
+
+from artist import ARTIST_ROOT
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.scenario import Scenario
+
 
 @pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
@@ -23,11 +26,12 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     """
     return torch.device(request.param)
 
+
 def test_kinematic(
     device: torch.device,
 ) -> None:
     """
-    Test the alignemnt optimization methods.
+    Test the kinematic with measured parameters.
 
     Parameters
     ----------
@@ -42,41 +46,133 @@ def test_kinematic(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scenario_path = pathlib.Path(ARTIST_ROOT) / f"tests/data/test_scenario_paint.h5"
+    scenario_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint.h5"
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
 
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_n=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_translation_u=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_n=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.first_joint_tilt_u=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_n=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_translation_u=torch.tensor(0.315, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_n=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.second_joint_tilt_u=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_n=torch.tensor(-0.17755, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_translation_u=torch.tensor(-0.4045, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_e=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_n=torch.tensor(0.0, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.deviation_parameters.concentrator_tilt_u=torch.tensor(0.0, device=device)
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_translation_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_translation_n = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_translation_u = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_tilt_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_tilt_n = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.first_joint_tilt_u = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_translation_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_translation_n = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_translation_u = torch.tensor(
+        0.315, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_tilt_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_tilt_n = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.second_joint_tilt_u = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_translation_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_translation_n = torch.tensor(
+        -0.17755, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_translation_u = torch.tensor(
+        -0.4045, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_tilt_e = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_tilt_n = torch.tensor(
+        0.0, device=device
+    )
+    scenario.heliostats.heliostat_list[
+        0
+    ].kinematic.deviation_parameters.concentrator_tilt_u = torch.tensor(
+        0.0, device=device
+    )
 
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].increment=torch.tensor(154166.666, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].initial_stroke_length=torch.tensor(0.075, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].offset=torch.tensor(0.34061, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].pivot_radius=torch.tensor(0.3204, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[0].initial_angle=torch.tensor(-1.570796, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].increment=torch.tensor(154166.666, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].initial_stroke_length=torch.tensor(0.075, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].offset=torch.tensor(0.3479, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].pivot_radius=torch.tensor(0.309, device=device)
-    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[1].initial_angle=torch.tensor(0.959931, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        0
+    ].increment = torch.tensor(154166.666, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        0
+    ].initial_stroke_length = torch.tensor(0.075, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        0
+    ].offset = torch.tensor(0.34061, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        0
+    ].pivot_radius = torch.tensor(0.3204, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        0
+    ].initial_angle = torch.tensor(-1.570796, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        1
+    ].increment = torch.tensor(154166.666, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        1
+    ].initial_stroke_length = torch.tensor(0.075, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        1
+    ].offset = torch.tensor(0.3479, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        1
+    ].pivot_radius = torch.tensor(0.309, device=device)
+    scenario.heliostats.heliostat_list[0].kinematic.actuators.actuator_list[
+        1
+    ].initial_angle = torch.tensor(0.959931, device=device)
 
     incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0])
 
@@ -88,9 +184,7 @@ def test_kinematic(
     )
 
     # Create raytracer - currently only possible for one heliostat.
-    raytracer = HeliostatRayTracer(
-        scenario=scenario, batch_size=10
-    )
+    raytracer = HeliostatRayTracer(scenario=scenario, batch_size=10)
 
     # Perform heliostat-based raytracing.
     final_bitmap = raytracer.trace_rays(
