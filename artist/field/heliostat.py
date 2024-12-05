@@ -859,7 +859,7 @@ class Heliostat(torch.nn.Module):
         ValueError
             If the heliostat has not yet been aligned.
         """
-        if self.is_aligned:
+        if not self.is_aligned:
             raise ValueError("Heliostat has not yet been aligned.")
         self.preferred_reflection_direction = reflect(
             incoming_ray_direction=rays,
