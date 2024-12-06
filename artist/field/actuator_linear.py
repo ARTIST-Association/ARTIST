@@ -201,7 +201,7 @@ class LinearActuator(Actuator):
         stroke_length = torch.sqrt(self.offset**2 + self.pivot_radius**2 - calc_step_1)
         motor_position = (stroke_length - self.initial_stroke_length) * self.increment
         return motor_position
-    
+
     def forward(self) -> None:
         """
         Specify the forward pass.

@@ -94,7 +94,7 @@ class LightSource(torch.nn.Module):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must be overridden!")
-    
+
     def forward(self) -> None:
         """
         Specify the forward pass.
