@@ -68,6 +68,8 @@ class Heliostat(torch.nn.Module):
         Compute the orientation for a heliostat given the desired motor positions.
     set_preferred_reflection_direction()
         Reflect incoming rays according to a normal vector.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -865,3 +867,14 @@ class Heliostat(torch.nn.Module):
             incoming_ray_direction=rays,
             reflection_surface_normals=self.current_aligned_surface_normals,
         )
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

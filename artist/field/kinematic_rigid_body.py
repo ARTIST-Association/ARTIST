@@ -37,6 +37,8 @@ class RigidBody(Kinematic):
         Compute the orientation matrix given the motor positions.
     align_surface_with_motor_positions()
         Align given surface points and surface normals according to motor positions.
+    forward()
+        Specify the forward pass.
 
     See Also
     --------
@@ -495,3 +497,14 @@ class RigidBody(Kinematic):
         )
 
         return aligned_surface_points, aligned_surface_normals
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")
