@@ -25,7 +25,7 @@ def device(request: pytest.FixtureRequest) -> torch.device:
 @pytest.mark.parametrize(
     "wgs84_coordinates, reference_point, expected_enu_coordinates",
     [
-        # Coordinates of Jülich power plant and multifocustower
+        # Coordinates of Jülich power plant and multi-focus tower.
         (
             (
                 torch.tensor(
@@ -48,12 +48,12 @@ def test_wgs84_to_enu_converter(
     device: torch.device,
 ) -> None:
     """
-    Test the WGS84 to enu conversion.
+    Test the WGS84 to ENU conversion.
 
     Parameters
     ----------
     wgs84_coordinates : torch.Tensor
-        The coordinates in lat, lon, alt that are to be transformed.
+        The coordinates in latitude, longitude, altitude that are to be transformed.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
     expected_enu_coordinates : torch.Tensor
