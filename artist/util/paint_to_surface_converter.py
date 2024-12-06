@@ -47,10 +47,9 @@ class PAINTToSurfaceConverter:
         """
         Initialize the converter.
 
-        Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
-        exported to a binary file. To convert this data into a surface configuration format suitable for ``ARTIST``,
-        this converter first loads the data and then learns NURBS surfaces based on the data. Finally, the converter
-        returns a list of facets that can be used directly in an ``ARTIST`` scenario.
+        Deflectometry data is provided in hdf5 files by ``PAINT```. To convert this data into a surface configuration 
+        format suitable for ``ARTIST``, this converter first loads the data and then learns NURBS surfaces based on
+        the data. Finally, the converter returns a list of facets that can be used directly in an ``ARTIST`` scenario.
 
         Parameters
         ----------
@@ -66,7 +65,7 @@ class PAINTToSurfaceConverter:
         self.step_size = step_size
 
     @staticmethod
-    def normalize_evaluation_points_for_nurbs(points: torch.Tensor) -> torch.Tensor:
+    def normalize_evaluation_points_for_nurbs(evaluation_points: torch.Tensor) -> torch.Tensor:
         """
         Normalize the evaluation points for NURBS.
 
@@ -85,10 +84,10 @@ class PAINTToSurfaceConverter:
         """
         # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
         # defined evaluation points.
-        points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
-            (points[:] - min(points[:])) + 2e-5
+        evaluation_points_normalized = (evaluation_points[:] - min(evaluation_points[:]) + 1e-5) / max(
+            (evaluation_points[:] - min(evaluation_points[:])) + 2e-5
         )
-        return points_normalized
+        return evaluation_points_normalized
 
     def fit_nurbs_surface(
         self,

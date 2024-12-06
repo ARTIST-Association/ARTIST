@@ -28,7 +28,7 @@ torch.cuda.manual_seed(7)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_stral"
+file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_stral"
 
 if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(

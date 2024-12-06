@@ -568,3 +568,24 @@ def get_calibration_properties(
         )
 
     return center_calibration_image, incident_ray_direction, motor_positions
+
+
+def normalize_points(points: torch.Tensor) -> torch.Tensor:
+    """
+    Normalize points in a tensor to the open interval of (0,1).
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        A tensor containing points to be normalized.
+
+    Returns
+    -------
+    torch.Tensor
+        The normalized points.
+    """
+    # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
+    points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
+        (points[:] - min(points[:])) + 2e-5
+    )
+    return points_normalized
