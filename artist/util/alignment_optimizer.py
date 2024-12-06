@@ -55,7 +55,7 @@ class AlignmentOptimizer:
         scheduler : Union[_LRScheduler, ReduceLROnPlateau]
             The learning rate scheduler.
         """
-        log.info("Create alignment optimizer")
+        log.info("Create alignment optimizer.")
         self.scenario = scenario
         self.optimizer = optimizer
         self.scheduler = scheduler
