@@ -19,7 +19,7 @@ class Kinematic(torch.nn.Module):
     align()
         Compute the orientation matrix to align the heliostat.
     forward()
-        Implement the forward kinematics.
+        Specify the forward pass.
     """
 
     def __init__(self, position: torch.Tensor, aim_point: torch.Tensor) -> None:
@@ -67,13 +67,13 @@ class Kinematic(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self) -> torch.Tensor:
+    def forward(self) -> None:
         """
-        Implement the forward kinematics.
+        Specify the forward pass.
 
         Raises
         ------
         NotImplementedError
-            Whenever called (abstract base class method).
+            Whenever called.
         """
         raise NotImplementedError("Must be overridden!")

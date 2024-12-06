@@ -1,5 +1,3 @@
-import math
-
 import pytest
 import torch
 
@@ -12,24 +10,6 @@ from artist.util.configuration_classes import (
     ActuatorListConfig,
     KinematicOffsets,
 )
-
-
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
 
 
 @pytest.fixture
@@ -94,7 +74,9 @@ def initial_offsets_above(device: torch.device) -> KinematicOffsets:
         Initial kinematic offsets for an up-orientated heliostat.
     """
     initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2, device=device),
+        kinematic_initial_orientation_offset_e=torch.tensor(
+            torch.pi / 2, device=device
+        ),
         kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
         kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
     )
@@ -212,8 +194,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1, 0, 0, 0],
-                    [0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 0],
-                    [0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0],
+                    [
+                        0,
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        0,
+                    ],
+                    [
+                        0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0,
+                    ],
                     [0, 0, 0, 1],
                 ]
             ),
@@ -223,8 +215,18 @@ def kinematic_model_3(
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0, 0.0],
-                    [math.sin(math.pi / 4), math.cos(math.pi / 4), 0.0, 0.0],
+                    [
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        -torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
                     [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -247,8 +249,18 @@ def kinematic_model_3(
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 0.0, 0.0],
-                    [math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0, 0.0],
+                    [
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        0.0,
+                    ],
                     [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -260,8 +272,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(-math.pi / 8), -math.sin(-math.pi / 8), 0.0],
-                    [0.0, math.sin(-math.pi / 8), math.cos(-math.pi / 8), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(-torch.pi / 8)),
+                        -torch.sin(torch.tensor(-torch.pi / 8)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 8)),
+                        torch.cos(torch.tensor(-torch.pi / 8)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -272,8 +294,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(-math.pi / 4), -math.sin(-math.pi / 4), 1.0],
-                    [0.0, math.sin(-math.pi / 4), math.cos(-math.pi / 4), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        -torch.sin(torch.tensor(-torch.pi / 4)),
+                        1.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -284,8 +316,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(math.pi / 4), -math.sin(math.pi / 4), 0.0],
-                    [0.0, math.sin(math.pi / 4), math.cos(math.pi / 4), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        -torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -296,8 +338,18 @@ def kinematic_model_3(
             torch.tensor(
                 [
                     [1.0, 0.0, 0.0, 0.0],
-                    [0.0, math.cos(math.pi / 2), -math.sin(math.pi / 2), 0.0],
-                    [0.0, math.sin(math.pi / 2), math.cos(math.pi / 2), 0.0],
+                    [
+                        0.0,
+                        torch.cos(torch.tensor(torch.pi / 2)),
+                        -torch.sin(torch.tensor(torch.pi / 2)),
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 2)),
+                        torch.cos(torch.tensor(torch.pi / 2)),
+                        0.0,
+                    ],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -307,8 +359,18 @@ def kinematic_model_3(
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(math.pi / 4), 0.0, math.sin(math.pi / 4), 0.0],
-                    [math.sin(math.pi / 4), 0.0, -math.cos(math.pi / 4), 0.0],
+                    [
+                        torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(torch.pi / 4)),
+                        0.0,
+                        -torch.cos(torch.tensor(torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -319,8 +381,18 @@ def kinematic_model_3(
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor(
                 [
-                    [math.cos(-math.pi / 4), 0.0, math.sin(-math.pi / 4), 0.0],
-                    [math.sin(-math.pi / 4), 0.0, -math.cos(-math.pi / 4), 0.0],
+                    [
+                        torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
+                    [
+                        torch.sin(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                        -torch.cos(torch.tensor(-torch.pi / 4)),
+                        0.0,
+                    ],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -356,7 +428,9 @@ def test_orientation_matrix(
     AssertionError
         If test does not complete as expected.
     """
-    orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
+    orientation_matrix = request.getfixturevalue(
+        kinematic_model_fixture
+    ).incident_ray_direction_to_orientation(
         incident_ray_direction.to(device), device=device
     )
-    torch.testing.assert_close(orientation_matrix[0], expected.to(device))
+    torch.testing.assert_close(orientation_matrix, expected.to(device))

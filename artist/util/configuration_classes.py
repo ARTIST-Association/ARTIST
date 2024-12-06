@@ -5,6 +5,50 @@ import torch
 from artist.util import config_dictionary
 
 
+class PowerPlantConfig:
+    """
+    Store the power plant configuration parameters.
+
+    Attributes
+    ----------
+    power_plant_position : torch.Tensor
+        The position of the power plant as latitude, longitude, altitude.
+
+    Methods
+    -------
+    create_power_plant_dict()
+       Create a dictionary containing the configuration parameters for the power plant.
+    """
+
+    def __init__(
+        self,
+        power_plant_position: torch.Tensor,
+    ) -> None:
+        """
+        Initialize the power plant configuration.
+
+        Parameters
+        ----------
+        power_plant_position : torch.Tensor
+            The position of the power plant as latitude, longitude, altitude.
+        """
+        self.power_plant_position = power_plant_position
+
+    def create_power_plant_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the power plant.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the power plant.
+        """
+        power_plant_dict = {
+            config_dictionary.power_plant_position: self.power_plant_position,
+        }
+        return power_plant_dict
+
+
 class ReceiverConfig:
     """
     Store the receiver configuration parameters.
@@ -210,15 +254,22 @@ class LightSourceConfig:
             The mean used for modeling the sun.
         covariance : float, optional
             The covariance used for modeling the sun.
+
+        Raises
+        ------
+        ValueError
+            If the specified light source distribution type is unknown.
         """
         self.light_source_key = light_source_key
         self.light_source_type = light_source_type
         self.number_of_rays = number_of_rays
         self.distribution_type = distribution_type
-        assert (
+
+        if (
             self.distribution_type
-            == config_dictionary.light_source_distribution_is_normal
-        ), "Unknown light source distribution type."
+            != config_dictionary.light_source_distribution_is_normal
+        ):
+            raise ValueError("Unknown light source distribution type.")
 
         if (
             self.distribution_type
@@ -941,10 +992,10 @@ class ActuatorParameters:
         The initial stroke length.
     offset : torch.Tensor, optional
         The initial actuator offset.
-    radius : torch.Tensor, optional
-        The radius of the considered joint.
-    phi_0 : torch.Tensor, optional
-        The initial phi value of the actuator.
+    pivot_radius : torch.Tensor, optional
+        The pivot radius of the considered joint.
+    initial_angle : torch.Tensor, optional
+        The initial angle of the actuator.
 
     Methods
     -------
@@ -957,8 +1008,8 @@ class ActuatorParameters:
         increment: Optional[torch.Tensor] = None,
         initial_stroke_length: Optional[torch.Tensor] = None,
         offset: Optional[torch.Tensor] = None,
-        radius: Optional[torch.Tensor] = None,
-        phi_0: Optional[torch.Tensor] = None,
+        pivot_radius: Optional[torch.Tensor] = None,
+        initial_angle: Optional[torch.Tensor] = None,
     ) -> None:
         """
         Initialize the actuator parameters.
@@ -971,16 +1022,16 @@ class ActuatorParameters:
             The initial stroke length.
         offset : torch.Tensor, optional
             The initial actuator offset.
-        radius : torch.Tensor, optional
-            The radius of the considered joint.
-        phi_0 : torch.Tensor, optional
-            The initial phi value of the actuator.
+        pivot_radius : torch.Tensor, optional
+            The pivot radius of the considered joint.
+        initial_angle : torch.Tensor, optional
+            The initial angle of the actuator.
         """
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.offset = offset
-        self.radius = radius
-        self.phi_0 = phi_0
+        self.pivot_radius = pivot_radius
+        self.initial_angle = initial_angle
 
     def create_actuator_parameters_dict(self) -> dict[str, torch.Tensor]:
         """
@@ -1006,13 +1057,13 @@ class ActuatorParameters:
             actuator_parameters_dict.update(
                 {config_dictionary.actuator_offset: self.offset}
             )
-        if self.radius is not None:
+        if self.pivot_radius is not None:
             actuator_parameters_dict.update(
-                {config_dictionary.actuator_radius: self.radius}
+                {config_dictionary.actuator_pivot_radius: self.pivot_radius}
             )
-        if self.phi_0 is not None:
+        if self.initial_angle is not None:
             actuator_parameters_dict.update(
-                {config_dictionary.actuator_phi_0: self.phi_0}
+                {config_dictionary.actuator_initial_angle: self.initial_angle}
             )
         return actuator_parameters_dict
 

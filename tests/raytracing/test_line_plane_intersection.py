@@ -6,24 +6,6 @@ import torch
 from artist.raytracing import raytracing_utils
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 @pytest.mark.parametrize(
     "ray_directions, plane_normal_vectors, plane_center, points_at_ray_origin, expected_intersections",
     [
@@ -108,15 +90,16 @@ def test_line_plane_intersection(
     AssertionError
         If test does not complete as expected.
     """
+    # Check if the ValueError is thrown as expected.
     if expected_intersections is None:
-        # Check if an AssertionError is thrown as expected.
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError) as exc_info:
             raytracing_utils.line_plane_intersections(
                 ray_directions=ray_directions.to(device),
                 plane_normal_vectors=plane_normal_vectors.to(device),
                 plane_center=plane_center.to(device),
                 points_at_ray_origin=points_at_ray_origin.to(device),
             )
+        assert "No intersection or line is within plane." in str(exc_info.value)
     else:
         # Check if the intersections match the expected intersections.
         intersections = raytracing_utils.line_plane_intersections(

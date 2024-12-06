@@ -134,5 +134,6 @@ testpaths = [
 omit = [
     "artist/util/scenario_generator.py",
     "artist/util/stral_to_surface_converter.py",
+    "artist/util/paint_to_surface_converter.py",
     "artist/util/configuration_classes.py"
     ]

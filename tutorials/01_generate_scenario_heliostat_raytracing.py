@@ -1,5 +1,4 @@
-import math
-from pathlib import Path
+import pathlib
 
 import torch
 
@@ -14,6 +13,7 @@ from artist.util.configuration_classes import (
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
     ReceiverConfig,
     ReceiverListConfig,
@@ -22,22 +22,29 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # The following parameter is the name of the scenario.
-file_path = "please/insert/your/path/here/name"
+file_path = pathlib.Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
-if not Path(file_path).parent.is_dir():
+if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(
-        f"The folder ``{Path(file_path).parent}`` selected to save the scenario does not exist. "
+        f"The folder ``{pathlib.Path(file_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
+
+# Include the power plant configuration.
+power_plant_config = PowerPlantConfig(
+    power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
+)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
     receiver_key="receiver1",
     receiver_type=config_dictionary.receiver_type_planar,
-    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0]),
-    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+    position_center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,
     resolution_e=256,
@@ -68,7 +75,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 stral_converter = StralToSurfaceConverter(
-    stral_file_path=f"{ARTIST_ROOT}/measurement_data/stral_test_data",
+    stral_file_path=pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_stral_data",
     surface_header_name="=5f2I2f",
     facet_header_name="=i9fI",
     points_on_facet_struct_name="=7f",
@@ -94,7 +101,9 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_li
 
 # Include the initial orientation offsets for the kinematic.
 kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(math.pi / 2)
+    kinematic_initial_orientation_offset_e=torch.tensor(
+        torch.tensor(torch.pi / 2, device=device), device=device
+    )
 )
 
 # Include the kinematic prototype configuration.
@@ -138,8 +147,8 @@ prototype_config = PrototypeConfig(
 heliostat1 = HeliostatConfig(
     heliostat_key="heliostat1",
     heliostat_id=1,
-    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0]),
-    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0]),
+    heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
+    heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
 )
 
 # Create a list of all the heliostats - in this case, only one.
@@ -155,6 +164,7 @@ if __name__ == "__main__":
     # Create a scenario object.
     scenario_object = ScenarioGenerator(
         file_path=file_path,
+        power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,

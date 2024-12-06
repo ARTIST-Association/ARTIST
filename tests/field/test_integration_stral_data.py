@@ -33,24 +33,6 @@ else:
     rank = 0
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 @pytest.mark.parametrize(
     "incident_ray_direction, expected_value, scenario_config",
     [
@@ -100,13 +82,17 @@ def test_compute_bitmaps(
     torch.cuda.manual_seed(7)
 
     # Load the scenario.
-    with h5py.File(f"{ARTIST_ROOT}/scenarios/{scenario_config}.h5", "r") as config_h5:
+    with h5py.File(
+        pathlib.Path(ARTIST_ROOT) / "tests/data" / f"{scenario_config}.h5", "r"
+    ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=config_h5, device=device
         )
 
     # Align heliostat.
-    scenario.heliostats.heliostat_list[0].set_aligned_surface(
+    scenario.heliostats.heliostat_list[
+        0
+    ].set_aligned_surface_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
@@ -126,17 +112,10 @@ def test_compute_bitmaps(
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
     if rank == 0:
-        if device.type == "cpu":
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/field/test_bitmaps_load_surface_stral"
-                / f"{expected_value}_cpu.pt"
-            )
-        else:
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/field/test_bitmaps_load_surface_stral"
-                / f"{expected_value}_gpu.pt"
-            )
-        expected = torch.load(expected_path).to(device)
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/expected_bitmaps_integration"
+            / f"{expected_value}_{device.type}.pt"
+        )
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
