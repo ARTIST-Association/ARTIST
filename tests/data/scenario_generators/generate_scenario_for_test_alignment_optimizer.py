@@ -1,18 +1,15 @@
-import json
 import pathlib
 
-from artist.util.surface_converter import SurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, paint_loader, utils
+from artist.util import config_dictionary, paint_loader
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorParameters,
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicDeviations,
     KinematicOffsets,
     KinematicPrototypeConfig,
     LightSourceConfig,
@@ -23,8 +20,8 @@ from artist.util.configuration_classes import (
     ReceiverListConfig,
     SurfacePrototypeConfig,
 )
-from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 from artist.util.scenario_generator import ScenarioGenerator
+from artist.util.surface_converter import SurfaceConverter
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -46,11 +43,17 @@ heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.js
 deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/deflectometry.h5"
 
 
-calibration_target_name  = paint_loader.read_paint_calibration_properties(calibration_file)
+calibration_target_name = paint_loader.read_paint_calibration_properties(
+    calibration_file
+)
 
-power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = paint_loader(tower_file, calibration_target_name, device)
+power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = (
+    paint_loader(tower_file, calibration_target_name, device)
+)
 
-heliostat_position, kinematic_deviations = paint_loader.read_paint_heliostat_properties(heliostat_file, power_plant_position, device)
+heliostat_position, kinematic_deviations = paint_loader.read_paint_heliostat_properties(
+    heliostat_file, power_plant_position, device
+)
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)

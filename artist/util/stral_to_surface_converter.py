@@ -350,14 +350,26 @@ class StralToSurfaceConverter:
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor.
-        min_x = min(single_facet_surface_points.shape[0] for single_facet_surface_points in surface_points_with_facets_list)
-        reduced_single_facet_surface_points = [single_facet_surface_points[:min_x] for single_facet_surface_points in surface_points_with_facets_list]
+        min_x = min(
+            single_facet_surface_points.shape[0]
+            for single_facet_surface_points in surface_points_with_facets_list
+        )
+        reduced_single_facet_surface_points = [
+            single_facet_surface_points[:min_x]
+            for single_facet_surface_points in surface_points_with_facets_list
+        ]
         surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
-        
-        min_x = min(single_facet_surface_normals.shape[0] for single_facet_surface_normals in surface_normals_with_facets_list)
-        reduced_single_facet_surface_normals = [single_facet_surface_normals[:min_x] for single_facet_surface_normals in surface_normals_with_facets_list]
+
+        min_x = min(
+            single_facet_surface_normals.shape[0]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        )
+        reduced_single_facet_surface_normals = [
+            single_facet_surface_normals[:min_x]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        ]
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
-        
+
         log.info("Loading STRAL data complete")
 
         # Select only selected number of points to reduce compute.

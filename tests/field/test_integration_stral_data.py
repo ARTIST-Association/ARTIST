@@ -32,6 +32,7 @@ else:
     world_size = 1
     rank = 0
 
+
 @pytest.mark.parametrize(
     "incident_ray_direction, expected_value, scenario_config",
     [
