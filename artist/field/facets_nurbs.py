@@ -32,7 +32,7 @@ class NurbsFacet(torch.nn.Module):
     canting_n : torch.Tensor
         The canting vector in the north direction of the facet.
 
-        
+
     Methods
     -------
     create_nurbs_surface()
