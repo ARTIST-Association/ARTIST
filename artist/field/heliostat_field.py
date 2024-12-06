@@ -107,4 +107,3 @@ class HeliostatField(torch.nn.Module):
             Whenever called.
         """
         raise NotImplementedError("Not Implemented!")
-

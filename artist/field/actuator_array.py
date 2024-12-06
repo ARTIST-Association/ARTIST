@@ -26,7 +26,7 @@ class ActuatorArray(torch.nn.Module):
     ----------
     actuator_list : List[Actuator]
         The list of actuators to be wrapped.
-    
+
     Methods
     -------
     forward()
@@ -99,7 +99,7 @@ class ActuatorArray(torch.nn.Module):
                 )
 
         self.actuator_list = actuator_array
-    
+
     def forward(self) -> None:
         """
         Specify the forward pass.
