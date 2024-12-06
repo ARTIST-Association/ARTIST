@@ -48,7 +48,7 @@ center_calibration_image, incident_ray_direction, motor_positions = (
 
 # Get optimizable parameters. (This will choose all 28 kinematic parameters)
 parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(
-    scenario=example_scenario
+    kinematic=example_scenario.heliostats.heliostat_list[0].kinematic
 )
 
 # Set up optimizer and scheduler parameters

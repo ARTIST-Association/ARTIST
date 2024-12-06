@@ -110,7 +110,7 @@ def test_alignment_optimizer_methods(
             scenario_file=scenario_file, device=device
         )
     optimizable_parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(
-        scenario=scenario
+        kinematic=scenario.heliostats.heliostat_list[0].kinematic
     )
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
