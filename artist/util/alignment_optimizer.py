@@ -83,7 +83,7 @@ class AlignmentOptimizer:
         incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
         motor_positions : Optional[torch.Tensor]
-            The motor positions specified in the calibration (default is None).
+            The motor positions specified in the calibration (default is ``None``).
         device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
 
