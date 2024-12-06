@@ -29,6 +29,8 @@ class Sun(LightSource):
         Class method to initialize a sun from an HDF5 file.
     get_distortions()
         Returns distortions used to rotate rays.
+    forward()
+        Specify the forward pass.
 
     See Also
     --------
@@ -240,3 +242,14 @@ class Sun(LightSource):
             return distortions_u, distortions_e
         else:
             raise ValueError("Unknown light distribution type.")
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

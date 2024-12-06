@@ -18,6 +18,8 @@ class LightSource(torch.nn.Module):
     -------
     get_distortions()
         Get distortions given the light source model.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -90,5 +92,16 @@ class LightSource(torch.nn.Module):
         ------
         NotImplementedError
             Whenever called (abstract base class method).
+        """
+        raise NotImplementedError("Must be overridden!")
+    
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
         """
         raise NotImplementedError("Must be overridden!")

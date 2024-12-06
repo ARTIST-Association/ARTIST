@@ -31,6 +31,14 @@ class NurbsFacet(torch.nn.Module):
         The canting vector in the east direction of the facet.
     canting_n : torch.Tensor
         The canting vector in the north direction of the facet.
+
+        
+    Methods
+    -------
+    create_nurbs_surface()
+        Create a NURBS surface to model a facet.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -135,3 +143,14 @@ class NurbsFacet(torch.nn.Module):
             device,
         )
         return nurbs_surface
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

@@ -31,6 +31,8 @@ class Actuator(torch.nn.Module):
         Calculate the joint angle for a given motor position.
     angle_to_motor_position()
         Calculate the motor position for a given angle.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -117,5 +119,16 @@ class Actuator(torch.nn.Module):
         ------
         NotImplementedError
             This abstract method must be overridden.
+        """
+        raise NotImplementedError("Must be overridden!")
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
         """
         raise NotImplementedError("Must be overridden!")
