@@ -12,11 +12,11 @@ class PowerPlantConfig:
     Attributes
     ----------
     power_plant_position : torch.Tensor
-        The position of the power plant in lat, lon, alt.
+        The position of the power plant as latitude, longitude, altitude.
 
     Methods
     -------
-    create_power_plant_dict
+    create_power_plant_dict()
        Create a dictionary containing the configuration parameters for the power plant.
     """
 
@@ -30,7 +30,7 @@ class PowerPlantConfig:
         Parameters
         ----------
         power_plant_position : torch.Tensor
-            The position of the power plant in lat, lon, alt.
+            The position of the power plant as latitude, longitude, altitude.
         """
         self.power_plant_position = power_plant_position
 
@@ -40,7 +40,7 @@ class PowerPlantConfig:
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the configuration parameters for the power plant.
         """
         power_plant_dict = {
