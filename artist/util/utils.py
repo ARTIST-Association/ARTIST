@@ -373,6 +373,10 @@ def convert_wgs84_coordinates_to_local_enu(
         The east offset in meters, north offset in meters, and the altitude difference from the reference point.
     """
     device = torch.device(device)
+    wgs84_a = 6378137.0  # Major axis in meters
+    wgs84_b = 6356752.314245  # Minor axis in meters
+    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
+
     # Convert latitude and longitude to radians
     lat_rad = torch.deg2rad(coordinates_to_transform[0])
     lon_rad = torch.deg2rad(coordinates_to_transform[1])
@@ -382,13 +386,13 @@ def convert_wgs84_coordinates_to_local_enu(
 
     # Calculate meridional radius of curvature for the first latitude
     sin_lat1 = torch.sin(lat_rad)
-    rn1 = config_dictionary.WGS84_A / torch.sqrt(
-        1 - config_dictionary.WGS84_E2 * sin_lat1**2
+    rn1 = wgs84_a / torch.sqrt(
+        1 - wgs84_e2 * sin_lat1**2
     )
 
     # Calculate transverse radius of curvature for the first latitude
-    rm1 = (config_dictionary.WGS84_A * (1 - config_dictionary.WGS84_E2)) / (
-        (1 - config_dictionary.WGS84_E2 * sin_lat1**2) ** 1.5
+    rm1 = (wgs84_a * (1 - wgs84_e2)) / (
+        (1 - wgs84_e2 * sin_lat1**2) ** 1.5
     )
 
     # Calculate delta latitude and delta longitude in radians
