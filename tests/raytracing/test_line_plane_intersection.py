@@ -5,25 +5,6 @@ import torch
 
 from artist.raytracing import raytracing_utils
 
-
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 @pytest.mark.parametrize(
     "ray_directions, plane_normal_vectors, plane_center, points_at_ray_origin, expected_intersections",
     [
