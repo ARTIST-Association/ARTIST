@@ -316,8 +316,8 @@ class StralToSurfaceConverter:
             facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
             canting_e = torch.empty(number_of_facets, 3, device=device)
             canting_n = torch.empty(number_of_facets, 3, device=device)
-            surface_points_with_facets = torch.empty(0, device=device)
-            surface_normals_with_facets = torch.empty(0, device=device)
+            surface_points_with_facets_list = []
+            surface_normals_with_facets_list = []
             for f in range(number_of_facets):
                 facet_header_data = facet_header_struct.unpack_from(
                     file.read(facet_header_struct.size)
@@ -332,24 +332,32 @@ class StralToSurfaceConverter:
                     facet_header_data[7:10], dtype=torch.float, device=device
                 )
                 number_of_points = facet_header_data[10]
-                if f == 0:
-                    surface_points_with_facets = torch.empty(
-                        number_of_facets, number_of_points, 3, device=device
-                    )
-                    surface_normals_with_facets = torch.empty(
-                        number_of_facets, number_of_points, 3, device=device
-                    )
+                single_facet_surface_points = torch.empty(number_of_points, 3)
+                single_facet_surface_normals = torch.empty(number_of_points, 3)
+
                 points_data = points_on_facet_struct.iter_unpack(
                     file.read(points_on_facet_struct.size * number_of_points)
                 )
                 for i, point_data in enumerate(points_data):
-                    surface_points_with_facets[f, i, :] = torch.tensor(
+                    single_facet_surface_points[i, :] = torch.tensor(
                         point_data[:3], dtype=torch.float, device=device
                     )
-                    surface_normals_with_facets[f, i, :] = torch.tensor(
+                    surface_normals_with_facets[i, :] = torch.tensor(
                         point_data[3:6], dtype=torch.float, device=device
                     )
+                surface_points_with_facets_list.append(single_facet_surface_points)
+                surface_normals_with_facets_list.append(single_facet_surface_normals)
 
+        # All single_facet_surface_points and single_facet_surface_normals must have the same
+        # dimensions, so that they can be stacked into a single tensor.
+        min_x = min(single_facet_surface_points.shape[0] for single_facet_surface_points in surface_points_with_facets_list)
+        reduced_single_facet_surface_points = [single_facet_surface_points[:min_x] for single_facet_surface_points in surface_points_with_facets_list]
+        surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
+        
+        min_x = min(single_facet_surface_normals.shape[0] for single_facet_surface_normals in surface_normals_with_facets_list)
+        reduced_single_facet_surface_normals = [single_facet_surface_normals[:min_x] for single_facet_surface_normals in surface_normals_with_facets_list]
+        surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
+        
         log.info("Loading STRAL data complete")
 
         # Select only selected number of points to reduce compute.
