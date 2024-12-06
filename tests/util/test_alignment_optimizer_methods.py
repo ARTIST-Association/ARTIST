@@ -130,7 +130,7 @@ def test_alignment_optimizer_methods(
     center_calibration_image, incident_ray_direction, motor_positions = (
         utils.get_calibration_properties(
             calibration_properties_path=calibration_properties_path,
-            scenario=scenario,
+            power_plant_position=scenario.power_plant_position,
             device=device,
         )
     )
