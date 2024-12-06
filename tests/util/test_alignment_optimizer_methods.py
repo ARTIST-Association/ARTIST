@@ -123,7 +123,7 @@ def test_alignment_optimizer_methods(
         threshold_mode="abs",
     )
 
-    # Load the calibration data
+    # Load the calibration data.
     calibration_properties_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
     )
@@ -135,7 +135,7 @@ def test_alignment_optimizer_methods(
         )
     )
 
-    # Create alignment optimizer
+    # Create alignment optimizer.
     alignment_optimizer = AlignmentOptimizer(
         scenario=scenario,
         optimizer=optimizer,
