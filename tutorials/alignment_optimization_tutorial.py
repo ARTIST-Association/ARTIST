@@ -41,7 +41,7 @@ calibration_properties_path = (
 center_calibration_image, incident_ray_direction, motor_positions = (
     utils.get_calibration_properties(
         calibration_properties_path=calibration_properties_path,
-        scenario=example_scenario,
+        power_plant_position=example_scenario.power_plant_position,
         device=device,
     )
 )

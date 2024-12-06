@@ -1,13 +1,9 @@
 import json
 import pathlib
-from typing import Any, Union
+from typing import Union
 
-# from artist.scenario import Scenario
-from artist.field.kinematic import Kinematic
 from artist.field.kinematic_rigid_body import RigidBody
 import torch
-
-from artist.util import config_dictionary
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -517,10 +513,9 @@ def get_rigid_body_kinematic_parameters_from_scenario(
     return parameters_list
 
 
-# The type hint for scenario should be Scenario, but Scenario cannot be imported due to circular imports.
 def get_calibration_properties(
     calibration_properties_path: pathlib.Path,
-    scenario: Any,
+    power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -530,8 +525,8 @@ def get_calibration_properties(
     ----------
     calibration_properties_path : pathlib.Path
         The path to the calibration properties file.
-    scenario : Scenario
-        The given scenario.
+    power_plant_position : torch.Tensor
+        The position of the power plant in latitude, longitude and elevation.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -552,7 +547,7 @@ def get_calibration_properties(
                 dtype=torch.float64,
                 device=device,
             ),
-            scenario.power_plant_position,
+            power_plant_position,
             device=device,
         )
         center_calibration_image = convert_3d_points_to_4d_format(
