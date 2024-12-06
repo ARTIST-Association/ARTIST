@@ -9,26 +9,8 @@ from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
-# Set up logger
+# Set up logger.
 set_logger_config()
-
-
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
 
 
 @pytest.mark.parametrize(

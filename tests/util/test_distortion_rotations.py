@@ -6,24 +6,6 @@ import torch
 from artist.util.utils import rotate_distortions
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 @pytest.mark.parametrize(
     "e_distortions, u_distortions, rays_to_rotate, expected_distorted_rays",
     [
