@@ -589,3 +589,39 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         (points[:] - min(points[:])) + 2e-5
     )
     return points_normalized
+
+def corner_points_to_plane(upper_left: torch.Tensor,
+                           upper_right: torch.Tensor,
+                           lower_left: torch.Tensor,
+                           lower_right: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Span a plane from corner points.
+
+    Parameters
+    ----------
+    upper_left : torch.Tensor
+        The upper left corner coordinate.
+    upper_right : torch.Tensor
+        The upper right corner coordinate.
+    lower_left : torch.Tensor
+        The lower left corner coordinate.
+    lower_right : torch.Tensor
+        The lower right corner coordinate.
+    
+    Returns
+    -------
+    torch.Tensor
+        The plane measurement in east direction.
+    torch.Tensor
+        The plane measurement in up direction.
+    """
+    plane_e = (
+        torch.abs(upper_right[0] - upper_left[0])
+        + torch.abs(lower_right[0] - lower_left[0])
+    ) / 2
+    plane_u = (
+        torch.abs(upper_left[2] - lower_left[2])
+        + torch.abs(upper_right[2] - lower_right[2])
+    ) / 2
+    return plane_e, plane_u

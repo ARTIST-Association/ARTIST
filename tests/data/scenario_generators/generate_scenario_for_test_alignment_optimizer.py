@@ -107,14 +107,7 @@ with open(tower_file, "r") as file:
         power_plant_position,
         device=device,
     )
-    plane_e = (
-        torch.abs(upper_right[0] - upper_left[0])
-        + torch.abs(lower_right[0] - lower_left[0])
-    ) / 2
-    plane_u = (
-        torch.abs(upper_left[2] - lower_left[2])
-        + torch.abs(upper_right[2] - lower_right[2])
-    ) / 2
+    plane_e, plane_u = utils.corner_points_to_plane(upper_left, upper_right, lower_left, lower_right)
 
 with open(heliostat_file, "r") as file:
     heliostat_dict = json.load(file)
