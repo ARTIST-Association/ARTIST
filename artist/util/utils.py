@@ -3,6 +3,8 @@ import pathlib
 from typing import Any, Union
 
 # from artist.scenario import Scenario
+from artist.field.kinematic import Kinematic
+from artist.field.kinematic_rigid_body import RigidBody
 import torch
 
 from artist.util import config_dictionary
@@ -246,7 +248,7 @@ def translate_enu(
 def azimuth_elevation_to_enu(
     azimuth: torch.Tensor,
     elevation: torch.Tensor,
-    srange: float = 1.0,
+    slant_range: float = 1.0,
     degree: bool = True,
 ) -> torch.Tensor:
     """
@@ -258,10 +260,10 @@ def azimuth_elevation_to_enu(
         Azimuth, clockwise from north (degrees).
     elevation : torch.Tensor
         Elevation angle above horizon, neglecting aberrations (degrees).
-    srange : float
+    slant_range : float
         Slant range (meters).
     degree : bool
-        Specifies if input is given in degrees or radians.
+        Whether input is given in degrees or radians.
 
     Returns
     -------
@@ -272,13 +274,13 @@ def azimuth_elevation_to_enu(
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
 
-    r = srange * torch.cos(elevation)
+    r = slant_range * torch.cos(elevation)
 
     enu = torch.stack(
         [
             r * torch.sin(azimuth),
             -r * torch.cos(azimuth),
-            srange * torch.sin(elevation),
+            slant_range * torch.sin(elevation),
         ],
         dim=0,
     )
@@ -361,7 +363,7 @@ def convert_wgs84_coordinates_to_local_enu(
     Parameters
     ----------
     coordinates_to_transform : torch.Tensor
-        The coordinates in lat, lon, alt that are to be transformed.
+        The coordinates in latitude, longitude, altitude that are to be transformed.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
     device : Union[torch.device, str]
@@ -377,29 +379,29 @@ def convert_wgs84_coordinates_to_local_enu(
     wgs84_b = 6356752.314245  # Minor axis in meters
     wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
 
-    # Convert latitude and longitude to radians
+    # Convert latitude and longitude to radians.
     lat_rad = torch.deg2rad(coordinates_to_transform[0])
     lon_rad = torch.deg2rad(coordinates_to_transform[1])
     alt = coordinates_to_transform[2] - reference_point[2]
     lat_tower_rad = torch.deg2rad(reference_point[0])
     lon_tower_rad = torch.deg2rad(reference_point[1])
 
-    # Calculate meridional radius of curvature for the first latitude
+    # Calculate meridional radius of curvature for the first latitude.
     sin_lat1 = torch.sin(lat_rad)
     rn1 = wgs84_a / torch.sqrt(
         1 - wgs84_e2 * sin_lat1**2
     )
 
-    # Calculate transverse radius of curvature for the first latitude
+    # Calculate transverse radius of curvature for the first latitude.
     rm1 = (wgs84_a * (1 - wgs84_e2)) / (
         (1 - wgs84_e2 * sin_lat1**2) ** 1.5
     )
 
-    # Calculate delta latitude and delta longitude in radians
+    # Calculate delta latitude and delta longitude in radians.
     dlat_rad = lat_tower_rad - lat_rad
     dlon_rad = lon_tower_rad - lon_rad
 
-    # Calculate north and east offsets in meters
+    # Calculate north and east offsets in meters.
     north_offset_m = dlat_rad * rm1
     east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
 
@@ -434,23 +436,25 @@ def get_center_of_mass(
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
+    Returns
+    -------
     torch.Tensor
         The coordinates of the flux density center of mass.
     """
     device = torch.device(device)
-    # Calculate center of mass of the bitmap
-    x_indices = torch.arange(bitmap.shape[0], device=device)
-    y_indices = torch.arange(bitmap.shape[1], device=device)
-    x_indices, y_indices = torch.meshgrid(x_indices, y_indices, indexing="ij")
+    # Calculate center of mass of the bitmap.
+    e_indices = torch.arange(bitmap.shape[0], device=device)
+    u_indices = torch.arange(bitmap.shape[1], device=device)
+    e_indices, u_indices = torch.meshgrid(e_indices, u_indices, indexing="ij")
 
     total_mass = bitmap.sum()
     normalized_bitmap = bitmap / total_mass
 
-    center_of_mass_x = (normalized_bitmap * x_indices).sum()
-    center_of_mass_y = (normalized_bitmap * y_indices).sum()
-    center_of_mass_bitmap = torch.stack([center_of_mass_x, center_of_mass_y], dim=-1)
+    center_of_mass_e = (normalized_bitmap * e_indices).sum()
+    center_of_mass_u = (normalized_bitmap * u_indices).sum()
+    center_of_mass_bitmap = torch.stack([center_of_mass_e, center_of_mass_u], dim=-1)
 
-    # Construct the coordinates relative to target center
+    # Construct the coordinates relative to target center.
     de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
     du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
     normalized_center = center_of_mass_bitmap / bitmap.size(-1)
@@ -460,109 +464,51 @@ def get_center_of_mass(
 
     return center_coordinates
 
-
-# The type hint for scenario should be Scenario, but Scenario cannot be imported due to circular imports.
 def get_rigid_body_kinematic_parameters_from_scenario(
-    scenario: Any,
+    kinematic: RigidBody,
 ) -> list[torch.Tensor]:
     """
-    Extract all kinematic deviation parameters and actuator parameters from a scenario.
+    Extract all deviation parameters and actuator parameters from a rigid body kinematic.
 
     Parameters
     ----------
-    scenario : Scenario
-        The scenario from which to extract the kinematic parameters.
+    kinematic : RigidBody
+        The kinematic from which to extract the parameters.
 
     Returns
     -------
     list[torch.Tensor]
-        The kinematic parameters from the scenario (requires_grad is True).
+        The parameters from the kinematic (requires_grad is True).
     """
     parameters_list = [
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_translation_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_translation_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_translation_u,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_tilt_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_tilt_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.first_joint_tilt_u,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_translation_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_translation_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_translation_u,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_tilt_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_tilt_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.second_joint_tilt_u,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_translation_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_translation_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_translation_u,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_tilt_e,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_tilt_n,
-        scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.deviation_parameters.concentrator_tilt_u,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[0]
-        .increment,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[0]
-        .initial_stroke_length,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[0]
-        .offset,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[0]
-        .pivot_radius,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[0]
-        .initial_angle,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[1]
-        .increment,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[1]
-        .initial_stroke_length,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[1]
-        .offset,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[1]
-        .pivot_radius,
-        scenario.heliostats.heliostat_list[0]
-        .kinematic.actuators.actuator_list[1]
-        .initial_angle,
+        kinematic.deviation_parameters.first_joint_translation_e,
+        kinematic.deviation_parameters.first_joint_translation_n,
+        kinematic.deviation_parameters.first_joint_translation_u,
+        kinematic.deviation_parameters.first_joint_tilt_e,
+        kinematic.deviation_parameters.first_joint_tilt_n,
+        kinematic.deviation_parameters.first_joint_tilt_u,
+        kinematic.deviation_parameters.second_joint_translation_e,
+        kinematic.deviation_parameters.second_joint_translation_n,
+        kinematic.deviation_parameters.second_joint_translation_u,
+        kinematic.deviation_parameters.second_joint_tilt_e,
+        kinematic.deviation_parameters.second_joint_tilt_n,
+        kinematic.deviation_parameters.second_joint_tilt_u,
+        kinematic.deviation_parameters.concentrator_translation_e,
+        kinematic.deviation_parameters.concentrator_translation_n,
+        kinematic.deviation_parameters.concentrator_translation_u,
+        kinematic.deviation_parameters.concentrator_tilt_e,
+        kinematic.deviation_parameters.concentrator_tilt_n,
+        kinematic.deviation_parameters.concentrator_tilt_u,
+        kinematic.actuators.actuator_list[0].increment,
+        kinematic.actuators.actuator_list[0].initial_stroke_length,
+        kinematic.actuators.actuator_list[0].offset,
+        kinematic.actuators.actuator_list[0].pivot_radius,
+        kinematic.actuators.actuator_list[0].initial_angle,
+        kinematic.actuators.actuator_list[1].increment,
+        kinematic.actuators.actuator_list[1].initial_stroke_length,
+        kinematic.actuators.actuator_list[1].offset,
+        kinematic.actuators.actuator_list[1].pivot_radius,
+        kinematic.actuators.actuator_list[1].initial_angle,
     ]
     for parameter in parameters_list:
         if parameter is not None:
