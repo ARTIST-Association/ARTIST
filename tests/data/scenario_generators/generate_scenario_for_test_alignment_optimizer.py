@@ -5,7 +5,7 @@ from artist.util.surface_converter import SurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, paint_loader, utils
+from artist.util import config_dictionary, paint_loader, set_logger_config, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorParameters,
@@ -13,7 +13,6 @@ from artist.util.configuration_classes import (
     HeliostatConfig,
     HeliostatListConfig,
     KinematicDeviations,
-    KinematicOffsets,
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -23,13 +22,15 @@ from artist.util.configuration_classes import (
     ReceiverListConfig,
     SurfacePrototypeConfig,
 )
-from artist.util.paint_to_surface_converter import PAINTToSurfaceConverter
 from artist.util.scenario_generator import ScenarioGenerator
+
+# Set up logger
+set_logger_config()
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint"
@@ -46,18 +47,18 @@ heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.js
 deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/deflectometry.h5"
 
 
-calibration_target_name  = paint_loader.read_paint_calibration_properties(calibration_file)
+calibration_target_name = paint_loader.extract_paint_calibration_properties(calibration_file)
 
-power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = paint_loader(tower_file, calibration_target_name, device)
+power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = paint_loader.extract_paint_tower_measurements(tower_file, calibration_target_name, device)
 
-heliostat_position, kinematic_deviations = paint_loader.read_paint_heliostat_properties(heliostat_file, power_plant_position, device)
+heliostat_position, kinematic_config, actuators_list_config = paint_loader.extract_paint_heliostat_properties(heliostat_file, power_plant_position, device)
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
-    receiver_key="receiver1",
+    receiver_key="receiver_1",
     receiver_type=target_type,
     position_center=target_center,
     normal_vector=normal_vector,
@@ -75,7 +76,7 @@ receiver_list_config = ReceiverListConfig(receiver_list=receiver_list)
 
 # Include the light source configuration.
 light_source1_config = LightSourceConfig(
-    light_source_key="sun1",
+    light_source_key="sun_1",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=1,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -102,119 +103,16 @@ facet_prototype_list = surface_converter.generate_surface_config(device=device)
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
-# Include the initial orientation offsets for the kinematic.
-kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(
-        torch.tensor(torch.pi / 2, device=device), device=device
-    )
-)
-
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
-    kinematic_type=config_dictionary.rigid_body_key,
-    kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
-    kinematic_deviations=kinematic_deviations,
+    type=config_dictionary.rigid_body_key,
+    initial_orientation=kinematic_config.initial_orientation,
+    deviations=kinematic_config.deviations,
 )
-
-
-# Include actuator parameters for actuator 1.
-index = 1
-actuator1_parameters = ActuatorParameters(
-    increment=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_increment}_{index}"
-        ],
-        device=device,
-    ),
-    initial_stroke_length=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_initial_stroke_length}_{index}"
-        ],
-        device=device,
-    ),
-    offset=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_offset}_{index}"
-        ],
-        device=device,
-    ),
-    pivot_radius=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_pivot_radius}_{index}"
-        ],
-        device=device,
-    ),
-    initial_angle=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_initial_angle}_{index}"
-        ],
-        device=device,
-    ),
-)
-# Include an actuator 1.
-actuator1_prototype = ActuatorConfig(
-    actuator_key=f"{config_dictionary.actuator_key}_{index}",
-    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-        f"{config_dictionary.paint_actuator_type}_{index}"
-    ].lower(),
-    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-        f"{config_dictionary.paint_clockwise}_{index}"
-    ],
-    actuator_parameters=actuator1_parameters,
-)
-# Include actuator parameters for actuator 2.
-index = 2
-actuator2_parameters = ActuatorParameters(
-    increment=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_increment}_{index}"
-        ],
-        device=device,
-    ),
-    initial_stroke_length=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_initial_stroke_length}_{index}"
-        ],
-        device=device,
-    ),
-    offset=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_offset}_{index}"
-        ],
-        device=device,
-    ),
-    pivot_radius=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_pivot_radius}_{index}"
-        ],
-        device=device,
-    ),
-    initial_angle=torch.tensor(
-        heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-            f"{config_dictionary.paint_initial_angle}_{index}"
-        ],
-        device=device,
-    ),
-)
-# Include an actuator 2.
-actuator2_prototype = ActuatorConfig(
-    actuator_key=f"{config_dictionary.actuator_key}_{index}",
-    actuator_type=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-        f"{config_dictionary.paint_actuator_type}_{index}"
-    ].lower(),
-    actuator_clockwise=heliostat_dict[config_dictionary.paint_heliostat_kinematic_key][
-        f"{config_dictionary.paint_clockwise}_{index}"
-    ],
-    actuator_parameters=actuator2_parameters,
-)
-
-
-# Create a list of actuators.
-actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
 
 # Include the actuator prototype config.
 actuator_prototype_config = ActuatorPrototypeConfig(
-    actuator_list=actuator_prototype_list
+    actuator_list=actuators_list_config.actuator_list
 )
 
 # Include the final prototype config.
@@ -224,11 +122,9 @@ prototype_config = PrototypeConfig(
     actuator_prototype=actuator_prototype_config,
 )
 
-# Note, we do not include individual heliostat parameters in this scenario.
-
 # Include the configuration for a heliostat.
 heliostat1 = HeliostatConfig(
-    heliostat_key="heliostat1",
+    heliostat_key="heliostat_1",
     heliostat_id=1,
     heliostat_position=heliostat_position,
     heliostat_aim_point=target_center,
@@ -243,8 +139,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-    # Create a scenario object.
-    scenario_object = ScenarioGenerator(
+    scenario_generator = ScenarioGenerator(
         file_path=file_path,
         power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
@@ -252,6 +147,4 @@ if __name__ == "__main__":
         prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,
     )
-
-    # Generate the scenario.
-    scenario_object.generate_scenario()
+    scenario_generator.generate_scenario()
