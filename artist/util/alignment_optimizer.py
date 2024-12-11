@@ -67,6 +67,7 @@ class AlignmentOptimizer:
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         motor_positions: Optional[torch.Tensor] = None,
+        num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
@@ -84,6 +85,8 @@ class AlignmentOptimizer:
             The incident ray direction specified in the calibration.
         motor_positions : Optional[torch.Tensor]
             The motor positions specified in the calibration (default is ``None``).
+        num_log : int
+            Number of log messages during training (default is 3).
         device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
 
@@ -105,6 +108,7 @@ class AlignmentOptimizer:
                     center_calibration_image=center_calibration_image,
                     incident_ray_direction=incident_ray_direction,
                     motor_positions=motor_positions,
+                    num_log=num_log,
                     device=device,
                 )
             )
@@ -115,6 +119,7 @@ class AlignmentOptimizer:
                     max_epoch=max_epoch,
                     center_calibration_image=center_calibration_image,
                     incident_ray_direction=incident_ray_direction,
+                    num_log=num_log,
                     device=device,
                 )
             )
@@ -128,6 +133,7 @@ class AlignmentOptimizer:
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
         motor_positions: torch.Tensor,
+        num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
@@ -148,6 +154,8 @@ class AlignmentOptimizer:
             The incident ray direction specified in the calibration.
         motor_positions : torch.Tensor
             The motor positions specified in the calibration.
+        num_log : int 
+            Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
 
@@ -172,6 +180,7 @@ class AlignmentOptimizer:
             / torch.norm(preferred_reflection_direction_calibration)
         )
 
+        log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             orientation = self.scenario.heliostats.heliostat_list[
                 0
@@ -198,7 +207,7 @@ class AlignmentOptimizer:
             self.optimizer.step()
             self.scheduler.step(loss)
 
-            if epoch in [max_epoch // 4, 2 * (max_epoch // 4), 3 * (max_epoch // 4)]:
+            if epoch % log_step == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
@@ -219,6 +228,7 @@ class AlignmentOptimizer:
         max_epoch: int,
         center_calibration_image: torch.Tensor,
         incident_ray_direction: torch.Tensor,
+        num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[list[torch.Tensor], Scenario]:
         """
@@ -238,6 +248,8 @@ class AlignmentOptimizer:
             The center of the calibration flux density.
         incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
+        num_log : int 
+            Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
 
@@ -253,6 +265,7 @@ class AlignmentOptimizer:
         loss = torch.inf
         epoch = 0
 
+        log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             # Align heliostat.
             self.scenario.heliostats.heliostat_list[
@@ -286,7 +299,7 @@ class AlignmentOptimizer:
             self.optimizer.step()
             self.scheduler.step(loss)
 
-            if epoch in [max_epoch // 4, 2 * (max_epoch // 4), 3 * (max_epoch // 4)]:
+            if epoch % log_step == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
