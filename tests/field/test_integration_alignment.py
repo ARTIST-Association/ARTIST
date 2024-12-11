@@ -33,27 +33,28 @@ else:
     rank = 0
 
 @pytest.mark.parametrize(
-    "incident_ray_direction, expected_value, scenario_config",
+    "incident_ray_direction, ray_direction_string, scenario_config",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "south", "test_scenario"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "east", "test_scenario"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "west", "test_scenario"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "above", "test_scenario"),
-        (
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "stral_south", "test_scenario_stral"),
+        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "stral_east", "test_scenario_stral"),
+        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "stral_west", "test_scenario_stral"),
+        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "stral_above", "test_scenario_stral"),
+        (   
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "individual_south",
-            "test_individual_measurements_scenario",
-        ),  # Test if loading with individual measurements works
+            "test_scenario_stral_individual_measurements",
+        ),
+        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "paint_south", "test_scenario_paint"),
     ],
 )
-def test_compute_bitmaps(
+def test_integration_alignment(
     incident_ray_direction: torch.Tensor,
-    expected_value: str,
+    ray_direction_string: str,
     scenario_config: str,
     device: torch.device,
 ) -> None:
     """
-    Compute the resulting flux density distribution (bitmap) for the given test case.
+    Align helisotats from different scenarios using the kinematic module to test the alignment process.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
     calculate the preferred reflection direction.
@@ -65,8 +66,8 @@ def test_compute_bitmaps(
     ----------
     incident_ray_direction : torch.Tensor
         The incident ray direction used for the test.
-    expected_value : str
-        The path to the expected value bitmap.
+    ray_direction_string : str
+        String value describing the ray direction.
     scenario_config : str
         The name of the scenario to be loaded.
     device : torch.device
@@ -114,7 +115,7 @@ def test_compute_bitmaps(
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_bitmaps_integration"
-            / f"{expected_value}_{device.type}.pt"
+            / f"{ray_direction_string}_{device.type}.pt"
         )
         expected = torch.load(expected_path, map_location=device, weights_only=True)
         torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
