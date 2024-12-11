@@ -1,12 +1,13 @@
 import h5py
 import pytest
+from pytest_mock import MockerFixture
 import torch
 
 from artist.field.heliostat import Heliostat
 
 
 @pytest.fixture
-def prototype_generator(mocker):
+def prototype_mock_generator(mocker: MockerFixture):
     return mocker.MagicMock()
 
 
@@ -19,13 +20,13 @@ def prototype_generator(mocker):
             "If the heliostat does not have individual surface parameters, a surface prototype must be provided!",
         ),
         (
-            prototype_generator,
+            prototype_mock_generator,
             None,
             "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!",
         ),
         (
-            prototype_generator,
-            prototype_generator,
+            prototype_mock_generator,
+            prototype_mock_generator,
             "If the heliostat does not have individual actuators, an actuator prototype must be provided!",
         ),
     ],

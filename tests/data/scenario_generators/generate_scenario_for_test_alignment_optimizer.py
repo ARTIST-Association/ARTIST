@@ -26,7 +26,7 @@ set_logger_config()
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_paint"
