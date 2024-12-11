@@ -25,8 +25,8 @@ class RigidBody(Kinematic):
         The initial orientation-rotation angles of the heliostat.
     actuators : ActuatorArray
         The actuators required for the kinematic.
-    artist_standart_orientation : torch.Tensor
-        The standart orientation of the kinematic.
+    artist_standard_orientation : torch.Tensor
+        The standard orientation of the kinematic.
 
     Methods
     -------
@@ -108,7 +108,7 @@ class RigidBody(Kinematic):
             actuator_list_config=actuator_config, device=device
         )
         self.initial_orientation_helisotat = initial_orientation
-        self.artist_standart_orientation = torch.tensor(
+        self.artist_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
@@ -282,7 +282,7 @@ class RigidBody(Kinematic):
 
         east_angle, north_angle, up_angle = utils.decompose_rotation(
             initial_vector=self.initial_orientation_helisotat[:-1],
-            target_vector=self.artist_standart_orientation[:-1],
+            target_vector=self.artist_standard_orientation[:-1],
             device=device,
         )
 
@@ -337,17 +337,8 @@ class RigidBody(Kinematic):
             incident_ray_direction, device=device
         )
 
-        # Option 1:
-        aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
-            -1
-        )
-        aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(
-            -1
-        )
-
-        # Option 2:
-        # aligned_surface_points = surface_points @ orientation.T
-        # aligned_surface_normals = surface_normals @ orientation.T
+        aligned_surface_points = surface_points @ orientation.T
+        aligned_surface_normals = surface_normals @ orientation.T
 
         return aligned_surface_points, aligned_surface_normals
 
@@ -493,14 +484,10 @@ class RigidBody(Kinematic):
 
         orientation = self.motor_positions_to_orientation(
             motor_positions, device=device
-        ).squeeze()
+        )
 
-        aligned_surface_points = (orientation @ surface_points.unsqueeze(-1)).squeeze(
-            -1
-        )
-        aligned_surface_normals = (orientation @ surface_normals.unsqueeze(-1)).squeeze(
-            -1
-        )
+        aligned_surface_points = surface_points @ orientation.T
+        aligned_surface_normals = surface_normals @ orientation.T
 
         return aligned_surface_points, aligned_surface_normals
 
