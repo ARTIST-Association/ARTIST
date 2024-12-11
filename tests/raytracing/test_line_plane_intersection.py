@@ -42,14 +42,14 @@ from artist.raytracing import raytracing_utils
                 [[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, -2.0, 0.0, 1.0]]
             ),
         ),
-        (  # AssertionError - no intersection since ray is parallel to plane.
+        (  # ValueError - no intersection since ray is parallel to plane.
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([0.0, 0.0, 0.0, 1.0]),
             torch.tensor([0.0, 0.0, 1.0, 1.0]),
             None,
         ),
-        (  # AssertionError - no intersection since ray is within the plane.
+        (  # ValueError - no intersection since ray is within the plane.
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([0.0, 0.0, 0.0, 1.0]),
