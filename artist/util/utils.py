@@ -386,14 +386,10 @@ def convert_wgs84_coordinates_to_local_enu(
 
     # Calculate meridional radius of curvature for the first latitude.
     sin_lat1 = torch.sin(lat_rad)
-    rn1 = wgs84_a / torch.sqrt(
-        1 - wgs84_e2 * sin_lat1**2
-    )
+    rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
 
     # Calculate transverse radius of curvature for the first latitude.
-    rm1 = (wgs84_a * (1 - wgs84_e2)) / (
-        (1 - wgs84_e2 * sin_lat1**2) ** 1.5
-    )
+    rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
 
     # Calculate delta latitude and delta longitude in radians.
     dlat_rad = lat_tower_rad - lat_rad
@@ -461,6 +457,7 @@ def get_center_of_mass(
     center_coordinates = target_center - 0.5 * (de + du) + e * de + u * du
 
     return center_coordinates
+
 
 def get_rigid_body_kinematic_parameters_from_scenario(
     kinematic: "RigidBody",
@@ -593,11 +590,13 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
     )
     return points_normalized
 
-def corner_points_to_plane(upper_left: torch.Tensor,
-                           upper_right: torch.Tensor,
-                           lower_left: torch.Tensor,
-                           lower_right: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+def corner_points_to_plane(
+    upper_left: torch.Tensor,
+    upper_right: torch.Tensor,
+    lower_left: torch.Tensor,
+    lower_right: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Span a plane from corner points.
 
@@ -611,7 +610,7 @@ def corner_points_to_plane(upper_left: torch.Tensor,
         The lower left corner coordinate.
     lower_right : torch.Tensor
         The lower right corner coordinate.
-    
+
     Returns
     -------
     torch.Tensor

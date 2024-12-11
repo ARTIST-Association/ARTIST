@@ -1,12 +1,12 @@
 import pathlib
 
 import h5py
-import pytest
 import torch
 
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
+
 
 def test_kinematic(
     device: torch.device,

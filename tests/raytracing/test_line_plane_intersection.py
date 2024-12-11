@@ -5,6 +5,7 @@ import torch
 
 from artist.raytracing import raytracing_utils
 
+
 @pytest.mark.parametrize(
     "ray_directions, plane_normal_vectors, plane_center, points_at_ray_origin, expected_intersections",
     [

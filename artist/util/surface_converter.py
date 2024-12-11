@@ -60,6 +60,7 @@ class SurfaceConverter:
     generate_surface_config()
         Generate a surface configuration from a data source.
     """
+
     def __init__(
         self,
         deflectometry_file_path: Optional[pathlib.Path] = None,
@@ -82,8 +83,8 @@ class SurfaceConverter:
 
         Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
         exported to a binary file or downloaded from ```PAINT``. The data formats are different depending on their source.
-        To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the 
-        data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can 
+        To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the
+        data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
         be used directly in an ``ARTIST`` scenario.
 
         Parameters
@@ -118,12 +119,26 @@ class SurfaceConverter:
             Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
 
         """
-        if (stral_file_path is None and deflectometry_file_path is None and heliostat_file_path is None):
-            raise ValueError("Either a ``STRAL`` file or both ``PAINT`` files must be specified!")
-        if (stral_file_path is not None and (deflectometry_file_path is not None or heliostat_file_path is not None)):
-            raise ValueError("You cannot specify a ``STRAL`` file in combination with any ``PAINT`` file!")
-        if (stral_file_path is None and (deflectometry_file_path is None or heliostat_file_path is None)):
-            raise ValueError("If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!")
+        if (
+            stral_file_path is None
+            and deflectometry_file_path is None
+            and heliostat_file_path is None
+        ):
+            raise ValueError(
+                "Either a ``STRAL`` file or both ``PAINT`` files must be specified!"
+            )
+        if stral_file_path is not None and (
+            deflectometry_file_path is not None or heliostat_file_path is not None
+        ):
+            raise ValueError(
+                "You cannot specify a ``STRAL`` file in combination with any ``PAINT`` file!"
+            )
+        if stral_file_path is None and (
+            deflectometry_file_path is None or heliostat_file_path is None
+        ):
+            raise ValueError(
+                "If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!"
+            )
 
         self.stral_file_path = stral_file_path
 
@@ -200,12 +215,8 @@ class SurfaceConverter:
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
         evaluation_points = surface_points.clone()
         evaluation_points[:, 2] = 0
-        evaluation_points_e = utils.normalize_points(
-            evaluation_points[:, 0]
-        )
-        evaluation_points_n = utils.normalize_points(
-            evaluation_points[:, 1]
-        )
+        evaluation_points_e = utils.normalize_points(evaluation_points[:, 0])
+        evaluation_points_n = utils.normalize_points(evaluation_points[:, 1])
 
         # Initialize the NURBS surface.
         control_points_shape = (number_control_points_e, number_control_points_n)
@@ -285,7 +296,7 @@ class SurfaceConverter:
             epoch += 1
 
         return nurbs_surface
-    
+
     def generate_surface_config(
         self,
         device: Union[torch.device, str] = "cuda",
@@ -303,9 +314,7 @@ class SurfaceConverter:
         list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
-        log.info(
-            "Beginning generation of the surface configuration based on data."
-        )
+        log.info("Beginning generation of the surface configuration based on data.")
         device = torch.device(device)
 
         if self.stral_file_path:
@@ -315,14 +324,26 @@ class SurfaceConverter:
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
-        min_x = min(single_facet_surface_points.shape[0] for single_facet_surface_points in surface_points_with_facets_list)
-        reduced_single_facet_surface_points = [single_facet_surface_points[:min_x] for single_facet_surface_points in surface_points_with_facets_list]
+        min_x = min(
+            single_facet_surface_points.shape[0]
+            for single_facet_surface_points in surface_points_with_facets_list
+        )
+        reduced_single_facet_surface_points = [
+            single_facet_surface_points[:min_x]
+            for single_facet_surface_points in surface_points_with_facets_list
+        ]
         surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
-        
-        min_x = min(single_facet_surface_normals.shape[0] for single_facet_surface_normals in surface_normals_with_facets_list)
-        reduced_single_facet_surface_normals = [single_facet_surface_normals[:min_x] for single_facet_surface_normals in surface_normals_with_facets_list]
+
+        min_x = min(
+            single_facet_surface_normals.shape[0]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        )
+        reduced_single_facet_surface_normals = [
+            single_facet_surface_normals[:min_x]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        ]
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
-        
+
         # Select only selected number of points to reduce compute.
         surface_points_with_facets = surface_points_with_facets[:, :: self.step_size]
         surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
@@ -350,7 +371,9 @@ class SurfaceConverter:
         log.info("Converting to NURBS surface")
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
-            log.info(f"Converting facet {i+1} of {surface_points_with_facets.shape[0]}.")
+            log.info(
+                f"Converting facet {i+1} of {surface_points_with_facets.shape[0]}."
+            )
             nurbs_surface = self.fit_nurbs_surface(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
@@ -380,7 +403,6 @@ class SurfaceConverter:
         log.info("Surface configuration based on data complete!")
         return facet_config_list
 
-
     def _extract_stral_data(
         self,
         device: Union[torch.device, str] = "cuda",
@@ -406,9 +428,7 @@ class SurfaceConverter:
         list[torch.Tensor]
             The surface normals for each facet.
         """
-        log.info(
-            "Beginning extraction of data from ```STRAL``` file."
-        )
+        log.info("Beginning extraction of data from ```STRAL``` file.")
         device = torch.device(device)
 
         # Create structures for reading ``STRAL`` file.
@@ -460,7 +480,7 @@ class SurfaceConverter:
                     )
                 surface_points_with_facets_list.append(single_facet_surface_points)
                 surface_normals_with_facets_list.append(single_facet_surface_normals)
-        
+
         log.info("Loading ``STRAL`` data complete")
 
         return facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
@@ -490,9 +510,7 @@ class SurfaceConverter:
         list[torch.Tensor]
             The surface normals for each facet.
         """
-        log.info(
-            "Beginning extraction of data from ```PAINT``` file."
-        )
+        log.info("Beginning extraction of data from ```PAINT``` file.")
         # Reading ``PAINT`` heliostat json file.
         with open(self.heliostat_file_path, "r") as file:
             heliostat_dict = json.load(file)
@@ -539,7 +557,7 @@ class SurfaceConverter:
                     single_facet_surface_normals[i, :] = normal_data
                 surface_points_with_facets_list.append(single_facet_surface_points)
                 surface_normals_with_facets_list.append(single_facet_surface_normals)
-        
+
         log.info("Loading ``PAINT`` data complete")
 
         return facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
