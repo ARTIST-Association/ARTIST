@@ -74,11 +74,12 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 surface_converter = SurfaceConverter(
-    stral_file_path=pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_stral_data",
     step_size=100,
     max_epoch=400,
 )
-facet_prototype_list = surface_converter.generate_surface_config(device=device)
+facet_prototype_list = surface_converter.generate_surface_config(
+    stral_file_path=file_path, device=device
+)
 
 # Generate the surface prototype configuration.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)

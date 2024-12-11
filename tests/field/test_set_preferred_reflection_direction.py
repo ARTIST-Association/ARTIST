@@ -24,7 +24,9 @@ def test_set_preferred_reflection_direction_error(
     mock_heliostat.is_aligned = False
     mock_rays = mocker.MagicMock()
 
-    mock_heliostat.set_preferred_reflection_direction = Heliostat.set_preferred_reflection_direction.__get__(mock_heliostat, Heliostat)
+    mock_heliostat.set_preferred_reflection_direction = (
+        Heliostat.set_preferred_reflection_direction.__get__(mock_heliostat, Heliostat)
+    )
 
     with pytest.raises(ValueError) as exc_info:
         mock_heliostat.set_preferred_reflection_direction(

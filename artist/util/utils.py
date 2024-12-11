@@ -1,5 +1,3 @@
-import json
-import pathlib
 from typing import TYPE_CHECKING, Union
 
 import torch
@@ -686,13 +684,17 @@ def get_center_of_mass(
     height, width = bitmap.shape
 
     # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_thresholded = torch.where(bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device))
+    flux_thresholded = torch.where(
+        bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device)
+    )
     total_intensity = flux_thresholded.sum()
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
     e_indices = (torch.arange(width, dtype=torch.float32, device=device) + 0.5) / width
-    u_indices = (torch.arange(height, dtype=torch.float32, device=device) + 0.5) / height
+    u_indices = (
+        torch.arange(height, dtype=torch.float32, device=device) + 0.5
+    ) / height
 
     # Compute the center of intensity using weighted sums of the coordinates.
     center_of_mass_e = (flux_thresholded.sum(dim=0) * e_indices).sum() / total_intensity
@@ -702,6 +704,8 @@ def get_center_of_mass(
     de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
     du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
 
-    center_coordinates = target_center - 0.5 * (de + du) + center_of_mass_e * de + center_of_mass_u * du
+    center_coordinates = (
+        target_center - 0.5 * (de + du) + center_of_mass_e * de + center_of_mass_u * du
+    )
 
     return center_coordinates

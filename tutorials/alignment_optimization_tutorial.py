@@ -5,7 +5,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.scenario import Scenario
-from artist.util import set_logger_config, utils
+from artist.util import paint_loader, set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
@@ -39,7 +39,7 @@ calibration_properties_path = (
 
 # Load the calibration data.
 center_calibration_image, incident_ray_direction, motor_positions = (
-    utils.get_calibration_properties(
+    paint_loader.extract_paint_calibration_data(
         calibration_properties_path=calibration_properties_path,
         power_plant_position=example_scenario.power_plant_position,
         device=device,

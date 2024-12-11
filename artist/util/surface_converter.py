@@ -24,12 +24,6 @@ class SurfaceConverter:
 
     Attributes
     ----------
-    deflectometry_file_path : pathlib.Path
-        The file path to the ``PAINT`` deflectometry data that will be converted.
-    heliostat_file_path : pathlib.Path
-        The file path to the ``PAINT`` heliostat properties data that will be converted.
-    stral_file_path : pathlib.Path
-        The file path to the ``STRAL`` data that will be converted.
     step_size : int
         The size of the step used to reduce the number of considered points for compute efficiency.
     number_eval_points_e : int
@@ -63,9 +57,6 @@ class SurfaceConverter:
 
     def __init__(
         self,
-        deflectometry_file_path: Optional[pathlib.Path] = None,
-        heliostat_file_path: Optional[pathlib.Path] = None,
-        stral_file_path: Optional[pathlib.Path] = None,
         step_size: int = 100,
         number_eval_points_e: int = 100,
         number_eval_points_n: int = 100,
@@ -89,12 +80,6 @@ class SurfaceConverter:
 
         Parameters
         ----------
-        deflectometry_file_path : Optional[pathlib.Path]
-            The file path to the ``PAINT`` deflectometry data that will be converted.
-        heliostat_file_path : Optional[pathlib.Path]
-            The file path to the ``PAINT`` heliostat properties data that will be converted.
-        stral_file_path : Optional[pathlib.Path]
-            The file path to the ``STRAL`` data that will be converted.
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency (default is 100).
         number_eval_points_e : int
@@ -119,32 +104,6 @@ class SurfaceConverter:
             Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
 
         """
-        if (
-            stral_file_path is None
-            and deflectometry_file_path is None
-            and heliostat_file_path is None
-        ):
-            raise ValueError(
-                "Either a ``STRAL`` file or both ``PAINT`` files must be specified!"
-            )
-        if stral_file_path is not None and (
-            deflectometry_file_path is not None or heliostat_file_path is not None
-        ):
-            raise ValueError(
-                "You cannot specify a ``STRAL`` file in combination with any ``PAINT`` file!"
-            )
-        if stral_file_path is None and (
-            deflectometry_file_path is None or heliostat_file_path is None
-        ):
-            raise ValueError(
-                "If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!"
-            )
-
-        self.stral_file_path = stral_file_path
-
-        self.deflectometry_file_path = deflectometry_file_path
-        self.heliostat_file_path = heliostat_file_path
-
         self.step_size = step_size
 
         self.number_eval_points_e = number_eval_points_e
@@ -299,6 +258,9 @@ class SurfaceConverter:
 
     def generate_surface_config(
         self,
+        deflectometry_file_path: Optional[pathlib.Path] = None,
+        heliostat_file_path: Optional[pathlib.Path] = None,
+        stral_file_path: Optional[pathlib.Path] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
@@ -306,6 +268,12 @@ class SurfaceConverter:
 
         Parameters
         ----------
+        deflectometry_file_path : Optional[pathlib.Path]
+            The file path to the ``PAINT`` deflectometry data that will be converted.
+        heliostat_file_path : Optional[pathlib.Path]
+            The file path to the ``PAINT`` heliostat properties data that will be converted.
+        stral_file_path : Optional[pathlib.Path]
+            The file path to the ``STRAL`` data that will be converted.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -317,22 +285,47 @@ class SurfaceConverter:
         log.info("Beginning generation of the surface configuration based on data.")
         device = torch.device(device)
 
-        if self.stral_file_path:
+        if (
+            stral_file_path is None
+            and deflectometry_file_path is None
+            and heliostat_file_path is None
+        ):
+            raise ValueError(
+                "Either a ``STRAL`` file or both ``PAINT`` files must be specified!"
+            )
+        if stral_file_path is not None and (
+            deflectometry_file_path is not None or heliostat_file_path is not None
+        ):
+            raise ValueError(
+                "You cannot specify a ``STRAL`` file in combination with any ``PAINT`` file!"
+            )
+        if stral_file_path is None and (
+            deflectometry_file_path is None or heliostat_file_path is None
+        ):
+            raise ValueError(
+                "If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!"
+            )
+
+        if stral_file_path:
             (
                 facet_translation_vectors,
                 canting_e,
                 canting_n,
                 surface_points_with_facets_list,
                 surface_normals_with_facets_list,
-            ) = self._extract_stral_data(device=device)
-        else:
+            ) = self._extract_stral_data(stral_file_path=stral_file_path, device=device)
+        elif heliostat_file_path and deflectometry_file_path:
             (
                 facet_translation_vectors,
                 canting_e,
                 canting_n,
                 surface_points_with_facets_list,
                 surface_normals_with_facets_list,
-            ) = self._extract_paint_data(device=device)
+            ) = self._extract_paint_data(
+                heliostat_file_path=heliostat_file_path,
+                deflectometry_file_path=deflectometry_file_path,
+                device=device,
+            )
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
@@ -417,6 +410,7 @@ class SurfaceConverter:
 
     def _extract_stral_data(
         self,
+        stral_file_path: pathlib.Path,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[
         torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]
@@ -426,6 +420,8 @@ class SurfaceConverter:
 
         Parameters
         ----------
+        stral_file_path : pathlib.Path
+            The file path to the ``STRAL`` data that will be converted.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -449,8 +445,8 @@ class SurfaceConverter:
         surface_header_struct = struct.Struct("=5f2I2f")
         facet_header_struct = struct.Struct("=i9fI")
         points_on_facet_struct = struct.Struct("=7f")
-        log.info(f"Reading STRAL file located at: {self.stral_file_path}")
-        with open(f"{self.stral_file_path}", "rb") as file:
+        log.info(f"Reading STRAL file located at: {stral_file_path}")
+        with open(f"{stral_file_path}", "rb") as file:
             surface_header_data = surface_header_struct.unpack_from(
                 file.read(surface_header_struct.size)
             )
@@ -511,6 +507,8 @@ class SurfaceConverter:
 
     def _extract_paint_data(
         self,
+        heliostat_file_path: pathlib.Path,
+        deflectometry_file_path: pathlib.Path,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[
         torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]
@@ -520,6 +518,10 @@ class SurfaceConverter:
 
         Parameters
         ----------
+        deflectometry_file_path : pathlib.Path
+            The file path to the ``PAINT`` deflectometry data that will be converted.
+        heliostat_file_path : pathlib.Path
+            The file path to the ``PAINT`` heliostat properties data that will be converted.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -538,7 +540,7 @@ class SurfaceConverter:
         """
         log.info("Beginning extraction of data from ```PAINT``` file.")
         # Reading ``PAINT`` heliostat json file.
-        with open(self.heliostat_file_path, "r") as file:
+        with open(heliostat_file_path, "r") as file:
             heliostat_dict = json.load(file)
             number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
                 config_dictionary.paint_number_of_facets
@@ -570,9 +572,9 @@ class SurfaceConverter:
 
         # Reading ``PAINT`` deflectometry hdf5 file.
         log.info(
-            f"Reading PAINT deflectometry file located at: {self.deflectometry_file_path}"
+            f"Reading PAINT deflectometry file located at: {deflectometry_file_path}"
         )
-        with h5py.File(self.deflectometry_file_path, "r") as file:
+        with h5py.File(deflectometry_file_path, "r") as file:
             surface_points_with_facets_list = []
             surface_normals_with_facets_list = []
             for f in range(number_of_facets):
