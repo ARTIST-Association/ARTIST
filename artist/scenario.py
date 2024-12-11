@@ -16,7 +16,6 @@ from artist.util.configuration_classes import (
     FacetConfig,
     KinematicDeviations,
     KinematicLoadConfig,
-    KinematicOffsets,
     SurfaceConfig,
 )
 
@@ -148,20 +147,6 @@ class Scenario:
                         config_dictionary.facet_number_eval_n
                     ][()]
                 ),
-                width=float(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.surface_prototype_key
-                    ][config_dictionary.facets_key][facet][
-                        config_dictionary.facets_width
-                    ][()]
-                ),
-                height=float(
-                    scenario_file[config_dictionary.prototype_key][
-                        config_dictionary.surface_prototype_key
-                    ][config_dictionary.facets_key][facet][
-                        config_dictionary.facets_height
-                    ][()]
-                ),
                 translation_vector=torch.tensor(
                     scenario_file[config_dictionary.prototype_key][
                         config_dictionary.surface_prototype_key
@@ -197,62 +182,7 @@ class Scenario:
         surface_prototype = SurfaceConfig(facets_list=facets_list)
 
         # Create kinematic prototype.
-        kinematic_initial_orientation_offset_e = scenario_file.get(
-            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
-            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
-        )
-        kinematic_initial_orientation_offset_n = scenario_file.get(
-            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
-            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-        )
-        kinematic_initial_orientation_offset_u = scenario_file.get(
-            f"{config_dictionary.prototype_key}/{config_dictionary.kinematic_prototype_key}/"
-            f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_u}"
-        )
-        if kinematic_initial_orientation_offset_e is None:
-            log.warning(
-                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_e} set."
-                f"Using default values!"
-            )
-        if kinematic_initial_orientation_offset_n is None:
-            log.warning(
-                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_n} set."
-                f"Using default values!"
-            )
-        if kinematic_initial_orientation_offset_u is None:
-            log.warning(
-                f"No kinematic prototype {config_dictionary.kinematic_initial_orientation_offset_u} set."
-                f"Using default values!"
-            )
-        kinematic_offsets = KinematicOffsets(
-            kinematic_initial_orientation_offset_e=(
-                torch.tensor(
-                    kinematic_initial_orientation_offset_e[()],
-                    dtype=torch.float,
-                    device=device,
-                )
-                if kinematic_initial_orientation_offset_e
-                else torch.tensor(0.0, dtype=torch.float, device=device)
-            ),
-            kinematic_initial_orientation_offset_n=(
-                torch.tensor(
-                    kinematic_initial_orientation_offset_n[()],
-                    dtype=torch.float,
-                    device=device,
-                )
-                if kinematic_initial_orientation_offset_n
-                else torch.tensor(0.0, dtype=torch.float, device=device)
-            ),
-            kinematic_initial_orientation_offset_u=(
-                torch.tensor(
-                    kinematic_initial_orientation_offset_u[()],
-                    dtype=torch.float,
-                    device=device,
-                )
-                if kinematic_initial_orientation_offset_u
-                else torch.tensor(0.0, dtype=torch.float, device=device)
-            ),
-        )
+        initial_orientation = torch.tensor(scenario_file[config_dictionary.prototype_key][config_dictionary.kinematic_prototype_key][config_dictionary.kinematic_initial_orientation][()], dtype=torch.float, device=device)
 
         first_joint_translation_e = scenario_file.get(
             f"{config_dictionary.prototype_key}/"
@@ -545,13 +475,13 @@ class Scenario:
             ),
         )
         kinematic_prototype = KinematicLoadConfig(
-            kinematic_type=str(
+            type=str(
                 scenario_file[config_dictionary.prototype_key][
                     config_dictionary.kinematic_prototype_key
                 ][config_dictionary.kinematic_type][()].decode("utf-8")
             ),
-            kinematic_initial_orientation_offsets=kinematic_offsets,
-            kinematic_deviations=kinematic_deviations,
+            initial_orientation=initial_orientation,
+            deviations=kinematic_deviations,
         )
 
         # Create actuator prototype.
@@ -642,18 +572,18 @@ class Scenario:
             )
             actuator_list.append(
                 ActuatorConfig(
-                    actuator_key="",
-                    actuator_type=str(
+                    key="",
+                    type=str(
                         scenario_file[config_dictionary.prototype_key][
                             config_dictionary.actuator_prototype_key
                         ][ac][config_dictionary.actuator_type_key][()].decode("utf-8")
                     ),
-                    actuator_clockwise=bool(
+                    clockwise_axis_movement=bool(
                         scenario_file[config_dictionary.prototype_key][
                             config_dictionary.actuator_prototype_key
-                        ][ac][config_dictionary.actuator_clockwise][()]
+                        ][ac][config_dictionary.actuator_clockwise_axis_movement][()]
                     ),
-                    actuator_parameters=actuator_parameters,
+                    parameters=actuator_parameters,
                 )
             )
         actuator_prototype = ActuatorListConfig(actuator_list=actuator_list)
