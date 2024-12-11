@@ -21,6 +21,7 @@ dependencies = [
     "torch",
     "h5py",
     "colorlog",
+    "pytest-mock",
 ]
 
 [project.optional-dependencies]
