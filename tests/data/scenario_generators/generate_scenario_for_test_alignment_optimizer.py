@@ -3,14 +3,11 @@ import pathlib
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, paint_loader, set_logger_config, utils
+from artist.util import config_dictionary, paint_loader, set_logger_config
 from artist.util.configuration_classes import (
-    ActuatorConfig,
-    ActuatorParameters,
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicDeviations,
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -46,11 +43,21 @@ heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.js
 deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/deflectometry.h5"
 
 
-calibration_target_name = paint_loader.extract_paint_calibration_properties(calibration_file)
+calibration_target_name = paint_loader.extract_paint_calibration_properties(
+    calibration_file
+)
 
-power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = paint_loader.extract_paint_tower_measurements(tower_file, calibration_target_name, device)
+power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u = (
+    paint_loader.extract_paint_tower_measurements(
+        tower_file, calibration_target_name, device
+    )
+)
 
-heliostat_position, kinematic_config, actuators_list_config = paint_loader.extract_paint_heliostat_properties(heliostat_file, power_plant_position, device)
+heliostat_position, kinematic_config, actuators_list_config = (
+    paint_loader.extract_paint_heliostat_properties(
+        heliostat_file, power_plant_position, device
+    )
+)
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
