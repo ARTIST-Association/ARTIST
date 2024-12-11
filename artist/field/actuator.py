@@ -11,7 +11,7 @@ class Actuator(torch.nn.Module):
     ----------
     joint_number : int
         Descriptor (number) of the joint.
-    clockwise : bool
+    clockwise_axis_movement : bool
         Turning direction of the joint.
     increment : torch.Tensor
         The stroke length change per motor step.
@@ -38,7 +38,7 @@ class Actuator(torch.nn.Module):
     def __init__(
         self,
         joint_number: int,
-        clockwise: bool,
+        clockwise_axis_movement: bool,
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
         offset: torch.Tensor,
@@ -59,7 +59,7 @@ class Actuator(torch.nn.Module):
         ----------
         joint_number : int
             Descriptor (number) of the joint.
-        clockwise : bool
+        clockwise_axis_movement : bool
             Turning direction of the joint.
         increment : torch.Tensor
             The stroke length change per motor step.
@@ -75,7 +75,7 @@ class Actuator(torch.nn.Module):
         """
         super().__init__()
         self.joint_number = joint_number
-        self.clockwise = clockwise
+        self.clockwise_axis_movement = clockwise_axis_movement
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.offset = offset

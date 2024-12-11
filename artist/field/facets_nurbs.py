@@ -21,10 +21,6 @@ class NurbsFacet(torch.nn.Module):
         The number of evaluation points for the NURBS surface in the east direction.
     number_eval_points_n : int
         The number of evaluation points for the NURBS surface in the north direction.
-    width : float
-        The width of the facet.
-    height : float
-        The height of the facet.
     translation_vector : torch.Tensor
         The translation_vector of the facet.
     canting_e : torch.Tensor
@@ -48,8 +44,6 @@ class NurbsFacet(torch.nn.Module):
         degree_n: int,
         number_eval_points_e: int,
         number_eval_points_n: int,
-        width: float,
-        height: float,
         translation_vector: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
@@ -61,9 +55,8 @@ class NurbsFacet(torch.nn.Module):
         Non-Uniform Rational B-Splines (NURBS). Thus, each facet is an individual NURBS surface. The
         NURBS surface is created by specifying several parameters. For a detailed description of these
         parameters see the `NURBS-tutorial`. For now, note that the NURBS surfaces can be formed through
-        control points, two degrees, the number of evaluation points in east and north direction, the
-        width and height of the heliostat, a translation vector to match the facets to their position,
-        and canting vectors.
+        control points, two degrees, the number of evaluation points in east and north direction, a 
+        translation vector to match the facets to their position, and canting vectors.
 
         Parameters
         ----------
@@ -77,10 +70,6 @@ class NurbsFacet(torch.nn.Module):
             The number of evaluation points for the NURBS surface in the east direction.
         number_eval_points_n : int
             The number of evaluation points for the NURBS surface in the north direction.
-        width : float
-            The width of the facet.
-        height : float
-            The height of the facet.
         translation_vector : torch.Tensor
             The translation_vector of the facet.
         canting_e : torch.Tensor
@@ -94,8 +83,6 @@ class NurbsFacet(torch.nn.Module):
         self.degree_n = degree_n
         self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
-        self.width = width
-        self.height = height
         self.translation_vector = translation_vector
         self.canting_e = canting_e
         self.canting_n = canting_n

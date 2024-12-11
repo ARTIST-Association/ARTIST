@@ -8,7 +8,7 @@ from typing_extensions import Self
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
 from artist.raytracing.raytracing_utils import reflect
-from artist.util import config_dictionary
+from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -16,7 +16,6 @@ from artist.util.configuration_classes import (
     FacetConfig,
     KinematicDeviations,
     KinematicLoadConfig,
-    KinematicOffsets,
     SurfaceConfig,
 )
 
@@ -115,17 +114,17 @@ class Heliostat(torch.nn.Module):
         self.aim_point = aim_point
         self.surface = Surface(surface_config=surface_config)
         try:
-            kinematic_object = kinematic_type_mapping[kinematic_config.kinematic_type]
+            kinematic_object = kinematic_type_mapping[kinematic_config.type]
         except KeyError:
             raise KeyError(
-                f"Currently the selected kinematic type: {kinematic_config.kinematic_type} is not supported."
+                f"Currently the selected kinematic type: {kinematic_config.type} is not supported."
             )
         self.kinematic = kinematic_object(
             position=position,
             aim_point=aim_point,
             actuator_config=actuator_config,
-            initial_orientation_offsets=kinematic_config.kinematic_initial_orientation_offsets,
-            deviation_parameters=kinematic_config.kinematic_deviations,
+            initial_orientation=kinematic_config.initial_orientation,
+            deviation_parameters=kinematic_config.deviations,
             device=device,
         )
         self.current_aligned_surface_points = torch.empty(0, device=device)
@@ -143,7 +142,7 @@ class Heliostat(torch.nn.Module):
         config_file: h5py.File,
         prototype_surface: Optional[SurfaceConfig] = None,
         prototype_kinematic: Optional[KinematicLoadConfig] = None,
-        prototype_actuator: Optional[ActuatorListConfig] = None,
+        prototype_actuator_list: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> Self:
@@ -158,7 +157,7 @@ class Heliostat(torch.nn.Module):
             An optional prototype for the surface configuration.
         prototype_kinematic : KinematicLoadConfig, optional
             An optional prototype for the kinematic configuration.
-        prototype_actuator : ActuatorConfig, optional
+        prototype_actuator_list : ActuatorListConfig, optional
             An optional prototype for the actuator configuration.
         heliostat_name : str, optional
             The name of the heliostat being loaded - used for logging.
@@ -216,16 +215,6 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facet_number_eval_n][()]
                     ),
-                    width=float(
-                        config_file[config_dictionary.heliostat_surface_key][
-                            config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_width][()]
-                    ),
-                    height=float(
-                        config_file[config_dictionary.heliostat_surface_key][
-                            config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_height][()]
-                    ),
                     translation_vector=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
@@ -264,65 +253,7 @@ class Heliostat(torch.nn.Module):
             surface_config = prototype_surface
 
         if config_dictionary.heliostat_kinematic_key in config_file.keys():
-            kinematic_initial_orientation_offset_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
-            )
-            kinematic_initial_orientation_offset_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            kinematic_initial_orientation_offset_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            if kinematic_initial_orientation_offset_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_e} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            if kinematic_initial_orientation_offset_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            if kinematic_initial_orientation_offset_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_u} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            kinematic_offsets = KinematicOffsets(
-                kinematic_initial_orientation_offset_e=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_e[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_n=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_n[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_u=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_u[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-            )
+            initial_orientation = torch.tensor(config_file[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_initial_orientation][()], dtype=torch.float, device=device)
 
             first_joint_translation_e = config_file.get(
                 f"{config_dictionary.heliostat_kinematic_key}/"
@@ -633,13 +564,13 @@ class Heliostat(torch.nn.Module):
                 ),
             )
             kinematic_config = KinematicLoadConfig(
-                kinematic_type=str(
+                type=str(
                     config_file[config_dictionary.heliostat_kinematic_key][
                         config_dictionary.kinematic_type
                     ][()].decode("utf-8")
                 ),
-                kinematic_initial_orientation_offsets=kinematic_offsets,
-                kinematic_deviations=kinematic_deviations,
+                initial_orientation=initial_orientation,
+                deviations=kinematic_deviations,
             )
         else:
             if prototype_kinematic is None:
@@ -737,30 +668,43 @@ class Heliostat(torch.nn.Module):
                 )
                 actuator_list.append(
                     ActuatorConfig(
-                        actuator_key="",
-                        actuator_type=str(
+                        key="",
+                        type=str(
                             config_file[config_dictionary.heliostat_actuator_key][ac][
                                 config_dictionary.actuator_type_key
                             ][()].decode("utf-8")
                         ),
-                        actuator_clockwise=bool(
+                        clockwise_axis_movement=bool(
                             config_file[config_dictionary.heliostat_actuator_key][ac][
-                                config_dictionary.actuator_clockwise
+                                config_dictionary.actuator_clockwise_axis_movement
                             ][()]
                         ),
-                        actuator_parameters=actuator_parameters,
+                        parameters=actuator_parameters,
                     )
                 )
             actuator_list_config = ActuatorListConfig(actuator_list=actuator_list)
         else:
-            if prototype_actuator is None:
+            if prototype_actuator_list is None:
                 raise ValueError(
                     "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
                 )
             log.info(
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
-            actuator_list_config = prototype_actuator
+            actuator_list_config = prototype_actuator_list
+
+        # Adapt initial angle of actuator one according to kinematic initial orientation.
+        # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
+        # The first actuator always rotates along the east-axis.
+        # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
+        # of actuator one needs to be transformed accordingly.
+        initial_angle= actuator_list_config.actuator_list[
+            0
+        ].parameters.initial_angle
+
+        transformed_initial_angle = utils.transform_initial_angle(initial_angle=initial_angle, initial_orientation=kinematic_config.initial_orientation, device=device)
+
+        actuator_list_config.actuator_list[0].parameters.initial_angle = transformed_initial_angle
 
         return cls(
             heliostat_id=heliostat_id,

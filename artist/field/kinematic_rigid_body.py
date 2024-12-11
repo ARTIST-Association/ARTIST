@@ -10,7 +10,6 @@ from artist.util import utils
 from artist.util.configuration_classes import (
     ActuatorListConfig,
     KinematicDeviations,
-    KinematicOffsets,
 )
 
 
@@ -22,10 +21,12 @@ class RigidBody(Kinematic):
     ----------
     deviation_parameters : KinematicDeviations
         18 deviation parameters describing imperfections in the heliostat.
-    initial_orientation_offsets : KinematicOffsets
+    initial_orientation : torch.Tensor
         The initial orientation-rotation angles of the heliostat.
     actuators : ActuatorArray
         The actuators required for the kinematic.
+    artist_standart_orientation : torch.Tensor
+        The standart orientation of the kinematic. 
 
     Methods
     -------
@@ -50,11 +51,7 @@ class RigidBody(Kinematic):
         position: torch.Tensor,
         aim_point: torch.Tensor,
         actuator_config: ActuatorListConfig,
-        initial_orientation_offsets: KinematicOffsets = KinematicOffsets(
-            kinematic_initial_orientation_offset_e=torch.tensor(0.0),
-            kinematic_initial_orientation_offset_n=torch.tensor(0.0),
-            kinematic_initial_orientation_offset_u=torch.tensor(0.0),
-        ),
+        initial_orientation: torch.Tensor,
         deviation_parameters: KinematicDeviations = KinematicDeviations(
             first_joint_translation_e=torch.tensor(0.0),
             first_joint_translation_n=torch.tensor(0.0),
@@ -107,16 +104,11 @@ class RigidBody(Kinematic):
             if isinstance(attr_value, torch.Tensor):
                 setattr(self.deviation_parameters, attr_name, attr_value.to(device))
 
-        self.initial_orientation_offsets = initial_orientation_offsets
-        for attr_name, attr_value in self.initial_orientation_offsets.__dict__.items():
-            if isinstance(attr_value, torch.Tensor):
-                setattr(
-                    self.initial_orientation_offsets, attr_name, attr_value.to(device)
-                )
-
         self.actuators = ActuatorArray(
             actuator_list_config=actuator_config, device=device
         )
+        self.initial_orientation_helisotat = initial_orientation
+        self.artist_standart_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
     def incident_ray_direction_to_orientation(
         self,
@@ -154,10 +146,10 @@ class RigidBody(Kinematic):
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
-                motor_position=motor_positions[0:1], device=device
+                motor_position=motor_positions[0], device=device
             )
             joint_2_angle = self.actuators.actuator_list[1].motor_position_to_angle(
-                motor_position=motor_positions[1:2], device=device
+                motor_position=motor_positions[1], device=device
             )
 
             initial_orientation = torch.eye(4, device=device)
@@ -245,7 +237,7 @@ class RigidBody(Kinematic):
 
             # Calculate joint 2 angle.
             joint_2_angle = -torch.arcsin(
-                -desired_concentrator_normal[0:1]
+                -desired_concentrator_normal[0]
                 / torch.cos(self.deviation_parameters.second_joint_translation_n)
             )
 
@@ -267,15 +259,15 @@ class RigidBody(Kinematic):
 
             joint_1_angle = (
                 torch.arctan2(
-                    a * -desired_concentrator_normal[2:3]
-                    - b * -desired_concentrator_normal[1:2],
-                    a * -desired_concentrator_normal[1:2]
-                    + b * -desired_concentrator_normal[2:3],
+                    a * -desired_concentrator_normal[2]
+                    - b * -desired_concentrator_normal[1],
+                    a * -desired_concentrator_normal[1]
+                    + b * -desired_concentrator_normal[2],
                 )
                 - torch.pi
             )
 
-            motor_positions = torch.cat(
+            motor_positions = torch.stack(
                 (
                     self.actuators.actuator_list[0].angle_to_motor_position(
                         joint_1_angle, device
@@ -286,19 +278,21 @@ class RigidBody(Kinematic):
                 ),
             )
 
+        east_angle, north_angle, up_angle = utils.decompose_rotation(initial_vector=self.initial_orientation_helisotat[:-1], target_vector=self.artist_standart_orientation[:-1], device=device)
+        
         # Return orientation matrix multiplied by the initial orientation offset.
         return (
             orientation
             @ utils.rotate_e(
-                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e,
+                e=east_angle,
                 device=device,
             )
             @ utils.rotate_n(
-                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n,
+                n=north_angle,
                 device=device,
             )
             @ utils.rotate_u(
-                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u,
+                u=up_angle,
                 device=device,
             )
         )
@@ -438,19 +432,21 @@ class RigidBody(Kinematic):
             )
         )
 
+        east_angle, north_angle, up_angle = utils.decompose_rotation(initial_vector=self.initial_orientation_helisotat[:-1], target_vector=self.artist_standard_orientation[:-1], device=device)
+        
         # Return orientation matrix multiplied by the initial orientation offset.
         return (
             orientation
             @ utils.rotate_e(
-                e=self.initial_orientation_offsets.kinematic_initial_orientation_offset_e,
+                e=east_angle,
                 device=device,
             )
             @ utils.rotate_n(
-                n=self.initial_orientation_offsets.kinematic_initial_orientation_offset_n,
+                n=north_angle,
                 device=device,
             )
             @ utils.rotate_u(
-                u=self.initial_orientation_offsets.kinematic_initial_orientation_offset_u,
+                u=up_angle,
                 device=device,
             )
         )
