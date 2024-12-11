@@ -26,7 +26,7 @@ class RigidBody(Kinematic):
     actuators : ActuatorArray
         The actuators required for the kinematic.
     artist_standart_orientation : torch.Tensor
-        The standart orientation of the kinematic. 
+        The standart orientation of the kinematic.
 
     Methods
     -------
@@ -108,7 +108,9 @@ class RigidBody(Kinematic):
             actuator_list_config=actuator_config, device=device
         )
         self.initial_orientation_helisotat = initial_orientation
-        self.artist_standart_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+        self.artist_standart_orientation = torch.tensor(
+            [0.0, -1.0, 0.0, 0.0], device=device
+        )
 
     def incident_ray_direction_to_orientation(
         self,
@@ -278,8 +280,12 @@ class RigidBody(Kinematic):
                 ),
             )
 
-        east_angle, north_angle, up_angle = utils.decompose_rotation(initial_vector=self.initial_orientation_helisotat[:-1], target_vector=self.artist_standart_orientation[:-1], device=device)
-        
+        east_angle, north_angle, up_angle = utils.decompose_rotation(
+            initial_vector=self.initial_orientation_helisotat[:-1],
+            target_vector=self.artist_standart_orientation[:-1],
+            device=device,
+        )
+
         # Return orientation matrix multiplied by the initial orientation offset.
         return (
             orientation
@@ -432,8 +438,12 @@ class RigidBody(Kinematic):
             )
         )
 
-        east_angle, north_angle, up_angle = utils.decompose_rotation(initial_vector=self.initial_orientation_helisotat[:-1], target_vector=self.artist_standard_orientation[:-1], device=device)
-        
+        east_angle, north_angle, up_angle = utils.decompose_rotation(
+            initial_vector=self.initial_orientation_helisotat[:-1],
+            target_vector=self.artist_standard_orientation[:-1],
+            device=device,
+        )
+
         # Return orientation matrix multiplied by the initial orientation offset.
         return (
             orientation

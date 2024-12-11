@@ -253,7 +253,13 @@ class Heliostat(torch.nn.Module):
             surface_config = prototype_surface
 
         if config_dictionary.heliostat_kinematic_key in config_file.keys():
-            initial_orientation = torch.tensor(config_file[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_initial_orientation][()], dtype=torch.float, device=device)
+            initial_orientation = torch.tensor(
+                config_file[config_dictionary.heliostat_kinematic_key][
+                    config_dictionary.kinematic_initial_orientation
+                ][()],
+                dtype=torch.float,
+                device=device,
+            )
 
             first_joint_translation_e = config_file.get(
                 f"{config_dictionary.heliostat_kinematic_key}/"
@@ -698,13 +704,17 @@ class Heliostat(torch.nn.Module):
         # The first actuator always rotates along the east-axis.
         # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
         # of actuator one needs to be transformed accordingly.
-        initial_angle= actuator_list_config.actuator_list[
+        initial_angle = actuator_list_config.actuator_list[0].parameters.initial_angle
+
+        transformed_initial_angle = utils.transform_initial_angle(
+            initial_angle=initial_angle,
+            initial_orientation=kinematic_config.initial_orientation,
+            device=device,
+        )
+
+        actuator_list_config.actuator_list[
             0
-        ].parameters.initial_angle
-
-        transformed_initial_angle = utils.transform_initial_angle(initial_angle=initial_angle, initial_orientation=kinematic_config.initial_orientation, device=device)
-
-        actuator_list_config.actuator_list[0].parameters.initial_angle = transformed_initial_angle
+        ].parameters.initial_angle = transformed_initial_angle
 
         return cls(
             heliostat_id=heliostat_id,
