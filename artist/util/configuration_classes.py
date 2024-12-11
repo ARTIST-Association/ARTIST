@@ -369,10 +369,6 @@ class FacetConfig:
         The number of evaluation points for the NURBS surface in the east direction.
     number_eval_points_n : int
         The number of evaluation points for the NURBS surface in the north direction.
-    width : float
-        The width of the facet.
-    height : float
-        The height of the facet.
     translation_vector : torch.Tensor
         The translation_vector of the facet.
     canting_e : torch.Tensor
@@ -394,8 +390,6 @@ class FacetConfig:
         degree_n: int,
         number_eval_points_e: int,
         number_eval_points_n: int,
-        width: float,
-        height: float,
         translation_vector: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
@@ -417,10 +411,6 @@ class FacetConfig:
             The number of evaluation points for the NURBS surface in the east direction.
         number_eval_points_n : int
             The number of evaluation points for the NURBS surface in the north direction.
-        width : float
-            The width of the facet.
-        height : float
-            The height of the facet.
         translation_vector : torch.Tensor
             The translation_vector of the facet.
         canting_e : torch.Tensor
@@ -434,8 +424,6 @@ class FacetConfig:
         self.degree_n = degree_n
         self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
-        self.width = width
-        self.height = height
         self.translation_vector = translation_vector
         self.canting_e = canting_e
         self.canting_n = canting_n
@@ -455,8 +443,6 @@ class FacetConfig:
             config_dictionary.facet_degree_n: self.degree_n,
             config_dictionary.facet_number_eval_e: self.number_eval_points_e,
             config_dictionary.facet_number_eval_n: self.number_eval_points_n,
-            config_dictionary.facets_width: self.width,
-            config_dictionary.facets_height: self.height,
             config_dictionary.facets_translation_vector: self.translation_vector,
             config_dictionary.facets_canting_e: self.canting_e,
             config_dictionary.facets_canting_n: self.canting_n,
@@ -758,96 +744,17 @@ class KinematicDeviations:
             )
         return deviations_dict
 
-
-class KinematicOffsets:
-    """
-    Store the kinematic offsets.
-
-    Attributes
-    ----------
-    kinematic_initial_orientation_offset_e : torch.Tensor, optional
-        The initial orientation offset in the east direction.
-    kinematic_initial_orientation_offset_n : torch.Tensor, optional
-        The initial orientation offset in the north direction.
-    kinematic_initial_orientation_offset_u : torch.Tensor, optional
-        The initial orientation offset in the up direction.
-
-    Methods
-    -------
-    create_kinematic_offsets_dict()
-        Create a dictionary containing the configuration parameters for the kinematic offsets.
-    """
-
-    def __init__(
-        self,
-        kinematic_initial_orientation_offset_e: Optional[torch.Tensor] = None,
-        kinematic_initial_orientation_offset_n: Optional[torch.Tensor] = None,
-        kinematic_initial_orientation_offset_u: Optional[torch.Tensor] = None,
-    ) -> None:
-        """
-        Initialize the initial orientation offsets.
-
-        Parameters
-        ----------
-        kinematic_initial_orientation_offset_e : torch.Tensor, optional
-            The initial orientation offset in the east direction.
-        kinematic_initial_orientation_offset_n : torch.Tensor, optional
-            The initial orientation offset in the north direction.
-        kinematic_initial_orientation_offset_u : torch.Tensor, optional
-            The initial orientation offset in the up direction.
-        """
-        self.kinematic_initial_orientation_offset_e = (
-            kinematic_initial_orientation_offset_e
-        )
-        self.kinematic_initial_orientation_offset_n = (
-            kinematic_initial_orientation_offset_n
-        )
-        self.kinematic_initial_orientation_offset_u = (
-            kinematic_initial_orientation_offset_u
-        )
-
-    def create_kinematic_offsets_dict(self) -> dict[str, Any]:
-        """
-        Create a dictionary containing the configuration parameters for the kinematic offsets.
-
-        Returns
-        -------
-        dict[str, Any]
-            A dictionary containing the configuration parameters for the kinematic offsets.
-        """
-        offset_dict = {}
-        if self.kinematic_initial_orientation_offset_e is not None:
-            offset_dict.update(
-                {
-                    config_dictionary.kinematic_initial_orientation_offset_e: self.kinematic_initial_orientation_offset_e
-                }
-            )
-        if self.kinematic_initial_orientation_offset_n is not None:
-            offset_dict.update(
-                {
-                    config_dictionary.kinematic_initial_orientation_offset_n: self.kinematic_initial_orientation_offset_n
-                }
-            )
-        if self.kinematic_initial_orientation_offset_u is not None:
-            offset_dict.update(
-                {
-                    config_dictionary.kinematic_initial_orientation_offset_u: self.kinematic_initial_orientation_offset_u
-                }
-            )
-        return offset_dict
-
-
 class KinematicConfig:
     """
     Store the configuration parameters for the kinematic.
 
     Attributes
     ----------
-    kinematic_type : str
+    type : str
         The type of kinematic used.
-    kinematic_initial_orientation_offsets : KinematicOffsets, optional
-        The initial orientation offsets of the kinematic configuration.
-    kinematic_deviations : KinematicDeviations, optional
+    initial_orientation : torch.Tensor
+        The initial orientation of the kinematic configuration.
+    deviations : KinematicDeviations, optional
         The kinematic deviations.
 
     Methods
@@ -858,27 +765,25 @@ class KinematicConfig:
 
     def __init__(
         self,
-        kinematic_type: str,
-        kinematic_initial_orientation_offsets: Optional[KinematicOffsets] = None,
-        kinematic_deviations: Optional[KinematicDeviations] = None,
+        type: str,
+        initial_orientation: torch.Tensor,
+        deviations: Optional[KinematicDeviations] = None,
     ) -> None:
         """
         Initialize the kinematic configuration.
 
         Parameters
         ----------
-        kinematic_type : str
+        type : str
             The type of kinematic used.
-        kinematic_initial_orientation_offsets : KinematicOffsets, optional
-            The initial orientation offsets of the kinematic configuration.
-        kinematic_deviations : KinematicDeviations, optional
+        initial_orientation : torch.Tensor
+            The initial orientation of the kinematic configuration.
+        deviations : KinematicDeviations, optional
             The kinematic deviations.
         """
-        self.kinematic_type = kinematic_type
-        self.kinematic_initial_orientation_offsets = (
-            kinematic_initial_orientation_offsets
-        )
-        self.kinematic_deviations = kinematic_deviations
+        self.type = type
+        self.initial_orientation = initial_orientation
+        self.deviations = deviations
 
     def create_kinematic_dict(self) -> dict[str, Any]:
         """
@@ -890,18 +795,13 @@ class KinematicConfig:
             A dictionary containing the configuration parameters for the kinematic.
         """
         kinematic_dict: dict[str, Any] = {
-            config_dictionary.kinematic_type: self.kinematic_type
+            config_dictionary.kinematic_type: self.type,
+            config_dictionary.kinematic_initial_orientation: self.initial_orientation
         }
-        if self.kinematic_initial_orientation_offsets is not None:
+        if self.deviations is not None:
             kinematic_dict.update(
                 {
-                    config_dictionary.kinematic_offsets_key: self.kinematic_initial_orientation_offsets.create_kinematic_offsets_dict()
-                }
-            )
-        if self.kinematic_deviations is not None:
-            kinematic_dict.update(
-                {
-                    config_dictionary.kinematic_deviations_key: self.kinematic_deviations.create_kinematic_deviations_dict()
+                    config_dictionary.kinematic_deviations_key: self.deviations.create_kinematic_deviations_dict()
                 }
             )
         return kinematic_dict
@@ -918,26 +818,26 @@ class KinematicPrototypeConfig(KinematicConfig):
 
     def __init__(
         self,
-        kinematic_type: str,
-        kinematic_initial_orientation_offsets: Optional[KinematicOffsets] = None,
-        kinematic_deviations: Optional[KinematicDeviations] = None,
+        type: str,
+        initial_orientation: torch.Tensor,
+        deviations: Optional[KinematicDeviations] = None,
     ) -> None:
         """
         Initialize the kinematic prototype configuration.
 
         Parameters
         ----------
-        kinematic_type : str
+        type : str
             The type of kinematic used.
-        kinematic_initial_orientation_offsets : KinematicOffsets, optional
-            The initial orientation offsets of the kinematic configuration.
-        kinematic_deviations : KinematicDeviations, optional
+        initial_orientation : torch.Tensor
+            The initial orientation of the kinematic configuration.
+        deviations : KinematicDeviations, optional
             The kinematic deviations.
         """
         super().__init__(
-            kinematic_type=kinematic_type,
-            kinematic_initial_orientation_offsets=kinematic_initial_orientation_offsets,
-            kinematic_deviations=kinematic_deviations,
+            type=type,
+            initial_orientation=initial_orientation,
+            deviations=deviations,
         )
 
 
@@ -947,37 +847,35 @@ class KinematicLoadConfig:
 
     Attributes
     ----------
-    kinematic_type : str
+    type : str
         The type of kinematic used.
-    kinematic_initial_orientation_offsets : KinematicOffsets, optional
-        The initial orientation offsets of the kinematic configuration.
-    kinematic_deviations : KinematicDeviations, optional
+    initial_orientation : torch.Tensor
+        The initial orientation of the kinematic configuration.
+    deviations : KinematicDeviations, optional
         The kinematic deviations.
     """
 
     def __init__(
         self,
-        kinematic_type: str,
-        kinematic_initial_orientation_offsets: KinematicOffsets,
-        kinematic_deviations: KinematicDeviations,
+        type: str,
+        initial_orientation: torch.Tensor,
+        deviations: KinematicDeviations,
     ) -> None:
         """
         Initialize the kinematic configuration for loading in ``ARTIST``.
 
         Parameters
         ----------
-        kinematic_type : str
+        type : str
             The type of kinematic used.
-        kinematic_initial_orientation_offsets : KinematicOffsets, optional
-            The initial orientation offsets of the kinematic configuration.
-        kinematic_deviations : KinematicDeviations, optional
+        initial_orientation : torch.Tensor
+            The initial orientation of the kinematic configuration.
+        deviations : KinematicDeviations, optional
             The kinematic deviations.
         """
-        self.kinematic_type = kinematic_type
-        self.kinematic_initial_orientation_offsets = (
-            kinematic_initial_orientation_offsets
-        )
-        self.kinematic_deviations = kinematic_deviations
+        self.type = type
+        self.initial_orientation = initial_orientation
+        self.deviations = deviations
 
 
 class ActuatorParameters:
@@ -1076,7 +974,7 @@ class ActuatorConfig:
     ----------
     actuator_type : str
         The type of actuator to use, e.g., linear or ideal.
-    actuator_clockwise : bool
+    clockwise_axis_movement : bool
         Boolean indicating if the actuator operates in a clockwise manner.
     actuator_parameters : ActuatorParameters, optional
         The parameters of the actuator
@@ -1089,27 +987,29 @@ class ActuatorConfig:
 
     def __init__(
         self,
-        actuator_key: str,
-        actuator_type: str,
-        actuator_clockwise: bool,
-        actuator_parameters: Optional[ActuatorParameters] = None,
+        key: str,
+        type: str,
+        clockwise_axis_movement: bool,
+        parameters: Optional[ActuatorParameters] = None,
     ) -> None:
         """
         Initialize the actuator configuration.
 
         Parameters
         ----------
-        actuator_type : str
+        key : str
+            The name or descriptor of the actuator.
+        type : str
             The type of actuator to use, e.g. linear or ideal.
-        actuator_clockwise : bool
-            Boolean indicating if the actuator operates in a clockwise manner.
-        actuator_parameters : ActuatorParameters, optional
+        clockwise_axis_movement : bool
+            Boolean indicating if the actuator operates in a clockwise or counterclockwise manner.
+        parameters : ActuatorParameters, optional
             The parameters of the actuator.
         """
-        self.actuator_key = actuator_key
-        self.actuator_type = actuator_type.lower()
-        self.actuator_clockwise = actuator_clockwise
-        self.actuator_parameters = actuator_parameters
+        self.key = key
+        self.type = type
+        self.clockwise_axis_movement = clockwise_axis_movement
+        self.parameters = parameters
 
     def create_actuator_dict(self) -> dict[str, Any]:
         """
@@ -1121,13 +1021,13 @@ class ActuatorConfig:
             A dictionary containing the actuator configuration.
         """
         actuator_dict = {
-            config_dictionary.actuator_type_key: self.actuator_type,
-            config_dictionary.actuator_clockwise: self.actuator_clockwise,
+            config_dictionary.actuator_type_key: self.type,
+            config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
         }
-        if self.actuator_parameters is not None:
+        if self.parameters is not None:
             actuator_dict.update(
                 {
-                    config_dictionary.actuator_parameters_key: self.actuator_parameters.create_actuator_parameters_dict()
+                    config_dictionary.actuator_parameters_key: self.parameters.create_actuator_parameters_dict()
                 }
             )
         return actuator_dict
@@ -1169,7 +1069,7 @@ class ActuatorListConfig:
             A dictionary containing a list of actuator configurations.
         """
         return {
-            actuator_config.actuator_key: actuator_config.create_actuator_dict()
+            actuator_config.key: actuator_config.create_actuator_dict()
             for actuator_config in self.actuator_list
         }
 
