@@ -43,7 +43,7 @@ heliostat_file = pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.js
 deflectometry_file = pathlib.Path(ARTIST_ROOT) / "tests/data/deflectometry.h5"
 
 
-calibration_target_name = paint_loader.extract_paint_calibration_properties(
+calibration_target_name = paint_loader.extract_paint_calibration_target_name(
     calibration_file
 )
 

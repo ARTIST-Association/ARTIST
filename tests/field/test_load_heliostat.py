@@ -1,13 +1,27 @@
+from typing import Optional
 import h5py
 import pytest
 import torch
 from pytest_mock import MockerFixture
-
+from unittest.mock import MagicMock
 from artist.field.heliostat import Heliostat
 
 
 @pytest.fixture
-def prototype_mock_generator(mocker: MockerFixture):
+def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
+    """
+    Generate a mock prototype.
+
+    Parameters
+    ----------
+    mocker : MockerFixture
+        A pytest-mock fixture used to create mock objects.
+    
+    Returns
+    -------
+    MagicMock
+        A mock prototype.
+    """
     return mocker.MagicMock()
 
 
@@ -31,18 +45,28 @@ def prototype_mock_generator(mocker: MockerFixture):
         ),
     ],
 )
-def test_heliostat_load_from_hdf5(
-    mocker,
-    prototype_surface,
-    prototype_kinematic,
-    error,
+def test_heliostat_load_from_hdf5_errors(
+    mocker: MockerFixture,
+    prototype_surface: Optional[MagicMock],
+    prototype_kinematic: Optional[MagicMock],
+    error: str,
     device: torch.device,
 ) -> None:
     """
+    Test the heliostat load from hdf5 method.
+
     Parameters
     ----------
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    mocker : MockerFixture
+        A pytest-mocker fixture used to create mock objects.
+    prototype_surface : Optional[MagicMock]
+        The mock prototype surface.
+    prototype_kinematic : Optional[MagicMock]
+        The mock prototype kinematic.
+    error : str
+        The expected error message.
+    device : torch.device
+        The device on which to initialize tensors.
 
     Raises
     ------
