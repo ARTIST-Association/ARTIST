@@ -187,7 +187,9 @@ class LinearActuator(Actuator):
         """
         device = torch.device(device)
         delta_angle = (
-            angle - self.initial_angle if self.clockwise_axis_movement else self.initial_angle - angle
+            angle - self.initial_angle
+            if self.clockwise_axis_movement
+            else self.initial_angle - angle
         )
 
         absolute_initial_angle = self._motor_position_to_absolute_angle(

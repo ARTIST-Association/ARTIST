@@ -14,7 +14,9 @@ from artist.util.configuration_classes import (
 )
 
 
-def extract_paint_calibration_properties(calibration_properties_path: pathlib.Path) -> str:
+def extract_paint_calibration_properties(
+    calibration_properties_path: pathlib.Path,
+) -> str:
     """
     Extract calibration data from ```PAINT`` calibration file for scenario generation.
 
@@ -22,7 +24,7 @@ def extract_paint_calibration_properties(calibration_properties_path: pathlib.Pa
     ----------
     calibration_properties_path : pathlib.Path
         The path to the calibration file.
-    
+
     Returns
     -------
     str
@@ -36,10 +38,12 @@ def extract_paint_calibration_properties(calibration_properties_path: pathlib.Pa
 
     return calibration_target_name
 
-def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path, 
-                                     target_name: str, 
-                                     device: Union[torch.device, str] = "cuda"
-    ) -> tuple[torch.Tensor, str, torch.Tensor, torch.Tensor, float, float]:
+
+def extract_paint_tower_measurements(
+    tower_measurements_path: pathlib.Path,
+    target_name: str,
+    device: Union[torch.device, str] = "cuda",
+) -> tuple[torch.Tensor, str, torch.Tensor, torch.Tensor, float, float]:
     """
     Extract tower data from ```PAINT`` tower measurement file for scenario generation.
 
@@ -51,7 +55,7 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
         The name of the target plane (receiver or calibration target).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Returns
     -------
     torch.Tensor
@@ -155,10 +159,11 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
     )
 
 
-def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path, 
-                                       power_plant_position: torch.Tensor, 
-                                       device: Union[torch.device, str] = "cuda"
-    ) -> tuple[torch.Tensor, KinematicConfig, ActuatorListConfig]:
+def extract_paint_heliostat_properties(
+    heliostat_properties_path: pathlib.Path,
+    power_plant_position: torch.Tensor,
+    device: Union[torch.device, str] = "cuda",
+) -> tuple[torch.Tensor, KinematicConfig, ActuatorListConfig]:
     """
     Extract heliostat data from ```PAINT`` heliostat file for scenario generation.
 
@@ -170,7 +175,7 @@ def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path,
         The position of the power plant in latitude, longitude and elevation.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Returns
     -------
     torch.Tensor
@@ -262,8 +267,14 @@ def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path,
         )
 
         # Include the initial orientation for the kinematic.
-        initial_orientation = utils.convert_3d_direction_to_4d_format(torch.tensor(heliostat_dict[config_dictionary.paint_initial_orientation], device=device), device=device)
-        
+        initial_orientation = utils.convert_3d_direction_to_4d_format(
+            torch.tensor(
+                heliostat_dict[config_dictionary.paint_initial_orientation],
+                device=device,
+            ),
+            device=device,
+        )
+
         # Include the kinematic prototype configuration.
         kinematic_config = KinematicConfig(
             type=config_dictionary.rigid_body_key,
@@ -271,27 +282,42 @@ def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path,
             deviations=kinematic_deviations,
         )
 
-    paint_actuators = list(heliostat_dict[config_dictionary.paint_kinematic][config_dictionary.paint_actuators])
+    paint_actuators = list(
+        heliostat_dict[config_dictionary.paint_kinematic][
+            config_dictionary.paint_actuators
+        ]
+    )
     actuator_list = []
-    
+
     for i, paint_actuator in enumerate(paint_actuators):
         parameters = ActuatorParameters(
-            increment=torch.tensor(paint_actuator[config_dictionary.paint_increment], device=device),
-            initial_stroke_length=torch.tensor(paint_actuator[config_dictionary.paint_initial_stroke_length], device=device),
-            offset=torch.tensor(paint_actuator[config_dictionary.paint_offset], device=device),
-            pivot_radius=torch.tensor(paint_actuator[config_dictionary.paint_pivot_radius], device=device),
-            initial_angle=torch.tensor(paint_actuator[config_dictionary.paint_initial_angle], device=device),
+            increment=torch.tensor(
+                paint_actuator[config_dictionary.paint_increment], device=device
+            ),
+            initial_stroke_length=torch.tensor(
+                paint_actuator[config_dictionary.paint_initial_stroke_length],
+                device=device,
+            ),
+            offset=torch.tensor(
+                paint_actuator[config_dictionary.paint_offset], device=device
+            ),
+            pivot_radius=torch.tensor(
+                paint_actuator[config_dictionary.paint_pivot_radius], device=device
+            ),
+            initial_angle=torch.tensor(
+                paint_actuator[config_dictionary.paint_initial_angle], device=device
+            ),
         )
         actuator = ActuatorConfig(
             key=f"{config_dictionary.heliostat_actuator_key}_{i}",
             type=paint_actuator[config_dictionary.paint_actuator_type],
-            clockwise_axis_movement=paint_actuator[config_dictionary.paint_clockwise_axis_movement],
+            clockwise_axis_movement=paint_actuator[
+                config_dictionary.paint_clockwise_axis_movement
+            ],
             parameters=parameters,
         )
         actuator_list.append(actuator)
 
-    actuators_list_config = ActuatorListConfig(
-        actuator_list=actuator_list
-    )
+    actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
 
     return heliostat_position, kinematic_config, actuators_list_config

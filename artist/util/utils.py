@@ -628,8 +628,12 @@ def corner_points_to_plane(
     ) / 2
     return plane_e, plane_u
 
-def decompose_rotation(initial_vector: torch.Tensor, target_vector:torch.Tensor, device: Union[torch.device, str] = "cuda",
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+def decompose_rotation(
+    initial_vector: torch.Tensor,
+    target_vector: torch.Tensor,
+    device: Union[torch.device, str] = "cuda",
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Get the individual angles along the east-, north- and up-axis, to rotate and initial vector into a target vector.
 
@@ -641,7 +645,7 @@ def decompose_rotation(initial_vector: torch.Tensor, target_vector:torch.Tensor,
         The rotated vector.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Returns
     -------
     torch.Tensor
@@ -650,11 +654,11 @@ def decompose_rotation(initial_vector: torch.Tensor, target_vector:torch.Tensor,
         The angle for the north-axis rotation.
     torch.Tensor
         The angle for the up-axis rotation.
-    
+
     """
     device = torch.device(device)
     # Normalize the input vectors
-    initial_vector = initial_vector/ torch.linalg.norm(initial_vector)
+    initial_vector = initial_vector / torch.linalg.norm(initial_vector)
     target_vector = target_vector / torch.linalg.norm(target_vector)
 
     # Compute the cross product (rotation axis)
@@ -678,7 +682,9 @@ def decompose_rotation(initial_vector: torch.Tensor, target_vector:torch.Tensor,
     return theta_components[0], theta_components[1], theta_components[2]
 
 
-def angle_between_vectors(vector_1: torch.Tensor, vector_2:torch.Tensor) -> torch.Tensor:
+def angle_between_vectors(
+    vector_1: torch.Tensor, vector_2: torch.Tensor
+) -> torch.Tensor:
     """
     Calculate the angle between two vectors.
 
@@ -688,7 +694,7 @@ def angle_between_vectors(vector_1: torch.Tensor, vector_2:torch.Tensor) -> torc
         The first vector.
     vector_2 : torch.Tensor
         The second vector.
-    
+
     Return
     ------
     torch.Tensor
@@ -707,15 +713,20 @@ def angle_between_vectors(vector_1: torch.Tensor, vector_2:torch.Tensor) -> torc
 
     return angle
 
-def transform_initial_angle(initial_angle: torch.Tensor, initial_orientation: torch.Tensor, device: Union[torch.device, str] = "cuda") -> torch.Tensor:
-    """
-    Computes the transformed angle of an initial angle in a rotated coordinate system.
 
-    This function accounts for a known offset, the initial angle, in the 
-    initial orientation vector. The offset represents a rotation around the 
-    east-axis. When the coordinate system is rotated to align 
-    the initial orientation with the ``ARTIST`` standard orientation, the axis for 
-    the offset rotation also changes. This function calculates the equivalent 
+def transform_initial_angle(
+    initial_angle: torch.Tensor,
+    initial_orientation: torch.Tensor,
+    device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Compute the transformed angle of an initial angle in a rotated coordinate system.
+
+    This function accounts for a known offset, the initial angle, in the
+    initial orientation vector. The offset represents a rotation around the
+    east-axis. When the coordinate system is rotated to align
+    the initial orientation with the ``ARTIST`` standard orientation, the axis for
+    the offset rotation also changes. This function calculates the equivalent
     transformed angle for the offset in the rotated coordinate system.
 
     Parameters
@@ -726,7 +737,7 @@ def transform_initial_angle(initial_angle: torch.Tensor, initial_orientation: to
         The initial orientation of the coordiante system.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
-    
+
     Returns
     -------
     torch.Tensor
@@ -741,11 +752,12 @@ def transform_initial_angle(initial_angle: torch.Tensor, initial_orientation: to
         e=initial_angle,
         device=device,
     )
-    
+
     # Compute the transformed angle relative to the reference orientation
     transformed_initial_angle = angle_between_vectors(
         initial_orientation[:-1], initial_orientation_with_offset[:-1]
-    ) - angle_between_vectors(initial_orientation[:-1], artist_standard_orientation[:-1])
+    ) - angle_between_vectors(
+        initial_orientation[:-1], artist_standard_orientation[:-1]
+    )
 
     return transformed_initial_angle
-    

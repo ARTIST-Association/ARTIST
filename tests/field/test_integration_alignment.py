@@ -40,7 +40,7 @@ else:
         (torch.tensor([1.0, 0.0, 0.0, 0.0]), "stral_east", "test_scenario_stral"),
         (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "stral_west", "test_scenario_stral"),
         (torch.tensor([0.0, 0.0, 1.0, 0.0]), "stral_above", "test_scenario_stral"),
-        (   
+        (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "individual_south",
             "test_scenario_stral_individual_measurements",

@@ -82,16 +82,16 @@ def actuator_configuration(device: torch.device) -> ActuatorListConfig:
         initial_angle=torch.tensor(0.959931, device=device),
     )
     actuator1_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.linear_actuator_key,
-        actuator_clockwise=False,
-        actuator_parameters=actuator1_parameters,
+        key="",
+        type=config_dictionary.linear_actuator_key,
+        clockwise_axis_movement=False,
+        parameters=actuator1_parameters,
     )
     actuator2_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.linear_actuator_key,
-        actuator_clockwise=True,
-        actuator_parameters=actuator2_parameters,
+        key="",
+        type=config_dictionary.linear_actuator_key,
+        clockwise_axis_movement=True,
+        parameters=actuator2_parameters,
     )
 
     return ActuatorListConfig(actuator_list=[actuator1_config, actuator2_config])
@@ -126,6 +126,7 @@ def kinematic_model_1(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
+        initial_orientation=torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )
@@ -160,6 +161,7 @@ def kinematic_model_2(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
+        initial_orientation=torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )

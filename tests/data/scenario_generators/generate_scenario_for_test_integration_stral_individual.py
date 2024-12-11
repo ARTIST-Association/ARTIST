@@ -1,6 +1,5 @@
 import pathlib
 
-from artist.util.surface_converter import SurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
@@ -23,7 +22,7 @@ from artist.util.configuration_classes import (
     SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
-from artist.util.stral_to_surface_converter import StralToSurfaceConverter
+from artist.util.surface_converter import SurfaceConverter
 
 # Set up logger
 set_logger_config()

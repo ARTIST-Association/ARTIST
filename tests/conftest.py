@@ -1,6 +1,7 @@
 import pytest
 import torch
 
+
 @pytest.fixture(params=["cpu", "cuda:3"] if torch.cuda.is_available() else ["cpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """

@@ -154,7 +154,7 @@ class AlignmentOptimizer:
             The incident ray direction specified in the calibration.
         motor_positions : torch.Tensor
             The motor positions specified in the calibration.
-        num_log : int 
+        num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
@@ -248,7 +248,7 @@ class AlignmentOptimizer:
             The center of the calibration flux density.
         incident_ray_direction : torch.Tensor
             The incident ray direction specified in the calibration.
-        num_log : int 
+        num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default: cuda).
