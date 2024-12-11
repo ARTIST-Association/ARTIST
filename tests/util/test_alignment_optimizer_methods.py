@@ -1,12 +1,13 @@
 import pathlib
 
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import h5py
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
 from artist.scenario import Scenario
-from artist.util import set_logger_config, utils
+from artist.util import config_dictionary, paint_loader, set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
 # Set up logger.
@@ -22,7 +23,7 @@ set_logger_config()
             "calibration_properties",
             1e-7,
             150,
-            0.001,
+            0.01,
             0.1,
             20,
             0.1,
@@ -91,6 +92,7 @@ def test_alignment_optimizer_methods(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
+
     optimizable_parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(
         kinematic=scenario.heliostats.heliostat_list[0].kinematic
     )
@@ -109,13 +111,8 @@ def test_alignment_optimizer_methods(
     calibration_properties_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
     )
-    center_calibration_image, incident_ray_direction, motor_positions = (
-        utils.get_calibration_properties(
-            calibration_properties_path=calibration_properties_path,
-            power_plant_position=scenario.power_plant_position,
-            device=device,
-        )
-    )
+    
+    center_calibration_image, incident_ray_direction, motor_positions = paint_loader.extract_paint_calibration_data(calibration_properties_path=calibration_properties_path, power_plant_position=scenario.power_plant_position, device=device)
 
     # Create alignment optimizer.
     alignment_optimizer = AlignmentOptimizer(
@@ -124,7 +121,7 @@ def test_alignment_optimizer_methods(
         scheduler=scheduler,
     )
 
-    if optimizer_method == "use_raytracing":
+    if optimizer_method == config_dictionary.optimizer_use_raytracing:
         motor_positions = None
 
     optimized_parameters, _ = alignment_optimizer.optimize(

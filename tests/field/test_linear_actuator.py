@@ -126,7 +126,7 @@ def kinematic_model_1(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
-        initial_orientation=torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device),
+        initial_orientation=torch.tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )
@@ -161,7 +161,7 @@ def kinematic_model_2(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
-        initial_orientation=torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device),
+        initial_orientation=torch.tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )

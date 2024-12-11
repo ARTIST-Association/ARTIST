@@ -49,7 +49,7 @@ def initial_orientation_south(device: torch.device) -> torch.Tensor:
     torch.Tensor
         Initial kinematic orientation vector for a south-orientated heliostat.
     """
-    initial_orientation_south = torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device)
+    initial_orientation_south = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
     return initial_orientation_south
 
 
@@ -68,7 +68,7 @@ def initial_orientation_up(device: torch.device) -> torch.Tensor:
     torch.Tensor
         Initial kinematic orientation vector for an up-orientated heliostat.
     """
-    initial_orientation_up = torch.Tensor([0.0, 0.0, 1.0, 0.0], device=device)
+    initial_orientation_up = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
     return initial_orientation_up
 
 
