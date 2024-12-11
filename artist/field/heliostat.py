@@ -8,7 +8,7 @@ from typing_extensions import Self
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
 from artist.raytracing.raytracing_utils import reflect
-from artist.util import config_dictionary
+from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -16,7 +16,6 @@ from artist.util.configuration_classes import (
     FacetConfig,
     KinematicDeviations,
     KinematicLoadConfig,
-    KinematicOffsets,
     SurfaceConfig,
 )
 
@@ -51,15 +50,25 @@ class Heliostat(torch.nn.Module):
         Boolean indicating if the heliostat is aligned.
     preferred_reflection_direction : torch.Tensor
         The preferred reflection direction for rays reflecting off the heliostat.
+    surface_points : torch.Tensor
+        The original, unaligned surface points.
+    surface_normals : torch.Tensor
+        The original, unaligned surface normals.
 
     Methods
     -------
     from_hdf5()
         Class method to initialize a heliostat from an HDF5 file.
-    set_aligned_surface()
+    set_aligned_surface_with_incident_ray_direction()
         Compute the aligned surface points and aligned surface normals of the heliostat.
+    set_aligned_surface_with_motor_positions()
+        Compute the aligned surface points and aligned surface normals of the heliostat.
+    get_orientation_from_motor_positions()
+        Compute the orientation for a heliostat given the desired motor positions.
     set_preferred_reflection_direction()
-        Compute the preferred reflection direction for each normal vector given an incident ray direction.
+        Reflect incoming rays according to a normal vector.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -105,17 +114,17 @@ class Heliostat(torch.nn.Module):
         self.aim_point = aim_point
         self.surface = Surface(surface_config=surface_config)
         try:
-            kinematic_object = kinematic_type_mapping[kinematic_config.kinematic_type]
+            kinematic_object = kinematic_type_mapping[kinematic_config.type]
         except KeyError:
             raise KeyError(
-                f"Currently the selected kinematic type: {kinematic_config.kinematic_type} is not supported."
+                f"Currently the selected kinematic type: {kinematic_config.type} is not supported."
             )
         self.kinematic = kinematic_object(
             position=position,
             aim_point=aim_point,
             actuator_config=actuator_config,
-            initial_orientation_offsets=kinematic_config.kinematic_initial_orientation_offsets,
-            deviation_parameters=kinematic_config.kinematic_deviations,
+            initial_orientation=kinematic_config.initial_orientation,
+            deviation_parameters=kinematic_config.deviations,
             device=device,
         )
         self.current_aligned_surface_points = torch.empty(0, device=device)
@@ -123,13 +132,17 @@ class Heliostat(torch.nn.Module):
         self.is_aligned = False
         self.preferred_reflection_direction = torch.empty(0, device=device)
 
+        self.surface_points, self.surface_normals = (
+            self.surface.get_surface_points_and_normals(device=device)
+        )
+
     @classmethod
     def from_hdf5(
         cls,
         config_file: h5py.File,
         prototype_surface: Optional[SurfaceConfig] = None,
         prototype_kinematic: Optional[KinematicLoadConfig] = None,
-        prototype_actuator: Optional[ActuatorListConfig] = None,
+        prototype_actuator_list: Optional[ActuatorListConfig] = None,
         heliostat_name: Optional[str] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> Self:
@@ -144,7 +157,7 @@ class Heliostat(torch.nn.Module):
             An optional prototype for the surface configuration.
         prototype_kinematic : KinematicLoadConfig, optional
             An optional prototype for the kinematic configuration.
-        prototype_actuator : ActuatorConfig, optional
+        prototype_actuator_list : ActuatorListConfig, optional
             An optional prototype for the actuator configuration.
         heliostat_name : str, optional
             The name of the heliostat being loaded - used for logging.
@@ -202,16 +215,6 @@ class Heliostat(torch.nn.Module):
                             config_dictionary.facets_key
                         ][facet][config_dictionary.facet_number_eval_n][()]
                     ),
-                    width=float(
-                        config_file[config_dictionary.heliostat_surface_key][
-                            config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_width][()]
-                    ),
-                    height=float(
-                        config_file[config_dictionary.heliostat_surface_key][
-                            config_dictionary.facets_key
-                        ][facet][config_dictionary.facets_height][()]
-                    ),
                     translation_vector=torch.tensor(
                         config_file[config_dictionary.heliostat_surface_key][
                             config_dictionary.facets_key
@@ -240,73 +243,22 @@ class Heliostat(torch.nn.Module):
             ]
             surface_config = SurfaceConfig(facets_list=facets_list)
         else:
-            assert (
-                prototype_surface is not None
-            ), "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
+            if prototype_surface is None:
+                raise ValueError(
+                    "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
+                )
             log.info(
                 "Individual surface parameters not provided - loading a heliostat with the surface prototype."
             )
             surface_config = prototype_surface
 
         if config_dictionary.heliostat_kinematic_key in config_file.keys():
-            kinematic_initial_orientation_offset_e = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_e}"
-            )
-            kinematic_initial_orientation_offset_n = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            kinematic_initial_orientation_offset_u = config_file.get(
-                f"{config_dictionary.heliostat_kinematic_key}/"
-                f"{config_dictionary.kinematic_offsets_key}/{config_dictionary.kinematic_initial_orientation_offset_n}"
-            )
-            if kinematic_initial_orientation_offset_e is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_e} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            if kinematic_initial_orientation_offset_n is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_n} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            if kinematic_initial_orientation_offset_u is None:
-                log.warning(
-                    f"No individual kinematic {config_dictionary.kinematic_initial_orientation_offset_u} for "
-                    f"{heliostat_name} set."
-                    f"Using default values!"
-                )
-            kinematic_offsets = KinematicOffsets(
-                kinematic_initial_orientation_offset_e=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_e[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_e
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_n=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_n[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_n
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
-                kinematic_initial_orientation_offset_u=(
-                    torch.tensor(
-                        kinematic_initial_orientation_offset_u[()],
-                        dtype=torch.float,
-                        device=device,
-                    )
-                    if kinematic_initial_orientation_offset_u
-                    else torch.tensor(0.0, dtype=torch.float, device=device)
-                ),
+            initial_orientation = torch.tensor(
+                config_file[config_dictionary.heliostat_kinematic_key][
+                    config_dictionary.kinematic_initial_orientation
+                ][()],
+                dtype=torch.float,
+                device=device,
             )
 
             first_joint_translation_e = config_file.get(
@@ -618,18 +570,19 @@ class Heliostat(torch.nn.Module):
                 ),
             )
             kinematic_config = KinematicLoadConfig(
-                kinematic_type=str(
+                type=str(
                     config_file[config_dictionary.heliostat_kinematic_key][
                         config_dictionary.kinematic_type
                     ][()].decode("utf-8")
                 ),
-                kinematic_initial_orientation_offsets=kinematic_offsets,
-                kinematic_deviations=kinematic_deviations,
+                initial_orientation=initial_orientation,
+                deviations=kinematic_deviations,
             )
         else:
-            assert (
-                prototype_kinematic is not None
-            ), "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
+            if prototype_kinematic is None:
+                raise ValueError(
+                    "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
+                )
             log.info(
                 "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
             )
@@ -653,15 +606,15 @@ class Heliostat(torch.nn.Module):
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_offset}"
                 )
-                radius = config_file.get(
+                pivot_radius = config_file.get(
                     f"{config_dictionary.heliostat_actuator_key}/{ac}/"
                     f"{config_dictionary.actuator_parameters_key}/"
-                    f"{config_dictionary.actuator_radius}"
+                    f"{config_dictionary.actuator_pivot_radius}"
                 )
-                phi_0 = config_file.get(
+                initial_angle = config_file.get(
                     f"{config_dictionary.heliostat_actuator_key}/{ac}/"
                     f"{config_dictionary.actuator_parameters_key}/"
-                    f"{config_dictionary.actuator_phi_0}"
+                    f"{config_dictionary.actuator_initial_angle}"
                 )
                 if increment is None:
                     log.warning(
@@ -678,14 +631,14 @@ class Heliostat(torch.nn.Module):
                         f"No individual {config_dictionary.actuator_offset} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
-                if radius is None:
+                if pivot_radius is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_radius} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_pivot_radius} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
-                if phi_0 is None:
+                if initial_angle is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_phi_0} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_initial_angle} set for {ac} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 actuator_parameters = ActuatorParameters(
@@ -706,42 +659,65 @@ class Heliostat(torch.nn.Module):
                         if offset
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
-                    radius=(
-                        torch.tensor(radius[()], dtype=torch.float, device=device)
-                        if radius
+                    pivot_radius=(
+                        torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
+                        if pivot_radius
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
-                    phi_0=(
-                        torch.tensor(phi_0[()], dtype=torch.float, device=device)
-                        if phi_0
+                    initial_angle=(
+                        torch.tensor(
+                            initial_angle[()], dtype=torch.float, device=device
+                        )
+                        if initial_angle
                         else torch.tensor(0.0, dtype=torch.float, device=device)
                     ),
                 )
                 actuator_list.append(
                     ActuatorConfig(
-                        actuator_key="",
-                        actuator_type=str(
+                        key="",
+                        type=str(
                             config_file[config_dictionary.heliostat_actuator_key][ac][
                                 config_dictionary.actuator_type_key
                             ][()].decode("utf-8")
                         ),
-                        actuator_clockwise=bool(
+                        clockwise_axis_movement=bool(
                             config_file[config_dictionary.heliostat_actuator_key][ac][
-                                config_dictionary.actuator_clockwise
+                                config_dictionary.actuator_clockwise_axis_movement
                             ][()]
                         ),
-                        actuator_parameters=actuator_parameters,
+                        parameters=actuator_parameters,
                     )
                 )
             actuator_list_config = ActuatorListConfig(actuator_list=actuator_list)
         else:
-            assert (
-                prototype_actuator is not None
-            ), "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
+            if prototype_actuator_list is None:
+                raise ValueError(
+                    "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
+                )
             log.info(
                 "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
             )
-            actuator_list_config = prototype_actuator
+            actuator_list_config = prototype_actuator_list
+
+        # Adapt initial angle of actuator one according to kinematic initial orientation.
+        # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
+        # The first actuator always rotates along the east-axis.
+        # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
+        # of actuator one needs to be transformed accordingly.
+        if actuator_list_config.actuator_list[0].parameters:
+            initial_angle = actuator_list_config.actuator_list[
+                0
+            ].parameters.initial_angle
+
+            transformed_initial_angle = utils.transform_initial_angle(
+                initial_angle=initial_angle,
+                initial_orientation=kinematic_config.initial_orientation,
+                device=device,
+            )
+
+            actuator_list_config.actuator_list[
+                0
+            ].parameters.initial_angle = transformed_initial_angle
 
         return cls(
             heliostat_id=heliostat_id,
@@ -753,13 +729,15 @@ class Heliostat(torch.nn.Module):
             device=device,
         )
 
-    def set_aligned_surface(
+    def set_aligned_surface_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Compute the aligned surface points and aligned surface normals of the heliostat.
+
+        This method uses the incident ray direction to align the heliostat.
 
         Parameters
         ----------
@@ -769,17 +747,62 @@ class Heliostat(torch.nn.Module):
             The device on which to initialize tensors (default is cuda).
         """
         device = torch.device(device)
-
-        surface_points, surface_normals = self.surface.get_surface_points_and_normals(
-            device=device
-        )
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.kinematic.align_surface(
-            incident_ray_direction, surface_points, surface_normals, device
+        ) = self.kinematic.align_surface_with_incident_ray_direction(
+            incident_ray_direction, self.surface_points, self.surface_normals, device
         )
         self.is_aligned = True
+
+    def set_aligned_surface_with_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
+        """
+        Compute the aligned surface points and aligned surface normals of the heliostat.
+
+        This method uses the motor positions to align the heliostat.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+        """
+        device = torch.device(device)
+        (
+            self.current_aligned_surface_points,
+            self.current_aligned_surface_normals,
+        ) = self.kinematic.align_surface_with_motor_positions(
+            motor_positions, self.surface_points, self.surface_normals, device
+        )
+        self.is_aligned = True
+
+    def get_orientation_from_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> torch.Tensor:
+        """
+        Compute the orientation for a heliostat given the desired motor positions.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The desired motor positions.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation for the given motor position.
+        """
+        device = torch.device(device)
+        return self.kinematic.motor_positions_to_orientation(motor_positions, device)
 
     def set_preferred_reflection_direction(self, rays: torch.Tensor) -> None:
         """
@@ -792,12 +815,23 @@ class Heliostat(torch.nn.Module):
 
         Raises
         ------
-        AssertionError
+        ValueError
             If the heliostat has not yet been aligned.
         """
-        assert self.is_aligned, "Heliostat has not yet been aligned."
-
+        if not self.is_aligned:
+            raise ValueError("Heliostat has not yet been aligned.")
         self.preferred_reflection_direction = reflect(
             incoming_ray_direction=rays,
             reflection_surface_normals=self.current_aligned_surface_normals,
         )
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

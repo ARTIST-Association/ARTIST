@@ -26,6 +26,11 @@ class ActuatorArray(torch.nn.Module):
     ----------
     actuator_list : List[Actuator]
         The list of actuators to be wrapped.
+
+    Methods
+    -------
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -56,19 +61,19 @@ class ActuatorArray(torch.nn.Module):
             # Try to load an actuator from the given configuration. This will fail, if ARTIST
             # does not recognize the actuator type defined in the configuration.
             try:
-                actuator_object = actuator_type_mapping[actuator_config.actuator_type]
+                actuator_object = actuator_type_mapping[actuator_config.type]
                 # Check if the actuator configuration contains actuator parameters and initialize an actuator with
                 # these parameters.
-                if actuator_config.actuator_parameters is not None:
+                if actuator_config.parameters is not None:
                     actuator_array.append(
                         actuator_object(
                             joint_number=i + 1,
-                            clockwise=actuator_config.actuator_clockwise,
-                            increment=actuator_config.actuator_parameters.increment,
-                            initial_stroke_length=actuator_config.actuator_parameters.initial_stroke_length,
-                            offset=actuator_config.actuator_parameters.offset,
-                            radius=actuator_config.actuator_parameters.radius,
-                            phi_0=actuator_config.actuator_parameters.phi_0,
+                            clockwise_axis_movement=actuator_config.clockwise_axis_movement,
+                            increment=actuator_config.parameters.increment,
+                            initial_stroke_length=actuator_config.parameters.initial_stroke_length,
+                            offset=actuator_config.parameters.offset,
+                            pivot_radius=actuator_config.parameters.pivot_radius,
+                            initial_angle=actuator_config.parameters.initial_angle,
                         )
                     )
                 # If the actuator config does not contain actuator parameters, initialize an actuator with default
@@ -80,17 +85,28 @@ class ActuatorArray(torch.nn.Module):
                     actuator_array.append(
                         actuator_object(
                             joint_number=i + 1,
-                            clockwise=actuator_config.actuator_clockwise,
+                            clockwise_axis_movement=actuator_config.clockwise_axis_movement,
                             increment=torch.tensor(0.0, device=device),
                             initial_stroke_length=torch.tensor(0.0, device=device),
                             offset=torch.tensor(0.0, device=device),
-                            radius=torch.tensor(0.0, device=device),
-                            phi_0=torch.tensor(0.0, device=device),
+                            pivot_radius=torch.tensor(0.0, device=device),
+                            initial_angle=torch.tensor(0.0, device=device),
                         )
                     )
             except KeyError:
                 raise KeyError(
-                    f"Currently the selected actuator type: {actuator_config.actuator_type} is not supported."
+                    f"Currently the selected actuator type: {actuator_config.type} is not supported."
                 )
 
         self.actuator_list = actuator_array
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

@@ -11,7 +11,7 @@ class Actuator(torch.nn.Module):
     ----------
     joint_number : int
         Descriptor (number) of the joint.
-    clockwise : bool
+    clockwise_axis_movement : bool
         Turning direction of the joint.
     increment : torch.Tensor
         The stroke length change per motor step.
@@ -20,30 +20,30 @@ class Actuator(torch.nn.Module):
     offset : torch.Tensor
         The offset between the linear actuator's pivoting point and the point
         around which the actuator is allowed to pivot.
-    radius : torch.Tensor
+    pivot_radius : torch.Tensor
         The actuator's pivoting radius.
-    phi_0 : torch.Tensor
+    initial_angle : torch.Tensor
         The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
 
     Methods
     -------
+    motor_position_to_angle()
+        Calculate the joint angle for a given motor position.
+    angle_to_motor_position()
+        Calculate the motor position for a given angle.
     forward()
-        The forward kinematic.
-    motor_steps_to_angles()
-        Translate motor steps to a joint angle.
-    angles_to_motor_steps()
-        Translate a joint angle to motor steps.
+        Specify the forward pass.
     """
 
     def __init__(
         self,
         joint_number: int,
-        clockwise: bool,
+        clockwise_axis_movement: bool,
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
         offset: torch.Tensor,
-        radius: torch.Tensor,
-        phi_0: torch.Tensor,
+        pivot_radius: torch.Tensor,
+        initial_angle: torch.Tensor,
     ) -> None:
         """
         Initialize an abstract actuator.
@@ -59,7 +59,7 @@ class Actuator(torch.nn.Module):
         ----------
         joint_number : int
             Descriptor (number) of the joint.
-        clockwise : bool
+        clockwise_axis_movement : bool
             Turning direction of the joint.
         increment : torch.Tensor
             The stroke length change per motor step.
@@ -68,30 +68,30 @@ class Actuator(torch.nn.Module):
         offset : torch.Tensor
             The offset between the linear actuator's pivoting point and the point
             around which the actuator is allowed to pivot.
-        radius : torch.Tensor
+        pivot_radius : torch.Tensor
             The actuator's pivoting radius.
-        phi_0 : torch.Tensor
+        initial_angle : torch.Tensor
             The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
         super().__init__()
         self.joint_number = joint_number
-        self.clockwise = clockwise
+        self.clockwise_axis_movement = clockwise_axis_movement
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.offset = offset
-        self.radius = radius
-        self.phi_0 = phi_0
+        self.pivot_radius = pivot_radius
+        self.initial_angle = initial_angle
 
-    def motor_steps_to_angles(
-        self, motor_steps: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def motor_position_to_angle(
+        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Translate motor steps to a joint angle.
+        Calculate the joint angle for a given motor position.
 
         Parameters
         ----------
-        motor_steps : torch.Tensor
-            The motor steps.
+        motor_position : torch.Tensor
+            The motor position.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -102,16 +102,16 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def angles_to_motor_steps(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def angle_to_motor_position(
+        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Translate a joint angle to motor steps.
+        Calculate the motor position for a given angle.
 
         Parameters
         ----------
-        angles : torch.Tensor
-            The joint angles.
+        angle : torch.Tensor
+            The joint angle.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -122,22 +122,13 @@ class Actuator(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(
-        self, actuator_pos: torch.Tensor, device: Union[torch.device, str] = "cuda"
-    ) -> torch.Tensor:
+    def forward(self) -> None:
         """
-        Perform forward kinematic.
-
-        Parameters
-        ----------
-        actuator_pos : torch.Tensor
-            The position of the actuator.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        Specify the forward pass.
 
         Raises
         ------
         NotImplementedError
-            This abstract method must be overridden.
+            Whenever called.
         """
         raise NotImplementedError("Must be overridden!")
