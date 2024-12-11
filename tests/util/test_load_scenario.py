@@ -1,7 +1,7 @@
 import h5py
 import pytest
-from pytest_mock import MockerFixture
 import torch
+from pytest_mock import MockerFixture
 
 from artist.field.heliostat import Heliostat
 
