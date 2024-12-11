@@ -457,64 +457,6 @@ def get_rigid_body_kinematic_parameters_from_scenario(
     return parameters_list
 
 
-def get_calibration_properties(
-    calibration_properties_path: pathlib.Path,
-    power_plant_position: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Get the calibration properties.
-
-    Parameters
-    ----------
-    calibration_properties_path : pathlib.Path
-        The path to the calibration properties file.
-    power_plant_position : torch.Tensor
-        The position of the power plant in latitude, longitude and elevation.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
-
-    Returns
-    -------
-    torch.Tensor
-        The calibration flux density center.
-    torch.Tensor
-        The incident ray direction.
-    torch.Tensor
-        The motor positions.
-    """
-    device = torch.device(device)
-    with open(calibration_properties_path, "r") as file:
-        calibration_dict = json.load(file)
-        center_calibration_image = convert_wgs84_coordinates_to_local_enu(
-            torch.tensor(
-                calibration_dict["focal_spot"]["UTIS"],
-                dtype=torch.float64,
-                device=device,
-            ),
-            power_plant_position,
-            device=device,
-        )
-        center_calibration_image = convert_3d_points_to_4d_format(
-            center_calibration_image, device=device
-        )
-        sun_azimuth = torch.tensor(calibration_dict["Sun_azimuth"], device=device)
-        sun_elevation = torch.tensor(calibration_dict["Sun_elevation"], device=device)
-        incident_ray_direction = convert_3d_direction_to_4d_format(
-            azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
-            device=device,
-        )
-        motor_positions = torch.tensor(
-            [
-                calibration_dict["motor_position"]["Axis1MotorPosition"],
-                calibration_dict["motor_position"]["Axis2MotorPosition"],
-            ],
-            device=device,
-        )
-
-    return center_calibration_image, incident_ray_direction, motor_positions
-
-
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
     Normalize points in a tensor to the open interval of (0,1).
