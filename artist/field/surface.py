@@ -45,8 +45,6 @@ class Surface(torch.nn.Module):
                 degree_n=facet_config.degree_n,
                 number_eval_points_e=facet_config.number_eval_points_e,
                 number_eval_points_n=facet_config.number_eval_points_n,
-                width=facet_config.width,
-                height=facet_config.height,
                 translation_vector=facet_config.translation_vector,
                 canting_e=facet_config.canting_e,
                 canting_n=facet_config.canting_n,

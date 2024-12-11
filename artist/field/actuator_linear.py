@@ -13,7 +13,7 @@ class LinearActuator(Actuator):
     ----------
     joint_number : int
         Descriptor (number) of the joint.
-    clockwise : bool
+    clockwise_axis_movement : bool
         Turning direction of the joint.
     increment : torch.Tensor
         The stroke length change per motor step.
@@ -44,7 +44,7 @@ class LinearActuator(Actuator):
     def __init__(
         self,
         joint_number: int,
-        clockwise: bool,
+        clockwise_axis_movement: bool,
         increment: torch.Tensor,
         initial_stroke_length: torch.Tensor,
         offset: torch.Tensor,
@@ -67,7 +67,7 @@ class LinearActuator(Actuator):
         ----------
         joint_number : int
             Descriptor (number) of the joint.
-        clockwise : bool
+        clockwise_axis_movement : bool
             Turning direction of the joint.
         increment : torch.Tensor
             The stroke length change per motor step.
@@ -83,7 +83,7 @@ class LinearActuator(Actuator):
         """
         super().__init__(
             joint_number,
-            clockwise,
+            clockwise_axis_movement,
             increment,
             initial_stroke_length,
             offset,
@@ -91,7 +91,7 @@ class LinearActuator(Actuator):
             initial_angle,
         )
         self.joint_number = joint_number
-        self.clockwise = clockwise
+        self.clockwise_axis_movement = clockwise_axis_movement
         self.increment = increment
         self.initial_stroke_length = initial_stroke_length
         self.offset = offset
@@ -158,7 +158,7 @@ class LinearActuator(Actuator):
 
         relative_angle = (
             self.initial_angle + delta_angle
-            if self.clockwise
+            if self.clockwise_axis_movement
             else self.initial_angle - delta_angle
         )
         return relative_angle
@@ -187,7 +187,7 @@ class LinearActuator(Actuator):
         """
         device = torch.device(device)
         delta_angle = (
-            angle - self.initial_angle if self.clockwise else self.initial_angle - angle
+            angle - self.initial_angle if self.clockwise_axis_movement else self.initial_angle - angle
         )
 
         absolute_initial_angle = self._motor_position_to_absolute_angle(

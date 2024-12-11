@@ -89,7 +89,7 @@ class HeliostatField(torch.nn.Module):
                 ],
                 prototype_surface=prototype_surface,
                 prototype_kinematic=prototype_kinematic,
-                prototype_actuator=prototype_actuator,
+                prototype_actuator_list=prototype_actuator,
                 heliostat_name=heliostat_name,
                 device=device,
             )
