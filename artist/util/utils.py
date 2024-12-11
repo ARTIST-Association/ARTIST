@@ -404,61 +404,6 @@ def convert_wgs84_coordinates_to_local_enu(
     )
 
 
-def get_center_of_mass(
-    bitmap: torch.Tensor,
-    target_center: torch.Tensor,
-    plane_e: float,
-    plane_u: float,
-    device: Union[torch.device, str] = "cuda",
-) -> torch.Tensor:
-    """
-    Calculate the coordinates of the flux density center of mass.
-
-    First determine the indices of the bitmap center of mass.
-    Next determine the position (coordinates) of the center of mass on the target.
-
-    Parameters
-    ----------
-    bitmap : torch.Tensor
-        The flux density in form of a bitmap.
-    target_center : torch.Tensor
-        The position of the center of the target.
-    plane_e : float
-        The width of the target surface.
-    plane_u : float
-        The height of the target surface.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
-
-    Returns
-    -------
-    torch.Tensor
-        The coordinates of the flux density center of mass.
-    """
-    device = torch.device(device)
-    # Calculate center of mass of the bitmap.
-    e_indices = torch.arange(bitmap.shape[0], device=device)
-    u_indices = torch.arange(bitmap.shape[1], device=device)
-    e_indices, u_indices = torch.meshgrid(e_indices, u_indices, indexing="ij")
-
-    total_mass = bitmap.sum()
-    normalized_bitmap = bitmap / total_mass
-
-    center_of_mass_e = (normalized_bitmap * e_indices).sum()
-    center_of_mass_u = (normalized_bitmap * u_indices).sum()
-    center_of_mass_bitmap = torch.stack([center_of_mass_e, center_of_mass_u], dim=-1)
-
-    # Construct the coordinates relative to target center.
-    de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
-    du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
-    normalized_center = center_of_mass_bitmap / bitmap.size(-1)
-    e = normalized_center[1]
-    u = 1 - normalized_center[0]
-    center_coordinates = target_center - 0.5 * (de + du) + e * de + u * du
-
-    return center_coordinates
-
-
 def get_rigid_body_kinematic_parameters_from_scenario(
     kinematic: "RigidBody",
 ) -> list[torch.Tensor]:
@@ -761,3 +706,60 @@ def transform_initial_angle(
     )
 
     return transformed_initial_angle
+
+
+def get_center_of_mass(
+    bitmap: torch.Tensor,
+    target_center: torch.Tensor,
+    plane_e: float,
+    plane_u: float,
+    threshold: float = 0.0,
+    device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Calculate the coordinates of the flux density center of mass.
+
+    First determine the indices of the bitmap center of mass.
+    Next determine the position (coordinates) of the center of mass on the target.
+
+    Parameters
+    ----------
+    bitmap : torch.Tensor
+        The flux density in form of a bitmap.
+    target_center : torch.Tensor
+        The position of the center of the target.
+    plane_e : float
+        The width of the target surface.
+    plane_u : float
+        The height of the target surface.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        The coordinates of the flux density center of mass.
+    """
+    device = torch.device(device)
+    height, width = bitmap.shape
+
+    # Threshold the bitmap values. Any values below the threshold are set to zero.
+    flux_thresholded = torch.where(bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device))
+    total_intensity = flux_thresholded.sum()
+
+    # Generate normalized east and up coordinates adjusted for pixel centers.
+    # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
+    e_indices = (torch.arange(width, dtype=torch.float32, device=device) + 0.5) / width
+    u_indices = (torch.arange(height, dtype=torch.float32, device=device) + 0.5) / height
+
+    # Compute the center of intensity using weighted sums of the coordinates.
+    center_of_mass_e = (flux_thresholded.sum(dim=0) * e_indices).sum() / total_intensity
+    center_of_mass_u = (flux_thresholded.sum(dim=1) * u_indices).sum() / total_intensity
+
+    # Construct the coordinates relative to target center.
+    de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
+    du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
+
+    center_coordinates = target_center - 0.5 * (de + du) + center_of_mass_e * de + center_of_mass_u * du
+
+    return center_coordinates
