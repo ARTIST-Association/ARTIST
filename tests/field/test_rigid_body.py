@@ -11,6 +11,7 @@ from artist.util.configuration_classes import (
     KinematicOffsets,
 )
 
+
 @pytest.fixture
 def actuator_configuration() -> ActuatorListConfig:
     """

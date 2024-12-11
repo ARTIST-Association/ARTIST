@@ -12,6 +12,7 @@ from artist.util.configuration_classes import (
     KinematicDeviations,
 )
 
+
 @pytest.fixture
 def deviation_parameters(device: torch.device) -> KinematicDeviations:
     """

@@ -2,9 +2,16 @@ import json
 import pathlib
 from typing import Union
 
-from artist.util import config_dictionary, utils
-from artist.util.configuration_classes import ActuatorConfig, ActuatorListConfig, ActuatorParameters, KinematicConfig, KinematicDeviations
 import torch
+
+from artist.util import config_dictionary, utils
+from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorListConfig,
+    ActuatorParameters,
+    KinematicConfig,
+    KinematicDeviations,
+)
 
 
 def extract_paint_calibration_properties(calibration_properties_path: pathlib.Path) -> str:
@@ -23,8 +30,10 @@ def extract_paint_calibration_properties(calibration_properties_path: pathlib.Pa
     """
     with open(calibration_properties_path, "r") as file:
         calibration_dict = json.load(file)
-        calibration_target_name = calibration_dict[config_dictionary.paint_calibration_traget]
-    
+        calibration_target_name = calibration_dict[
+            config_dictionary.paint_calibration_traget
+        ]
+
     return calibration_target_name
 
 def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path, 
@@ -61,13 +70,17 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
         power_plant_position = torch.tensor(
-            tower_dict[config_dictionary.paint_power_plant_properties][config_dictionary.paint_coordinates],
+            tower_dict[config_dictionary.paint_power_plant_properties][
+                config_dictionary.paint_coordinates
+            ],
             dtype=torch.float64,
             device=device,
         )
         target_type = tower_dict[target_name][config_dictionary.paint_receiver_type]
         target_center_lat_lon = torch.tensor(
-            tower_dict[target_name][config_dictionary.paint_coordinates][config_dictionary.paint_center],
+            tower_dict[target_name][config_dictionary.paint_coordinates][
+                config_dictionary.paint_center
+            ],
             dtype=torch.float64,
             device=device,
         )
@@ -78,12 +91,17 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
             target_center_3d, device=device
         )
         normal_vector = utils.convert_3d_direction_to_4d_format(
-            torch.tensor(tower_dict[target_name][config_dictionary.paint_normal_vector], device=device),
+            torch.tensor(
+                tower_dict[target_name][config_dictionary.paint_normal_vector],
+                device=device,
+            ),
             device=device,
         )
         upper_left = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[target_name][config_dictionary.paint_coordinates][config_dictionary.paint_upper_left],
+                tower_dict[target_name][config_dictionary.paint_coordinates][
+                    config_dictionary.paint_upper_left
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -92,7 +110,9 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
         )
         lower_left = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[target_name][config_dictionary.paint_coordinates][config_dictionary.paint_lower_left],
+                tower_dict[target_name][config_dictionary.paint_coordinates][
+                    config_dictionary.paint_lower_left
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -101,7 +121,9 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
         )
         upper_right = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[target_name][config_dictionary.paint_coordinates][config_dictionary.paint_upper_right],
+                tower_dict[target_name][config_dictionary.paint_coordinates][
+                    config_dictionary.paint_upper_right
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
@@ -110,16 +132,28 @@ def extract_paint_tower_measurements(tower_measurements_path: pathlib.Path,
         )
         lower_right = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                tower_dict[target_name][config_dictionary.paint_coordinates][config_dictionary.paint_lower_right],
+                tower_dict[target_name][config_dictionary.paint_coordinates][
+                    config_dictionary.paint_lower_right
+                ],
                 dtype=torch.float64,
                 device=device,
             ),
             power_plant_position,
             device=device,
         )
-        plane_e, plane_u = utils.corner_points_to_plane(upper_left, upper_right, lower_left, lower_right)
+        plane_e, plane_u = utils.corner_points_to_plane(
+            upper_left, upper_right, lower_left, lower_right
+        )
 
-    return power_plant_position, target_type, target_center, normal_vector, plane_e, plane_u
+    return (
+        power_plant_position,
+        target_type,
+        target_center,
+        normal_vector,
+        plane_e,
+        plane_u,
+    )
+
 
 def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path, 
                                        power_plant_position: torch.Tensor, 
@@ -150,7 +184,9 @@ def extract_paint_heliostat_properties(heliostat_properties_path: pathlib.Path,
         heliostat_dict = json.load(file)
         heliostat_position_3d = utils.convert_wgs84_coordinates_to_local_enu(
             torch.tensor(
-                heliostat_dict[config_dictionary.paint_heliostat_position], dtype=torch.float64, device=device
+                heliostat_dict[config_dictionary.paint_heliostat_position],
+                dtype=torch.float64,
+                device=device,
             ),
             power_plant_position,
             device=device,
