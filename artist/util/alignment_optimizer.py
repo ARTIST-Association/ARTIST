@@ -284,7 +284,7 @@ class AlignmentOptimizer:
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
             center = utils.get_center_of_mass(
-                torch.flip(final_bitmap.T, dims=(0, 1)),
+                bitmap=torch.flip(final_bitmap, dims=(0, 1)),
                 target_center=self.scenario.receivers.receiver_list[0].position_center,
                 plane_e=self.scenario.receivers.receiver_list[0].plane_e,
                 plane_u=self.scenario.receivers.receiver_list[0].plane_u,
