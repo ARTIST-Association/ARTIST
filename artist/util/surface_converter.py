@@ -5,6 +5,7 @@ import struct
 from typing import Optional, Union
 
 import h5py
+import numpy as np
 import torch
 
 from artist.util import config_dictionary, utils
@@ -29,12 +30,6 @@ class SurfaceConverter:
         The file path to the ``PAINT`` heliostat properties data that will be converted.
     stral_file_path : pathlib.Path
         The file path to the ``STRAL`` data that will be converted.
-    surface_header_name : str
-        The name for the surface header in the ``STRAL`` file.
-    facet_header_name : str
-        The name for the facet header in the ``STRAL`` file.
-    points_on_facet_struct_name : str
-        The name of the point on facet structure in the ``STRAL`` file.
     step_size : int
         The size of the step used to reduce the number of considered points for compute efficiency.
     number_eval_points_e : int
@@ -67,12 +62,9 @@ class SurfaceConverter:
     """
     def __init__(
         self,
-        deflectometry_file_path: Optional[pathlib.Path],
-        heliostat_file_path: Optional[pathlib.Path],
-        stral_file_path: Optional[pathlib.Path],
-        surface_header_name: Optional[str] = "=5f2I2f",
-        facet_header_name: Optional[str] = "=i9fI",
-        points_on_facet_struct_name: Optional[str] = "=7f",
+        deflectometry_file_path: Optional[pathlib.Path] = None,
+        heliostat_file_path: Optional[pathlib.Path] = None,
+        stral_file_path: Optional[pathlib.Path] = None,
         step_size: int = 100,
         number_eval_points_e: int = 100,
         number_eval_points_n: int = 100,
@@ -102,12 +94,6 @@ class SurfaceConverter:
             The file path to the ``PAINT`` heliostat properties data that will be converted.
         stral_file_path : Optional[pathlib.Path]
             The file path to the ``STRAL`` data that will be converted.
-        surface_header_name : Optional[str]
-            The name for the surface header in the ``STRAL`` file (default is "=5f2I2f").
-        facet_header_name : Optional[str]
-            The name for the facet header in the ``STRAL`` file (default is "=i9fI").
-        points_on_facet_struct_name : Optional[str]
-            The name of the point on facet structure in the ``STRAL`` file (default is "=7f").
         step_size : int
             The size of the step used to reduce the number of considered points for compute efficiency (default is 100).
         number_eval_points_e : int
@@ -140,9 +126,6 @@ class SurfaceConverter:
             raise ValueError("If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!")
 
         self.stral_file_path = stral_file_path
-        self.surface_header_name = surface_header_name
-        self.facet_header_name = facet_header_name
-        self.points_on_facet_struct_name = points_on_facet_struct_name
 
         self.deflectometry_file_path = deflectometry_file_path
         self.heliostat_file_path = heliostat_file_path
@@ -326,9 +309,9 @@ class SurfaceConverter:
         device = torch.device(device)
 
         if self.stral_file_path:
-            heliostat_width, heliostat_height, facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list = self.extract_stral_data()
+            facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list = self._extract_stral_data(device=device)
         else:
-            heliostat_width, heliostat_height, facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list = self.extract_paint_data()
+            facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list = self._extract_paint_data(device=device)
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
@@ -383,14 +366,12 @@ class SurfaceConverter:
             )
             facet_config_list.append(
                 FacetConfig(
-                    facet_key=f"facet{i+1}",
+                    facet_key=f"facet_{i+1}",
                     control_points=nurbs_surface.control_points.detach(),
                     degree_e=nurbs_surface.degree_e,
                     degree_n=nurbs_surface.degree_n,
                     number_eval_points_e=self.number_eval_points_e,
                     number_eval_points_n=self.number_eval_points_n,
-                    width=heliostat_width / 2,
-                    height=heliostat_height / 2,
                     translation_vector=facet_translation_vectors[i],
                     canting_e=canting_e[i],
                     canting_n=canting_n[i],
@@ -403,7 +384,7 @@ class SurfaceConverter:
     def _extract_stral_data(
         self,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[float, float, torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
         """
         Generate a surface configuration from a ``STRAL`` file.
 
@@ -414,10 +395,6 @@ class SurfaceConverter:
 
         Returns
         -------
-        float
-            The heliostat width.
-        float
-            The heliostat height.
         torch.Tensor
             The facet translation vectors defining the translation of each facet from the heliostat origin.
         torch.Tensor
@@ -434,17 +411,15 @@ class SurfaceConverter:
         )
         device = torch.device(device)
 
-        # Create structures for reading ``STRAL`` file correctly.
-        surface_header_struct = struct.Struct(self.surface_header_name)
-        facet_header_struct = struct.Struct(self.facet_header_name)
-        points_on_facet_struct = struct.Struct(self.points_on_facet_struct_name)
+        # Create structures for reading ``STRAL`` file.
+        surface_header_struct = struct.Struct("=5f2I2f")
+        facet_header_struct = struct.Struct("=i9fI")
+        points_on_facet_struct = struct.Struct("=7f")
         log.info(f"Reading STRAL file located at: {self.stral_file_path}")
-        with open(f"{self.stral_file_path}.binp", "rb") as file:
+        with open(f"{self.stral_file_path}", "rb") as file:
             surface_header_data = surface_header_struct.unpack_from(
                 file.read(surface_header_struct.size)
             )
-            # Load width and height.
-            heliostat_width, heliostat_height = surface_header_data[3:5]
 
             # Calculate the number of facets.
             n_xy = surface_header_data[5:7]
@@ -470,8 +445,8 @@ class SurfaceConverter:
                     facet_header_data[7:10], dtype=torch.float, device=device
                 )
                 number_of_points = facet_header_data[10]
-                single_facet_surface_points = torch.empty(number_of_points, 3)
-                single_facet_surface_normals = torch.empty(number_of_points, 3)
+                single_facet_surface_points = torch.empty(number_of_points, 3, device=device)
+                single_facet_surface_normals = torch.empty(number_of_points, 3, device=device)
 
                 points_data = points_on_facet_struct.iter_unpack(
                     file.read(points_on_facet_struct.size * number_of_points)
@@ -488,12 +463,12 @@ class SurfaceConverter:
         
         log.info("Loading ``STRAL`` data complete")
 
-        return heliostat_width, heliostat_height, facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
+        return facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
 
     def _extract_paint_data(
         self,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[float, float, torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
         """
         Generate a surface configuration from a ``PAINT`` dataset.
 
@@ -504,10 +479,6 @@ class SurfaceConverter:
 
         Returns
         -------
-        float
-            The heliostat width.
-        float
-            The heliostat height.
         torch.Tensor
             The facet translation vectors defining the translation of each facet from the heliostat origin.
         torch.Tensor
@@ -525,9 +496,7 @@ class SurfaceConverter:
         # Reading ``PAINT`` heliostat json file.
         with open(self.heliostat_file_path, "r") as file:
             heliostat_dict = json.load(file)
-            heliostat_width = heliostat_dict["width"]
-            heliostat_height = heliostat_dict["height"]
-            number_of_facets = heliostat_dict["facet_properties"]["number_of_facets"]
+            number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][config_dictionary.paint_number_of_facets]
 
             facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
             canting_e = torch.empty(number_of_facets, 3, device=device)
@@ -535,17 +504,17 @@ class SurfaceConverter:
 
             for facet in range(number_of_facets):
                 facet_translation_vectors[facet, :] = torch.tensor(
-                    heliostat_dict["facet_properties"]["facets"][facet][
-                        "translation_vector"
+                    heliostat_dict[config_dictionary.paint_facet_properties][config_dictionary.paint_facets][facet][
+                        config_dictionary.paint_translation_vetor
                     ],
                     device=device,
                 )
                 canting_e[facet, :] = torch.tensor(
-                    heliostat_dict["facet_properties"]["facets"][facet]["canting_e"],
+                    heliostat_dict[config_dictionary.paint_facet_properties][config_dictionary.paint_facets][facet][config_dictionary.paint_canting_e],
                     device=device,
                 )
                 canting_n[facet, :] = torch.tensor(
-                    heliostat_dict["facet_properties"]["facets"][facet]["canting_n"],
+                    heliostat_dict[config_dictionary.paint_facet_properties][config_dictionary.paint_facets][facet][config_dictionary.paint_canting_n],
                     device=device,
                 )
 
@@ -557,12 +526,12 @@ class SurfaceConverter:
             surface_points_with_facets_list = []
             surface_normals_with_facets_list = []
             for f in range(number_of_facets):
-                number_of_points = len(file[f"facet{f+1}"]["surface_points"])
-                single_facet_surface_points = torch.empty(number_of_points, 3)
-                single_facet_surface_normals = torch.empty(number_of_points, 3)
+                number_of_points = len(file[f"{config_dictionary.paint_facet}{f+1}"][config_dictionary.paint_surface_points])
+                single_facet_surface_points = torch.empty(number_of_points, 3, device=device)
+                single_facet_surface_normals = torch.empty(number_of_points, 3, device=device)
 
-                points_data = torch.tensor(file[f"facet{f+1}"]["surface_points"], device=device)
-                normals_data = torch.tensor(file[f"facet{f+1}"]["surface_normals"], device=device)
+                points_data = torch.tensor(np.array(file[f"{config_dictionary.paint_facet}{f+1}"][config_dictionary.paint_surface_points]), device=device)
+                normals_data = torch.tensor(np.array(file[f"{config_dictionary.paint_facet}{f+1}"][config_dictionary.paint_surface_normals]), device=device)
 
                 for i, point_data in enumerate(points_data):
                     single_facet_surface_points[i, :] = point_data
@@ -573,4 +542,4 @@ class SurfaceConverter:
         
         log.info("Loading ``PAINT`` data complete")
 
-        return heliostat_width, heliostat_height, facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
+        return facet_translation_vectors, canting_e, canting_n, surface_points_with_facets_list, surface_normals_with_facets_list
