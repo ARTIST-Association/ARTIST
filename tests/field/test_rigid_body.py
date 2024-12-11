@@ -8,7 +8,6 @@ from artist.util import config_dictionary
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
-    KinematicOffsets,
 )
 
 
@@ -23,22 +22,22 @@ def actuator_configuration() -> ActuatorListConfig:
         A List containing parameters for each actuator.
     """
     actuator1_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.ideal_actuator_key,
-        actuator_clockwise=False,
+        key="",
+        type=config_dictionary.ideal_actuator_key,
+        clockwise_axis_movement=False,
     )
     actuator2_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.ideal_actuator_key,
-        actuator_clockwise=True,
+        key="",
+        type=config_dictionary.ideal_actuator_key,
+        clockwise_axis_movement=True,
     )
     return ActuatorListConfig(actuator_list=[actuator1_config, actuator2_config])
 
 
 @pytest.fixture
-def initial_offsets_south(device: torch.device) -> KinematicOffsets:
+def initial_orientation_south(device: torch.device) -> torch.Tensor:
     """
-    Define initial offsets for a south-orientated heliostat.
+    Define initial orientation vector for a south-orientated heliostat.
 
     Parameters
     ----------
@@ -47,21 +46,17 @@ def initial_offsets_south(device: torch.device) -> KinematicOffsets:
 
     Returns
     -------
-    KinematicOffsets
-        Initial kinematic offsets for a south-orientated heliostat.
+    torch.Tensor
+        Initial kinematic orientation vector for a south-orientated heliostat.
     """
-    initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(0.0, device=device),
-        kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
-        kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
-    )
-    return initial_offsets
+    initial_orientation_south = torch.Tensor([0.0, -1.0, 0.0, 0.0], device=device)
+    return initial_orientation_south
 
 
 @pytest.fixture
-def initial_offsets_above(device: torch.device) -> KinematicOffsets:
+def initial_orientation_up(device: torch.device) -> torch.Tensor:
     """
-    Define initial offsets for an up-orientated heliostat.
+    Define initial orientation vector for an up-orientated heliostat.
 
     Parameters
     ----------
@@ -70,23 +65,17 @@ def initial_offsets_above(device: torch.device) -> KinematicOffsets:
 
     Returns
     -------
-    KinematicOffsets
-        Initial kinematic offsets for an up-orientated heliostat.
+    torch.Tensor
+        Initial kinematic orientation vector for an up-orientated heliostat.
     """
-    initial_offsets = KinematicOffsets(
-        kinematic_initial_orientation_offset_e=torch.tensor(
-            torch.pi / 2, device=device
-        ),
-        kinematic_initial_orientation_offset_n=torch.tensor(0.0, device=device),
-        kinematic_initial_orientation_offset_u=torch.tensor(0.0, device=device),
-    )
-    return initial_offsets
+    initial_orientation_up = torch.Tensor([0.0, 0.0, 1.0, 0.0], device=device)
+    return initial_orientation_up
 
 
 @pytest.fixture
 def kinematic_model_1(
     actuator_configuration: ActuatorListConfig,
-    initial_offsets_south: KinematicOffsets,
+    initial_orientation_south: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
@@ -96,8 +85,8 @@ def kinematic_model_1(
     ----------
     actuator_configuration : ActuatorListConfig
         The configuration of the actuators.
-    initial_offsets_south : KinematicOffsets
-        The kinematic initial orientation offsets.
+    initial_orientation_south : torch.Tensor
+        The kinematic initial orientation.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -112,7 +101,7 @@ def kinematic_model_1(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
-        initial_orientation_offsets=initial_offsets_south,
+        initial_orientation=initial_orientation_south,
         device=device,
     )
 
@@ -120,7 +109,7 @@ def kinematic_model_1(
 @pytest.fixture
 def kinematic_model_2(
     actuator_configuration: ActuatorListConfig,
-    initial_offsets_south: KinematicOffsets,
+    initial_orientation_south: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
@@ -130,8 +119,8 @@ def kinematic_model_2(
     ----------
     actuator_configuration : ActuatorListConfig
         The configuration of the actuators.
-    initial_offsets_south : KinematicOffsets
-        The kinematic initial orientation offsets.
+    initial_orientation_south : torch.Tensor
+        The kinematic initial orientation.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -146,7 +135,7 @@ def kinematic_model_2(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
-        initial_orientation_offsets=initial_offsets_south,
+        initial_orientation=initial_orientation_south,
         device=device,
     )
 
@@ -154,7 +143,7 @@ def kinematic_model_2(
 @pytest.fixture
 def kinematic_model_3(
     actuator_configuration: ActuatorListConfig,
-    initial_offsets_above: KinematicOffsets,
+    initial_orientation_up: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
@@ -164,7 +153,7 @@ def kinematic_model_3(
     ----------
     actuator_configuration : ActuatorListConfig
         The configuration of the actuators.
-    initial_offsets_above : KinematicOffsets
+    initial_orientation_up : torch.Tensor
         The kinematic initial orientation offsets.
     device : torch.device
         The device on which to initialize tensors.
@@ -180,7 +169,7 @@ def kinematic_model_3(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
-        initial_orientation_offsets=initial_offsets_above,
+        initial_orientation=initial_orientation_up,
         device=device,
     )
 

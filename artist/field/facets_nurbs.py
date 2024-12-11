@@ -55,7 +55,7 @@ class NurbsFacet(torch.nn.Module):
         Non-Uniform Rational B-Splines (NURBS). Thus, each facet is an individual NURBS surface. The
         NURBS surface is created by specifying several parameters. For a detailed description of these
         parameters see the `NURBS-tutorial`. For now, note that the NURBS surfaces can be formed through
-        control points, two degrees, the number of evaluation points in east and north direction, a 
+        control points, two degrees, the number of evaluation points in east and north direction, a
         translation vector to match the facets to their position, and canting vectors.
 
         Parameters

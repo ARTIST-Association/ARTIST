@@ -182,7 +182,13 @@ class Scenario:
         surface_prototype = SurfaceConfig(facets_list=facets_list)
 
         # Create kinematic prototype.
-        initial_orientation = torch.tensor(scenario_file[config_dictionary.prototype_key][config_dictionary.kinematic_prototype_key][config_dictionary.kinematic_initial_orientation][()], dtype=torch.float, device=device)
+        initial_orientation = torch.tensor(
+            scenario_file[config_dictionary.prototype_key][
+                config_dictionary.kinematic_prototype_key
+            ][config_dictionary.kinematic_initial_orientation][()],
+            dtype=torch.float,
+            device=device,
+        )
 
         first_joint_translation_e = scenario_file.get(
             f"{config_dictionary.prototype_key}/"

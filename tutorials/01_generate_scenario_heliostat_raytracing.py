@@ -9,7 +9,6 @@ from artist.util.configuration_classes import (
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicOffsets,
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -20,7 +19,7 @@ from artist.util.configuration_classes import (
     SurfacePrototypeConfig,
 )
 from artist.util.scenario_generator import ScenarioGenerator
-from artist.util.stral_to_surface_converter import StralToSurfaceConverter
+from artist.util.surface_converter import SurfaceConverter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,56 +73,35 @@ light_source_list = [light_source1_config]
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
 # Generate surface configuration from STRAL data.
-stral_converter = StralToSurfaceConverter(
+surface_converter = SurfaceConverter(
     stral_file_path=pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_stral_data",
-    surface_header_name="=5f2I2f",
-    facet_header_name="=i9fI",
-    points_on_facet_struct_name="=7f",
     step_size=100,
+    max_epoch=400,
 )
-facet_prototype_list = stral_converter.generate_surface_config_from_stral(
-    number_eval_points_e=200,
-    number_eval_points_n=200,
-    conversion_method=config_dictionary.convert_nurbs_from_normals,
-    number_control_points_e=20,
-    number_control_points_n=20,
-    degree_e=3,
-    degree_n=3,
-    tolerance=3e-5,
-    max_epoch=10000,
-    initial_learning_rate=1e-3,
-)
+facet_prototype_list = surface_converter.generate_surface_config(device=device)
 
 # Generate the surface prototype configuration.
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 
 # Note that we do not include kinematic deviations in this scenario!
-
-# Include the initial orientation offsets for the kinematic.
-kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(
-        torch.tensor(torch.pi / 2, device=device), device=device
-    )
-)
-
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
-    kinematic_type=config_dictionary.rigid_body_key,
-    kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
+    type=config_dictionary.rigid_body_key,
+    initial_orientation=torch.Tensor([0.0, 0.0, 1.0, 0.0], device=device),
 )
 
 # Include an ideal actuator.
 actuator1_prototype = ActuatorConfig(
-    actuator_key="actuator1",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=False,
+    key="actuator1",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=False,
 )
 
 # Include a second ideal actuator.
 actuator2_prototype = ActuatorConfig(
-    actuator_key="actuator2",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=True,
+    key="actuator2",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=True,
 )
 
 # Create a list of actuators.
@@ -162,7 +140,7 @@ if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
 
     # Create a scenario object.
-    scenario_object = ScenarioGenerator(
+    scenario_generator = ScenarioGenerator(
         file_path=file_path,
         power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
@@ -172,4 +150,4 @@ if __name__ == "__main__":
     )
 
     # Generate the scenario.
-    scenario_object.generate_scenario()
+    scenario_generator.generate_scenario()

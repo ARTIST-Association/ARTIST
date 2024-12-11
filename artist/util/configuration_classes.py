@@ -744,6 +744,7 @@ class KinematicDeviations:
             )
         return deviations_dict
 
+
 class KinematicConfig:
     """
     Store the configuration parameters for the kinematic.
@@ -796,7 +797,7 @@ class KinematicConfig:
         """
         kinematic_dict: dict[str, Any] = {
             config_dictionary.kinematic_type: self.type,
-            config_dictionary.kinematic_initial_orientation: self.initial_orientation
+            config_dictionary.kinematic_initial_orientation: self.initial_orientation,
         }
         if self.deviations is not None:
             kinematic_dict.update(
