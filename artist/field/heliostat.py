@@ -704,17 +704,20 @@ class Heliostat(torch.nn.Module):
         # The first actuator always rotates along the east-axis.
         # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
         # of actuator one needs to be transformed accordingly.
-        initial_angle = actuator_list_config.actuator_list[0].parameters.initial_angle
+        if actuator_list_config.actuator_list[0].parameters:
+            initial_angle = actuator_list_config.actuator_list[
+                0
+            ].parameters.initial_angle
 
-        transformed_initial_angle = utils.transform_initial_angle(
-            initial_angle=initial_angle,
-            initial_orientation=kinematic_config.initial_orientation,
-            device=device,
-        )
+            transformed_initial_angle = utils.transform_initial_angle(
+                initial_angle=initial_angle,
+                initial_orientation=kinematic_config.initial_orientation,
+                device=device,
+            )
 
-        actuator_list_config.actuator_list[
-            0
-        ].parameters.initial_angle = transformed_initial_angle
+            actuator_list_config.actuator_list[
+                0
+            ].parameters.initial_angle = transformed_initial_angle
 
         return cls(
             heliostat_id=heliostat_id,

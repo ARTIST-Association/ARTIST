@@ -99,13 +99,15 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 surface_converter = SurfaceConverter(
-    deflectometry_file_path=deflectometry_file,
-    heliostat_file_path=heliostat_file,
     step_size=100,
     max_epoch=400,
 )
 
-facet_prototype_list = surface_converter.generate_surface_config(device=device)
+facet_prototype_list = surface_converter.generate_surface_config(
+    deflectometry_file_path=deflectometry_file,
+    heliostat_file_path=heliostat_file,
+    device=device,
+)
 
 surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_list)
 

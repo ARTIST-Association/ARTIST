@@ -1,6 +1,5 @@
 import pathlib
 
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import h5py
 import pytest
 import torch
@@ -111,8 +110,14 @@ def test_alignment_optimizer_methods(
     calibration_properties_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
     )
-    
-    center_calibration_image, incident_ray_direction, motor_positions = paint_loader.extract_paint_calibration_data(calibration_properties_path=calibration_properties_path, power_plant_position=scenario.power_plant_position, device=device)
+
+    center_calibration_image, incident_ray_direction, motor_positions = (
+        paint_loader.extract_paint_calibration_data(
+            calibration_properties_path=calibration_properties_path,
+            power_plant_position=scenario.power_plant_position,
+            device=device,
+        )
+    )
 
     # Create alignment optimizer.
     alignment_optimizer = AlignmentOptimizer(

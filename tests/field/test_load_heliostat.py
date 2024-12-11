@@ -1,9 +1,11 @@
 from typing import Optional
+from unittest.mock import MagicMock
+
 import h5py
 import pytest
 import torch
 from pytest_mock import MockerFixture
-from unittest.mock import MagicMock
+
 from artist.field.heliostat import Heliostat
 
 
@@ -16,7 +18,7 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
     ----------
     mocker : MockerFixture
         A pytest-mock fixture used to create mock objects.
-    
+
     Returns
     -------
     MagicMock
