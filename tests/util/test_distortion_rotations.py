@@ -259,6 +259,12 @@ from artist.util.utils import rotate_distortions
                 ]
             ),
         ),
+        (  # Test raise ValueError
+            torch.tensor([[[math.pi / 2]]]),
+            torch.tensor([[[0.0], [0.0]]]),
+            torch.tensor([[[1.0, 1.0, 1.0, 0.0]]]),
+            None,
+        ),
     ],
 )
 def test_distortion_rotations(
@@ -289,11 +295,26 @@ def test_distortion_rotations(
     AssertionError
         If test does not complete as expected.
     """
-    distorted_rays = (
-        rotate_distortions(
-            e=e_distortions.to(device), u=u_distortions.to(device), device=device
+    if expected_distorted_rays is None:
+        with pytest.raises(ValueError) as exc_info:
+            distorted_rays = (
+                rotate_distortions(
+                    e=e_distortions.to(device),
+                    u=u_distortions.to(device),
+                    device=device,
+                )
+                @ rays_to_rotate.to(device).unsqueeze(-1)
+            ).squeeze(-1)
+        assert (
+            "The two tensors containing angles for the east and up rotation must have the same shape."
+            in str(exc_info.value)
         )
-        @ rays_to_rotate.to(device).unsqueeze(-1)
-    ).squeeze(-1)
+    else:
+        distorted_rays = (
+            rotate_distortions(
+                e=e_distortions.to(device), u=u_distortions.to(device), device=device
+            )
+            @ rays_to_rotate.to(device).unsqueeze(-1)
+        ).squeeze(-1)
 
-    torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))
+        torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))
