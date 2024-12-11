@@ -1,9 +1,11 @@
 import json
 import pathlib
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
-from artist.field.kinematic_rigid_body import RigidBody
 import torch
+
+if TYPE_CHECKING:
+    from artist.field.kinematic_rigid_body import RigidBody
 
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -461,7 +463,7 @@ def get_center_of_mass(
     return center_coordinates
 
 def get_rigid_body_kinematic_parameters_from_scenario(
-    kinematic: RigidBody,
+    kinematic: "RigidBody",
 ) -> list[torch.Tensor]:
     """
     Extract all deviation parameters and actuator parameters from a rigid body kinematic.
@@ -539,6 +541,7 @@ def get_calibration_properties(
     torch.Tensor
         The motor positions.
     """
+    device = torch.device(device)
     with open(calibration_properties_path, "r") as file:
         calibration_dict = json.load(file)
         center_calibration_image = convert_wgs84_coordinates_to_local_enu(
@@ -625,3 +628,125 @@ def corner_points_to_plane(upper_left: torch.Tensor,
         + torch.abs(upper_right[2] - lower_right[2])
     ) / 2
     return plane_e, plane_u
+
+def decompose_rotation(initial_vector: torch.Tensor, target_vector:torch.Tensor, device: Union[torch.device, str] = "cuda",
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Get the individual angles along the east-, north- and up-axis, to rotate and initial vector into a target vector.
+
+    Parameters
+    ----------
+    initial_vector : torch.Tensor
+        The initial vector.
+    rotated_vector : torch.Tensor
+        The rotated vector.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+    
+    Returns
+    -------
+    torch.Tensor
+        The angle for the east-axis rotation.
+    torch.Tensor
+        The angle for the north-axis rotation.
+    torch.Tensor
+        The angle for the up-axis rotation.
+    
+    """
+    device = torch.device(device)
+    # Normalize the input vectors
+    initial_vector = initial_vector/ torch.linalg.norm(initial_vector)
+    target_vector = target_vector / torch.linalg.norm(target_vector)
+
+    # Compute the cross product (rotation axis)
+    r = torch.linalg.cross(initial_vector, target_vector)
+    r_norm = torch.linalg.norm(r)
+
+    # If the cross product is zero, the vectors are aligned; no rotation needed
+    if r_norm == 0:
+        return torch.tensor([0.0, 0.0, 0.0], device=device)
+
+    # Normalize the rotation axis
+    r_normalized = r / r_norm
+
+    # Compute the angle between the vectors
+    cos_theta = torch.clip(torch.dot(initial_vector, target_vector), -1.0, 1.0)
+    theta = torch.arccos(cos_theta)
+
+    # Decompose the angle along each axis
+    theta_components = theta * r_normalized
+
+    return theta_components[0], theta_components[1], theta_components[2]
+
+
+def angle_between_vectors(vector_1: torch.Tensor, vector_2:torch.Tensor) -> torch.Tensor:
+    """
+    Calculate the angle between two vectors.
+
+    Parameters
+    ----------
+    vector_1 : torch.Tensor
+        The first vector.
+    vector_2 : torch.Tensor
+        The second vector.
+    
+    Return
+    ------
+    torch.Tensor
+        The angle between the input vectors.
+    """
+    dot_product = torch.dot(vector_1, vector_2)
+
+    norm_u = torch.norm(vector_1)
+    norm_v = torch.norm(vector_2)
+
+    angle = dot_product / (norm_u * norm_v)
+
+    angle = torch.clamp(angle, -1.0, 1.0)
+
+    angle = torch.acos(angle)
+
+    return angle
+
+def transform_initial_angle(initial_angle: torch.Tensor, initial_orientation: torch.Tensor, device: Union[torch.device, str] = "cuda") -> torch.Tensor:
+    """
+    Computes the transformed angle of an initial angle in a rotated coordinate system.
+
+    This function accounts for a known offset, the initial angle, in the 
+    initial orientation vector. The offset represents a rotation around the 
+    east-axis. When the coordinate system is rotated to align 
+    the initial orientation with the ``ARTIST`` standard orientation, the axis for 
+    the offset rotation also changes. This function calculates the equivalent 
+    transformed angle for the offset in the rotated coordinate system.
+
+    Parameters
+    ----------
+    initial_angle : torch.Tensor
+        The initial angle, or offset along the east-axis.
+    initial_orientation : torch.Tensor
+        The initial orientation of the coordiante system.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+    
+    Returns
+    -------
+    torch.Tensor
+        The transformed angle in the rotated coordinate system.
+    """
+    device = torch.device(device)
+    # ``ARTIST`` is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
+    artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+
+    # Apply the rotation by the initial angle to the initial orientation.
+    initial_orientation_with_offset = initial_orientation @ rotate_e(
+        e=initial_angle,
+        device=device,
+    )
+    
+    # Compute the transformed angle relative to the reference orientation
+    transformed_initial_angle = angle_between_vectors(
+        initial_orientation[:-1], initial_orientation_with_offset[:-1]
+    ) - angle_between_vectors(initial_orientation[:-1], artist_standard_orientation[:-1])
+
+    return transformed_initial_angle
+    
