@@ -1,9 +1,10 @@
 import pathlib
 
+from artist.util.surface_converter import SurfaceConverter
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary
+from artist.util import config_dictionary, set_logger_config
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -11,7 +12,6 @@ from artist.util.configuration_classes import (
     HeliostatConfig,
     HeliostatListConfig,
     KinematicConfig,
-    KinematicOffsets,
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -25,14 +25,17 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.stral_to_surface_converter import StralToSurfaceConverter
 
+# Set up logger
+set_logger_config()
+
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 file_path = file_path = (
-    pathlib.Path(ARTIST_ROOT) / "tests/data/test_individual_measurements_scenario"
+    pathlib.Path(ARTIST_ROOT) / "tests/data/test_scenario_stral_individual_measurements"
 )
 
 if not pathlib.Path(file_path).parent.is_dir():
@@ -41,6 +44,8 @@ if not pathlib.Path(file_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
+stral_file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/stral_test_data.binp"
+
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
@@ -48,7 +53,7 @@ power_plant_config = PowerPlantConfig(
 
 # Include the receiver configuration.
 receiver1_config = ReceiverConfig(
-    receiver_key="receiver1",
+    receiver_key="receiver_1",
     receiver_type=config_dictionary.receiver_type_planar,
     position_center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
@@ -66,7 +71,7 @@ receiver_list_config = ReceiverListConfig(receiver_list=receiver_list)
 
 # Include the light source configuration.
 light_source1_config = LightSourceConfig(
-    light_source_key="sun1",
+    light_source_key="sun_1",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -81,54 +86,36 @@ light_source_list = [light_source1_config]
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
 # Generate surface configuration from STRAL data.
-stral_converter = StralToSurfaceConverter(
-    stral_file_path=pathlib.Path(ARTIST_ROOT) / "tests/data/stral_test_data",
-    surface_header_name="=5f2I2f",
-    facet_header_name="=i9fI",
-    points_on_facet_struct_name="=7f",
+surface_converter = SurfaceConverter(
+    stral_file_path=stral_file_path,
     step_size=100,
-)
-list_of_facets = stral_converter.generate_surface_config_from_stral(
-    number_eval_points_e=100,
-    number_eval_points_n=100,
-    conversion_method=config_dictionary.convert_nurbs_from_normals,
-    number_control_points_e=20,
-    number_control_points_n=20,
-    degree_e=3,
-    degree_n=3,
-    tolerance=3e-5,
-    max_epoch=10000,
-    initial_learning_rate=1e-3,
-    device=device,
+    max_epoch=400,
 )
 
-surface_prototype_config = SurfacePrototypeConfig(facets_list=list_of_facets)
+facets_list = surface_converter.generate_surface_config(device=device)
+
+surface_prototype_config = SurfacePrototypeConfig(facets_list=facets_list)
 
 # Include the initial orientation offsets for the kinematic.
-kinematic_prototype_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(
-        torch.tensor(torch.pi / 2, device=device), device=device
-    )
-)
 
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
-    kinematic_type=config_dictionary.rigid_body_key,
-    kinematic_initial_orientation_offsets=kinematic_prototype_offsets,
+    type=config_dictionary.rigid_body_key,
+    initial_orientation=[0.0, 0.0, 1.0, 0.0],
 )
 
 # Include an ideal actuator.
 actuator1_prototype = ActuatorConfig(
-    actuator_key="actuator1",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=False,
+    key="actuator_1",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=False,
 )
 
 # Include a linear actuator.
 actuator2_prototype = ActuatorConfig(
-    actuator_key="actuator2",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=True,
+    key="actuator_2",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=True,
 )
 
 # Create a list of actuators.
@@ -147,40 +134,32 @@ prototype_config = PrototypeConfig(
 )
 
 # Include the heliostat surface config. In this case, it is identical to the prototype.
-heliostat1_surface_config = SurfaceConfig(facets_list=list_of_facets)
+heliostat1_surface_config = SurfaceConfig(facets_list=facets_list)
 
 # Include kinematic configuration for the heliostat.
-heliostat1_kinematic_offsets = KinematicOffsets(
-    kinematic_initial_orientation_offset_e=torch.tensor(
-        torch.tensor(torch.pi / 2, device=device), device=device
-    )
-)
-
 heliostat1_kinematic_config = KinematicConfig(
-    kinematic_type=config_dictionary.rigid_body_key,
-    kinematic_initial_orientation_offsets=heliostat1_kinematic_offsets,
+    type=config_dictionary.rigid_body_key,
+    initial_orientation=[0.0, 0.0, 1.0, 0.0],
 )
 
 # Include actuators for the heliostat.
-# Include an ideal actuator.
 actuator1_heliostat1 = ActuatorConfig(
-    actuator_key="actuator1",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=False,
+    key="actuator_1",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=False,
+)
+actuator2_heliostat1 = ActuatorConfig(
+    key="actuator_2",
+    type=config_dictionary.ideal_actuator_key,
+    clockwise_axis_movement=True,
 )
 
-# Include a linear actuator.
-actuator2_heliostat1 = ActuatorConfig(
-    actuator_key="actuator2",
-    actuator_type=config_dictionary.ideal_actuator_key,
-    actuator_clockwise=True,
-)
 actuator_heliostat1_list = [actuator1_heliostat1, actuator2_heliostat1]
 heliostat1_actuator_config = ActuatorListConfig(actuator_list=actuator_heliostat1_list)
 
 # Include the configuration for a heliostat.
 heliostat_1 = HeliostatConfig(
-    heliostat_key="heliostat1",
+    heliostat_key="heliostat_1",
     heliostat_id=1,
     heliostat_position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
     heliostat_aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
@@ -197,8 +176,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-    # Create a scenario object.
-    scenario_object = ScenarioGenerator(
+    scenario_generator = ScenarioGenerator(
         file_path=file_path,
         power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
@@ -206,6 +184,4 @@ if __name__ == "__main__":
         prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,
     )
-
-    # Generate the scenario.
-    scenario_object.generate_scenario()
+    scenario_generator.generate_scenario()
