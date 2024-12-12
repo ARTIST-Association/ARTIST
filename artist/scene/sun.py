@@ -219,28 +219,16 @@ class Sun(LightSource):
         -------
         tuple[torch.Tensor, torch.Tensor]
             The distortion in north and up direction.
-
-        Raises
-        ------
-        ValueError
-            If the distribution type is not valid, currently only the normal distribution is implemented.
         """
         torch.manual_seed(random_seed)
-        if (
-            self.distribution_parameters[
-                config_dictionary.light_source_distribution_type
-            ]
-            == config_dictionary.light_source_distribution_is_normal
-        ):
-            distortions_u, distortions_e = self.distribution.sample(
-                (
-                    int(number_of_heliostats * self.number_of_rays),
-                    number_of_facets,
-                    number_of_points,
-                ),
-            ).permute(3, 0, 1, 2)
-            return distortions_u, distortions_e
-
+        distortions_u, distortions_e = self.distribution.sample(
+            (
+                int(number_of_heliostats * self.number_of_rays),
+                number_of_facets,
+                number_of_points,
+            ),
+        ).permute(3, 0, 1, 2)
+        return distortions_u, distortions_e
 
     def forward(self) -> None:
         """
