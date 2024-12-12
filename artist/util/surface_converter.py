@@ -365,7 +365,7 @@ class SurfaceConverter:
         # Convert to 4D format.
         canting_n = utils.convert_3d_direction_to_4d_format(canting_n, device=device)
         canting_e = utils.convert_3d_direction_to_4d_format(canting_e, device=device)
-        surface_points_with_facets = utils.convert_3d_points_to_4d_format(
+        surface_points_with_facets = utils.convert_3d_point_to_4d_format(
             surface_points_with_facets, device=device
         )
         surface_normals_with_facets = utils.convert_3d_direction_to_4d_format(
