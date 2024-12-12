@@ -240,8 +240,7 @@ class Sun(LightSource):
                 ),
             ).permute(3, 0, 1, 2)
             return distortions_u, distortions_e
-        else:
-            raise ValueError("Unknown light distribution type.")
+
 
     def forward(self) -> None:
         """
