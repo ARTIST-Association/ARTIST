@@ -221,7 +221,7 @@ def translate_enu(
     torch.Tensor
         Corresponding rotation matrix.
     """
-    if e.shape != u.shape != n.shape:
+    if not (e.shape == u.shape == n.shape):
         raise ValueError(
             "The three tensors containing the east, north, and up translations must have the same shape."
         )
@@ -283,7 +283,7 @@ def azimuth_elevation_to_enu(
     return enu
 
 
-def convert_3d_points_to_4d_format(
+def convert_3d_point_to_4d_format(
     point: torch.Tensor, device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
@@ -334,7 +334,7 @@ def convert_3d_direction_to_4d_format(
     device = torch.device(device)
     if direction.size(dim=-1) != 3:
         raise ValueError(
-            f"Expected a 3D point but got a point of shape {direction.shape}!"
+            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
         )
 
     zeros_tensor = torch.zeros(
