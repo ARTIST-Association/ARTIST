@@ -79,7 +79,7 @@ def extract_paint_calibration_data(
             power_plant_position,
             device=device,
         )
-        center_calibration_image = utils.convert_3d_points_to_4d_format(
+        center_calibration_image = utils.convert_3d_point_to_4d_format(
             center_calibration_image, device=device
         )
         sun_azimuth = torch.tensor(
@@ -159,7 +159,7 @@ def extract_paint_tower_measurements(
         target_center_3d = utils.convert_wgs84_coordinates_to_local_enu(
             target_center_lat_lon, power_plant_position, device=device
         )
-        target_center = utils.convert_3d_points_to_4d_format(
+        target_center = utils.convert_3d_point_to_4d_format(
             target_center_3d, device=device
         )
         normal_vector = utils.convert_3d_direction_to_4d_format(
@@ -264,7 +264,7 @@ def extract_paint_heliostat_properties(
             power_plant_position,
             device=device,
         )
-        heliostat_position = utils.convert_3d_points_to_4d_format(
+        heliostat_position = utils.convert_3d_point_to_4d_format(
             heliostat_position_3d, device=device
         )
 
