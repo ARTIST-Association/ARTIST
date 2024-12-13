@@ -1,11 +1,14 @@
 import pathlib
 
+import pytest
+import torch
+
 from artist import ARTIST_ROOT
 from artist.util.configuration_classes import FacetConfig
 from artist.util.surface_converter import SurfaceConverter
 
 
-def test_surface_converter(device):
+def test_surface_converter(device: torch.device) -> None:
     """
     Test the surface converter with ``STRAL`` and ``PAINT`` files.
 
@@ -48,3 +51,39 @@ def test_surface_converter(device):
     assert isinstance(surface_config_stral, list)
     assert all(isinstance(obj, FacetConfig) for obj in surface_config_paint)
     assert all(isinstance(obj, FacetConfig) for obj in surface_config_stral)
+
+
+def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
+    """
+    Test fitting nurbs method for errors.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    surface_converter = SurfaceConverter(
+        step_size=5000,
+        number_eval_points_e=10,
+        number_eval_points_n=10,
+        number_control_points_e=5,
+        number_control_points_n=5,
+        max_epoch=1,
+    )
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        surface_converter.fit_nurbs_surface(
+            surface_points=torch.rand(10, 4, device=device),
+            surface_normals=torch.rand(10, 4, device=device),
+            conversion_method="invalid_method",
+            max_epoch=1,
+            device=device,
+        )
+    assert "Conversion method invalid_method not yet implemented!" in str(
+        exc_info.value
+    )
