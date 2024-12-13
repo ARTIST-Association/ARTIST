@@ -12,7 +12,7 @@ def test_light_source_array_load_from_hdf5_errors(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat load from hdf5 method.
+    Test loading a light source array from an hdf5 file.
 
     Parameters
     ----------
