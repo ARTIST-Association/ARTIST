@@ -77,7 +77,7 @@ surface_converter = SurfaceConverter(
     step_size=100,
     max_epoch=400,
 )
-facet_prototype_list = surface_converter.generate_surface_config(
+facet_prototype_list = surface_converter.generate_surface_config_from_stral(
     stral_file_path=file_path, device=device
 )
 

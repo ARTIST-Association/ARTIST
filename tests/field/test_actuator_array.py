@@ -39,10 +39,6 @@ def test_actuator_array_errors(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat load from hdf5 method.
-
-    Parameters
-    ----------
     Test initializing an actuator array.
 
     Parameters

@@ -8,7 +8,7 @@ def test_set_preferred_reflection_direction_error(
     mocker: MockerFixture,
 ) -> None:
     """
-    Test the heliostat load from hdf5 method.
+    Test setting the preferred reflection direction for unaligned heliostats.
 
     Parameters
     ----------
