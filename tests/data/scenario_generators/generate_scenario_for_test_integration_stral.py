@@ -85,7 +85,7 @@ surface_converter = SurfaceConverter(
     max_epoch=400,
 )
 
-facet_prototype_list = surface_converter.generate_surface_config(
+facet_prototype_list = surface_converter.generate_surface_config_from_stral(
     stral_file_path=stral_file_path, device=device
 )
 
