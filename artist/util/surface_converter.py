@@ -2,7 +2,7 @@ import json
 import logging
 import pathlib
 import struct
-from typing import Optional, Union
+from typing import Union
 
 import h5py
 import numpy as np
@@ -51,8 +51,10 @@ class SurfaceConverter:
     -------
     fit_nurbs_surface()
         Fit the NURBS surface given the conversion method.
-    generate_surface_config()
-        Generate a surface configuration from a data source.
+    generate_surface_config_from_stral()
+        Generate a surface configuration from a ``STRAL`` file.
+    generate_surface_config_from_paint()
+        Generate a surface configuration from a ``PAINT`` dataset.
     """
 
     def __init__(
@@ -256,11 +258,13 @@ class SurfaceConverter:
 
         return nurbs_surface
 
-    def generate_surface_config(
+    def _generate_surface_config(
         self,
-        deflectometry_file_path: Optional[pathlib.Path] = None,
-        heliostat_file_path: Optional[pathlib.Path] = None,
-        stral_file_path: Optional[pathlib.Path] = None,
+        surface_points_with_facets_list: list[torch.Tensor],
+        surface_normals_with_facets_list: list[torch.Tensor],
+        facet_translation_vectors: torch.Tensor,
+        canting_e: torch.Tensor,
+        canting_n: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
@@ -268,12 +272,16 @@ class SurfaceConverter:
 
         Parameters
         ----------
-        deflectometry_file_path : Optional[pathlib.Path]
-            The file path to the ``PAINT`` deflectometry data that will be converted.
-        heliostat_file_path : Optional[pathlib.Path]
-            The file path to the ``PAINT`` heliostat properties data that will be converted.
-        stral_file_path : Optional[pathlib.Path]
-            The file path to the ``STRAL`` data that will be converted.
+        surface_points_with_facets_list : list[torch.Tensor]
+            A list of facetted surface points. Points per facet may vary.
+        surface_normals_with_facets_list : list[torch.Tensor]
+            A list of facetted surface normals. Normals per facet may vary.
+        facet_translation_vectors : torch.Tensor
+            Translation vector for each facet from heliostat origin to relative position.
+        canting_e : torch.Tensor
+            The canting vector per facet in east direction.
+        canting_n : torch.Tensor
+            The canting vector per facet in north direction.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -284,48 +292,6 @@ class SurfaceConverter:
         """
         log.info("Beginning generation of the surface configuration based on data.")
         device = torch.device(device)
-
-        if (
-            stral_file_path is None
-            and deflectometry_file_path is None
-            and heliostat_file_path is None
-        ):
-            raise ValueError(
-                "Either a ``STRAL`` file or both ``PAINT`` files must be specified!"
-            )
-        if stral_file_path is not None and (
-            deflectometry_file_path is not None or heliostat_file_path is not None
-        ):
-            raise ValueError(
-                "You cannot specify a ``STRAL`` file in combination with any ``PAINT`` file!"
-            )
-        if stral_file_path is None and (
-            deflectometry_file_path is None or heliostat_file_path is None
-        ):
-            raise ValueError(
-                "If you choose ``PAINT`` as data source you need both a deflectometry file and a heliostat properties file!"
-            )
-
-        if stral_file_path:
-            (
-                facet_translation_vectors,
-                canting_e,
-                canting_n,
-                surface_points_with_facets_list,
-                surface_normals_with_facets_list,
-            ) = self._extract_stral_data(stral_file_path=stral_file_path, device=device)
-        elif heliostat_file_path and deflectometry_file_path:
-            (
-                facet_translation_vectors,
-                canting_e,
-                canting_n,
-                surface_points_with_facets_list,
-                surface_normals_with_facets_list,
-            ) = self._extract_paint_data(
-                heliostat_file_path=heliostat_file_path,
-                deflectometry_file_path=deflectometry_file_path,
-                device=device,
-            )
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
@@ -408,13 +374,11 @@ class SurfaceConverter:
         log.info("Surface configuration based on data complete!")
         return facet_config_list
 
-    def _extract_stral_data(
+    def generate_surface_config_from_stral(
         self,
         stral_file_path: pathlib.Path,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]
-    ]:
+    ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
 
@@ -427,16 +391,8 @@ class SurfaceConverter:
 
         Returns
         -------
-        torch.Tensor
-            The facet translation vectors defining the translation of each facet from the heliostat origin.
-        torch.Tensor
-            The canting vectors for each facet in east direction.
-        torch.Tensor
-            The canting vectors for each facet in north direction.
-        list[torch.Tensor]
-            The surface points for each facet.
-        list[torch.Tensor]
-            The surface normals for each facet.
+        list[FacetConfig]
+            A list of facet configurations used to generate a surface.
         """
         log.info("Beginning extraction of data from ```STRAL``` file.")
         device = torch.device(device)
@@ -497,22 +453,23 @@ class SurfaceConverter:
 
         log.info("Loading ``STRAL`` data complete")
 
-        return (
-            facet_translation_vectors,
-            canting_e,
-            canting_n,
-            surface_points_with_facets_list,
-            surface_normals_with_facets_list,
+        surface_config = self._generate_surface_config(
+            surface_points_with_facets_list=surface_points_with_facets_list,
+            surface_normals_with_facets_list=surface_normals_with_facets_list,
+            facet_translation_vectors=facet_translation_vectors,
+            canting_e=canting_e,
+            canting_n=canting_n,
+            device=device,
         )
 
-    def _extract_paint_data(
+        return surface_config
+
+    def generate_surface_config_from_paint(
         self,
         heliostat_file_path: pathlib.Path,
         deflectometry_file_path: pathlib.Path,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]
-    ]:
+    ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``PAINT`` dataset.
 
@@ -527,16 +484,8 @@ class SurfaceConverter:
 
         Returns
         -------
-        torch.Tensor
-            The facet translation vectors defining the translation of each facet from the heliostat origin.
-        torch.Tensor
-            The canting vectors for each facet in east direction.
-        torch.Tensor
-            The canting vectors for each facet in north direction.
-        list[torch.Tensor]
-            The surface points for each facet.
-        list[torch.Tensor]
-            The surface normals for each facet.
+        list[FacetConfig]
+            A list of facet configurations used to generate a surface.
         """
         log.info("Beginning extraction of data from ```PAINT``` file.")
         # Reading ``PAINT`` heliostat json file.
@@ -616,10 +565,13 @@ class SurfaceConverter:
 
         log.info("Loading ``PAINT`` data complete")
 
-        return (
-            facet_translation_vectors,
-            canting_e,
-            canting_n,
-            surface_points_with_facets_list,
-            surface_normals_with_facets_list,
+        surface_config = self._generate_surface_config(
+            surface_points_with_facets_list=surface_points_with_facets_list,
+            surface_normals_with_facets_list=surface_normals_with_facets_list,
+            facet_translation_vectors=facet_translation_vectors,
+            canting_e=canting_e,
+            canting_n=canting_n,
+            device=device,
         )
+
+        return surface_config
