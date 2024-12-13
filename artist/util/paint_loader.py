@@ -111,7 +111,7 @@ def extract_paint_tower_measurements(
     tower_measurements_path: pathlib.Path,
     target_name: str,
     device: Union[torch.device, str] = "cuda",
-) -> tuple[torch.Tensor, str, torch.Tensor, torch.Tensor, float, float]:
+) -> tuple[torch.Tensor, str, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract tower data from ```PAINT`` tower measurement file for scenario generation.
 
@@ -134,9 +134,9 @@ def extract_paint_tower_measurements(
         The coordinates of the target center in ENU.
     torch.Tensor
         The normal vector of the target plane.
-    float
+    torch.Tensor
         The dimension of the target plane in east direction (width).
-    float
+    torch.Tensor
         The dimension of the target plane in up dimension (height).
     """
     with open(tower_measurements_path, "r") as file:
