@@ -103,7 +103,7 @@ surface_converter = SurfaceConverter(
     max_epoch=400,
 )
 
-facet_prototype_list = surface_converter.generate_surface_config(
+facet_prototype_list = surface_converter.generate_surface_config_from_paint(
     deflectometry_file_path=deflectometry_file,
     heliostat_file_path=heliostat_file,
     device=device,
