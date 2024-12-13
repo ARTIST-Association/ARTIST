@@ -323,7 +323,7 @@ class SurfaceConverter:
         facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
             facet_translation_vectors, device=device
         )
-        # If we are learning the surface points from ``STRAL``, we do not need to translate the facets.
+        # If we are using a point cloud to learn the points, we do not need to translate the facets.
         if self.conversion_method == config_dictionary.convert_nurbs_from_points:
             facet_translation_vectors = torch.zeros(
                 facet_translation_vectors.shape, device=device
