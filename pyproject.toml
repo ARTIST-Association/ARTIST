@@ -21,7 +21,6 @@ dependencies = [
     "torch",
     "h5py",
     "colorlog",
-    "pytest-mock",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +29,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-cov",
+    "pytest-mock",
     "sphinx-autoapi",
     "sphinx-rtd-theme",
     "sphinxcontrib-napoleon",
