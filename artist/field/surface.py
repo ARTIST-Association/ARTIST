@@ -19,6 +19,8 @@ class Surface(torch.nn.Module):
     -------
     get_surface_points_and_normals()
         Calculate all surface points and normals from all facets.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(self, surface_config: SurfaceConfig) -> None:
@@ -43,8 +45,6 @@ class Surface(torch.nn.Module):
                 degree_n=facet_config.degree_n,
                 number_eval_points_e=facet_config.number_eval_points_e,
                 number_eval_points_n=facet_config.number_eval_points_n,
-                width=facet_config.width,
-                height=facet_config.height,
                 translation_vector=facet_config.translation_vector,
                 canting_e=facet_config.canting_e,
                 canting_n=facet_config.canting_n,
@@ -89,3 +89,14 @@ class Surface(torch.nn.Module):
             surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

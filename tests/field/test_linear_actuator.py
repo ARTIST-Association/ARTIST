@@ -13,24 +13,6 @@ from artist.util.configuration_classes import (
 )
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 @pytest.fixture
 def deviation_parameters(device: torch.device) -> KinematicDeviations:
     """
@@ -88,28 +70,28 @@ def actuator_configuration(device: torch.device) -> ActuatorListConfig:
         increment=torch.tensor(154166.666, device=device),
         initial_stroke_length=torch.tensor(0.075, device=device),
         offset=torch.tensor(0.34061, device=device),
-        radius=torch.tensor(0.3204, device=device),
-        phi_0=torch.tensor(-1.570796, device=device),
+        pivot_radius=torch.tensor(0.3204, device=device),
+        initial_angle=torch.tensor(-1.570796, device=device),
     )
 
     actuator2_parameters = ActuatorParameters(
         increment=torch.tensor(154166.666, device=device),
         initial_stroke_length=torch.tensor(0.075, device=device),
         offset=torch.tensor(0.3479, device=device),
-        radius=torch.tensor(0.309, device=device),
-        phi_0=torch.tensor(0.959931, device=device),
+        pivot_radius=torch.tensor(0.309, device=device),
+        initial_angle=torch.tensor(0.959931, device=device),
     )
     actuator1_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.linear_actuator_key,
-        actuator_clockwise=False,
-        actuator_parameters=actuator1_parameters,
+        key="",
+        type=config_dictionary.linear_actuator_key,
+        clockwise_axis_movement=False,
+        parameters=actuator1_parameters,
     )
     actuator2_config = ActuatorConfig(
-        actuator_key="",
-        actuator_type=config_dictionary.linear_actuator_key,
-        actuator_clockwise=True,
-        actuator_parameters=actuator2_parameters,
+        key="",
+        type=config_dictionary.linear_actuator_key,
+        clockwise_axis_movement=True,
+        parameters=actuator2_parameters,
     )
 
     return ActuatorListConfig(actuator_list=[actuator1_config, actuator2_config])
@@ -144,6 +126,7 @@ def kinematic_model_1(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
+        initial_orientation=torch.tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )
@@ -178,6 +161,7 @@ def kinematic_model_2(
         position=position,
         aim_point=aim_point,
         actuator_config=actuator_configuration,
+        initial_orientation=torch.tensor([0.0, -1.0, 0.0, 0.0], device=device),
         deviation_parameters=deviation_parameters,
         device=device,
     )
@@ -288,9 +272,11 @@ def test_orientation_matrix(
     AssertionError
         If test does not complete as expected.
     """
-    orientation_matrix = request.getfixturevalue(kinematic_model_fixture).align(
+    orientation_matrix = request.getfixturevalue(
+        kinematic_model_fixture
+    ).incident_ray_direction_to_orientation(
         incident_ray_direction.to(device), device=device
     )
     torch.testing.assert_close(
-        orientation_matrix[0], expected.to(device), atol=5e-4, rtol=5e-4
+        orientation_matrix, expected.to(device), atol=5e-4, rtol=5e-4
     )

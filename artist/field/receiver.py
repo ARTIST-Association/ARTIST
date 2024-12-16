@@ -36,6 +36,8 @@ class Receiver(torch.nn.Module):
     -------
     from_hdf5()
         Class method that initializes a receiver from an HDF5 file.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -158,3 +160,14 @@ class Receiver(torch.nn.Module):
             curvature_e=curvature_e,
             curvature_u=curvature_u,
         )
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")
