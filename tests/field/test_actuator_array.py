@@ -39,14 +39,14 @@ def test_actuator_array_errors(
     device: torch.device,
 ) -> None:
     """
-    Test initializing an actuator array.
+    Test that actuator array raises errors with improper initialization.
 
     Parameters
     ----------
     actuator_config : ActuatorConfig
         The actuator config with a specific actuator type.
-    expected_error : bool
-        Specify whether error is expected
+    device : torch.device
+        The device on which to initialize tensors (default is cuda).
 
     Raises
     ------

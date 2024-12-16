@@ -16,7 +16,7 @@ def test_ray_initialization_error(
     ray_directions: torch.Tensor, ray_magnitudes: torch.Tensor
 ) -> None:
     """
-    Test the ray initialization.
+    Test errors during the ray initialization.
 
     Parameters
     ----------

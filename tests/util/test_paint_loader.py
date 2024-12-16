@@ -23,7 +23,7 @@ def test_extract_paint_calibration_target_name(
     expected: str,
 ) -> None:
     """
-    Test the calibration target name paint loader.
+    Test the function to load the calibration target name from ``PAINT`` calibration data.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ def test_extract_paint_calibration_data(
     device: torch.device,
 ) -> None:
     """
-    Test the calibration data paint loader.
+    Test the functino to extract calibration data from ``PAINT`` calibration data.
 
     Parameters
     ----------
@@ -128,7 +128,7 @@ def test_extract_paint_tower_measurements(
     device: torch.device,
 ) -> None:
     """
-    Test the tower measurement paint loader.
+    Test the tower measurement loader for ``PAINT`` data.
 
     Parameters
     ----------
@@ -184,7 +184,7 @@ def test_extract_paint_heliostat_properties(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat properties paint loader.
+    Test the heliostat properties loader for ``PAINT`` data.
 
     Parameters
     ----------

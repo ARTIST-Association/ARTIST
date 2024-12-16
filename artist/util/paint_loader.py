@@ -18,7 +18,7 @@ def extract_paint_calibration_target_name(
     calibration_properties_path: pathlib.Path,
 ) -> str:
     """
-    Extract calibration data from ```PAINT`` calibration file for scenario generation.
+    Extract the calibration target name from a ```PAINT`` calibration file for scenario generation.
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ def extract_paint_calibration_target_name(
     Returns
     -------
     str
-        The name of the calibration traget name.
+        The name of the calibration target.
     """
     with open(calibration_properties_path, "r") as file:
         calibration_dict = json.load(file)
@@ -45,7 +45,7 @@ def extract_paint_calibration_data(
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Extract calibration data from ```PAINT`` calibration file for alignment optimization.
+    Extract calibration data from a ``PAINT`` calibration file for alignment optimization.
 
     Parameters
     ----------
@@ -113,7 +113,7 @@ def extract_paint_tower_measurements(
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, str, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Extract tower data from ```PAINT`` tower measurement file for scenario generation.
+    Extract tower data from a ``PAINT`` tower measurement file for scenario generation.
 
     Parameters
     ----------
@@ -233,7 +233,7 @@ def extract_paint_heliostat_properties(
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, KinematicConfig, ActuatorListConfig]:
     """
-    Extract heliostat data from ```PAINT`` heliostat file for scenario generation.
+    Extract heliostat data from a ``PAINT`` heliostat file for scenario generation.
 
     Parameters
     ----------
