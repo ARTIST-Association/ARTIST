@@ -7,24 +7,6 @@ from artist.scene import Sun
 from artist.util import config_dictionary
 
 
-@pytest.fixture(params=["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"])
-def device(request: pytest.FixtureRequest) -> torch.device:
-    """
-    Return the device on which to initialize tensors.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-
-    Returns
-    -------
-    torch.device
-        The device on which to initialize tensors.
-    """
-    return torch.device(request.param)
-
-
 def calculate_expected(
     distribution_parameters: Dict[str, Any],
     further_parameters: Dict[str, int],
@@ -127,6 +109,23 @@ def distribution_parameters_3() -> Dict[str, Any]:
 
 
 @pytest.fixture
+def distribution_parameters_4() -> Dict[str, Any]:
+    """
+    Fixture that returns distribution parameters for the sun.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Distribution parameters for the sun.
+    """
+    return {
+        config_dictionary.light_source_distribution_type: "invalid_distribution_type",
+        config_dictionary.light_source_mean: 10,
+        config_dictionary.light_source_covariance: 15,
+    }
+
+
+@pytest.fixture
 def further_parameters_1() -> Dict[str, int]:
     """
     Fixture that returns further test parameters.
@@ -184,17 +183,18 @@ def further_parameters_3() -> Dict[str, int]:
 
 
 @pytest.mark.parametrize(
-    "light_source, distribution_parameters_fixture, further_parameters_fixture",
+    "light_source, distribution_parameters_fixture, further_parameters_fixture, expected_error",
     [
-        ("sun", "distribution_parameters_1", "further_parameters_1"),
-        ("sun", "distribution_parameters_2", "further_parameters_2"),
-        ("sun", "distribution_parameters_3", "further_parameters_3"),
-        ("sun", "distribution_parameters_1", "further_parameters_2"),
-        ("sun", "distribution_parameters_1", "further_parameters_3"),
-        ("sun", "distribution_parameters_2", "further_parameters_1"),
-        ("sun", "distribution_parameters_2", "further_parameters_3"),
-        ("sun", "distribution_parameters_3", "further_parameters_1"),
-        ("sun", "distribution_parameters_3", "further_parameters_2"),
+        ("sun", "distribution_parameters_1", "further_parameters_1", False),
+        ("sun", "distribution_parameters_2", "further_parameters_2", False),
+        ("sun", "distribution_parameters_3", "further_parameters_3", False),
+        ("sun", "distribution_parameters_1", "further_parameters_2", False),
+        ("sun", "distribution_parameters_1", "further_parameters_3", False),
+        ("sun", "distribution_parameters_2", "further_parameters_1", False),
+        ("sun", "distribution_parameters_2", "further_parameters_3", False),
+        ("sun", "distribution_parameters_3", "further_parameters_1", False),
+        ("sun", "distribution_parameters_3", "further_parameters_2", False),
+        ("sun", "distribution_parameters_4", "further_parameters_2", True),
     ],
 )
 def test_light_sources(
@@ -202,6 +202,7 @@ def test_light_sources(
     light_source: str,
     distribution_parameters_fixture: str,
     further_parameters_fixture: str,
+    expected_error: bool,
     device: torch.device,
 ) -> None:
     """
@@ -216,7 +217,9 @@ def test_light_sources(
     distribution_parameters_fixture : str
         The pytest fixture containing the distribution parameters.
     further_parameters_fixture : str
-        The pytest fixture containing the further test parameters.
+        The pytest fixture containing the further test parameters or ``None````None`` if an error is expected.
+    expected_error : bool
+        Specifies if ValueError is expected or not.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -230,23 +233,35 @@ def test_light_sources(
 
     # Run test if light source is a sun.
     if light_source == "sun":
-        sun = Sun(
-            distribution_parameters=request.getfixturevalue(
-                distribution_parameters_fixture
-            ),
-            number_of_rays=further_params_dict["num_rays"],
-            device=device,
-        )
-        distortions_u, distortions_e = sun.get_distortions(
-            number_of_points=further_params_dict["num_points"],
-            number_of_heliostats=further_params_dict["num_heliostats"],
-            number_of_facets=further_params_dict["num_facets"],
-            random_seed=further_params_dict["random_seed"],
-        )
-        expected_u, expected_e = calculate_expected(
-            request.getfixturevalue(distribution_parameters_fixture),
-            request.getfixturevalue(further_parameters_fixture),
-            device=device,
-        )
-        torch.testing.assert_close(distortions_u, expected_u)
-        torch.testing.assert_close(distortions_e, expected_e)
+        # Check if the ValueError is thrown as expected.
+        if expected_error:
+            with pytest.raises(ValueError) as exc_info:
+                Sun(
+                    distribution_parameters=request.getfixturevalue(
+                        distribution_parameters_fixture
+                    ),
+                    number_of_rays=further_params_dict["num_rays"],
+                    device=device,
+                )
+            assert "Unknown sunlight distribution type." in str(exc_info.value)
+        else:
+            sun = Sun(
+                distribution_parameters=request.getfixturevalue(
+                    distribution_parameters_fixture
+                ),
+                number_of_rays=further_params_dict["num_rays"],
+                device=device,
+            )
+            distortions_u, distortions_e = sun.get_distortions(
+                number_of_points=further_params_dict["num_points"],
+                number_of_heliostats=further_params_dict["num_heliostats"],
+                number_of_facets=further_params_dict["num_facets"],
+                random_seed=further_params_dict["random_seed"],
+            )
+            expected_u, expected_e = calculate_expected(
+                request.getfixturevalue(distribution_parameters_fixture),
+                request.getfixturevalue(further_parameters_fixture),
+                device=device,
+            )
+            torch.testing.assert_close(distortions_u, expected_u)
+            torch.testing.assert_close(distortions_e, expected_e)

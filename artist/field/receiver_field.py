@@ -25,6 +25,8 @@ class ReceiverField(torch.nn.Module):
     -------
     from_hdf5()
         Load the list of receivers from an HDF5 file.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(self, receiver_list: list[Receiver]):
@@ -72,3 +74,14 @@ class ReceiverField(torch.nn.Module):
             for receiver_name in config_file[config_dictionary.receiver_key].keys()
         ]
         return cls(receiver_list=receiver_field)
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

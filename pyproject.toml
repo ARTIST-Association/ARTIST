@@ -29,6 +29,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-cov",
+    "pytest-mock",
     "sphinx-autoapi",
     "sphinx-rtd-theme",
     "sphinxcontrib-napoleon",
@@ -133,6 +134,5 @@ testpaths = [
 [tool.coverage.run]
 omit = [
     "artist/util/scenario_generator.py",
-    "artist/util/stral_to_surface_converter.py",
     "artist/util/configuration_classes.py"
     ]

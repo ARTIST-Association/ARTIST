@@ -30,6 +30,8 @@ class HeliostatField(torch.nn.Module):
     -------
     from_hdf5()
         Load the list of heliostats from an HDF5 file.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(self, heliostat_list: list[Heliostat]):
@@ -87,10 +89,21 @@ class HeliostatField(torch.nn.Module):
                 ],
                 prototype_surface=prototype_surface,
                 prototype_kinematic=prototype_kinematic,
-                prototype_actuator=prototype_actuator,
+                prototype_actuator_list=prototype_actuator,
                 heliostat_name=heliostat_name,
                 device=device,
             )
             for heliostat_name in config_file[config_dictionary.heliostat_key].keys()
         ]
         return cls(heliostat_list=heliostat_list)
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

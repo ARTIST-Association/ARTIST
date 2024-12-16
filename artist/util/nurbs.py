@@ -34,6 +34,8 @@ class NURBSSurface(torch.nn.Module):
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surface.
+    forward()
+        Specify the forward pass.
     """
 
     def __init__(
@@ -417,3 +419,14 @@ class NURBSSurface(torch.nn.Module):
         )
 
         return derivatives[:, 0, 0], normals
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

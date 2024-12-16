@@ -29,6 +29,8 @@ class Sun(LightSource):
         Class method to initialize a sun from an HDF5 file.
     get_distortions()
         Returns distortions used to rotate rays.
+    forward()
+        Specify the forward pass.
 
     See Also
     --------
@@ -62,7 +64,7 @@ class Sun(LightSource):
 
         Raises
         ------
-        ValueError | NotImplementedError
+        ValueError
             If the specified distribution type is unknown.
         """
         super().__init__(number_of_rays=number_of_rays)
@@ -70,13 +72,13 @@ class Sun(LightSource):
 
         self.distribution_parameters = distribution_parameters
         self.number_of_rays = number_of_rays
-
-        assert (
+        if (
             self.distribution_parameters[
                 config_dictionary.light_source_distribution_type
             ]
-            == config_dictionary.light_source_distribution_is_normal
-        ), "Unknown sunlight distribution type."
+            != config_dictionary.light_source_distribution_is_normal
+        ):
+            raise ValueError("Unknown sunlight distribution type.")
 
         if (
             self.distribution_parameters[
@@ -217,26 +219,24 @@ class Sun(LightSource):
         -------
         tuple[torch.Tensor, torch.Tensor]
             The distortion in north and up direction.
+        """
+        torch.manual_seed(random_seed)
+        distortions_u, distortions_e = self.distribution.sample(
+            (
+                int(number_of_heliostats * self.number_of_rays),
+                number_of_facets,
+                number_of_points,
+            ),
+        ).permute(3, 0, 1, 2)
+        return distortions_u, distortions_e
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
 
         Raises
         ------
-        ValueError
-            If the distribution type is not valid, currently only the normal distribution is implemented.
+        NotImplementedError
+            Whenever called.
         """
-        torch.manual_seed(random_seed)
-        if (
-            self.distribution_parameters[
-                config_dictionary.light_source_distribution_type
-            ]
-            == config_dictionary.light_source_distribution_is_normal
-        ):
-            distortions_u, distortions_e = self.distribution.sample(
-                (
-                    int(number_of_heliostats * self.number_of_rays),
-                    number_of_facets,
-                    number_of_points,
-                ),
-            ).permute(3, 0, 1, 2)
-            return distortions_u, distortions_e
-        else:
-            raise ValueError("Unknown light distribution type.")
+        raise NotImplementedError("Not Implemented!")
