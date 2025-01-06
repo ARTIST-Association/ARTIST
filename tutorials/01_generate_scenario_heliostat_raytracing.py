@@ -3,7 +3,7 @@ import pathlib
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary
+from artist.util import config_dictionary, set_logger_config
 from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorPrototypeConfig,
@@ -21,17 +21,23 @@ from artist.util.configuration_classes import (
 from artist.util.scenario_generator import ScenarioGenerator
 from artist.util.surface_converter import SurfaceConverter
 
+# Set up logger.
+set_logger_config()
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = pathlib.Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
+scenario_path = pathlib.Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
-if not pathlib.Path(file_path).parent.is_dir():
+if not pathlib.Path(scenario_path).parent.is_dir():
     raise FileNotFoundError(
-        f"The folder ``{pathlib.Path(file_path).parent}`` selected to save the scenario does not exist. "
+        f"The folder ``{pathlib.Path(scenario_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
+
+# The path to the stral file containing heliostat and deflectometry data.
+stral_file_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_stral_data.binp"
 
 # Include the power plant configuration.
 power_plant_config = PowerPlantConfig(
@@ -78,7 +84,7 @@ surface_converter = SurfaceConverter(
     max_epoch=400,
 )
 facet_prototype_list = surface_converter.generate_surface_config_from_stral(
-    stral_file_path=file_path, device=device
+    stral_file_path=stral_file_path, device=device
 )
 
 # Generate the surface prototype configuration.
@@ -88,7 +94,7 @@ surface_prototype_config = SurfacePrototypeConfig(facets_list=facet_prototype_li
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
     type=config_dictionary.rigid_body_key,
-    initial_orientation=torch.Tensor([0.0, 0.0, 1.0, 0.0], device=device),
+    initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
 )
 
 # Include an ideal actuator.
@@ -142,7 +148,7 @@ if __name__ == "__main__":
 
     # Create a scenario object.
     scenario_generator = ScenarioGenerator(
-        file_path=file_path,
+        file_path=scenario_path,
         power_plant_config=power_plant_config,
         receiver_list_config=receiver_list_config,
         light_source_list_config=light_source_list_config,
