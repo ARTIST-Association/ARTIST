@@ -25,8 +25,6 @@ def set_logger_config(
         The file to save the log to.
     log_to_stdout : bool
         A flag indicating if the log should be printed on stdout. Default is True.
-    log_rank : bool
-        A flag for prepending the MPI rank to the logging message. Default is False.
     colors : bool
         A flag for using colored logs. Default is True.
     """
