@@ -24,7 +24,7 @@ from artist.util.surface_converter import SurfaceConverter
 # Set up logger.
 set_logger_config()
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
 scenario_path = (

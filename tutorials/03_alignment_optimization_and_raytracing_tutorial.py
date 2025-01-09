@@ -16,7 +16,7 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_distributed_environment(device=device)
