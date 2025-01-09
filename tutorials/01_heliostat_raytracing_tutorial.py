@@ -32,7 +32,7 @@ with h5py.File(scenario_name, "r") as f:
 print(example_scenario)
 print(f"The light source is a {example_scenario.light_sources.light_source_list[0]}")
 print(
-    f"The receiver type is {example_scenario.receivers.receiver_list[0].receiver_type}"
+    f"There are {len(example_scenario.target_areas.target_area_list)} target areas on the tower."
 )
 single_heliostat = example_scenario.heliostats.heliostat_list[0]
 print(f"The heliostat position is: {single_heliostat.position}")
