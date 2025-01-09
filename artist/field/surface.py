@@ -49,7 +49,7 @@ class Surface(torch.nn.Module):
                 canting_e=facet_config.canting_e,
                 canting_n=facet_config.canting_n,
             )
-            for facet_config in surface_config.facets_list
+            for facet_config in surface_config.facet_list
         ]
 
     def get_surface_points_and_normals(
