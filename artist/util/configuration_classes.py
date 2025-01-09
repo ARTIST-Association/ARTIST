@@ -49,157 +49,143 @@ class PowerPlantConfig:
         return power_plant_dict
 
 
-class ReceiverConfig:
+class TargetAreaConfig:
     """
-    Store the receiver configuration parameters.
+    Store the tower target area configuration parameters.
 
     Attributes
     ----------
-    receiver_key : str
-        The ID string used to identify the receiver in the HDF5 file.
-    receiver_type : str
-        The type of receiver, e.g., planar.
-    position_center : torch.Tensor
-        The position of the receiver's center.
+    target_area_key : str
+        The ID string used to identify the target area in the HDF5 file.
+    geometry : str
+        The type of target area, e.g., planar.
+    center : torch.Tensor
+        The position of the target area's center.
     normal_vector : torch.Tensor
-        The normal vector to the receiver plane.
+        The normal vector to the target plane.
     plane_e : float
-        The size of the receiver in the east direction.
+        The size of the target area in the east direction.
     plane_u : float
-        The size of the receiver in the up direction.
-    resolution_e : int
-        The resolution of the receiver in the east direction.
-    resolution_u : int
-        The resolution of the receiver in the up direction.
-    curvature_e: Optional[float]
-        The curvature of the receiver in the east direction.
-    curvature_u: Optional[float]
-        The curvature of the receiver in the up direction.
+        The size of the target area in the up direction.
+    curvature_e : float
+        The curvature of the target area in the east direction.
+    curvature_u : float
+        The curvature of the target area in the up direction.
 
     Methods
     -------
     create_receiver_dict()
-       Create a dictionary containing the configuration parameters for the receiver.
+       Create a dictionary containing the configuration parameters for the target area.
     """
 
     def __init__(
         self,
-        receiver_key: str,
-        receiver_type: str,
-        position_center: torch.Tensor,
+        target_area_key: str,
+        geometry: str,
+        center: torch.Tensor,
         normal_vector: torch.Tensor,
         plane_e: float,
         plane_u: float,
-        resolution_e: int,
-        resolution_u: int,
         curvature_e: Optional[float] = None,
         curvature_u: Optional[float] = None,
     ) -> None:
         """
-        Initialize the receiver configuration.
+        Initialize the target area configuration.
 
         Parameters
         ----------
-        receiver_key : str
-            The key used to identify the receiver in the HDF5 file.
-        receiver_type : str
-            The type of receiver, e.g. planar.
-        position_center : torch.Tensor
-            The position of the center of the receiver.
+        target_area_key : str
+            The ID string used to identify the target area in the HDF5 file.
+        geometry : str
+            The type of target area, e.g., planar.
+        center : torch.Tensor
+            The position of the target area's center.
         normal_vector : torch.Tensor
-            The normal vector to the receiver plane.
+            The normal vector to the target plane.
         plane_e : float
-            The size of the receiver in the east direction.
+            The size of the target area in the east direction.
         plane_u : float
-            The size of the receiver in the up direction.
-        resolution_e : int
-            The resolution of the receiver in the east direction.
-        resolution_u : int
-            The resolution of the receiver in the up direction.
+            The size of the target area in the up direction.
         curvature_e: float, optional
-            The curvature of the receiver in the east direction.
+            The curvature of the target area in the east direction.
         curvature_u: float, optional
-            The curvature of the receiver in the up direction.
+            The curvature of the target area in the up direction.
         """
-        self.receiver_key = receiver_key
-        self.receiver_type = receiver_type
-        self.position_center = position_center
+        self.target_area_key = target_area_key
+        self.geometry = geometry
+        self.center = center
         self.normal_vector = normal_vector
         self.plane_e = plane_e
         self.plane_u = plane_u
-        self.resolution_e = resolution_e
-        self.resolution_u = resolution_u
         self.curvature_e = curvature_e
         self.curvature_u = curvature_u
 
-    def create_receiver_dict(self) -> dict[str, Any]:
+    def create_target_area_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the receiver.
+        Create a dictionary containing the configuration parameters for the target area.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the receiver.
+            A dictionary containing the configuration parameters for the target area.
         """
-        receiver_dict = {
-            config_dictionary.receiver_type: self.receiver_type,
-            config_dictionary.receiver_position_center: self.position_center,
-            config_dictionary.receiver_normal_vector: self.normal_vector,
-            config_dictionary.receiver_plane_e: self.plane_e,
-            config_dictionary.receiver_plane_u: self.plane_u,
-            config_dictionary.receiver_resolution_e: self.resolution_e,
-            config_dictionary.receiver_resolution_u: self.resolution_u,
+        target_area_dict = {
+            config_dictionary.target_area_geometry: self.geometry,
+            config_dictionary.target_area_position_center: self.center,
+            config_dictionary.target_area_normal_vector: self.normal_vector,
+            config_dictionary.target_area_plane_e: self.plane_e,
+            config_dictionary.target_area_plane_u: self.plane_u,
         }
         if self.curvature_e is not None:
-            receiver_dict.update(
-                {config_dictionary.receiver_curvature_e: self.curvature_e}
+            target_area_dict.update(
+                {config_dictionary.target_area_curvature_e: self.curvature_e}
             )
         if self.curvature_u is not None:
-            receiver_dict.update(
-                {config_dictionary.receiver_curvature_u: self.curvature_u}
+            target_area_dict.update(
+                {config_dictionary.target_area_curvature_u: self.curvature_u}
             )
 
-        return receiver_dict
+        return target_area_dict
 
 
-class ReceiverListConfig:
+class TargetAreaListConfig:
     """
-    Store the receiver list configuration parameters.
+    Store the target area list configuration parameters.
 
     Attributes
     ----------
-    receiver_list : list[ReceiverConfig]
-        A list of receiver configurations to be included in the scenario.
+    target_area_list : list[TargetAreaConfig]
+        A list of target area configurations to be included in the scenario.
 
     Methods
     -------
-    create_receiver_list_dict()
-       Create a dictionary containing the configuration parameters for the list of receivers.
+    create_target_area_list_dict()
+       Create a dictionary containing the configuration parameters for the list of target areas.
     """
 
-    def __init__(self, receiver_list: list[ReceiverConfig]) -> None:
+    def __init__(self, target_area_list: list[TargetAreaConfig]) -> None:
         """
-        Initialize the receiver list configuration.
+        Initialize the target area list configuration.
 
         Parameters
         ----------
-        receiver_list : list[ReceiverConfig]
-            The list of receiver configurations included in the scenario.
+        target_area_list : list[TargetAreaConfig]
+            The list of target area configurations included in the scenario.
         """
-        self.receiver_list = receiver_list
+        self.target_area_list = target_area_list
 
-    def create_receiver_list_dict(self) -> dict[str, Any]:
+    def create_target_area_list_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the list of receivers.
+        Create a dictionary containing the configuration parameters for the list of target areas.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the list of receivers.
+            A dictionary containing the configuration parameters for the list of target areas.
         """
         return {
-            receiver.receiver_key: receiver.create_receiver_dict()
-            for receiver in self.receiver_list
+            target_area.target_area_key: target_area.create_target_area_dict()
+            for target_area in self.target_area_list
         }
 
 
@@ -455,7 +441,7 @@ class SurfaceConfig:
 
     Attributes
     ----------
-    facets_list : list[FacetsConfiguration]
+    facet_list : list[FacetsConfiguration]
         The list of facets to be used for the surface of the heliostat.
 
     Methods
@@ -464,16 +450,16 @@ class SurfaceConfig:
        Create a dictionary containing the configuration parameters for the surface.
     """
 
-    def __init__(self, facets_list: list[FacetConfig]) -> None:
+    def __init__(self, facet_list: list[FacetConfig]) -> None:
         """
         Initialize the surface configuration.
 
         Parameters
         ----------
-        facets_list : list[FacetsConfig]
+        facet_list : list[FacetsConfig]
             The list of facets to be used for the surface of the heliostat.
         """
-        self.facets_list = facets_list
+        self.facet_list = facet_list
 
     def create_surface_dict(self) -> dict[str, Any]:
         """
@@ -484,10 +470,10 @@ class SurfaceConfig:
         dict[str, Any]
             A dictionary containing the configuration parameters for the surface.
         """
-        facets_dict = {
-            facet.facet_key: facet.create_facet_dict() for facet in self.facets_list
+        facet_dict = {
+            facet.facet_key: facet.create_facet_dict() for facet in self.facet_list
         }
-        return {config_dictionary.facets_key: facets_dict}
+        return {config_dictionary.facets_key: facet_dict}
 
 
 class SurfacePrototypeConfig(SurfaceConfig):
@@ -499,16 +485,16 @@ class SurfacePrototypeConfig(SurfaceConfig):
     :class:`SurfaceConfig` : Reference to the parent class.
     """
 
-    def __init__(self, facets_list: list[FacetConfig]) -> None:
+    def __init__(self, facet_list: list[FacetConfig]) -> None:
         """
         Initialize the surface prototype configuration.
 
         Parameters
         ----------
-        facets_list : list[FacetsConfig]
+        facet_list : list[FacetsConfig]
             The list of facets to be used for the surface of the heliostat prototype.
         """
-        super().__init__(facets_list=facets_list)
+        super().__init__(facet_list=facet_list)
 
 
 class KinematicDeviations:
@@ -1114,8 +1100,8 @@ class PrototypeConfig:
         The prototype for the surface.
     kinematic_prototype : KinematicPrototypeConfig
         The prototype for the kinematic.
-    actuator_prototype : ActuatorPrototypeConfig
-        The prototype for the actuator.
+    actuators_prototype : ActuatorPrototypeConfig
+        The prototype for the actuators.
 
     Methods
     -------
@@ -1127,7 +1113,7 @@ class PrototypeConfig:
         self,
         surface_prototype: SurfacePrototypeConfig,
         kinematic_prototype: KinematicPrototypeConfig,
-        actuator_prototype: ActuatorPrototypeConfig,
+        actuators_prototype: ActuatorPrototypeConfig,
     ) -> None:
         """
         Initialize the prototype configuration.
@@ -1138,12 +1124,12 @@ class PrototypeConfig:
             The prototype for the surface.
         kinematic_prototype : KinematicPrototypeConfig
             The prototype for the kinematic.
-        actuator_prototype : ActuatorPrototypeConfig
-            The prototype for the actuator.
+        actuators_prototype : ActuatorPrototypeConfig
+            The prototype for the actuators.
         """
         self.surface_prototype = surface_prototype
         self.kinematic_prototype = kinematic_prototype
-        self.actuator_prototype = actuator_prototype
+        self.actuators_prototype = actuators_prototype
 
     def create_prototype_dict(self) -> dict[str, Any]:
         """
@@ -1157,7 +1143,7 @@ class PrototypeConfig:
         return {
             config_dictionary.surface_prototype_key: self.surface_prototype.create_surface_dict(),
             config_dictionary.kinematic_prototype_key: self.kinematic_prototype.create_kinematic_dict(),
-            config_dictionary.actuator_prototype_key: self.actuator_prototype.create_actuator_list_dict(),
+            config_dictionary.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
         }
 
 
@@ -1167,20 +1153,20 @@ class HeliostatConfig:
 
     Attributes
     ----------
-    heliostat_key : str
-        The key used to identify the heliostat in the HDF5 file.
-    heliostat_id : int
+    name : str
+        The name used to identify the heliostat in the HDF5 file.
+    id : int
         The numerical ID of the heliostat.
-    heliostat_position : torch.Tensor
+    position : torch.Tensor
         The position of the heliostat.
-    heliostat_aim_point : torch.Tensor
+    aim_point : torch.Tensor
         The position of the heliostat aim point.
-    heliostat_surface : SurfaceConfig, optional
+    surface : SurfaceConfig, optional
         An optional individual surface config for the heliostat.
-    heliostat_kinematic : KinematicConfig, optional
+    kinematic : KinematicConfig, optional
         An optional kinematic config for the heliostat.
-    heliostat_actuator : ActuatorListConfig, optional
-        An optional actuator config for the heliostat.
+    actuators : ActuatorListConfig, optional
+        An optional actuator list config for the heliostat.
 
     Methods
     -------
@@ -1190,41 +1176,41 @@ class HeliostatConfig:
 
     def __init__(
         self,
-        heliostat_key: str,
-        heliostat_id: int,
-        heliostat_position: torch.Tensor,
-        heliostat_aim_point: torch.Tensor,
-        heliostat_surface: Optional[SurfaceConfig] = None,
-        heliostat_kinematic: Optional[KinematicConfig] = None,
-        heliostat_actuator: Optional[ActuatorListConfig] = None,
+        name: str,
+        id: int,
+        position: torch.Tensor,
+        aim_point: torch.Tensor,
+        surface: Optional[SurfaceConfig] = None,
+        kinematic: Optional[KinematicConfig] = None,
+        actuators: Optional[ActuatorListConfig] = None,
     ) -> None:
         """
         Initialize the single heliostat configuration.
 
         Parameters
         ----------
-        heliostat_key : str
-            The key used to identify the heliostat in the HDF5 file.
-        heliostat_id : int
+        name : str
+            The name used to identify the heliostat in the HDF5 file.
+        id : int
             The numerical ID of the heliostat.
-        heliostat_position : torch.Tensor
+        position : torch.Tensor
             The position of the heliostat.
-        heliostat_aim_point : torch.Tensor
+        aim_point : torch.Tensor
             The position of the heliostat aim point.
-        heliostat_surface : SurfaceConfig, optional
+        surface : SurfaceConfig, optional
             An optional individual surface config for the heliostat.
-        heliostat_kinematic : KinematicConfig, optional
+        kinematic : KinematicConfig, optional
             An optional kinematic config for the heliostat.
-        heliostat_actuator : ActuatorListConfig, optional
-            An optional actuator config for the heliostat.
+        actuators : ActuatorListConfig, optional
+            An optional actuator list config for the heliostat.
         """
-        self.heliostat_key = heliostat_key
-        self.heliostat_id = heliostat_id
-        self.heliostat_position = heliostat_position
-        self.heliostat_aim_point = heliostat_aim_point
-        self.heliostat_surface = heliostat_surface
-        self.heliostat_kinematic = heliostat_kinematic
-        self.heliostat_actuator = heliostat_actuator
+        self.name = name
+        self.id = id
+        self.position = position
+        self.aim_point = aim_point
+        self.surface = surface
+        self.kinematic = kinematic
+        self.actuators = actuators
 
     def create_heliostat_config_dict(self) -> dict[str, Any]:
         """
@@ -1236,26 +1222,26 @@ class HeliostatConfig:
             A dictionary containing the heliostat configuration parameters.
         """
         heliostat_dict = {
-            config_dictionary.heliostat_id: self.heliostat_id,
-            config_dictionary.heliostat_position: self.heliostat_position,
-            config_dictionary.heliostat_aim_point: self.heliostat_aim_point,
+            config_dictionary.heliostat_id: self.id,
+            config_dictionary.heliostat_position: self.position,
+            config_dictionary.heliostat_aim_point: self.aim_point,
         }
-        if self.heliostat_surface is not None:
+        if self.surface is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_surface_key: self.heliostat_surface.create_surface_dict()
+                    config_dictionary.heliostat_surface_key: self.surface.create_surface_dict()
                 }
             )
-        if self.heliostat_kinematic is not None:
+        if self.kinematic is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_kinematic_key: self.heliostat_kinematic.create_kinematic_dict()
+                    config_dictionary.heliostat_kinematic_key: self.kinematic.create_kinematic_dict()
                 }
             )
-        if self.heliostat_actuator is not None:
+        if self.actuators is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_actuator_key: self.heliostat_actuator.create_actuator_list_dict()
+                    config_dictionary.heliostat_actuator_key: self.actuators.create_actuator_list_dict()
                 }
             )
 
@@ -1301,6 +1287,6 @@ class HeliostatListConfig:
             A dictionary containing the heliostat list configuration parameters.
         """
         return {
-            heliostat.heliostat_key: heliostat.create_heliostat_config_dict()
+            heliostat.name: heliostat.create_heliostat_config_dict()
             for heliostat in self.heliostat_list
         }
