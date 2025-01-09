@@ -6,58 +6,25 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.util import paint_loader
-from artist.util.configuration_classes import ActuatorListConfig, KinematicConfig
-
-
-@pytest.mark.parametrize(
-    "file_path, expected",
-    [
-        (
-            pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json",
-            "multi_focus_tower",
-        )
-    ],
+from artist.util.configuration_classes import (
+    HeliostatListConfig,
+    PowerPlantConfig,
+    TargetAreaListConfig,
 )
-def test_extract_paint_calibration_target_name(
-    file_path: pathlib.Path,
-    expected: str,
-) -> None:
-    """
-    Test the function to load the calibration target name from ``PAINT`` calibration data.
-
-    Parameters
-    ----------
-    file_path : pathlib.Path
-        The path to the calibration file.
-    expected : str
-        The expected extracted data.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    calibration_target_name = paint_loader.extract_paint_calibration_target_name(
-        calibration_properties_path=file_path
-    )
-
-    assert calibration_target_name == expected
 
 
 @pytest.mark.parametrize(
     "file_path, power_plant_position, expected_list",
     [
         (
-            pathlib.Path(ARTIST_ROOT) / "tests/data/calibration_properties.json",
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/paint_multiple_heliostats/AA39/calibration-properties.json",
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
-                torch.tensor(
-                    [-18.332265853882, -2.928076744080, 52.565364837646, 1.000000000000]
-                ),
-                torch.tensor(
-                    [-0.596934497356, -0.437113255262, 0.672756373882, 0.000000000000]
-                ),
-                torch.tensor([24282, 43957]),
+                "multi_focus_tower",
+                torch.tensor([-17.403167724609, -2.928076744080, 50.741085052490, 1.0]),
+                torch.tensor([-0.721040308475, -0.524403691292, 0.452881515026, 0.0]),
+                torch.tensor([26370, 68271]),
             ],
         )
     ],
@@ -96,34 +63,26 @@ def test_extract_paint_calibration_data(
     )
 
     for actual, expected in zip(extracted_list, expected_list):
-        torch.testing.assert_close(actual, expected.to(device), atol=5e-4, rtol=5e-4)
+        if isinstance(actual, torch.Tensor) and isinstance(expected, torch.Tensor):
+            torch.testing.assert_close(
+                actual, expected.to(device), atol=5e-4, rtol=5e-4
+            )
+        else:
+            assert actual == expected
 
 
 @pytest.mark.parametrize(
-    "file_path, target_name, expected_list",
+    "file_path, expected_list",
     [
         (
-            pathlib.Path(ARTIST_ROOT) / "tests/data/tower.json",
-            "multi_focus_tower",
-            [
-                torch.tensor(
-                    [50.913421122593, 6.387824755875, 87.000000000000],
-                    dtype=torch.float64,
-                ),
-                "planar",
-                torch.tensor(
-                    [-17.604515075684, -2.744643926620, 51.979751586914, 1.000000000000]
-                ),
-                torch.tensor([0, 1, 0, 0]),
-                torch.tensor(5.411863327026),
-                torch.tensor(6.387498855591),
-            ],
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/paint_multiple_heliostats/tower-measurements.json",
+            [PowerPlantConfig, TargetAreaListConfig],
         )
     ],
 )
 def test_extract_paint_tower_measurements(
     file_path: pathlib.Path,
-    target_name: str,
     expected_list: list[Any],
     device: torch.device,
 ) -> None:
@@ -134,8 +93,6 @@ def test_extract_paint_tower_measurements(
     ----------
     file_path : pathlib.Path
         The path to the tower file.
-    target_name : str
-        The name of the target on the tower.
     expected_list : list[Any]
         The expected extracted data.
     device : torch.device
@@ -148,39 +105,42 @@ def test_extract_paint_tower_measurements(
     """
     extracted_list = list(
         paint_loader.extract_paint_tower_measurements(
-            tower_measurements_path=file_path, target_name=target_name, device=device
+            tower_measurements_path=file_path, device=device
         )
     )
 
     for actual, expected in zip(extracted_list, expected_list):
-        if isinstance(actual, torch.Tensor) and isinstance(expected, torch.Tensor):
-            torch.testing.assert_close(
-                actual, expected.to(device), atol=5e-4, rtol=5e-4
-            )
-        else:
-            assert actual == expected
+        assert isinstance(actual, expected)
 
 
 @pytest.mark.parametrize(
-    "file_path, power_plant_position, expected_list",
+    "heliostat_and_deflectometry_paths, power_plant_position, aim_point, max_epochs_for_surface_training, expected",
     [
         (
-            pathlib.Path(ARTIST_ROOT) / "tests/data/heliostat_properties.json",
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
-                torch.tensor(
-                    [11.738112449646, 24.784408569336, 1.794999957085, 1.000000000000]
-                ),
-                KinematicConfig,
-                ActuatorListConfig,
+                (
+                    "heliostat_1",
+                    pathlib.Path(ARTIST_ROOT)
+                    / "tests/data/paint_multiple_heliostats/AA39/heliostat-properties.json",
+                    pathlib.Path(ARTIST_ROOT)
+                    / "tests/data/paint_multiple_heliostats/AA39/deflectometry.h5",
+                )
             ],
+            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            torch.tensor(
+                [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
+            ),
+            2,
+            HeliostatListConfig,
         )
     ],
 )
-def test_extract_paint_heliostat_properties(
-    file_path: pathlib.Path,
+def test_extract_paint_heliostats(
+    heliostat_and_deflectometry_paths: list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
-    expected_list: list[Any],
+    aim_point: torch.Tensor,
+    max_epochs_for_surface_training: int,
+    expected: Any,
     device: torch.device,
 ) -> None:
     """
@@ -188,12 +148,14 @@ def test_extract_paint_heliostat_properties(
 
     Parameters
     ----------
-    file_path : pathlib.Path
-        The path to the heliostat file.
+    heliostat_and_deflectometry_paths : tuple[str, pathlib.Path, pathlib.Path]
+        Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
-        The power plant position.
-    expected_list : list[Any]
-        The expected extracted data.
+        The position of the power plant in latitude, longitude and elevation.
+    aim_point : torch.Tensor
+        The default aim point for the heliostats (Should ideally be on a receiver).
+    max_epochs_for_surface_training : int
+        The maximum amount of epochs for fitting the NURBS.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -202,18 +164,12 @@ def test_extract_paint_heliostat_properties(
     AssertionError
         If test does not complete as expected.
     """
-    extracted_list = list(
-        paint_loader.extract_paint_heliostat_properties(
-            heliostat_properties_path=file_path,
-            power_plant_position=power_plant_position.to(device),
-            device=device,
-        )
+    extracted = paint_loader.extract_paint_heliostats(
+        heliostat_and_deflectometry_paths=heliostat_and_deflectometry_paths,
+        power_plant_position=power_plant_position.to(device),
+        aim_point=aim_point.to(device),
+        max_epochs_for_surface_training=max_epochs_for_surface_training,
+        device=device,
     )
 
-    for actual, expected in zip(extracted_list, expected_list):
-        if isinstance(actual, torch.Tensor) and isinstance(expected, torch.Tensor):
-            torch.testing.assert_close(
-                actual, expected.to(device), atol=5e-4, rtol=5e-4
-            )
-        else:
-            assert isinstance(actual, expected)
+    assert isinstance(extracted, expected)
