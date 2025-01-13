@@ -27,9 +27,7 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-scenario_path = (
-    pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_scenario_heliostat_raytracing"
-)
+scenario_path = pathlib.Path(ARTIST_ROOT) / "please/insert/your/path/here/name"
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
 if not pathlib.Path(scenario_path).parent.is_dir():
