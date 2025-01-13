@@ -444,6 +444,7 @@ def extract_paint_heliostats(
         actuator_prototype_config = ActuatorPrototypeConfig(
             actuator_list=prototype_actuator_list
         )
+
     prototype_config = PrototypeConfig(
         surface_prototype=surface_prototype_config,
         kinematic_prototype=kinematic_prototype_config,
