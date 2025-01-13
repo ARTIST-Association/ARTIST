@@ -339,7 +339,7 @@ class AlignmentOptimizer:
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
-            if self.rank == 0:
+            if self.is_distributed and self.rank == 0:
                 final_bitmap = torch.distributed.all_reduce(
                     final_bitmap, op=torch.distributed.ReduceOp.SUM
                 )
