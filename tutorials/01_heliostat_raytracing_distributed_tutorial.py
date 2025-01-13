@@ -32,7 +32,10 @@ scenario_path = (
     pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
 )
 if use_pre_generated_scenario:
-    scenario_path = pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_scenario_paint_single_heliostat.h5"
+    scenario_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tutorials/data/test_scenario_paint_single_heliostat.h5"
+    )
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:

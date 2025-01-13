@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 # we might have to create different classes for calibration targets and receivers,
 # as parameters like the normal_vector or plane_e only make sense for planar areas not convex_cylinders.
 
+
 class TargetArea(torch.nn.Module):
     """
     Implement a target area.
@@ -58,13 +59,13 @@ class TargetArea(torch.nn.Module):
     ) -> None:
         """
         Initialize the tower target area.
-        
+
         Target areas are positioned on the solar tower and are either calibration targets or receivers.
-        The calibration target areas are used in the alignment optimization to find optimal kinematic parameters. 
-        The receiver areas are used for the actual power plant operation. During the usual operation, the heliostats 
-        are aimed at a receiver area. This heats up the receiver. Behind the receiver, the clean energy extraction 
-        processes begin. Parameters of a target area include the center coordinate, the normal vector as well 
-        as the plane width and height. Optionally, the target area can be provided with curvature parameters, 
+        The calibration target areas are used in the alignment optimization to find optimal kinematic parameters.
+        The receiver areas are used for the actual power plant operation. During the usual operation, the heliostats
+        are aimed at a receiver area. This heats up the receiver. Behind the receiver, the clean energy extraction
+        processes begin. Parameters of a target area include the center coordinate, the normal vector as well
+        as the plane width and height. Optionally, the target area can be provided with curvature parameters,
         indicating the curvature of the target area.
 
         Parameters
@@ -123,7 +124,9 @@ class TargetArea(torch.nn.Module):
         if target_area_name:
             log.info(f"Loading {target_area_name} from an HDF5 file.")
         device = torch.device(device)
-        geometry = config_file[config_dictionary.target_area_geometry][()].decode("utf-8")
+        geometry = config_file[config_dictionary.target_area_geometry][()].decode(
+            "utf-8"
+        )
         center = torch.tensor(
             config_file[config_dictionary.target_area_position_center][()],
             dtype=torch.float,
@@ -141,11 +144,15 @@ class TargetArea(torch.nn.Module):
         curvature_u = None
 
         if config_dictionary.target_area_curvature_e in config_file.keys():
-            curvature_e = float(config_file[config_dictionary.target_area_curvature_e][()])
+            curvature_e = float(
+                config_file[config_dictionary.target_area_curvature_e][()]
+            )
         else:
             log.warning("No curvature in the east direction set for the receiver!")
         if config_dictionary.target_area_curvature_u in config_file.keys():
-            curvature_u = float(config_file[config_dictionary.target_area_curvature_u][()])
+            curvature_u = float(
+                config_file[config_dictionary.target_area_curvature_u][()]
+            )
         else:
             log.warning("No curvature in the up direction set for the receiver!")
 

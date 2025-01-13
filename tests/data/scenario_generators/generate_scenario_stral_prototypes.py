@@ -30,7 +30,9 @@ torch.cuda.manual_seed(7)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
-file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_scenario_stral_prototypes"
+file_path = (
+    pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_scenario_stral_prototypes"
+)
 
 if not pathlib.Path(file_path).parent.is_dir():
     raise FileNotFoundError(
@@ -46,12 +48,14 @@ power_plant_config = PowerPlantConfig(
 )
 
 # Include a single tower area (receiver)
-receiver_config = TargetAreaConfig(target_area_key="receiver",
-                                    geometry=config_dictionary.target_area_type_planar,
-                                    center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
-                                    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-                                    plane_e=8.629666667,
-                                    plane_u=7.0,)
+receiver_config = TargetAreaConfig(
+    target_area_key="receiver",
+    geometry=config_dictionary.target_area_type_planar,
+    center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
+    plane_e=8.629666667,
+    plane_u=7.0,
+)
 
 target_area_config_list = [receiver_config]
 
@@ -149,4 +153,4 @@ if __name__ == "__main__":
         prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,
     )
-    scenario_generator.generate_scenario() 
+    scenario_generator.generate_scenario()
