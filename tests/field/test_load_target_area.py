@@ -60,6 +60,16 @@ def test_target_area_from_hdf5(
         config_dictionary.target_area_curvature_u: mock_curvature_u,
     }[key]
 
+    mock_h5_file.keys.return_value = [
+        config_dictionary.target_area_geometry,
+        config_dictionary.target_area_position_center,
+        config_dictionary.target_area_normal_vector,
+        config_dictionary.target_area_plane_e,
+        config_dictionary.target_area_plane_u,
+        config_dictionary.target_area_curvature_e,
+        config_dictionary.target_area_curvature_u,
+    ]
+
     # Perform the test
     target_area = TargetArea.from_hdf5(
         config_file=mock_h5_file,
