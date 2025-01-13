@@ -9,12 +9,16 @@ from artist.util.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorParameters,
+    ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
     KinematicConfig,
     KinematicDeviations,
+    KinematicPrototypeConfig,
     PowerPlantConfig,
+    PrototypeConfig,
     SurfaceConfig,
+    SurfacePrototypeConfig,
     TargetAreaConfig,
     TargetAreaListConfig,
 )
@@ -234,7 +238,7 @@ def extract_paint_heliostats(
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
     device: Union[torch.device, str] = "cuda",
-) -> HeliostatListConfig:
+) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
 
@@ -255,7 +259,13 @@ def extract_paint_heliostats(
     -------
     HeliostatListConfig
         The configuration of all heliostats in the scenario.
+    PrototypeConfig
+        The configuration for a heliostat prototype.
     """
+    prototype_facet_list = None
+    prototype_kinematic = None
+    prototype_actuator_list = None
+
     heliostat_config_list = []
     for id, file_tuple in enumerate(heliostat_and_deflectometry_paths):
         with open(file_tuple[1], "r") as file:
@@ -286,6 +296,7 @@ def extract_paint_heliostats(
             )
 
             surface_config = SurfaceConfig(facet_list=facet_list)
+            prototype_facet_list = facet_list
 
             kinematic_deviations = KinematicDeviations(
                 first_joint_translation_e=torch.tensor(
@@ -368,6 +379,7 @@ def extract_paint_heliostats(
                 initial_orientation=initial_orientation,
                 deviations=kinematic_deviations,
             )
+            prototype_kinematic = kinematic_config
 
             paint_actuators = list(
                 heliostat_dict[config_dictionary.paint_kinematic][
@@ -406,7 +418,7 @@ def extract_paint_heliostats(
                     parameters=parameters,
                 )
                 actuator_list.append(actuator)
-
+            prototype_actuator_list = actuator_list
             actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
 
         heliostat_config = HeliostatConfig(
@@ -421,9 +433,24 @@ def extract_paint_heliostats(
 
         heliostat_config_list.append(heliostat_config)
 
-        # Create the configuration for all heliostats.
-        heliostats_list_config = HeliostatListConfig(
-            heliostat_list=heliostat_config_list
+        # Include the configuration for a prototype. (Will be extracted from the first heliostat in the list.)
+        surface_prototype_config = SurfacePrototypeConfig(
+            facet_list=prototype_facet_list
         )
+        kinematic_prototype_config = KinematicPrototypeConfig(
+            type=prototype_kinematic.type,
+            initial_orientation=prototype_kinematic.initial_orientation,
+        )
+        actuator_prototype_config = ActuatorPrototypeConfig(
+            actuator_list=prototype_actuator_list
+        )
+    prototype_config = PrototypeConfig(
+        surface_prototype=surface_prototype_config,
+        kinematic_prototype=kinematic_prototype_config,
+        actuators_prototype=actuator_prototype_config,
+    )
 
-    return heliostats_list_config
+    # Create the configuration for all heliostats.
+    heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_config_list)
+
+    return heliostats_list_config, prototype_config

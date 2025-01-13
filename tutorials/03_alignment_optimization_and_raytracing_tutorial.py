@@ -1,10 +1,10 @@
 import pathlib
 
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 import h5py
 import torch
 
 from artist import ARTIST_ROOT
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import paint_loader, set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
@@ -50,12 +50,15 @@ calibration_properties_path = (
 )
 
 # Load the calibration data.
-calibration_target_name, center_calibration_image, incident_ray_direction, motor_positions = (
-    paint_loader.extract_paint_calibration_data(
-        calibration_properties_path=calibration_properties_path,
-        power_plant_position=example_scenario.power_plant_position,
-        device=device,
-    )
+(
+    calibration_target_name,
+    center_calibration_image,
+    incident_ray_direction,
+    motor_positions,
+) = paint_loader.extract_paint_calibration_data(
+    calibration_properties_path=calibration_properties_path,
+    power_plant_position=example_scenario.power_plant_position,
+    device=device,
 )
 
 # Get optimizable parameters. This will select all 28 kinematic parameters.

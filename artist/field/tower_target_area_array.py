@@ -33,8 +33,8 @@ class TargetAreaArray(torch.nn.Module):
         """
         Initialize the target area array.
 
-        A target area array consists of one or more target areas that are positioned 
-        on the solar tower, in front of the heliostats. The target area array is provided 
+        A target area array consists of one or more target areas that are positioned
+        on the solar tower, in front of the heliostats. The target area array is provided
         with a list of target areas to initialize the target areas.
 
         Parameters
@@ -69,7 +69,9 @@ class TargetAreaArray(torch.nn.Module):
         device = torch.device(device)
         target_area_aray = [
             TargetArea.from_hdf5(
-                config_file=config_file[config_dictionary.receiver_key][target_area_name],
+                config_file=config_file[config_dictionary.receiver_key][
+                    target_area_name
+                ],
                 target_area_name=target_area_name,
                 device=device,
             )
