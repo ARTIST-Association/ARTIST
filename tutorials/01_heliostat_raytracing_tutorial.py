@@ -78,8 +78,10 @@ for i in range(len(single_heliostat.surface.facets)):
     u_aligned = (
         single_heliostat.current_aligned_surface_points[i, :, 2].cpu().detach().numpy()
     )
-    ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i+1}")
-    ax2.scatter(e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i+1}")
+    ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i + 1}")
+    ax2.scatter(
+        e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i + 1}"
+    )
 
 # Add labels.
 ax1.set_xlabel("E")
@@ -188,7 +190,7 @@ def plot_multiple_images(
         if names is not None and i < len(names):
             ax.set_title(names[i])
         else:
-            ax.set_title(f"Untitled Image {i+1}")
+            ax.set_title(f"Untitled Image {i + 1}")
 
     # Hide unused subplots.
     for j in range(i + 1, grid_size * grid_size):
