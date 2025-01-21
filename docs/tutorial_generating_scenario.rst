@@ -1,4 +1,4 @@
-.. _generating_scenario:
+.. _tutorial_generating_scenario:
 
 ``ARTIST`` Tutorial: Generating a Scenario HDF5 File
 ====================================================
@@ -38,7 +38,7 @@ In this tutorial, we will develop a very simple ``ARTIST`` scenario that contain
 Now we can get started defining each of these elements and then generating the scenario!
 
 Power Plant
---------
+-----------
 This is where the power plant location is saved in WGS84 latitude, longitude, altitude coordinates.
 We can define the location of the power plant with the ``PowerPlantConfig`` class as shown below:
 
@@ -53,7 +53,7 @@ This configuration defines the following properties:
 - The ``power_plant_position`` indicating the power plants location.
 
 Target Areas
---------
+------------
 The target areas are located on the solar tower, it is where the reflected light from the heliostats is concentrated.
 We can define a target area with the ``TargetAreaConfig`` class as shown below:
 

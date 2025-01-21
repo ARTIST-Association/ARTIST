@@ -1,4 +1,4 @@
-.. _heliostat_raytracing:
+.. _tutorial_heliostat_raytracing:
 
 ``ARTIST`` Tutorial: Heliostat Raytracing
 =========================================
