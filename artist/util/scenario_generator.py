@@ -222,7 +222,7 @@ class ScenarioGenerator:
             log.info("Including parameters for the target areas.")
             self.include_parameters(
                 file=f,
-                prefix=config_dictionary.receiver_key,
+                prefix=config_dictionary.target_area_key,
                 parameters=self.flatten_dict(
                     self.target_area_list_config.create_target_area_list_dict()
                 ),

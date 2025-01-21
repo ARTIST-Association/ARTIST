@@ -440,6 +440,7 @@ def extract_paint_heliostats(
         kinematic_prototype_config = KinematicPrototypeConfig(
             type=prototype_kinematic.type,
             initial_orientation=prototype_kinematic.initial_orientation,
+            deviations=prototype_kinematic.deviations,
         )
         actuator_prototype_config = ActuatorPrototypeConfig(
             actuator_list=prototype_actuator_list

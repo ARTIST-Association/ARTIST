@@ -68,13 +68,15 @@ class TargetAreaArray(torch.nn.Module):
         device = torch.device(device)
         target_area_aray = [
             TargetArea.from_hdf5(
-                config_file=config_file[config_dictionary.receiver_key][
+                config_file=config_file[config_dictionary.target_area_key][
                     target_area_name
                 ],
                 target_area_name=target_area_name,
                 device=device,
             )
-            for target_area_name in config_file[config_dictionary.receiver_key].keys()
+            for target_area_name in config_file[
+                config_dictionary.target_area_key
+            ].keys()
         ]
         return cls(target_area_list=target_area_aray)
 
