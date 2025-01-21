@@ -89,6 +89,14 @@ def test_alignment_optimizer_methods(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
+    # The distributed environment is setup and destroyed using a Generator object.
+    environment_generator = utils.setup_distributed_environment(device=device)
+
+    is_distributed, rank, world_size = next(environment_generator)
+
+    if device.type == "cuda":
+        torch.cuda.set_device(rank % torch.cuda.device_count())
+
     scenario_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/scenarios/{scenario_name}.h5"
     )
@@ -132,6 +140,10 @@ def test_alignment_optimizer_methods(
         scenario=scenario,
         optimizer=optimizer,
         scheduler=scheduler,
+        world_size=world_size,
+        rank=rank,
+        batch_size=1000,
+        is_distributed=is_distributed,
     )
 
     if optimizer_method == config_dictionary.optimizer_use_raytracing:
