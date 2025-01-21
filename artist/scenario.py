@@ -615,7 +615,7 @@ class Scenario:
         """Return a string representation of the scenario."""
         return (
             f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
-            f" with {len(self.target_areas.target_area_list)} Tower Areas,"
-            f" {len(self.light_sources.light_source_list)} Light Sources,"
-            f" and {len(self.heliostats.heliostat_list)} Heliostats."
+            f" with {len(self.target_areas.target_area_list)} Target Area(s),"
+            f" {len(self.light_sources.light_source_list)} Light Source(s),"
+            f" and {len(self.heliostats.heliostat_list)} Heliostat(s)."
         )
