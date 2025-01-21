@@ -19,7 +19,7 @@ from artist.util.configuration_classes import (
     [
         (
             pathlib.Path(ARTIST_ROOT)
-            / "tests/data/paint_multiple_heliostats/AA39/calibration-properties.json",
+            / "tests/data/paint/AA39/calibration-properties.json",
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
                 "multi_focus_tower",
@@ -76,8 +76,7 @@ def test_extract_paint_calibration_data(
     "file_path, expected_list",
     [
         (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/paint_multiple_heliostats/tower-measurements.json",
+            pathlib.Path(ARTIST_ROOT) / "tests/data/paint/tower-measurements.json",
             [PowerPlantConfig, TargetAreaListConfig],
         )
     ],
@@ -122,9 +121,9 @@ def test_extract_paint_tower_measurements(
                 (
                     "heliostat_1",
                     pathlib.Path(ARTIST_ROOT)
-                    / "tests/data/paint_multiple_heliostats/AA39/heliostat-properties.json",
+                    / "tests/data/paint/AA39/heliostat-properties.json",
                     pathlib.Path(ARTIST_ROOT)
-                    / "tests/data/paint_multiple_heliostats/AA39/deflectometry.h5",
+                    / "tests/data/paint/AA39/deflectometry.h5",
                 )
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),

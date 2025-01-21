@@ -113,8 +113,7 @@ def test_alignment_optimizer_methods(
 
     # Load the calibration data.
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / f"tests/data/paint_multiple_heliostats/AA39/{calibration_file}.json"
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/paint/AA39/{calibration_file}.json"
     )
 
     (
