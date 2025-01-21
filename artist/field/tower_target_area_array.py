@@ -42,8 +42,7 @@ class TargetAreaArray(torch.nn.Module):
         target_area_list : List[TargetArea]
             The list of target areas included in the scenario.
         """
-        # TODO
-        # super(TargetAreaArray, self).__init__()
+        super().__init__()
         self.target_area_list = target_area_list
 
     @classmethod
