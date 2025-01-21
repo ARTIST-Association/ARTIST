@@ -28,7 +28,7 @@ the path and name of the ``scenario_file`` variable:
 .. code-block::
 
     USE_DOWNLOADED_DATA = False   # Select true if you want to use downloaded data.
-    scenario_name = "please/insert/the/path/to/your/scenario/here/name.h5" # Adjust if you want to use your local scenario.
+    scenario_file = "please/insert/the/path/to/your/scenario/here/name.h5" # Adjust if you want to use your local scenario.
 
 Once you have adjusted these parameters, you can load a scenario in ``ARTIST`` by simply calling the
 ``load_scenario_from_hdf5()`` method, which is a ``Python`` ``classmethod`` that initializes a ``Scenario`` object based on
@@ -36,61 +36,59 @@ the configuration contained in the HDF5 file:
 
 .. code-block::
 
-    # Load the scenario.
-    with h5py.File(scenario_name, "r") as f:
-        example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f)
+        # Load the scenario.
+        with h5py.File(scenario_file, "r") as f:
+            example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
 
 When loading the scenario, a large number of log messages is generated:
 
 .. code-block::
 
-    [2024-05-23 15:09:33,129][artist.scenario][INFO] - Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version 1.0.
-    [2024-05-23 15:09:33,130][artist.field.receiver_field][INFO] - Loading a receiver field from an HDF5 file.
-    [2024-05-23 15:09:33,130][artist.field.receiver][INFO] - Loading receiver1 from an HDF5 file.
-    [2024-05-23 15:09:33,132][artist.field.receiver][WARNING] - No curvature in the east direction set for the receiver!
-    [2024-05-23 15:09:33,132][artist.field.receiver][WARNING] - No curvature in the up direction set for the receiver!
-    [2024-05-23 15:09:33,132][artist.scene.light_source_array][INFO] - Loading a light source array from an HDF5 file.
-    [2024-05-23 15:09:33,133][artist.scene.sun][INFO] - Loading sun1 from an HDF5 file.
-    [2024-05-23 15:09:33,134][artist.scene.sun][INFO] - Initializing a sun modeled with a multivariate normal distribution.
-    [2024-05-23 15:09:33,139][artist.scenario][WARNING] - No kinematic prototype initial_kinematic_orientation_offset_n set.Using default values!
-    [2024-05-23 15:09:33,140][artist.scenario][WARNING] - No kinematic prototype initial_kinematic_orientation_offset_u set.Using default values!
-    [2024-05-23 15:09:33,140][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_e set. Using default values!
-    [2024-05-23 15:09:33,140][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_n set. Using default values!
-    [2024-05-23 15:09:33,141][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_u set. Using default values!
-    [2024-05-23 15:09:33,141][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_e set. Using default values!
-    [2024-05-23 15:09:33,141][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_n set. Using default values!
-    [2024-05-23 15:09:33,141][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_u set. Using default values!
-    [2024-05-23 15:09:33,142][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_e set. Using default values!
-    [2024-05-23 15:09:33,142][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_n set. Using default values!
-    [2024-05-23 15:09:33,142][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_u set. Using default values!
-    [2024-05-23 15:09:33,142][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_e set. Using default values!
-    [2024-05-23 15:09:33,143][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_n set. Using default values!
-    [2024-05-23 15:09:33,143][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_u set. Using default values!
-    [2024-05-23 15:09:33,143][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_e set. Using default values!
-    [2024-05-23 15:09:33,143][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_u set. Using default values!
-    [2024-05-23 15:09:33,143][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_n set. Using default values!
-    [2024-05-23 15:09:33,144][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_e set. Using default values!
-    [2024-05-23 15:09:33,144][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_n set. Using default values!
-    [2024-05-23 15:09:33,144][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_u set. Using default values!
-    [2024-05-23 15:09:33,145][artist.scenario][WARNING] - No prototype actuator_increment set for actuator1. Using default values!
-    [2024-05-23 15:09:33,145][artist.scenario][WARNING] - No prototype initial_stroke_length set for actuator1. Using default values!
-    [2024-05-23 15:09:33,145][artist.scenario][WARNING] - No prototype offset set for actuator1. Using default values!
-    [2024-05-23 15:09:33,146][artist.scenario][WARNING] - No prototype radius set for actuator1. Using default values!
-    [2024-05-23 15:09:33,146][artist.scenario][WARNING] - No prototype phi_0 set for actuator1. Using default values!
-    [2024-05-23 15:09:33,147][artist.scenario][WARNING] - No prototype actuator_increment set for actuator2. Using default values!
-    [2024-05-23 15:09:33,147][artist.scenario][WARNING] - No prototype initial_stroke_length set for actuator2. Using default values!
-    [2024-05-23 15:09:33,147][artist.scenario][WARNING] - No prototype offset set for actuator2. Using default values!
-    [2024-05-23 15:09:33,147][artist.scenario][WARNING] - No prototype radius set for actuator2. Using default values!
-    [2024-05-23 15:09:33,148][artist.scenario][WARNING] - No prototype phi_0 set for actuator2. Using default values!
-    [2024-05-23 15:09:33,148][artist.field.heliostat_field][INFO] - Loading a heliostat field from an HDF5 file.
-    [2024-05-23 15:09:33,149][artist.field.heliostat][INFO] - Loading heliostat1 from an HDF5 file.
-    [2024-05-23 15:09:33,149][artist.field.heliostat][INFO] - Individual surface parameters not provided - loading a heliostat with the surface prototype.
-    [2024-05-23 15:09:33,150][artist.field.heliostat][INFO] - Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype.
-    [2024-05-23 15:09:33,150][artist.field.heliostat][INFO] - Individual actuator configurations not provided - loading a heliostat with the actuator prototype.
+    [2025-01-21 14:34:14,410][artist.scenario][INFO] - Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version 1.0.
+    [2025-01-21 14:34:14,431][artist.field.tower_target_area_array][INFO] - Loading the tower target area array from an HDF5 file.
+    [2025-01-21 14:34:14,431][artist.field.tower_target_area][INFO] - Loading receiver from an HDF5 file.
+    [2025-01-21 14:34:15,445][artist.field.tower_target_area][WARNING] - No curvature in the east direction set for the receiver!
+    [2025-01-21 14:34:15,445][artist.field.tower_target_area][WARNING] - No curvature in the up direction set for the receiver!
+    [2025-01-21 14:34:15,446][artist.scene.light_source_array][INFO] - Loading a light source array from an HDF5 file.
+    [2025-01-21 14:34:15,446][artist.scene.sun][INFO] - Loading sun_1 from an HDF5 file.
+    [2025-01-21 14:34:15,447][artist.scene.sun][INFO] - Initializing a sun modeled with a multivariate normal distribution.
+    [2025-01-21 14:34:17,525][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_e set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_n set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic first_joint_translation_u set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_e set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_n set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic first_joint_tilt_u set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_e set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_n set. Using default values!
+    [2025-01-21 14:34:17,526][artist.scenario][WARNING] - No prototype kinematic second_joint_translation_u set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_e set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_n set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic second_joint_tilt_u set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_e set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_u set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_translation_n set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_e set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_n set. Using default values!
+    [2025-01-21 14:34:17,527][artist.scenario][WARNING] - No prototype kinematic concentrator_tilt_u set. Using default values!
+    [2025-01-21 14:34:17,528][artist.scenario][WARNING] - No prototype increment set for actuator_1. Using default values!
+    [2025-01-21 14:34:17,529][artist.scenario][WARNING] - No prototype initial_stroke_length set for actuator_1. Using default values!
+    [2025-01-21 14:34:17,529][artist.scenario][WARNING] - No prototype offset set for actuator_1. Using default values!
+    [2025-01-21 14:34:17,529][artist.scenario][WARNING] - No prototype pivot_radius set for actuator_1. Using default values!
+    [2025-01-21 14:34:17,529][artist.scenario][WARNING] - No prototype initial_angle set for actuator_1. Using default values!
+    [2025-01-21 14:34:17,530][artist.scenario][WARNING] - No prototype increment set for actuator_2. Using default values!
+    [2025-01-21 14:34:17,530][artist.scenario][WARNING] - No prototype initial_stroke_length set for actuator_2. Using default values!
+    [2025-01-21 14:34:17,530][artist.scenario][WARNING] - No prototype offset set for actuator_2. Using default values!
+    [2025-01-21 14:34:17,530][artist.scenario][WARNING] - No prototype pivot_radius set for actuator_2. Using default values!
+    [2025-01-21 14:34:17,530][artist.scenario][WARNING] - No prototype initial_angle set for actuator_2. Using default values!
+    [2025-01-21 14:34:17,531][artist.field.heliostat_field][INFO] - Loading a heliostat field from an HDF5 file.
+    [2025-01-21 14:34:17,531][artist.field.heliostat][INFO] - Loading heliostat_1 from an HDF5 file.
+    [2025-01-21 14:34:17,532][artist.field.heliostat][INFO] - Individual surface parameters not provided - loading a heliostat with the surface prototype.
+    [2025-01-21 14:34:17,532][artist.field.heliostat][INFO] - Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype.
+    [2025-01-21 14:34:17,532][artist.field.heliostat][INFO] - Individual actuator configurations not provided - loading a heliostat with the actuator prototype.
 
 These log messages consist of three brackets:
 
-   - The first bracket, e.g., ``[2024-05-22 18:10:21,397]``, displays the time stamp.
+   - The first bracket, e.g., ``[2025-01-21 14:34:14,410]``, displays the time stamp.
    - The second bracket, e.g., ``[artist.scenario]``, displays the file that generated the log message.
    - The third bracket, e.g., ``[INFO]`` or ``[WARNING]``, displays the level for which the log message is being generated.
    - Finally, after the three brackets, the log message is printed.
@@ -110,10 +108,11 @@ what type of light source and receiver is included:
 
 .. code-block::
 
+    # Inspect the scenario.
     print(example_scenario)
     print(f"The light source is a {example_scenario.light_sources.light_source_list[0]}")
     print(
-        f"The receiver type is {example_scenario.receivers.receiver_list[0].receiver_type}"
+        f"The first target area is a {example_scenario.target_areas.target_area_list[0]}."
     )
     single_heliostat = example_scenario.heliostats.heliostat_list[0]
     print(f"The heliostat position is: {single_heliostat.position}")
@@ -123,13 +122,12 @@ This code generates the following output:
 
 .. code-block::
 
-    ``ARTIST`` Scenario containing:
-        Receivers: 1, 	Light Sources: 1,	 Heliostats: 1
+    ARTIST Scenario containing:
+            A Power Plant located at: [0.0, 0.0, 0.0] with 1 Target Area(s), 1 Light Source(s), and 1 Heliostat(s).
     The light source is a Sun()
-    The receiver type is planar
-    The heliostat position is: tensor([0., 5., 0., 1.])
-    The heliostat is aiming at: tensor([  0., -50.,   0.,   1.])
-
+    The first target area is a receiver.
+    The heliostat position is: tensor([0., 5., 0., 1.], device='cuda:0')
+    The heliostat is aiming at: tensor([  0., -50.,   0.,   1.], device='cuda:0')
 
 
 Aligning a Heliostat
@@ -151,8 +149,8 @@ direction*, we can align the heliostat with the following code:
 .. code-block::
 
     # Align the heliostat.
-    single_heliostat.set_aligned_surface(
-        incident_ray_direction=incident_ray_direction_south
+    single_heliostat.set_aligned_surface_with_incident_ray_direction(
+        incident_ray_direction=incident_ray_direction_south, device=device
     )
 
 We can compare the original surface and the aligned surface in the following plot:
@@ -161,7 +159,7 @@ We can compare the original surface and the aligned surface in the following plo
    :width: 100 %
    :align: center
 
-Since both the receiver and the sun are directly to the south of the heliostat, this alignment is completely plausible.
+Since both the target area (receiver) and the sun are directly to the south of the heliostat, this alignment is completely plausible.
 The heliostat is rotated 90 degrees along the east axis to reflect the sunlight back in the direction it is coming
 from.
 
@@ -203,7 +201,9 @@ desired incident ray direction and finally normalizing the resulting image.
 .. code-block::
 
     # Perform heliostat-based raytracing.
-    image_south = raytracer.trace_rays(incident_ray_direction=incident_ray_direction_south)
+    image_south = raytracer.trace_rays(
+        incident_ray_direction=incident_ray_direction_south, device=device
+    )
     image_south = raytracer.normalize_bitmap(image_south)
 
 If we plot the output, we get the following flux density image!
@@ -221,14 +221,20 @@ raytracing with the following code:
 .. code-block::
 
     # Define light directions.
-    incident_ray_direction_east = torch.tensor([1.0, 0.0, 0.0, 0.0])
-    incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0])
-    incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0])
+    incident_ray_direction_east = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
+    incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
+    incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
 
     # Perform alignment and raytracing to generate flux density images.
-    image_east = align_and_trace_rays(light_direction=incident_ray_direction_east)
-    image_west = align_and_trace_rays(light_direction=incident_ray_direction_west)
-    image_above = align_and_trace_rays(light_direction=incident_ray_direction_above)
+    image_east = align_and_trace_rays(
+        light_direction=incident_ray_direction_east, device=device
+    )
+    image_west = align_and_trace_rays(
+        light_direction=incident_ray_direction_west, device=device
+    )
+    image_above = align_and_trace_rays(
+        light_direction=incident_ray_direction_above, device=device
+    )
 
 If we were to now plot the results of all four considered incident ray directions, we get the following image:
 
