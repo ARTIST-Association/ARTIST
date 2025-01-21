@@ -24,6 +24,7 @@ from artist.util.surface_converter import SurfaceConverter
 # Set up logger.
 set_logger_config()
 
+# Set the device.
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # The following parameter is the name of the scenario.
@@ -54,6 +55,7 @@ receiver_config = TargetAreaConfig(
     plane_u=7.0,
 )
 
+# Create list of target area configs - in this case only one.
 target_area_config_list = [receiver_config]
 
 # Include the tower area configurations.
@@ -77,7 +79,6 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 surface_converter = SurfaceConverter(
-    step_size=100,
     max_epoch=400,
 )
 facet_prototype_list = surface_converter.generate_surface_config_from_stral(
