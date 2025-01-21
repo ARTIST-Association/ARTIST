@@ -30,10 +30,7 @@ if not pathlib.Path(file_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
-tower_file = (
-    pathlib.Path(ARTIST_ROOT)
-    / "tests/data/paint_multiple_heliostats/tower-measurements.json"
-)
+tower_file = pathlib.Path(ARTIST_ROOT) / "tests/data/paint/tower-measurements.json"
 
 # Include the power plant configuration.
 power_plant_config, target_area_list_config = (
@@ -65,9 +62,8 @@ for heliostat in heliostats:
     heliostat_files = (
         heliostat,
         pathlib.Path(ARTIST_ROOT)
-        / f"tests/data/paint_multiple_heliostats/{heliostat}/heliostat-properties.json",
-        pathlib.Path(ARTIST_ROOT)
-        / f"tests/data/paint_multiple_heliostats/{heliostat}/deflectometry.h5",
+        / f"tests/data/paint/{heliostat}/heliostat-properties.json",
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/paint/{heliostat}/deflectometry.h5",
     )
     heliostat_files_list.append(heliostat_files)
 
