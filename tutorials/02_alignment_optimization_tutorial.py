@@ -35,7 +35,7 @@ with h5py.File(scenario_path, "r") as scenario_file:
         scenario_file=scenario_file, device=device
     )
 
-# Set calibration data.
+# Set calibration data
 calibration_properties_path = (
     pathlib.Path(ARTIST_ROOT) / "tutorials/data/calibration-properties.json"
 )
@@ -77,7 +77,7 @@ if use_raytracing:
 
 optimizer = torch.optim.Adam(parameters, lr=initial_learning_rate)
 
-# Set up learning rate scheduler.
+# Set up learning rate scheduler
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
     mode="min",
@@ -99,7 +99,6 @@ optimized_parameters, optimized_scenario = alignment_optimizer.optimize(
     max_epoch=max_epoch,
     center_calibration_image=center_calibration_image,
     incident_ray_direction=incident_ray_direction,
-    calibration_target_name=calibration_target_name,
     motor_positions=motor_positions,
     device=device,
 )
