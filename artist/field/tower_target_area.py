@@ -10,12 +10,6 @@ from artist.util import config_dictionary
 log = logging.getLogger(__name__)
 """A logger for the tower target area."""
 
-# TODO
-# Right now both the calibration targets and the receiver are modeled as a plane.
-# At some point the receiver might be modeled more precicely. If that happens
-# we might have to create different classes for calibration targets and receivers,
-# as parameters like the normal_vector or plane_e only make sense for planar areas not convex_cylinders.
-
 
 class TargetArea(torch.nn.Module):
     """
