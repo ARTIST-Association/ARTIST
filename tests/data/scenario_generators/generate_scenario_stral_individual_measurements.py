@@ -61,6 +61,7 @@ receiver_config = TargetAreaConfig(
     plane_u=7.0,
 )
 
+# Create list of target area configs - in this case only one.
 target_area_config_list = [receiver_config]
 
 # Include the tower area configurations.
