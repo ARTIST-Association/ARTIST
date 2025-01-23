@@ -4,6 +4,7 @@
 ==========================================
 
 .. note::
+
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/02_alignment_optimization_tutorial.py
 
