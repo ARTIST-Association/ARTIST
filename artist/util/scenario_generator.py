@@ -12,7 +12,7 @@ from artist.util.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    ReceiverListConfig,
+    TargetAreaListConfig,
 )
 
 log = logging.getLogger(__name__)
@@ -29,8 +29,8 @@ class ScenarioGenerator:
         File path to the HDF5 to be saved.
     power_plant_config : PowerPlantConfig
         The power plant configuration object.
-    receiver_list_config : ReceiverListConfig
-        The receiver list configuration object.
+    target_area_list_config : TargetAreaListConfig
+        The target area list configuration object.
     light_source_list_config : LightSourceListConfig
         The light source list configuration object.
     heliostat_list_config : HeliostatListConfig
@@ -54,7 +54,7 @@ class ScenarioGenerator:
         self,
         file_path: pathlib.Path,
         power_plant_config: PowerPlantConfig,
-        receiver_list_config: ReceiverListConfig,
+        target_area_list_config: TargetAreaListConfig,
         light_source_list_config: LightSourceListConfig,
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
@@ -64,7 +64,7 @@ class ScenarioGenerator:
         Initialize the scenario generator.
 
         Scenarios in ``ARTIST`` describe the whole environment and all the components of a solar tower power
-        plant. The scenario generator creates the scenarios. A scenario encompasses the receiver(s), the
+        plant. The scenario generator creates the scenarios. A scenario encompasses the tower target area(s), the
         light source(s), prototypes, and the heliostat(s). The generated scenarios are then saved in HDF5
         files.
 
@@ -74,8 +74,8 @@ class ScenarioGenerator:
             File path to the HDF5 to be saved.
         power_plant_config : PowerPlantConfig
             The power plant configuration object.
-        receiver_list_config : ReceiverListConfig
-            The receiver list configuration object.
+        target_area_list_config : TargetAreaListConfig
+            The target area list configuration object.
         light_source_list_config : LightSourceListConfig
             The light source list configuration object.
         heliostat_list_config : HeliostatListConfig
@@ -92,7 +92,7 @@ class ScenarioGenerator:
                 "Please create the folder or adjust the file path before running again!"
             )
         self.power_plant_config = power_plant_config
-        self.receiver_list_config = receiver_list_config
+        self.target_area_list_config = target_area_list_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
@@ -111,21 +111,17 @@ class ScenarioGenerator:
         """
         # Define accepted number of facets based on the prototype
         accepted_number_of_facets = len(
-            self.prototype_config.surface_prototype.facets_list
+            self.prototype_config.surface_prototype.facet_list
         )
         # Define accepted number of points based on the prototype
         accepted_number_of_points = (
-            self.prototype_config.surface_prototype.facets_list[0].number_eval_points_e
-            * self.prototype_config.surface_prototype.facets_list[
-                0
-            ].number_eval_points_n
+            self.prototype_config.surface_prototype.facet_list[0].number_eval_points_e
+            * self.prototype_config.surface_prototype.facet_list[0].number_eval_points_n
         )
         # Check that every facet in the prototype has the same number of evaluation points
         if not all(
-            self.prototype_config.surface_prototype.facets_list[i].number_eval_points_e
-            * self.prototype_config.surface_prototype.facets_list[
-                i
-            ].number_eval_points_n
+            self.prototype_config.surface_prototype.facet_list[i].number_eval_points_e
+            * self.prototype_config.surface_prototype.facet_list[i].number_eval_points_n
             == accepted_number_of_points
             for i in range(accepted_number_of_facets)
         ):
@@ -135,17 +131,14 @@ class ScenarioGenerator:
 
         # Check that every heliostat has the same number of facets and evaluation points
         for heliostat in self.heliostat_list_config.heliostat_list:
-            if heliostat.heliostat_surface:
-                if (
-                    len(heliostat.heliostat_surface.facets_list)
-                    != accepted_number_of_facets
-                ):
+            if heliostat.surface:
+                if len(heliostat.surface.facet_list) != accepted_number_of_facets:
                     raise ValueError(
                         "Individual heliostats must all have the same number of facets!"
                     )
                 if not all(
-                    heliostat.heliostat_surface.facets_list[i].number_eval_points_e
-                    * heliostat.heliostat_surface.facets_list[i].number_eval_points_n
+                    heliostat.surface.facet_list[i].number_eval_points_e
+                    * heliostat.surface.facet_list[i].number_eval_points_n
                     == accepted_number_of_points
                     for i in range(accepted_number_of_facets)
                 ):
@@ -208,15 +201,15 @@ class ScenarioGenerator:
 
     def generate_scenario(self) -> None:
         """Generate the scenario according to the given parameters."""
-        log.info(f"Generating a scenario saved to: {self.file_path}")
+        log.info(f"Generating a scenario saved to: {self.file_path}.")
         save_name = self.file_path.parent / (self.file_path.name + ".h5")
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
-            log.info(f"Using scenario generator version {self.version}")
+            log.info(f"Using scenario generator version {self.version}.")
             f.attrs["version"] = self.version
 
             # Include parameters for the power plant.
-            log.info("Including parameters for the power plant")
+            log.info("Including parameters for the power plant.")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.power_plant_key,
@@ -225,18 +218,18 @@ class ScenarioGenerator:
                 ),
             )
 
-            # Include parameters for the receivers.
-            log.info("Including parameters for the receivers")
+            # Include parameters for the tower target areas.
+            log.info("Including parameters for the target areas.")
             self.include_parameters(
                 file=f,
-                prefix=config_dictionary.receiver_key,
+                prefix=config_dictionary.target_area_key,
                 parameters=self.flatten_dict(
-                    self.receiver_list_config.create_receiver_list_dict()
+                    self.target_area_list_config.create_target_area_list_dict()
                 ),
             )
 
             # Include parameters for the light sources.
-            log.info("Including parameters for the light sources")
+            log.info("Including parameters for the light sources.")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.light_source_key,
@@ -246,7 +239,7 @@ class ScenarioGenerator:
             )
 
             # Include parameters for the prototype.
-            log.info("Including parameters for the prototype")
+            log.info("Including parameters for the prototype.")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.prototype_key,
@@ -256,7 +249,7 @@ class ScenarioGenerator:
             )
 
             # Include heliostat parameters.
-            log.info("Including parameters for the heliostats")
+            log.info("Including parameters for the heliostats.")
             self.include_parameters(
                 file=f,
                 prefix=config_dictionary.heliostat_key,

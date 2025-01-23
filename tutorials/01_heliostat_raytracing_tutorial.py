@@ -9,30 +9,35 @@ from matplotlib.pyplot import tight_layout
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
+from artist.util import set_logger_config
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be downloaded for this tutorial!
 DOWNLOAD_DATA = False
-scenario_name = "please/insert/the/path/to/the/scenario/here/name.h5"
+scenario_file = "please/insert/the/path/to/the/scenario/here/name.h5"
 
 if DOWNLOAD_DATA:
     url = "https://drive.google.com/uc?export=download&id=1WSJyabylkK8cMDgulymVP5nPNGNf_BzN"
     output_filename = "tutorial_scenario.h5"
     command = ["wget", "-O", output_filename, url]
     result = subprocess.run(command, capture_output=True, text=True)
-    scenario_name = output_filename
+    scenario_file = output_filename
 
+# Set up logger.
+set_logger_config()
+
+# Set the device.
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
-with h5py.File(scenario_name, "r") as f:
+with h5py.File(scenario_file, "r") as f:
     example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
 
 # Inspect the scenario.
 print(example_scenario)
 print(f"The light source is a {example_scenario.light_sources.light_source_list[0]}")
 print(
-    f"The receiver type is {example_scenario.receivers.receiver_list[0].receiver_type}"
+    f"The first target area is a {example_scenario.target_areas.target_area_list[0].name}."
 )
 single_heliostat = example_scenario.heliostats.heliostat_list[0]
 print(f"The heliostat position is: {single_heliostat.position}")
@@ -106,7 +111,6 @@ ax2.set_zticks([])
 # Create a single legend for both subplots.
 handles, labels = ax1.get_legend_handles_labels()
 fig.legend(handles, labels, loc="upper center", ncols=4)
-
 
 # Show the plot.
 plt.show()

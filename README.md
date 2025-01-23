@@ -59,18 +59,26 @@ The ``ARTIST`` repository is structured as shown below:
 ```
 .
 ├── artist # Parent package
-│   ├── field # Objects in the field, e.g. heliostats and receivers
+│   ├── field # Objects in the field, e.g. heliostats and target areas like receivers and calibration targets.
 │   ├── raytracing
-│   ├── scene # Light sources and factors influencing the surroundings
-│   └── util
-├── measurement_data # Real measurements that can be used in ARTIST
-├── scenarios # Scenarios describing a field that can be loaded by ARTIST
+│   ├── scene # Light sources and factors influencing the surroundings.
+│   ├── util
+│   └── ...
 ├── tests/
+│   ├── data
+│   │   ├── paint # Real measurements from the PAINT database that can be used in ARTIST.
+│   │   ├── scenario_generators
+│   │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
+│   │   ├── stral # Real measurements from the STRAL software that can be used in ARTIST.
+│   │   └── ...
 │   ├── field
 │   ├── raytracing
 │   ├── scene
-│   └── util
-└── tutorials # Tutorials to help you get started with ARTIST
+│   ├── util
+│   └── ...
+└── tutorials # Tutorials to help you get started with ARTIST.
+    ├── data # Data accessed in the tutorials.
+    └── ...
 ```
 
 ## Documentation
