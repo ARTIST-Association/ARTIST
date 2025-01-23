@@ -185,7 +185,7 @@ class Heliostat(torch.nn.Module):
         )
 
         if config_dictionary.heliostat_surface_key in config_file.keys():
-            facets_list = [
+            facet_list = [
                 FacetConfig(
                     facet_key="",
                     control_points=torch.tensor(
@@ -241,7 +241,7 @@ class Heliostat(torch.nn.Module):
                     config_dictionary.facets_key
                 ].keys()
             ]
-            surface_config = SurfaceConfig(facets_list=facets_list)
+            surface_config = SurfaceConfig(facet_list=facet_list)
         else:
             if prototype_surface is None:
                 raise ValueError(
@@ -590,55 +590,57 @@ class Heliostat(torch.nn.Module):
 
         if config_dictionary.heliostat_actuator_key in config_file.keys():
             actuator_list = []
-            for ac in config_file[config_dictionary.heliostat_actuator_key].keys():
+            for actuator in config_file[
+                config_dictionary.heliostat_actuator_key
+            ].keys():
                 increment = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_increment}"
                 )
                 initial_stroke_length = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_initial_stroke_length}"
                 )
                 offset = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_offset}"
                 )
                 pivot_radius = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_pivot_radius}"
                 )
                 initial_angle = config_file.get(
-                    f"{config_dictionary.heliostat_actuator_key}/{ac}/"
+                    f"{config_dictionary.heliostat_actuator_key}/{actuator}/"
                     f"{config_dictionary.actuator_parameters_key}/"
                     f"{config_dictionary.actuator_initial_angle}"
                 )
                 if increment is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_increment} set for {ac}. Using default values!"
+                        f"No individual {config_dictionary.actuator_increment} set for {actuator}. Using default values!"
                     )
                 if initial_stroke_length is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_initial_stroke_length} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_initial_stroke_length} set for {actuator} on "
                         f"{heliostat_name}. "
                         f"Using default values!"
                     )
                 if offset is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_offset} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_offset} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 if pivot_radius is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_pivot_radius} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_pivot_radius} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 if initial_angle is None:
                     log.warning(
-                        f"No individual {config_dictionary.actuator_initial_angle} set for {ac} on "
+                        f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
                         f"{heliostat_name}. Using default values!"
                     )
                 actuator_parameters = ActuatorParameters(
@@ -674,16 +676,16 @@ class Heliostat(torch.nn.Module):
                 )
                 actuator_list.append(
                     ActuatorConfig(
-                        key="",
+                        key=actuator,
                         type=str(
-                            config_file[config_dictionary.heliostat_actuator_key][ac][
-                                config_dictionary.actuator_type_key
-                            ][()].decode("utf-8")
+                            config_file[config_dictionary.heliostat_actuator_key][
+                                actuator
+                            ][config_dictionary.actuator_type_key][()].decode("utf-8")
                         ),
                         clockwise_axis_movement=bool(
-                            config_file[config_dictionary.heliostat_actuator_key][ac][
-                                config_dictionary.actuator_clockwise_axis_movement
-                            ][()]
+                            config_file[config_dictionary.heliostat_actuator_key][
+                                actuator
+                            ][config_dictionary.actuator_clockwise_axis_movement][()]
                         ),
                         parameters=actuator_parameters,
                     )
