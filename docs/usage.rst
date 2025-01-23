@@ -11,5 +11,7 @@ Here, you can find an overview of how to use ``ARTIST``.
    coordinates
    nurbs_tutorial
    scenario
-   generating_scenario
-   heliostat_raytracing
+   tutorial_generating_scenario
+   tutorial_heliostat_raytracing
+   tutorial_distributed_raytracing
+   tutorial_kinematic_calibration
