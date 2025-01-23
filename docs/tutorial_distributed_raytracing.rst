@@ -4,6 +4,7 @@
 ==========================================
 
 .. note::
+
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/features/multi_heliostats/tutorials/01_heliostat_raytracing_distributed_tutorial.py
 
@@ -26,6 +27,7 @@ If the program is run without the intention of being distributed, the world size
 All of this is handled by running the following code:
 
 .. code-block::
+
     # The distributed environment is setup and destroyed using a Generator object.
     environment_generator = utils.setup_distributed_environment(device=device)
 
@@ -34,6 +36,7 @@ All of this is handled by running the following code:
 To set the device on each rank, run this code:
 
 .. code-block::
+
     if device.type == "cuda":
         torch.cuda.set_device(rank % torch.cuda.device_count())
 
@@ -41,6 +44,7 @@ This completly sets up the distributed environment. To use it during the raytrac
 ``HeliostatRayTracer`` slightly different than before:
 
 .. code-block::
+
     # Create raytracer
     raytracer = HeliostatRayTracer(
         scenario=scenario,
@@ -55,6 +59,7 @@ ranks. Each rank handles a portion of the overall rays. In the end, after the ra
 The only step left is to add up all of those bitmaps to receive the complete flux density distribution from the considered heliostat:
 
 .. code-block::
+
     if is_distributed:
         final_bitmap = torch.distributed.all_reduce(
             final_bitmap, op=torch.distributed.ReduceOp.SUM
@@ -69,6 +74,7 @@ This is also handled by the ``environment_generator`` we set up in the beginning
 Simply execute the following code and you are done:
 
 .. code-block::
+
     # Make sure the code after the yield statement in the environment Generator
     # is called, to clean up the distributed process group.
     try:
