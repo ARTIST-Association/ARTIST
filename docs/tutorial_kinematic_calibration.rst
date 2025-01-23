@@ -115,7 +115,7 @@ need information about:
 - The incident ray direction during the measurement,
 
 The more efficient calibration via the ``motor_positions`` additionally needs information about the motor positions
-that were measurement during the data acquisition. The ``motor_positions`` is an optional parameter in the ``optimize()``
+that were measured during the data acquisition. The ``motor_positions`` is an optional parameter in the ``optimize()``
 function above. Since we included them here, the calibration happens via the motor positions.
 
 Optimization methods
