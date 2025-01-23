@@ -6,7 +6,7 @@ import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
-from artist.field.receiver_field import ReceiverField
+from artist.field.tower_target_area_array import TargetAreaArray
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
@@ -31,8 +31,8 @@ class Scenario:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant as latitude, longitude, altitude.
-    receivers : ReceiverField
-        A list of receivers included in the scenario.
+    target_areas : TargetAreaArray
+        A list of tower target areas included in the scenario.
     light_sources : LightSourceArray
         A list of light sources included in the scenario.
     heliostats : HeliostatField
@@ -47,7 +47,7 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        receivers: ReceiverField,
+        target_areas: TargetAreaArray,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -55,22 +55,22 @@ class Scenario:
         Initialize the scenario.
 
         A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
-        least one receiver, at least one light source and at least one heliostat in a heliostat field. ``ARTIST`` also
-        supports scenarios that contain multiple receivers, multiple light sources, and multiple heliostats.
+        least one target area that is a receiver, at least one light source and at least one heliostat in a heliostat field.
+        ``ARTIST`` also supports scenarios that contain multiple target areas, multiple light sources, and multiple heliostats.
 
         Parameters
         ----------
         power_plant_position : torch.Tensor,
             The position of the power plant as latitude, longitude, altitude.
-        receivers : ReceiverField
-            A list of receivers included in the scenario.
+        target_areas : TargetAreaArray
+            A list of tower target areas included in the scenario.
         light_sources : LightSourceArray
             A list of light sources included in the scenario.
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
-        self.receivers = receivers
+        self.target_areas = target_areas
         self.light_sources = light_sources
         self.heliostats = heliostat_field
 
@@ -102,12 +102,14 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        receivers = ReceiverField.from_hdf5(config_file=scenario_file, device=device)
+        target_areas = TargetAreaArray.from_hdf5(
+            config_file=scenario_file, device=device
+        )
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
         )
 
-        facets_list = [
+        facet_list = [
             FacetConfig(
                 facet_key="",
                 control_points=torch.tensor(
@@ -179,7 +181,7 @@ class Scenario:
                 config_dictionary.surface_prototype_key
             ][config_dictionary.facets_key].keys()
         ]
-        surface_prototype = SurfaceConfig(facets_list=facets_list)
+        surface_prototype = SurfaceConfig(facet_list=facet_list)
 
         # Create kinematic prototype.
         initial_orientation = torch.tensor(
@@ -493,35 +495,35 @@ class Scenario:
         # Create actuator prototype.
         actuator_list = []
         for ac in scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuator_prototype_key
+            config_dictionary.actuators_prototype_key
         ].keys():
             increment = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuators_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_increment}"
             )
             initial_stroke_length = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuators_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_initial_stroke_length}"
             )
             offset = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuators_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_offset}"
             )
             pivot_radius = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuators_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_pivot_radius}"
             )
             initial_angle = scenario_file.get(
                 f"{config_dictionary.prototype_key}/"
-                f"{config_dictionary.actuator_prototype_key}/{ac}/"
+                f"{config_dictionary.actuators_prototype_key}/{ac}/"
                 f"{config_dictionary.actuator_parameters_key}/"
                 f"{config_dictionary.actuator_initial_angle}"
             )
@@ -581,12 +583,12 @@ class Scenario:
                     key="",
                     type=str(
                         scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
+                            config_dictionary.actuators_prototype_key
                         ][ac][config_dictionary.actuator_type_key][()].decode("utf-8")
                     ),
                     clockwise_axis_movement=bool(
                         scenario_file[config_dictionary.prototype_key][
-                            config_dictionary.actuator_prototype_key
+                            config_dictionary.actuators_prototype_key
                         ][ac][config_dictionary.actuator_clockwise_axis_movement][()]
                     ),
                     parameters=actuator_parameters,
@@ -604,7 +606,7 @@ class Scenario:
 
         return cls(
             power_plant_position=power_plant_position,
-            receivers=receivers,
+            target_areas=target_areas,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
@@ -612,6 +614,8 @@ class Scenario:
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""
         return (
-            f"ARTIST Scenario containing:\n\tReceivers: {len(self.receivers.receiver_list)}, \tLight Sources: "
-            f"{len(self.light_sources.light_source_list)},\t Heliostats: {len(self.heliostats.heliostat_list)}"
+            f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
+            f" with {len(self.target_areas.target_area_list)} Target Area(s),"
+            f" {len(self.light_sources.light_source_list)} Light Source(s),"
+            f" and {len(self.heliostats.heliostat_list)} Heliostat(s)."
         )
