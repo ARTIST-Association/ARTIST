@@ -22,7 +22,7 @@ The Distributed Environment
 ---------------------------
 The Heliostat-Tracing process can be parallelized using Distributed Data Parallel.
 Based on the available devices, the environemnt is initialized with the appropriate communication backend.
-For computation on GPUs the nccl backend optimized for NVIDIA GPUs is chosen. For computation on CPUs gloo is used as backend.
+For computation on GPUs the ``nccl`` backend optimized for NVIDIA GPUs is chosen. For computation on CPUs ``gloo`` is used as backend.
 If the program is run without the intention of being distributed, the world size will be set to 1, accordingly the only rank is 0.
 All of this is handled by running the following code:
 
@@ -53,7 +53,7 @@ This completly sets up the distributed environment. To use it during the raytrac
         batch_size=100,
     )
 
-This time we can specify the ``world_size`` and the ``rank`` because we set those up earlier.
+We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
 The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
 ranks. Each rank handles a portion of the overall rays. In the end, after the raytracing we get one flux distribution from each rank.
 The only step left is to add up all of those bitmaps to receive the complete flux density distribution from the considered heliostat:
