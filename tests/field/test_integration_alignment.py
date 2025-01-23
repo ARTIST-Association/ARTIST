@@ -1,7 +1,6 @@
-"""Tests loading a heliostat surface from STRAL data and performing ray tracing."""
+"""Tests loading a heliostat and performing ray tracing."""
 
 import pathlib
-import warnings
 
 import h5py
 import pytest
@@ -11,41 +10,40 @@ from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 
-warnings.filterwarnings("always")
-
-# Attempt to import MPI.
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-    warnings.warn(
-        "MPI is not available and distributed computing not possible. ARTIST will run on a single machine!",
-        ImportWarning,
-    )
-
-# Set up MPI.
-if MPI is not None:
-    comm = MPI.COMM_WORLD
-    world_size = comm.size
-    rank = comm.rank
-else:
-    world_size = 1
-    rank = 0
-
 
 @pytest.mark.parametrize(
     "incident_ray_direction, ray_direction_string, scenario_config",
     [
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "stral_south", "test_scenario_stral"),
-        (torch.tensor([1.0, 0.0, 0.0, 0.0]), "stral_east", "test_scenario_stral"),
-        (torch.tensor([-1.0, 0.0, 0.0, 0.0]), "stral_west", "test_scenario_stral"),
-        (torch.tensor([0.0, 0.0, 1.0, 0.0]), "stral_above", "test_scenario_stral"),
+        (
+            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            "stral_south",
+            "test_scenario_stral_prototypes",
+        ),
+        (
+            torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            "stral_east",
+            "test_scenario_stral_prototypes",
+        ),
+        (
+            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
+            "stral_west",
+            "test_scenario_stral_prototypes",
+        ),
+        (
+            torch.tensor([0.0, 0.0, 1.0, 0.0]),
+            "stral_above",
+            "test_scenario_stral_prototypes",
+        ),
         (
             torch.tensor([0.0, -1.0, 0.0, 0.0]),
             "individual_south",
             "test_scenario_stral_individual_measurements",
         ),
-        (torch.tensor([0.0, -1.0, 0.0, 0.0]), "paint_south", "test_scenario_paint"),
+        (
+            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            "paint_south",
+            "test_scenario_paint_single_heliostat",
+        ),
     ],
 )
 def test_integration_alignment(
@@ -84,7 +82,8 @@ def test_integration_alignment(
 
     # Load the scenario.
     with h5py.File(
-        pathlib.Path(ARTIST_ROOT) / "tests/data" / f"{scenario_config}.h5", "r"
+        pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios" / f"{scenario_config}.h5",
+        "r",
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=config_h5, device=device
@@ -98,25 +97,19 @@ def test_integration_alignment(
     )
 
     # Create raytracer - currently only possible for one heliostat.
-    raytracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=10
-    )
+    raytracer = HeliostatRayTracer(scenario=scenario)
 
     # Perform heliostat-based raytracing.
     final_bitmap = raytracer.trace_rays(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    # Apply all-reduce if MPI is used.
-    if MPI is not None:
-        final_bitmap = comm.allreduce(final_bitmap, op=MPI.SUM)
     final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
-    if rank == 0:
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_bitmaps_integration"
-            / f"{ray_direction_string}_{device.type}.pt"
-        )
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
-        torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_bitmaps_integration"
+        / f"{ray_direction_string}_{device.type}.pt"
+    )
+    expected = torch.load(expected_path, map_location=device, weights_only=True)
+    torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)

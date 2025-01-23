@@ -3,8 +3,11 @@ import pathlib
 import h5py
 import pytest
 import torch
+from pytest_mock import MockerFixture
 
 from artist import ARTIST_ROOT
+from artist.field.tower_target_area import TargetArea
+from artist.field.tower_target_area_array import TargetAreaArray
 from artist.scenario import Scenario
 from artist.util import config_dictionary, paint_loader, set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
@@ -18,8 +21,8 @@ set_logger_config()
     [
         (
             "use_motor_positions",
-            "test_scenario_paint",
-            "calibration_properties",
+            "test_scenario_paint_single_heliostat",
+            "calibration-properties",
             1e-7,
             150,
             0.01,
@@ -29,8 +32,8 @@ set_logger_config()
         ),
         (
             "use_raytracing",
-            "test_scenario_paint",
-            "calibration_properties",
+            "test_scenario_paint_single_heliostat",
+            "calibration-properties",
             1e-7,
             27,
             0.0002,
@@ -86,7 +89,17 @@ def test_alignment_optimizer_methods(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scenario_path = pathlib.Path(ARTIST_ROOT) / f"tests/data/{scenario_name}.h5"
+    # The distributed environment is setup and destroyed using a Generator object.
+    environment_generator = utils.setup_distributed_environment(device=device)
+
+    is_distributed, rank, world_size = next(environment_generator)
+
+    if device.type == "cuda":
+        torch.cuda.set_device(rank % torch.cuda.device_count())
+
+    scenario_path = (
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/scenarios/{scenario_name}.h5"
+    )
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
@@ -108,15 +121,18 @@ def test_alignment_optimizer_methods(
 
     # Load the calibration data.
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT) / f"tests/data/{calibration_file}.json"
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/paint/AA39/{calibration_file}.json"
     )
 
-    center_calibration_image, incident_ray_direction, motor_positions = (
-        paint_loader.extract_paint_calibration_data(
-            calibration_properties_path=calibration_properties_path,
-            power_plant_position=scenario.power_plant_position,
-            device=device,
-        )
+    (
+        calibration_target_name,
+        center_calibration_image,
+        incident_ray_direction,
+        motor_positions,
+    ) = paint_loader.extract_paint_calibration_data(
+        calibration_properties_path=calibration_properties_path,
+        power_plant_position=scenario.power_plant_position,
+        device=device,
     )
 
     # Create alignment optimizer.
@@ -124,6 +140,10 @@ def test_alignment_optimizer_methods(
         scenario=scenario,
         optimizer=optimizer,
         scheduler=scheduler,
+        world_size=world_size,
+        rank=rank,
+        batch_size=1000,
+        is_distributed=is_distributed,
     )
 
     if optimizer_method == config_dictionary.optimizer_use_raytracing:
@@ -134,7 +154,9 @@ def test_alignment_optimizer_methods(
         max_epoch=max_epoch,
         center_calibration_image=center_calibration_image,
         incident_ray_direction=incident_ray_direction,
+        calibration_target_name=calibration_target_name,
         motor_positions=motor_positions,
+        num_log=max_epoch,
         device=device,
     )
 
@@ -146,3 +168,49 @@ def test_alignment_optimizer_methods(
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(optimized_parameters, expected, atol=0.01, rtol=0.01)
+
+
+def test_raytracing_exception(mocker: MockerFixture, device: torch.device) -> None:
+    """
+    Test raytracing alignment optimization with faulty calibration target.
+
+    Parameters
+    ----------
+    mocker : MockerFixture
+        A pytest-mock fixture used to create mock objects.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    mock_alignment_optimizer = mocker.MagicMock(spec=AlignmentOptimizer)
+
+    mock_scenario = mocker.MagicMock(spec=Scenario)
+    mock_alignment_optimizer.scenario = mock_scenario
+    mock_target_areas = mocker.MagicMock(spec=TargetAreaArray)
+    mock_alignment_optimizer.scenario.target_areas = mock_target_areas
+    mock_target_area = mocker.MagicMock(spec=TargetArea)
+    mock_target_area.name = "receiver"
+    mock_alignment_optimizer.scenario.target_areas.target_area_list = [mock_target_area]
+
+    mock_alignment_optimizer._optimize_kinematic_parameters_with_raytracing = (
+        AlignmentOptimizer._optimize_kinematic_parameters_with_raytracing.__get__(
+            mock_alignment_optimizer, AlignmentOptimizer
+        )
+    )
+
+    with pytest.raises(KeyError) as exc_info:
+        mock_alignment_optimizer._optimize_kinematic_parameters_with_raytracing(
+            tolerance=0.0,
+            max_epoch=0,
+            center_calibration_image=torch.tensor([0.0]),
+            incident_ray_direction=torch.tensor([0.0]),
+            calibration_target_name="invalid_calibration_target_name",
+            device=device,
+        )
+    assert "The specified calibration target is not included in the scenario!" in str(
+        exc_info.value
+    )

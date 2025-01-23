@@ -8,6 +8,15 @@ from artist.scenario import Scenario
 from artist.util import paint_loader, set_logger_config, utils
 from artist.util.alignment_optimizer import AlignmentOptimizer
 
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
+
+# Set up logger
+set_logger_config()
+
+# Set the device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be used for this tutorial!
 use_pre_generated_scenario = True
@@ -17,14 +26,8 @@ scenario_path = (
 if use_pre_generated_scenario:
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_alignment_optimization.h5"
+        / "tutorials/data/test_scenario_paint_single_heliostat.h5"
     )
-
-# Set up logger.
-set_logger_config()
-
-# Set the device.
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_path, "r") as scenario_file:
@@ -32,18 +35,21 @@ with h5py.File(scenario_path, "r") as scenario_file:
         scenario_file=scenario_file, device=device
     )
 
-# Choose calibration data.
+# Set calibration data
 calibration_properties_path = (
-    pathlib.Path(ARTIST_ROOT) / "tutorials/data/test_calibration_properties.json"
+    pathlib.Path(ARTIST_ROOT) / "tutorials/data/calibration-properties.json"
 )
 
 # Load the calibration data.
-center_calibration_image, incident_ray_direction, motor_positions = (
-    paint_loader.extract_paint_calibration_data(
-        calibration_properties_path=calibration_properties_path,
-        power_plant_position=example_scenario.power_plant_position,
-        device=device,
-    )
+(
+    calibration_target_name,
+    center_calibration_image,
+    incident_ray_direction,
+    motor_positions,
+) = paint_loader.extract_paint_calibration_data(
+    calibration_properties_path=calibration_properties_path,
+    power_plant_position=example_scenario.power_plant_position,
+    device=device,
 )
 
 # Get optimizable parameters. This will select all 28 kinematic parameters.
@@ -54,7 +60,7 @@ parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(
 # Set up optimizer and scheduler parameters.
 tolerance = 1e-7
 max_epoch = 150
-initial_learning_rate = 0.001
+initial_learning_rate = 0.01
 learning_rate_factor = 0.1
 learning_rate_patience = 20
 learning_rate_threshold = 0.1
@@ -71,7 +77,7 @@ if use_raytracing:
 
 optimizer = torch.optim.Adam(parameters, lr=initial_learning_rate)
 
-# Set up learning rate scheduler.
+# Set up learning rate scheduler
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
     mode="min",
