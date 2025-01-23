@@ -62,6 +62,7 @@ In the pre-generated scenario used in this tutorial, we use a rigid body kinemat
 there are alltogether 28 optimizable parameters. You can select all of them with the following code:
 
 .. code-block::
+
     # Get optimizable parameters. This will select all 28 kinematic parameters.
     parameters = utils.get_rigid_body_kinematic_parameters_from_scenario(
         kinematic=example_scenario.heliostats.heliostat_list[0].kinematic
@@ -73,6 +74,7 @@ The alignment optimizer object is responsible for the kinematic calibration. We 
 creating an ``AlignmentOptimizer`` object as shown below:
 
 .. code-block::
+
     # Create alignment optimizer.
     alignment_optimizer = AlignmentOptimizer(
         scenario=example_scenario,
@@ -81,6 +83,7 @@ creating an ``AlignmentOptimizer`` object as shown below:
     )
 
 This object defines the following alignment optimizer properties:
+
 - The ``scenario`` provides all of the environment variables.
 - The ``optimizer`` is a ``torch.optim.Optimizer`` like ``torch.optim.Adam`` that contains the optimizable parameters.
 - The ``scheduler`` is a ``torch.optim.lr_scheduler`` like ``torch.optim.lr_scheduler.ReduceLROnPlateau``.
@@ -91,6 +94,7 @@ The set up is now complete and the kinematic calibration can begin. The kinemati
 We start the optimization process by calling:
 
 .. code-block::
+
     optimized_parameters, optimized_scenario = alignment_optimizer.optimize(
         tolerance=tolerance,
         max_epoch=max_epoch,
@@ -116,6 +120,7 @@ function above. Since we included them here, the calibration happens via the mot
 Optimization methods
 --------------------
 Here is the workflow of the kinematic calibration with motor positions:
+
 - We start with default values for all optimizable paramters.
 - We calculate the preferred reflection direction of our heliostat through knowledge about the
   center of the calibration flux density distribution.
@@ -125,6 +130,7 @@ Here is the workflow of the kinematic calibration with motor positions:
 - The optimizer updates the optimizable parametrs until it is accurate enough or the maximum number of epochs is reached.
 
 Here is the workflow of the kinematic calibration with the differentiable raytracer.
+
 - We start with default values for all optimizable paramters.
 - In the optimization loop we align the heliostat by providing the incident ray direction of the calibration data.
   Then we create the Heliostat Raytracer by specifying the used calibration target instead of the revceiver. We trace the rays

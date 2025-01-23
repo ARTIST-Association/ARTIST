@@ -4,6 +4,7 @@
 ====================================================
 
 .. note::
+
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_generate_scenario_heliostat_raytracing.py
 
@@ -50,6 +51,7 @@ We can define the location of the power plant with the ``PowerPlantConfig`` clas
     )
 
 This configuration defines the following properties:
+
 - The ``power_plant_position`` indicating the power plants location.
 
 Target Areas
