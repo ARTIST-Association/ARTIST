@@ -343,7 +343,7 @@ class SurfaceConverter:
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
             log.info(
-                f"Converting facet {i+1} of {surface_points_with_facets.shape[0]}."
+                f"Converting facet {i + 1} of {surface_points_with_facets.shape[0]}."
             )
             nurbs_surface = self.fit_nurbs_surface(
                 surface_points=surface_points_with_facets[i],
@@ -360,7 +360,7 @@ class SurfaceConverter:
             )
             facet_config_list.append(
                 FacetConfig(
-                    facet_key=f"facet_{i+1}",
+                    facet_key=f"facet_{i + 1}",
                     control_points=nurbs_surface.control_points.detach(),
                     degree_e=nurbs_surface.degree_e,
                     degree_n=nurbs_surface.degree_n,
@@ -528,7 +528,7 @@ class SurfaceConverter:
             surface_normals_with_facets_list = []
             for f in range(number_of_facets):
                 number_of_points = len(
-                    file[f"{config_dictionary.paint_facet}{f+1}"][
+                    file[f"{config_dictionary.paint_facet}{f + 1}"][
                         config_dictionary.paint_surface_points
                     ]
                 )
@@ -541,7 +541,7 @@ class SurfaceConverter:
 
                 points_data = torch.tensor(
                     np.array(
-                        file[f"{config_dictionary.paint_facet}{f+1}"][
+                        file[f"{config_dictionary.paint_facet}{f + 1}"][
                             config_dictionary.paint_surface_points
                         ]
                     ),
@@ -549,7 +549,7 @@ class SurfaceConverter:
                 )
                 normals_data = torch.tensor(
                     np.array(
-                        file[f"{config_dictionary.paint_facet}{f+1}"][
+                        file[f"{config_dictionary.paint_facet}{f + 1}"][
                             config_dictionary.paint_surface_normals
                         ]
                     ),
