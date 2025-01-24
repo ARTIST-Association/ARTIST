@@ -6,7 +6,7 @@
 .. note::
 
     You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/features/multi_heliostats/tutorials/01_heliostat_raytracing_distributed_tutorial.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_heliostat_raytracing_distributed_tutorial.py
 
 This tutorial provides a brief introduction to ``ARTIST`` showcasing how the distributed environment is set up by performing distributed raytracing.
 
