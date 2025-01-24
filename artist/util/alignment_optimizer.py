@@ -329,18 +329,18 @@ class AlignmentOptimizer:
             # Create raytracer
             raytracer = HeliostatRayTracer(
                 scenario=self.scenario,
-                aim_point_area=calibration_target_name,
                 world_size=self.world_size,
                 rank=self.rank,
                 batch_size=self.batch_size,
+                random_seed=self.rank,
             )
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
-            if self.is_distributed and self.rank == 0:
-                final_bitmap = torch.distributed.all_reduce(
+            if self.is_distributed:
+                torch.distributed.all_reduce(
                     final_bitmap, op=torch.distributed.ReduceOp.SUM
                 )
 

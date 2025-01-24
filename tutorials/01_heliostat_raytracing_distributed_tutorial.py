@@ -1,7 +1,10 @@
+import os
 import pathlib
 
 import h5py
+import psutil
 import torch
+from matplotlib import pyplot as plt
 
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
@@ -23,7 +26,19 @@ environment_generator = utils.setup_distributed_environment(device=device)
 is_distributed, rank, world_size = next(environment_generator)
 
 if device.type == "cuda":
-    torch.cuda.set_device(rank % torch.cuda.device_count())
+    gpu_count = torch.cuda.device_count()
+    device_id = rank % gpu_count
+    device = torch.device(f"cuda:{device_id}")
+    torch.cuda.set_device(device)
+
+if device.type == "cpu":
+    num_cores = os.cpu_count()
+    if isinstance(num_cores, int):
+        cores_per_rank = num_cores // world_size
+    start_core = rank * cores_per_rank
+    end_core = start_core + cores_per_rank - 1
+    process = psutil.Process(os.getpid())
+    process.cpu_affinity(list(range(start_core, end_core + 1)))
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be used for this tutorial!
@@ -52,10 +67,7 @@ scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_dire
 
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=scenario,
-    world_size=world_size,
-    rank=rank,
-    batch_size=100,
+    scenario=scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
 )
 
 # Perform heliostat-based raytracing.
@@ -63,12 +75,12 @@ final_bitmap = raytracer.trace_rays(
     incident_ray_direction=incident_ray_direction, device=device
 )
 
-if is_distributed:
-    final_bitmap = torch.distributed.all_reduce(
-        final_bitmap, op=torch.distributed.ReduceOp.SUM
-    )
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.savefig(f"rank_{rank}.png")
+torch.distributed.barrier()
 
-final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+if is_distributed:
+    torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.
@@ -76,3 +88,8 @@ try:
     next(environment_generator)
 except StopIteration:
     pass
+
+final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.savefig("final.png")
