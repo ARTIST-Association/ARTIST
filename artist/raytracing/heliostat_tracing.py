@@ -208,7 +208,6 @@ class HeliostatRayTracer:
             batch_size=batch_size,
             shuffle=shuffle,
             sampler=distortions_sampler,
-            num_workers=self.world_size,
         )
 
         self.bitmap_resolution_e = bitmap_resolution_e
