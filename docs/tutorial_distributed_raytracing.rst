@@ -55,8 +55,26 @@ This completly sets up the distributed environment. To use it during the raytrac
 
 We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
 The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
-ranks. Each rank handles a portion of the overall rays. In the end, after the raytracing we get one flux distribution from each rank.
-The only step left is to add up all of those bitmaps to receive the complete flux density distribution from the considered heliostat:
+ranks. Each rank handles a portion of the overall rays.
+
+**Example**
+Let's say our ``world_size`` is four. We will now have four individual ``ranks`` that perform Heliostat Raytracing in parallel.
+Since we are using Distributed Data Parallel, each ``rank`` is assigned an exact copy of the single heliostat in our scenario.
+The data, in our case the rays, are split up and each ``rank`` handles a portion of them. Each ray is assigned to exactly one
+``rank``, no ray is duplicated. If we were to plot the results of all four raytracing results of the seperate ``ranks``, we get these
+Flux Density Distributions:
+
++------------------------+------------------------+------------------------+------------------------+
+| .. image:: ./images/distributed_flux_rank_0.png | .. image:: ./images/distributed_flux_rank_1.png |
+|    :scale: 25%                                  |    :scale: 25%                                  |
+|                                                 |                                                 |
++------------------------+------------------------+------------------------+------------------------+
+| .. image:: ./images/distributed_flux_rank_2.png | .. image:: ./images/distributed_flux_rank_3.png |
+|    :scale: 25%                                  |    :scale: 25%                                  |
+|                                                 |                                                 |
++------------------------+------------------------+------------------------+------------------------+
+
+The only step left is to add up all of those bitmaps to receive the total Flux Density Distribution from the considered heliostat:
 
 .. code-block::
 
@@ -64,6 +82,12 @@ The only step left is to add up all of those bitmaps to receive the complete flu
         final_bitmap = torch.distributed.all_reduce(
             final_bitmap, op=torch.distributed.ReduceOp.SUM
         )
+
+The total Flux Density Distribution now looks like this:
+
+.. figure:: ./images/distributed_final_flux.png
+   :width: 80 %
+   :align: center
 
 Cleaning up the Distributed Environment
 ---------------------------------------
