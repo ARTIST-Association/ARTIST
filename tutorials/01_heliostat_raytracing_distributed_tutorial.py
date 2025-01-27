@@ -76,8 +76,8 @@ final_bitmap = raytracer.trace_rays(
 )
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title(f"Flux Density Distribution from rank: {rank}")
 plt.savefig(f"rank_{rank}.png")
-torch.distributed.barrier()
 
 if is_distributed:
     torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
@@ -92,4 +92,5 @@ except StopIteration:
 final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title("Total Flux Density Distribution")
 plt.savefig("final.png")
