@@ -126,7 +126,7 @@ image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
 fig, ax = plt.subplots(figsize=(6, 6))
-ax.imshow(image_south.T.cpu().detach().numpy(), cmap="inferno")
+ax.imshow(image_south.cpu().detach().numpy(), cmap="inferno")
 tight_layout()
 
 
@@ -190,7 +190,7 @@ def plot_multiple_images(
     # Plot each tensor.
     for i, image in enumerate(image_tensors):
         ax = axes[i]
-        ax.imshow(image.T.cpu().detach().numpy(), cmap="inferno")
+        ax.imshow(image.cpu().detach().numpy(), cmap="inferno")
         if names is not None and i < len(names):
             ax.set_title(names[i])
         else:

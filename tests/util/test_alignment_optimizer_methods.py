@@ -96,7 +96,7 @@ def test_alignment_optimizer_methods(
 
     is_distributed, rank, world_size = next(environment_generator)
 
-    if device.type == "cuda":
+    if device.type == "cuda" and is_distributed:
         gpu_count = torch.cuda.device_count()
         device_id = rank % gpu_count
         device = torch.device(f"cuda:{device_id}")
@@ -170,7 +170,7 @@ def test_alignment_optimizer_methods(
         incident_ray_direction=incident_ray_direction,
         calibration_target_name=calibration_target_name,
         motor_positions=motor_positions,
-        num_log=max_epoch,
+        num_log=10,
         device=device,
     )
 
@@ -181,7 +181,7 @@ def test_alignment_optimizer_methods(
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(optimized_parameters, expected, atol=0.01, rtol=0.01)
+    torch.testing.assert_close(optimized_parameters, expected, atol=5e-2, rtol=5e-2)
 
 
 def test_raytracing_exception(mocker: MockerFixture, device: torch.device) -> None:

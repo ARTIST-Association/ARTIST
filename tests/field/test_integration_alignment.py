@@ -112,4 +112,4 @@ def test_integration_alignment(
         / f"{ray_direction_string}_{device.type}.pt"
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
-    torch.testing.assert_close(final_bitmap.T, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(final_bitmap, expected, atol=5e-4, rtol=5e-4)
