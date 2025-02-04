@@ -699,10 +699,12 @@ def get_center_of_mass(
 
     # Compute the center of intensity using weighted sums of the coordinates.
     center_of_mass_e = (flux_thresholded.sum(dim=0) * e_indices).sum() / total_intensity
-    center_of_mass_u = (flux_thresholded.sum(dim=1) * u_indices).sum() / total_intensity
+    center_of_mass_u = 1 - (
+        (flux_thresholded.sum(dim=1) * u_indices).sum() / total_intensity
+    )
 
     # Construct the coordinates relative to target center.
-    de = torch.tensor([plane_e, 0.0, 0.0, 0.0], device=device)
+    de = torch.tensor([-plane_e, 0.0, 0.0, 0.0], device=device)
     du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
 
     center_coordinates = (
