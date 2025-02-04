@@ -329,6 +329,7 @@ class AlignmentOptimizer:
             # Create raytracer
             raytracer = HeliostatRayTracer(
                 scenario=self.scenario,
+                aim_point_area=calibration_target_name,
                 world_size=self.world_size,
                 rank=self.rank,
                 batch_size=self.batch_size,
@@ -347,7 +348,7 @@ class AlignmentOptimizer:
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
             center = utils.get_center_of_mass(
-                bitmap=torch.flip(final_bitmap, dims=(0, 1)),
+                bitmap=final_bitmap,
                 target_center=calibration_target.center,
                 plane_e=calibration_target.plane_e,
                 plane_u=calibration_target.plane_u,
