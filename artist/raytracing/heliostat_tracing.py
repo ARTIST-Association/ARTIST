@@ -239,7 +239,7 @@ class HeliostatRayTracer:
         device = torch.device(device)
 
         final_bitmap = torch.zeros(
-            (self.bitmap_resolution_e, self.bitmap_resolution_u), device=device
+            (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
         self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
@@ -368,9 +368,9 @@ class HeliostatRayTracer:
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
         #
-        # 4|3
-        # -.-
         # 1|2
+        # -.-
+        # 4|3
         #
         # where the numbers are the four neighboring, discrete pixels, the
         # "-" and "|" are the discrete pixel borders, and the "." is the
@@ -378,12 +378,12 @@ class HeliostatRayTracer:
         # That the "." may be anywhere in-between the four pixels is not
         # shown in the ASCII diagram, but is important to keep in mind.
 
-        # The lower-valued neighboring pixels (for x this corresponds to 1
-        # and 4, for y to 1 and 2).
+        # The lower-valued neighboring pixels (for x this corresponds to 4
+        # and 3, for y to 1 and 4).
         x_inds_low = x_ints.floor().long()
         y_inds_low = y_ints.floor().long()
         # The higher-valued neighboring pixels (for x this corresponds to 2
-        # and 3, for y to 3 and 4).
+        # and 3, for y to 1 and 2).
         x_inds_high = x_inds_low + 1
         y_inds_high = y_inds_low + 1
 
@@ -400,8 +400,6 @@ class HeliostatRayTracer:
         x_ints_high = x_ints - x_inds_low
         # y-value influence in 3 and 4
         y_ints_high = y_ints - y_inds_low
-        del x_ints
-        del y_ints
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
@@ -414,41 +412,21 @@ class HeliostatRayTracer:
         x_inds_2 = x_inds_high
         y_inds_2 = y_inds_low
         ints_2 = x_ints_high * y_ints_low
-        del y_inds_low
-        del y_ints_low
 
         x_inds_3 = x_inds_high
         y_inds_3 = y_inds_high
         ints_3 = x_ints_high * y_ints_high
-        del x_inds_high
-        del x_ints_high
 
         x_inds_4 = x_inds_low
         y_inds_4 = y_inds_high
         ints_4 = x_ints_low * y_ints_high
-        del x_inds_low
-        del y_inds_high
-        del x_ints_low
-        del y_ints_high
 
         # Combine all indices and intensities in the correct order.
-        x_inds = torch.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
-        del x_inds_1
-        del x_inds_2
-        del x_inds_3
-        del x_inds_4
+        x_inds = torch.hstack([x_inds_4, x_inds_3, x_inds_2, x_inds_1]).long().ravel()
 
-        y_inds = torch.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
-        del y_inds_1
-        del y_inds_2
-        del y_inds_3
-        del y_inds_4
+        y_inds = torch.hstack([y_inds_4, y_inds_3, y_inds_2, y_inds_1]).long().ravel()
 
-        ints = torch.hstack([ints_1, ints_2, ints_3, ints_4]).ravel()
-        del ints_1
-        del ints_2
-        del ints_3
-        del ints_4
+        ints = torch.hstack([ints_4, ints_3, ints_2, ints_1]).ravel()
 
         # For distribution, we regard even those neighboring pixels that are
         # _not_ part of the image. That is why here, we set up a mask to
@@ -463,13 +441,16 @@ class HeliostatRayTracer:
 
         # Flux density map for heliostat field
         total_bitmap = torch.zeros(
-            [self.bitmap_resolution_e, self.bitmap_resolution_u],
+            [self.bitmap_resolution_u, self.bitmap_resolution_e],
             dtype=dx_ints.dtype,
             device=device,
         )
         # Add up all distributed intensities in the corresponding indices.
         total_bitmap.index_put_(
-            (x_inds[indices], y_inds[indices]),
+            (
+                self.bitmap_resolution_u - 1 - y_inds[indices],
+                self.bitmap_resolution_e - 1 - x_inds[indices],
+            ),
             ints[indices],
             accumulate=True,
         )
