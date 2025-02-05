@@ -1,8 +1,6 @@
-import os
 import pathlib
 
 import h5py
-import psutil
 import pytest
 import torch
 from pytest_mock import MockerFixture
@@ -94,22 +92,7 @@ def test_alignment_optimizer_methods(
     # The distributed environment is setup and destroyed using a Generator object.
     environment_generator = utils.setup_distributed_environment(device=device)
 
-    is_distributed, rank, world_size = next(environment_generator)
-
-    if device.type == "cuda" and is_distributed:
-        gpu_count = torch.cuda.device_count()
-        device_id = rank % gpu_count
-        device = torch.device(f"cuda:{device_id}")
-        torch.cuda.set_device(device)
-
-    if device.type == "cpu":
-        num_cores = os.cpu_count()
-        if isinstance(num_cores, int):
-            cores_per_rank = num_cores // world_size
-        start_core = rank * cores_per_rank
-        end_core = start_core + cores_per_rank - 1
-        process = psutil.Process(os.getpid())
-        process.cpu_affinity(list(range(start_core, end_core + 1)))
+    device, is_distributed, rank, world_size = next(environment_generator)
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/scenarios/{scenario_name}.h5"
