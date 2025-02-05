@@ -1,6 +1,7 @@
 import os
 from typing import TYPE_CHECKING, Generator, Union
 
+import psutil
 import torch
 
 if TYPE_CHECKING:
@@ -673,6 +674,8 @@ def get_center_of_mass(
         The width of the target surface.
     plane_u : float
         The height of the target surface.
+    threshold : float
+        Determines how intense a pixel in the bitmap needs to be to be registered (default: 0.0).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -716,7 +719,7 @@ def get_center_of_mass(
 
 def setup_distributed_environment(
     device: Union[torch.device, str] = "cuda",
-) -> Generator[tuple[bool, int, int], None, None]:
+) -> Generator[tuple[torch.device, bool, int, int], None, None]:
     """
     Set up the distributed environment and destroy it in the end.
 
@@ -733,6 +736,8 @@ def setup_distributed_environment(
 
     Yields
     ------
+    torch.device
+        The device for each rank.
     bool
         Distributed mode enabled or disabled.
     int
@@ -740,36 +745,46 @@ def setup_distributed_environment(
     int
         The world size or total number of processes.
     """
-    # Choose backend depending on device type
     device = torch.device(device)
-    if device.type == "cuda":
-        backend = "nccl"
-    else:
-        backend = "gloo"
+    backend = "nccl" if device.type == "cuda" else "gloo"
 
-    print(f"Using device type: {device.type} and backend: {backend}")
+    is_distributed = False
+    rank, world_size = 0, 1
 
-    # Check if running in distributed mode
-    is_distributed = "WORLD_SIZE" in os.environ and int(os.environ["WORLD_SIZE"]) > 1
-    print(f"Distributed Mode: {'Enabled' if is_distributed else 'Disabled'}")
-
-    # Initialize the distributed process group if in distributed mode
-    if is_distributed:
-        rank = int(os.environ["RANK"])
-        world_size = int(os.environ["WORLD_SIZE"])
-        print(f"Initializing distributed process group: Rank {rank}/{world_size}")
-
+    try:
+        # Attempt to initialize the process group
         torch.distributed.init_process_group(backend=backend, init_method="env://")
+        is_distributed = True
+        world_size = torch.distributed.get_world_size()
+        rank = torch.distributed.get_rank()
+        if rank == 0:
+            print(f"Using device type: {device.type} and backend: {backend}")
+            print(f"Distributed Mode: {'Enabled' if is_distributed else 'Disabled'}")
         print(
             f"Distributed process group initialized: Rank {rank}, World Size {world_size}"
         )
-    else:
-        rank = 0
-        world_size = 1
+
+    except Exception:
+        print(f"Using device type: {device.type} and backend: {backend}")
         print("Running in single-device mode.")
 
+    if device.type == "cuda" and is_distributed:
+        gpu_count = torch.cuda.device_count()
+        device_id = rank % gpu_count
+        device = torch.device(f"cuda:{device_id}")
+        torch.cuda.set_device(device)
+
+    if device.type == "cpu" and is_distributed:
+        num_cores = os.cpu_count()
+        if isinstance(num_cores, int):
+            cores_per_rank = num_cores // world_size
+        start_core = rank * cores_per_rank
+        end_core = start_core + cores_per_rank - 1
+        process = psutil.Process(os.getpid())
+        process.cpu_affinity(list(range(start_core, end_core + 1)))
+
     try:
-        yield is_distributed, rank, world_size
+        yield device, is_distributed, rank, world_size
     finally:
         if is_distributed:
             torch.distributed.barrier()

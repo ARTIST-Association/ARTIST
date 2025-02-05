@@ -1,8 +1,6 @@
-import os
 import pathlib
 
 import h5py
-import psutil
 import torch
 from matplotlib import pyplot as plt
 
@@ -23,22 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_distributed_environment(device=device)
 
-is_distributed, rank, world_size = next(environment_generator)
-
-if device.type == "cuda":
-    gpu_count = torch.cuda.device_count()
-    device_id = rank % gpu_count
-    device = torch.device(f"cuda:{device_id}")
-    torch.cuda.set_device(device)
-
-if device.type == "cpu":
-    num_cores = os.cpu_count()
-    if isinstance(num_cores, int):
-        cores_per_rank = num_cores // world_size
-    start_core = rank * cores_per_rank
-    end_core = start_core + cores_per_rank - 1
-    process = psutil.Process(os.getpid())
-    process.cpu_affinity(list(range(start_core, end_core + 1)))
+device, is_distributed, rank, world_size = next(environment_generator)
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be used for this tutorial!
@@ -49,7 +32,7 @@ scenario_path = (
 if use_pre_generated_scenario:
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_paint_single_heliostat.h5"
+        / "tutorials/data/test_scenario_paint_single_heliostat_4_rays.h5"
     )
 
 # Load the scenario.
