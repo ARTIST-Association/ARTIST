@@ -54,7 +54,7 @@ def test_setup_distributed_environment(
         with patch("torch.distributed.is_available", return_value=True):
             # Test the generator
             gen = setup_distributed_environment(device=device)
-            is_distributed_out, rank_out, world_size_out = next(gen)
+            device, is_distributed_out, rank_out, world_size_out = next(gen)
 
             # Assert outputs
             assert is_distributed_out == is_distributed
