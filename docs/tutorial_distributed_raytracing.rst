@@ -31,14 +31,7 @@ All of this is handled by running the following code:
     # The distributed environment is setup and destroyed using a Generator object.
     environment_generator = utils.setup_distributed_environment(device=device)
 
-    is_distributed, rank, world_size = next(environment_generator)
-
-To set the device on each rank, run this code:
-
-.. code-block::
-
-    if device.type == "cuda":
-        torch.cuda.set_device(rank % torch.cuda.device_count())
+    device, is_distributed, rank, world_size = next(environment_generator)
 
 This completly sets up the distributed environment. To use it during the raytracing process, we initialize the
 ``HeliostatRayTracer`` slightly different than before:
@@ -47,11 +40,9 @@ This completly sets up the distributed environment. To use it during the raytrac
 
     # Create raytracer
     raytracer = HeliostatRayTracer(
-        scenario=scenario,
-        world_size=world_size,
-        rank=rank,
-        batch_size=100,
+        scenario=scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
     )
+
 
 We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
 The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
@@ -105,3 +96,18 @@ Simply execute the following code and you are done:
         next(environment_generator)
     except StopIteration:
         pass
+
+
+Further Information
+-------------------
+Currently the heliostat-raytracing parallelisation with DDP parallelizes over the ``number_of_rays``
+which is set in the ``lightsource``. During the initialization of the ``HeliostatRayTracer``, a ``DistortionsDataset``
+is set up. This dataset is later handed to a sampler and a data loader that distribute individual parts of
+the dataset among the distributed ranks. The ``DistortionsDataset`` samples ray distortions according to the
+parameters in the ``lightsource``. In the end the dataset contains a tuple of ray distortions in the east and up direction.
+If we inspect one element of the dataset tuple for example ``distortions_e`` (and everything is the same for ``distortions_u```),
+we see that it is a multi-dimensional tensor of shape (``number_of_rays``, number of facets, number of surface points per facet).
+This means for each surface point on each facet we sample 5 different ray distortions. As defined in the ``DistortionsDataset``,
+the length of the dataset alwways equals to ``number_of_rays``. The dataset is split by the sampler and loader along this dimension.
+If ``number_of_rays`` is only one, the dataset cannot be split, all rays go to rank zero, even if you parallelize with four ranks.
+rank one to three will be idle. If the ``number_of_rays`` is greater or equal the world size, all ranks will receive data.
