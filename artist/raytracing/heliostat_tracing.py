@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Iterator, Union
 
 if TYPE_CHECKING:
     from artist.scenario import Scenario
 
 import torch
-from torch.utils.data import DataLoader, Dataset, DistributedSampler
+from torch.utils.data import DataLoader, Dataset, Sampler
 
 from artist.scene import LightSource
 from artist.util import utils
@@ -91,8 +91,127 @@ class DistortionsDataset(Dataset):
             The distortions in the up and east direction for the given index.
         """
         return (
-            self.distortions_u[idx, :],
-            self.distortions_e[idx, :],
+            self.distortions_u[idx],
+            self.distortions_e[idx],
+        )
+
+
+class RestrictedDistributedSampler(Sampler):
+    """
+    Initializes a custom distributed sampler.
+
+    The ``DistributedSampler`` from torch replicates samples if the size of the dataset
+    is smaller than the world size to assign data to each rank. This custom sampler
+    can leave some ranks idle if the dataset is not large enough to distribute data to
+    each rank. Replicated samples would mean replicated rays that physically do not exist.
+
+    Attributes
+    ----------
+    number_of_samples : int
+        The number of samples in the dataset.
+    world_size : int
+        The world size or total number of processes.
+    rank : int
+        The rank of the current process.
+    shuffle : bool
+        Shuffled sampling or sequential.
+    seed : int
+        The seed to replicate random sampling.
+    active_replicas : int
+        Number of processes that will receive data.
+    number_of_samples_per_rank : int
+        The number of samples per rank.
+
+    Methods
+    -------
+    set_seed()
+        Set the seed for reproducible shuffling across epochs.
+
+    See Also
+    --------
+    :class:`torch.utils.data.Sampler` : The parent class.
+    """
+
+    def __init__(
+        self, dataset: Dataset, world_size: int = 1, rank: int = 0, shuffle: bool = True
+    ) -> None:
+        """
+        Set up a custom distributed sampler to assign data to each rank.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            The dataset from which the samples are taken.
+        world_size : int
+            The world size or total number of processes (default: 1).
+        rank : int
+            The rank of the current process (default: 0).
+        shuffle : bool
+            Shuffled sampling or sequential (default: True).
+        """
+        super().__init__(dataset)
+        self.number_of_samples = len(dataset)
+        self.world_size = world_size
+        self.rank = rank
+        self.shuffle = shuffle
+        self.seed = 0
+
+        # Adjust num_replicas if dataset is smaller than world_size
+        self.active_replicas = min(self.number_of_samples, self.world_size)
+
+        # Only assign data to first `active_replicas` ranks
+        self.number_of_samples_per_rank = (
+            self.number_of_samples // self.active_replicas
+            if self.rank < self.active_replicas
+            else 0
+        )
+
+    def set_seed(self, seed: int = 0) -> None:
+        """
+        Set the seed for reproducible shuffling across epochs.
+
+        Parameters
+        ----------
+        seed: int
+            The seed for the random generator.
+        """
+        self.seed = seed
+
+    def __iter__(self) -> Iterator[int]:
+        """
+        Generate a sequence of indices for the current rank's portion of the dataset.
+
+        Returns
+        -------
+        Iterator[int]
+            An iterator over (shuffled) indices for the current rank.
+        """
+        # Generate indices and shuffle them if shuffle=True
+        indices = list(range(self.number_of_samples))
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed)
+            indices = torch.randperm(len(indices), generator=g).tolist()
+
+        # Split indices only among active ranks
+        if self.rank < self.active_replicas:
+            start_idx = self.rank * self.number_of_samples_per_rank
+            end_idx = start_idx + self.number_of_samples_per_rank
+            return iter(indices[start_idx:end_idx])
+        else:
+            return iter([])
+
+    def __len__(self) -> int:
+        """
+        Determine the number of samples assigned to the current rank.
+
+        Returns
+        -------
+        int
+            The number of samples for the current rank.
+        """
+        return (
+            self.number_of_samples_per_rank if self.rank < self.active_replicas else 0
         )
 
 
@@ -195,19 +314,19 @@ class HeliostatRayTracer:
             number_of_points=self.number_of_surface_points,
             random_seed=random_seed,
         )
-        # Create distributed sampler.
-        distortions_sampler = DistributedSampler(
+        # Create restricted distributed sampler.
+        self.distortions_sampler = RestrictedDistributedSampler(
             dataset=self.distortions_dataset,
-            shuffle=shuffle,
-            num_replicas=self.world_size,
+            world_size=self.world_size,
             rank=self.rank,
+            shuffle=shuffle,
         )
         # Create dataloader.
         self.distortions_loader = DataLoader(
             self.distortions_dataset,
             batch_size=batch_size,
-            shuffle=shuffle,
-            sampler=distortions_sampler,
+            shuffle=False,
+            sampler=self.distortions_sampler,
         )
 
         self.bitmap_resolution_e = bitmap_resolution_e
@@ -244,6 +363,7 @@ class HeliostatRayTracer:
 
         self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
 
+        self.distortions_sampler.set_seed(0)
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(batch_u, batch_e, device)
 
