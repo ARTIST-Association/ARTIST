@@ -1,7 +1,7 @@
 .. _tutorial_distributed_raytracing:
 
 ``ARTIST`` Tutorial: Distributed Raytracing
-==========================================
+===========================================
 
 .. note::
 
@@ -100,14 +100,14 @@ Simply execute the following code and you are done:
 
 Further Information
 -------------------
-Currently the heliostat-raytracing parallelisation with DDP parallelizes over the ``number_of_rays``
+Currently the heliostat-raytracing parallelization with DDP parallelizes over the ``number_of_rays``
 which is set in the ``lightsource``. During the initialization of the ``HeliostatRayTracer``, a ``DistortionsDataset``
 is set up. This dataset is later handed to a sampler and a data loader that distribute individual parts of
 the dataset among the distributed ranks. The ``DistortionsDataset`` samples ray distortions according to the
 parameters in the ``lightsource``. In the end the dataset contains a tuple of ray distortions in the east and up direction.
 If we inspect one element of the dataset tuple for example ``distortions_e`` (and everything is the same for ``distortions_u```),
-we see that it is a multi-dimensional tensor of shape (``number_of_rays``, number of facets, number of surface points per facet).
+we see that it is a multi-dimensional tensor of shape (number of rays, number of facets, number of surface points per facet).
 This means for each surface point on each facet we sample 5 different ray distortions. As defined in the ``DistortionsDataset``,
-the length of the dataset alwways equals to ``number_of_rays``. The dataset is split by the sampler and loader along this dimension.
+the length of the dataset always equals to ``number_of_rays``. The dataset is split by the sampler and loader along this dimension.
 If ``number_of_rays`` is only one, the dataset cannot be split, all rays go to rank zero, even if you parallelize with four ranks.
 rank one to three will be idle. If the ``number_of_rays`` is greater or equal the world size, all ranks will receive data.
