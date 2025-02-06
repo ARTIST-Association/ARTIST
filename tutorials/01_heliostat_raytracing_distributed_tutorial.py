@@ -4,7 +4,6 @@ import h5py
 import torch
 from matplotlib import pyplot as plt
 
-from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
@@ -18,22 +17,13 @@ set_logger_config()
 # Set the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Specify the path to your scenario.h5 file.
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name.h5")
+
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_distributed_environment(device=device)
 
 device, is_distributed, rank, world_size = next(environment_generator)
-
-# If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
-# true and a pre-generated scenario file will be used for this tutorial!
-use_pre_generated_scenario = True
-scenario_path = (
-    pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
-)
-if use_pre_generated_scenario:
-    scenario_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_paint_single_heliostat_4_rays.h5"
-    )
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:
