@@ -19,11 +19,11 @@ torch.cuda.manual_seed(7)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/test_scenario_stral")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/tower-measurements.json"
+    "please/insert/the/path/to/the/tower/measurements/here/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
@@ -32,19 +32,19 @@ heliostat_files_list = [
     (
         "name1",
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
+            "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
         ),
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"
+            "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
         ),
     ),
     (
         "name2",
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+            "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
         ),
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"
+            "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
         ),
     ),
     # ... Include as many as you want, but at least one!
