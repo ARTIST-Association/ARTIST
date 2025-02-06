@@ -201,19 +201,6 @@ class RestrictedDistributedSampler(Sampler):
         else:
             return iter([])
 
-    def __len__(self) -> int:
-        """
-        Determine the number of samples assigned to the current rank.
-
-        Returns
-        -------
-        int
-            The number of samples for the current rank.
-        """
-        return (
-            self.number_of_samples_per_rank if self.rank < self.active_replicas else 0
-        )
-
 
 class HeliostatRayTracer:
     """
