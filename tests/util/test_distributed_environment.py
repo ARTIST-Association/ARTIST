@@ -43,15 +43,21 @@ def test_setup_distributed_environment(
         "RANK": str(rank),
     }
 
-    # Patch environment variables
-    with (
-        patch.dict(os.environ, mock_env, clear=True),
-        patch("torch.distributed.init_process_group") as mock_init_pg,
-        patch("torch.distributed.barrier") as mock_barrier,
-        patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
-    ):
-        # Mock torch.distributed.is_available to always return True
-        with patch("torch.distributed.is_available", return_value=True):
+    if not is_distributed:
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch(
+                "torch.distributed.init_process_group",
+                side_effect=RuntimeError("Mocked failure"),
+            ) as mock_init_pg,
+            patch(
+                "torch.distributed.get_world_size",
+                return_value=int(mock_env["WORLD_SIZE"]),
+            ),
+            patch("torch.distributed.get_rank", return_value=int(mock_env["RANK"])),
+            patch("torch.distributed.barrier") as mock_barrier,
+            patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
+        ):
             # Test the generator
             gen = setup_distributed_environment(device=device)
             device, is_distributed_out, rank_out, world_size_out = next(gen)
@@ -61,19 +67,43 @@ def test_setup_distributed_environment(
             assert rank_out == rank
             assert world_size_out == world_size
 
-            if is_distributed:
-                mock_init_pg.assert_called_once_with(
-                    backend="nccl" if device.type == "cuda" else "gloo",
-                    init_method="env://",
-                )
-                mock_barrier.assert_not_called()
-            else:
-                mock_init_pg.assert_not_called()
+            mock_init_pg.assert_called_once()
+            mock_barrier.assert_not_called()
 
             # Ensure cleanup
             gen.close()
-            if is_distributed:
-                mock_barrier.assert_called_once()
-                mock_destroy_pg.assert_called_once()
-            else:
-                mock_destroy_pg.assert_not_called()
+            mock_destroy_pg.assert_not_called()
+
+    if is_distributed:
+        # Patch environment variables
+        with (
+            patch.dict(os.environ, mock_env, clear=True),
+            patch("torch.distributed.init_process_group") as mock_init_pg,
+            patch(
+                "torch.distributed.get_world_size",
+                return_value=int(mock_env["WORLD_SIZE"]),
+            ),
+            patch("torch.distributed.get_rank", return_value=int(mock_env["RANK"])),
+            patch("torch.distributed.barrier") as mock_barrier,
+            patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
+        ):
+            # Test the generator
+            gen = setup_distributed_environment(device=device)
+            device, is_distributed_out, rank_out, world_size_out = next(gen)
+
+            # Assert outputs
+            assert is_distributed_out == is_distributed
+            assert rank_out == rank
+            assert world_size_out == world_size
+
+            mock_init_pg.assert_called_once_with(
+                backend="nccl" if device.type == "cuda" else "gloo",
+                init_method="env://",
+            )
+            mock_barrier.assert_not_called()
+
+            # Ensure cleanup
+            gen.close()
+
+            mock_barrier.assert_called_once()
+            mock_destroy_pg.assert_called_once()
