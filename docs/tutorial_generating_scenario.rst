@@ -37,7 +37,7 @@ The code below shows, that creating a scenario from ``STRAL`` requires a ``.binp
     )
 
 For generating a scenario from ``PAINT`` specify the following files (If you want to set up a scenario with multiple
-helisotat, simply add more files for each heliostat):
+heliostats, simply add more files for each heliostat):
 
 - One ``tower-measurement.json`` file
 - One or more ``heliostat-properties.json`` file
@@ -52,7 +52,7 @@ helisotat, simply add more files for each heliostat):
     )
 
     # Specify the following data for each heliostat that you want to include in the scenario:
-    # A tuple of: (helisotat-name, heliostat-properties.json, deflectometry.h5)
+    # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
     heliostat_files_list = [
         (
             "name1",
@@ -124,7 +124,7 @@ tower(s). The ``paint_loader`` retrieves this inforamtion together with the ``Po
         )
     )
 
-Both configuration define the following properties:
+Both configurations define the following properties:
 
 - The ``power_plant_position`` indicating the power plants location.
 
@@ -216,7 +216,7 @@ we have to wrap our light source in a list and create a ``LightSourceListConfig`
     light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
 
-Prototypes from ``STARL``
+Prototypes from ``STRAL``
 -------------------------
 You can skip this part if you are only interested in the ``PAINT`` data source.
 The next step in defining our scenario is to define our *prototype*. We define the prototype before defining the
