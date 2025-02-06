@@ -22,7 +22,7 @@ set_logger_config()
         (
             "use_motor_positions",
             "test_scenario_paint_single_heliostat",
-            "calibration-properties",
+            "AA39-calibration-properties",
             1e-7,
             150,
             0.01,
@@ -33,7 +33,7 @@ set_logger_config()
         (
             "use_raytracing",
             "test_scenario_paint_single_heliostat",
-            "calibration-properties",
+            "AA39-calibration-properties",
             1e-7,
             27,
             0.0002,
@@ -118,7 +118,7 @@ def test_alignment_optimizer_methods(
 
     # Load the calibration data.
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT) / f"tests/data/paint/AA39/{calibration_file}.json"
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/field_data/{calibration_file}.json"
     )
 
     (
