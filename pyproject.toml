@@ -21,7 +21,6 @@ dependencies = [
     "torch",
     "h5py",
     "colorlog",
-    "psutil",
 ]
 
 [project.optional-dependencies]
