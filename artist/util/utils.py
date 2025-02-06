@@ -1,7 +1,5 @@
-import os
 from typing import TYPE_CHECKING, Generator, Union
 
-import psutil
 import torch
 
 if TYPE_CHECKING:
@@ -773,15 +771,6 @@ def setup_distributed_environment(
         device_id = rank % gpu_count
         device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device)
-
-    if device.type == "cpu" and is_distributed:
-        num_cores = os.cpu_count()
-        if isinstance(num_cores, int):
-            cores_per_rank = num_cores // world_size
-        start_core = rank * cores_per_rank
-        end_core = start_core + cores_per_rank - 1
-        process = psutil.Process(os.getpid())
-        process.cpu_affinity(list(range(start_core, end_core + 1)))
 
     try:
         yield device, is_distributed, rank, world_size
