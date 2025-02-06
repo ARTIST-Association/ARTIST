@@ -261,7 +261,7 @@ class HeliostatRayTracer:
         rank: int = 0,
         batch_size: int = 1,
         random_seed: int = 7,
-        shuffle: bool = False,
+        shuffle: bool = True,
         bitmap_resolution_e: int = 256,
         bitmap_resolution_u: int = 256,
     ) -> None:
