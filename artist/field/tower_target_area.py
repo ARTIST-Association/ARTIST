@@ -105,7 +105,7 @@ class TargetArea(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the target area.
-        target_area_name : str, optional
+        target_area_name : str
             The name of the target area - used for logging.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
@@ -115,8 +115,7 @@ class TargetArea(torch.nn.Module):
         TargetArea
             A tower target area initialized from an HDF5 file.
         """
-        if target_area_name:
-            log.info(f"Loading {target_area_name} from an HDF5 file.")
+        log.info(f"Loading {target_area_name} from an HDF5 file.")
         device = torch.device(device)
         geometry = config_file[config_dictionary.target_area_geometry][()].decode(
             "utf-8"
@@ -142,13 +141,17 @@ class TargetArea(torch.nn.Module):
                 config_file[config_dictionary.target_area_curvature_e][()]
             )
         else:
-            log.warning("No curvature in the east direction set for the receiver!")
+            log.warning(
+                f"No curvature in the east direction set for the {target_area_name}!"
+            )
         if config_dictionary.target_area_curvature_u in config_file.keys():
             curvature_u = float(
                 config_file[config_dictionary.target_area_curvature_u][()]
             )
         else:
-            log.warning("No curvature in the up direction set for the receiver!")
+            log.warning(
+                f"No curvature in the up direction set for the {target_area_name}!"
+            )
 
         return cls(
             name=target_area_name,

@@ -5,12 +5,16 @@
 
 .. note::
 
-    You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_generate_scenario_heliostat_raytracing.py
+    You can find the corresponding ``Python`` scripts for this tutorial here:
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_stral.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_paint.py
 
-In this tutorial, we will guide you through the process of generating a simple ``ARTIST`` scenario HDF5 file. Before
+In this tutorial, we will guide you through the process of generating simple ``ARTIST`` scenario HDF5 files. Before
 starting the tutorial, make sure you have read the information regarding the structure of an ``ARTIST`` scenario file
 :ref:`that you can find here <scenario>`!
+Data from different data sources may have to be handled differently to create scenarios in ``ARTIST``. Depending on the
+structure of the input data, different functions will need to be called. This tutorial shows how to convert ``STRAL`` and
+``PAINT`` data to create usable scenarios for ``ARTIST``.
 
 Before we start defining the scenario, we need to determine where it will be saved. We define this by setting the
 ``scenario_path`` variable. If this location does not exist, the scenario generation will automatically fail.
@@ -20,6 +24,57 @@ Before we start defining the scenario, we need to determine where it will be sav
     # The following parameter is the name of the scenario.
     scenario_path = "please/insert/your/path/here/name"
 
+Additionally we have to specify where our ``STRAL`` or ``PAINT`` input files are saved.
+While ``STRAL`` saves everything in one file, ``PAINT`` data is split into several different files.
+The code below shows, that creating a scenario from ``STRAL`` requires a ``.binp`` file.
+
+.. code-block::
+
+    # STRAL
+    # Specify the path to your stral_data.binp file.
+    stral_file_path = pathlib.Path(
+        "please/insert/the/path/to/the/strahl/data/here/stral_data.binp"
+    )
+
+For generating a scenario from ``PAINT`` specify the following files (If you want to set up a scenario with multiple
+heliostats, simply add more files for each heliostat):
+
+- One ``tower-measurement.json`` file
+- One or more ``heliostat-properties.json`` file
+- One or more ``deflectometry.h5`` file
+
+.. code-block::
+
+    # PAINT
+    # Specify the path to your tower-measurements.json file.
+    tower_file = pathlib.Path(
+        "please/insert/the/path/to/the/tower/measurements/here/tower-measurements.json"
+    )
+
+    # Specify the following data for each heliostat that you want to include in the scenario:
+    # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
+    heliostat_files_list = [
+        (
+            "name1",
+            pathlib.Path(
+                "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
+            ),
+            pathlib.Path(
+                "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
+            ),
+        ),
+        (
+            "name2",
+            pathlib.Path(
+                "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
+            ),
+            pathlib.Path(
+                "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
+            ),
+        ),
+        # ... Include as many as you want, but at least one!
+    ]
+
 As mentioned in the :ref:`information on a scenario <scenario>`, an ``ARTIST`` scenario consists of five main elements:
 
 - One power plant location
@@ -28,39 +83,61 @@ As mentioned in the :ref:`information on a scenario <scenario>`, an ``ARTIST`` s
 - At least one (but usually more) heliostats.
 - A prototype which is used if the individual heliostats do not have individual parameters.
 
-In this tutorial, we will develop a very simple ``ARTIST`` scenario that contains:
+In this tutorial, we will develop simple ``ARTIST`` scenarios that contain:
 
-- A default power plant location
-- One planar target area that is a receiver.
+- A power plant location
+- One or more target areas.
 - One ``Sun`` as a light source.
-- One heliostat.
+- One or more heliostats.
 - A corresponding prototype to define the properties of the heliostat.
 
 Now we can get started defining each of these elements and then generating the scenario!
+Differences between the handling of ``STRAL`` and ``PAINT`` files will be highlighted.
 
 Power Plant
 -----------
 This is where the power plant location is saved in WGS84 latitude, longitude, altitude coordinates.
-We can define the location of the power plant with the ``PowerPlantConfig`` class as shown below:
+Since ``STRAL`` files do not contain information about the power plant position, we have to enter the
+coordinates manually, as shown below:
 
 .. code-block::
 
+    # STRAL
     # Include the power plant configuration.
     power_plant_config = PowerPlantConfig(
       power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
     )
 
-This configuration defines the following properties:
+``PAINT`` stores information about the power plant coordinates in ``tower-measurement.json`` files. In
+general, when using ``PAINT`` as data source, you can use functions from the ``paint_loader`` to retrieve the data.
+We can define the location of the power plant with the ``PowerPlantConfig`` class as shown below, note
+that the ``tower-measurement.json`` files also contain information about each target area on the solar
+tower(s). The ``paint_loader`` retrieves this inforamtion together with the ``PowerPlantConfig``.
+
+.. code-block::
+
+    # PAINT
+    # Include the power plant configuration.
+    power_plant_config, target_area_list_config = (
+        paint_loader.extract_paint_tower_measurements(
+            tower_measurements_path=tower_file, device=device
+        )
+    )
+
+Both configurations define the following properties:
 
 - The ``power_plant_position`` indicating the power plants location.
 
 Target Areas
 ------------
 The target areas are located on the solar tower, it is where the reflected light from the heliostats is concentrated.
-We can define a target area with the ``TargetAreaConfig`` class as shown below:
+We can define a target area with the ``TargetAreaConfig`` class as shown below. Since we already retrieved this config
+for the ``PAINT`` data above, the following only shows manually creating ``TaTargetAreaConfig`` for the use in
+``STRAL``-scenario-generators:
 
 .. code-block::
 
+    # STRAL
     # Include a single tower area (receiver)
     receiver_config = TargetAreaConfig(
         target_area_key="receiver",
@@ -96,11 +173,14 @@ target areas, we have to wrap our target area in a list and create a ``TargetAre
     # Include the tower area configurations.
     target_area_list_config = TargetAreaListConfig(target_area_config_list)
 
+As mentioned above this is all done automatically, when using ``PAINT`` data and the ``paint_loader```.
+
 Light Source
 ------------
 The light source is the object responsible for providing light that is then reflected by the heliostats. Typically, this
 light source is a ``Sun``, however in certain situations it may be beneficial to model multiple artificial light
-sources. We define the light source by creating a ``LightSourceConfig`` object as shown below:
+sources. Light source information are not included in any files, you have to define them by yourself.
+We define the light source by creating a ``LightSourceConfig`` object as shown below:
 
 .. code-block::
 
@@ -136,8 +216,9 @@ we have to wrap our light source in a list and create a ``LightSourceListConfig`
     light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
 
-Prototype
----------
+Prototypes from ``STRAL``
+-------------------------
+You can skip this part if you are only interested in the ``PAINT`` data source.
 The next step in defining our scenario is to define our *prototype*. We define the prototype before defining the
 heliostat, since in this tutorial we load the heliostat based on the prototype parameters. A prototype always contains
 a *surface* prototype, a *kinematic* prototype, and an *actuator* prototype.
@@ -147,6 +228,7 @@ We start with the *surface* prototype. In this case, we generate the surface bas
 
 .. code-block::
 
+    # STRAL
     # Generate surface configuration from STRAL data.
     surface_converter = SurfaceConverter(
         max_epoch=400,
@@ -161,6 +243,7 @@ can create this list of facets by calling the ``generate_surface_config_from_str
 
 .. code-block::
 
+    # STRAL
     facet_prototype_list = surface_converter.generate_surface_config_from_stral(
         stral_file_path=stral_file_path, device=device
     )
@@ -178,6 +261,7 @@ Now that the facet list has been created automatically by learning NURBS from ST
 
 .. code-block::
 
+    # STRAL
     # Generate the surface prototype configuration.
     surface_prototype_config = SurfacePrototypeConfig(facet_list=facet_prototype_list)
 
@@ -190,6 +274,7 @@ we ignore these deviations. Therefore, we can now create the kinematic prototype
 
 .. code-block::
 
+    # STRAL
     # Include the kinematic prototype configuration.
     kinematic_prototype_config = KinematicPrototypeConfig(
         type=config_dictionary.rigid_body_key,
@@ -208,6 +293,7 @@ kinematic applied in this scenario, we require **exactly two** actuators. We can
 
 .. code-block::
 
+    # STRAL
     # Include an ideal actuator.
     actuator1_prototype = ActuatorConfig(
         key="actuator_1",
@@ -235,6 +321,7 @@ prototype, we need to wrap both actuators in a list and generate an ``ActuatorPr
 
 .. code-block::
 
+    # STRAL
     # Create a list of actuators.
     actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
 
@@ -248,6 +335,7 @@ combines all the above configurations into one object, as shown below:
 
 .. code-block::
 
+    # STRAL
     # Include the final prototype config.
     prototype_config = PrototypeConfig(
         surface_prototype=surface_prototype_config,
@@ -255,12 +343,14 @@ combines all the above configurations into one object, as shown below:
         actuator_prototype=actuator_prototype_config,
     )
 
-Heliostat
----------
+Heliostat from ``STRAL``
+------------------------
+You can skip even further if you are only interested in the ``PAINT`` data source.
 Having defined the prototype we can now define our heliostat by creating a ``HeliostatConfig`` object as shown below:
 
 .. code-block::
 
+    # STRAL
     # Include the configuration for a heliostat.
     heliostat1 = HeliostatConfig(
         name="heliostat_1",
@@ -285,11 +375,36 @@ configuration in a list and create a ``HeliostatListConfig`` object as shown bel
 
 .. code-block::
 
+    # STRAL
     # Create a list of all the heliostats - in this case, only one.
     heliostat_list = [heliostat1]
 
     # Create the configuration for all heliostats.
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
+
+
+Prototypes and Heliostats from ``PAINT``
+----------------------------------------
+This sections shows how to load prototype configurations and heliostat configurations from ``PAINT``
+by using the ``paint_loader`` again. Before we can use the ``paint_loader`` to extract everything we need
+to choose one target area that is the default aimpoint of our heliostats. Usually it will make sense to
+choose a receiver for this, as shown below:
+
+.. code-block::
+
+    # PAINT
+    target_area = [
+        target_area
+        for target_area in target_area_list_config.target_area_list
+        if target_area.target_area_key == config_dictionary.target_area_reveicer
+    ]
+
+    heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
+        heliostat_and_deflectometry_paths=heliostat_files_list,
+        power_plant_position=power_plant_config.power_plant_position,
+        aim_point=target_area[0].center,
+        device=device,
+    )
 
 
 Generate Scenario
@@ -314,7 +429,7 @@ generate this scenario by running the ``main`` function shown below:
 This ``main`` function initially defines the ``ScenarioGenerator`` object based on the previously defined ``scenario_path``
 and our configurations for the receiver(s), light source(s), prototype, and heliostat(s).
 
-Running the ``main`` function should produce the following output:
+Running the ``main`` function should produce the following output for ``STRAL`` conversions:
 
 .. code-block::
 
