@@ -18,7 +18,7 @@ will run through some basic concepts necessary to understanding ``ARTIST`` inclu
 Loading a Scenario
 ------------------
 Before we load the scenario, you need to decide which scenario file to use. This tutorial is based on a simple scenario
-which you can create in the tutorial on :ref:`generating a scenario <generating_scenario>`. However, since generating a
+which you can create in the tutorial on :ref:`generating a scenario <tutorial_generating_scenario>`. However, since generating a
 scenario involves training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided the
 scenario file online for your convenience.
 

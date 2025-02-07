@@ -333,21 +333,22 @@ class AlignmentOptimizer:
                 world_size=self.world_size,
                 rank=self.rank,
                 batch_size=self.batch_size,
+                random_seed=self.rank,
             )
 
             final_bitmap = raytracer.trace_rays(
                 incident_ray_direction=incident_ray_direction, device=device
             )
 
-            if self.is_distributed and self.rank == 0:
-                final_bitmap = torch.distributed.all_reduce(
+            if self.is_distributed:
+                torch.distributed.all_reduce(
                     final_bitmap, op=torch.distributed.ReduceOp.SUM
                 )
 
             final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
             center = utils.get_center_of_mass(
-                bitmap=torch.flip(final_bitmap, dims=(0, 1)),
+                bitmap=final_bitmap,
                 target_center=calibration_target.center,
                 plane_e=calibration_target.plane_e,
                 plane_u=calibration_target.plane_u,

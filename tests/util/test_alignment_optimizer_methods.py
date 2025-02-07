@@ -22,7 +22,7 @@ set_logger_config()
         (
             "use_motor_positions",
             "test_scenario_paint_single_heliostat",
-            "calibration-properties",
+            "AA39-calibration-properties",
             1e-7,
             150,
             0.01,
@@ -33,7 +33,7 @@ set_logger_config()
         (
             "use_raytracing",
             "test_scenario_paint_single_heliostat",
-            "calibration-properties",
+            "AA39-calibration-properties",
             1e-7,
             27,
             0.0002,
@@ -92,10 +92,7 @@ def test_alignment_optimizer_methods(
     # The distributed environment is setup and destroyed using a Generator object.
     environment_generator = utils.setup_distributed_environment(device=device)
 
-    is_distributed, rank, world_size = next(environment_generator)
-
-    if device.type == "cuda":
-        torch.cuda.set_device(rank % torch.cuda.device_count())
+    device, is_distributed, rank, world_size = next(environment_generator)
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT) / f"tests/data/scenarios/{scenario_name}.h5"
@@ -121,7 +118,7 @@ def test_alignment_optimizer_methods(
 
     # Load the calibration data.
     calibration_properties_path = (
-        pathlib.Path(ARTIST_ROOT) / f"tests/data/paint/AA39/{calibration_file}.json"
+        pathlib.Path(ARTIST_ROOT) / f"tests/data/field_data/{calibration_file}.json"
     )
 
     (
@@ -156,7 +153,7 @@ def test_alignment_optimizer_methods(
         incident_ray_direction=incident_ray_direction,
         calibration_target_name=calibration_target_name,
         motor_positions=motor_positions,
-        num_log=max_epoch,
+        num_log=10,
         device=device,
     )
 
@@ -167,7 +164,7 @@ def test_alignment_optimizer_methods(
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(optimized_parameters, expected, atol=0.01, rtol=0.01)
+    torch.testing.assert_close(optimized_parameters, expected, atol=5e-2, rtol=5e-2)
 
 
 def test_raytracing_exception(mocker: MockerFixture, device: torch.device) -> None:

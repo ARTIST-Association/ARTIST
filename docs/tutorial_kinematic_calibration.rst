@@ -71,7 +71,7 @@ there are alltogether 28 optimizable parameters. You can select all of them with
 
 Setting up the ``AlignmentOptimizer``
 -------------------------------------
-The alignment optimizer object is responsible for the kinematic calibration. We define the light source by
+The alignment optimizer object is responsible for the kinematic calibration. We define the alignment optimizer by
 creating an ``AlignmentOptimizer`` object as shown below:
 
 .. code-block::

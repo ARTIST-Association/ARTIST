@@ -1,16 +1,20 @@
-from typing import TYPE_CHECKING, Union
+import logging
+from typing import TYPE_CHECKING, Iterator, Union
 
 if TYPE_CHECKING:
     from artist.scenario import Scenario
 
 import torch
-from torch.utils.data import DataLoader, Dataset, DistributedSampler
+from torch.utils.data import DataLoader, Dataset, Sampler
 
 from artist.scene import LightSource
 from artist.util import utils
 
 from . import raytracing_utils
 from .rays import Rays
+
+log = logging.getLogger(__name__)
+"""A logger for the heliostat raytracer."""
 
 
 class DistortionsDataset(Dataset):
@@ -91,9 +95,124 @@ class DistortionsDataset(Dataset):
             The distortions in the up and east direction for the given index.
         """
         return (
-            self.distortions_u[idx, :],
-            self.distortions_e[idx, :],
+            self.distortions_u[idx],
+            self.distortions_e[idx],
         )
+
+
+class RestrictedDistributedSampler(Sampler):
+    """
+    Initializes a custom distributed sampler.
+
+    The ``DistributedSampler`` from torch replicates samples if the size of the dataset
+    is smaller than the world size to assign data to each rank. This custom sampler
+    can leave some ranks idle if the dataset is not large enough to distribute data to
+    each rank. Replicated samples would mean replicated rays that physically do not exist.
+
+    Attributes
+    ----------
+    number_of_samples : int
+        The number of samples in the dataset.
+    world_size : int
+        The world size or total number of processes.
+    rank : int
+        The rank of the current process.
+    shuffle : bool
+        Shuffled sampling or sequential.
+    seed : int
+        The seed to replicate random sampling.
+    active_replicas : int
+        Number of processes that will receive data.
+    number_of_samples_per_rank : int
+        The number of samples per rank.
+
+    Methods
+    -------
+    set_seed()
+        Set the seed for reproducible shuffling across epochs.
+
+    See Also
+    --------
+    :class:`torch.utils.data.Sampler` : The parent class.
+    """
+
+    def __init__(
+        self,
+        number_of_samples: int,
+        world_size: int = 1,
+        rank: int = 0,
+        shuffle: bool = True,
+    ) -> None:
+        """
+        Set up a custom distributed sampler to assign data to each rank.
+
+        Parameters
+        ----------
+        number_of_samples : int
+            The length of the dataset or total number of samples.
+        world_size : int
+            The world size or total number of processes (default: 1).
+        rank : int
+            The rank of the current process (default: 0).
+        shuffle : bool
+            Shuffled sampling or sequential (default: True).
+        """
+        super().__init__()
+        self.number_of_samples = number_of_samples
+        self.world_size = world_size
+        self.rank = rank
+        self.shuffle = shuffle
+        self.seed = 0
+
+        # Adjust num_replicas if dataset is smaller than world_size
+        self.active_replicas = min(self.number_of_samples, self.world_size)
+        if self.rank == 0:
+            active_ranks_string = ", ".join(str(i) for i in range(self.active_replicas))
+            log.info(
+                f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
+            )
+
+        # Only assign data to first `active_replicas` ranks
+        self.number_of_samples_per_rank = (
+            self.number_of_samples // self.active_replicas
+            if self.rank < self.active_replicas
+            else 0
+        )
+
+    def set_seed(self, seed: int = 0) -> None:
+        """
+        Set the seed for reproducible shuffling across epochs.
+
+        Parameters
+        ----------
+        seed: int
+            The seed for the random generator.
+        """
+        self.seed = seed
+
+    def __iter__(self) -> Iterator[int]:
+        """
+        Generate a sequence of indices for the current rank's portion of the dataset.
+
+        Returns
+        -------
+        Iterator[int]
+            An iterator over (shuffled) indices for the current rank.
+        """
+        # Generate indices and shuffle them if shuffle=True
+        indices = list(range(self.number_of_samples))
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed)
+            indices = torch.randperm(len(indices), generator=g).tolist()
+
+        # Split indices only among active ranks
+        if self.rank < self.active_replicas:
+            start_idx = self.rank * self.number_of_samples_per_rank
+            end_idx = start_idx + self.number_of_samples_per_rank
+            return iter(indices[start_idx:end_idx])
+        else:
+            return iter([])
 
 
 class HeliostatRayTracer:
@@ -142,7 +261,7 @@ class HeliostatRayTracer:
         rank: int = 0,
         batch_size: int = 1,
         random_seed: int = 7,
-        shuffle: bool = False,
+        shuffle: bool = True,
         bitmap_resolution_e: int = 256,
         bitmap_resolution_u: int = 256,
     ) -> None:
@@ -195,19 +314,19 @@ class HeliostatRayTracer:
             number_of_points=self.number_of_surface_points,
             random_seed=random_seed,
         )
-        # Create distributed sampler.
-        distortions_sampler = DistributedSampler(
-            dataset=self.distortions_dataset,
-            shuffle=shuffle,
-            num_replicas=self.world_size,
+        # Create restricted distributed sampler.
+        self.distortions_sampler = RestrictedDistributedSampler(
+            number_of_samples=len(self.distortions_dataset),
+            world_size=self.world_size,
             rank=self.rank,
+            shuffle=shuffle,
         )
         # Create dataloader.
         self.distortions_loader = DataLoader(
             self.distortions_dataset,
             batch_size=batch_size,
-            shuffle=shuffle,
-            sampler=distortions_sampler,
+            shuffle=False,
+            sampler=self.distortions_sampler,
         )
 
         self.bitmap_resolution_e = bitmap_resolution_e
@@ -237,12 +356,14 @@ class HeliostatRayTracer:
             The resulting bitmap.
         """
         device = torch.device(device)
+
         final_bitmap = torch.zeros(
-            (self.bitmap_resolution_e, self.bitmap_resolution_u), device=device
+            (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
         self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
 
+        self.distortions_sampler.set_seed(0)
         for batch_u, batch_e in self.distortions_loader:
             rays = self.scatter_rays(batch_u, batch_e, device)
 
@@ -367,9 +488,9 @@ class HeliostatRayTracer:
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
         #
-        # 4|3
-        # -.-
         # 1|2
+        # -.-
+        # 4|3
         #
         # where the numbers are the four neighboring, discrete pixels, the
         # "-" and "|" are the discrete pixel borders, and the "." is the
@@ -377,12 +498,12 @@ class HeliostatRayTracer:
         # That the "." may be anywhere in-between the four pixels is not
         # shown in the ASCII diagram, but is important to keep in mind.
 
-        # The lower-valued neighboring pixels (for x this corresponds to 1
-        # and 4, for y to 1 and 2).
+        # The lower-valued neighboring pixels (for x this corresponds to 4
+        # and 3, for y to 1 and 4).
         x_inds_low = x_ints.floor().long()
         y_inds_low = y_ints.floor().long()
         # The higher-valued neighboring pixels (for x this corresponds to 2
-        # and 3, for y to 3 and 4).
+        # and 3, for y to 1 and 2).
         x_inds_high = x_inds_low + 1
         y_inds_high = y_inds_low + 1
 
@@ -399,8 +520,6 @@ class HeliostatRayTracer:
         x_ints_high = x_ints - x_inds_low
         # y-value influence in 3 and 4
         y_ints_high = y_ints - y_inds_low
-        del x_ints
-        del y_ints
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
@@ -413,41 +532,21 @@ class HeliostatRayTracer:
         x_inds_2 = x_inds_high
         y_inds_2 = y_inds_low
         ints_2 = x_ints_high * y_ints_low
-        del y_inds_low
-        del y_ints_low
 
         x_inds_3 = x_inds_high
         y_inds_3 = y_inds_high
         ints_3 = x_ints_high * y_ints_high
-        del x_inds_high
-        del x_ints_high
 
         x_inds_4 = x_inds_low
         y_inds_4 = y_inds_high
         ints_4 = x_ints_low * y_ints_high
-        del x_inds_low
-        del y_inds_high
-        del x_ints_low
-        del y_ints_high
 
         # Combine all indices and intensities in the correct order.
-        x_inds = torch.hstack([x_inds_1, x_inds_2, x_inds_3, x_inds_4]).long().ravel()
-        del x_inds_1
-        del x_inds_2
-        del x_inds_3
-        del x_inds_4
+        x_inds = torch.hstack([x_inds_4, x_inds_3, x_inds_2, x_inds_1]).long().ravel()
 
-        y_inds = torch.hstack([y_inds_1, y_inds_2, y_inds_3, y_inds_4]).long().ravel()
-        del y_inds_1
-        del y_inds_2
-        del y_inds_3
-        del y_inds_4
+        y_inds = torch.hstack([y_inds_4, y_inds_3, y_inds_2, y_inds_1]).long().ravel()
 
-        ints = torch.hstack([ints_1, ints_2, ints_3, ints_4]).ravel()
-        del ints_1
-        del ints_2
-        del ints_3
-        del ints_4
+        ints = torch.hstack([ints_4, ints_3, ints_2, ints_1]).ravel()
 
         # For distribution, we regard even those neighboring pixels that are
         # _not_ part of the image. That is why here, we set up a mask to
@@ -462,13 +561,16 @@ class HeliostatRayTracer:
 
         # Flux density map for heliostat field
         total_bitmap = torch.zeros(
-            [self.bitmap_resolution_e, self.bitmap_resolution_u],
+            [self.bitmap_resolution_u, self.bitmap_resolution_e],
             dtype=dx_ints.dtype,
             device=device,
         )
         # Add up all distributed intensities in the corresponding indices.
         total_bitmap.index_put_(
-            (x_inds[indices], y_inds[indices]),
+            (
+                self.bitmap_resolution_u - 1 - y_inds[indices],
+                self.bitmap_resolution_e - 1 - x_inds[indices],
+            ),
             ints[indices],
             accumulate=True,
         )

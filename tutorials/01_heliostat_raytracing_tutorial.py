@@ -1,4 +1,5 @@
 import math
+import pathlib
 import subprocess
 from typing import Optional, Union
 
@@ -14,14 +15,14 @@ from artist.util import set_logger_config
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be downloaded for this tutorial!
 DOWNLOAD_DATA = False
-scenario_file = "please/insert/the/path/to/the/scenario/here/name.h5"
+scenario_file = pathlib.Path("please/insert/the/path/to/the/scenario/here/name.h5")
 
 if DOWNLOAD_DATA:
-    url = "https://drive.google.com/uc?export=download&id=1WSJyabylkK8cMDgulymVP5nPNGNf_BzN"
+    url = "https://drive.google.com/uc?export=download&id=1X0bMmzwdlnk88bCaYM_sNUGaMxnMaRG8"
     output_filename = "tutorial_scenario.h5"
     command = ["wget", "-O", output_filename, url]
     result = subprocess.run(command, capture_output=True, text=True)
-    scenario_file = output_filename
+    scenario_file = pathlib.Path(output_filename)
 
 # Set up logger.
 set_logger_config()
@@ -126,7 +127,7 @@ image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
 fig, ax = plt.subplots(figsize=(6, 6))
-ax.imshow(image_south.T.cpu().detach().numpy(), cmap="inferno")
+ax.imshow(image_south.cpu().detach().numpy(), cmap="inferno")
 tight_layout()
 
 
@@ -190,7 +191,7 @@ def plot_multiple_images(
     # Plot each tensor.
     for i, image in enumerate(image_tensors):
         ax = axes[i]
-        ax.imshow(image.T.cpu().detach().numpy(), cmap="inferno")
+        ax.imshow(image.cpu().detach().numpy(), cmap="inferno")
         if names is not None and i < len(names):
             ax.set_title(names[i])
         else:

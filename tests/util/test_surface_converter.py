@@ -23,12 +23,15 @@ def test_surface_converter(device: torch.device) -> None:
         If test does not complete as expected.
     """
     heliostat_file_path = (
-        pathlib.Path(ARTIST_ROOT) / "tests/data/paint/AA39/heliostat-properties.json"
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/field_data/AA39-heliostat-properties.json"
     )
     deflectometry_file_path = (
-        pathlib.Path(ARTIST_ROOT) / "tests/data/paint/AA39/deflectometry.h5"
+        pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA39-deflectometry.h5"
     )
-    stral_file_path = pathlib.Path(ARTIST_ROOT) / "tests/data/stral/test_data_AA39.binp"
+    stral_file_path = (
+        pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/test_stral_data.binp"
+    )
 
     surface_converter_normals = SurfaceConverter(
         step_size=5000,

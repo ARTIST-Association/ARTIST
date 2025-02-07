@@ -2,8 +2,8 @@ import pathlib
 
 import h5py
 import torch
+from matplotlib import pyplot as plt
 
-from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import set_logger_config, utils
@@ -17,25 +17,13 @@ set_logger_config()
 # Set the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Specify the path to your scenario.h5 file.
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name.h5")
+
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_distributed_environment(device=device)
 
-is_distributed, rank, world_size = next(environment_generator)
-
-if device.type == "cuda":
-    torch.cuda.set_device(rank % torch.cuda.device_count())
-
-# If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
-# true and a pre-generated scenario file will be used for this tutorial!
-use_pre_generated_scenario = True
-scenario_path = (
-    pathlib.Path(ARTIST_ROOT) / "please/insert/the/path/to/the/scenario/here/name.h5"
-)
-if use_pre_generated_scenario:
-    scenario_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tutorials/data/test_scenario_paint_single_heliostat.h5"
-    )
+device, is_distributed, rank, world_size = next(environment_generator)
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_file:
@@ -52,10 +40,7 @@ scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_dire
 
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=scenario,
-    world_size=world_size,
-    rank=rank,
-    batch_size=100,
+    scenario=scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
 )
 
 # Perform heliostat-based raytracing.
@@ -63,12 +48,12 @@ final_bitmap = raytracer.trace_rays(
     incident_ray_direction=incident_ray_direction, device=device
 )
 
-if is_distributed:
-    final_bitmap = torch.distributed.all_reduce(
-        final_bitmap, op=torch.distributed.ReduceOp.SUM
-    )
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title(f"Flux Density Distribution from rank: {rank}")
+plt.savefig(f"rank_{rank}.png")
 
-final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+if is_distributed:
+    torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.
@@ -76,3 +61,9 @@ try:
     next(environment_generator)
 except StopIteration:
     pass
+
+final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title("Total Flux Density Distribution")
+plt.savefig("final.png")
