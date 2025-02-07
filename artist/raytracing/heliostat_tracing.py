@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Iterator, Union
 
 if TYPE_CHECKING:
@@ -11,6 +12,9 @@ from artist.util import utils
 
 from . import raytracing_utils
 from .rays import Rays
+
+log = logging.getLogger(__name__)
+"""A logger for the heliostat raytracer."""
 
 
 class DistortionsDataset(Dataset):
@@ -133,15 +137,19 @@ class RestrictedDistributedSampler(Sampler):
     """
 
     def __init__(
-        self, dataset: Dataset, world_size: int = 1, rank: int = 0, shuffle: bool = True
+        self,
+        number_of_samples: int,
+        world_size: int = 1,
+        rank: int = 0,
+        shuffle: bool = True,
     ) -> None:
         """
         Set up a custom distributed sampler to assign data to each rank.
 
         Parameters
         ----------
-        dataset : Dataset
-            The dataset from which the samples are taken.
+        number_of_samples : int
+            The length of the dataset or total number of samples.
         world_size : int
             The world size or total number of processes (default: 1).
         rank : int
@@ -149,8 +157,8 @@ class RestrictedDistributedSampler(Sampler):
         shuffle : bool
             Shuffled sampling or sequential (default: True).
         """
-        super().__init__(dataset)
-        self.number_of_samples = len(dataset)
+        super().__init__()
+        self.number_of_samples = number_of_samples
         self.world_size = world_size
         self.rank = rank
         self.shuffle = shuffle
@@ -158,6 +166,11 @@ class RestrictedDistributedSampler(Sampler):
 
         # Adjust num_replicas if dataset is smaller than world_size
         self.active_replicas = min(self.number_of_samples, self.world_size)
+        if self.rank == 0:
+            active_ranks_string = ", ".join(str(i) for i in range(self.active_replicas))
+            log.info(
+                f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
+            )
 
         # Only assign data to first `active_replicas` ranks
         self.number_of_samples_per_rank = (
@@ -303,7 +316,7 @@ class HeliostatRayTracer:
         )
         # Create restricted distributed sampler.
         self.distortions_sampler = RestrictedDistributedSampler(
-            dataset=self.distortions_dataset,
+            number_of_samples=len(self.distortions_dataset),
             world_size=self.world_size,
             rank=self.rank,
             shuffle=shuffle,
