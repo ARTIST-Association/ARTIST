@@ -34,9 +34,8 @@ class DistortionsDataset(Dataset):
     def __init__(
         self,
         light_source: LightSource,
-        number_of_points: int,
-        number_of_facets: int = 4,
-        number_of_heliostats: int = 1,
+        number_of_points_per_heliostat: int,
+        number_of_heliostats: int,
         random_seed: int = 7,
     ) -> None:
         """
@@ -61,10 +60,8 @@ class DistortionsDataset(Dataset):
         random_seed : int
             The random seed used for generating the distortions (default: 7).
         """
-        self.number_of_heliostats = number_of_heliostats
         self.distortions_u, self.distortions_e = light_source.get_distortions(
-            number_of_points=number_of_points,
-            number_of_facets=number_of_facets,
+            number_of_points=number_of_points_per_heliostat,
             number_of_heliostats=number_of_heliostats,
             random_seed=random_seed,
         )
@@ -255,8 +252,6 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: "Scenario",
-        aim_point_area: str = "receiver",
-        heliostat_index: int = 0,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -297,21 +292,21 @@ class HeliostatRayTracer:
         bitmap_resolution_u : int
             The resolution of the bitmap in the up dimension (default: 256).
         """
-        self.heliostat = scenario.heliostats.heliostat_list[heliostat_index]
-        self.target_area = next(
-            area
-            for area in scenario.target_areas.target_area_list
-            if area.name == aim_point_area
-        )
+        self.scenario = scenario
         self.world_size = world_size
         self.rank = rank
-        self.number_of_surface_points = (
-            self.heliostat.current_aligned_surface_points.size(1)
+
+        # TODO: maybe this is not really optimial to just take the size of the first heliostat for everything
+        self.number_of_surface_points_per_heliostat = (
+            self.scenario.heliostats.heliostat_list[0].surface_points.shape[0]
+            * self.scenario.heliostats.heliostat_list[0].surface_points.shape[1]
         )
+
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=scenario.light_sources.light_source_list[0],
-            number_of_points=self.number_of_surface_points,
+            number_of_points_per_heliostat=self.number_of_surface_points_per_heliostat,
+            number_of_heliostats=len(self.scenario.heliostats.heliostat_list),
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -361,7 +356,9 @@ class HeliostatRayTracer:
             (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
-        self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
+        # self.heliostat.set_preferred_reflection_direction(rays=-incident_ray_direction)
+
+        all_preferred_reflection_direction = 0
 
         self.distortions_sampler.set_seed(0)
         for batch_u, batch_e in self.distortions_loader:
