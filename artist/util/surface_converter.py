@@ -60,8 +60,8 @@ class SurfaceConverter:
     def __init__(
         self,
         step_size: int = 100,
-        number_eval_points_e: int = 100,
-        number_eval_points_n: int = 100,
+        number_eval_points_e: int = 50,
+        number_eval_points_n: int = 50,
         conversion_method: str = config_dictionary.convert_nurbs_from_normals,
         number_control_points_e: int = 20,
         number_control_points_n: int = 20,
