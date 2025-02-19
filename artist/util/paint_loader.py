@@ -79,7 +79,7 @@ def extract_paint_calibration_data(
         sun_elevation = torch.tensor(
             calibration_dict[config_dictionary.paint_sun_elevation], device=device
         )
-        incident_ray_direction = utils.convert_3d_direction_to_4d_format(
+        sun_position_enu = utils.convert_3d_point_to_4d_format(
             utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
             device=device,
         )
@@ -98,7 +98,7 @@ def extract_paint_calibration_data(
     return (
         calibration_target_name,
         center_calibration_image,
-        incident_ray_direction,
+        sun_position_enu,
         motor_positions,
     )
 
