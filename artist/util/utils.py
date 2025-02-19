@@ -269,13 +269,16 @@ def azimuth_elevation_to_enu(
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
+    
+    if azimuth < 0.0:
+        azimuth += (torch.pi * 2)
 
     r = slant_range * torch.cos(elevation)
 
     enu = torch.stack(
         [
             r * torch.sin(azimuth),
-            -r * torch.cos(azimuth),
+            r * torch.cos(azimuth),
             slant_range * torch.sin(elevation),
         ],
         dim=0,
@@ -769,6 +772,8 @@ def setup_distributed_environment(
     if device.type == "cuda" and is_distributed:
         gpu_count = torch.cuda.device_count()
         device_id = rank % gpu_count
+        if device_id == 1:
+            device_id += 1
         device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device)
 
