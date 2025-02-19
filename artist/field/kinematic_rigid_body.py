@@ -220,7 +220,7 @@ class RigidBody(Kinematic):
             incident_ray_direction = (
                 incident_ray_direction / incident_ray_direction.norm()
             )
-            desired_concentrator_normal = incident_ray_direction + desired_reflect_vec
+            desired_concentrator_normal = - incident_ray_direction + desired_reflect_vec
             desired_concentrator_normal = (
                 desired_concentrator_normal / desired_concentrator_normal.norm()
             )
