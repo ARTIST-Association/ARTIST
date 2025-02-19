@@ -1,3 +1,4 @@
+from artist.raytracing.rays import Rays
 import torch
 
 from artist.util import utils
@@ -29,9 +30,34 @@ def reflect(
     )
 
 
+def reflect_all(
+    incoming_ray_direction: torch.Tensor, reflection_surface_normals: torch.Tensor
+) -> torch.Tensor:
+    """
+    Reflect incoming rays given the normals of a reflective surface.
+
+    Parameters
+    ----------
+    incoming_ray_direction : torch.Tensor
+        The direction of the incoming rays to be reflected.
+    reflection_surface_normals : torch.Tensor
+        The normal of the reflective surface.
+
+    Returns
+    -------
+    torch.Tensor
+        The reflected rays.
+    """
+    return (
+        incoming_ray_direction
+        - 2
+        * torch.sum(incoming_ray_direction * reflection_surface_normals, dim=-1).unsqueeze(-1)
+        * reflection_surface_normals
+    )
+
 def line_plane_intersections(
-    ray_directions: torch.Tensor,
-    plane_normal_vectors: torch.Tensor,
+    rays: Rays,
+    plane_normal_vector: torch.Tensor,
     plane_center: torch.Tensor,
     points_at_ray_origin: torch.Tensor,
     epsilon: float = 1e-6,
@@ -57,17 +83,29 @@ def line_plane_intersections(
     torch.Tensor
         The intersections of the lines and plane.
     """
-    # Use the cosine between the ray directions and the normals to calculate the relative distribution strength of
-    # the incoming rays.
-    relative_distribution_strengths = ray_directions @ plane_normal_vectors
+    # Use Lambert’s Cosine Law to calculate the relative intensity of the reflected rays on a plane.
+    # The relative intensity is calculated by taking the dot product (matrix multiplication) of the plane's 
+    # unit normal vector and the normalized ray-direction vectors, pointing from the plane to the source.
+    # This determines how much the ray aligns with the plane normal.
+    relative_intensities = - rays.ray_directions @ plane_normal_vector
 
-    if (torch.abs(relative_distribution_strengths) <= epsilon).all():
-        raise ValueError("No intersection or line is within plane.")
+    if (relative_intensities <= epsilon).all():
+        raise ValueError("No ray hits the front of the receiver.")
 
-    # Calculate the final distribution strengths.
-    distribution_strengths = (
-        (plane_center - points_at_ray_origin)
-        @ plane_normal_vectors
-        / relative_distribution_strengths
-    )
-    return points_at_ray_origin + ray_directions * distribution_strengths.unsqueeze(-1)
+    # Calculate the intersections on the plane of each ray.
+    # First, calculate the projection of the ray origin onto the plane’s normal.
+    # This indicates how far the ray origin is from the plane (along the normal direction of the plane).
+    ray_plane_projections = (points_at_ray_origin - plane_center) @ plane_normal_vector
+    # Next, calculate the scalar distance along the ray direction from the ray origin to the intersection point on the plane. 
+    # This indicates how far the intersection point is along the ray's direction.
+    intersection_distances = ray_plane_projections.unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1) / relative_intensities
+    # Combine to get the intersections
+    intersections = points_at_ray_origin.unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1, -1) + rays.ray_directions * intersection_distances.unsqueeze(-1)
+
+    # Calculate the absolute intensities of the rays hitting the target plane.
+    # Use inverse-square law for distance attenuation from heliostat to target plane.
+    distances = torch.norm((points_at_ray_origin - plane_center), dim=-1)
+    distance_attenuations = (1 / (distances ** 2)).unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1)
+    absolute_intensities = rays.ray_magnitudes * relative_intensities * distance_attenuations
+
+    return intersections, absolute_intensities
