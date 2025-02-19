@@ -7,6 +7,9 @@ import torch
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import paint_loader, set_logger_config, utils
+from tutorials.new_scenario import NewScenario
+
+from matplotlib import pyplot as plt
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -15,7 +18,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
@@ -43,7 +47,7 @@ with h5py.File(scenario_path) as scenario_file:
 (
     _,
     _,
-    incident_ray_direction,
+    sun_position,
     _,
 ) = paint_loader.extract_paint_calibration_data(
     calibration_properties_path=calibration_properties_path,
@@ -51,33 +55,52 @@ with h5py.File(scenario_path) as scenario_file:
     device=device,
 )
 
+incident_ray_direction = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_position
+
 # Align all heliostats
-for i in range(2000):
+for i in range(len(scenario.heliostats.heliostat_list)):
     scenario.heliostats.heliostat_list[
-        0
+        i
     ].set_aligned_surface_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction, device=device
     )
 
+aligned_scenario = NewScenario(scenario=scenario, device=device)
+aimpoint_area = next(
+    (
+        area
+        for area in aligned_scenario.target_areas.target_area_list
+        if area.name == "receiver"
+    ),
+    None,
+)
 
 start_time = time.time()
-
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
+    scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
 )
 
 # Perform heliostat-based raytracing.
 final_bitmap = raytracer.trace_rays(
-    incident_ray_direction=incident_ray_direction, device=device
+    incident_ray_direction=incident_ray_direction,
+    target_area=aimpoint_area,
+    device=device
 )
+
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
+plt.savefig(f"rank_{rank}_{device}.png")
 
 if is_distributed:
     torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
 
-final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+#final_bitmap = raytracer.normalize_bitmap(final_bitmap, aimpoint_area)
 
 end_time = time.time()
-elapsed = end_time - start_time
+print(end_time-start_time)
 
-print(elapsed)
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title("Total Flux Density Distribution")
+plt.savefig(f"final_single_device_mode_{device}.png")
+
