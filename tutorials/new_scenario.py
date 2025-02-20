@@ -72,7 +72,7 @@ class NewScenario:
         self.target_areas = scenario.target_areas
         self.light_sources = scenario.light_sources
         
-        number_of_heliostats = 4 #len(scenario.heliostats.heliostat_list)
+        number_of_heliostats = 2200 #len(scenario.heliostats.heliostat_list)
         number_of_surface_points_per_heliostat = scenario.heliostats.heliostat_list[0].surface_points.shape[0] * scenario.heliostats.heliostat_list[0].surface_points.shape[1]
         dimension_of_single_point = scenario.heliostats.heliostat_list[0].surface_points.shape[2]
 
