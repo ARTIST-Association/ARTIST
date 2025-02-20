@@ -18,8 +18,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
@@ -56,6 +56,7 @@ with h5py.File(scenario_path) as scenario_file:
 )
 
 incident_ray_direction = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_position
+#incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
 # Align all heliostats
 for i in range(len(scenario.heliostats.heliostat_list)):
@@ -78,7 +79,7 @@ aimpoint_area = next(
 start_time = time.time()
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
+    scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=300, random_seed=rank
 )
 
 # Perform heliostat-based raytracing.
@@ -90,7 +91,7 @@ final_bitmap = raytracer.trace_rays(
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
 plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
-plt.savefig(f"rank_{rank}_{device}.png")
+plt.savefig(f"rank_{rank}_{device.type}.png")
 
 if is_distributed:
     torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
@@ -102,5 +103,5 @@ print(end_time-start_time)
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
 plt.title("Total Flux Density Distribution")
-plt.savefig(f"final_single_device_mode_{device}.png")
+plt.savefig(f"final_single_device_mode_{device.type}.png")
 
