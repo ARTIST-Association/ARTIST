@@ -95,17 +95,16 @@ def line_plane_intersections(
     # Calculate the intersections on the plane of each ray.
     # First, calculate the projection of the ray origin onto the plane’s normal.
     # This indicates how far the ray origin is from the plane (along the normal direction of the plane).
-    ray_plane_projections = (points_at_ray_origin - plane_center) @ plane_normal_vector
     # Next, calculate the scalar distance along the ray direction from the ray origin to the intersection point on the plane. 
     # This indicates how far the intersection point is along the ray's direction.
-    intersection_distances = ray_plane_projections.unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1) / relative_intensities
+    intersection_distances = ((points_at_ray_origin - plane_center) @ plane_normal_vector).unsqueeze(1) / relative_intensities
+
     # Combine to get the intersections
-    intersections = points_at_ray_origin.unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1, -1) + rays.ray_directions * intersection_distances.unsqueeze(-1)
+    intersections = points_at_ray_origin.unsqueeze(1) + rays.ray_directions * intersection_distances.unsqueeze(-1)
 
     # Calculate the absolute intensities of the rays hitting the target plane.
     # Use inverse-square law for distance attenuation from heliostat to target plane.
-    distances = torch.norm((points_at_ray_origin - plane_center), dim=-1)
-    distance_attenuations = (1 / (distances ** 2)).unsqueeze(1).expand(-1, rays.ray_directions.shape[1], -1)
+    distance_attenuations = (1 / (torch.norm((points_at_ray_origin - plane_center), dim=-1) ** 2)).unsqueeze(1)
     absolute_intensities = rays.ray_magnitudes * relative_intensities * distance_attenuations
 
     return intersections, absolute_intensities
