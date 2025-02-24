@@ -62,18 +62,21 @@ def rotate_distortions(
     sin_e = -torch.sin(e)  # Heliostat convention
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(e.shape, device=device)
     ones = torch.ones(e.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_u, -sin_u, zeros, zeros], dim=1),
-            torch.stack([cos_e * sin_u, cos_e * cos_u, sin_e, zeros], dim=1),
-            torch.stack([-sin_e * sin_u, -sin_e * cos_u, cos_e, zeros], dim=1),
-            torch.stack([zeros, zeros, zeros, ones], dim=1),
-        ],
-        dim=1,
-    ).permute(0, 3, 4, 1, 2)
+    matrix = torch.zeros(e.shape[0], e.shape[1], e.shape[2], 4, 4, device=device)
+
+    matrix[:, :, :, 0, 0] = cos_u
+    matrix[:, :, :, 0, 1] = -sin_u
+    matrix[:, :, :, 1, 0] = cos_e * sin_u
+    matrix[:, :, :, 1, 1] = cos_e * cos_u
+    matrix[:, :, :, 1, 2] = sin_e
+    matrix[:, :, :, 2, 0] = -sin_e * sin_u
+    matrix[:, :, :, 2, 1] = -sin_e * cos_u
+    matrix[:, :, :, 2, 2] = cos_e
+    matrix[:, :, :, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_e(
@@ -772,6 +775,8 @@ def setup_distributed_environment(
     if device.type == "cuda" and is_distributed:
         gpu_count = torch.cuda.device_count()
         device_id = rank % gpu_count
+        # if device_id == 1:
+        #     device_id = 3
         device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device)
 

@@ -42,7 +42,6 @@ with h5py.File(scenario_path) as scenario_file:
         scenario_file=scenario_file, device=device
     )
 
-
 # Load the incident_ray_direction from the calibration data.
 (
     _,
@@ -66,42 +65,83 @@ for i in range(len(scenario.heliostats.heliostat_list)):
         incident_ray_direction=incident_ray_direction, device=device
     )
 
-aligned_scenario = NewScenario(scenario=scenario, device=device)
-aimpoint_area = next(
-    (
-        area
-        for area in aligned_scenario.target_areas.target_area_list
-        if area.name == "receiver"
-    ),
-    None,
-)
+#numbers = [1, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800]
+numbers = [2643]
+for num_helios in numbers:
+    aligned_scenario = NewScenario(scenario=scenario, num_helios=num_helios, device=device)
+    aimpoint_area = next(
+        (
+            area
+            for area in aligned_scenario.target_areas.target_area_list
+            if area.name == "receiver"
+        ),
+        None,
+    )
 
-start_time = time.time()
-# Create raytracer
-raytracer = HeliostatRayTracer(
-    scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=300, random_seed=rank
-)
+    start_time = time.time()
+    # Create raytracer
+    raytracer = HeliostatRayTracer(
+        scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=num_helios, random_seed=rank
+    )
 
-# Perform heliostat-based raytracing.
-final_bitmap = raytracer.trace_rays(
-    incident_ray_direction=incident_ray_direction,
-    target_area=aimpoint_area,
-    device=device
-)
+    # Perform heliostat-based raytracing.
+    final_bitmap = raytracer.trace_rays(
+        incident_ray_direction=incident_ray_direction,
+        target_area=aimpoint_area,
+        device=device
+    )
 
-plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
-plt.savefig(f"rank_{rank}_{device.type}.png")
+    if is_distributed:
+        torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
 
-if is_distributed:
-    torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+    end_time = time.time()
+    print(f"heliostats: {num_helios}, batch size: {num_helios}, {device}, time: {end_time-start_time}")
 
-#final_bitmap = raytracer.normalize_bitmap(final_bitmap, aimpoint_area)
+    torch.cuda.empty_cache()
 
-end_time = time.time()
-print(end_time-start_time)
+# aligned_scenario = NewScenario(scenario=scenario, num_helios=2200, device=device)
+# aimpoint_area = next(
+#     (
+#         area
+#         for area in aligned_scenario.target_areas.target_area_list
+#         if area.name == "receiver"
+#     ),
+#     None,
+# )
 
-plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-plt.title("Total Flux Density Distribution")
-plt.savefig(f"final_single_device_mode_{device.type}.png")
+# start_time = time.time()
+# # Create raytracer
+# raytracer = HeliostatRayTracer(
+#     scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=2200, random_seed=rank
+# )
 
+# # Perform heliostat-based raytracing.
+# final_bitmap = raytracer.trace_rays(
+#     incident_ray_direction=incident_ray_direction,
+#     target_area=aimpoint_area,
+#     device=device
+# )
+
+# # plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+# # plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
+# # plt.savefig(f"new_rank_{rank}_{device.type}.png")
+
+# if is_distributed:
+#     torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+
+# #final_bitmap = raytracer.normalize_bitmap(final_bitmap, aimpoint_area)
+
+# end_time = time.time()
+# print(f"heliostats: 2200, batch size: 2200, {device}, time: {end_time-start_time}")
+
+# plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+# plt.title("Total Flux Density Distribution")
+# plt.savefig(f"new_final_single_device_mode_{device.type}.png")
+
+
+# # Make sure the code after the yield statement in the environment Generator
+# # is called, to clean up the distributed process group.
+# try:
+#     next(environment_generator)
+# except StopIteration:
+#     pass
