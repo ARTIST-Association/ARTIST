@@ -2,10 +2,10 @@ from typing import Union
 
 import torch
 
-from artist.field.actuator import Actuator
+from artist.field.actuator import Actuators
 
 
-class LinearActuator(Actuator):
+class LinearActuators(Actuators):
     """
     Implement the behavior of a linear actuator.
 
@@ -43,13 +43,12 @@ class LinearActuator(Actuator):
 
     def __init__(
         self,
-        joint_number: int,
-        clockwise_axis_movement: bool,
-        increment: torch.Tensor,
-        initial_stroke_length: torch.Tensor,
-        offset: torch.Tensor,
-        pivot_radius: torch.Tensor,
-        initial_angle: torch.Tensor,
+        clockwise_axis_movement: torch.Tensor,
+        increments: torch.Tensor,
+        initial_stroke_lengths: torch.Tensor,
+        offsets: torch.Tensor,
+        pivot_radii: torch.Tensor,
+        initial_angles: torch.Tensor,
     ) -> None:
         """
         Initialize a linear actuator.
@@ -81,25 +80,16 @@ class LinearActuator(Actuator):
         initial_angle : torch.Tensor
             The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
-        super().__init__(
-            joint_number,
-            clockwise_axis_movement,
-            increment,
-            initial_stroke_length,
-            offset,
-            pivot_radius,
-            initial_angle,
-        )
-        self.joint_number = joint_number
+        super().__init__()
         self.clockwise_axis_movement = clockwise_axis_movement
-        self.increment = increment
-        self.initial_stroke_length = initial_stroke_length
-        self.offset = offset
-        self.pivot_radius = pivot_radius
-        self.initial_angle = initial_angle
+        self.increments = increments
+        self.initial_stroke_lengths = initial_stroke_lengths
+        self.offsets = offsets
+        self.pivot_radii = pivot_radii
+        self.initial_angles = initial_angles
 
-    def _motor_position_to_absolute_angle(
-        self, motor_position: torch.Tensor
+    def _motor_positions_to_absolute_angles(
+        self, motor_positions: torch.Tensor
     ) -> torch.Tensor:
         """
         Convert motor steps into an angle using actuator geometry.
@@ -118,15 +108,15 @@ class LinearActuator(Actuator):
         torch.Tensor
             The calculated absolute angle.
         """
-        stroke_length = motor_position / self.increment + self.initial_stroke_length
-        calc_step_1 = self.offset**2 + self.pivot_radius**2 - stroke_length**2
-        calc_step_2 = 2.0 * self.offset * self.pivot_radius
+        stroke_lengths = motor_positions / self.increments + self.initial_stroke_lengths
+        calc_step_1 = self.offsets**2 + self.pivot_radii**2 - stroke_lengths**2
+        calc_step_2 = 2.0 * self.offsets * self.pivot_radii
         calc_step_3 = calc_step_1 / calc_step_2
-        absolute_angle = torch.arccos(calc_step_3)
-        return absolute_angle
+        absolute_angles = torch.arccos(calc_step_3)
+        return absolute_angles
 
-    def motor_position_to_angle(
-        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def motor_positions_to_angles(
+        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the joint angle for a given motor position.
@@ -148,23 +138,21 @@ class LinearActuator(Actuator):
             The joint angle corresponding to the motor position.
         """
         device = torch.device(device)
-        absolute_angle = self._motor_position_to_absolute_angle(
-            motor_position=motor_position
+        absolute_angles = self._motor_positions_to_absolute_angles(
+            motor_positions=motor_positions
         )
-        absolute_initial_angle = self._motor_position_to_absolute_angle(
-            motor_position=torch.zeros(1, device=device)
+        absolute_initial_angles = self._motor_positions_to_absolute_angles(
+            motor_positions=torch.zeros_like(motor_positions, device=device)
         )
-        delta_angle = absolute_initial_angle - absolute_angle
+        delta_angles = absolute_initial_angles - absolute_angles
 
-        relative_angle = (
-            self.initial_angle + delta_angle
-            if self.clockwise_axis_movement
-            else self.initial_angle - delta_angle
+        relative_angles = (
+            self.initial_angles + delta_angles * (self.clockwise_axis_movement == 1) - delta_angles * (self.clockwise_axis_movement == 0)
         )
-        return relative_angle
+        return relative_angles
 
-    def angle_to_motor_position(
-        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def angles_to_motor_positions(
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the motor position for a given angle.
@@ -186,23 +174,23 @@ class LinearActuator(Actuator):
             The motor steps.
         """
         device = torch.device(device)
-        delta_angle = (
-            angle - self.initial_angle
-            if self.clockwise_axis_movement
-            else self.initial_angle - angle
+        delta_angles = torch.where(
+            self.clockwise_axis_movement == 1, 
+            angles - self.initial_angles,
+            self.initial_angles - angles
         )
 
-        absolute_initial_angle = self._motor_position_to_absolute_angle(
-            motor_position=torch.zeros(1, device=device)
+        absolute_initial_angles = self._motor_positions_to_absolute_angles(
+            motor_positions=torch.zeros_like(angles, device=device)
         )
-        initial_angle = absolute_initial_angle - delta_angle
+        initial_angles = absolute_initial_angles - delta_angles
 
-        calc_step_3 = torch.cos(initial_angle)
-        calc_step_2 = 2.0 * self.offset * self.pivot_radius
+        calc_step_3 = torch.cos(initial_angles)
+        calc_step_2 = 2.0 * self.offsets * self.pivot_radii
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_length = torch.sqrt(self.offset**2 + self.pivot_radius**2 - calc_step_1)
-        motor_position = (stroke_length - self.initial_stroke_length) * self.increment
-        return motor_position
+        stroke_lengths = torch.sqrt(self.offsets**2 + self.pivot_radii**2 - calc_step_1)
+        motor_positions = (stroke_lengths - self.initial_stroke_lengths) * self.increments
+        return motor_positions
 
     def forward(self) -> None:
         """

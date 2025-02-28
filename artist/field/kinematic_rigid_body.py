@@ -1,5 +1,6 @@
 from typing import Union
 
+from artist.field.actuator_linear import LinearActuators
 import torch
 
 from artist.field.actuator_array import ActuatorArray
@@ -48,30 +49,11 @@ class RigidBody(Kinematic):
 
     def __init__(
         self,
-        position: torch.Tensor,
-        aim_point: torch.Tensor,
-        actuator_config: ActuatorListConfig,
-        initial_orientation: torch.Tensor,
-        deviation_parameters: KinematicDeviations = KinematicDeviations(
-            first_joint_translation_e=torch.tensor(0.0),
-            first_joint_translation_n=torch.tensor(0.0),
-            first_joint_translation_u=torch.tensor(0.0),
-            first_joint_tilt_e=torch.tensor(0.0),
-            first_joint_tilt_n=torch.tensor(0.0),
-            first_joint_tilt_u=torch.tensor(0.0),
-            second_joint_translation_e=torch.tensor(0.0),
-            second_joint_translation_n=torch.tensor(0.0),
-            second_joint_translation_u=torch.tensor(0.0),
-            second_joint_tilt_e=torch.tensor(0.0),
-            second_joint_tilt_n=torch.tensor(0.0),
-            second_joint_tilt_u=torch.tensor(0.0),
-            concentrator_translation_e=torch.tensor(0.0),
-            concentrator_translation_n=torch.tensor(0.0),
-            concentrator_translation_u=torch.tensor(0.0),
-            concentrator_tilt_e=torch.tensor(0.0),
-            concentrator_tilt_n=torch.tensor(0.0),
-            concentrator_tilt_u=torch.tensor(0.0),
-        ),
+        heliostat_positions: torch.Tensor,
+        aim_points: torch.Tensor,
+        actuator_parameters: ActuatorListConfig,
+        initial_orientations: torch.Tensor,
+        deviation_parameters: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -97,19 +79,27 @@ class RigidBody(Kinematic):
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
-        super().__init__(position=position, aim_point=aim_point)
+        super().__init__()
         device = torch.device(device)
+        self.heliostat_positions = heliostat_positions
+        self.aim_points = aim_points
+        self.initial_orientations = initial_orientations
         self.deviation_parameters = deviation_parameters
-        for attr_name, attr_value in self.deviation_parameters.__dict__.items():
-            if isinstance(attr_value, torch.Tensor):
-                setattr(self.deviation_parameters, attr_name, attr_value.to(device))
 
-        self.actuators = ActuatorArray(
-            actuator_list_config=actuator_config, device=device
-        )
-        self.initial_orientation_helisotat = initial_orientation
         self.artist_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
+        )
+
+        self.number_of_heliostats = heliostat_positions.shape[0]
+        self.number_of_actuators_per_heliostat = actuator_parameters.shape[2]
+
+        self.linear_actuators = LinearActuators(
+            clockwise_axis_movement=actuator_parameters[:, 1],
+            increments=actuator_parameters[:, 2],
+            initial_stroke_lengths=actuator_parameters[:, 3],
+            offsets=actuator_parameters[:, 4],
+            pivot_radii=actuator_parameters[:, 5],
+            initial_angles=actuator_parameters[:, 6],
         )
 
     def incident_ray_direction_to_orientation(
@@ -138,167 +128,155 @@ class RigidBody(Kinematic):
         torch.Tensor
             The orientation matrix.
         """
-        if len(self.actuators.actuator_list) != 2:
+        if self.number_of_actuators_per_heliostat != 2:
             raise ValueError(
-                f"The rigid body kinematic requires exactly two actuators but {len(self.actuators.actuator_list)} were specified, please check the configuration!"
+                f"The rigid body kinematic requires exactly two actuators but {self.number_of_actuators_per_heliostat} were specified, please check the configuration!"
             )
 
         device = torch.device(device)
-        motor_positions = torch.zeros(2, device=device)
+        motor_positions = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat), device=device)
         last_iteration_loss = None
         for _ in range(max_num_iterations):
-            joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
-                motor_position=motor_positions[0], device=device
-            )
-            joint_2_angle = self.actuators.actuator_list[1].motor_position_to_angle(
-                motor_position=motor_positions[1], device=device
+            joint_angles = self.linear_actuators.motor_positions_to_angles(
+                motor_positions=motor_positions, device=device
             )
 
-            initial_orientation = torch.eye(4, device=device)
+            initial_orientations = torch.eye(4, device=device).unsqueeze(0)
 
             # Account for position.
-            initial_orientation = initial_orientation @ utils.translate_enu(
-                e=self.position[0],
-                n=self.position[1],
-                u=self.position[2],
+            initial_orientations = initial_orientations @ utils.translate_enu(
+                e=self.heliostat_positions[:, 0],
+                n=self.heliostat_positions[:, 1],
+                u=self.heliostat_positions[:, 2],
                 device=device,
             )
 
-            joint_1_rotation = (
+            joint_rotations = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat, 4, 4), device=device)
+
+            joint_rotations[:, 0] = (
                 utils.rotate_n(
-                    n=self.deviation_parameters.first_joint_tilt_n, device=device
+                    n=self.deviation_parameters[:, 4], device=device
                 )
                 @ utils.rotate_u(
-                    u=self.deviation_parameters.first_joint_tilt_u, device=device
+                    u=self.deviation_parameters[:, 5], device=device
                 )
                 @ utils.translate_enu(
-                    e=self.deviation_parameters.first_joint_translation_e,
-                    n=self.deviation_parameters.first_joint_translation_n,
-                    u=self.deviation_parameters.first_joint_translation_u,
+                    e=self.deviation_parameters[:, 0],
+                    n=self.deviation_parameters[:, 1],
+                    u=self.deviation_parameters[:, 2],
                     device=device,
                 )
-                @ utils.rotate_e(joint_1_angle, device=device)
+                @ utils.rotate_e(
+                    e=joint_angles[:, 0], device=device)
             )
-            joint_2_rotation = (
+            joint_rotations[:, 1] = (
                 utils.rotate_e(
-                    e=self.deviation_parameters.second_joint_tilt_e, device=device
+                    e=self.deviation_parameters[:, 9], device=device
                 )
                 @ utils.rotate_n(
-                    n=self.deviation_parameters.second_joint_tilt_n, device=device
+                    n=self.deviation_parameters[:, 10], device=device
                 )
                 @ utils.translate_enu(
-                    e=self.deviation_parameters.second_joint_translation_e,
-                    n=self.deviation_parameters.second_joint_translation_n,
-                    u=self.deviation_parameters.second_joint_translation_u,
+                    e=self.deviation_parameters[:, 6],
+                    n=self.deviation_parameters[:, 7],
+                    u=self.deviation_parameters[:, 8],
                     device=device,
                 )
-                @ utils.rotate_u(joint_2_angle, device=device)
+                @ utils.rotate_u(
+                    u=joint_angles[:, 1], device=device)
             )
 
-            orientation = (
-                initial_orientation
-                @ joint_1_rotation
-                @ joint_2_rotation
+            orientations = (
+                initial_orientations
+                @ joint_rotations[:, 0]
+                @ joint_rotations[:, 1]
                 @ utils.translate_enu(
-                    e=self.deviation_parameters.concentrator_translation_e,
-                    n=self.deviation_parameters.concentrator_translation_n,
-                    u=self.deviation_parameters.concentrator_translation_u,
+                    e=self.deviation_parameters[:, 12],
+                    n=self.deviation_parameters[:, 13],
+                    u=self.deviation_parameters[:, 14],
                     device=device,
                 )
             )
 
-            concentrator_normal = orientation @ torch.tensor(
+            concentrator_normals = orientations @ torch.tensor(
                 [0, -1, 0, 0], dtype=torch.float32, device=device
             )
-            concentrator_origin = orientation @ torch.tensor(
+            concentrator_origins = orientations @ torch.tensor(
                 [0, 0, 0, 1], dtype=torch.float32, device=device
             )
 
-            # Compute desired normal.
-            desired_reflect_vec = self.aim_point - concentrator_origin
-            desired_reflect_vec = desired_reflect_vec / desired_reflect_vec.norm()
-            incident_ray_direction = (
-                incident_ray_direction / incident_ray_direction.norm()
-            )
-            desired_concentrator_normal = - incident_ray_direction + desired_reflect_vec
-            desired_concentrator_normal = (
-                desired_concentrator_normal / desired_concentrator_normal.norm()
-            )
+            # Compute desired normals.
+            desired_reflect_vecs = torch.nn.functional.normalize(self.aim_points - concentrator_origins, p=2, dim=1)
+            desired_concentrator_normals = torch.nn.functional.normalize(-incident_ray_direction + desired_reflect_vecs, p=2, dim=1)
 
             # Compute epoch loss.
-            loss = torch.abs(desired_concentrator_normal - concentrator_normal)
+            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(dim=0)
 
             # Stop if converged.
             if isinstance(last_iteration_loss, torch.Tensor):
                 eps = torch.abs(last_iteration_loss - loss)
                 if torch.any(eps <= min_eps):
                     break
-            last_iteration_loss = loss.detach()
+            last_iteration_loss = loss
 
             # Analytical Solution
+            joint_angles = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat), device=device)
 
-            # Calculate joint 2 angle.
-            joint_2_angle = -torch.arcsin(
-                -desired_concentrator_normal[0]
-                / torch.cos(self.deviation_parameters.second_joint_translation_n)
+            # Calculate joint 2 angles.
+            joint_angles[:, 1] = -torch.arcsin(
+                -desired_concentrator_normals[:, 0]
+                / torch.cos(self.deviation_parameters[:, 7])
             )
 
-            # Calculate joint 1 angle.
+            # Calculate joint 1 angles.
             a = -torch.cos(
-                self.deviation_parameters.second_joint_translation_e
-            ) * torch.cos(joint_2_angle) + torch.sin(
-                self.deviation_parameters.second_joint_translation_e
+                self.deviation_parameters[:, 6]
+            ) * torch.cos(joint_angles[:, 1]) + torch.sin(
+                self.deviation_parameters[:, 6]
             ) * torch.sin(
-                self.deviation_parameters.second_joint_translation_n
-            ) * torch.sin(joint_2_angle)
+                self.deviation_parameters[:, 7]
+            ) * torch.sin(joint_angles[:, 1])
             b = -torch.sin(
-                self.deviation_parameters.second_joint_translation_e
-            ) * torch.cos(joint_2_angle) - torch.cos(
-                self.deviation_parameters.second_joint_translation_e
+                self.deviation_parameters[:, 6]
+            ) * torch.cos(joint_angles[:, 1]) - torch.cos(
+                self.deviation_parameters[:, 6]
             ) * torch.sin(
-                self.deviation_parameters.second_joint_translation_n
-            ) * torch.sin(joint_2_angle)
+                self.deviation_parameters[:, 7]
+            ) * torch.sin(joint_angles[:, 1])
 
-            joint_1_angle = (
+            joint_angles[:, 0] = (
                 torch.arctan2(
-                    a * -desired_concentrator_normal[2]
-                    - b * -desired_concentrator_normal[1],
-                    a * -desired_concentrator_normal[1]
-                    + b * -desired_concentrator_normal[2],
+                    a * -desired_concentrator_normals[:, 2]
+                    - b * -desired_concentrator_normals[:, 1],
+                    a * -desired_concentrator_normals[:, 1]
+                    + b * -desired_concentrator_normals[:, 2],
                 )
                 - torch.pi
             )
 
-            motor_positions = torch.stack(
-                (
-                    self.actuators.actuator_list[0].angle_to_motor_position(
-                        joint_1_angle, device
-                    ),
-                    self.actuators.actuator_list[1].angle_to_motor_position(
-                        joint_2_angle, device
-                    ),
-                ),
+            motor_positions = self.linear_actuators.angles_to_motor_positions(
+                joint_angles, device
             )
 
-        east_angle, north_angle, up_angle = utils.decompose_rotation(
-            initial_vector=self.initial_orientation_helisotat[:-1],
+        east_angles, north_angles, up_angles = utils.decompose_rotations(
+            initial_vector=self.initial_orientations[:, :-1],
             target_vector=self.artist_standard_orientation[:-1],
             device=device,
         )
 
-        # Return orientation matrix multiplied by the initial orientation offset.
+        # Return orientation matrices multiplied by the initial orientation offsets.
         return (
-            orientation
+            orientations
             @ utils.rotate_e(
-                e=east_angle,
+                e=east_angles,
                 device=device,
             )
             @ utils.rotate_n(
-                n=north_angle,
+                n=north_angles,
                 device=device,
             )
             @ utils.rotate_u(
-                u=up_angle,
+                u=up_angles,
                 device=device,
             )
         )
@@ -337,8 +315,8 @@ class RigidBody(Kinematic):
             incident_ray_direction, device=device
         )
 
-        aligned_surface_points = surface_points @ orientation.T
-        aligned_surface_normals = surface_normals @ orientation.T
+        aligned_surface_points = surface_points @ orientation.transpose(1, 2)
+        aligned_surface_normals = surface_normals @ orientation.transpose(1, 2)
 
         return aligned_surface_points, aligned_surface_normals
 

@@ -4,13 +4,13 @@ from typing import Union
 import torch
 
 from artist.field.actuator_ideal import IdealActuator
-from artist.field.actuator_linear import LinearActuator
+from artist.field.actuator_linear import LinearActuators
 from artist.util import config_dictionary
 from artist.util.configuration_classes import ActuatorListConfig
 
 actuator_type_mapping = {
     config_dictionary.ideal_actuator_key: IdealActuator,
-    config_dictionary.linear_actuator_key: LinearActuator,
+    config_dictionary.linear_actuator_key: LinearActuators,
 }
 """A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct actuator type."""
 
