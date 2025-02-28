@@ -3,11 +3,11 @@ from typing import Union
 import torch
 
 from artist.field.actuator import (
-    Actuator,
+    Actuators,
 )
 
 
-class IdealActuator(Actuator):
+class IdealActuator(Actuators):
     """
     Implement the behavior of an ideal actuator.
 
