@@ -106,16 +106,18 @@ def rotate_e(
 
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat convention
-    zeros = torch.zeros(e.shape, device=device)
     ones = torch.ones(e.shape, device=device)
-    return torch.stack(
-        [
-            torch.stack([ones, zeros, zeros, zeros]),
-            torch.stack([zeros, cos_e, sin_e, zeros]),
-            torch.stack([zeros, -sin_e, cos_e, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+
+    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
+    
+    matrix[:, 0, 0] = ones
+    matrix[:, 1, 1] = cos_e
+    matrix[:, 1, 2] = sin_e
+    matrix[:, 2, 1] = -sin_e
+    matrix[:, 2, 2] = cos_e
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_n(
@@ -144,17 +146,18 @@ def rotate_n(
 
     cos_n = torch.cos(n)
     sin_n = torch.sin(n)
-    zeros = torch.zeros(n.shape, device=device)
     ones = torch.ones(n.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_n, zeros, -sin_n, zeros]),
-            torch.stack([zeros, ones, zeros, zeros]),
-            torch.stack([sin_n, zeros, cos_n, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(n.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = cos_n
+    matrix[:, 0, 2] = -sin_n
+    matrix[:, 1, 1] = ones
+    matrix[:, 2, 0] = sin_n
+    matrix[:, 2, 2] = cos_n
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_u(
@@ -183,17 +186,18 @@ def rotate_u(
 
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(u.shape, device=device)
     ones = torch.ones(u.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_u, -sin_u, zeros, zeros]),
-            torch.stack([sin_u, cos_u, zeros, zeros]),
-            torch.stack([zeros, zeros, ones, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(u.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = cos_u
+    matrix[:, 0, 1] = -sin_u
+    matrix[:, 1, 0] = sin_u
+    matrix[:, 1, 1] = cos_u
+    matrix[:, 2, 2] = ones
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def translate_enu(
@@ -231,17 +235,19 @@ def translate_enu(
 
     device = torch.device(device)
 
-    zeros = torch.zeros(e.shape, device=device)
     ones = torch.ones(e.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([ones, zeros, zeros, e]),
-            torch.stack([zeros, ones, zeros, n]),
-            torch.stack([zeros, zeros, ones, u]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = ones
+    matrix[:, 0, 3] = e
+    matrix[:, 1, 1] = ones
+    matrix[:, 1, 3] = n
+    matrix[:, 2, 2] = ones
+    matrix[:, 2, 3] = u
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def azimuth_elevation_to_enu(
@@ -249,9 +255,12 @@ def azimuth_elevation_to_enu(
     elevation: torch.Tensor,
     slant_range: float = 1.0,
     degree: bool = True,
+    device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
-    Coordinate transformation from azimuth and elevation to east, north, up.
+    Transform coordinates from azimuth and elevation to east, north, up.
+
+    This method assumes a south-oriented azimuth-elevation coordiante system, where 0° points toward the south.
 
     Parameters
     ----------
@@ -263,6 +272,8 @@ def azimuth_elevation_to_enu(
         Slant range (meters).
     degree : bool
         Whether input is given in degrees or radians.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
@@ -278,14 +289,12 @@ def azimuth_elevation_to_enu(
 
     r = slant_range * torch.cos(elevation)
 
-    enu = torch.stack(
-        [
-            r * torch.sin(azimuth),
-            r * torch.cos(azimuth),
-            slant_range * torch.sin(elevation),
-        ],
-        dim=0,
-    )
+    enu = torch.zeros(3, device=device)
+
+    enu[0] = r * torch.sin(azimuth)
+    enu[1] = - r * torch.cos(azimuth)
+    enu[2] = slant_range * torch.sin(elevation)
+
     return enu
 
 
@@ -520,7 +529,7 @@ def corner_points_to_plane(
     return plane_e, plane_u
 
 
-def decompose_rotation(
+def decompose_rotations(
     initial_vector: torch.Tensor,
     target_vector: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
@@ -548,29 +557,24 @@ def decompose_rotation(
 
     """
     device = torch.device(device)
+
     # Normalize the input vectors
-    initial_vector = initial_vector / torch.linalg.norm(initial_vector)
-    target_vector = target_vector / torch.linalg.norm(target_vector)
+    initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
+    target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(0)
 
     # Compute the cross product (rotation axis)
     r = torch.linalg.cross(initial_vector, target_vector)
-    r_norm = torch.linalg.norm(r)
-
-    # If the cross product is zero, the vectors are aligned; no rotation needed
-    if r_norm == 0:
-        return torch.tensor([0.0, 0.0, 0.0], device=device)
 
     # Normalize the rotation axis
-    r_normalized = r / r_norm
+    r_normalized = torch.nn.functional.normalize(r, p=2, dim=1)
 
     # Compute the angle between the vectors
-    cos_theta = torch.clip(torch.dot(initial_vector, target_vector), -1.0, 1.0)
-    theta = torch.arccos(cos_theta)
+    theta = torch.arccos(torch.clamp(initial_vector @ target_vector.T, -1.0, 1.0))
 
     # Decompose the angle along each axis
     theta_components = theta * r_normalized
 
-    return theta_components[0], theta_components[1], theta_components[2]
+    return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
 
 
 def angle_between_vectors(
@@ -642,7 +646,7 @@ def transform_initial_angle(
     initial_orientation_with_offset = initial_orientation @ rotate_e(
         e=initial_angle,
         device=device,
-    )
+    ).squeeze(0)
 
     # Compute the transformed angle relative to the reference orientation
     transformed_initial_angle = angle_between_vectors(
