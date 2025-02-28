@@ -80,7 +80,7 @@ def extract_paint_calibration_data(
             calibration_dict[config_dictionary.paint_sun_elevation], device=device
         )
         sun_position_enu = utils.convert_3d_point_to_4d_format(
-            utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True),
+            utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True, device=device),
             device=device,
         )
         motor_positions = torch.tensor(
