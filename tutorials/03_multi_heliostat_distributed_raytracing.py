@@ -5,7 +5,7 @@ import h5py
 import torch
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.util.scenario import Scenario
 from artist.util import paint_loader, set_logger_config, utils
 from tutorials.new_scenario import NewScenario
 
@@ -18,8 +18,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
@@ -54,94 +54,57 @@ with h5py.File(scenario_path) as scenario_file:
     device=device,
 )
 
+# Incident ray direction needs to be normed
 incident_ray_direction = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_position
 #incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
 # Align all heliostats
-for i in range(len(scenario.heliostats.heliostat_list)):
-    scenario.heliostats.heliostat_list[
-        i
-    ].set_aligned_surface_with_incident_ray_direction(
-        incident_ray_direction=incident_ray_direction, device=device
-    )
+scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
+    incident_ray_direction=incident_ray_direction,
+    device=device
+)
 
-#numbers = [1, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800]
-numbers = [2643]
-for num_helios in numbers:
-    aligned_scenario = NewScenario(scenario=scenario, num_helios=num_helios, device=device)
-    aimpoint_area = next(
-        (
-            area
-            for area in aligned_scenario.target_areas.target_area_list
-            if area.name == "receiver"
-        ),
-        None,
-    )
+start_time = time.time()
+# Create raytracer
+raytracer = HeliostatRayTracer(
+    scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
+)
 
-    start_time = time.time()
-    # Create raytracer
-    raytracer = HeliostatRayTracer(
-        scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=num_helios, random_seed=rank
-    )
+target_area = next(
+    (
+        area
+        for area in scenario.target_areas.target_area_list
+        if area.name == "receiver"
+    ),
+    None,
+)
 
-    # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays(
-        incident_ray_direction=incident_ray_direction,
-        target_area=aimpoint_area,
-        device=device
-    )
+# Perform heliostat-based raytracing.
+final_bitmap = raytracer.trace_rays(
+    incident_ray_direction=incident_ray_direction,
+    target_area=target_area,
+    device=device
+)
 
-    if is_distributed:
-        torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
+plt.savefig(f"AA_new_rank_{rank}_{device.type}.png")
 
-    end_time = time.time()
-    print(f"heliostats: {num_helios}, batch size: {num_helios}, {device}, time: {end_time-start_time}")
+if is_distributed:
+    torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
 
-    torch.cuda.empty_cache()
+#final_bitmap = raytracer.normalize_bitmap(final_bitmap, aimpoint_area)
 
-# aligned_scenario = NewScenario(scenario=scenario, num_helios=2200, device=device)
-# aimpoint_area = next(
-#     (
-#         area
-#         for area in aligned_scenario.target_areas.target_area_list
-#         if area.name == "receiver"
-#     ),
-#     None,
-# )
+end_time = time.time()
+print(f"heliostats: 2200, batch size: 2200, {device}, time: {end_time-start_time}")
 
-# start_time = time.time()
-# # Create raytracer
-# raytracer = HeliostatRayTracer(
-#     scenario=aligned_scenario, world_size=world_size, rank=rank, batch_size=2200, random_seed=rank
-# )
+plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
+plt.title("Total Flux Density Distribution")
+plt.savefig(f"AA_new_final_single_device_mode_{device.type}.png")
 
-# # Perform heliostat-based raytracing.
-# final_bitmap = raytracer.trace_rays(
-#     incident_ray_direction=incident_ray_direction,
-#     target_area=aimpoint_area,
-#     device=device
-# )
-
-# # plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-# # plt.title(f"Flux Density Distribution from rank (heliostat): {rank}")
-# # plt.savefig(f"new_rank_{rank}_{device.type}.png")
-
-# if is_distributed:
-#     torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
-
-# #final_bitmap = raytracer.normalize_bitmap(final_bitmap, aimpoint_area)
-
-# end_time = time.time()
-# print(f"heliostats: 2200, batch size: 2200, {device}, time: {end_time-start_time}")
-
-# plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-# plt.title("Total Flux Density Distribution")
-# plt.savefig(f"new_final_single_device_mode_{device.type}.png")
-
-
-# # Make sure the code after the yield statement in the environment Generator
-# # is called, to clean up the distributed process group.
-# try:
-#     next(environment_generator)
-# except StopIteration:
-#     pass
+# Make sure the code after the yield statement in the environment Generator
+# is called, to clean up the distributed process group.
+try:
+    next(environment_generator)
+except StopIteration:
+    pass

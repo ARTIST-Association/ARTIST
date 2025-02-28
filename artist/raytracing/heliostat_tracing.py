@@ -2,8 +2,7 @@ import logging
 from typing import TYPE_CHECKING, Iterator, Union
 
 if TYPE_CHECKING:
-    from artist.scenario import Scenario
-    from tutorials.new_scenario import NewScenario
+    from artist.util.scenario import Scenario
 
 from artist.field.tower_target_area import TargetArea
 import torch
@@ -241,7 +240,7 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
-        scenario: "NewScenario",
+        scenario: "Scenario",
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -288,14 +287,14 @@ class HeliostatRayTracer:
 
         # TODO: maybe this is not really optimial to just take the size of the first heliostat for everything
         self.number_of_surface_points_per_heliostat = (
-            self.scenario.all_current_aligned_surface_points.shape[1]
+            self.scenario.heliostat_field.all_current_aligned_surface_points.shape[1]
         )
 
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=scenario.light_sources.light_source_list[0],
             number_of_points_per_heliostat=self.number_of_surface_points_per_heliostat,
-            number_of_heliostats=self.scenario.all_current_aligned_surface_points.shape[0],
+            number_of_heliostats=self.scenario.heliostat_field.all_current_aligned_surface_points.shape[0],
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -345,10 +344,10 @@ class HeliostatRayTracer:
             (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
-        if not self.scenario.is_aligned:
-            raise ValueError("Heliostat has not yet been aligned.")
-        self.scenario.all_preferred_reflection_directions = raytracing_utils.reflect_all(incoming_ray_direction=incident_ray_direction,
-                                                                                         reflection_surface_normals=self.scenario.all_current_aligned_surface_normals)
+        if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1):
+            raise ValueError("Not all heliostats have been aligned.")
+        self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect_all(incoming_ray_direction=incident_ray_direction,
+                                                                                         reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals)
 
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
@@ -364,7 +363,7 @@ class HeliostatRayTracer:
                 rays=rays,
                 plane_normal_vector=target_area.normal_vector,
                 plane_center=target_area.center,
-                points_at_ray_origin=self.scenario.all_current_aligned_surface_points[heliostat_indices],
+                points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[heliostat_indices],
             )
             #torch.cuda.empty_cache()
 
@@ -422,7 +421,7 @@ class HeliostatRayTracer:
             u=distortion_u, e=distortion_e, device=device
         )
           
-        scattered_rays = (rotations @ self.scenario.all_preferred_reflection_directions[heliostat_indices, :, :].unsqueeze(1).unsqueeze(-1)).squeeze(-1)
+        scattered_rays = (rotations @ self.scenario.heliostat_field.all_preferred_reflection_directions[heliostat_indices, :, :].unsqueeze(1).unsqueeze(-1)).squeeze(-1)
         
         return Rays(
             ray_directions=scattered_rays,
