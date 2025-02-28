@@ -7,13 +7,6 @@ class Kinematic(torch.nn.Module):
     """
     Abstract base class for all kinematic modules.
 
-    Attributes
-    ----------
-    aim_point : torch.Tensor
-        The aim point of the heliostat.
-    position : torch.Tensor
-        The position of the heliostat.
-
     Methods
     -------
     align()
@@ -22,7 +15,7 @@ class Kinematic(torch.nn.Module):
         Specify the forward pass.
     """
 
-    def __init__(self, position: torch.Tensor, aim_point: torch.Tensor) -> None:
+    def __init__(self) -> None:
         """
         Initialize the kinematic.
 
@@ -30,17 +23,8 @@ class Kinematic(torch.nn.Module):
         can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostat
         and its actuators. The abstract base class defines an align function that all kinematics need to overwrite
         in order to align the heliostat surface according to a provided aim point.
-
-        Parameters
-        ----------
-        position : torch.Tensor
-            The position of the heliostat.
-        aim_point : torch.Tensor
-            The aim point of the heliostat.
         """
         super().__init__()
-        self.position = position
-        self.aim_point = aim_point
 
     def align(
         self,

@@ -3,27 +3,9 @@ from typing import Union
 import torch
 
 
-class Actuator(torch.nn.Module):
+class Actuators(torch.nn.Module):
     """
     Implement the abstract behavior of an actuator.
-
-    Attributes
-    ----------
-    joint_number : int
-        Descriptor (number) of the joint.
-    clockwise_axis_movement : bool
-        Turning direction of the joint.
-    increment : torch.Tensor
-        The stroke length change per motor step.
-    initial_stroke_length : torch.Tensor
-        The stroke length for a motor step of 0.
-    offset : torch.Tensor
-        The offset between the linear actuator's pivoting point and the point
-        around which the actuator is allowed to pivot.
-    pivot_radius : torch.Tensor
-        The actuator's pivoting radius.
-    initial_angle : torch.Tensor
-        The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
 
     Methods
     -------
@@ -37,13 +19,6 @@ class Actuator(torch.nn.Module):
 
     def __init__(
         self,
-        joint_number: int,
-        clockwise_axis_movement: bool,
-        increment: torch.Tensor,
-        initial_stroke_length: torch.Tensor,
-        offset: torch.Tensor,
-        pivot_radius: torch.Tensor,
-        initial_angle: torch.Tensor,
     ) -> None:
         """
         Initialize an abstract actuator.
@@ -74,13 +49,6 @@ class Actuator(torch.nn.Module):
             The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
         super().__init__()
-        self.joint_number = joint_number
-        self.clockwise_axis_movement = clockwise_axis_movement
-        self.increment = increment
-        self.initial_stroke_length = initial_stroke_length
-        self.offset = offset
-        self.pivot_radius = pivot_radius
-        self.initial_angle = initial_angle
 
     def motor_position_to_angle(
         self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
