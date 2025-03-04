@@ -1,3 +1,4 @@
+from ast import Tuple
 import logging
 from typing import Optional, Union
 from artist.field import surface
@@ -7,9 +8,27 @@ import h5py
 import torch
 
 
-def load_surface_config(prototype: bool,
-                        scenario_file: h5py.File,
-                        device: Union[torch.device, str] = "cuda"):
+def surface_config(prototype: bool,
+                   scenario_file: h5py.File,
+                   device: Union[torch.device, str] = "cuda"
+) -> SurfaceConfig:
+    """
+    Load a surface configuration from an hdf5 scenario file.
+
+    Parameters
+    ----------
+    prototype : bool
+        Loading a prototype or an individual surface configuration.
+    scenario_file : h5py.File
+        The opened scenario .h5 file containing the information.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    SurfaceConfig
+        The surface configuration.
+    """
     device = torch.device(device)
     if prototype:
         facet_config = scenario_file[config_dictionary.prototype_key][
@@ -60,11 +79,99 @@ def load_surface_config(prototype: bool,
     return surface_config
 
 
-def load_kinematic_deviations_rigid_body(prototype: bool,
-                                         scenario_file: h5py.File,
-                                         log: logging.Logger,
-                                         heliostat_name: Optional[str]=None, 
-                                         device: Union[torch.device, str] = "cuda"):
+def kinematic_deviations(prototype: bool,
+                         kinematic_type: str,
+                         scenario_file: h5py.File,
+                         log: logging.Logger,
+                         heliostat_name: Optional[str]=None, 
+                         device: Union[torch.device, str] = "cuda"
+) -> Tuple[torch.Tensor, int]:
+    """
+    Load kinematic deviations from an hdf5 scenario file.
+
+    Parameters
+    ----------
+    prototype : bool
+        Loading prototype or individual kinematic deviations.
+    kinematic_type : str
+        The kinematic type.
+    scenario_file : h5py.File
+        The opened scenario .h5 file containing the information.
+    log : logging.Logger
+        The logger for the scenario loader.
+    heliostat_name : Optional[str]
+        The heliostat name, only needed for individual heliostats, not prototypes (default is None).
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the kinmatic type in the scenario file is unknown.
+
+    Returns
+    -------
+    torch.Tensor
+        The kinematic deviation parameters.
+    int
+        The number of actuators needed for this kinematic type.
+
+    """
+    device = torch.device(device)
+
+    if prototype:
+        kinematic_deviations_config = scenario_file[config_dictionary.prototype_key][
+            config_dictionary.kinematic_prototype_key
+        ][config_dictionary.kinematic_deviations_key]
+    else:
+        kinematic_deviations_config = scenario_file[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_deviations_key]
+
+    if kinematic_type == config_dictionary.rigid_body_key:
+        kinematic_deviations = rigid_body_deviations(
+            prototype=prototype,
+            scenario_file=kinematic_deviations_config,
+            log=log,
+            heliostat_name=heliostat_name,
+            device=device
+        )
+        number_of_actuators = config_dictionary.rigid_body_number_of_actuators
+    if kinematic_type == "new_kinematic":
+        kinematic_deviations = new_kinematic_deviations()
+        number_of_actuators = 3
+    
+    else:
+        raise ValueError(
+            f"The kinematic type: {kinematic_type} is not yet implemented!"
+        )
+    return kinematic_deviations, number_of_actuators
+
+def rigid_body_deviations(prototype: bool,
+                          scenario_file: h5py.File,
+                          log: logging.Logger,
+                          heliostat_name: Optional[str]=None, 
+                          device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    """
+    Load kinematic deviations for a rigid body kinematic from an hdf5 scenario file.
+
+    Parameters
+    ----------
+    prototype : bool
+        Loading prototype or individual kinematic deviations.
+    scenario_file : h5py.File
+        The opened scenario .h5 file containing the information.
+    log : logging.Logger
+        The logger for the scenario loader.
+    heliostat_name : Optional[str]
+        The heliostat name, only needed for individual heliostats, not prototypes (default is None).
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        18 deviation parameters for the rigid body kinematic.
+    """
     device = torch.device(device)
     if prototype:
         kinematic_deviations_config = scenario_file[config_dictionary.prototype_key][
@@ -73,7 +180,7 @@ def load_kinematic_deviations_rigid_body(prototype: bool,
     else:
         kinematic_deviations_config = scenario_file[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_deviations_key]
 
-    kinematic_deviations = torch.zeros(18, dtype=torch.float, device=device)
+    kinematic_deviations = torch.zeros(config_dictionary.rigid_body_number_of_deviation_parameters, dtype=torch.float, device=device)
     
     first_joint_translation_e = kinematic_deviations_config.get(
         f"{config_dictionary.first_joint_translation_e}"
@@ -349,15 +456,53 @@ def load_kinematic_deviations_rigid_body(prototype: bool,
     return kinematic_deviations
 
 
-def load_kinematic_deviations_new_kinematic():
+def new_kinematic_deviations():
     pass
 
 
-def load_actuators(prototype: bool,
+def actuator_parameters(prototype: bool,
                    scenario_file: h5py.File,
+                   actuator_type: str,
+                   number_of_actuators: int,
                    log = logging.Logger,
                    heliostat_name: Optional[str]=None,
-                   device: Union[torch.device, str] = "cuda"):
+                   device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    pass
+    
+    
+
+
+def actuator_parameters(prototype: bool,
+                   scenario_file: h5py.File,
+                   number_of_actuators: int,
+                   log = logging.Logger,
+                   heliostat_name: Optional[str]=None,
+                   device: Union[torch.device, str] = "cuda"
+) -> torch.Tensor:
+    """
+    Load actuator parameters from an hdf5 scenario file.
+
+    Parameters
+    ----------
+    prototype : bool
+        Loading prototype or individual actuator parameters.
+    scenario_file : h5py.File
+        The opened scenario .h5 file containing the information.
+    number_of_actuators : int
+        The number of actuators used for a specific kinematic.
+    log : logging.Logger
+        The logger for the scenario loader.
+    heliostat_name : Optional[str]
+        The heliostat name, only needed for individual heliostats, not prototypes (default is None).
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        7 actuator parameters for for each actuator in the file.
+    """
     device = torch.device(device)
     if prototype:
         actuator_config = scenario_file[config_dictionary.prototype_key][
@@ -366,7 +511,7 @@ def load_actuators(prototype: bool,
     else:
         actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
 
-    actuator_parameters = torch.zeros((7, 2), device=device)
+    actuator_parameters = torch.zeros((7, number_of_actuators), device=device)
 
     for index, actuator in enumerate(actuator_config.keys()):
         type=str(

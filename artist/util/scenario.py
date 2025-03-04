@@ -1,7 +1,6 @@
 import logging
 from typing import Union
 from artist.util import config_dictionary, utils_load_h5
-from artist.util.configuration_classes import ActuatorConfig, ActuatorListConfig, ActuatorParameters, KinematicDeviations, KinematicLoadConfig, SurfaceConfig
 from typing_extensions import Self
 from artist.field.heliostat_field import HeliostatField
 from artist.field.tower_target_area_array import TargetAreaArray
@@ -24,7 +23,7 @@ class Scenario:
         A list of tower target areas included in the scenario.
     light_sources : LightSourceArray
         A list of light sources included in the scenario.
-    heliostats : HeliostatField
+    heliostat_field : HeliostatField
         The heliostat field for the scenario.
 
     Methods
@@ -99,9 +98,9 @@ class Scenario:
             config_file=scenario_file, device=device
         )
 
-        prototype_surface = utils_load_h5.load_surface_config(prototype=True,
-                                                              scenario_file=scenario_file,
-                                                              device=device)
+        prototype_surface = utils_load_h5.surface_config(prototype=True,
+                                                         scenario_file=scenario_file,
+                                                         device=device)
 
         prototype_initial_orientation = torch.tensor(
             scenario_file[config_dictionary.prototype_key][
@@ -111,16 +110,20 @@ class Scenario:
             device=device,
         )
 
-        prototype_kinematic_deviations_rigid_body = utils_load_h5.load_kinematic_deviations_rigid_body(
+        prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][config_dictionary.kinematic_prototype_key][config_dictionary.kinematic_type][()].decode("utf-8")
+
+        prototype_kinematic_deviations, number_of_actuators = utils_load_h5.kinematic_deviations(
             prototype=True,
+            kinematic_type=prototype_kinematic_type,
             scenario_file=scenario_file,
             log=log,
             device=device
         )
-
-        prototype_actuators = utils_load_h5.load_actuators(
+            
+        prototype_actuators = utils_load_h5.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
+            number_of_actuators=number_of_actuators,
             log=log,
             device=device
         )
@@ -129,7 +132,7 @@ class Scenario:
             config_file=scenario_file,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=prototype_initial_orientation,
-            prototype_kinematic_deviations_rigid_body=prototype_kinematic_deviations_rigid_body,
+            prototype_kinematic_deviations_rigid_body=prototype_kinematic_deviations,
             prototype_actuators=prototype_actuators,
             device=device,
         )
