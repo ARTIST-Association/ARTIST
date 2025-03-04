@@ -132,7 +132,7 @@ class HeliostatField(torch.nn.Module):
             all_aim_points[index] = torch.tensor(single_heliostat_config[config_dictionary.heliostat_aim_point][()], dtype=torch.float, device=device)
 
             if config_dictionary.heliostat_surface_key in single_heliostat_config.keys():
-                surface_config = utils_load_h5.load_surface_config(
+                surface_config = utils_load_h5.surface_config(
                     prototype=False,
                     scenario_file=single_heliostat_config,
                     device=device)
@@ -154,14 +154,14 @@ class HeliostatField(torch.nn.Module):
                     config_dictionary.kinematic_type
                 ][()].decode("utf-8")
                 if  kinematic_type == config_dictionary.rigid_body_key:
-                    kinematic_deviations = utils_load_h5.load_kinematic_deviations_rigid_body(
+                    kinematic_deviations = utils_load_h5.rigid_body_deviations()(
                         prototype=False,
                         scenario_file=single_heliostat_config,
                         heliostat_name=heliostat_name, 
                         log=log, 
                         device=device)
                 if kinematic_type == "new_kinematic":
-                    kinematic_deviations = utils_load_h5.load_kinematic_deviations_new_kinematic()
+                    kinematic_deviations = utils_load_h5.new_kinematic_deviations()
             else:
                 if prototype_kinematic_deviations_rigid_body is None:
                     raise ValueError(
@@ -177,7 +177,7 @@ class HeliostatField(torch.nn.Module):
             all_kinematic_deviation_parameters[index] = kinematic_deviations
 
             if config_dictionary.heliostat_actuator_key in single_heliostat_config.keys():
-                actuator_parameters = utils_load_h5.load_actuators(
+                actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
                     scenario_file=single_heliostat_config,
                     heliostat_name=heliostat_name, 

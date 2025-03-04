@@ -1,3 +1,4 @@
+import time
 from typing import Union
 
 import torch
@@ -29,7 +30,7 @@ class NURBSSurface(torch.nn.Module):
     calculate_knots()
         Calculate the knot vectors in east and north direction.
     find_span()
-         Determine the knot span index for given evaluation points.
+        Determine the knot span index for given evaluation points. 
     basis_function_and_derivatives()
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
     calculate_surface_points_and_normals()
@@ -139,6 +140,7 @@ class NURBSSurface(torch.nn.Module):
         computational efficiency, basis functions that are zero are not computed. Therefore, the knot span in which the
         evaluation point lies is first computed using this function.
         See `The NURBS Book` p. 68 for reference.
+        If the knot vector is uniform, the span indices can be computed more efficiently.
 
         Parameters
         ----------
@@ -159,27 +161,40 @@ class NURBSSurface(torch.nn.Module):
             The knot span index.
         """
         device = torch.device(device)
-        n = control_points.shape[1] - 1
-        span_indices = torch.zeros(
-            len(evaluation_points), dtype=torch.int64, device=device
-        )
-        for i, evaluation_point in enumerate(evaluation_points):
-            if torch.isclose(evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5):
-                span_indices[i] = n
-                continue
-            low = degree
-            high = control_points.shape[1]
-            mid = (low + high) // 2
-            while (
-                evaluation_point < knot_vector[mid]
-                or evaluation_point >= knot_vector[mid + 1]
-            ):
-                if evaluation_point < knot_vector[mid]:
-                    high = mid
-                else:
-                    low = mid
+
+        knot_vector_is_uniform = torch.all((torch.diff(knot_vector[degree:-degree]) - torch.diff(knot_vector[degree:-degree])[0]) < 1e-5)
+        if knot_vector_is_uniform:
+            unique_knots = torch.unique(knot_vector)
+
+            min_value = unique_knots[0]
+            max_value = unique_knots[-1]
+
+            scaled_points = (evaluation_points - min_value) / (max_value - min_value)
+
+            span_indices = torch.floor(scaled_points * (len(unique_knots) - 1)).long() + degree
+
+        else:
+            n = control_points.shape[1] - 1
+            span_indices = torch.zeros(
+                len(evaluation_points), dtype=torch.int64, device=device
+            )
+            for i, evaluation_point in enumerate(evaluation_points):
+                if torch.isclose(evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5):
+                    span_indices[i] = n
+                    continue
+                low = degree
+                high = control_points.shape[1]
                 mid = (low + high) // 2
-            span_indices[i] = mid
+                while (
+                    evaluation_point < knot_vector[mid]
+                    or evaluation_point >= knot_vector[mid + 1]
+                ):
+                    if evaluation_point < knot_vector[mid]:
+                        high = mid
+                    else:
+                        low = mid
+                    mid = (low + high) // 2
+                span_indices[i] = mid
 
         return span_indices
 
@@ -323,7 +338,7 @@ class NURBSSurface(torch.nn.Module):
 
         nth_derivative = 1
 
-        # Find span indices x direction (based on A2.1, p. 68).
+        # Find span indices e direction (based on A2.1, p. 68).
         span_indices_e = self.find_span(
             self.degree_e,
             self.evaluation_points_e,
@@ -332,7 +347,7 @@ class NURBSSurface(torch.nn.Module):
             device,
         )
 
-        # Find span indices y direction (based on A2.1, p. 68).
+        # Find span indices n direction (based on A2.1, p. 68).
         span_indices_n = self.find_span(
             self.degree_n,
             self.evaluation_points_n,
