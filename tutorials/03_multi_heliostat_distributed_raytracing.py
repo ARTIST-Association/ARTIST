@@ -7,7 +7,6 @@ import torch
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util.scenario import Scenario
 from artist.util import paint_loader, set_logger_config, utils
-from tutorials.new_scenario import NewScenario
 
 from matplotlib import pyplot as plt
 
@@ -18,8 +17,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
