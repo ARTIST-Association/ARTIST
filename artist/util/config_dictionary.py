@@ -131,6 +131,10 @@ ideal_actuator_key = "ideal"
 """Key defining that the actuator used is an ideal actuator."""
 linear_actuator_key = "linear"
 """Key defining that the actuator used is a linear actuator."""
+linear_actuator_number_of_parameters = 7
+"""Number of parameters for a single linear actuator."""
+ideal_actuator_number_of_parameters = 2
+"""Number of parameters for a single ideal actuator."""
 
 surface_prototype_key = "surface"
 """Key to access the surface prototype."""
