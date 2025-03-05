@@ -3,6 +3,8 @@ from typing import Union
 from artist.util import config_dictionary, utils_load_h5
 from typing_extensions import Self
 from artist.field.heliostat_field import HeliostatField
+from artist.field.tower_target_area import TargetArea
+from artist.util.scenario import Scenario
 from artist.field.tower_target_area_array import TargetAreaArray
 from artist.scene.light_source_array import LightSourceArray
 import h5py
@@ -133,6 +135,7 @@ class Scenario:
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
             number_of_actuators=number_of_actuators,
+            initial_orientation=prototype_initial_orientation,
             log=log,
             device=device
         )
@@ -152,6 +155,32 @@ class Scenario:
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
+    
+
+    def get_target_area(self, target_area_name: str) -> TargetArea:
+        """
+        Retrieve a specified target area from the scenario.
+
+        Parameters
+        ----------
+        target_area_name : str
+            The string name of the target area.
+        
+        Returns
+        -------
+        TargetArea
+            The specified target area.
+        """
+        target_area = next(
+            (
+                area
+                for area in self.target_areas.target_area_list
+                if area.name == target_area_name
+            ),
+            None,
+        )
+        return target_area
+
 
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""

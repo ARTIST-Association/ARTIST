@@ -779,8 +779,6 @@ def setup_distributed_environment(
     if device.type == "cuda" and is_distributed:
         gpu_count = torch.cuda.device_count()
         device_id = rank % gpu_count
-        # if device_id == 1:
-        #     device_id = 3
         device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device)
 

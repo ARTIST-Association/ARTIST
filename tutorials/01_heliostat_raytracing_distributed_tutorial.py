@@ -5,7 +5,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.util.scenario import Scenario
 from artist.util import set_logger_config, utils
 
 torch.manual_seed(7)
@@ -15,7 +15,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name.h5")
@@ -33,19 +34,22 @@ with h5py.File(scenario_path) as scenario_file:
 
 incident_ray_direction = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
-# Align heliostat.
-scenario.heliostats.heliostat_list[0].set_aligned_surface_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction, device=device
+# Align all heliostats
+scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
+    incident_ray_direction=incident_ray_direction,
+    device=device
 )
 
 # Create raytracer
 raytracer = HeliostatRayTracer(
-    scenario=scenario, world_size=world_size, rank=rank, batch_size=1, random_seed=rank
+    scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
 )
 
 # Perform heliostat-based raytracing.
 final_bitmap = raytracer.trace_rays(
-    incident_ray_direction=incident_ray_direction, device=device
+    incident_ray_direction=incident_ray_direction,
+    target_area=scenario.get_target_area("receiver"),
+    device=device
 )
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
@@ -62,7 +66,7 @@ try:
 except StopIteration:
     pass
 
-final_bitmap = raytracer.normalize_bitmap(final_bitmap)
+#final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
 plt.title("Total Flux Density Distribution")
