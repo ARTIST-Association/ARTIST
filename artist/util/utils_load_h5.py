@@ -2,7 +2,7 @@ from ast import Tuple
 import logging
 from typing import Optional, Union
 from artist.field import surface
-from artist.util import config_dictionary
+from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig, SurfaceConfig
 import h5py
 import torch
@@ -453,6 +453,7 @@ def actuator_parameters(prototype: bool,
                    scenario_file: h5py.File,
                    actuator_type: str,
                    number_of_actuators: int,
+                   initial_orientation: torch.Tensor,
                    log = logging.Logger,
                    heliostat_name: Optional[str]=None,
                    device: Union[torch.device, str] = "cuda"
@@ -470,6 +471,8 @@ def actuator_parameters(prototype: bool,
         The actuator type.
     number_of_actuators : int
         The number of actuators.
+    initial_orientation : torch.Tensor
+        The initial orientation of the heliostat.
     log : logging.Logger
         The logger for the scenario loader.
     heliostat_name : Optional[str]
@@ -500,6 +503,7 @@ def actuator_parameters(prototype: bool,
         actuator_parameters = parameters_linear_actuators(
             actuator_config=actuator_config,
             number_of_actuators=number_of_actuators,
+            initial_orientation=initial_orientation,
             log=log,
             heliostat_name=heliostat_name,
             device=device
@@ -508,7 +512,6 @@ def actuator_parameters(prototype: bool,
         actuator_parameters = parameters_ideal_actuators(
             actuator_config=actuator_config,
             number_of_actuators=number_of_actuators,
-            heliostat_name=heliostat_name,
             device=device,
         )
     else:
@@ -521,6 +524,7 @@ def actuator_parameters(prototype: bool,
 def parameters_linear_actuators(
                    actuator_config: h5py.File,
                    number_of_actuators: int,
+                   initial_orientation: torch.Tensor,
                    log = logging.Logger,
                    heliostat_name: Optional[str]=None,
                    device: Union[torch.device, str] = "cuda"
@@ -534,6 +538,8 @@ def parameters_linear_actuators(
         The opened scenario HDF5 file containing the information.
     number_of_actuators : int
         The number of actuators used for a specific kinematic.
+    initial_orientation : torch.Tensor
+        The initial orientation of the heliostat.
     log : logging.Logger
         The logger for the scenario loader.
     heliostat_name : Optional[str]
@@ -656,12 +662,22 @@ def parameters_linear_actuators(
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
     
+    # Adapt initial angle of actuator one according to kinematic initial orientation.
+    # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
+    # The first actuator always rotates along the east-axis.
+    # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
+    # of actuator one needs to be transformed accordingly.
+    actuator_parameters[6, 0] = utils.transform_initial_angle(
+        initial_angle=actuator_parameters[6, 0].unsqueeze(0),
+        initial_orientation=initial_orientation,
+        device=device,
+    )
+    
     return actuator_parameters
 
 def parameters_ideal_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
-    heliostat_name: Optional[str]=None,
     device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """

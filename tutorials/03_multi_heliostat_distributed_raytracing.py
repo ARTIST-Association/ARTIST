@@ -17,8 +17,8 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
@@ -69,19 +69,10 @@ raytracer = HeliostatRayTracer(
     scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
 )
 
-target_area = next(
-    (
-        area
-        for area in scenario.target_areas.target_area_list
-        if area.name == "receiver"
-    ),
-    None,
-)
-
 # Perform heliostat-based raytracing.
 final_bitmap = raytracer.trace_rays(
     incident_ray_direction=incident_ray_direction,
-    target_area=target_area,
+    target_area=scenario.get_target_area("receiver"),
     device=device
 )
 

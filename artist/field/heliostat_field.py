@@ -1,20 +1,15 @@
 import logging
 from typing import Union
 
-from artist.field import actuator
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
 import h5py
-from torch import device
+
 import torch.nn
 from typing_extensions import Self
 
-from artist.field.heliostat import Heliostat
-from artist.util import config_dictionary, utils_load_h5, utils
+from artist.util import config_dictionary, utils_load_h5
 from artist.util.configuration_classes import (
-    ActuatorListConfig,
-    FacetConfig,
-    KinematicLoadConfig,
     SurfaceConfig,
 )
 
@@ -24,43 +19,90 @@ log = logging.getLogger(__name__)
 
 class HeliostatField(torch.nn.Module):
     """
-    Wrap the heliostat list as a ``torch.nn.Module`` to allow gradient calculation.
+    A heliostat field consists of many heliostats that have a unique position in the field. The
+    heliostats in the field are aligned individually to reflect the incoming light in a way that
+    ensures maximum efficiency for the whole power plant.
+
 
     Attributes
     ----------
-    heliostat_list : list[Heliostat]
-        A list of heliostats included in the scenario.
+    number_of_heliostats : int
+        The number of heliostats in the field.
+    all_heliostat_names : list[str]
+        The string names of each heliostat in the field in the correct order.
+    all_heliostat_positions : torch.Tensor
+        Heliostat positions of all heliostats in the field.
+    all_aim_points : torch.Tensor
+        Aim points of all heliostats in the field.
+    all_surface_points : torch.Tensor
+        Surface points of all heliostats in the field.
+    all_surface_normals : torch.Tensor
+        Surface normals of all heliostats in the field.
+    all_initial_orientations : torch.Tensor
+        Initial orientations of all heliostats in the field.
+    all_kinematic_deviation_parameters : torch.Tensor
+        Kinematic deviation parameters of all helisotats in the field.
+    all_actuator_parameters : torch.Tensor
+        Actuator parameters of all actuators in the field.
+    all_aligned_heliostats : torch.Tensor
+        Unaligned heliostats marked with 0, aligned heliostats marked with 1.
+    all_preferred_reflection_directions : torch.Tensor
+        Preferred reflection directions of all heliostats in the field.
+    all_current_aligned_surface_points : torch.Tensor
+        Aligned surface points of all heliostats in the field.
+    all_current_aligned_surface_normals : torch.Tensor
+        Aligned surface normals of all heliostats in the field.
 
     Methods
     -------
     from_hdf5()
-        Load the list of heliostats from an HDF5 file.
+        Load a helisotat field from an HDF5 file.
+    align_surfaces_with_incident_ray_direction()
+        Compute the aligned surface points and aligned surface normals of all heliostats in the field.
     forward()
         Specify the forward pass.
     """
 
     def __init__(self, 
-                 number_of_heliostats,
-                 all_heliostat_names,
-                 all_heliostat_positions,
-                 all_aim_points,
-                 all_surface_points,
-                 all_surface_normals,
-                 all_initial_orientations,
-                 all_kinematic_deviation_parameters,
-                 all_actuator_parameters,
+                 number_of_heliostats: int,
+                 all_heliostat_names: list[str],
+                 all_heliostat_positions: torch.Tensor,
+                 all_aim_points: torch.Tensor,
+                 all_surface_points: torch.Tensor,
+                 all_surface_normals: torch.Tensor,
+                 all_initial_orientations: torch.Tensor,
+                 all_kinematic_deviation_parameters: torch.Tensor,
+                 all_actuator_parameters: torch.Tensor,
                  device: Union[torch.device, str] = "cuda"):
         """
         Initialize the heliostat field.
 
-        A heliostat field consists of many heliostats that have a unique position in the field. The
-        heliostats in the field are aligned individually to reflect the incoming light in a way that
-        ensures maximum efficiency for the whole power plant.
+        Individual heliostats are not saved as seperate entites, instead seperate tensors
+        for each heliostat property exist. Each property tensor contains information about this
+        property for all heliostats in the field.
 
         Parameters
         ----------
-        heliostat_list : list[Heliostat]
-            The list of heliostats included in the scenario.
+        number_of_heliostats : int
+            The number of heliostats in the field.
+        all_heliostat_names : list[str]
+            The string names of each heliostat in the field in the correct order.
+        all_heliostat_positions : torch.Tensor
+            Heliostat positions of all heliostats in the field.
+        all_aim_points : torch.Tensor
+            Aim points of all heliostats in the field.
+        all_surface_points : torch.Tensor
+            Surface points of all heliostats in the field.
+        all_surface_normals : torch.Tensor
+            Surface normals of all heliostats in the field.
+        all_initial_orientations : torch.Tensor
+            Initial orientations of all heliostats in the field.
+        all_kinematic_deviation_parameters : torch.Tensor
+            Kinematic deviation parameters of all helisotats in the field.
+        all_actuator_parameters : torch.Tensor
+            Actuator parameters of all actuators in the field.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super(HeliostatField, self).__init__()
         self.number_of_heliostats = number_of_heliostats
@@ -193,6 +235,7 @@ class HeliostatField(torch.nn.Module):
                     scenario_file=single_heliostat_config,
                     actuator_type=actuator_type,
                     number_of_actuators=number_of_actuators,
+                    initial_orientation=initial_orientation,
                     log=log,
                     heliostat_name=heliostat_name, 
                     device=device)
@@ -205,17 +248,6 @@ class HeliostatField(torch.nn.Module):
                     "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                 )
                 actuator_parameters = prototype_actuators
-
-            # Adapt initial angle of actuator one according to kinematic initial orientation.
-            # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
-            # The first actuator always rotates along the east-axis.
-            # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
-            # of actuator one needs to be transformed accordingly.
-            actuator_parameters[6, 0] = utils.transform_initial_angle(
-                initial_angle=actuator_parameters[6, 0].unsqueeze(0),
-                initial_orientation=initial_orientation,
-                device=device,
-            )
 
             all_actuator_parameters[index] = actuator_parameters
 
@@ -237,9 +269,9 @@ class HeliostatField(torch.nn.Module):
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
-        Compute the aligned surface points and aligned surface normals of the heliostat.
+        Compute the aligned surface points and aligned surface normals of all heliostats in the field.
 
-        This method uses the incident ray direction to align the heliostat.
+        This method uses the incident ray direction to align the heliostats.
 
         Parameters
         ----------
@@ -249,6 +281,7 @@ class HeliostatField(torch.nn.Module):
             The device on which to initialize tensors (default is cuda).
         """
         rigid_body_kinematic = RigidBody(
+            number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.all_heliostat_positions,
             aim_points=self.all_aim_points,
             actuator_parameters=self.all_actuator_parameters,
@@ -260,7 +293,7 @@ class HeliostatField(torch.nn.Module):
         (
             self.all_current_aligned_surface_points,
             self.all_current_aligned_surface_normals,
-        ) = rigid_body_kinematic.align_surface_with_incident_ray_direction(
+        ) = rigid_body_kinematic.align_surfaces_with_incident_ray_direction(
             incident_ray_direction, self.all_surface_points, self.all_surface_normals, device
         )
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
