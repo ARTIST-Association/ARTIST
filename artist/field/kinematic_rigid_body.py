@@ -3,15 +3,10 @@ from typing import Union
 from artist.field.actuator_linear import LinearActuators
 import torch
 
-from artist.field.actuator_array import ActuatorArray
 from artist.field.kinematic import (
     Kinematic,
 )
-from artist.util import utils
-from artist.util.configuration_classes import (
-    ActuatorListConfig,
-    KinematicDeviations,
-)
+from artist.util import config_dictionary, utils
 
 
 class RigidBody(Kinematic):
@@ -20,19 +15,25 @@ class RigidBody(Kinematic):
 
     Attributes
     ----------
-    deviation_parameters : KinematicDeviations
-        18 deviation parameters describing imperfections in the heliostat.
-    initial_orientation : torch.Tensor
-        The initial orientation-rotation angles of the heliostat.
-    actuators : ActuatorArray
-        The actuators required for the kinematic.
+    number_of_heliostats : int
+        The number of heliostats using a rigid body kinematic.
+    heliostat_positions : torch.Tensor
+        The positions of the heliostats.
+    aim_points : torch.Tensor
+        The aim points of the heliostats.
+    initial_orientations : torch.Tensor
+        The initial orientation offsets of the heliostats.
+    deviation_parameters : torch.Tensor
+        The deviation parameters for the kinematic.
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematic.
+    actuators : LinearActuators
+        The linear actuators of the kinematic.
 
     Methods
     -------
     incident_ray_direction_to_orientation()
-        Compute the orientation matrix given an incident ray direction.
+        Compute orientation matrices given an incident ray direction.
     align_surface_with_incident_ray_direction()
         Align given surface points and surface normals according to an incident ray direction.
     motor_positions_to_orientation()
@@ -46,12 +47,12 @@ class RigidBody(Kinematic):
     --------
     :class:`Kinematic` : Reference to the parent class.
     """
-
     def __init__(
         self,
+        number_of_heliostats: int,
         heliostat_positions: torch.Tensor,
         aim_points: torch.Tensor,
-        actuator_parameters: ActuatorListConfig,
+        actuator_parameters: torch.Tensor,
         initial_orientations: torch.Tensor,
         deviation_parameters: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
@@ -59,28 +60,32 @@ class RigidBody(Kinematic):
         """
         Initialize the rigid body kinematic.
 
-        The rigid body kinematic determines a transformation matrix that is applied to the heliostat surface in order to
-        align it. The heliostat then reflects the incoming light according to the provided aim point. The kinematic is
-        equipped with an actuator array that encompasses one or more actuators that turn the heliostat surface.
-        Furthermore, initial orientation offsets and deviation parameters, both for the kinematic, can be provided.
+        The rigid body kinematic determines a transformation matrix that is applied to the heliostat surfaces in order to
+        align them. The heliostats then reflect the incoming light according to the provided aim points. The rigid body 
+        kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
+        Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
 
         Parameters
         ----------
-        position : torch.Tensor
-            The position of the heliostat.
-        aim_point : torch.Tensor
-            The aim point of the heliostat.
-        actuator_config : ActuatorListConfig
-            The actuator configuration parameters.
-        initial_orientation_offsets : KinematicOffsets
-            The initial orientation offsets of the kinematic (default: 0.0 for each possible offset).
-        deviation_parameters : KinematicDeviations
-            The deviation parameters for the kinematic (default: 0.0 for each deviation).
+        number_of_heliostats : int
+            The number of heliostats using a rigid body kinematic.
+        heliostat_positions : torch.Tensor
+            The positions of the heliostats.
+        aim_points : torch.Tensor
+            The aim points of the heliostats.
+        actuator_parameters : torch.Tensor
+            The actuator parameters.
+        initial_orientations : torch.Tensor
+            The initial orientation offsets of the heliostats.
+        deviation_parameters : torch.Tensor
+            The deviation parameters for the kinematic.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
         device = torch.device(device)
+
+        self.number_of_heliostats = number_of_heliostats
         self.heliostat_positions = heliostat_positions
         self.aim_points = aim_points
         self.initial_orientations = initial_orientations
@@ -90,11 +95,9 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.number_of_heliostats = heliostat_positions.shape[0]
-        self.number_of_actuators_per_heliostat = actuator_parameters.shape[2]
-
-        self.linear_actuators = LinearActuators(
-            clockwise_axis_movement=actuator_parameters[:, 1],
+        # TODO nicht nur Linear erlauben?
+        self.actuators = LinearActuators(
+            clockwise_axis_movements=actuator_parameters[:, 1],
             increments=actuator_parameters[:, 2],
             initial_stroke_lengths=actuator_parameters[:, 3],
             offsets=actuator_parameters[:, 4],
@@ -110,7 +113,7 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute the orientation matrix given an incident ray direction.
+        Compute orientation matrices given an incident ray direction.
 
         Parameters
         ----------
@@ -128,16 +131,11 @@ class RigidBody(Kinematic):
         torch.Tensor
             The orientation matrix.
         """
-        if self.number_of_actuators_per_heliostat != 2:
-            raise ValueError(
-                f"The rigid body kinematic requires exactly two actuators but {self.number_of_actuators_per_heliostat} were specified, please check the configuration!"
-            )
-
         device = torch.device(device)
-        motor_positions = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat), device=device)
+        motor_positions = torch.zeros((self.number_of_heliostats, config_dictionary.rigid_body_number_of_actuators), device=device)
         last_iteration_loss = None
         for _ in range(max_num_iterations):
-            joint_angles = self.linear_actuators.motor_positions_to_angles(
+            joint_angles = self.actuators.motor_positions_to_angles(
                 motor_positions=motor_positions, device=device
             )
 
@@ -151,7 +149,7 @@ class RigidBody(Kinematic):
                 device=device,
             )
 
-            joint_rotations = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat, 4, 4), device=device)
+            joint_rotations = torch.zeros((self.number_of_heliostats, config_dictionary.rigid_body_number_of_actuators, 4, 4), device=device)
 
             joint_rotations[:, 0] = (
                 utils.rotate_n(
@@ -220,7 +218,7 @@ class RigidBody(Kinematic):
             last_iteration_loss = loss
 
             # Analytical Solution
-            joint_angles = torch.zeros((self.number_of_heliostats, self.number_of_actuators_per_heliostat), device=device)
+            joint_angles = torch.zeros((self.number_of_heliostats, config_dictionary.rigid_body_number_of_actuators), device=device)
 
             # Calculate joint 2 angles.
             joint_angles[:, 1] = -torch.arcsin(
@@ -254,7 +252,7 @@ class RigidBody(Kinematic):
                 - torch.pi
             )
 
-            motor_positions = self.linear_actuators.angles_to_motor_positions(
+            motor_positions = self.actuators.angles_to_motor_positions(
                 joint_angles, device
             )
 
@@ -281,7 +279,7 @@ class RigidBody(Kinematic):
             )
         )
 
-    def align_surface_with_incident_ray_direction(
+    def align_surfaces_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
         surface_points: torch.Tensor,
@@ -296,7 +294,7 @@ class RigidBody(Kinematic):
         incident_ray_direction : torch.Tensor
             The direction of the rays.
         surface_points : torch.Tensor
-            Points on the surface of the heliostat that reflect the light.
+            Points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
             Normals to the surface points.
         device : Union[torch.device, str]
