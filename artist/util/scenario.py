@@ -119,10 +119,19 @@ class Scenario:
             log=log,
             device=device
         )
+
+        prototype_actuator_keys = list(scenario_file[config_dictionary.prototype_key][
+            config_dictionary.actuators_prototype_key
+        ].keys())
+
+        prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
+            config_dictionary.actuators_prototype_key
+        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
             
         prototype_actuators = utils_load_h5.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
+            actuator_type=prototype_actuator_type,
             number_of_actuators=number_of_actuators,
             log=log,
             device=device
@@ -132,7 +141,7 @@ class Scenario:
             config_file=scenario_file,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=prototype_initial_orientation,
-            prototype_kinematic_deviations_rigid_body=prototype_kinematic_deviations,
+            prototype_kinematic_deviations=prototype_kinematic_deviations,
             prototype_actuators=prototype_actuators,
             device=device,
         )
@@ -150,5 +159,5 @@ class Scenario:
             f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
             f" with {len(self.target_areas.target_area_list)} Target Area(s),"
             f" {len(self.light_sources.light_source_list)} Light Source(s),"
-            f" and {self.heliostat_field.all_surface_points.shape[0]} Heliostat(s)."
+            f" and {self.heliostat_field.number_of_heliostats} Heliostat(s)."
         )

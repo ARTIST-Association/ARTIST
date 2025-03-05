@@ -40,6 +40,7 @@ class HeliostatField(torch.nn.Module):
     """
 
     def __init__(self, 
+                 number_of_heliostats,
                  all_heliostat_names,
                  all_heliostat_positions,
                  all_aim_points,
@@ -62,6 +63,7 @@ class HeliostatField(torch.nn.Module):
             The list of heliostats included in the scenario.
         """
         super(HeliostatField, self).__init__()
+        self.number_of_heliostats = number_of_heliostats
         self.all_heliostat_names = all_heliostat_names
         self.all_heliostat_positions = all_heliostat_positions
         self.all_aim_points = all_aim_points
@@ -80,11 +82,11 @@ class HeliostatField(torch.nn.Module):
     @classmethod
     def from_hdf5(
         cls,
-        config_file,
-        prototype_surface,
-        prototype_initial_orientation,
-        prototype_kinematic_deviations_rigid_body,
-        prototype_actuators,
+        config_file: h5py.File,
+        prototype_surface: SurfaceConfig,
+        prototype_initial_orientation: torch.Tensor,
+        prototype_kinematic_deviations: torch.Tensor,
+        prototype_actuators: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> Self:
         """
@@ -96,10 +98,12 @@ class HeliostatField(torch.nn.Module):
             The HDF5 file containing the configuration to be loaded.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if the heliostat has no individual surface.
-        prototype_kinematic : KinematicLoadConfig
-            The prototype for the kinematic configuration to be used if the heliostat has no individual kinematic.
-        prototype_actuator : ActuatorListConfig
-            The prototype for the actuator configuration to be used if the heliostat has no individual actuators.
+        prototype_initial_orientation : torch.Tensor
+            The prototype for the initial orientation to be used if the heliostat has no individual initial orientation.
+        prototype_kinematic_deviations : torch.Tensor
+            The prototype for the kinematic deviations to be used if the heliostat has no individual kinematic deviations.
+        prototype_actuators : torch.Tensor
+            The prototype for the actuators to be used if the heliostat has no individual actuators.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -112,6 +116,7 @@ class HeliostatField(torch.nn.Module):
         device = torch.device(device)
 
         number_of_heliostats = len(config_file[config_dictionary.heliostat_key])
+
         # TODO 10000 ersetzen
         number_of_surface_points_per_heliostat = 10000
         all_heliostat_names = []
@@ -120,6 +125,8 @@ class HeliostatField(torch.nn.Module):
         all_surface_points = torch.zeros((number_of_heliostats, number_of_surface_points_per_heliostat, 4), device=device)
         all_surface_normals = torch.zeros((number_of_heliostats, number_of_surface_points_per_heliostat, 4), device=device)
         all_initial_orientations = torch.zeros((number_of_heliostats, 4), device=device)
+        
+        # TODO unterschiedliche Parameter Längen
         all_kinematic_deviation_parameters = torch.zeros((number_of_heliostats, 18), device=device)
         all_actuator_parameters = torch.zeros((number_of_heliostats, 7, 2), device=device)
 
@@ -153,17 +160,17 @@ class HeliostatField(torch.nn.Module):
                 kinematic_type = single_heliostat_config[config_dictionary.heliostat_kinematic_key][
                     config_dictionary.kinematic_type
                 ][()].decode("utf-8")
-                if  kinematic_type == config_dictionary.rigid_body_key:
-                    kinematic_deviations = utils_load_h5.rigid_body_deviations()(
-                        prototype=False,
-                        scenario_file=single_heliostat_config,
-                        heliostat_name=heliostat_name, 
-                        log=log, 
-                        device=device)
-                if kinematic_type == "new_kinematic":
-                    kinematic_deviations = utils_load_h5.new_kinematic_deviations()
+
+                kinematic_deviations, number_of_actuators = utils_load_h5.kinematic_deviations(
+                    prototype=False,
+                    kinematic_type=kinematic_type,
+                    scenario_file=single_heliostat_config,
+                    log=log,
+                    heliostat_name=heliostat_name,
+                    device=device
+                )
             else:
-                if prototype_kinematic_deviations_rigid_body is None:
+                if prototype_kinematic_deviations is None:
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
@@ -171,17 +178,23 @@ class HeliostatField(torch.nn.Module):
                     "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                 )
                 initial_orientation = prototype_initial_orientation
-                kinematic_deviations = prototype_kinematic_deviations_rigid_body
+                kinematic_deviations = prototype_kinematic_deviations
             
             all_initial_orientations[index] = initial_orientation
             all_kinematic_deviation_parameters[index] = kinematic_deviations
 
             if config_dictionary.heliostat_actuator_key in single_heliostat_config.keys():
+                actuator_keys = list(single_heliostat_config[config_dictionary.heliostat_actuator_key].keys())
+
+                actuator_type = single_heliostat_config[config_dictionary.heliostat_actuator_key][actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
+
                 actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
                     scenario_file=single_heliostat_config,
+                    actuator_type=actuator_type,
+                    number_of_actuators=number_of_actuators,
+                    log=log,
                     heliostat_name=heliostat_name, 
-                    log=log, 
                     device=device)
             else:
                 if prototype_actuators is None:
@@ -206,7 +219,8 @@ class HeliostatField(torch.nn.Module):
 
             all_actuator_parameters[index] = actuator_parameters
 
-        return cls(all_heliostat_names=all_heliostat_names,
+        return cls(number_of_heliostats=number_of_heliostats,
+                   all_heliostat_names=all_heliostat_names,
                    all_heliostat_positions=all_heliostat_positions,
                    all_aim_points=all_aim_points,
                    all_surface_points=all_surface_points,
