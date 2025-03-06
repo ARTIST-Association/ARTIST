@@ -4,7 +4,6 @@ from artist.util import config_dictionary, utils_load_h5
 from typing_extensions import Self
 from artist.field.heliostat_field import HeliostatField
 from artist.field.tower_target_area import TargetArea
-from artist.util.scenario import Scenario
 from artist.field.tower_target_area_array import TargetAreaArray
 from artist.scene.light_source_array import LightSourceArray
 import h5py
