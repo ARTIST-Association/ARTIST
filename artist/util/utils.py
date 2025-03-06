@@ -291,7 +291,7 @@ def azimuth_elevation_to_enu(
 
     enu = torch.zeros(3, device=device)
 
-    enu[0] = r * torch.sin(azimuth)
+    enu[0] = - r * torch.sin(azimuth)
     enu[1] = - r * torch.cos(azimuth)
     enu[2] = slant_range * torch.sin(elevation)
 
