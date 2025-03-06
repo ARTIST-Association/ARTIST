@@ -13,7 +13,7 @@ This tutorial provides a brief introduction to ``ARTIST`` showcasing how the dis
 It is best if you already know about the following processes in ``ARTIST``
 
 - How to load a scenario.
-- Activating the kinematic in a heliostat to align this heliostat for raytracing.
+- Aligning heliostats.
 - Performing heliostat raytracing to generate a flux density image on the receiver.
 
 If you need help with this look into our other tutorials such as the tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
