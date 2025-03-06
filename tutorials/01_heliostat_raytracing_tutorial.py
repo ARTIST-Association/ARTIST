@@ -9,7 +9,7 @@ import torch
 from matplotlib.pyplot import tight_layout
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.util.scenario import Scenario
 from artist.util import set_logger_config
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
@@ -32,29 +32,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_file, "r") as f:
-    example_scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
+    scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
 
 # Inspect the scenario.
-print(example_scenario)
-print(f"The light source is a {example_scenario.light_sources.light_source_list[0]}")
+print(scenario)
+print(f"The light source is a {scenario.light_sources.light_source_list[0]}")
 print(
-    f"The first target area is a {example_scenario.target_areas.target_area_list[0].name}."
+    f"The first target area is a {scenario.target_areas.target_area_list[0].name}."
 )
-single_heliostat = example_scenario.heliostats.heliostat_list[0]
-print(f"The heliostat position is: {single_heliostat.position}")
-print(f"The heliostat is aiming at: {single_heliostat.aim_point}")
+print(f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}")
+print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0]}")
+print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0]}")
 
-# Define the incident ray direction for when the sun is in the south.
-incident_ray_direction_south = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+# Define the incident ray direction.
+# When the sun is directly in the south, the rays point directly to the north.
+incident_ray_direction_south = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-# Save original surface points.
-original_surface_points, _ = single_heliostat.surface.get_surface_points_and_normals(
+# Save original surface points of the first heliostat in the scenario.
+original_surface_points, _ = scenario.heliostat_field.all_surface_points[0]
+
+# Align all heliostats
+scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
+    incident_ray_direction=incident_ray_direction,
     device=device
-)
-
-# Align the heliostat.
-single_heliostat.set_aligned_surface_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction_south, device=device
 )
 
 # Define colors for each facet.
@@ -70,7 +70,7 @@ gs = fig.add_gridspec(
 ax1 = fig.add_subplot(121, projection="3d")
 ax2 = fig.add_subplot(122, projection="3d")
 
-# Plot each facet
+# Plot each facet of the first heliostat in the scenario.
 for i in range(len(single_heliostat.surface.facets)):
     e_origin = original_surface_points[i, :, 0].cpu().detach().numpy()
     n_origin = original_surface_points[i, :, 1].cpu().detach().numpy()
