@@ -2,7 +2,7 @@ import json
 import logging
 import pathlib
 import struct
-from typing import Union
+from typing import Optional, Union
 
 import h5py
 import numpy as np
@@ -262,6 +262,8 @@ class SurfaceConverter:
         self,
         surface_points_with_facets_list: list[torch.Tensor],
         surface_normals_with_facets_list: list[torch.Tensor],
+        heliostat_height: float,
+        heliostat_width: float,
         facet_translation_vectors: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
@@ -276,6 +278,10 @@ class SurfaceConverter:
             A list of facetted surface points. Points per facet may vary.
         surface_normals_with_facets_list : list[torch.Tensor]
             A list of facetted surface normals. Normals per facet may vary.
+        heliostat_height : float
+            The height of the heliostat.
+        heliostat_width : float
+            The width of the heliostat.
         facet_translation_vectors : torch.Tensor
             Translation vector for each facet from heliostat origin to relative position.
         canting_e : torch.Tensor
@@ -336,6 +342,17 @@ class SurfaceConverter:
         )
         surface_normals_with_facets = utils.convert_3d_direction_to_4d_format(
             surface_normals_with_facets, device=device
+        )
+
+        #TODO
+
+        new_surface_points = generate_ideal_juelich_heliostat_surface(
+            heliostat_height=heliostat_height,
+            heliostat_width=heliostat_width,
+            canting_e=canting_e,
+            canting_n=canting_n,
+            facet_translation_vectors=facet_translation_vectors,
+            number_of_surface_points=10000,
         )
 
         # Convert to NURBS surface.
@@ -406,7 +423,8 @@ class SurfaceConverter:
             surface_header_data = surface_header_struct.unpack_from(
                 file.read(surface_header_struct.size)
             )
-
+            # Load width and heigt of the whole heliostat
+            width, height = surface_header_data[3:5]
             # Calculate the number of facets.
             n_xy = surface_header_data[5:7]
             number_of_facets = n_xy[0] * n_xy[1]
@@ -456,6 +474,8 @@ class SurfaceConverter:
         surface_config = self._generate_surface_config(
             surface_points_with_facets_list=surface_points_with_facets_list,
             surface_normals_with_facets_list=surface_normals_with_facets_list,
+            heliostat_height=height,
+            heliostat_width=width,
             facet_translation_vectors=facet_translation_vectors,
             canting_e=canting_e,
             canting_n=canting_n,
@@ -467,16 +487,18 @@ class SurfaceConverter:
     def generate_surface_config_from_paint(
         self,
         heliostat_file_path: pathlib.Path,
-        deflectometry_file_path: pathlib.Path,
+        deflectometry_file_path: Optional[pathlib.Path] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``PAINT`` dataset.
 
+        If no deflectometry file path is specified, TODO 
+
         Parameters
         ----------
-        deflectometry_file_path : pathlib.Path
-            The file path to the ``PAINT`` deflectometry data that will be converted.
+        deflectometry_file_path : Optional[pathlib.Path]
+            The file path to the ``PAINT`` deflectometry data that will be converted (default is None).
         heliostat_file_path : pathlib.Path
             The file path to the ``PAINT`` heliostat properties data that will be converted.
         device : Union[torch.device, str]
@@ -494,6 +516,9 @@ class SurfaceConverter:
             number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
                 config_dictionary.paint_number_of_facets
             ]
+
+            heliostat_height = heliostat_dict[config_dictionary.paint_heliostat_height]
+            heliostat_width = heliostat_dict[config_dictionary.paint_heliostat_width]
 
             facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
             canting_e = torch.empty(number_of_facets, 3, device=device)
@@ -517,57 +542,67 @@ class SurfaceConverter:
                         config_dictionary.paint_facets
                     ][facet][config_dictionary.paint_canting_n],
                     device=device,
-                )
+                ) 
 
-        # Reading ``PAINT`` deflectometry hdf5 file.
-        log.info(
-            f"Reading PAINT deflectometry file located at: {deflectometry_file_path}."
-        )
-        with h5py.File(deflectometry_file_path, "r") as file:
-            surface_points_with_facets_list = []
-            surface_normals_with_facets_list = []
-            for f in range(number_of_facets):
-                number_of_points = len(
-                    file[f"{config_dictionary.paint_facet}{f + 1}"][
-                        config_dictionary.paint_surface_points
-                    ]
-                )
-                single_facet_surface_points = torch.empty(
-                    number_of_points, 3, device=device
-                )
-                single_facet_surface_normals = torch.empty(
-                    number_of_points, 3, device=device
-                )
-
-                points_data = torch.tensor(
-                    np.array(
+        
+        if deflectometry_file_path is None or not os.path.isfile(deflectometry_file_path):
+            # Reading ``PAINT`` deflectometry hdf5 file.
+            log.info(
+                f"Reading PAINT deflectometry file located at: {deflectometry_file_path}."
+            )
+            with h5py.File(deflectometry_file_path, "r") as file:
+                surface_points_with_facets_list = []
+                surface_normals_with_facets_list = []
+                for f in range(number_of_facets):
+                    number_of_points = len(
                         file[f"{config_dictionary.paint_facet}{f + 1}"][
                             config_dictionary.paint_surface_points
                         ]
-                    ),
-                    device=device,
-                )
-                normals_data = torch.tensor(
-                    np.array(
-                        file[f"{config_dictionary.paint_facet}{f + 1}"][
-                            config_dictionary.paint_surface_normals
-                        ]
-                    ),
-                    device=device,
-                )
+                    )
+                    single_facet_surface_points = torch.empty(
+                        number_of_points, 3, device=device
+                    )
+                    single_facet_surface_normals = torch.empty(
+                        number_of_points, 3, device=device
+                    )
 
-                for i, point_data in enumerate(points_data):
-                    single_facet_surface_points[i, :] = point_data
-                for i, normal_data in enumerate(normals_data):
-                    single_facet_surface_normals[i, :] = normal_data
-                surface_points_with_facets_list.append(single_facet_surface_points)
-                surface_normals_with_facets_list.append(single_facet_surface_normals)
+                    points_data = torch.tensor(
+                        np.array(
+                            file[f"{config_dictionary.paint_facet}{f + 1}"][
+                                config_dictionary.paint_surface_points
+                            ]
+                        ),
+                        device=device,
+                    )
+                    normals_data = torch.tensor(
+                        np.array(
+                            file[f"{config_dictionary.paint_facet}{f + 1}"][
+                                config_dictionary.paint_surface_normals
+                            ]
+                        ),
+                        device=device,
+                    )
 
-        log.info("Loading ``PAINT`` data complete.")
+                    for i, point_data in enumerate(points_data):
+                        single_facet_surface_points[i, :] = point_data
+                    for i, normal_data in enumerate(normals_data):
+                        single_facet_surface_normals[i, :] = normal_data
+                    surface_points_with_facets_list.append(single_facet_surface_points)
+                    surface_normals_with_facets_list.append(single_facet_surface_normals)
+
+            log.info("Loading ``PAINT`` with defletometry data complete.")
+        else:
+            log.info(
+            f"Deflectometry not found or is not a deflectometry file at location: {deflectometry_file_path}."
+        )
+            
+            log.info("Loading ``PAINT`` without defletometry data complete. Created an ideal heliostat.")
 
         surface_config = self._generate_surface_config(
             surface_points_with_facets_list=surface_points_with_facets_list,
             surface_normals_with_facets_list=surface_normals_with_facets_list,
+            heliostat_height=heliostat_height,
+            heliostat_width=heliostat_width,
             facet_translation_vectors=facet_translation_vectors,
             canting_e=canting_e,
             canting_n=canting_n,
@@ -575,3 +610,68 @@ class SurfaceConverter:
         )
 
         return surface_config
+
+
+def generate_ideal_juelich_heliostat_surface(heliostat_height: float, 
+                           heliostat_width: float, 
+                           cantings_e: torch.Tensor, 
+                           cantings_n: torch.Tensor, 
+                           facet_translation_vectors: torch.Tensor, 
+                           number_of_surface_points: int,
+                           device: Union[torch.device, str] = "cuda") -> torch.Tensor:
+    """
+    Generates an ideal Juelich heliostat surface represented as a point cloud.
+
+    Create surface points for a heliostat consisting of four facets, each with individual
+    canting angles. Points are generated in local facet coordinates, then rotated and translated to form
+    an ideal heliostat geometry according to specified parameters.
+
+    Parameters:
+    ----------
+    heliostat_height : float
+        Overall height of the heliostat (vertical dimension).
+    heliostat_width : float
+        Overall width of the heliostat (horizontal dimension).
+    cantings_e : torch.Tensor
+        The facet canting angles around the east axis (radians).
+    cantings_n : torch.Tensor
+        The facet canting angles around the north axis (radians).
+    facet_translation_vectors : torch.Tensor
+        The ENU (east, north, up) translations for each facet.
+    number_of_surface_points : int
+        Total number of surface points to generate across all facets.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns:
+    -------
+    torch.Tensor
+        The ideal heliostat surface points for each facet.
+    """
+    # TODO Doku Update that we decided to use point clouds as the standard for generating nurbs (CAD support possible)
+    number_of_facets = 4
+    facet_height = heliostat_height / 2
+    facet_width = heliostat_width / 2
+
+    aspect_ratio = facet_width / facet_height
+
+    number_of_columns_per_facet = int(((number_of_surface_points / number_of_facets) * aspect_ratio) ** 0.5)
+    number_of_rows_per_facet = int(torch.ceil((number_of_surface_points / number_of_facets) / number_of_columns_per_facet))
+
+    number_of_surface_points_per_facet = number_of_columns_per_facet * number_of_rows_per_facet
+    
+    surface_points_all_facets = torch.zeros([number_of_facets, number_of_surface_points_per_facet, 4], device=device)
+
+    surface_points_all_facets[:, :, 0] = torch.linspace(-facet_width/2, facet_width/2, steps=number_of_columns_per_facet, device=device)
+    surface_points_all_facets[:, :, 1] = torch.linspace(-facet_height/2, facet_height/2, steps=number_of_rows_per_facet, device=device)
+
+    surface_points_all_facets = surface_points_all_facets @ (utils.rotate_n(cantings_n, device=device) @ utils.rotate_e(cantings_e, device=device))
+    surface_points_ideal_canted = surface_points_all_facets @ utils.translate_enu(
+        e=facet_translation_vectors[:, 0],
+        n=facet_translation_vectors[:, 1],
+        u=facet_translation_vectors[:, 2],
+        device=device
+    )
+        
+    return surface_points_ideal_canted
+
