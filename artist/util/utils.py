@@ -788,3 +788,25 @@ def setup_distributed_environment(
         if is_distributed:
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
+
+#TODO Controll angles carefully
+def enu_to_angles(enu_vector):
+    """
+    Convert an ENU vector [E, N, U] into azimuth and elevation angles (in radians).
+
+    Parameters:
+    enu_vector (torch.Tensor): A tensor of shape (3,) representing [E, N, U].
+
+    Returns:
+    tuple: (azimuth, elevation) in radians.
+           - azimuth: angle in horizontal plane, measured clockwise from North.
+           - elevation: angle above the horizontal plane.
+    """
+    east, north, up = enu_vector[0], enu_vector[1], enu_vector[2]
+    # Compute horizontal distance
+    horizontal_dist = torch.sqrt(east**2 + north**2)
+    # Azimuth: angle measured from North towards East
+    azimuth = torch.atan2(east, north)
+    # Elevation: angle above the horizontal plane
+    elevation = torch.atan2(up, horizontal_dist)
+    return azimuth, elevation

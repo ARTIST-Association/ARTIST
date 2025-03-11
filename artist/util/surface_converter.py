@@ -4,9 +4,12 @@ import pathlib
 import struct
 from typing import Optional, Union
 
+import matplotlib.pyplot as plt #TODO Remove Later
+
 import h5py
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig
@@ -344,17 +347,6 @@ class SurfaceConverter:
             surface_normals_with_facets, device=device
         )
 
-        #TODO
-
-        new_surface_points = generate_ideal_juelich_heliostat_surface(
-            heliostat_height=heliostat_height,
-            heliostat_width=heliostat_width,
-            canting_e=canting_e,
-            canting_n=canting_n,
-            facet_translation_vectors=facet_translation_vectors,
-            number_of_surface_points=10000,
-        )
-
         # Convert to NURBS surface.
         log.info("Converting to NURBS surface.")
         facet_config_list = []
@@ -484,10 +476,71 @@ class SurfaceConverter:
 
         return surface_config
 
+    def generate_ideal_juelich_heliostat_surface(
+        self,
+        cantings_e: torch.Tensor,
+        cantings_n: torch.Tensor,
+        facet_translation_vectors: torch.Tensor,
+        number_of_surface_points: int,
+        device: Union[torch.device, str] = "cuda"
+        ) -> torch.Tensor:
+        """
+        Generate an ideal Jülich heliostat surface as a collection of points on 4 facets.
+        """
+
+        ###CANTING ADAPTION REMOVE LATER####
+        cantings_n = torch.cat((-cantings_n[:, :2], cantings_n[:, 2:]), dim=1)
+        cantings_e = torch.cat((-cantings_e[:, :2], cantings_e[:, 2:]), dim=1)
+
+        # Compute half-dimensions from the spatial components.
+        half_facet_heights = torch.norm(cantings_n, dim=1)  # shape: (4,)
+        half_facet_widths  = torch.norm(cantings_e, dim=1)   # shape: (4,)
+        
+        # Assuming all facets are identical, pick the dimensions from the first facet.
+        facet_height = 4 * half_facet_heights[0]
+        facet_width  = 4 * half_facet_widths[0]
+        
+        number_of_facets = 4
+        # Now the point cloud has shape (4, N, 3)
+        surface_pointcloud = create_point_cloud_with_fixed_aspect_ratio(
+            facet_height, facet_width, number_of_surface_points, number_of_facets, device)
+
+        # Normalize the spatial part of the canting vectors (first three components)
+        canting_e_spatial = F.normalize(cantings_e[:, :3], dim=1)  # (4, 3)
+        canting_n_spatial = F.normalize(cantings_n[:, :3], dim=1)  # (4, 3)
+
+        # Compute the third basis vector ("up") using the cross product.
+        canting_u_spatial = torch.cross(canting_e_spatial, canting_n_spatial, dim=1)
+        canting_u_spatial = F.normalize(canting_u_spatial, dim=1)  # (4, 3)
+
+        # Build the 3x3 rotation matrix for each facet.
+        # Each matrix has columns [canting_e_spatial, canting_n_spatial, canting_u_spatial].
+        R_3x3 = torch.stack((canting_e_spatial, canting_n_spatial, canting_u_spatial), dim=2)  # (4, 3, 3)
+
+        # Rotate the surface point cloud.
+        # surface_pointcloud has shape (4, N, 3) so we can use batch matrix multiplication.
+        rotated_surface_pointcloud = torch.bmm(surface_pointcloud, R_3x3.transpose(1, 2))
+        
+        # Translate the points.
+        # facet_translation_vectors should be of shape (4, 3)
+        translated_points = rotated_surface_pointcloud + facet_translation_vectors[:,:3].unsqueeze(1)
+        
+        # Split into a list (one tensor per facet)
+        surface_points_with_facets_list = [translated_points[i] for i in range(translated_points.shape[0])]
+
+        # Duplicate the surface normals (canting_u_spatial) for each point per facet.
+        surface_normals_with_facets_list = [
+            canting_u_spatial[i].unsqueeze(0).expand(translated_points.shape[1], -1)
+            for i in range(canting_u_spatial.shape[0])
+        ]
+
+        return surface_points_with_facets_list, surface_normals_with_facets_list
+    
     def generate_surface_config_from_paint(
         self,
         heliostat_file_path: pathlib.Path,
         deflectometry_file_path: Optional[pathlib.Path] = None,
+        number_of_surface_points_for_ideal_surface: Optional[int]= 2000,
         device: Union[torch.device, str] = "cuda",
     ) -> list[FacetConfig]:
         """
@@ -545,7 +598,7 @@ class SurfaceConverter:
                 ) 
 
         
-        if deflectometry_file_path is None or not os.path.isfile(deflectometry_file_path):
+        if deflectometry_file_path is not None and pathlib.Path(deflectometry_file_path).is_file():
             # Reading ``PAINT`` deflectometry hdf5 file.
             log.info(
                 f"Reading PAINT deflectometry file located at: {deflectometry_file_path}."
@@ -594,7 +647,15 @@ class SurfaceConverter:
         else:
             log.info(
             f"Deflectometry not found or is not a deflectometry file at location: {deflectometry_file_path}."
-        )
+            )
+            surface_points_with_facets_list, surface_normals_with_facets_list = self.generate_ideal_juelich_heliostat_surface(
+            cantings_e = canting_e,
+            cantings_n = canting_n,
+            facet_translation_vectors = facet_translation_vectors,
+            number_of_surface_points=number_of_surface_points_for_ideal_surface,
+            device = device
+            )
+            
             
             log.info("Loading ``PAINT`` without defletometry data complete. Created an ideal heliostat.")
 
@@ -610,68 +671,133 @@ class SurfaceConverter:
         )
 
         return surface_config
+    
+    
 
-
-def generate_ideal_juelich_heliostat_surface(heliostat_height: float, 
-                           heliostat_width: float, 
-                           cantings_e: torch.Tensor, 
-                           cantings_n: torch.Tensor, 
-                           facet_translation_vectors: torch.Tensor, 
-                           number_of_surface_points: int,
-                           device: Union[torch.device, str] = "cuda") -> torch.Tensor:
+def compute_grid_dimensions(facet_width: float, facet_height: float, points_per_facet: float) -> tuple[int, int]:
     """
-    Generates an ideal Juelich heliostat surface represented as a point cloud.
-
-    Create surface points for a heliostat consisting of four facets, each with individual
-    canting angles. Points are generated in local facet coordinates, then rotated and translated to form
-    an ideal heliostat geometry according to specified parameters.
+    Compute the number of columns and rows for a grid that maintains an aspect ratio.
 
     Parameters:
     ----------
-    heliostat_height : float
-        Overall height of the heliostat (vertical dimension).
-    heliostat_width : float
-        Overall width of the heliostat (horizontal dimension).
-    cantings_e : torch.Tensor
-        The facet canting angles around the east axis (radians).
-    cantings_n : torch.Tensor
-        The facet canting angles around the north axis (radians).
-    facet_translation_vectors : torch.Tensor
-        The ENU (east, north, up) translations for each facet.
-    number_of_surface_points : int
-        Total number of surface points to generate across all facets.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    facet_width : float
+        Width of the facet.
+    facet_height : float
+        Height of the facet.
+    points_per_facet : float
+        Approximate number of points for each facet.
 
     Returns:
     -------
-    torch.Tensor
-        The ideal heliostat surface points for each facet.
+    int, int
+        Number of columns and rows for the grid.
     """
-    # TODO Doku Update that we decided to use point clouds as the standard for generating nurbs (CAD support possible)
-    number_of_facets = 4
-    facet_height = heliostat_height / 2
-    facet_width = heliostat_width / 2
-
     aspect_ratio = facet_width / facet_height
 
-    number_of_columns_per_facet = int(((number_of_surface_points / number_of_facets) * aspect_ratio) ** 0.5)
-    number_of_rows_per_facet = int(torch.ceil((number_of_surface_points / number_of_facets) / number_of_columns_per_facet))
+    # Convert to tensor to ensure compatibility with torch operations
+    points_per_facet_tensor = torch.tensor(points_per_facet, dtype=torch.float32)
+    aspect_ratio_tensor = torch.tensor(aspect_ratio, dtype=torch.float32)
 
-    number_of_surface_points_per_facet = number_of_columns_per_facet * number_of_rows_per_facet
+    # Compute an approximate number of columns
+    number_of_columns = torch.round(torch.sqrt(points_per_facet_tensor * aspect_ratio_tensor)).int().item()
+
+    # Compute rows such that the total points approximate `points_per_facet`
+    number_of_rows = torch.round(points_per_facet_tensor / number_of_columns).int().item()
+
+    return number_of_columns, number_of_rows
+
+def plot_pointcloud(pointcloud: torch.Tensor) -> None:
+    """
+    Plot a pointcloud generated by generate_ideal_juelich_heliostat_surface.
     
-    surface_points_all_facets = torch.zeros([number_of_facets, number_of_surface_points_per_facet, 4], device=device)
+    The pointcloud is expected to be of shape (number_of_facets, number_of_surface_points, 3),
+    where the coordinates are in the East-North-Up (ENU) coordinate system.
+    """
+    # Convert the pointcloud to a numpy array (moving to CPU if necessary)
+    pc_np = pointcloud.detach().cpu().numpy()
+    
+    # Create a new figure and axis for the plot.
+    fig, ax = plt.subplots(figsize=(6, 6))
+    
+    # Define a set of colors for different facets.
+    colors = ['red', 'blue', 'green', 'purple']
+    
+    # Iterate over the facets and plot each one.
+    for i in range(pc_np.shape[0]):
+        facet = pc_np[i]  # shape: (number_of_surface_points, 3)
+        east = facet[:, 0]
+        north = facet[:, 1]
+        ax.scatter(east, north, color=colors[i % len(colors)], label=f'Facet {i+1}', s=20)
+    
+    # Label the axes and set plot title.
+    ax.set_xlabel("East")
+    ax.set_ylabel("North")
+    ax.set_title("Heliostat Surface Point Cloud (East-North Plane)")
+    ax.legend()
+    ax.grid(True)
+    ax.axis("equal")  # Ensures equal scaling on both axes.
+    
+    plt.savefig("pointcloud.png")
+    plt.close(fig)
 
-    surface_points_all_facets[:, :, 0] = torch.linspace(-facet_width/2, facet_width/2, steps=number_of_columns_per_facet, device=device)
-    surface_points_all_facets[:, :, 1] = torch.linspace(-facet_height/2, facet_height/2, steps=number_of_rows_per_facet, device=device)
 
-    surface_points_all_facets = surface_points_all_facets @ (utils.rotate_n(cantings_n, device=device) @ utils.rotate_e(cantings_e, device=device))
-    surface_points_ideal_canted = surface_points_all_facets @ utils.translate_enu(
-        e=facet_translation_vectors[:, 0],
-        n=facet_translation_vectors[:, 1],
-        u=facet_translation_vectors[:, 2],
-        device=device
-    )
-        
-    return surface_points_ideal_canted
+import torch
+import math
 
+def create_point_cloud_with_fixed_aspect_ratio(total_heliostat_height, total_heliostat_width, 
+                                               desired_points_per_facet, number_facets, device):
+    """
+    Creates a point cloud for heliostat facets with a fixed aspect ratio.
+    Returns points of shape (number_facets, num_points, 3).
+    """
+    device = torch.device(device)
+    
+    # Define dimensions for a single facet (half the heliostat's size)
+    single_facet_height = total_heliostat_height / 2
+    single_facet_width  = total_heliostat_width / 2
+
+    # --- Step 1: Determine spacing along the East direction ---
+    num_points_east = int(round(math.sqrt(desired_points_per_facet)))
+    num_points_east = max(num_points_east, 1)
+    point_spacing = single_facet_width / (num_points_east - 1) if num_points_east > 1 else single_facet_width
+
+    # --- Step 2: Determine the number of points along the North direction ---
+    num_points_north = int(single_facet_height / point_spacing) + 1
+    num_points_north = max(num_points_north, 1)
+    grid_north_span = (num_points_north - 1) * point_spacing
+
+    east_coords = torch.linspace(-single_facet_width / 2, single_facet_width / 2, 
+                                 steps=num_points_east, device=device)
+    north_coords = torch.linspace(-grid_north_span / 2, grid_north_span / 2, 
+                                  steps=num_points_north, device=device)
+
+    # --- Step 3: Create the grid for one facet ---
+    mesh_east, mesh_north = torch.meshgrid(east_coords, north_coords, indexing='ij')
+    mesh_east = mesh_east.reshape(-1)
+    mesh_north = mesh_north.reshape(-1)
+    mesh_up = torch.zeros_like(mesh_east, device=device)
+
+    facet_point_cloud = torch.stack([mesh_east, mesh_north, mesh_up], dim=-1)  # (num_points, 3)
+
+    # --- (Optional) Report the difference in point count ---
+    actual_point_count = num_points_east * num_points_north
+    point_difference = actual_point_count - desired_points_per_facet
+    if point_difference > 0:
+        print(f"Using {actual_point_count} points, which is {point_difference} more than requested {desired_points_per_facet}.")
+    elif point_difference < 0:
+        print(f"Using {actual_point_count} points, which is {-point_difference} less than requested {desired_points_per_facet}.")
+    else:
+        print(f"Using exactly {actual_point_count} points as requested.")
+
+    # --- Step 4: Repeat for all facets ---
+    complete_point_cloud = facet_point_cloud.unsqueeze(0).repeat(number_facets, 1, 1)
+    return complete_point_cloud
+
+
+
+
+
+
+
+#Facet Spans (East): [[-0.6374922394752502, 1.9569215510273352e-05, 0.0031505227088928223], [-0.6374922394752502, -1.9569215510273352e-05, 0.0031505227088928223], [-0.6374922394752502, -1.9569215510273352e-05, -0.0031505227088928223], [-0.6374922394752502, 1.9569215510273352e-
+#Facet Spans (North): [[-0.0, 0.8024845123291016, -0.004984567407518625], [-0.0, 0.8024845123291016, 0.004984567407518625], [-0.0, 0.8024845123291016, -0.004984567407518625], [-0.0, 0.8024845123291016, 0.004984567407518625]]
