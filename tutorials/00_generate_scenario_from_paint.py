@@ -1,5 +1,4 @@
 import pathlib
-import time
 
 import torch
 
@@ -17,36 +16,36 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 # Set the device.
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test_single")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tests/data/field_data/tower-measurements.json"
+    "please/insert/the/path/to/the/paint/data/here/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (helisotat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
-        "AA39",
+        "name",
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tests/data/field_data/AA39-heliostat-properties.json"
+            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
         ),
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tests/data/field_data/AA39-deflectometry.h5"
+            "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
         ),
     ),
     # (
-    #     "name2",
-    #     pathlib.Path(
-    #         "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
-    #     ),
+        # "name2",
+        # pathlib.Path(
+        #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+        # ),
+        # pathlib.Path(
+        #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
+        # ),
     # ),
     # ... Include as many as you want, but at least one!
 ]

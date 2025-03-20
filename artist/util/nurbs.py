@@ -18,7 +18,7 @@ class NURBSSurface(torch.nn.Module):
     evaluation_points_n : torch.Tensor
         The evaluation points in north direction.
     control_points : torch.Tensor
-        The control_points.
+        The control points.
     knot_vector_e : torch.Tensor
         The knot vector in east direction.
     knot_vector_n : torch.Tensor
@@ -50,7 +50,7 @@ class NURBSSurface(torch.nn.Module):
         """
         Initialize a NURBS surface.
 
-        NURBS stands for Non-Uniform Rational B-Splines and allow for an efficient and precise reconstruction
+        NURBS stands for Non-Uniform Rational B-Spline. NURBS allow for an efficient and precise reconstruction
         of the imperfect heliostat surfaces in the digital twin. This implementation of the NURBS is
         differentiable. The NURBS surfaces require a degree in two directions, evaluation points, and control
         points. These parameters are used to create the NURBS surface. For more details, see the NURBS tutorial.
@@ -66,7 +66,7 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points_n : torch.Tensor
             The evaluation points in north direction.
         control_points : torch.Tensor
-            The control_points.
+            The control points.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
@@ -222,7 +222,7 @@ class NURBSSurface(torch.nn.Module):
         degree : int
             The degree of the NURBS surface in one direction.
         nth_derivative : int
-            Specifies how many derivatives are calculated (default: 1).
+            Specifies how many derivatives are calculated (default is 1).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

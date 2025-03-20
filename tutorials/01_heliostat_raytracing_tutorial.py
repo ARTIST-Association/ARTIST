@@ -9,20 +9,20 @@ import torch
 from matplotlib.pyplot import tight_layout
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.util.scenario import Scenario
 from artist.util import set_logger_config
+from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be downloaded for this tutorial!
-DOWNLOAD_DATA = False
-scenario_file = pathlib.Path("please/insert/the/path/to/the/scenario/here/name.h5")
+default= False
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
-if DOWNLOAD_DATA:
+if default:
     url = "https://drive.google.com/uc?export=download&id=1X0bMmzwdlnk88bCaYM_sNUGaMxnMaRG8"
     output_filename = "tutorial_scenario.h5"
     command = ["wget", "-O", output_filename, url]
     result = subprocess.run(command, capture_output=True, text=True)
-    scenario_file = pathlib.Path(output_filename)
+    scenario_path = pathlib.Path(output_filename)
 
 # Set up logger.
 set_logger_config()
@@ -31,31 +31,36 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
-with h5py.File(scenario_file, "r") as f:
-    scenario = Scenario.load_scenario_from_hdf5(scenario_file=f, device=device)
+with h5py.File(scenario_path) as scenario_path:
+    scenario = Scenario.load_scenario_from_hdf5(
+        scenario_file=scenario_path, device=device
+    )
 
 # Inspect the scenario.
 print(scenario)
-print(f"The light source is a {scenario.light_sources.light_source_list[0]}")
+print(f"The light source is a {scenario.light_sources.light_source_list[0]}.")
 print(
     f"The first target area is a {scenario.target_areas.target_area_list[0].name}."
 )
-print(f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}")
-print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0]}")
-print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0]}")
+print(f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}.")
+print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0].tolist()}.")
+print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0].tolist()}.")
 
 # Define the incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
+# The incident ray direction needs to be normed.
 incident_ray_direction_south = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
 # Save original surface points of the first heliostat in the scenario.
-original_surface_points, _ = scenario.heliostat_field.all_surface_points[0]
+original_surface_points = scenario.heliostat_field.all_surface_points[0]
 
-# Align all heliostats
+# Align all heliostats.
 scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction,
+    incident_ray_direction=incident_ray_direction_south,
     device=device
 )
+
+aligned_surface_points = scenario.heliostat_field.all_current_aligned_surface_points[0]
 
 # Define colors for each facet.
 colors = ["r", "g", "b", "y"]
@@ -71,18 +76,23 @@ ax1 = fig.add_subplot(121, projection="3d")
 ax2 = fig.add_subplot(122, projection="3d")
 
 # Plot each facet of the first heliostat in the scenario.
-for i in range(len(single_heliostat.surface.facets)):
-    e_origin = original_surface_points[i, :, 0].cpu().detach().numpy()
-    n_origin = original_surface_points[i, :, 1].cpu().detach().numpy()
-    u_origin = original_surface_points[i, :, 2].cpu().detach().numpy()
+number_of_facets = 4
+number_of_surface_points_per_facet = original_surface_points.shape[0]
+batch_size = number_of_surface_points_per_facet // number_of_facets
+for i in range(number_of_facets):
+    start = i * batch_size
+    end = start + batch_size
+    e_origin = original_surface_points[start:end, 0].cpu().detach().numpy()
+    n_origin = original_surface_points[start:end, 1].cpu().detach().numpy()
+    u_origin = original_surface_points[start:end, 2].cpu().detach().numpy()
     e_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 0].cpu().detach().numpy()
+        aligned_surface_points[start:end, 0].cpu().detach().numpy()
     )
     n_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 1].cpu().detach().numpy()
+        aligned_surface_points[start:end, 1].cpu().detach().numpy()
     )
     u_aligned = (
-        single_heliostat.current_aligned_surface_points[i, :, 2].cpu().detach().numpy()
+        aligned_surface_points[start:end, 2].cpu().detach().numpy()
     )
     ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i + 1}")
     ax2.scatter(
@@ -116,14 +126,17 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 # Show the plot.
 plt.show()
 
-# Define the raytracer.
-raytracer = HeliostatRayTracer(scenario=example_scenario, batch_size=100)
+# Create a raytracer.
+raytracer = HeliostatRayTracer(
+    scenario=scenario, batch_size=1
+)
 
 # Perform heliostat-based raytracing.
 image_south = raytracer.trace_rays(
-    incident_ray_direction=incident_ray_direction_south, device=device
+    incident_ray_direction=incident_ray_direction_south,
+    target_area=scenario.get_target_area("receiver"),
+    device=device
 )
-image_south = raytracer.normalize_bitmap(image_south)
 
 # Plot the result.
 fig, ax = plt.subplots(figsize=(6, 6))
@@ -143,18 +156,24 @@ def align_and_trace_rays(
     light_direction : torch.Tensor
         The direction of the incoming light on the heliostat.
     device : Union[torch.device, str]
-        The device on which to initialize tensors (default: cuda).
+        The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
     torch.Tensor
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
-    single_heliostat.set_aligned_surface_with_incident_ray_direction(
-        incident_ray_direction=light_direction, device=device
+    # Align all heliostats.
+    scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
+        incident_ray_direction=light_direction,
+        device=device
     )
-    return raytracer.normalize_bitmap(
-        raytracer.trace_rays(incident_ray_direction=light_direction, device=device)
+
+    # Perform heliostat-based raytracing.
+    return raytracer.trace_rays(
+        incident_ray_direction=light_direction,
+        target_area=scenario.get_target_area("receiver"),
+        device=device
     )
 
 
@@ -207,9 +226,9 @@ def plot_multiple_images(
 
 # Consider multiple incident ray directions and plot the result.
 # Define light directions.
-incident_ray_direction_east = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
-incident_ray_direction_west = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
-incident_ray_direction_above = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
+incident_ray_direction_east = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
+incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
+incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
 
 # Perform alignment and raytracing to generate flux density images.
 image_east = align_and_trace_rays(

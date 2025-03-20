@@ -2,59 +2,60 @@ from typing import Union
 
 import torch
 
-from artist.field.actuator import (
-    Actuators,
-)
+from artist.field.actuator import Actuators
 
 
-class IdealActuator(Actuators):
+class IdealActuators(Actuators):
     """
-    Implement the behavior of an ideal actuator.
+    Implement the behavior of ideal actuators.
 
     Methods
     -------
-    motor_position_to_angle()
-        Calculate the joint angle for a given motor position.
-    angle_to_motor_position()
-        Calculate the motor position for a given angle.
+    motor_positions_to_angles()
+        Calculate the joint angles for given motor positions.
+    angles_to_motor_positions()
+        Calculate the motor positions for given joint angles.
     forward()
         Specify the forward pass.
 
     See Also
     --------
-    :class:`Actuator` : The parent class.
+    :class:`Actuator` : Reference to the parent class.
     """
 
-    def motor_position_to_angle(
-        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def __init__(self, **kwargs) -> None:
+        pass 
+    
+    def motor_positions_to_angles(
+        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Calculate the joint angle for a given motor position.
+        Calculate the joint angles for given motor positions.
 
         Parameters
         ----------
-        motor_position : torch.Tensor
-            The motor position.
+        motor_positions : torch.Tensor
+            The motor positions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
-            The joint angle corresponding to the motor position.
+            The joint angles corresponding to the motor positions.
         """
-        return motor_position
+        return motor_positions
 
-    def angle_to_motor_position(
-        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def angles_to_motor_positions(
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Calculate the motor position for a given angle.
+        Calculate the motor positions for given joint angles.
 
         Parameters
         ----------
-        angle : torch.Tensor
-            The joint angle.
+        angles : torch.Tensor
+            The joint angles.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -63,7 +64,7 @@ class IdealActuator(Actuators):
         torch.Tensor
             The motor steps.
         """
-        return angle
+        return angles
 
     def forward(self) -> None:
         """

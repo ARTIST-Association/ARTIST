@@ -13,7 +13,7 @@ class Surface(torch.nn.Module):
     Attributes
     ----------
     facets : List[Facet]
-        A list of facets that comprise the surface of the heliostat.
+        A list of facets that comprise the surface of a heliostat.
 
     Methods
     -------

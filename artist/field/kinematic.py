@@ -10,7 +10,7 @@ class Kinematic(torch.nn.Module):
     Methods
     -------
     align()
-        Compute the orientation matrix to align the heliostat.
+        Align given surface points and surface normals according to an input.
     forward()
         Specify the forward pass.
     """
@@ -20,29 +20,17 @@ class Kinematic(torch.nn.Module):
         Initialize the kinematic.
 
         The abstract kinematic implements a template for the construction of inheriting kinematics which currently
-        can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostat
-        and its actuators. The abstract base class defines an align function that all kinematics need to overwrite
-        in order to align the heliostat surface according to a provided aim point.
+        can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostats
+        and their actuators. The abstract base class defines an align function that all kinematics need to overwrite
+        in order to align the heliostat surfaces.
         """
         super().__init__()
 
     def align(
         self,
-        incident_ray_direction: torch.Tensor,
-        max_num_iterations: int = 2,
-        min_eps: float = 0.0001,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Compute the rotation matrix to align the concentrator along a desired orientation.
-
-        Parameters
-        ----------
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
-        max_num_iterations : int
-            Maximum number of iterations (default: 2).
-        min_eps : float
-            Convergence criterion (default: 0.0001).
+        Align given surface points and surface normals according to an input.
 
         Raises
         ------

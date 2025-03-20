@@ -20,8 +20,6 @@ target_area_reveicer = "receiver"
 target_area_type_planar = "planar"
 """Key used to define that a planar target area type is used."""
 
-light_source_prefix = "lightsource"
-"""Key to access the light source."""
 light_source_type = "type"
 """Key to access the light source type."""
 sun_key = "sun"
@@ -95,8 +93,6 @@ concentrator_tilt_n = "concentrator_tilt_n"
 concentrator_tilt_u = "concentrator_tilt_u"
 """Key to access the kinematic concentrator tilt in the up direction."""
 
-kinematic_initial_orientation = "initial_orientation"
-"""Key to access the initial orientation."""
 kinematic_type = "type"
 """Key to access the kinematic type."""
 rigid_body_key = "rigid_body"
@@ -105,8 +101,8 @@ rigid_body_number_of_deviation_parameters = 18
 """Number of deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
-kinematic_offsets_key = "offsets"
-"""Key to access the kinematic offsets."""
+kinematic_initial_orientation = "initial_orientation"
+"""Key to access the initial orientation."""
 kinematic_deviations_key = "deviations"
 """Key to access the kinematic deviations."""
 

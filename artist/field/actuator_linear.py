@@ -7,7 +7,7 @@ from artist.field.actuator import Actuators
 
 class LinearActuators(Actuators):
     """
-    Implements the behavior of a linear actuators.
+    Implement the behavior of linear actuators.
 
     Attributes
     ----------
@@ -109,7 +109,7 @@ class LinearActuators(Actuators):
         calc_step_1 = self.offsets**2 + self.pivot_radii**2 - stroke_lengths**2
         calc_step_2 = 2.0 * self.offsets * self.pivot_radii
         calc_step_3 = calc_step_1 / calc_step_2
-        absolute_angles = torch.arccos(calc_step_3)
+        absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
         return absolute_angles
 
     def motor_positions_to_angles(

@@ -26,17 +26,17 @@ from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
-    calibration_properties_path: pathlib.Path,
+    calibration_properties_paths: pathlib.Path,
     power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
-) -> tuple[str, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Extract calibration data from a ``PAINT`` calibration file for alignment optimization.
+    Extract calibration data from ``PAINT`` calibration files.
 
     Parameters
     ----------
-    calibration_properties_path : pathlib.Path
-        The path to the calibration properties file.
+    calibration_properties_paths : pathlib.Path
+        The paths to the calibration properties files.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
     device : Union[torch.device, str]
@@ -44,62 +44,72 @@ def extract_paint_calibration_data(
 
     Returns
     -------
-    str
-        The name of the calibration target.
+    list[str]
+        The names of the calibration targets.
     torch.Tensor
-        The calibration flux density center.
+        The calibration flux density centers.
     torch.Tensor
-        The incident ray direction.
+        The sun positions.
     torch.Tensor
         The motor positions.
     """
     device = torch.device(device)
-    with open(calibration_properties_path, "r") as file:
-        calibration_dict = json.load(file)
-        calibration_target_name = calibration_dict[
-            config_dictionary.paint_calibration_traget
-        ]
-        center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
-            torch.tensor(
-                calibration_dict[config_dictionary.paint_focal_spot][
-                    config_dictionary.paint_utis
-                ],
-                dtype=torch.float64,
+
+    number_of_calibrations = len(calibration_properties_paths)
+
+    calibration_target_names = []
+    center_calibration_images = torch.zeros((number_of_calibrations, 4), device=device)
+    sun_positions_enu = torch.zeros((number_of_calibrations, 4), device=device)
+    all_motor_positions = torch.zeros((number_of_calibrations, 2), device=device)
+
+    for index, path in enumerate(calibration_properties_paths):
+        with open(path, "r") as file:
+            calibration_dict = json.load(file)
+            calibration_target_names.append(calibration_dict[
+                    config_dictionary.paint_calibration_traget
+                ]
+            )
+            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
+                torch.tensor(
+                    calibration_dict[config_dictionary.paint_focal_spot][
+                        config_dictionary.paint_utis
+                    ],
+                    dtype=torch.float64,
+                    device=device,
+                ),
+                power_plant_position,
                 device=device,
-            ),
-            power_plant_position,
-            device=device,
-        )
-        center_calibration_image = utils.convert_3d_point_to_4d_format(
-            center_calibration_image, device=device
-        )
-        sun_azimuth = torch.tensor(
-            calibration_dict[config_dictionary.paint_sun_azimuth], device=device
-        )
-        sun_elevation = torch.tensor(
-            calibration_dict[config_dictionary.paint_sun_elevation], device=device
-        )
-        sun_position_enu = utils.convert_3d_point_to_4d_format(
-            utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True, device=device),
-            device=device,
-        )
-        motor_positions = torch.tensor(
-            [
-                calibration_dict[config_dictionary.paint_motor_positions][
-                    config_dictionary.paint_first_axis
+            )
+            center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
+                center_calibration_image, device=device
+            )
+            sun_azimuth = torch.tensor(
+                calibration_dict[config_dictionary.paint_sun_azimuth], device=device
+            )
+            sun_elevation = torch.tensor(
+                calibration_dict[config_dictionary.paint_sun_elevation], device=device
+            )
+            sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
+                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True, device=device),
+                device=device,
+            )
+            all_motor_positions[index] = torch.tensor(
+                [
+                    calibration_dict[config_dictionary.paint_motor_positions][
+                        config_dictionary.paint_first_axis
+                    ],
+                    calibration_dict[config_dictionary.paint_motor_positions][
+                        config_dictionary.paint_second_axis
+                    ],
                 ],
-                calibration_dict[config_dictionary.paint_motor_positions][
-                    config_dictionary.paint_second_axis
-                ],
-            ],
-            device=device,
-        )
+                device=device,
+            )
 
     return (
-        calibration_target_name,
-        center_calibration_image,
-        sun_position_enu,
-        motor_positions,
+        calibration_target_names,
+        center_calibration_images,
+        sun_positions_enu,
+        all_motor_positions,
     )
 
 
@@ -162,7 +172,7 @@ def extract_paint_tower_measurements(
             )
 
             prefix = ""
-            if target_area == "receiver":
+            if target_area == config_dictionary.target_area_reveicer:
                 prefix = "receiver_outer_"
             upper_left = utils.convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
@@ -251,7 +261,7 @@ def extract_paint_heliostats(
     aim_point : torch.Tensor
         The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
-        The maximum amount of epochs for fitting the NURBS.
+        The maximum amount of epochs for fitting the NURBS (default is 400).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -433,7 +443,7 @@ def extract_paint_heliostats(
 
         heliostat_config_list.append(heliostat_config)
 
-        # Include the configuration for a prototype. (Will be extracted from the first heliostat in the list.)
+        # Include the configuration for a prototype (Will be extracted from the first heliostat in the list).
         surface_prototype_config = SurfacePrototypeConfig(
             facet_list=prototype_facet_list
         )
