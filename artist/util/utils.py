@@ -1,29 +1,6 @@
-from typing import TYPE_CHECKING, Generator, Union
+from typing import Generator, Union
 
 import torch
-
-if TYPE_CHECKING:
-    from artist.field.kinematic_rigid_body import RigidBody
-
-
-def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """
-    Calculate the batch-wise dot product.
-
-    Parameters
-    ----------
-    x : torch.Tensor
-        Single tensor with dimension (1, 4).
-    y : torch.Tensor
-        Single tensor with dimension (N, 4).
-
-
-    Returns
-    -------
-    torch.Tensor
-        Dot product of x and y as a tensor with dimension (N, 1).
-    """
-    return (x * y).sum(-1).unsqueeze(-1)
 
 
 def rotate_distortions(
@@ -41,9 +18,9 @@ def rotate_distortions(
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians.
+        East rotation angles in radians.
     u : torch.Tensor
-        Up rotation angle in radians.
+        Up rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -59,7 +36,7 @@ def rotate_distortions(
     device = torch.device(device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention
+    sin_e = -torch.sin(e)  # Heliostat convention.
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
     ones = torch.ones(e.shape, device=device)
@@ -93,7 +70,7 @@ def rotate_e(
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians.
+        East rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -105,7 +82,7 @@ def rotate_e(
     device = torch.device(device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention
+    sin_e = -torch.sin(e)  # Heliostat convention.
     ones = torch.ones(e.shape, device=device)
 
     matrix = torch.zeros(e.shape[0], 4, 4, device=device)
@@ -133,7 +110,7 @@ def rotate_n(
     Parameters
     ----------
     n : torch.Tensor
-        North rotation angle in radians.
+        North rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -173,7 +150,7 @@ def rotate_u(
     Parameters
     ----------
     u : torch.Tensor
-        Up rotation angle in radians.
+        Up rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -215,11 +192,11 @@ def translate_enu(
     Parameters
     ----------
     e : torch.Tensor
-        East translation.
+        East translations.
     n : torch.Tensor
-        North translation.
+        North translations.
     u : torch.Tensor
-        Up translation.
+        Up translations.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -265,20 +242,20 @@ def azimuth_elevation_to_enu(
     Parameters
     ----------
     azimuth : torch.Tensor
-        Azimuth, clockwise from north (degrees).
+        Azimuth, 0° points toward the south (degrees).
     elevation : torch.Tensor
         Elevation angle above horizon, neglecting aberrations (degrees).
     slant_range : float
-        Slant range (meters).
+        Slant range in meters (default is 1.0).
     degree : bool
-        Whether input is given in degrees or radians.
+        Whether input is given in degrees (default is True).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
     torch.Tensor
-        The east, north, up (enu) coordinates.
+        The east, north, up (ENU) coordinates.
     """
     if degree:
         elevation = torch.deg2rad(elevation)
@@ -291,7 +268,7 @@ def azimuth_elevation_to_enu(
 
     enu = torch.zeros(3, device=device)
 
-    enu[0] = - r * torch.sin(azimuth)
+    enu[0] = r * torch.sin(azimuth)
     enu[1] = - r * torch.cos(azimuth)
     enu[2] = slant_range * torch.sin(elevation)
 
@@ -417,59 +394,6 @@ def convert_wgs84_coordinates_to_local_enu(
     )
 
 
-def get_rigid_body_kinematic_parameters_from_scenario(
-    kinematic: "RigidBody",
-) -> list[torch.Tensor]:
-    """
-    Extract all deviation parameters and actuator parameters from a rigid body kinematic.
-
-    Parameters
-    ----------
-    kinematic : RigidBody
-        The kinematic from which to extract the parameters.
-
-    Returns
-    -------
-    list[torch.Tensor]
-        The parameters from the kinematic (requires_grad is True).
-    """
-    parameters_list = [
-        kinematic.deviation_parameters.first_joint_translation_e,
-        kinematic.deviation_parameters.first_joint_translation_n,
-        kinematic.deviation_parameters.first_joint_translation_u,
-        kinematic.deviation_parameters.first_joint_tilt_e,
-        kinematic.deviation_parameters.first_joint_tilt_n,
-        kinematic.deviation_parameters.first_joint_tilt_u,
-        kinematic.deviation_parameters.second_joint_translation_e,
-        kinematic.deviation_parameters.second_joint_translation_n,
-        kinematic.deviation_parameters.second_joint_translation_u,
-        kinematic.deviation_parameters.second_joint_tilt_e,
-        kinematic.deviation_parameters.second_joint_tilt_n,
-        kinematic.deviation_parameters.second_joint_tilt_u,
-        kinematic.deviation_parameters.concentrator_translation_e,
-        kinematic.deviation_parameters.concentrator_translation_n,
-        kinematic.deviation_parameters.concentrator_translation_u,
-        kinematic.deviation_parameters.concentrator_tilt_e,
-        kinematic.deviation_parameters.concentrator_tilt_n,
-        kinematic.deviation_parameters.concentrator_tilt_u,
-        kinematic.actuators.actuator_list[0].increment,
-        kinematic.actuators.actuator_list[0].initial_stroke_length,
-        kinematic.actuators.actuator_list[0].offset,
-        kinematic.actuators.actuator_list[0].pivot_radius,
-        kinematic.actuators.actuator_list[0].initial_angle,
-        kinematic.actuators.actuator_list[1].increment,
-        kinematic.actuators.actuator_list[1].initial_stroke_length,
-        kinematic.actuators.actuator_list[1].offset,
-        kinematic.actuators.actuator_list[1].pivot_radius,
-        kinematic.actuators.actuator_list[1].initial_angle,
-    ]
-    for parameter in parameters_list:
-        if parameter is not None:
-            parameter.requires_grad_()
-
-    return parameters_list
-
-
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
     Normalize points in a tensor to the open interval of (0,1).
@@ -558,20 +482,20 @@ def decompose_rotations(
     """
     device = torch.device(device)
 
-    # Normalize the input vectors
+    # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
     target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(0)
 
-    # Compute the cross product (rotation axis)
+    # Compute the cross product (rotation axis).
     r = torch.linalg.cross(initial_vector, target_vector)
 
-    # Normalize the rotation axis
+    # Normalize the rotation axis.
     r_normalized = torch.nn.functional.normalize(r, p=2, dim=1)
 
-    # Compute the angle between the vectors
+    # Compute the angle between the vectors.
     theta = torch.arccos(torch.clamp(initial_vector @ target_vector.T, -1.0, 1.0))
 
-    # Decompose the angle along each axis
+    # Decompose the angle along each axis.
     theta_components = theta * r_normalized
 
     return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
@@ -648,7 +572,7 @@ def transform_initial_angle(
         device=device,
     ).squeeze(0)
 
-    # Compute the transformed angle relative to the reference orientation
+    # Compute the transformed angle relative to the reference orientation.
     transformed_initial_angle = angle_between_vectors(
         initial_orientation[:-1], initial_orientation_with_offset[:-1]
     ) - angle_between_vectors(
@@ -683,7 +607,7 @@ def get_center_of_mass(
     plane_u : float
         The height of the target surface.
     threshold : float
-        Determines how intense a pixel in the bitmap needs to be to be registered (default: 0.0).
+        Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -760,20 +684,20 @@ def setup_distributed_environment(
     rank, world_size = 0, 1
 
     try:
-        # Attempt to initialize the process group
+        # Attempt to initialize the process group.
         torch.distributed.init_process_group(backend=backend, init_method="env://")
         is_distributed = True
         world_size = torch.distributed.get_world_size()
         rank = torch.distributed.get_rank()
         if rank == 0:
-            print(f"Using device type: {device.type} and backend: {backend}")
-            print(f"Distributed Mode: {'Enabled' if is_distributed else 'Disabled'}")
+            print(f"Using device type: {device.type} and backend: {backend}.")
+            print(f"Distributed Mode: {'Enabled.' if is_distributed else 'Disabled.'}")
         print(
             f"Distributed process group initialized: Rank {rank}, World Size {world_size}"
         )
 
     except Exception:
-        print(f"Using device type: {device.type} and backend: {backend}")
+        print(f"Using device type: {device.type} and backend: {backend}.")
         print("Running in single-device mode.")
 
     if device.type == "cuda" and is_distributed:

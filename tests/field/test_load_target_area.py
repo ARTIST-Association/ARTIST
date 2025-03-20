@@ -27,7 +27,7 @@ def test_target_area_from_hdf5(
     """
     mock_h5_file = mocker.MagicMock(spec=h5py.File)
 
-    # Define mocked objects for various keys
+    # Define mocked objects for various keys.
     mock_geometry = mocker.MagicMock()
     mock_geometry.__getitem__.return_value = b"planar"
 
@@ -49,7 +49,7 @@ def test_target_area_from_hdf5(
     mock_curvature_u = mocker.MagicMock()
     mock_curvature_u.__getitem__.return_value = 2.0
 
-    # Combine all keys into one `side_effect`
+    # Combine all keys into one `side_effect`.
     mock_h5_file.__getitem__.side_effect = lambda key: {
         config_dictionary.target_area_geometry: mock_geometry,
         config_dictionary.target_area_position_center: mock_center,
@@ -70,7 +70,7 @@ def test_target_area_from_hdf5(
         config_dictionary.target_area_curvature_u,
     ]
 
-    # Perform the test
+    # Perform the test.
     target_area = TargetArea.from_hdf5(
         config_file=mock_h5_file,
         target_area_name="receiver",

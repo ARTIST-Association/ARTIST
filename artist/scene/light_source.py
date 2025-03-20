@@ -1,6 +1,3 @@
-from typing import Optional
-
-import h5py
 import torch
 from typing_extensions import Self
 
@@ -45,17 +42,10 @@ class LightSource(torch.nn.Module):
 
     @classmethod
     def from_hdf5(
-        cls, config_file: h5py.File, light_source_name: Optional[str] = None
+        cls,
     ) -> Self:
         """
         Load the light source from an HDF5 file.
-
-        Parameters
-        ----------
-        config_file : h5py.File
-            The HDF5 file containing the information about the light source.
-        light_source_name : str, optional
-            The name of the light source - used for logging.
 
         Raises
         ------
@@ -66,27 +56,12 @@ class LightSource(torch.nn.Module):
 
     def get_distortions(
         self,
-        number_of_points: int,
-        number_of_facets: int = 4,
-        number_of_heliostats: int = 1,
-        random_seed: int = 7,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get distortions given the light source model.
 
         This function gets the distortions that are later used to model possible ray directions that are being generated
         from the light source. Depending on the model of the light source, the distortions are generated differently.
-
-        Parameters
-        ----------
-        number_of_points : int
-            The number of points on the heliostat.
-        number_of_facets : int, optional
-            The number of facets per heliostat (default: 4).
-        number_of_heliostats : int, optional
-            The number of heliostats in the scenario (default: 1).
-        random_seed : int
-            The random seed to enable result replication (default: 7).
 
         Raises
         ------

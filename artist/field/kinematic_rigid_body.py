@@ -1,13 +1,18 @@
 from typing import Union
 
-from artist.field.actuator_linear import LinearActuators
 import torch
 
+from artist.field.actuator_ideal import IdealActuators
+from artist.field.actuator_linear import LinearActuators
 from artist.field.kinematic import (
     Kinematic,
 )
 from artist.util import config_dictionary, utils
 
+actuator_type_mapping = {
+    0.0: LinearActuators,
+    1.0: IdealActuators,
+}
 
 class RigidBody(Kinematic):
     """
@@ -16,7 +21,7 @@ class RigidBody(Kinematic):
     Attributes
     ----------
     number_of_heliostats : int
-        The number of heliostats using a rigid body kinematic.
+        The number of heliostats using this rigid body kinematic.
     heliostat_positions : torch.Tensor
         The positions of the heliostats.
     aim_points : torch.Tensor
@@ -27,18 +32,18 @@ class RigidBody(Kinematic):
         The deviation parameters for the kinematic.
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematic.
-    actuators : LinearActuators
-        The linear actuators of the kinematic.
+    actuators : Actuators
+        The actuators used in the kinematic.
 
     Methods
     -------
-    incident_ray_direction_to_orientation()
+    incident_ray_direction_to_orientations()
         Compute orientation matrices given an incident ray direction.
-    align_surface_with_incident_ray_direction()
+    align_surfaces_with_incident_ray_direction()
         Align given surface points and surface normals according to an incident ray direction.
-    motor_positions_to_orientation()
-        Compute the orientation matrix given the motor positions.
-    align_surface_with_motor_positions()
+    motor_positions_to_orientations()
+        Compute orientation matrices given the motor positions..
+    align_surfaces_with_motor_positions()
         Align given surface points and surface normals according to motor positions.
     forward()
         Specify the forward pass.
@@ -47,6 +52,7 @@ class RigidBody(Kinematic):
     --------
     :class:`Kinematic` : Reference to the parent class.
     """
+    
     def __init__(
         self,
         number_of_heliostats: int,
@@ -58,9 +64,9 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
-        Initialize the rigid body kinematic.
+        Initialize a rigid body kinematic.
 
-        The rigid body kinematic determines a transformation matrix that is applied to the heliostat surfaces in order to
+        The rigid body kinematic determines a transformation matrices that are applied to the heliostat surfaces in order to
         align them. The heliostats then reflect the incoming light according to the provided aim points. The rigid body 
         kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
         Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
@@ -68,7 +74,7 @@ class RigidBody(Kinematic):
         Parameters
         ----------
         number_of_heliostats : int
-            The number of heliostats using a rigid body kinematic.
+            The number of heliostats using this rigid body kinematic.
         heliostat_positions : torch.Tensor
             The positions of the heliostats.
         aim_points : torch.Tensor
@@ -95,8 +101,8 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        # TODO nicht nur Linear erlauben?
-        self.actuators = LinearActuators(
+        actuators_object = actuator_type_mapping[actuator_parameters[0, 0, 0].item()]
+        self.actuators = actuators_object(
             clockwise_axis_movements=actuator_parameters[:, 1],
             increments=actuator_parameters[:, 2],
             initial_stroke_lengths=actuator_parameters[:, 3],
@@ -105,7 +111,7 @@ class RigidBody(Kinematic):
             initial_angles=actuator_parameters[:, 6],
         )
 
-    def incident_ray_direction_to_orientation(
+    def incident_ray_direction_to_orientations(
         self,
         incident_ray_direction: torch.Tensor,
         max_num_iterations: int = 2,
@@ -120,18 +126,19 @@ class RigidBody(Kinematic):
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
         max_num_iterations : int
-            Maximum number of iterations (default: 2).
+            Maximum number of iterations (default is 2).
         min_eps : float
-            Convergence criterion (default: 0.0001).
+            Convergence criterion (default is 0.0001).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
-            The orientation matrix.
+            The orientation matrices.
         """
         device = torch.device(device)
+
         motor_positions = torch.zeros((self.number_of_heliostats, config_dictionary.rigid_body_number_of_actuators), device=device)
         last_iteration_loss = None
         for _ in range(max_num_iterations):
@@ -141,7 +148,7 @@ class RigidBody(Kinematic):
 
             initial_orientations = torch.eye(4, device=device).unsqueeze(0)
 
-            # Account for position.
+            # Account for positions.
             initial_orientations = initial_orientations @ utils.translate_enu(
                 e=self.heliostat_positions[:, 0],
                 n=self.heliostat_positions[:, 1],
@@ -229,18 +236,18 @@ class RigidBody(Kinematic):
             # Calculate joint 1 angles.
             a = -torch.cos(
                 self.deviation_parameters[:, 6]
-            ) * torch.cos(joint_angles[:, 1]) + torch.sin(
+            ) * torch.cos(joint_angles[:, 1].clone()) + torch.sin(
                 self.deviation_parameters[:, 6]
             ) * torch.sin(
                 self.deviation_parameters[:, 7]
-            ) * torch.sin(joint_angles[:, 1])
+            ) * torch.sin(joint_angles[:, 1].clone())
             b = -torch.sin(
                 self.deviation_parameters[:, 6]
-            ) * torch.cos(joint_angles[:, 1]) - torch.cos(
+            ) * torch.cos(joint_angles[:, 1].clone()) - torch.cos(
                 self.deviation_parameters[:, 6]
             ) * torch.sin(
                 self.deviation_parameters[:, 7]
-            ) * torch.sin(joint_angles[:, 1])
+            ) * torch.sin(joint_angles[:, 1].clone())
 
             joint_angles[:, 0] = (
                 torch.arctan2(
@@ -292,11 +299,11 @@ class RigidBody(Kinematic):
         Parameters
         ----------
         incident_ray_direction : torch.Tensor
-            The direction of the rays.
+            The direction of the incident ray as seen from the heliostat.
         surface_points : torch.Tensor
-            Points on the surface of the heliostats that reflect the light.
+            The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
-            Normals to the surface points.
+            The normals to the surface points.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -309,126 +316,122 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        orientation = self.incident_ray_direction_to_orientation(
+        orientations = self.incident_ray_direction_to_orientations(
             incident_ray_direction, device=device
         )
 
-        aligned_surface_points = surface_points @ orientation.transpose(1, 2)
-        aligned_surface_normals = surface_normals @ orientation.transpose(1, 2)
+        aligned_surface_points = surface_points @ orientations.transpose(1, 2)
+        aligned_surface_normals = surface_normals @ orientations.transpose(1, 2)
 
         return aligned_surface_points, aligned_surface_normals
 
-    def motor_positions_to_orientation(
+    def motor_positions_to_orientations(
         self,
         motor_positions: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute the orientation matrix given the motor positions.
+        Compute orientation matrices given the motor positions.
 
         Parameters
         ----------
         motor_positions : torch.Tensor
-            The motor positions from the calibration.
+            The motor positions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
-            The orientation matrix.
+            The orientation matrices.
         """
-        if len(self.actuators.actuator_list) != 2:
-            raise ValueError(
-                f"The rigid body kinematic requires exactly two actuators but {len(self.actuators.actuator_list)} were specified, please check the configuration!"
-            )
-
         device = torch.device(device)
 
-        joint_1_angle = self.actuators.actuator_list[0].motor_position_to_angle(
-            motor_position=motor_positions[0], device=device
-        )
-        joint_2_angle = self.actuators.actuator_list[1].motor_position_to_angle(
-            motor_position=motor_positions[1], device=device
+        joint_angles = self.actuators.motor_positions_to_angles(
+            motor_positions=motor_positions, device=device
         )
 
-        initial_orientation = torch.eye(4, device=device)
+        initial_orientations = torch.eye(4, device=device)
 
-        # Account for position.
-        initial_orientation = initial_orientation @ utils.translate_enu(
-            e=self.position[0],
-            n=self.position[1],
-            u=self.position[2],
+        # Account for positions.
+        initial_orientations = initial_orientations @ utils.translate_enu(
+            e=self.heliostat_positions[:, 0],
+            n=self.heliostat_positions[:, 1],
+            u=self.heliostat_positions[:, 2],
             device=device,
         )
 
-        joint_1_rotation = (
+        joint_rotations = torch.zeros((self.number_of_heliostats, config_dictionary.rigid_body_number_of_actuators, 4, 4), device=device)
+
+        joint_rotations[:, 0] = (
             utils.rotate_n(
-                n=self.deviation_parameters.first_joint_tilt_n, device=device
+                n=self.deviation_parameters[:, 4], device=device
             )
             @ utils.rotate_u(
-                u=self.deviation_parameters.first_joint_tilt_u, device=device
+                u=self.deviation_parameters[:, 5], device=device
             )
             @ utils.translate_enu(
-                e=self.deviation_parameters.first_joint_translation_e,
-                n=self.deviation_parameters.first_joint_translation_n,
-                u=self.deviation_parameters.first_joint_translation_u,
+                e=self.deviation_parameters[:, 0],
+                n=self.deviation_parameters[:, 1],
+                u=self.deviation_parameters[:, 2],
                 device=device,
             )
-            @ utils.rotate_e(joint_1_angle, device=device)
+            @ utils.rotate_e(
+                e=joint_angles[:, 0], device=device)
         )
-        joint_2_rotation = (
+        joint_rotations[:, 1] = (
             utils.rotate_e(
-                e=self.deviation_parameters.second_joint_tilt_e, device=device
+                e=self.deviation_parameters[:, 9], device=device
             )
             @ utils.rotate_n(
-                n=self.deviation_parameters.second_joint_tilt_n, device=device
+                n=self.deviation_parameters[:, 10], device=device
             )
             @ utils.translate_enu(
-                e=self.deviation_parameters.second_joint_translation_e,
-                n=self.deviation_parameters.second_joint_translation_n,
-                u=self.deviation_parameters.second_joint_translation_u,
+                e=self.deviation_parameters[:, 6],
+                n=self.deviation_parameters[:, 7],
+                u=self.deviation_parameters[:, 8],
                 device=device,
             )
-            @ utils.rotate_u(joint_2_angle, device=device)
+            @ utils.rotate_u(
+                u=joint_angles[:, 1], device=device)
         )
-
-        orientation = (
-            initial_orientation
-            @ joint_1_rotation
-            @ joint_2_rotation
+    
+        orientations = (
+            initial_orientations
+            @ joint_rotations[:, 0]
+            @ joint_rotations[:, 1]
             @ utils.translate_enu(
-                e=self.deviation_parameters.concentrator_translation_e,
-                n=self.deviation_parameters.concentrator_translation_n,
-                u=self.deviation_parameters.concentrator_translation_u,
+                e=self.deviation_parameters[:, 12],
+                n=self.deviation_parameters[:, 13],
+                u=self.deviation_parameters[:, 14],
                 device=device,
             )
         )
 
-        east_angle, north_angle, up_angle = utils.decompose_rotation(
-            initial_vector=self.initial_orientation_helisotat[:-1],
+        east_angles, north_angles, up_angles = utils.decompose_rotations(
+            initial_vector=self.initial_orientations[:, :-1],
             target_vector=self.artist_standard_orientation[:-1],
             device=device,
         )
 
-        # Return orientation matrix multiplied by the initial orientation offset.
+        # Return orientation matrices multiplied by the initial orientation offsets.
         return (
-            orientation
+            orientations
             @ utils.rotate_e(
-                e=east_angle,
+                e=east_angles,
                 device=device,
             )
             @ utils.rotate_n(
-                n=north_angle,
+                n=north_angles,
                 device=device,
             )
             @ utils.rotate_u(
-                u=up_angle,
+                u=up_angles,
                 device=device,
             )
         )
 
-    def align_surface_with_motor_positions(
+    def align_surfaces_with_motor_positions(
         self,
         motor_positions: torch.Tensor,
         surface_points: torch.Tensor,
@@ -440,12 +443,12 @@ class RigidBody(Kinematic):
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
-            The direction of the rays.
+        motor_positions : torch.Tensor
+            The motor positions.
         surface_points : torch.Tensor
-            Points on the surface of the heliostat that reflect the light.
+            The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
-            Normals to the surface points.
+            The normals to the surface points.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -458,12 +461,12 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        orientation = self.motor_positions_to_orientation(
+        orientations = self.motor_positions_to_orientations(
             motor_positions, device=device
         )
 
-        aligned_surface_points = surface_points @ orientation.T
-        aligned_surface_normals = surface_normals @ orientation.T
+        aligned_surface_points = surface_points @ orientations.transpose(1, 2)
+        aligned_surface_normals = surface_normals @ orientations.transpose(1, 2)
 
         return aligned_surface_points, aligned_surface_normals
 

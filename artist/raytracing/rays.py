@@ -37,10 +37,9 @@ class Rays:
             If the length of the ray directions does not match the length of the ray magnitudes.
         """
         if (
-            (ray_directions.size(dim=0) != ray_magnitudes.size(dim=0))
-            or (ray_directions.size(dim=1) != ray_magnitudes.size(dim=1))
-            or (ray_directions.size(dim=2) != ray_magnitudes.size(dim=2))
+            ray_directions.shape[:-1] == ray_magnitudes.shape and ray_directions.shape[-1] == 4
         ):
-            raise ValueError("Ray directions and magnitudes have differing sizes!")
-        self.ray_directions = ray_directions
-        self.ray_magnitudes = ray_magnitudes
+            self.ray_directions = ray_directions
+            self.ray_magnitudes = ray_magnitudes
+        else: 
+            raise ValueError("Ray directions and magnitudes have incompatible sizes!")

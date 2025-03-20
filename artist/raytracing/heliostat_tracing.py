@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Iterator, Union
 if TYPE_CHECKING:
     from artist.util.scenario import Scenario
 
-from artist.field.tower_target_area import TargetArea
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
+from artist.field.tower_target_area import TargetArea
 from artist.scene import LightSource
 from artist.util import utils
 
@@ -28,8 +28,6 @@ class DistortionsDataset(Dataset):
         The distortions in the up direction.
     distortions_e : torch.Tensor
         The distortions in the east direction.
-    number_of_heliostats : int
-        The number of heliostats in the scenario.
     """
 
     def __init__(
@@ -52,14 +50,12 @@ class DistortionsDataset(Dataset):
         ----------
         light_source : LightSource
             The light source used to model the distortions.
-        number_of_points : int
-            The number of points on the heliostat for which distortions are created.
-        number_of_facets : int
-            The number of facets per heliostat (default: 4).
+        number_of_points_per_heliostat : int
+            The number of points on the heliostats for which distortions are created.
         number_of_heliostats : int
-            The number of heliostats in the scenario (default: 1).
+            The number of heliostats in the scenario.
         random_seed : int
-            The random seed used for generating the distortions (default: 7).
+            The random seed used for generating the distortions (default is 7).
         """
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points_per_heliostat,
@@ -89,8 +85,10 @@ class DistortionsDataset(Dataset):
 
         Returns
         -------
-        tuple[torch.Tensor, torch.Tensor]
-            The distortions in the up and east direction for the given index.
+        torch.Tensor
+            The distortions in the up direction for the given index.
+        torch.Tensor
+            The distortions in the east direction for the given index.
         """
         return (
             self.distortions_u[idx],
@@ -102,8 +100,8 @@ class RestrictedDistributedSampler(Sampler):
     """
     Initializes a custom distributed sampler.
 
-    The ``DistributedSampler`` from torch replicates samples if the size of the dataset
-    is smaller than the world size to assign data to each rank. This custom sampler
+    The ``DistributedSampler`` from PyTorch replicates samples if the size of the dataset
+    is smaller than the world size, to assign data to each rank. This custom sampler
     can leave some ranks idle if the dataset is not large enough to distribute data to
     each rank. Replicated samples would mean replicated rays that physically do not exist.
 
@@ -115,23 +113,14 @@ class RestrictedDistributedSampler(Sampler):
         The world size or total number of processes.
     rank : int
         The rank of the current process.
-    shuffle : bool
-        Shuffled sampling or sequential.
-    seed : int
-        The seed to replicate random sampling.
-    active_replicas : int
-        Number of processes that will receive data.
+    number_of_active_ranks : int
+        The number of processes that will receive data.
     number_of_samples_per_rank : int
         The number of samples per rank.
 
-    Methods
-    -------
-    set_seed()
-        Set the seed for reproducible shuffling across epochs.
-
     See Also
     --------
-    :class:`torch.utils.data.Sampler` : The parent class.
+    :class:`torch.utils.data.Sampler` : Reference to the parent class.
     """
 
     def __init__(
@@ -141,36 +130,34 @@ class RestrictedDistributedSampler(Sampler):
         rank: int = 0,
     ) -> None:
         """
-        Set up a custom distributed sampler to assign data to each rank.
+        Set up a custom distributed sampler to assign data to each rank or leave them idle.
 
         Parameters
         ----------
         number_of_samples : int
             The length of the dataset or total number of samples.
         world_size : int
-            The world size or total number of processes (default: 1).
+            The world size or total number of processes (default is 1).
         rank : int
-            The rank of the current process (default: 0).
-        shuffle : bool
-            Shuffled sampling or sequential (default: True).
+            The rank of the current process (default is 0).
         """
         super().__init__()
         self.number_of_samples = number_of_samples
         self.world_size = world_size
         self.rank = rank
 
-        # Adjust num_replicas if dataset is smaller than world_size
-        self.active_replicas = min(self.number_of_samples, self.world_size)
+        # Adjust num_replicas if dataset is smaller than world_size.
+        self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
         if self.rank == 0:
-            active_ranks_string = ", ".join(str(i) for i in range(self.active_replicas))
-            # log.info(
-            #     f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
-            # )
+            active_ranks_string = ", ".join(str(i) for i in range(self.number_of_active_ranks))
+            log.info(
+                f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
+            )
 
-        # Only assign data to first `active_replicas` ranks
+        # Only assign data to first active ranks.
         self.number_of_samples_per_rank = (
-            self.number_of_samples // self.active_replicas
-            if self.rank < self.active_replicas
+            self.number_of_samples // self.number_of_active_ranks
+            if self.rank < self.number_of_active_ranks
             else 0
         )
 
@@ -181,24 +168,13 @@ class RestrictedDistributedSampler(Sampler):
         Returns
         -------
         Iterator[int]
-            An iterator over (shuffled) indices for the current rank.
+            An iterator over indices for the current rank.
         """
-        # Generate indices and shuffle them if shuffle=True
-        indices = list(range(self.number_of_samples))
-
         rank_indices = []
         for i in range(self.rank, self.number_of_samples, self.world_size):
             rank_indices.append(i)
 
         return iter(rank_indices)
-
-        # Split indices only among active ranks
-        # if self.rank < self.active_replicas:
-        #     start_idx = self.rank * self.number_of_samples_per_rank
-        #     end_idx = start_idx + self.number_of_samples_per_rank
-        #     return iter(indices[start_idx:end_idx])
-        # else:
-        #     return iter([])
 
 
 class HeliostatRayTracer:
@@ -207,31 +183,33 @@ class HeliostatRayTracer:
 
     Attributes
     ----------
-    heliostat : Heliostat
-        The heliostat considered for raytracing.
-    target_area : TargetArea
-        The target area considered for raytracing.
+    scenario : Scenario
+        The scenario used to perform raytracing.
     world_size : int
-        The world size i.e., the overall number of processors / ranks.
+        The world size i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
-    number_of_surface_points : int
-        The number of surface points on the heliostat.
+    batch_size : int
+        The amount of samples (Heliostats) processed parallely within a single rank.
+    number_of_surface_points_per_heliostat : int
+        The number of surface points on a single heliostat.
     distortions_dataset : DistortionsDataset
         The dataset containing the distortions for ray scattering.
+    distortions_sampler : RestrictedDistributedSampler
+        The distortion sampler.
     distortions_loader : DataLoader
         The dataloader that loads the distortions.
     bitmap_resolution_e : int
-        The resolution of the bitmap in the east dimension (default: 256).
+        The resolution of the bitmap in the east dimension.
     bitmap_resolution_u : int
-        The resolution of the bitmap in the up dimension (default: 256).
+        The resolution of the bitmap in the up dimension.
 
     Methods
     -------
     trace_rays()
         Perform heliostat raytracing.
     scatter_rays()
-        Scatter the reflected rays around the preferred ray direction.
+        Scatter the reflected rays around the preferred ray directions for each heliostat.
     sample_bitmap()
         Sample a bitmap (flux density distribution) of the reflected rays on the target area.
     normalize_bitmap()
@@ -261,31 +239,24 @@ class HeliostatRayTracer:
         ----------
         scenario : Scenario
             The scenario used to perform raytracing.
-        aim_point_area : str
-            The target area on in which the aimpoint is supposed to be.
-        heliostat_index : int
-            Index of heliostat from the heliostat list (default: 0).
         world_size : int
-            The world size (default: 1).
+            The world size i.e., the overall number of processes (default is 1).
         rank : int
-            The rank (default: 0).
+            The rank, i.e., individual process ID (default is 0).
         batch_size : int
-            The batch size used for raytracing (default: 1).
+            The amount of samples (Heliostats) processed parallely within a single rank (default is 1).
         random_seed : int
-            The random seed used for generating the distortions (default: 7).
-        shuffle : bool
-            A boolean flag indicating whether to shuffle the data (default: False).
+            The random seed used for generating the distortions (default is 7).
         bitmap_resolution_e : int
-            The resolution of the bitmap in the east dimension (default: 256).
+            The resolution of the bitmap in the east dimension (default is 256).
         bitmap_resolution_u : int
-            The resolution of the bitmap in the up dimension (default: 256).
+            The resolution of the bitmap in the up dimension (default is 256).
         """
         self.scenario = scenario
         self.world_size = world_size
         self.rank = rank
         self.batch_size = batch_size
 
-        # TODO: maybe this is not really optimial to just take the size of the first heliostat for everything
         self.number_of_surface_points_per_heliostat = (
             self.scenario.heliostat_field.all_current_aligned_surface_points.shape[1]
         )
@@ -294,7 +265,7 @@ class HeliostatRayTracer:
         self.distortions_dataset = DistortionsDataset(
             light_source=scenario.light_sources.light_source_list[0],
             number_of_points_per_heliostat=self.number_of_surface_points_per_heliostat,
-            number_of_heliostats=self.scenario.heliostat_field.all_current_aligned_surface_points.shape[0],
+            number_of_heliostats=self.scenario.heliostat_field.number_of_heliostats,
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -323,15 +294,22 @@ class HeliostatRayTracer:
         """
         Perform heliostat raytracing.
 
-        Scatter the rays according to the distortions, calculate the line plane intersection, and calculate the
-        resulting bitmap on the target area.
+        Scatter the rays according to the distortions, calculate the intersection with the target plane, 
+        and sample the resulting bitmap on the target area.
 
         Parameters
         ----------
         incident_ray_direction : torch.Tensor
             The direction of the incident ray as seen from the heliostat.
+        target_area : TargetArea
+            The target area used to sample the bitmap on.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
+
+        Raises
+        ------
+        ValueError
+            If not all heliostats used for raytracing have been aligned.
 
         Returns
         -------
@@ -344,28 +322,28 @@ class HeliostatRayTracer:
             (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
-        if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1):
+        if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1.0):
             raise ValueError("Not all heliostats have been aligned.")
-        self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect_all(incoming_ray_direction=incident_ray_direction,
-                                                                                         reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals)
-
+        
+        self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect(
+            incoming_ray_direction=incident_ray_direction,
+            reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals
+        )
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
 
             sampler_indices = list(self.distortions_sampler)
             
-            heliostat_indices = sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]
+            heliostat_indices_per_batch = sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]
         
-            rays = self.scatter_rays(batch_u, batch_e, heliostat_indices, device)
-            #torch.cuda.empty_cache()
+            rays = self.scatter_rays(batch_u, batch_e, heliostat_indices_per_batch, device)
 
             intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
                 rays=rays,
                 plane_normal_vector=target_area.normal_vector,
                 plane_center=target_area.center,
-                points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[heliostat_indices],
+                points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[heliostat_indices_per_batch],
             )
-            #torch.cuda.empty_cache()
 
             dx_intersections = (
                 intersections[:, :, :, 0]
@@ -385,7 +363,14 @@ class HeliostatRayTracer:
                 & (dy_intersections < target_area.plane_u + 1)
             )
 
-            total_bitmap = self.sample_bitmap(target_area, dx_intersections, dy_intersections, intersection_indices, absolute_intensities, device=device)
+            total_bitmap = self.sample_bitmap(
+                target_area=target_area, 
+                dx_intersections=dx_intersections, 
+                dy_intersections=dy_intersections, 
+                intersection_indices=intersection_indices, 
+                absolute_intensities=absolute_intensities, 
+                device=device
+            )
 
             final_bitmap = final_bitmap + total_bitmap
 
@@ -399,7 +384,7 @@ class HeliostatRayTracer:
         device: Union[torch.device, str] = "cuda",
     ) -> Rays:
         """
-        Scatter the reflected rays around the preferred ray direction.
+        Scatter the reflected rays around the preferred ray directions for each heliostat.
 
         Parameters
         ----------
@@ -407,13 +392,15 @@ class HeliostatRayTracer:
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
+        heliostat_indices : list
+            The indices of the heliostats considered in the current batch.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         Rays
-            Scattered rays around the preferred direction.
+            Scattered rays around the preferred directions.
         """
         device = torch.device(device)
 
@@ -442,14 +429,16 @@ class HeliostatRayTracer:
 
         Parameters
         ----------
-        dx_ints : torch.Tensor
-            x position of intersection with the target area of shape (N, 1), where N is the resolution of
-            the target area along the x-axis.
-        dy_ints : torch.Tensor
-            y position of intersection with the target area of shape (N, 1), where N is the resolution of
-            the target area along the y-axis.
-        indices : torch.Tensor
-            Index of the pixel.
+        target_area : TargetArea
+            The target area used to sample the bitmap on.
+        dx_intersections : torch.Tensor
+            The x-position of the intersection with the target area, scaled to the bitmap resolution.
+        dy_intersections : torch.Tensor
+            The y-position of the intersection with the target area, scaled to the bitmap resolution.
+        intersection_indices : torch.Tensor
+            Indices of the pixels.
+        absolute_intensities : torch.Tensor
+            The absolute intensities of the rays hitting the target plane.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -572,6 +561,8 @@ class HeliostatRayTracer:
         ----------
         bitmap : torch.Tensor
             The bitmap to be normalized.
+        target_area : TargetArea
+            The target area used to sample the bitmap on.
 
         Returns
         -------

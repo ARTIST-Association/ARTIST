@@ -5,14 +5,14 @@ import torch
 
 class Actuators(torch.nn.Module):
     """
-    Implement the abstract behavior of an actuator.
+    Implement the abstract behavior of actuators.
 
     Methods
     -------
-    motor_position_to_angle()
-        Calculate the joint angle for a given motor position.
-    angle_to_motor_position()
-        Calculate the motor position for a given angle.
+    motor_positions_to_angles()
+        Calculate the joint angles for given motor positions.
+    angles_to_motor_positions()
+        Calculate the motor positions for given joint angles.
     forward()
         Specify the forward pass.
     """
@@ -21,45 +21,26 @@ class Actuators(torch.nn.Module):
         self,
     ) -> None:
         """
-        Initialize an abstract actuator.
+        Initialize abstract actuators.
 
         The abstract actuator implements a template for the construction of inheriting actuators which can be
         ideal or linear. An actuator is responsible for turning the heliostat surface in such a way that the
-        heliostat reflects the incoming light onto the aim point on the receiver. The abstract actuator specifies
+        heliostat reflects the incoming light onto the aim point on the tower. The abstract actuator specifies
         the functionality that must be implemented in the inheriting classes. These include one function to map
         the motor steps to angles and another one for the opposite conversion of angles to motor steps.
-
-
-        Parameters
-        ----------
-        joint_number : int
-            Descriptor (number) of the joint.
-        clockwise_axis_movement : bool
-            Turning direction of the joint.
-        increment : torch.Tensor
-            The stroke length change per motor step.
-        initial_stroke_length : torch.Tensor
-            The stroke length for a motor step of 0.
-        offset : torch.Tensor
-            The offset between the linear actuator's pivoting point and the point
-            around which the actuator is allowed to pivot.
-        pivot_radius : torch.Tensor
-            The actuator's pivoting radius.
-        initial_angle : torch.Tensor
-            The angle that the actuator introduces to the manipulated coordinate system at the initial stroke length.
         """
         super().__init__()
 
-    def motor_position_to_angle(
-        self, motor_position: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def motor_positions_to_angles(
+        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Calculate the joint angle for a given motor position.
+        Calculate the joint angles for given motor positions.
 
         Parameters
         ----------
-        motor_position : torch.Tensor
-            The motor position.
+        motor_positions : torch.Tensor
+            The motor positions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -70,16 +51,16 @@ class Actuators(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def angle_to_motor_position(
-        self, angle: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    def angles_to_motor_positions(
+        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
-        Calculate the motor position for a given angle.
+        Calculate the motor positions for given joint angles.
 
         Parameters
         ----------
-        angle : torch.Tensor
-            The joint angle.
+        angles : torch.Tensor
+            The joint angles.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

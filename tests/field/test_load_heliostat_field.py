@@ -6,7 +6,7 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.field.heliostat import Heliostat
+from artist.field.heliostat_field import HeliostatField
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
         ),
     ],
 )
-def test_heliostat_load_from_hdf5_errors(
+def test_heliostat_field_load_from_hdf5_errors(
     mocker: MockerFixture,
     prototype_surface: Optional[MagicMock],
     prototype_kinematic: Optional[MagicMock],
@@ -55,7 +55,7 @@ def test_heliostat_load_from_hdf5_errors(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat load from hdf5 method.
+    Test the heliostat field load from hdf5 method.
 
     Parameters
     ----------
@@ -76,12 +76,21 @@ def test_heliostat_load_from_hdf5_errors(
         If test does not complete as expected.
     """
     mock_h5_file = mocker.MagicMock(spec=h5py.File)
+    mock_group_heliostats = mocker.MagicMock()
+    mock_group_heliostats.keys.return_value = ["heliostat_1"]
+    mock_h5_file.__getitem__.return_value = mock_group_heliostats
+    mock_group_heliostats.__len__.return_value = 1
+    mock_group_heliostats.keys.return_value = ["heliostats"]
 
     with pytest.raises(ValueError) as exc_info:
-        Heliostat.from_hdf5(
+        HeliostatField.from_hdf5(
             config_file=mock_h5_file,
+            number_of_heliostats = 1,
+            number_of_surface_points_per_heliostat = 10,
             prototype_surface=prototype_surface,
-            prototype_kinematic=prototype_kinematic,
+            prototype_initial_orientation=None,
+            prototype_kinematic_deviations=prototype_kinematic,
+            prototype_actuators=None,
             device=device,
         )
     assert error in str(exc_info.value)

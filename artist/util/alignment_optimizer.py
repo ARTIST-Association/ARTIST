@@ -7,20 +7,21 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, _LRScheduler
 
 from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
 from artist.util import utils
+from artist.util.scenario import Scenario
 
 log = logging.getLogger(__name__)
 """A logger for the alignment optimizer."""
 
 
-class AlignmentOptimizer:
+class KinematicOptimizer:
     """
-    Alignment optimizer to find optimal kinematic parameters.
+    An optimizer used to find optimal kinematic parameters.
 
-    The alignment optimizer optimizes parameters of the rigid body kinematics.
-    These parameters can include the 18 kinematic deviations parameters as well as five actuator
-    parameters for each actuator.
+    The kinematic optimizer optimizes kinematic parameters.
+    These parameters are specific to a certain kinematic type 
+    and can for example include the 18 kinematic deviations parameters as well as five actuator
+    parameters for each actuator for a rigid body kinematic.
 
     Attributes
     ----------
@@ -30,14 +31,6 @@ class AlignmentOptimizer:
         The optimizer.
     scheduler : Union[_LRScheduler, ReduceLROnPlateau]
         The learning rate scheduler.
-    world_size : int
-        The world size i.e., the overall number of processors / ranks (default: 1).
-    rank : int
-        The rank, i.e., individual process ID (default: 0).
-    batch_size : int
-        The batch size used for raytracing (default: 100).
-    is_distributed : bool
-        Distributed mode enabled (default: False).
 
     Methods
     -------
@@ -50,13 +43,9 @@ class AlignmentOptimizer:
         scenario: Scenario,
         optimizer: Optimizer,
         scheduler: Union[_LRScheduler, ReduceLROnPlateau],
-        world_size: int = 1,
-        rank: int = 0,
-        batch_size: int = 100,
-        is_distributed: bool = False,
     ) -> None:
         """
-        Initialize the alignment optimizer.
+        Initialize the kinematic optimizer.
 
         Parameters
         ----------
@@ -66,35 +55,23 @@ class AlignmentOptimizer:
             The optimizer.
         scheduler : Union[_LRScheduler, ReduceLROnPlateau]
             The learning rate scheduler.
-        world_size : int
-            The world size i.e., the overall number of processors / ranks (default: 1).
-        rank : int
-            The rank, i.e., individual process ID (default: 0).
-        batch_size : int
-            The batch size used for raytracing (default: 100).
-        is_distributed : bool
-            Distributed mode enabled (default: False).
         """
-        log.info("Create alignment optimizer.")
+        log.info("Create a kinematic optimizer.")
         self.scenario = scenario
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.world_size = world_size
-        self.rank = rank
-        self.batch_size = batch_size
-        self.is_distributed = is_distributed
 
     def optimize(
         self,
         tolerance: float,
         max_epoch: int,
-        center_calibration_image: torch.Tensor,
-        incident_ray_direction: torch.Tensor,
-        calibration_target_name: Optional[str] = None,
+        center_calibration_images: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
+        calibration_target_names: Optional[str] = None,
         motor_positions: Optional[torch.Tensor] = None,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[list[torch.Tensor], Scenario]:
+    ) -> None:
         """
         Optimize the kinematic parameters.
 
@@ -104,66 +81,55 @@ class AlignmentOptimizer:
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_image : torch.Tensor
-            The center of the calibration flux density.
-        incident_ray_direction : torch.Tensor
-            The incident ray direction specified in the calibration.
-        calibration_target_name : Optional[str]
-            The name of the calibration target.
+        center_calibration_images : torch.Tensor
+            The centers of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibration.
+        calibration_target_names : Optional[str]
+            The name of the calibration targets (default is None).
         motor_positions : Optional[torch.Tensor]
-            The motor positions specified in the calibration (default is ``None``).
+            The motor positions specified in the calibration files (default is None).
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        list[torch.Tensor]
-            The list of optimized kinematic parameters.
-        Scenario
-            The scenario with aligned heliostat and optimized kinematic parameters.
         """
-        log.info("Start alignment optimization.")
+        log.info("Start the kinematic calibration.")
         device = torch.device(device)
 
         if motor_positions is not None:
-            optimized_parameters, self.scenario = (
-                self._optimize_kinematic_parameters_with_motor_positions(
-                    tolerance=tolerance,
-                    max_epoch=max_epoch,
-                    center_calibration_image=center_calibration_image,
-                    incident_ray_direction=incident_ray_direction,
-                    motor_positions=motor_positions,
-                    num_log=num_log,
-                    device=device,
-                )
+            self._optimize_kinematic_parameters_with_motor_positions(
+                tolerance=tolerance,
+                max_epoch=max_epoch,
+                center_calibration_images=center_calibration_images,
+                incident_ray_directions=incident_ray_directions,
+                all_motor_positions=motor_positions,
+                num_log=num_log,
+                device=device,
             )
-        elif calibration_target_name is not None:
-            optimized_parameters, self.scenario = (
-                self._optimize_kinematic_parameters_with_raytracing(
-                    tolerance=tolerance,
-                    max_epoch=max_epoch,
-                    calibration_target_name=calibration_target_name,
-                    center_calibration_image=center_calibration_image,
-                    incident_ray_direction=incident_ray_direction,
-                    num_log=num_log,
-                    device=device,
-                )
+
+        elif calibration_target_names is not None:
+            self._optimize_kinematic_parameters_with_raytracing(
+                tolerance=tolerance,
+                max_epoch=max_epoch,
+                calibration_target_names=calibration_target_names,
+                center_calibration_images=center_calibration_images,
+                incident_ray_directions=incident_ray_directions,
+                num_log=num_log,
+                device=device,
             )
-        log.info("Alignment optimized.")
-        return optimized_parameters, self.scenario
+        log.info("Kinematic parameters optimized.")
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
         tolerance: float,
         max_epoch: int,
-        center_calibration_image: torch.Tensor,
-        incident_ray_direction: torch.Tensor,
-        motor_positions: torch.Tensor,
+        center_calibration_images: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
+        all_motor_positions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[list[torch.Tensor], Scenario]:
+    ) -> None:
         """
         Optimize the kinematic parameters using the motor positions.
 
@@ -176,96 +142,85 @@ class AlignmentOptimizer:
             The optimzer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_image : torch.Tensor
-            The center of the calibration flux density.
-        incident_ray_direction : torch.Tensor
-            The incident ray direction specified in the calibration.
-        motor_positions : torch.Tensor
-            The motor positions specified in the calibration.
+        center_calibration_images : torch.Tensor
+            The center of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibration data.
+        all_motor_positions : torch.Tensor
+            The motor positions specified in the calibration data.
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
-            The device on which to initialize tensors (default: cuda).
-
-        Returns
-        -------
-        list[torch.Tensor]
-            The list of optimized parameters.
-        Scenario
-            The scenario with aligned heliostat and optimized kinematic parameters.
+            The device on which to initialize tensors (default is cuda).
         """
-        log.info("Alignment optimization with motor positions.")
+        log.info("Kinematic calibration with motor positions.")
         device = torch.device(device)
         loss = torch.inf
         epoch = 0
 
-        preferred_reflection_direction_calibration = (
-            center_calibration_image
-            - self.scenario.heliostats.heliostat_list[0].position
-        )
-        preferred_reflection_direction_calibration = (
-            preferred_reflection_direction_calibration
-            / torch.norm(preferred_reflection_direction_calibration)
+        preferred_reflection_direction_calibrations = torch.nn.functional.normalize(
+            (
+            center_calibration_images
+            - self.scenario.heliostat_field.all_heliostat_positions
+            ), p=2, dim=1
         )
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
-            orientation = self.scenario.heliostats.heliostat_list[
-                0
-            ].get_orientation_from_motor_positions(
-                motor_positions=motor_positions, device=device
-            )
-
-            preferred_reflection_direction = raytracing_utils.reflect(
-                -incident_ray_direction, orientation[0:4, 2]
-            )
-
+            total_loss = 0.0
             self.optimizer.zero_grad()
 
-            loss = (
+            for motor_positions, incident_ray_direction, preferred_reflection_direction_calibration in zip(all_motor_positions, incident_ray_directions, preferred_reflection_direction_calibrations):
+
+                orientation = self.scenario.heliostat_field.get_orientations_from_motor_positions(
+                    motor_positions=motor_positions,
+                    device=device
+                )
+
+                preferred_reflection_direction = raytracing_utils.reflect(
+                    incoming_ray_direction=incident_ray_direction, 
+                    reflection_surface_normals=orientation[:, 0:4, 2]
+                )
+
+                loss = (
                 (
                     preferred_reflection_direction
                     - preferred_reflection_direction_calibration
                 )
                 .abs()
                 .mean()
-            )
-            loss.backward()
+                )
+
+                loss.backward()
+                total_loss += loss
 
             self.optimizer.step()
-            self.scheduler.step(loss)
+            self.scheduler.step(total_loss)
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {total_loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
-
-        self.scenario.heliostats.heliostat_list[
-            0
-        ].set_aligned_surface_with_motor_positions(
-            motor_positions=motor_positions.to(device), device=device
-        )
-
-        return self.optimizer.param_groups[0]["params"], self.scenario
+    
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
         tolerance: float,
         max_epoch: int,
-        calibration_target_name: str,
-        center_calibration_image: torch.Tensor,
-        incident_ray_direction: torch.Tensor,
+        calibration_target_names: list[str],
+        center_calibration_images: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[list[torch.Tensor], Scenario]:
+    ) -> None:
         """
         Optimize the kinematic parameters using raytracing.
 
         This optimizer method optimizes the kinematic parameters by extracting the focus point
         of a calibration image and using heliostat-tracing. This method is slower than the other
-        optimization method found in the alignment optimizer.
+        optimization method found in the kinematic optimizer.
 
         Parameters
         ----------
@@ -273,101 +228,69 @@ class AlignmentOptimizer:
             The optimzer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        calibration_target_name : str
-            The name of the calibration target or tower area.
-        center_calibration_image : torch.Tensor
-            The center of the calibration flux density.
-        incident_ray_direction : torch.Tensor
-            The incident ray direction specified in the calibration.
+        calibration_target_names : list[str]
+            The name of the calibration targets.
+        center_calibration_images : torch.Tensor
+            The centers of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibration data.
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
-            The device on which to initialize tensors (default: cuda).
-
-        Returns
-        -------
-        list[torch.Tensor]
-            The list of optimized parameters.
-        Scenario
-            The scenario with aligned heliostat and optimized kinematic parameters.
+            The device on which to initialize tensors (default is cuda).
         """
-        log.info("Alignment optimization with raytracing.")
+        log.info("Kinematic optimization with raytracing.")
         device = torch.device(device)
         loss = torch.inf
         epoch = 0
 
-        # Since the default heliostat aim point and thereby kinematic aim point is in the receiver center, the aim point
-        # needs to be updated to the center of the calibration target.
-        calibration_target = next(
-            (
-                area
-                for area in self.scenario.target_areas.target_area_list
-                if area.name == calibration_target_name
-            ),
-            None,
+        # Create a raytracer.
+        raytracer = HeliostatRayTracer(
+            scenario=self.scenario,
+            batch_size=1
         )
-
-        if calibration_target is None:
-            raise KeyError(
-                "The specified calibration target is not included in the scenario!"
-            )
-
-        self.scenario.heliostats.heliostat_list[0].aim_point = calibration_target.center
-        self.scenario.heliostats.heliostat_list[
-            0
-        ].kinematic.aim_point = calibration_target.center
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
-            # Align heliostat.
-            self.scenario.heliostats.heliostat_list[
-                0
-            ].set_aligned_surface_with_incident_ray_direction(
-                incident_ray_direction=incident_ray_direction, device=device
-            )
-
-            # Create raytracer
-            raytracer = HeliostatRayTracer(
-                scenario=self.scenario,
-                aim_point_area=calibration_target_name,
-                world_size=self.world_size,
-                rank=self.rank,
-                batch_size=self.batch_size,
-                random_seed=self.rank,
-            )
-
-            final_bitmap = raytracer.trace_rays(
-                incident_ray_direction=incident_ray_direction, device=device
-            )
-
-            if self.is_distributed:
-                torch.distributed.all_reduce(
-                    final_bitmap, op=torch.distributed.ReduceOp.SUM
-                )
-
-            final_bitmap = raytracer.normalize_bitmap(final_bitmap)
-
-            center = utils.get_center_of_mass(
-                bitmap=final_bitmap,
-                target_center=calibration_target.center,
-                plane_e=calibration_target.plane_e,
-                plane_u=calibration_target.plane_u,
-                device=device,
-            )
-
+            total_loss = 0.0
             self.optimizer.zero_grad()
 
-            loss = (center - center_calibration_image).abs().mean()
-            loss.backward()
+            for calibration_target_name, incident_ray_direction, center_calibration_image in zip(calibration_target_names, incident_ray_directions, center_calibration_images):
+
+                calibration_target = self.scenario.get_target_area(calibration_target_name)
+                
+                self.scenario.heliostat_field.all_aim_points = calibration_target.center.expand(self.scenario.heliostat_field.number_of_heliostats, -1)
+
+                # Align heliostat.
+                self.scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
+                    incident_ray_direction=incident_ray_direction,
+                    device=device)
+
+                # Perform heliostat-based raytracing.
+                final_bitmap = raytracer.trace_rays(
+                    incident_ray_direction=incident_ray_direction,
+                    target_area=calibration_target,
+                    device=device
+                )
+
+                center = utils.get_center_of_mass(
+                    bitmap=final_bitmap,
+                    target_center=calibration_target.center,
+                    plane_e=calibration_target.plane_e,
+                    plane_u=calibration_target.plane_u,
+                    device=device,
+                )
+
+                loss = (center - center_calibration_image).abs().mean()
+                loss.backward()
+                total_loss += loss
 
             self.optimizer.step()
-            self.scheduler.step(loss)
+            self.scheduler.step(total_loss)
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {total_loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
-
-        return self.optimizer.param_groups[0]["params"], self.scenario

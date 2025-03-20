@@ -18,14 +18,14 @@ from artist.util.configuration_classes import (
     "file_path, power_plant_position, expected_list",
     [
         (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-calibration-properties.json",
+            [pathlib.Path(ARTIST_ROOT)
+            / "tests/data/field_data/AA39-calibration-properties.json"],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
-                "multi_focus_tower",
-                torch.tensor([-17.403167724609, -2.928076744080, 50.741085052490, 1.0]),
-                torch.tensor([-0.721040308475, -0.524403691292, 0.452881515026, 0.0]),
-                torch.tensor([26370, 68271]),
+                ["multi_focus_tower"],
+                torch.tensor([[-17.403167724609, -2.928076744080, 50.741085052490, 1.0]]),
+                torch.tensor([[-0.721040308475, -0.524403691292, 0.452881515026, 1.0]]),
+                torch.tensor([[26370.0, 68271.0]]),
             ],
         )
     ],
@@ -57,7 +57,7 @@ def test_extract_paint_calibration_data(
     """
     extracted_list = list(
         paint_loader.extract_paint_calibration_data(
-            calibration_properties_path=file_path,
+            calibration_properties_paths=file_path,
             power_plant_position=power_plant_position.to(device),
             device=device,
         )
@@ -69,7 +69,8 @@ def test_extract_paint_calibration_data(
                 actual, expected.to(device), atol=5e-4, rtol=5e-4
             )
         else:
-            assert actual == expected
+            for actual_element, expected_element in zip(actual, expected):
+                assert actual_element == expected_element
 
 
 @pytest.mark.parametrize(

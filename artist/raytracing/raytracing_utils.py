@@ -1,47 +1,20 @@
-from artist.raytracing.rays import Rays
 import torch
 
-from artist.util import utils
+from artist.raytracing.rays import Rays
 
 
 def reflect(
     incoming_ray_direction: torch.Tensor, reflection_surface_normals: torch.Tensor
 ) -> torch.Tensor:
     """
-    Reflect incoming rays given the normals of a reflective surface.
+    Reflect incoming rays given the normals of reflective surfaces.
 
     Parameters
     ----------
     incoming_ray_direction : torch.Tensor
-        The direction of the incoming rays to be reflected.
+        The direction of the incident ray as seen from the heliostat.
     reflection_surface_normals : torch.Tensor
-        The normal of the reflective surface.
-
-    Returns
-    -------
-    torch.Tensor
-        The reflected rays.
-    """
-    return (
-        incoming_ray_direction
-        - 2
-        * utils.batch_dot(incoming_ray_direction, reflection_surface_normals)
-        * reflection_surface_normals
-    )
-
-
-def reflect_all(
-    incoming_ray_direction: torch.Tensor, reflection_surface_normals: torch.Tensor
-) -> torch.Tensor:
-    """
-    Reflect incoming rays given the normals of a reflective surface.
-
-    Parameters
-    ----------
-    incoming_ray_direction : torch.Tensor
-        The direction of the incoming rays to be reflected.
-    reflection_surface_normals : torch.Tensor
-        The normal of the reflective surface.
+        The normals of the reflective surfaces.
 
     Returns
     -------
@@ -61,18 +34,18 @@ def line_plane_intersections(
     plane_center: torch.Tensor,
     points_at_ray_origin: torch.Tensor,
     epsilon: float = 1e-6,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute line-plane intersections of ray directions and the (receiver) plane.
+    Compute line-plane intersections of the rays and the (receiver) plane.
 
     Parameters
     ----------
-    ray_directions : torch.Tensor
-        The direction of the rays being considered for the intersection.
-    plane_normal_vectors : torch.Tensor
-        The normal vectors of the plane being considered for the intersection.
+    rays : Rays
+        The rays.
+    plane_normal_vector : torch.Tensor
+        The normal vector of the plane.
     plane_center : torch.Tensor
-        The center of the plane being considered for the intersection.
+        The center of the plane.
     points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
     epsilon : float
@@ -82,6 +55,8 @@ def line_plane_intersections(
     -------
     torch.Tensor
         The intersections of the lines and plane.
+    torch.Tensor
+        The absolute intensities of the rays hitting the target plane. 
     """
     # Use Lambert’s Cosine Law to calculate the relative intensity of the reflected rays on a plane.
     # The relative intensity is calculated by taking the dot product (matrix multiplication) of the plane's 
@@ -90,7 +65,7 @@ def line_plane_intersections(
     relative_intensities = - rays.ray_directions @ plane_normal_vector
 
     if (relative_intensities <= epsilon).all():
-        raise ValueError("No ray hits the front of the receiver.")
+        raise ValueError("No ray intersection on the front of the target area plane.")
 
     # Calculate the intersections on the plane of each ray.
     # First, calculate the projection of the ray origin onto the plane’s normal.
