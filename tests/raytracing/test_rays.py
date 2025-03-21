@@ -35,4 +35,6 @@ def test_ray_initialization_error(
     # Check if the ValueError is thrown as expected.
     with pytest.raises(ValueError) as exc_info:
         Rays(ray_directions=ray_directions, ray_magnitudes=ray_magnitudes)
-    assert "Ray directions and magnitudes have incompatible sizes!" in str(exc_info.value)
+    assert "Ray directions and magnitudes have incompatible sizes!" in str(
+        exc_info.value
+    )

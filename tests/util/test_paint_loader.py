@@ -18,12 +18,16 @@ from artist.util.configuration_classes import (
     "file_path, power_plant_position, expected_list",
     [
         (
-            [pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-calibration-properties.json"],
+            [
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-calibration-properties.json"
+            ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
                 ["multi_focus_tower"],
-                torch.tensor([[-17.403167724609, -2.928076744080, 50.741085052490, 1.0]]),
+                torch.tensor(
+                    [[-17.403167724609, -2.928076744080, 50.741085052490, 1.0]]
+                ),
                 torch.tensor([[-0.721040308475, -0.524403691292, 0.452881515026, 1.0]]),
                 torch.tensor([[26370.0, 68271.0]]),
             ],
@@ -31,7 +35,7 @@ from artist.util.configuration_classes import (
     ],
 )
 def test_extract_paint_calibration_data(
-    file_path: pathlib.Path,
+    file_path: list[pathlib.Path],
     power_plant_position: torch.Tensor,
     expected_list: list[torch.Tensor],
     device: torch.device,
@@ -41,7 +45,7 @@ def test_extract_paint_calibration_data(
 
     Parameters
     ----------
-    file_path : pathlib.Path
+    file_path : list[pathlib.Path]
         The path to the calibration file.
     power_plant_position : torch.Tensor
         The power plant position.

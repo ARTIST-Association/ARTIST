@@ -52,12 +52,12 @@ class LinearActuators(Actuators):
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. The clockwise axis movement attribute describes 
+        A linear actuator describes movement within a 2D plane. The clockwise axis movement attribute describes
         the turning direction of the actuator. The linear actuator is further parametrized by five parameters.
-        These are the increment, which stores the information about the stroke length change per motor step, 
-        the initial stroke length, and an offset that describes the difference between the linear actuator's 
-        pivoting point and the point around which the actuator is allowed to pivot. Next, the actuator's pivoting 
-        radius is described by the pivot radius and lastly, the initial angle indicates the angle that the 
+        These are the increment, which stores the information about the stroke length change per motor step,
+        the initial stroke length, and an offset that describes the difference between the linear actuator's
+        pivoting point and the point around which the actuator is allowed to pivot. Next, the actuator's pivoting
+        radius is described by the pivot radius and lastly, the initial angle indicates the angle that the
         actuator introduces to the manipulated coordinate system at the initial stroke length.
 
         Parameters
@@ -143,7 +143,9 @@ class LinearActuators(Actuators):
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.initial_angles + delta_angles * (self.clockwise_axis_movements == 1) - delta_angles * (self.clockwise_axis_movements == 0)
+            self.initial_angles
+            + delta_angles * (self.clockwise_axis_movements == 1)
+            - delta_angles * (self.clockwise_axis_movements == 0)
         )
         return relative_angles
 
@@ -171,9 +173,9 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
         delta_angles = torch.where(
-            self.clockwise_axis_movements == 1, 
+            self.clockwise_axis_movements == 1,
             angles - self.initial_angles,
-            self.initial_angles - angles
+            self.initial_angles - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
@@ -185,7 +187,9 @@ class LinearActuators(Actuators):
         calc_step_2 = 2.0 * self.offsets * self.pivot_radii
         calc_step_1 = calc_step_3 * calc_step_2
         stroke_lengths = torch.sqrt(self.offsets**2 + self.pivot_radii**2 - calc_step_1)
-        motor_positions = (stroke_lengths - self.initial_stroke_lengths) * self.increments
+        motor_positions = (
+            stroke_lengths - self.initial_stroke_lengths
+        ) * self.increments
         return motor_positions
 
     def forward(self) -> None:

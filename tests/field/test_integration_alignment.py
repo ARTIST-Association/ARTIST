@@ -56,8 +56,8 @@ def test_integration_alignment(
     Align helisotats from different scenarios using the kinematic module to test the alignment process.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
-    calculate the preferred reflection direction. Then perform heliostat based raytracing. 
-    This uses distortions based on the model of the sun to generate additional rays, calculates the intersections 
+    calculate the preferred reflection direction. Then perform heliostat based raytracing.
+    This uses distortions based on the model of the sun to generate additional rays, calculates the intersections
     on the receiver, and computes the bitmap.
 
     Parameters
@@ -90,8 +90,7 @@ def test_integration_alignment(
 
     # Align heliostat.
     scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=incident_ray_direction.to(device), 
-        device=device
+        incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
     # Create a raytracer.
@@ -99,9 +98,9 @@ def test_integration_alignment(
 
     # Perform heliostat-based raytracing.
     final_bitmap = raytracer.trace_rays(
-        incident_ray_direction=incident_ray_direction.to(device), 
+        incident_ray_direction=incident_ray_direction.to(device),
         target_area=scenario.get_target_area("receiver"),
-        device=device
+        device=device,
     )
 
     expected_path = (

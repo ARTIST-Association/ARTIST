@@ -14,7 +14,7 @@ from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
 # true and a pre-generated scenario file will be downloaded for this tutorial!
-default= False
+default = False
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 if default:
@@ -39,12 +39,16 @@ with h5py.File(scenario_path) as scenario_path:
 # Inspect the scenario.
 print(scenario)
 print(f"The light source is a {scenario.light_sources.light_source_list[0]}.")
+print(f"The first target area is a {scenario.target_areas.target_area_list[0].name}.")
 print(
-    f"The first target area is a {scenario.target_areas.target_area_list[0].name}."
+    f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}."
 )
-print(f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}.")
-print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0].tolist()}.")
-print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0].tolist()}.")
+print(
+    f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0].tolist()}."
+)
+print(
+    f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0].tolist()}."
+)
 
 # Define the incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
@@ -56,8 +60,7 @@ original_surface_points = scenario.heliostat_field.all_surface_points[0]
 
 # Align all heliostats.
 scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction_south,
-    device=device
+    incident_ray_direction=incident_ray_direction_south, device=device
 )
 
 aligned_surface_points = scenario.heliostat_field.all_current_aligned_surface_points[0]
@@ -85,15 +88,9 @@ for i in range(number_of_facets):
     e_origin = original_surface_points[start:end, 0].cpu().detach().numpy()
     n_origin = original_surface_points[start:end, 1].cpu().detach().numpy()
     u_origin = original_surface_points[start:end, 2].cpu().detach().numpy()
-    e_aligned = (
-        aligned_surface_points[start:end, 0].cpu().detach().numpy()
-    )
-    n_aligned = (
-        aligned_surface_points[start:end, 1].cpu().detach().numpy()
-    )
-    u_aligned = (
-        aligned_surface_points[start:end, 2].cpu().detach().numpy()
-    )
+    e_aligned = aligned_surface_points[start:end, 0].cpu().detach().numpy()
+    n_aligned = aligned_surface_points[start:end, 1].cpu().detach().numpy()
+    u_aligned = aligned_surface_points[start:end, 2].cpu().detach().numpy()
     ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i + 1}")
     ax2.scatter(
         e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i + 1}"
@@ -127,15 +124,13 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 plt.show()
 
 # Create a raytracer.
-raytracer = HeliostatRayTracer(
-    scenario=scenario, batch_size=1
-)
+raytracer = HeliostatRayTracer(scenario=scenario, batch_size=1)
 
 # Perform heliostat-based raytracing.
 image_south = raytracer.trace_rays(
     incident_ray_direction=incident_ray_direction_south,
     target_area=scenario.get_target_area("receiver"),
-    device=device
+    device=device,
 )
 
 # Plot the result.
@@ -165,15 +160,14 @@ def align_and_trace_rays(
     """
     # Align all heliostats.
     scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=light_direction,
-        device=device
+        incident_ray_direction=light_direction, device=device
     )
 
     # Perform heliostat-based raytracing.
     return raytracer.trace_rays(
         incident_ray_direction=light_direction,
         target_area=scenario.get_target_area("receiver"),
-        device=device
+        device=device,
     )
 
 

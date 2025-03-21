@@ -34,18 +34,16 @@ heliostat_files_list = [
         pathlib.Path(
             "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
         ),
-        pathlib.Path(
-            "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
-        ),
+        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
     # (
-        # "name2",
-        # pathlib.Path(
-        #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
-        # ),
-        # pathlib.Path(
-        #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
-        # ),
+    # "name2",
+    # pathlib.Path(
+    #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+    # ),
+    # pathlib.Path(
+    #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
+    # ),
     # ),
     # ... Include as many as you want, but at least one!
 ]

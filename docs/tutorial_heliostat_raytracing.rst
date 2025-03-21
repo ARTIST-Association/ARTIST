@@ -42,7 +42,7 @@ the configuration contained in the HDF5 file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_path, device=device
         )
-        
+
 When loading the scenario, a large number of log messages is generated:
 
 .. code-block::
@@ -258,7 +258,7 @@ raytracing with the following code:
     incident_ray_direction_east = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
     incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
     incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
-    
+
     # Perform alignment and raytracing to generate flux density images.
     image_east = align_and_trace_rays(
         light_direction=incident_ray_direction_east, device=device

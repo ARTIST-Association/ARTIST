@@ -29,7 +29,7 @@ class NURBSSurface(torch.nn.Module):
     calculate_knots()
         Calculate the knot vectors in east and north direction.
     find_span()
-        Determine the knot span index for given evaluation points. 
+        Determine the knot span index for given evaluation points.
     basis_function_and_derivatives()
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
     calculate_surface_points_and_normals()
@@ -161,7 +161,13 @@ class NURBSSurface(torch.nn.Module):
         """
         device = torch.device(device)
 
-        knot_vector_is_uniform = torch.all((torch.diff(knot_vector[degree:-degree]) - torch.diff(knot_vector[degree:-degree])[0]) < 1e-5)
+        knot_vector_is_uniform = torch.all(
+            (
+                torch.diff(knot_vector[degree:-degree])
+                - torch.diff(knot_vector[degree:-degree])[0]
+            )
+            < 1e-5
+        )
         if knot_vector_is_uniform:
             unique_knots = torch.unique(knot_vector)
 
@@ -170,7 +176,9 @@ class NURBSSurface(torch.nn.Module):
 
             scaled_points = (evaluation_points - min_value) / (max_value - min_value)
 
-            span_indices = torch.floor(scaled_points * (len(unique_knots) - 1)).long() + degree
+            span_indices = (
+                torch.floor(scaled_points * (len(unique_knots) - 1)).long() + degree
+            )
 
         else:
             n = control_points.shape[1] - 1
@@ -178,7 +186,9 @@ class NURBSSurface(torch.nn.Module):
                 len(evaluation_points), dtype=torch.int64, device=device
             )
             for i, evaluation_point in enumerate(evaluation_points):
-                if torch.isclose(evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5):
+                if torch.isclose(
+                    evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5
+                ):
                     span_indices[i] = n
                     continue
                 low = degree

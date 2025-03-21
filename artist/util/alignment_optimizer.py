@@ -19,7 +19,7 @@ class KinematicOptimizer:
     An optimizer used to find optimal kinematic parameters.
 
     The kinematic optimizer optimizes kinematic parameters.
-    These parameters are specific to a certain kinematic type 
+    These parameters are specific to a certain kinematic type
     and can for example include the 18 kinematic deviations parameters as well as five actuator
     parameters for each actuator for a rigid body kinematic.
 
@@ -67,7 +67,7 @@ class KinematicOptimizer:
         max_epoch: int,
         center_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        calibration_target_names: Optional[str] = None,
+        calibration_target_names: Optional[list[str]] = None,
         motor_positions: Optional[torch.Tensor] = None,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
@@ -85,7 +85,7 @@ class KinematicOptimizer:
             The centers of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration.
-        calibration_target_names : Optional[str]
+        calibration_target_names : Optional[list[str]]
             The name of the calibration targets (default is None).
         motor_positions : Optional[torch.Tensor]
             The motor positions specified in the calibration files (default is None).
@@ -160,9 +160,11 @@ class KinematicOptimizer:
 
         preferred_reflection_direction_calibrations = torch.nn.functional.normalize(
             (
-            center_calibration_images
-            - self.scenario.heliostat_field.all_heliostat_positions
-            ), p=2, dim=1
+                center_calibration_images
+                - self.scenario.heliostat_field.all_heliostat_positions
+            ),
+            p=2,
+            dim=1,
         )
 
         log_step = max_epoch // num_log
@@ -170,25 +172,33 @@ class KinematicOptimizer:
             total_loss = 0.0
             self.optimizer.zero_grad()
 
-            for motor_positions, incident_ray_direction, preferred_reflection_direction_calibration in zip(all_motor_positions, incident_ray_directions, preferred_reflection_direction_calibrations):
-
-                orientation = self.scenario.heliostat_field.get_orientations_from_motor_positions(
-                    motor_positions=motor_positions,
-                    device=device
+            for (
+                motor_positions,
+                incident_ray_direction,
+                preferred_reflection_direction_calibration,
+            ) in zip(
+                all_motor_positions,
+                incident_ray_directions,
+                preferred_reflection_direction_calibrations,
+            ):
+                orientation = (
+                    self.scenario.heliostat_field.get_orientations_from_motor_positions(
+                        motor_positions=motor_positions, device=device
+                    )
                 )
 
                 preferred_reflection_direction = raytracing_utils.reflect(
-                    incoming_ray_direction=incident_ray_direction, 
-                    reflection_surface_normals=orientation[:, 0:4, 2]
+                    incoming_ray_direction=incident_ray_direction,
+                    reflection_surface_normals=orientation[:, 0:4, 2],
                 )
 
                 loss = (
-                (
-                    preferred_reflection_direction
-                    - preferred_reflection_direction_calibration
-                )
-                .abs()
-                .mean()
+                    (
+                        preferred_reflection_direction
+                        - preferred_reflection_direction_calibration
+                    )
+                    .abs()
+                    .mean()
                 )
 
                 loss.backward()
@@ -199,11 +209,10 @@ class KinematicOptimizer:
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {total_loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {total_loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
-    
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -245,32 +254,42 @@ class KinematicOptimizer:
         epoch = 0
 
         # Create a raytracer.
-        raytracer = HeliostatRayTracer(
-            scenario=self.scenario,
-            batch_size=1
-        )
+        raytracer = HeliostatRayTracer(scenario=self.scenario, batch_size=1)
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             total_loss = 0.0
             self.optimizer.zero_grad()
 
-            for calibration_target_name, incident_ray_direction, center_calibration_image in zip(calibration_target_names, incident_ray_directions, center_calibration_images):
+            for (
+                calibration_target_name,
+                incident_ray_direction,
+                center_calibration_image,
+            ) in zip(
+                calibration_target_names,
+                incident_ray_directions,
+                center_calibration_images,
+            ):
+                calibration_target = self.scenario.get_target_area(
+                    calibration_target_name
+                )
 
-                calibration_target = self.scenario.get_target_area(calibration_target_name)
-                
-                self.scenario.heliostat_field.all_aim_points = calibration_target.center.expand(self.scenario.heliostat_field.number_of_heliostats, -1)
+                self.scenario.heliostat_field.all_aim_points = (
+                    calibration_target.center.expand(
+                        self.scenario.heliostat_field.number_of_heliostats, -1
+                    )
+                )
 
                 # Align heliostat.
                 self.scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-                    incident_ray_direction=incident_ray_direction,
-                    device=device)
+                    incident_ray_direction=incident_ray_direction, device=device
+                )
 
                 # Perform heliostat-based raytracing.
                 final_bitmap = raytracer.trace_rays(
                     incident_ray_direction=incident_ray_direction,
                     target_area=calibration_target,
-                    device=device
+                    device=device,
                 )
 
                 center = utils.get_center_of_mass(
@@ -290,7 +309,7 @@ class KinematicOptimizer:
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {total_loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {total_loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1

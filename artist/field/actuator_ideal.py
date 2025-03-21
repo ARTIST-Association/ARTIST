@@ -24,8 +24,8 @@ class IdealActuators(Actuators):
     """
 
     def __init__(self, **kwargs) -> None:
-        pass 
-    
+        pass
+
     def motor_positions_to_angles(
         self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:

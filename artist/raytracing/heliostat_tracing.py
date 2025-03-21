@@ -149,7 +149,9 @@ class RestrictedDistributedSampler(Sampler):
         # Adjust num_replicas if dataset is smaller than world_size.
         self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
         if self.rank == 0:
-            active_ranks_string = ", ".join(str(i) for i in range(self.number_of_active_ranks))
+            active_ranks_string = ", ".join(
+                str(i) for i in range(self.number_of_active_ranks)
+            )
             log.info(
                 f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
             )
@@ -294,7 +296,7 @@ class HeliostatRayTracer:
         """
         Perform heliostat raytracing.
 
-        Scatter the rays according to the distortions, calculate the intersection with the target plane, 
+        Scatter the rays according to the distortions, calculate the intersection with the target plane,
         and sample the resulting bitmap on the target area.
 
         Parameters
@@ -324,25 +326,32 @@ class HeliostatRayTracer:
 
         if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1.0):
             raise ValueError("Not all heliostats have been aligned.")
-        
+
         self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect(
             incoming_ray_direction=incident_ray_direction,
-            reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals
+            reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals,
         )
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
-
             sampler_indices = list(self.distortions_sampler)
-            
-            heliostat_indices_per_batch = sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]
-        
-            rays = self.scatter_rays(batch_u, batch_e, heliostat_indices_per_batch, device)
 
-            intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
-                rays=rays,
-                plane_normal_vector=target_area.normal_vector,
-                plane_center=target_area.center,
-                points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[heliostat_indices_per_batch],
+            heliostat_indices_per_batch = sampler_indices[
+                batch_index * self.batch_size : (batch_index + 1) * self.batch_size
+            ]
+
+            rays = self.scatter_rays(
+                batch_u, batch_e, heliostat_indices_per_batch, device
+            )
+
+            intersections, absolute_intensities = (
+                raytracing_utils.line_plane_intersections(
+                    rays=rays,
+                    plane_normal_vector=target_area.normal_vector,
+                    plane_center=target_area.center,
+                    points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[
+                        heliostat_indices_per_batch
+                    ],
+                )
             )
 
             dx_intersections = (
@@ -364,12 +373,12 @@ class HeliostatRayTracer:
             )
 
             total_bitmap = self.sample_bitmap(
-                target_area=target_area, 
-                dx_intersections=dx_intersections, 
-                dy_intersections=dy_intersections, 
-                intersection_indices=intersection_indices, 
-                absolute_intensities=absolute_intensities, 
-                device=device
+                target_area=target_area,
+                dx_intersections=dx_intersections,
+                dy_intersections=dy_intersections,
+                intersection_indices=intersection_indices,
+                absolute_intensities=absolute_intensities,
+                device=device,
             )
 
             final_bitmap = final_bitmap + total_bitmap
@@ -407,9 +416,16 @@ class HeliostatRayTracer:
         rotations = utils.rotate_distortions(
             u=distortion_u, e=distortion_e, device=device
         )
-          
-        scattered_rays = (rotations @ self.scenario.heliostat_field.all_preferred_reflection_directions[heliostat_indices, :, :].unsqueeze(1).unsqueeze(-1)).squeeze(-1)
-        
+
+        scattered_rays = (
+            rotations
+            @ self.scenario.heliostat_field.all_preferred_reflection_directions[
+                heliostat_indices, :, :
+            ]
+            .unsqueeze(1)
+            .unsqueeze(-1)
+        ).squeeze(-1)
+
         return Rays(
             ray_directions=scattered_rays,
             ray_magnitudes=torch.ones(scattered_rays.shape[:-1], device=device),
@@ -452,8 +468,16 @@ class HeliostatRayTracer:
         # dx_intersections and dy_intersections contain itersection coordinates ranging from 0 to target_area.plane_e/_u.
         # x_intersections and y_intersections contain those intersection coordinates scaled to a range from 0 to bitmap_resolution_e/_u.
         # Additionally a mask is applied, only the intersections where intersection_indices == True are kept, the tensors are flattened.
-        x_intersections = dx_intersections[intersection_indices] / target_area.plane_e * self.bitmap_resolution_e
-        y_intersections = dy_intersections[intersection_indices] / target_area.plane_u * self.bitmap_resolution_u
+        x_intersections = (
+            dx_intersections[intersection_indices]
+            / target_area.plane_e
+            * self.bitmap_resolution_e
+        )
+        y_intersections = (
+            dy_intersections[intersection_indices]
+            / target_area.plane_u
+            * self.bitmap_resolution_u
+        )
         absolute_intensities = absolute_intensities[intersection_indices]
 
         # We assume a continuously positioned value in-between four
@@ -479,17 +503,21 @@ class HeliostatRayTracer:
         y_indices_high = y_indices_low + 1
 
         total_intersections = x_intersections.shape[0]
-        x_indices = torch.zeros((total_intersections * 4), device=device, dtype=torch.int32)
+        x_indices = torch.zeros(
+            (total_intersections * 4), device=device, dtype=torch.int32
+        )
         x_indices[:total_intersections] = x_indices_low
-        x_indices[total_intersections:total_intersections*2] = x_indices_high
-        x_indices[total_intersections*2:total_intersections*3] = x_indices_high
-        x_indices[total_intersections*3:] = x_indices_low
+        x_indices[total_intersections : total_intersections * 2] = x_indices_high
+        x_indices[total_intersections * 2 : total_intersections * 3] = x_indices_high
+        x_indices[total_intersections * 3 :] = x_indices_low
 
-        y_indices = torch.zeros((total_intersections * 4), device=device, dtype=torch.int32)
+        y_indices = torch.zeros(
+            (total_intersections * 4), device=device, dtype=torch.int32
+        )
         y_indices[:total_intersections] = y_indices_high
-        y_indices[total_intersections:total_intersections*2] = y_indices_high
-        y_indices[total_intersections*2:total_intersections*3] = y_indices_low
-        y_indices[total_intersections*3:] = y_indices_low
+        y_indices[total_intersections : total_intersections * 2] = y_indices_high
+        y_indices[total_intersections * 2 : total_intersections * 3] = y_indices_low
+        y_indices[total_intersections * 3 :] = y_indices_low
 
         # When distributing the continuously positioned value/intensity to
         # the discretely positioned pixels, we give the corresponding
@@ -508,17 +536,25 @@ class HeliostatRayTracer:
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
         # so we know where to position them. The numbers correspond to the
-        # ASCII diagram above. 
-        intensities_pixel_1 = x_low_influences * y_high_influences * absolute_intensities
-        intensities_pixel_2 = x_high_influences * y_high_influences * absolute_intensities
-        intensities_pixel_3 = x_high_influences * y_low_influences * absolute_intensities
+        # ASCII diagram above.
+        intensities_pixel_1 = (
+            x_low_influences * y_high_influences * absolute_intensities
+        )
+        intensities_pixel_2 = (
+            x_high_influences * y_high_influences * absolute_intensities
+        )
+        intensities_pixel_3 = (
+            x_high_influences * y_low_influences * absolute_intensities
+        )
         intensities_pixel_4 = x_low_influences * y_low_influences * absolute_intensities
 
         intensities = torch.zeros((total_intersections * 4), device=device)
         intensities[:total_intersections] = intensities_pixel_1
-        intensities[total_intersections:total_intersections*2] = intensities_pixel_2
-        intensities[total_intersections*2:total_intersections*3] = intensities_pixel_3
-        intensities[total_intersections*3:] = intensities_pixel_4
+        intensities[total_intersections : total_intersections * 2] = intensities_pixel_2
+        intensities[total_intersections * 2 : total_intersections * 3] = (
+            intensities_pixel_3
+        )
+        intensities[total_intersections * 3 :] = intensities_pixel_4
 
         # For distribution, we regard even those neighboring pixels that are
         # _not_ part of the image. That is why here, we set up a mask to

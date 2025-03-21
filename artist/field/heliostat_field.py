@@ -69,17 +69,19 @@ class HeliostatField(torch.nn.Module):
         Specify the forward pass.
     """
 
-    def __init__(self, 
-                 number_of_heliostats: int,
-                 all_heliostat_names: list[str],
-                 all_heliostat_positions: torch.Tensor,
-                 all_aim_points: torch.Tensor,
-                 all_surface_points: torch.Tensor,
-                 all_surface_normals: torch.Tensor,
-                 all_initial_orientations: torch.Tensor,
-                 all_kinematic_deviation_parameters: torch.Tensor,
-                 all_actuator_parameters: torch.Tensor,
-                 device: Union[torch.device, str] = "cuda") -> None:
+    def __init__(
+        self,
+        number_of_heliostats: int,
+        all_heliostat_names: list[str],
+        all_heliostat_positions: torch.Tensor,
+        all_aim_points: torch.Tensor,
+        all_surface_points: torch.Tensor,
+        all_surface_normals: torch.Tensor,
+        all_initial_orientations: torch.Tensor,
+        all_kinematic_deviation_parameters: torch.Tensor,
+        all_actuator_parameters: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
         """
         Initialize the heliostat field.
 
@@ -122,10 +124,15 @@ class HeliostatField(torch.nn.Module):
         self.all_actuator_parameters = all_actuator_parameters
 
         self.all_aligned_heliostats = torch.zeros(number_of_heliostats, device=device)
-        self.all_preferred_reflection_directions = torch.zeros_like(all_surface_normals, device=device)
-        self.all_current_aligned_surface_points = torch.zeros_like(all_surface_points, device=device)
-        self.all_current_aligned_surface_normals = torch.zeros_like(all_surface_normals, device=device)
-       
+        self.all_preferred_reflection_directions = torch.zeros_like(
+            all_surface_normals, device=device
+        )
+        self.all_current_aligned_surface_points = torch.zeros_like(
+            all_surface_points, device=device
+        )
+        self.all_current_aligned_surface_normals = torch.zeros_like(
+            all_surface_normals, device=device
+        )
 
     @classmethod
     def from_hdf5(
@@ -173,24 +180,42 @@ class HeliostatField(torch.nn.Module):
         all_heliostat_names = []
         all_heliostat_positions = torch.zeros((number_of_heliostats, 4), device=device)
         all_aim_points = torch.zeros((number_of_heliostats, 4), device=device)
-        all_surface_points = torch.zeros((number_of_heliostats, number_of_surface_points_per_heliostat, 4), device=device)
-        all_surface_normals = torch.zeros((number_of_heliostats, number_of_surface_points_per_heliostat, 4), device=device)
+        all_surface_points = torch.zeros(
+            (number_of_heliostats, number_of_surface_points_per_heliostat, 4),
+            device=device,
+        )
+        all_surface_normals = torch.zeros(
+            (number_of_heliostats, number_of_surface_points_per_heliostat, 4),
+            device=device,
+        )
         all_initial_orientations = torch.zeros((number_of_heliostats, 4), device=device)
-        
+
         # TODO unterschiedliche Parameter Längen
-        all_kinematic_deviation_parameters = torch.zeros((number_of_heliostats, 18), device=device)
-        all_actuator_parameters = torch.zeros((number_of_heliostats, 7, 2), device=device)
+        all_kinematic_deviation_parameters = torch.zeros(
+            (number_of_heliostats, 18), device=device
+        )
+        all_actuator_parameters = torch.zeros(
+            (number_of_heliostats, 7, 2), device=device
+        )
 
-        for index, heliostat_name in enumerate(config_file[config_dictionary.heliostat_key].keys()):
+        for index, heliostat_name in enumerate(
+            config_file[config_dictionary.heliostat_key].keys()
+        ):
             all_heliostat_names.append(heliostat_name)
-            
-            single_heliostat_config = config_file[config_dictionary.heliostat_key][heliostat_name]
 
-            if config_dictionary.heliostat_surface_key in single_heliostat_config.keys():
+            single_heliostat_config = config_file[config_dictionary.heliostat_key][
+                heliostat_name
+            ]
+
+            if (
+                config_dictionary.heliostat_surface_key
+                in single_heliostat_config.keys()
+            ):
                 surface_config = utils_load_h5.surface_config(
                     prototype=False,
                     scenario_file=single_heliostat_config,
-                    device=device)
+                    device=device,
+                )
             else:
                 if prototype_surface is None:
                     raise ValueError(
@@ -200,20 +225,31 @@ class HeliostatField(torch.nn.Module):
                     "Individual surface parameters not provided - loading a heliostat with the surface prototype."
                 )
                 surface_config = prototype_surface
-            
-            if config_dictionary.heliostat_kinematic_key in single_heliostat_config.keys():
-                initial_orientation = torch.tensor(single_heliostat_config[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_initial_orientation][()], dtype=torch.float, device=device)
-                kinematic_type = single_heliostat_config[config_dictionary.heliostat_kinematic_key][
-                    config_dictionary.kinematic_type
-                ][()].decode("utf-8")
 
-                kinematic_deviations, number_of_actuators = utils_load_h5.kinematic_deviations(
-                    prototype=False,
-                    kinematic_type=kinematic_type,
-                    scenario_file=single_heliostat_config,
-                    log=log,
-                    heliostat_name=heliostat_name,
-                    device=device
+            if (
+                config_dictionary.heliostat_kinematic_key
+                in single_heliostat_config.keys()
+            ):
+                initial_orientation = torch.tensor(
+                    single_heliostat_config[config_dictionary.heliostat_kinematic_key][
+                        config_dictionary.kinematic_initial_orientation
+                    ][()],
+                    dtype=torch.float,
+                    device=device,
+                )
+                kinematic_type = single_heliostat_config[
+                    config_dictionary.heliostat_kinematic_key
+                ][config_dictionary.kinematic_type][()].decode("utf-8")
+
+                kinematic_deviations, number_of_actuators = (
+                    utils_load_h5.kinematic_deviations(
+                        prototype=False,
+                        kinematic_type=kinematic_type,
+                        scenario_file=single_heliostat_config,
+                        log=log,
+                        heliostat_name=heliostat_name,
+                        device=device,
+                    )
                 )
             else:
                 if prototype_kinematic_deviations is None:
@@ -226,10 +262,21 @@ class HeliostatField(torch.nn.Module):
                 initial_orientation = prototype_initial_orientation
                 kinematic_deviations = prototype_kinematic_deviations
 
-            if config_dictionary.heliostat_actuator_key in single_heliostat_config.keys():
-                actuator_keys = list(single_heliostat_config[config_dictionary.heliostat_actuator_key].keys())
+            if (
+                config_dictionary.heliostat_actuator_key
+                in single_heliostat_config.keys()
+            ):
+                actuator_keys = list(
+                    single_heliostat_config[
+                        config_dictionary.heliostat_actuator_key
+                    ].keys()
+                )
 
-                actuator_type = single_heliostat_config[config_dictionary.heliostat_actuator_key][actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
+                actuator_type = single_heliostat_config[
+                    config_dictionary.heliostat_actuator_key
+                ][actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
+                    "utf-8"
+                )
 
                 actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
@@ -238,8 +285,9 @@ class HeliostatField(torch.nn.Module):
                     number_of_actuators=number_of_actuators,
                     initial_orientation=initial_orientation,
                     log=log,
-                    heliostat_name=heliostat_name, 
-                    device=device)
+                    heliostat_name=heliostat_name,
+                    device=device,
+                )
             else:
                 if prototype_actuators is None:
                     raise ValueError(
@@ -250,25 +298,38 @@ class HeliostatField(torch.nn.Module):
                 )
                 actuator_parameters = prototype_actuators
 
-            all_heliostat_positions[index] = torch.tensor(single_heliostat_config[config_dictionary.heliostat_position][()], dtype=torch.float, device=device)
-            all_aim_points[index] = torch.tensor(single_heliostat_config[config_dictionary.heliostat_aim_point][()], dtype=torch.float, device=device)
+            all_heliostat_positions[index] = torch.tensor(
+                single_heliostat_config[config_dictionary.heliostat_position][()],
+                dtype=torch.float,
+                device=device,
+            )
+            all_aim_points[index] = torch.tensor(
+                single_heliostat_config[config_dictionary.heliostat_aim_point][()],
+                dtype=torch.float,
+                device=device,
+            )
             surface = Surface(surface_config)
-            all_surface_points[index], all_surface_normals[index] = (tensor.reshape(-1, 4) for tensor in surface.get_surface_points_and_normals(device=device))
+            all_surface_points[index], all_surface_normals[index] = (
+                tensor.reshape(-1, 4)
+                for tensor in surface.get_surface_points_and_normals(device=device)
+            )
             all_initial_orientations[index] = initial_orientation
             all_kinematic_deviation_parameters[index] = kinematic_deviations
             all_actuator_parameters[index] = actuator_parameters
 
-        return cls(number_of_heliostats=number_of_heliostats,
-                   all_heliostat_names=all_heliostat_names,
-                   all_heliostat_positions=all_heliostat_positions,
-                   all_aim_points=all_aim_points,
-                   all_surface_points=all_surface_points,
-                   all_surface_normals=all_surface_normals,
-                   all_initial_orientations=all_initial_orientations,
-                   all_kinematic_deviation_parameters=all_kinematic_deviation_parameters,
-                   all_actuator_parameters=all_actuator_parameters,
-                   device=device)
-    
+        return cls(
+            number_of_heliostats=number_of_heliostats,
+            all_heliostat_names=all_heliostat_names,
+            all_heliostat_positions=all_heliostat_positions,
+            all_aim_points=all_aim_points,
+            all_surface_points=all_surface_points,
+            all_surface_normals=all_surface_normals,
+            all_initial_orientations=all_initial_orientations,
+            all_kinematic_deviation_parameters=all_kinematic_deviation_parameters,
+            all_actuator_parameters=all_actuator_parameters,
+            device=device,
+        )
+
     def align_surfaces_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
@@ -295,20 +356,19 @@ class HeliostatField(torch.nn.Module):
             actuator_parameters=self.all_actuator_parameters,
             initial_orientations=self.all_initial_orientations,
             deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device
+            device=device,
         )
         (
             self.all_current_aligned_surface_points,
             self.all_current_aligned_surface_normals,
         ) = rigid_body_kinematic.align_surfaces_with_incident_ray_direction(
-            incident_ray_direction=incident_ray_direction, 
+            incident_ray_direction=incident_ray_direction,
             surface_points=self.all_surface_points,
             surface_normals=self.all_surface_normals,
-            device=device
+            device=device,
         )
 
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
-
 
     def get_orientations_from_motor_positions(
         self,
@@ -339,10 +399,11 @@ class HeliostatField(torch.nn.Module):
             actuator_parameters=self.all_actuator_parameters,
             initial_orientations=self.all_initial_orientations,
             deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device
+            device=device,
         )
-        return rigid_body_kinematic.motor_positions_to_orientations(motor_positions, device)
-    
+        return rigid_body_kinematic.motor_positions_to_orientations(
+            motor_positions, device
+        )
 
     def align_surfaces_with_motor_positions(
         self,
@@ -362,7 +423,7 @@ class HeliostatField(torch.nn.Module):
             The device on which to initialize tensors (default is cuda).
         """
         device = torch.device(device)
-        
+
         rigid_body_kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.all_heliostat_positions,
@@ -370,20 +431,19 @@ class HeliostatField(torch.nn.Module):
             actuator_parameters=self.all_actuator_parameters,
             initial_orientations=self.all_initial_orientations,
             deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device
+            device=device,
         )
         (
             self.all_current_aligned_surface_points,
             self.all_current_aligned_surface_normals,
         ) = rigid_body_kinematic.align_surfaces_with_motor_positions(
-            motor_positions=motor_positions, 
+            motor_positions=motor_positions,
             surface_points=self.all_surface_points,
             surface_normals=self.all_surface_normals,
-            device=device
+            device=device,
         )
 
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
-    
 
     def forward(self) -> None:
         """
