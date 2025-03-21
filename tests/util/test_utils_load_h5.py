@@ -10,15 +10,11 @@ from artist.util import config_dictionary, utils_load_h5
 
 @pytest.mark.parametrize(
     "kinematic_type",
-    [(
-        "invalid_kinematic_type"
-    )],
+    [("invalid_kinematic_type")],
 )
 def test_load_kinematic_deviations(
-        mocker: MockerFixture,
-        kinematic_type: str, 
-        device: torch.device
-    ):
+    mocker: MockerFixture, kinematic_type: str, device: torch.device
+):
     """
     Test errors raised when loading kinematic deviations from an hdf5 file.
 
@@ -60,26 +56,22 @@ def test_load_kinematic_deviations(
     )
 
 
-
 @pytest.mark.parametrize(
     "actuator_type, error_message",
     [
         (
             "invalid_actuator_type",
-            "The actuator type: invalid_actuator_type is not yet implemented!"
+            "The actuator type: invalid_actuator_type is not yet implemented!",
         ),
         (
             "linear",
-            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type. Expected 2 actuators, found 1 actuator(s)."
-        )
+            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type. Expected 2 actuators, found 1 actuator(s).",
+        ),
     ],
 )
 def test_load_actuator_parameters(
-        mocker: MockerFixture,
-        actuator_type: str, 
-        error_message: str,
-        device: torch.device
-    ):
+    mocker: MockerFixture, actuator_type: str, error_message: str, device: torch.device
+):
     """
     Test errors raised when loading actuator parameters from an hdf5 file.
 
@@ -125,7 +117,4 @@ def test_load_actuator_parameters(
             log=log,
             device=device,
         )
-    assert error_message in str(
-        exc_info.value
-    )
-
+    assert error_message in str(exc_info.value)

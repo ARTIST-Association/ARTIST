@@ -433,6 +433,14 @@ def rigid_body_deviations(
 
 
 def new_kinematic_deviations():
+    """
+    Define place-holder method for further kinematic types.
+
+    Returns
+    -------
+    torch.Tensor:
+        The kinematic deviation parameters.
+    """
     pass
 
 
@@ -666,4 +674,12 @@ def parameters_juelich_actuators(
 
 
 def parameters_new_actuators() -> torch.Tensor:
+    """
+    Define place-holder method for further actuator types.
+
+    Returns
+    -------
+    torch.Tensor:
+        The actuator parameters.
+    """
     pass
