@@ -548,7 +548,7 @@ def parameters_juelich_actuators(
     if len(actuator_config.keys()) != number_of_actuators:
         raise ValueError(
             f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type."
-            f"Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuators."
+            f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
 
     actuator_parameters = torch.zeros(
