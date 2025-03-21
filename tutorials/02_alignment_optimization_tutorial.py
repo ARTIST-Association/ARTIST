@@ -4,7 +4,7 @@ import h5py
 import torch
 
 from artist.util import paint_loader, set_logger_config
-from artist.util.alignment_optimizer import KinematicOptimizer
+from artist.util.kinematic_optimizer import KinematicOptimizer
 from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
