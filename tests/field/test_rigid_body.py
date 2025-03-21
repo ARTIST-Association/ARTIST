@@ -10,7 +10,7 @@ from artist.field.kinematic_rigid_body import (
 def actuator_parameters(device: torch.device) -> torch.Tensor:
     """
     Define actuator parameters used in tests.
-    
+
     Parameters
     ----------
     device : torch.device
@@ -25,7 +25,7 @@ def actuator_parameters(device: torch.device) -> torch.Tensor:
 
     parameters[:, 0, :] = 1
     parameters[:, 1, 1] = 1
-    
+
     return parameters
 
 
@@ -98,7 +98,7 @@ def kinematic_model_1(
         aim_points=aim_point,
         actuator_parameters=actuator_parameters,
         initial_orientations=initial_orientation_south,
-        deviation_parameters = torch.zeros((1, 18), dtype=torch.float, device=device),
+        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
         device=device,
     )
 
@@ -134,7 +134,7 @@ def kinematic_model_2(
         aim_points=aim_point,
         actuator_parameters=actuator_parameters,
         initial_orientations=initial_orientation_south,
-        deviation_parameters = torch.zeros((1, 18), dtype=torch.float, device=device),
+        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
         device=device,
     )
 
@@ -170,7 +170,7 @@ def kinematic_model_3(
         aim_points=aim_point,
         actuator_parameters=actuator_parameters,
         initial_orientations=initial_orientation_up,
-        deviation_parameters = torch.zeros((1, 18), dtype=torch.float, device=device),
+        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
         device=device,
     )
 
@@ -183,22 +183,24 @@ def kinematic_model_3(
             torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1, 0, 0, 0],
+                [
                     [
-                        0,
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        -torch.sin(torch.tensor(-torch.pi / 4)),
-                        0,
-                    ],
-                    [
-                        0,
-                        torch.sin(torch.tensor(-torch.pi / 4)),
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        0,
-                    ],
-                    [0, 0, 0, 1],
-                ]]
+                        [1, 0, 0, 0],
+                        [
+                            0,
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            -torch.sin(torch.tensor(-torch.pi / 4)),
+                            0,
+                        ],
+                        [
+                            0,
+                            torch.sin(torch.tensor(-torch.pi / 4)),
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            0,
+                        ],
+                        [0, 0, 0, 1],
+                    ]
+                ]
             ),
         ),
         (
@@ -206,22 +208,24 @@ def kinematic_model_3(
             torch.tensor([[-1.0, 0.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
+                [
                     [
-                        torch.cos(torch.tensor(torch.pi / 4)),
-                        -torch.sin(torch.tensor(torch.pi / 4)),
-                        0.0,
-                        0.0,
-                    ],
-                    [
-                        torch.sin(torch.tensor(torch.pi / 4)),
-                        torch.cos(torch.tensor(torch.pi / 4)),
-                        0.0,
-                        0.0,
-                    ],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [
+                            torch.cos(torch.tensor(torch.pi / 4)),
+                            -torch.sin(torch.tensor(torch.pi / 4)),
+                            0.0,
+                            0.0,
+                        ],
+                        [
+                            torch.sin(torch.tensor(torch.pi / 4)),
+                            torch.cos(torch.tensor(torch.pi / 4)),
+                            0.0,
+                            0.0,
+                        ],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -229,12 +233,14 @@ def kinematic_model_3(
             torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                [
+                    [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -242,45 +248,49 @@ def kinematic_model_3(
             torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
+                [
                     [
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        -torch.sin(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                        0.0,
-                    ],
-                    [
-                        torch.sin(torch.tensor(-torch.pi / 4)),
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                        0.0,
-                    ],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            -torch.sin(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                            0.0,
+                        ],
+                        [
+                            torch.sin(torch.tensor(-torch.pi / 4)),
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                            0.0,
+                        ],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
             "kinematic_model_1",
-            torch.tensor([[0.0000,  0.7071, -0.7071,  0.0000]]),
+            torch.tensor([[0.0000, 0.7071, -0.7071, 0.0000]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
+                [
                     [
-                        0.0,
-                        torch.cos(torch.tensor(-torch.pi / 8)),
-                        -torch.sin(torch.tensor(-torch.pi / 8)),
-                        0.0,
-                    ],
-                    [
-                        0.0,
-                        torch.sin(torch.tensor(-torch.pi / 8)),
-                        torch.cos(torch.tensor(-torch.pi / 8)),
-                        0.0,
-                    ],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [1.0, 0.0, 0.0, 0.0],
+                        [
+                            0.0,
+                            torch.cos(torch.tensor(-torch.pi / 8)),
+                            -torch.sin(torch.tensor(-torch.pi / 8)),
+                            0.0,
+                        ],
+                        [
+                            0.0,
+                            torch.sin(torch.tensor(-torch.pi / 8)),
+                            torch.cos(torch.tensor(-torch.pi / 8)),
+                            0.0,
+                        ],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -288,22 +298,24 @@ def kinematic_model_3(
             torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
+                [
                     [
-                        0.0,
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        -torch.sin(torch.tensor(-torch.pi / 4)),
-                        1.0,
-                    ],
-                    [
-                        0.0,
-                        torch.sin(torch.tensor(-torch.pi / 4)),
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                    ],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [1.0, 0.0, 0.0, 0.0],
+                        [
+                            0.0,
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            -torch.sin(torch.tensor(-torch.pi / 4)),
+                            1.0,
+                        ],
+                        [
+                            0.0,
+                            torch.sin(torch.tensor(-torch.pi / 4)),
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                        ],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -311,22 +323,24 @@ def kinematic_model_3(
             torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
+                [
                     [
-                        0.0,
-                        torch.cos(torch.tensor(torch.pi / 4)),
-                        -torch.sin(torch.tensor(torch.pi / 4)),
-                        0.0,
-                    ],
-                    [
-                        0.0,
-                        torch.sin(torch.tensor(torch.pi / 4)),
-                        torch.cos(torch.tensor(torch.pi / 4)),
-                        0.0,
-                    ],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [1.0, 0.0, 0.0, 0.0],
+                        [
+                            0.0,
+                            torch.cos(torch.tensor(torch.pi / 4)),
+                            -torch.sin(torch.tensor(torch.pi / 4)),
+                            0.0,
+                        ],
+                        [
+                            0.0,
+                            torch.sin(torch.tensor(torch.pi / 4)),
+                            torch.cos(torch.tensor(torch.pi / 4)),
+                            0.0,
+                        ],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -334,22 +348,24 @@ def kinematic_model_3(
             torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
+                [
                     [
-                        0.0,
-                        torch.cos(torch.tensor(torch.pi / 2)),
-                        -torch.sin(torch.tensor(torch.pi / 2)),
-                        0.0,
-                    ],
-                    [
-                        0.0,
-                        torch.sin(torch.tensor(torch.pi / 2)),
-                        torch.cos(torch.tensor(torch.pi / 2)),
-                        0.0,
-                    ],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [1.0, 0.0, 0.0, 0.0],
+                        [
+                            0.0,
+                            torch.cos(torch.tensor(torch.pi / 2)),
+                            -torch.sin(torch.tensor(torch.pi / 2)),
+                            0.0,
+                        ],
+                        [
+                            0.0,
+                            torch.sin(torch.tensor(torch.pi / 2)),
+                            torch.cos(torch.tensor(torch.pi / 2)),
+                            0.0,
+                        ],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -357,22 +373,24 @@ def kinematic_model_3(
             torch.tensor([[-1.0, 0.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
+                [
                     [
-                        torch.cos(torch.tensor(torch.pi / 4)),
-                        0.0,
-                        torch.sin(torch.tensor(torch.pi / 4)),
-                        0.0,
-                    ],
-                    [
-                        torch.sin(torch.tensor(torch.pi / 4)),
-                        0.0,
-                        -torch.cos(torch.tensor(torch.pi / 4)),
-                        0.0,
-                    ],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [
+                            torch.cos(torch.tensor(torch.pi / 4)),
+                            0.0,
+                            torch.sin(torch.tensor(torch.pi / 4)),
+                            0.0,
+                        ],
+                        [
+                            torch.sin(torch.tensor(torch.pi / 4)),
+                            0.0,
+                            -torch.cos(torch.tensor(torch.pi / 4)),
+                            0.0,
+                        ],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -380,22 +398,24 @@ def kinematic_model_3(
             torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
             "incident_ray_direction_to_orientations",
             torch.tensor(
-                [[
+                [
                     [
-                        torch.cos(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                        torch.sin(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                    ],
-                    [
-                        torch.sin(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                        -torch.cos(torch.tensor(-torch.pi / 4)),
-                        0.0,
-                    ],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                        [
+                            torch.cos(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                            torch.sin(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                        ],
+                        [
+                            torch.sin(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                            -torch.cos(torch.tensor(-torch.pi / 4)),
+                            0.0,
+                        ],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -403,12 +423,14 @@ def kinematic_model_3(
             torch.tensor([[0.0, 0.0]]),
             "motor_positions_to_orientations",
             torch.tensor(
-                [[
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]]
+                [
+                    [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ]
+                ]
             ),
         ),
         (
@@ -416,12 +438,34 @@ def kinematic_model_3(
             torch.tensor([[5.0, 1000.0]]),
             "motor_positions_to_orientations",
             torch.tensor(
-                [[
-                    [0.562379062176, -0.826879560947, 0.000000000000, 0.000000000000],
-                    [0.234554469585, 0.159525677562, 0.958924293518, 1.000000000000],
-                    [-0.792914927006, -0.539278924465, 0.283662199974, 0.000000000000],
-                    [0.000000000000, 0.000000000000, 0.000000000000, 1.000000000000],
-                ]]
+                [
+                    [
+                        [
+                            0.562379062176,
+                            -0.826879560947,
+                            0.000000000000,
+                            0.000000000000,
+                        ],
+                        [
+                            0.234554469585,
+                            0.159525677562,
+                            0.958924293518,
+                            1.000000000000,
+                        ],
+                        [
+                            -0.792914927006,
+                            -0.539278924465,
+                            0.283662199974,
+                            0.000000000000,
+                        ],
+                        [
+                            0.000000000000,
+                            0.000000000000,
+                            0.000000000000,
+                            1.000000000000,
+                        ],
+                    ]
+                ]
             ),
         ),
         (
@@ -429,12 +473,14 @@ def kinematic_model_3(
             torch.tensor([[10.0, 40.0]]),
             "motor_positions_to_orientations",
             torch.tensor(
-                [[
-                    [-6.6694e-01, 3.2570e-08, 7.4511e-01, 0.0000e00],
-                    [-6.2520e-01, 5.4402e-01, -5.5961e-01, 0.0000e00],
-                    [-4.0536e-01, -8.3907e-01, -3.6283e-01, 0.0000e00],
-                    [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
-                ]]
+                [
+                    [
+                        [-6.6694e-01, 3.2570e-08, 7.4511e-01, 0.0000e00],
+                        [-6.2520e-01, 5.4402e-01, -5.5961e-01, 0.0000e00],
+                        [-4.0536e-01, -8.3907e-01, -3.6283e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ]
+                ]
             ),
         ),
     ],
@@ -471,11 +517,7 @@ def test_orientation_matrix(
         If test does not complete as expected.
     """
     get_orientation = getattr(request.getfixturevalue(kinematic_model_fixture), method)
-    
+
     # Check if the orientation matrix is correct.
     orientation_matrix = get_orientation(input.to(device), device=device)
     torch.testing.assert_close(orientation_matrix, expected.to(device))
-
-
-
-

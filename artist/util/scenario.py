@@ -14,6 +14,7 @@ from artist.util import config_dictionary, utils_load_h5
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
 
+
 class Scenario:
     """
     Define a scenario loaded by ARTIST.
@@ -92,7 +93,7 @@ class Scenario:
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
         device = torch.device(device)
-        
+
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][
                 config_dictionary.power_plant_position
@@ -105,9 +106,9 @@ class Scenario:
             config_file=scenario_file, device=device
         )
 
-        prototype_surface = utils_load_h5.surface_config(prototype=True,
-                                                         scenario_file=scenario_file,
-                                                         device=device)
+        prototype_surface = utils_load_h5.surface_config(
+            prototype=True, scenario_file=scenario_file, device=device
+        )
 
         prototype_initial_orientation = torch.tensor(
             scenario_file[config_dictionary.prototype_key][
@@ -117,24 +118,32 @@ class Scenario:
             device=device,
         )
 
-        prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][config_dictionary.kinematic_prototype_key][config_dictionary.kinematic_type][()].decode("utf-8")
+        prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][
+            config_dictionary.kinematic_prototype_key
+        ][config_dictionary.kinematic_type][()].decode("utf-8")
 
-        prototype_kinematic_deviations, number_of_actuators = utils_load_h5.kinematic_deviations(
-            prototype=True,
-            kinematic_type=prototype_kinematic_type,
-            scenario_file=scenario_file,
-            log=log,
-            device=device
+        prototype_kinematic_deviations, number_of_actuators = (
+            utils_load_h5.kinematic_deviations(
+                prototype=True,
+                kinematic_type=prototype_kinematic_type,
+                scenario_file=scenario_file,
+                log=log,
+                device=device,
+            )
         )
 
-        prototype_actuator_keys = list(scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
-        ].keys())
+        prototype_actuator_keys = list(
+            scenario_file[config_dictionary.prototype_key][
+                config_dictionary.actuators_prototype_key
+            ].keys()
+        )
 
         prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
             config_dictionary.actuators_prototype_key
-        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
-            
+        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
+            "utf-8"
+        )
+
         prototype_actuators = utils_load_h5.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
@@ -142,16 +151,20 @@ class Scenario:
             number_of_actuators=number_of_actuators,
             initial_orientation=prototype_initial_orientation,
             log=log,
-            device=device
+            device=device,
         )
 
         number_of_heliostats = len(scenario_file[config_dictionary.heliostat_key])
-        number_of_surface_points_per_heliostat = len(prototype_surface.facet_list) * prototype_surface.facet_list[0].number_eval_points_e * prototype_surface.facet_list[0].number_eval_points_n
-        
+        number_of_surface_points_per_heliostat = (
+            len(prototype_surface.facet_list)
+            * prototype_surface.facet_list[0].number_eval_points_e
+            * prototype_surface.facet_list[0].number_eval_points_n
+        )
+
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
-            number_of_heliostats = number_of_heliostats,
-            number_of_surface_points_per_heliostat = number_of_surface_points_per_heliostat,
+            number_of_heliostats=number_of_heliostats,
+            number_of_surface_points_per_heliostat=number_of_surface_points_per_heliostat,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=prototype_initial_orientation,
             prototype_kinematic_deviations=prototype_kinematic_deviations,
@@ -165,7 +178,6 @@ class Scenario:
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
-    
 
     def get_target_area(self, target_area_name: str) -> TargetArea:
         """
@@ -175,7 +187,7 @@ class Scenario:
         ----------
         target_area_name : str
             The string name of the target area.
-        
+
         Returns
         -------
         TargetArea
@@ -189,13 +201,18 @@ class Scenario:
             ),
             None,
         )
-        return target_area
-    
+        if target_area is None:
+            raise ValueError(
+                f"No target area with the name {target_area_name} found in the sceanrio!"
+            )
+        else:
+            return target_area
 
-    def create_calibration_scenario(self,
-                                heliostat_index: int,
-                                device: Union[torch.device, str] = "cuda",
-    ) -> Self:
+    def create_calibration_scenario(
+        self,
+        heliostat_index: int,
+        device: Union[torch.device, str] = "cuda",
+    ) -> "Scenario":
         """
         Create a calibration scenario with a single heliostat from an existing scenario.
 
@@ -212,29 +229,40 @@ class Scenario:
             The calibration scenario.
         """
         device = torch.device(device)
-        
+
         heliostat_index = torch.tensor([heliostat_index], device=device)
-        
+
         heliostat_field = HeliostatField(
             number_of_heliostats=1,
-            all_heliostat_names=self.heliostat_field.all_heliostat_names[heliostat_index],
-            all_heliostat_positions=self.heliostat_field.all_heliostat_positions[heliostat_index],
+            all_heliostat_names=[
+                self.heliostat_field.all_heliostat_names[heliostat_index]
+            ],
+            all_heliostat_positions=self.heliostat_field.all_heliostat_positions[
+                heliostat_index
+            ],
             all_aim_points=self.heliostat_field.all_aim_points[heliostat_index],
             all_surface_points=self.heliostat_field.all_surface_points[heliostat_index],
-            all_surface_normals=self.heliostat_field.all_surface_normals[heliostat_index],
-            all_initial_orientations=self.heliostat_field.all_initial_orientations[heliostat_index],
-            all_kinematic_deviation_parameters=self.heliostat_field.all_kinematic_deviation_parameters[heliostat_index],
-            all_actuator_parameters=self.heliostat_field.all_actuator_parameters[heliostat_index],
-            device=device
+            all_surface_normals=self.heliostat_field.all_surface_normals[
+                heliostat_index
+            ],
+            all_initial_orientations=self.heliostat_field.all_initial_orientations[
+                heliostat_index
+            ],
+            all_kinematic_deviation_parameters=self.heliostat_field.all_kinematic_deviation_parameters[
+                heliostat_index
+            ],
+            all_actuator_parameters=self.heliostat_field.all_actuator_parameters[
+                heliostat_index
+            ],
+            device=device,
         )
 
         return Scenario(
             power_plant_position=self.power_plant_position,
             target_areas=self.target_areas,
             light_sources=self.light_sources,
-            heliostat_field=heliostat_field
+            heliostat_field=heliostat_field,
         )
-
 
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""

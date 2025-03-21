@@ -1,4 +1,3 @@
-from typing import Optional
 from unittest.mock import MagicMock
 
 import h5py
@@ -7,6 +6,7 @@ import torch
 from pytest_mock import MockerFixture
 
 from artist.field.heliostat_field import HeliostatField
+from artist.util.configuration_classes import SurfaceConfig
 
 
 @pytest.fixture
@@ -49,8 +49,8 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
 )
 def test_heliostat_field_load_from_hdf5_errors(
     mocker: MockerFixture,
-    prototype_surface: Optional[MagicMock],
-    prototype_kinematic: Optional[MagicMock],
+    prototype_surface: SurfaceConfig,
+    prototype_kinematic: torch.Tensor,
     error: str,
     device: torch.device,
 ) -> None:
@@ -85,8 +85,8 @@ def test_heliostat_field_load_from_hdf5_errors(
     with pytest.raises(ValueError) as exc_info:
         HeliostatField.from_hdf5(
             config_file=mock_h5_file,
-            number_of_heliostats = 1,
-            number_of_surface_points_per_heliostat = 10,
+            number_of_heliostats=1,
+            number_of_surface_points_per_heliostat=10,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=None,
             prototype_kinematic_deviations=prototype_kinematic,

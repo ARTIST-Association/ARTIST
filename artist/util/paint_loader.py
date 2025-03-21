@@ -26,7 +26,7 @@ from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
-    calibration_properties_paths: pathlib.Path,
+    calibration_properties_paths: list[pathlib.Path],
     power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -35,7 +35,7 @@ def extract_paint_calibration_data(
 
     Parameters
     ----------
-    calibration_properties_paths : pathlib.Path
+    calibration_properties_paths : list[pathlib.Path]
         The paths to the calibration properties files.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
@@ -65,9 +65,8 @@ def extract_paint_calibration_data(
     for index, path in enumerate(calibration_properties_paths):
         with open(path, "r") as file:
             calibration_dict = json.load(file)
-            calibration_target_names.append(calibration_dict[
-                    config_dictionary.paint_calibration_traget
-                ]
+            calibration_target_names.append(
+                calibration_dict[config_dictionary.paint_calibration_traget]
             )
             center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
@@ -90,7 +89,9 @@ def extract_paint_calibration_data(
                 calibration_dict[config_dictionary.paint_sun_elevation], device=device
             )
             sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                utils.azimuth_elevation_to_enu(sun_azimuth, sun_elevation, degree=True, device=device),
+                utils.azimuth_elevation_to_enu(
+                    sun_azimuth, sun_elevation, degree=True, device=device
+                ),
                 device=device,
             )
             all_motor_positions[index] = torch.tensor(

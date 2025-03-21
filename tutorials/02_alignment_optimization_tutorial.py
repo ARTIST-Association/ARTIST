@@ -48,19 +48,20 @@ with h5py.File(scenario_path, "r") as scenario_file:
 )
 
 # The incident ray direction needs to be normed.
-incident_ray_directions = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+incident_ray_directions = (
+    torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+)
 
 # Create a calibration scenario from the original scenario.
 # It contains a single helisotat, chosen by its index.
 calibration_scenario = scenario.create_calibration_scenario(
-    heliostat_index=2,
-    device=device
+    heliostat_index=2, device=device
 )
 
 # Select the kinematic parameters to be optimzed and calibrated.
 optimizable_parameters = [
     calibration_scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
-    calibration_scenario.heliostat_field.all_actuator_parameters.requires_grad_()
+    calibration_scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
 ]
 
 # Set up optimizer and scheduler.

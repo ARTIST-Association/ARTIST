@@ -22,11 +22,11 @@ General Remarks
 ---------------
 The datastructures in ``ARTIST`` are set up to handle all heliostat computations at the same time. For example if there are multiple heliostats
 in the same scenario, all heliostats are aligned in one step. The same is true for parts of the raytracing. These calculations are internally implemented
-as large matrix-multiplications, which are highly efficient when using PyTorch on GPUs. The distributed raytracing takes this parallelization further and 
+as large matrix-multiplications, which are highly efficient when using PyTorch on GPUs. The distributed raytracing takes this parallelization further and
 can be used when its desired to caluclate parallely on multiple devices. The Heliostat-Tracing process can be distributed and parallelized using Distributed Data Parallel.
-For the distributed raytracing using DDP, the heliostat field is duplicated across all devices and the rays are seperated into unique groups. 
-The distributed devices handle only a portion of the overall rays but they have access to the whole heliostat field. Each ray in the scenario belongs to a certain 
-heliostat, for DDP-raytracing the rays are split along the heliostat dimension. This means each rank handles the rays of specific heliostats. 
+For the distributed raytracing using DDP, the heliostat field is duplicated across all devices and the rays are seperated into unique groups.
+The distributed devices handle only a portion of the overall rays but they have access to the whole heliostat field. Each ray in the scenario belongs to a certain
+heliostat, for DDP-raytracing the rays are split along the heliostat dimension. This means each rank handles the rays of specific heliostats.
 Overly simplified, in a scenario with 2000 heliostats and 4 ranks, this can be imagined as the first rank handling all rays of the first 500 heliostats and so on.
 
 The Distributed Environment
@@ -57,16 +57,16 @@ This completly sets up the distributed environment. To use it during the raytrac
 We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
 The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
 ranks. Each rank handles a portion of the overall rays. The ``batch_size`` is an important parameter determining the performance of the
-raytracer. It determines how many heliostats are computed parallely in the large matrix-multiplications. If the raytracing is not distributed 
+raytracer. It determines how many heliostats are computed parallely in the large matrix-multiplications. If the raytracing is not distributed
 and the ``batch_size`` is 1, the raytracing happens sequentially, if the ``batch_size`` equals the number of heliostats, the raytracing happens
-simultaneously for all heliostats. As the ``batch_size`` increases from 1 to the number of heliostats, the execution becomes faster but needs more 
+simultaneously for all heliostats. As the ``batch_size`` increases from 1 to the number of heliostats, the execution becomes faster but needs more
 memory space. If the raytracing is distributed and there are multiple ranks, the ``batch_size`` determines how many heliostats are parallelized within
-each rank. 
+each rank.
 
 **Example**
 Let's say there are four heliostats in our scenario. The ``world_size`` is four. We will now have four individual ``ranks`` that perform Heliostat Raytracing in parallel.
 Since we are using Distributed Data Parallel, each ``rank`` is assigned an exact copy of whole heliostat field in our scenario, meaning each ``rank`` can
-access all four heliostats. The data, in our case the rays belonging to each heliostat, are split up and each ``rank`` handles a portion of them. 
+access all four heliostats. The data, in our case the rays belonging to each heliostat, are split up and each ``rank`` handles a portion of them.
 Each ray is assigned to exactly one ``rank``, no ray is duplicated. The rays from the first helisotat go to rank number 0, the rays for the second heliostat go
 to rank number 1 and so on. If we were to plot the results of all four distributed raytracings of the seperate ``ranks``, we get these
 Flux Density Distributions, each flux belongs to one heliostat:
@@ -115,14 +115,14 @@ Simply execute the following code and you are done:
 Further Information
 -------------------
 The heliostat-raytracing parallelization with DDP parallelizes over the number of heliostats in the scenario.
-During the initialization of the ``HeliostatRayTracer``, a ``DistortionsDataset`` is set up. This dataset is 
+During the initialization of the ``HeliostatRayTracer``, a ``DistortionsDataset`` is set up. This dataset is
 later handed to a distributed sampler and a distributed data loader which distribute individual parts of
 the dataset among the distributed ranks. The ``DistortionsDataset`` samples ray distortions according to the
 parameters in the ``lightsource``. In the end the dataset contains a tuple of ray distortions in the east and up direction.
 If we inspect one element of the dataset tuple for example ``distortions_e`` (and everything is the same for ``distortions_u```),
 we see that it is a multi-dimensional tensor of shape ``(number of heliostats, number of rays per point, number of surface points per facet)``.
-This means for each surface point on each heliostat we sample ``number_of_rays`` different ray distortions. 
-As defined in the ``DistortionsDataset``, the length of the dataset always equals to ``number_of_heliostats``. The dataset is split 
-by the sampler and loader along this dimension. If the ``number_of_heliostats`` is only one, the dataset cannot be split, all rays go 
-to ``rank`` zero, even if you parallelize with four ranks. ``rank`` one to n will be idle. 
+This means for each surface point on each heliostat we sample ``number_of_rays`` different ray distortions.
+As defined in the ``DistortionsDataset``, the length of the dataset always equals to ``number_of_heliostats``. The dataset is split
+by the sampler and loader along this dimension. If the ``number_of_heliostats`` is only one, the dataset cannot be split, all rays go
+to ``rank`` zero, even if you parallelize with four ranks. ``rank`` one to n will be idle.
 If the ``number_of_heliostats`` is greater or equal to the ``world_size``, all ranks will receive data.

@@ -38,8 +38,7 @@ scenario.heliostat_field.all_aim_points = scenario.get_target_area("reiceiver").
 
 # Align all heliostats.
 scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction,
-    device=device
+    incident_ray_direction=incident_ray_direction, device=device
 )
 
 # Create a raytracer.
@@ -51,7 +50,7 @@ raytracer = HeliostatRayTracer(
 final_bitmap = raytracer.trace_rays(
     incident_ray_direction=incident_ray_direction,
     target_area=scenario.get_target_area("receiver"),
-    device=device
+    device=device,
 )
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")

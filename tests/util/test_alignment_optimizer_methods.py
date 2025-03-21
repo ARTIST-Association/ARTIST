@@ -96,7 +96,7 @@ def test_alignment_optimizer_methods(
 
     optimizable_parameters = [
         scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
-        scenario.heliostat_field.all_actuator_parameters.requires_grad_()
+        scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
     ]
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
@@ -110,9 +110,9 @@ def test_alignment_optimizer_methods(
     )
 
     # Load the calibration data.
-    calibration_properties_paths = [(
-        pathlib.Path(ARTIST_ROOT) / f"tests/data/field_data/{calibration_file}.json"
-    )]
+    calibration_properties_paths = [
+        (pathlib.Path(ARTIST_ROOT) / f"tests/data/field_data/{calibration_file}.json")
+    ]
 
     (
         calibration_target_names,
@@ -125,7 +125,9 @@ def test_alignment_optimizer_methods(
         device=device,
     )
 
-    incident_ray_directions = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+    incident_ray_directions = (
+        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+    )
 
     # Create alignment optimizer.
     alignment_optimizer = KinematicOptimizer(
@@ -147,7 +149,7 @@ def test_alignment_optimizer_methods(
         num_log=10,
         device=device,
     )
-    
+
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_optimized_alignment_parameters"
@@ -155,5 +157,15 @@ def test_alignment_optimizer_methods(
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(scenario.heliostat_field.all_kinematic_deviation_parameters, expected["kinematic_deviations"], atol=5e-2, rtol=5e-2)
-    torch.testing.assert_close(scenario.heliostat_field.all_actuator_parameters, expected["actuator_parameters"], atol=5e-2, rtol=5e-2)
+    torch.testing.assert_close(
+        scenario.heliostat_field.all_kinematic_deviation_parameters,
+        expected["kinematic_deviations"],
+        atol=5e-2,
+        rtol=5e-2,
+    )
+    torch.testing.assert_close(
+        scenario.heliostat_field.all_actuator_parameters,
+        expected["actuator_parameters"],
+        atol=5e-2,
+        rtol=5e-2,
+    )

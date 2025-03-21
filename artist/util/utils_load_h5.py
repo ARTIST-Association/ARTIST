@@ -8,9 +8,8 @@ from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig, SurfaceConfig
 
 
-def surface_config(prototype: bool,
-                   scenario_file: h5py.File,
-                   device: Union[torch.device, str] = "cuda"
+def surface_config(
+    prototype: bool, scenario_file: h5py.File, device: Union[torch.device, str] = "cuda"
 ) -> SurfaceConfig:
     """
     Load a surface configuration from an HDF5 scenario file.
@@ -36,7 +35,9 @@ def surface_config(prototype: bool,
             config_dictionary.surface_prototype_key
         ][config_dictionary.facets_key]
     else:
-        facet_config = scenario_file[config_dictionary.heliostat_surface_key][config_dictionary.facets_key]
+        facet_config = scenario_file[config_dictionary.heliostat_surface_key][
+            config_dictionary.facets_key
+        ]
 
     facet_list = [
         FacetConfig(
@@ -46,12 +47,8 @@ def surface_config(prototype: bool,
                 dtype=torch.float,
                 device=device,
             ),
-            degree_e=int(
-                facet_config[facet][config_dictionary.facet_degree_e][()]
-            ),
-            degree_n=int(
-                facet_config[facet][config_dictionary.facet_degree_n][()]
-            ),
+            degree_e=int(facet_config[facet][config_dictionary.facet_degree_e][()]),
+            degree_n=int(facet_config[facet][config_dictionary.facet_degree_n][()]),
             number_eval_points_e=int(
                 facet_config[facet][config_dictionary.facet_number_eval_e][()]
             ),
@@ -80,12 +77,13 @@ def surface_config(prototype: bool,
     return surface_config
 
 
-def kinematic_deviations(prototype: bool,
-                         kinematic_type: str,
-                         scenario_file: h5py.File,
-                         log: logging.Logger,
-                         heliostat_name: Optional[str]=None, 
-                         device: Union[torch.device, str] = "cuda"
+def kinematic_deviations(
+    prototype: bool,
+    kinematic_type: str,
+    scenario_file: h5py.File,
+    log: logging.Logger,
+    heliostat_name: Optional[str] = None,
+    device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, int]:
     """
     Load kinematic deviations from an HDF5 scenario file.
@@ -131,7 +129,7 @@ def kinematic_deviations(prototype: bool,
             kinematic_config=kinematic_config,
             log=log,
             heliostat_name=heliostat_name,
-            device=device
+            device=device,
         )
         number_of_actuators = config_dictionary.rigid_body_number_of_actuators
     elif kinematic_type == "new_kinematic":
@@ -141,13 +139,15 @@ def kinematic_deviations(prototype: bool,
         raise ValueError(
             f"The kinematic type: {kinematic_type} is not yet implemented!"
         )
-    
+
     return kinematic_deviations, number_of_actuators
 
-def rigid_body_deviations(kinematic_config: h5py.File,
-                          log: logging.Logger,
-                          heliostat_name: Optional[str]=None, 
-                          device: Union[torch.device, str] = "cuda"
+
+def rigid_body_deviations(
+    kinematic_config: h5py.File,
+    log: logging.Logger,
+    heliostat_name: Optional[str] = None,
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Load kinematic deviations for a rigid body kinematic from an HDF5 scenario file.
@@ -170,8 +170,12 @@ def rigid_body_deviations(kinematic_config: h5py.File,
     """
     device = torch.device(device)
 
-    kinematic_deviations = torch.zeros(config_dictionary.rigid_body_number_of_deviation_parameters, dtype=torch.float, device=device)
-    
+    kinematic_deviations = torch.zeros(
+        config_dictionary.rigid_body_number_of_deviation_parameters,
+        dtype=torch.float,
+        device=device,
+    )
+
     first_joint_translation_e = kinematic_config.get(
         f"{config_dictionary.kinematic_deviations_key}/"
         f"{config_dictionary.first_joint_translation_e}"
@@ -335,128 +339,92 @@ def rigid_body_deviations(kinematic_config: h5py.File,
             f"Using default values!"
         )
     kinematic_deviations[0] = (
-        torch.tensor(
-            first_joint_translation_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_translation_e[()], dtype=torch.float, device=device)
         if first_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[1] = (
-        torch.tensor(
-            first_joint_translation_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_translation_n[()], dtype=torch.float, device=device)
         if first_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[2] = (
-        torch.tensor(
-            first_joint_translation_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_translation_u[()], dtype=torch.float, device=device)
         if first_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[3] = (
-        torch.tensor(
-            first_joint_tilt_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_tilt_e[()], dtype=torch.float, device=device)
         if first_joint_tilt_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[4] = (
-        torch.tensor(
-            first_joint_tilt_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
         if first_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[5] = (
-        torch.tensor(
-            first_joint_tilt_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
         if first_joint_tilt_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[6] = (
-        torch.tensor(
-            second_joint_translation_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_translation_e[()], dtype=torch.float, device=device)
         if second_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[7] = (
-        torch.tensor(
-            second_joint_translation_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_translation_n[()], dtype=torch.float, device=device)
         if second_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[8] = (
-        torch.tensor(
-            second_joint_translation_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_translation_u[()], dtype=torch.float, device=device)
         if second_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[9] = (
-        torch.tensor(
-            second_joint_tilt_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
         if second_joint_tilt_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[10] = (
-        torch.tensor(
-            second_joint_tilt_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
         if second_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[11] = (
-        torch.tensor(
-            second_joint_tilt_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(second_joint_tilt_u[()], dtype=torch.float, device=device)
         if second_joint_tilt_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[12] = (
-        torch.tensor(
-            concentrator_translation_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_translation_e[()], dtype=torch.float, device=device)
         if concentrator_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[13] = (
-        torch.tensor(
-            concentrator_translation_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_translation_n[()], dtype=torch.float, device=device)
         if concentrator_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[14] = (
-        torch.tensor(
-            concentrator_translation_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_translation_u[()], dtype=torch.float, device=device)
         if concentrator_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[15] = (
-        torch.tensor(
-            concentrator_tilt_e[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_tilt_e[()], dtype=torch.float, device=device)
         if concentrator_tilt_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[16] = (
-        torch.tensor(
-            concentrator_tilt_n[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_tilt_n[()], dtype=torch.float, device=device)
         if concentrator_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
     kinematic_deviations[17] = (
-        torch.tensor(
-            concentrator_tilt_u[()], dtype=torch.float, device=device
-        )
+        torch.tensor(concentrator_tilt_u[()], dtype=torch.float, device=device)
         if concentrator_tilt_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
@@ -468,14 +436,15 @@ def new_kinematic_deviations():
     pass
 
 
-def actuator_parameters(prototype: bool,
-                   scenario_file: h5py.File,
-                   actuator_type: str,
-                   number_of_actuators: int,
-                   initial_orientation: torch.Tensor,
-                   log = logging.Logger,
-                   heliostat_name: Optional[str]=None,
-                   device: Union[torch.device, str] = "cuda"
+def actuator_parameters(
+    prototype: bool,
+    scenario_file: h5py.File,
+    actuator_type: str,
+    number_of_actuators: int,
+    initial_orientation: torch.Tensor,
+    log=logging.Logger,
+    heliostat_name: Optional[str] = None,
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Load actuator parameters from an HDF5 scenario file.
@@ -503,7 +472,7 @@ def actuator_parameters(prototype: bool,
     ------
     ValueError
         If the actuator type in the scenario file is unknown.
-        
+
     Returns
     -------
     torch.Tensor
@@ -518,31 +487,33 @@ def actuator_parameters(prototype: bool,
     else:
         actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
 
-    if actuator_type == config_dictionary.linear_actuator_key or actuator_type == config_dictionary.ideal_actuator_key:
+    if (
+        actuator_type == config_dictionary.linear_actuator_key
+        or actuator_type == config_dictionary.ideal_actuator_key
+    ):
         actuator_parameters = parameters_juelich_actuators(
             actuator_config=actuator_config,
             number_of_actuators=number_of_actuators,
             initial_orientation=initial_orientation,
             log=log,
             heliostat_name=heliostat_name,
-            device=device
+            device=device,
         )
     elif actuator_type == "new_actuators":
         actuator_parameters = parameters_new_actuators()
     else:
-        raise ValueError(
-            f"The actuator type: {actuator_type} is not yet implemented!"
-        )
-    
+        raise ValueError(f"The actuator type: {actuator_type} is not yet implemented!")
+
     return actuator_parameters
 
+
 def parameters_juelich_actuators(
-                   actuator_config: h5py.File,
-                   number_of_actuators: int,
-                   initial_orientation: torch.Tensor,
-                   log = logging.Logger,
-                   heliostat_name: Optional[str]=None,
-                   device: Union[torch.device, str] = "cuda"
+    actuator_config: h5py.File,
+    number_of_actuators: int,
+    initial_orientation: torch.Tensor,
+    log=logging.Logger,
+    heliostat_name: Optional[str] = None,
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Load actuator parameters for juelich actuators from an HDF5 scenario file.
@@ -566,7 +537,7 @@ def parameters_juelich_actuators(
     ------
     ValueError
         If the file contains the wrong amount of actuators for a heliostat with a specific kinematic type.
-        
+
     Returns
     -------
     torch.Tensor
@@ -579,19 +550,22 @@ def parameters_juelich_actuators(
             f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type."
             f"Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuators."
         )
-    
-    actuator_parameters = torch.zeros((config_dictionary.linear_actuator_number_of_parameters, number_of_actuators), device=device)
+
+    actuator_parameters = torch.zeros(
+        (config_dictionary.linear_actuator_number_of_parameters, number_of_actuators),
+        device=device,
+    )
 
     for index, actuator in enumerate(actuator_config.keys()):
-        type=str(
-            actuator_config[
-                actuator
-            ][config_dictionary.actuator_type_key][()].decode("utf-8")
+        type = str(
+            actuator_config[actuator][config_dictionary.actuator_type_key][()].decode(
+                "utf-8"
+            )
         )
-        clockwise_axis_movement=bool(
-            actuator_config[
-                actuator
-            ][config_dictionary.actuator_clockwise_axis_movement][()]
+        clockwise_axis_movement = bool(
+            actuator_config[actuator][
+                config_dictionary.actuator_clockwise_axis_movement
+            ][()]
         )
         increment = actuator_config.get(
             f"{actuator}/"
@@ -643,19 +617,19 @@ def parameters_juelich_actuators(
                 f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
-        actuator_parameters[0, index] = 0 if type==config_dictionary.linear_actuator_key else 1
-        
+        actuator_parameters[0, index] = (
+            0 if type == config_dictionary.linear_actuator_key else 1
+        )
+
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
 
         actuator_parameters[2, index] = (
-            torch.tensor(increment[()], dtype=torch.float, device=device) 
-            if increment 
+            torch.tensor(increment[()], dtype=torch.float, device=device)
+            if increment
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
         actuator_parameters[3, index] = (
-            torch.tensor(
-                initial_stroke_length[()], dtype=torch.float, device=device
-            )
+            torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
             if initial_stroke_length
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
@@ -670,13 +644,11 @@ def parameters_juelich_actuators(
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
         actuator_parameters[6, index] = (
-            torch.tensor(
-                initial_angle[()], dtype=torch.float, device=device
-            )
+            torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-    
+
     # For all linear actuators:
     # Adapt initial angle of actuator one according to kinematic initial orientation.
     # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
@@ -689,8 +661,9 @@ def parameters_juelich_actuators(
             initial_orientation=initial_orientation,
             device=device,
         )
-    
+
     return actuator_parameters
+
 
 def parameters_new_actuators() -> torch.Tensor:
     pass

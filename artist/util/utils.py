@@ -86,7 +86,7 @@ def rotate_e(
     ones = torch.ones(e.shape, device=device)
 
     matrix = torch.zeros(e.shape[0], 4, 4, device=device)
-    
+
     matrix[:, 0, 0] = ones
     matrix[:, 1, 1] = cos_e
     matrix[:, 1, 2] = sin_e
@@ -232,7 +232,7 @@ def azimuth_elevation_to_enu(
     elevation: torch.Tensor,
     slant_range: float = 1.0,
     degree: bool = True,
-    device: Union[torch.device, str] = "cuda"
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Transform coordinates from azimuth and elevation to east, north, up.
@@ -260,16 +260,16 @@ def azimuth_elevation_to_enu(
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
-    
+
     if azimuth < 0.0:
-        azimuth += (torch.pi * 2)
+        azimuth += torch.pi * 2
 
     r = slant_range * torch.cos(elevation)
 
     enu = torch.zeros(3, device=device)
 
     enu[0] = r * torch.sin(azimuth)
-    enu[1] = - r * torch.cos(azimuth)
+    enu[1] = -r * torch.cos(azimuth)
     enu[2] = slant_range * torch.sin(elevation)
 
     return enu
@@ -484,7 +484,9 @@ def decompose_rotations(
 
     # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
-    target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(0)
+    target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(
+        0
+    )
 
     # Compute the cross product (rotation axis).
     r = torch.linalg.cross(initial_vector, target_vector)
