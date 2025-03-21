@@ -54,6 +54,11 @@ def line_plane_intersections(
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
 
+    Raises
+    ------
+    ValueError
+        If there are no intersections on the front of the target plane.
+
     Returns
     -------
     torch.Tensor

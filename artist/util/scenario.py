@@ -188,6 +188,11 @@ class Scenario:
         target_area_name : str
             The string name of the target area.
 
+        Raises
+        ------
+        ValueError
+            If no target area with the specified name exists.
+
         Returns
         -------
         TargetArea
