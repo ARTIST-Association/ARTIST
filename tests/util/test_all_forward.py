@@ -4,9 +4,9 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.field.actuator import Actuators
-from artist.field.actuator_ideal import IdealActuators
-from artist.field.actuator_linear import LinearActuators
+from artist.field.actuators import Actuators
+from artist.field.actuators_ideal import IdealActuators
+from artist.field.actuators_linear import LinearActuators
 from artist.field.facets_nurbs import NurbsFacet
 from artist.field.heliostat_field import HeliostatField
 from artist.field.kinematic import Kinematic

@@ -2,8 +2,8 @@ from typing import Union
 
 import torch
 
-from artist.field.actuator_ideal import IdealActuators
-from artist.field.actuator_linear import LinearActuators
+from artist.field.actuators_ideal import IdealActuators
+from artist.field.actuators_linear import LinearActuators
 from artist.field.kinematic import (
     Kinematic,
 )

@@ -2,7 +2,7 @@ from typing import Union
 
 import torch
 
-from artist.field.actuator import Actuators
+from artist.field.actuators import Actuators
 
 
 class IdealActuators(Actuators):
