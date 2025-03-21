@@ -34,7 +34,7 @@ class Rays:
         Raises
         ------
         ValueError
-            If the length of the ray directions does not match the length of the ray magnitudes.
+            If the shapes of the ray directions does not match the shapes of the ray magnitudes.
         """
         if (
             ray_directions.shape[:-1] == ray_magnitudes.shape

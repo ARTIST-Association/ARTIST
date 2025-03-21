@@ -168,6 +168,11 @@ class HeliostatField(torch.nn.Module):
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
+        Raises
+        ------
+        ValueError
+            If neither prototypes nor individual heliostat parameters are provided.
+
         Returns
         -------
         HeliostatField

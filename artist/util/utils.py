@@ -24,6 +24,11 @@ def rotate_distortions(
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
+    Raises
+    ------
+    ValueError
+        If the sizes of the input tensors do not match.
+
     Returns
     -------
     torch.Tensor
@@ -200,6 +205,11 @@ def translate_enu(
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
+    Raises
+    ------
+    ValueError
+        If the sizes of the input tensors do not match.
+
     Returns
     -------
     torch.Tensor
@@ -290,6 +300,11 @@ def convert_3d_point_to_4d_format(
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
+    Raises
+    ------
+    ValueError
+        If the input is not 3D.
+
     Returns
     -------
     torch.Tensor
@@ -317,6 +332,11 @@ def convert_3d_direction_to_4d_format(
         Input direction in a 3D format.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the input is not 3D.
 
     Returns
     -------
