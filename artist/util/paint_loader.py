@@ -66,9 +66,9 @@ def extract_paint_calibration_data(
         with open(path, "r") as file:
             calibration_dict = json.load(file)
             calibration_target_names.append(
-                calibration_dict[config_dictionary.paint_calibration_traget]
+                calibration_dict[config_dictionary.paint_calibration_target]
             )
-            center_calibration_image = utils.convert_wgs84_coordinates_to_local_enu(
+            center_calibration_image = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     calibration_dict[config_dictionary.paint_focal_spot][
                         config_dictionary.paint_utis
@@ -89,7 +89,7 @@ def extract_paint_calibration_data(
                 calibration_dict[config_dictionary.paint_sun_elevation], device=device
             )
             sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                utils.azimuth_elevation_to_enu(
+                azimuth_elevation_to_enu(
                     sun_azimuth, sun_elevation, degree=True, device=device
                 ),
                 device=device,
@@ -160,7 +160,7 @@ def extract_paint_tower_measurements(
                 dtype=torch.float64,
                 device=device,
             )
-            center_3d = utils.convert_wgs84_coordinates_to_local_enu(
+            center_3d = convert_wgs84_coordinates_to_local_enu(
                 center_lat_lon, power_plant_position, device=device
             )
             center = utils.convert_3d_point_to_4d_format(center_3d, device=device)
@@ -173,9 +173,9 @@ def extract_paint_tower_measurements(
             )
 
             prefix = ""
-            if target_area == config_dictionary.target_area_reveicer:
+            if target_area == config_dictionary.target_area_receiver:
                 prefix = "receiver_outer_"
-            upper_left = utils.convert_wgs84_coordinates_to_local_enu(
+            upper_left = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     tower_dict[target_area][config_dictionary.paint_coordinates][
                         f"{prefix}{config_dictionary.paint_upper_left}"
@@ -186,7 +186,7 @@ def extract_paint_tower_measurements(
                 power_plant_position,
                 device=device,
             )
-            lower_left = utils.convert_wgs84_coordinates_to_local_enu(
+            lower_left = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     tower_dict[target_area][config_dictionary.paint_coordinates][
                         f"{prefix}{config_dictionary.paint_lower_left}"
@@ -197,7 +197,7 @@ def extract_paint_tower_measurements(
                 power_plant_position,
                 device=device,
             )
-            upper_right = utils.convert_wgs84_coordinates_to_local_enu(
+            upper_right = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     tower_dict[target_area][config_dictionary.paint_coordinates][
                         f"{prefix}{config_dictionary.paint_upper_right}"
@@ -208,7 +208,7 @@ def extract_paint_tower_measurements(
                 power_plant_position,
                 device=device,
             )
-            lower_right = utils.convert_wgs84_coordinates_to_local_enu(
+            lower_right = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     tower_dict[target_area][config_dictionary.paint_coordinates][
                         f"{prefix}{config_dictionary.paint_lower_right}"
@@ -219,7 +219,7 @@ def extract_paint_tower_measurements(
                 power_plant_position,
                 device=device,
             )
-            plane_e, plane_u = utils.corner_points_to_plane(
+            plane_e, plane_u = corner_points_to_plane(
                 upper_left, upper_right, lower_left, lower_right
             )
 
@@ -281,7 +281,7 @@ def extract_paint_heliostats(
     for id, file_tuple in enumerate(heliostat_and_deflectometry_paths):
         with open(file_tuple[1], "r") as file:
             heliostat_dict = json.load(file)
-            heliostat_position_3d = utils.convert_wgs84_coordinates_to_local_enu(
+            heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
                     heliostat_dict[config_dictionary.paint_heliostat_position],
                     dtype=torch.float64,
@@ -467,3 +467,148 @@ def extract_paint_heliostats(
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_config_list)
 
     return heliostats_list_config, prototype_config
+
+
+def azimuth_elevation_to_enu(
+    azimuth: torch.Tensor,
+    elevation: torch.Tensor,
+    slant_range: float = 1.0,
+    degree: bool = True,
+    device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Transform coordinates from azimuth and elevation to east, north, up.
+
+    This method assumes a south-oriented azimuth-elevation coordinate system, where 0° points toward the south.
+
+    Parameters
+    ----------
+    azimuth : torch.Tensor
+        Azimuth, 0° points toward the south (degrees).
+    elevation : torch.Tensor
+        Elevation angle above horizon, neglecting aberrations (degrees).
+    slant_range : float
+        Slant range in meters (default is 1.0).
+    degree : bool
+        Whether input is given in degrees (default is True).
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        The east, north, up (ENU) coordinates.
+    """
+    if degree:
+        elevation = torch.deg2rad(elevation)
+        azimuth = torch.deg2rad(azimuth)
+
+    if azimuth < 0.0:
+        azimuth += torch.pi * 2
+
+    r = slant_range * torch.cos(elevation)
+
+    enu = torch.zeros(3, device=device)
+
+    enu[0] = r * torch.sin(azimuth)
+    enu[1] = -r * torch.cos(azimuth)
+    enu[2] = slant_range * torch.sin(elevation)
+
+    return enu
+
+
+def convert_wgs84_coordinates_to_local_enu(
+    coordinates_to_transform: torch.Tensor,
+    reference_point: torch.Tensor,
+    device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
+
+    This function calculates the north and east offsets in meters of a coordinate from the reference point.
+    It converts the latitude and longitude to radians, calculates the radius of curvature values,
+    and then computes the offsets based on the differences between the coordinate and the reference point.
+    Finally, it returns a tensor containing these offsets along with the altitude difference.
+
+    Parameters
+    ----------
+    coordinates_to_transform : torch.Tensor
+        The coordinates in latitude, longitude, altitude that are to be transformed.
+    reference_point : torch.Tensor
+        The center of origin of the ENU coordinate system in WGS84 coordinates.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Returns
+    -------
+    torch.Tensor
+        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
+    """
+    device = torch.device(device)
+    wgs84_a = 6378137.0  # Major axis in meters
+    wgs84_b = 6356752.314245  # Minor axis in meters
+    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
+
+    # Convert latitude and longitude to radians.
+    lat_rad = torch.deg2rad(coordinates_to_transform[0])
+    lon_rad = torch.deg2rad(coordinates_to_transform[1])
+    alt = coordinates_to_transform[2] - reference_point[2]
+    lat_tower_rad = torch.deg2rad(reference_point[0])
+    lon_tower_rad = torch.deg2rad(reference_point[1])
+
+    # Calculate meridional radius of curvature for the first latitude.
+    sin_lat1 = torch.sin(lat_rad)
+    rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
+
+    # Calculate transverse radius of curvature for the first latitude.
+    rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
+
+    # Calculate delta latitude and delta longitude in radians.
+    dlat_rad = lat_tower_rad - lat_rad
+    dlon_rad = lon_tower_rad - lon_rad
+
+    # Calculate north and east offsets in meters.
+    north_offset_m = dlat_rad * rm1
+    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
+
+    return torch.tensor(
+        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
+    )
+
+
+def corner_points_to_plane(
+    upper_left: torch.Tensor,
+    upper_right: torch.Tensor,
+    lower_left: torch.Tensor,
+    lower_right: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Span a plane from corner points.
+
+    Parameters
+    ----------
+    upper_left : torch.Tensor
+        The upper left corner coordinate.
+    upper_right : torch.Tensor
+        The upper right corner coordinate.
+    lower_left : torch.Tensor
+        The lower left corner coordinate.
+    lower_right : torch.Tensor
+        The lower right corner coordinate.
+
+    Returns
+    -------
+    torch.Tensor
+        The plane measurement in east direction.
+    torch.Tensor
+        The plane measurement in up direction.
+    """
+    plane_e = (
+        torch.abs(upper_right[0] - upper_left[0])
+        + torch.abs(lower_right[0] - lower_left[0])
+    ) / 2
+    plane_u = (
+        torch.abs(upper_left[2] - lower_left[2])
+        + torch.abs(upper_right[2] - lower_right[2])
+    ) / 2
+    return plane_e, plane_u

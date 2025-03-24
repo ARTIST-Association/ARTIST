@@ -42,11 +42,11 @@ class HeliostatField(torch.nn.Module):
     all_initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the field.
     all_kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all helisotats in the field.
+        The kinematic deviation parameters of all heliostats in the field.
     all_actuator_parameters : torch.Tensor
         The actuator parameters of all actuators in the field.
     all_aligned_heliostats : torch.Tensor
-        Information about alignment of helisotats.
+        Information about alignment of heliostats.
         Unaligned heliostats marked with 0, aligned heliostats marked with 1.
     all_preferred_reflection_directions : torch.Tensor
         The preferred reflection directions of all heliostats in the field.
@@ -58,7 +58,7 @@ class HeliostatField(torch.nn.Module):
     Methods
     -------
     from_hdf5()
-        Load a helisotat field from an HDF5 file.
+        Load a heliostat field from an HDF5 file.
     align_surfaces_with_incident_ray_direction()
         Align all surface points and surface normals of all heliostats in the field.
     get_orientations_from_motor_positions()
@@ -85,7 +85,7 @@ class HeliostatField(torch.nn.Module):
         """
         Initialize the heliostat field.
 
-        Individual heliostats are not saved as seperate entites, instead seperate tensors
+        Individual heliostats are not saved as separate entities, instead separate tensors
         for each heliostat property exist. Each property tensor contains information about this
         property for all heliostats in the field.
 
@@ -106,7 +106,7 @@ class HeliostatField(torch.nn.Module):
         all_initial_orientations : torch.Tensor
             The initial orientations of all heliostats in the field.
         all_kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all helisotats in the field.
+            The kinematic deviation parameters of all heliostats in the field.
         all_actuator_parameters : torch.Tensor
             The actuator parameters of all actuators in the field.
         device : Union[torch.device, str]

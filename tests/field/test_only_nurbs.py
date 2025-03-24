@@ -44,7 +44,7 @@ def random_surface(
 
 def test_nurbs(device: torch.device) -> None:
     """
-    Test the NURBS surface only, without raytracing.
+    Test the NURBS surface only, without ray tracing.
 
     First, a random surface is generated, it consists of ``surface_points``.
     Then, all the NURBS parameters are initialized (evaluation points, control points, degree,...)

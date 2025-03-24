@@ -503,7 +503,7 @@ class SurfaceConverter:
                 facet_translation_vectors[facet, :] = torch.tensor(
                     heliostat_dict[config_dictionary.paint_facet_properties][
                         config_dictionary.paint_facets
-                    ][facet][config_dictionary.paint_translation_vetor],
+                    ][facet][config_dictionary.paint_translation_vector],
                     device=device,
                 )
                 canting_e[facet, :] = torch.tensor(

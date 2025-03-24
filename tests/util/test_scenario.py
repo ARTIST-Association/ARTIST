@@ -9,7 +9,7 @@ from artist.util.scenario import Scenario, TargetArea
 
 @pytest.mark.parametrize(
     "target_area_name, expected",
-    [("reciever", TargetArea), ("invalid_target_area_name", None)],
+    [("receiver", TargetArea), ("invalid_target_area_name", None)],
 )
 def test_get_target_area(
     target_area_name: str, expected: Union[TargetArea, None]
@@ -44,7 +44,7 @@ def test_get_target_area(
         with pytest.raises(ValueError) as exc_info:
             Scenario.get_target_area(mock_scenario, target_area_name)
         assert (
-            f"No target area with the name {target_area_name} found in the sceanrio!"
+            f"No target area with the name {target_area_name} found in the scenario!"
             in str(exc_info.value)
         )
     else:

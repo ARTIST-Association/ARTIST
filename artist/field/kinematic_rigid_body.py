@@ -216,11 +216,11 @@ class RigidBody(Kinematic):
             )
 
             # Compute desired normals.
-            desired_reflect_vecs = torch.nn.functional.normalize(
+            desired_reflection_direction = torch.nn.functional.normalize(
                 self.aim_points - concentrator_origins, p=2, dim=1
             )
             desired_concentrator_normals = torch.nn.functional.normalize(
-                -incident_ray_direction + desired_reflect_vecs, p=2, dim=1
+                -incident_ray_direction + desired_reflection_direction, p=2, dim=1
             )
 
             # Compute epoch loss.

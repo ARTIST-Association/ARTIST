@@ -106,7 +106,7 @@ def kinematic_deviations(
     Raises
     ------
     ValueError
-        If the kinmatic type in the scenario file is unknown.
+        If the kinematic type in the scenario file is unknown.
 
     Returns
     -------

@@ -33,7 +33,7 @@ The code below shows, that creating a scenario from ``STRAL`` requires a ``.binp
     # STRAL
     # Specify the path to your stral_data.binp file.
     stral_file_path = pathlib.Path(
-        "please/insert/the/path/to/the/strahl/data/here/stral_data.binp"
+        "please/insert/the/path/to/the/stral/data/here/stral_data.binp"
     )
 
 For generating a scenario from ``PAINT`` specify the following files (If you want to set up a scenario with multiple
@@ -112,7 +112,7 @@ coordinates manually, as shown below:
 general, when using ``PAINT`` as data source, you can use functions from the ``paint_loader`` to retrieve the data.
 We can define the location of the power plant with the ``PowerPlantConfig`` class as shown below, note
 that the ``tower-measurement.json`` files also contain information about each target area on the solar
-tower(s). The ``paint_loader`` retrieves this inforamtion together with the ``PowerPlantConfig``.
+tower(s). The ``paint_loader`` retrieves this information together with the ``PowerPlantConfig``.
 
 .. code-block::
 
@@ -198,7 +198,7 @@ This configuration defines the following light source properties:
 
 - The ``light_source_key`` used to identify the light source when loading the ``ARTIST`` scenario.
 - The ``light_source_type`` which defines what type of light source is used. In this case, it is a ``Sun``.
-- The ``number_of_rays`` which defines how many rays are sampled from the light source for raytracing.
+- The ``number_of_rays`` which defines how many rays are sampled from the light source for ray tracing.
 - The ``distribution_type`` which models what distribution is used to model the light source. In this case, we use a
   normal distribution.
 - The ``mean`` and the ``covariance`` which are the parameters of the previously defined normal distribution used to
@@ -387,7 +387,7 @@ Prototypes and Heliostats from ``PAINT``
 ----------------------------------------
 This sections shows how to load prototype configurations and heliostat configurations from ``PAINT``
 by using the ``paint_loader`` again. Before we can use the ``paint_loader`` to extract everything we need
-to choose one target area that is the default aimpoint of our heliostats. Usually it will make sense to
+to choose one target area that is the default aim point of our heliostats. Usually it will make sense to
 choose a receiver for this, as shown below:
 
 .. code-block::
@@ -396,7 +396,7 @@ choose a receiver for this, as shown below:
     target_area = [
         target_area
         for target_area in target_area_list_config.target_area_list
-        if target_area.target_area_key == config_dictionary.target_area_reveicer
+        if target_area.target_area_key == config_dictionary.target_area_receiver
     ]
 
     heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
