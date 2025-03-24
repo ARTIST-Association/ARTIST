@@ -41,7 +41,7 @@ def test_extract_paint_calibration_data(
     device: torch.device,
 ) -> None:
     """
-    Test the functino to extract calibration data from ``PAINT`` calibration data.
+    Test the function to extract calibration data from ``PAINT`` calibration data.
 
     Parameters
     ----------

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from artist.util import utils
+from artist.util import paint_loader
 
 
 @pytest.mark.parametrize(
@@ -91,7 +91,7 @@ def test_azimuth_elevation_to_enu(
     AssertionError
         If test does not complete as expected.
     """
-    enu_coordinates = utils.azimuth_elevation_to_enu(
+    enu_coordinates = paint_loader.azimuth_elevation_to_enu(
         azimuth=azimuth, elevation=elevation, degree=degree, device=device
     )
     torch.testing.assert_close(

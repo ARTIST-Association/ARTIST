@@ -1,6 +1,6 @@
 .. _tutorial_heliostat_raytracing:
 
-``ARTIST`` Tutorial: Heliostat Raytracing
+``ARTIST`` Tutorial: Heliostat Ray Tracing
 =========================================
 
 .. note::
@@ -8,12 +8,12 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_heliostat_raytracing_tutorial.py
 
-This tutorial provides a brief introduction to ``ARTIST`` showcasing how Heliostat Raytracing is performed. The tutorial
+This tutorial provides a brief introduction to ``ARTIST`` showcasing how Heliostat Ray Tracing is performed. The tutorial
 will run through some basic concepts necessary to understanding ``ARTIST`` including:
 
 - How to load a scenario.
-- Activating the kinematic in a heliostat to align this heliostat for raytracing.
-- Performing heliostat raytracing to generate a flux density image on the receiver.
+- Activating the kinematic in a heliostat to align this heliostat for ray tracing.
+- Performing heliostat ray tracing to generate a flux density image on the receiver.
 
 Loading a Scenario
 ------------------
@@ -160,7 +160,7 @@ This code generates the following output:
 
 Aligning Heliostats
 --------------------
-Before we can start raytracing, we need to align the heliostats. In the current scenario, our heliostats are
+Before we can start ray tracing, we need to align the heliostats. In the current scenario, our heliostats are
 initialized pointing straight up at the sky. Unfortunately, this orientation is not very useful for reflecting
 sunlight from the sun onto the receiver that is located in the south (see aim point above).
 
@@ -193,14 +193,14 @@ Since both the target area (receiver) and the sun are directly to the south of t
 The heliostat is rotated 90 degrees along the east axis to reflect the sunlight back in the direction it is coming
 from.
 
-Raytracing
+Ray Tracing
 ----------
-With the heliostats now aligned, it is time to perform some raytracing to generate flux density images.
+With the heliostats now aligned, it is time to perform some ray tracing to generate flux density images.
 
-In this tutorial, we are considering *heliostat raytracing*. Heliostat raytracing (as it's name suggests) traces rays
+In this tutorial, we are considering *heliostat ray tracing*. Heliostat ray tracing (as it's name suggests) traces rays
 of sunlight from the heliostat. If we were to trace rays from the sun, then only a small portion would hit the heliostat
-and even a smaller portion of these rays would hit the receiver. Therefore, heliostat raytracing can be computationally
-efficient. Concretely, the heliostat raytracing involves three main steps:
+and even a smaller portion of these rays would hit the receiver. Therefore, heliostat ray tracing can be computationally
+efficient. Concretely, the heliostat ray tracing involves three main steps:
 
 1. We calculate the preferred reflection directions of all heliostats. This preferred reflection direction models the direction of a ray
    coming directly from the sun to the heliostats, i.e., along the incident ray direction. Specifically, we reflect this
@@ -211,15 +211,15 @@ efficient. Concretely, the heliostat raytracing involves three main steps:
 3. We trace these rays onto the target area by performing a *line-plane intersection* and determining the resulting flux
    density image on the receiver.
 
-Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class! Therefore, raytracing
+Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class! Therefore, ray tracing
 with ``ARTIST`` involves two simple lines of code. First, we define the ``HeliostatRayTracer``. A ``HeliostatRayTracer``
 only requires a ``Scenario`` object as an argument, but in this tutorial we additionally define the ``batch_size``.
 The ``batch_size`` defines the number of heliostats that are traced at once:
 
 .. code-block::
 
-    # Create raytracer
-    raytracer = HeliostatRayTracer(
+    # Create ray tracer
+    ray_tracer = HeliostatRayTracer(
         scenario=scenario, batch_size=1
     )
 
@@ -233,8 +233,8 @@ desired incident ray direction and a target area (for this tutorial we use the r
 
 .. code-block::
 
-    # Perform heliostat-based raytracing.
-    image_south = raytracer.trace_rays(
+    # Perform heliostat-based ray tracing.
+    image_south = ray_tracer.trace_rays(
         incident_ray_direction=incident_ray_direction_south,
         target_area=scenario.get_target_area("receiver"),
         device=device
@@ -246,11 +246,11 @@ If we plot the output, we get the following flux density image!
    :width: 80 %
    :align: center
 
-That's it – a simple example of heliostat raytracing with ``ARTIST``!
+That's it – a simple example of heliostat ray tracing with ``ARTIST``!
 
-Of course, this one scenario is capable of performing raytracing for any incident ray direction. For example, we can consider
-three further incident ray directions and perform raytracing using a helper function that combines alignment and
-raytracing with the following code:
+Of course, this one scenario is capable of performing ray tracing for any incident ray direction. For example, we can consider
+three further incident ray directions and perform ray tracing using a helper function that combines alignment and
+ray tracing with the following code:
 
 .. code-block::
 
@@ -259,7 +259,7 @@ raytracing with the following code:
     incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
     incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
 
-    # Perform alignment and raytracing to generate flux density images.
+    # Perform alignment and ray tracing to generate flux density images.
     image_east = align_and_trace_rays(
         light_direction=incident_ray_direction_east, device=device
     )

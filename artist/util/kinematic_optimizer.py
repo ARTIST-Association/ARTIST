@@ -139,7 +139,7 @@ class KinematicOptimizer:
         Parameters
         ----------
         tolerance : float
-            The optimzer tolerance.
+            The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
         center_calibration_images : torch.Tensor
@@ -225,7 +225,7 @@ class KinematicOptimizer:
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
-        Optimize the kinematic parameters using raytracing.
+        Optimize the kinematic parameters using ray tracing.
 
         This optimizer method optimizes the kinematic parameters by extracting the focus point
         of a calibration image and using heliostat-tracing. This method is slower than the other
@@ -234,7 +234,7 @@ class KinematicOptimizer:
         Parameters
         ----------
         tolerance : float
-            The optimzer tolerance.
+            The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
         calibration_target_names : list[str]
@@ -248,13 +248,13 @@ class KinematicOptimizer:
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
-        log.info("Kinematic optimization with raytracing.")
+        log.info("Kinematic optimization with ray tracing.")
         device = torch.device(device)
         loss = torch.inf
         epoch = 0
 
-        # Create a raytracer.
-        raytracer = HeliostatRayTracer(scenario=self.scenario, batch_size=1)
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(scenario=self.scenario, batch_size=1)
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
@@ -285,8 +285,8 @@ class KinematicOptimizer:
                     incident_ray_direction=incident_ray_direction, device=device
                 )
 
-                # Perform heliostat-based raytracing.
-                final_bitmap = raytracer.trace_rays(
+                # Perform heliostat-based ray tracing.
+                final_bitmap = ray_tracer.trace_rays(
                     incident_ray_direction=incident_ray_direction,
                     target_area=calibration_target,
                     device=device,

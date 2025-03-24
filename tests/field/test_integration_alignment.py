@@ -53,10 +53,10 @@ def test_integration_alignment(
     device: torch.device,
 ) -> None:
     """
-    Align helisotats from different scenarios using the kinematic module to test the alignment process.
+    Align heliostats from different scenarios using the kinematic module to test the alignment process.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
-    calculate the preferred reflection direction. Then perform heliostat based raytracing.
+    calculate the preferred reflection direction. Then perform heliostat based ray tracing.
     This uses distortions based on the model of the sun to generate additional rays, calculates the intersections
     on the receiver, and computes the bitmap.
 
@@ -93,11 +93,11 @@ def test_integration_alignment(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    # Create a raytracer.
-    raytracer = HeliostatRayTracer(scenario=scenario)
+    # Create a ray tracer.
+    ray_tracer = HeliostatRayTracer(scenario=scenario)
 
-    # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays(
+    # Perform heliostat-based ray tracing.
+    final_bitmap = ray_tracer.trace_rays(
         incident_ray_direction=incident_ray_direction.to(device),
         target_area=scenario.get_target_area("receiver"),
         device=device,

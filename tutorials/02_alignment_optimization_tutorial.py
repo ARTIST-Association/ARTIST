@@ -53,12 +53,12 @@ incident_ray_directions = (
 )
 
 # Create a calibration scenario from the original scenario.
-# It contains a single helisotat, chosen by its index.
+# It contains a single heliostat, chosen by its index.
 calibration_scenario = scenario.create_calibration_scenario(
     heliostat_index=2, device=device
 )
 
-# Select the kinematic parameters to be optimzed and calibrated.
+# Select the kinematic parameters to be optimized and calibrated.
 optimizable_parameters = [
     calibration_scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
     calibration_scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
@@ -72,8 +72,8 @@ learning_rate_factor = 0.1
 learning_rate_patience = 20
 learning_rate_threshold = 0.1
 
-use_raytracing = False
-if use_raytracing:
+use_ray_tracing = False
+if use_ray_tracing:
     all_calibration_motor_positions = None
     tolerance = 1e-7
     max_epoch = 27

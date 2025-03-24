@@ -53,7 +53,7 @@ def test_alignment_optimizer_methods(
     device: torch.device,
 ) -> None:
     """
-    Test the alignemnt optimization methods.
+    Test the alignment optimization methods.
 
     Parameters
     ----------

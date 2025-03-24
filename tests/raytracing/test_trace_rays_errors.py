@@ -25,10 +25,10 @@ def test_trace_rays_unaligned_error(device: torch.device) -> None:
         [[0.0], [1.0]], device=device
     )
 
-    mock_raytracer = MagicMock(spec=HeliostatRayTracer)
-    mock_raytracer.scenario = mock_scenario
-    mock_raytracer.bitmap_resolution_e = 50
-    mock_raytracer.bitmap_resolution_u = 50
+    mock_ray_tracer = MagicMock(spec=HeliostatRayTracer)
+    mock_ray_tracer.scenario = mock_scenario
+    mock_ray_tracer.bitmap_resolution_e = 50
+    mock_ray_tracer.bitmap_resolution_u = 50
 
     mock_target_area = MagicMock(spec=TargetArea)
 
@@ -37,9 +37,9 @@ def test_trace_rays_unaligned_error(device: torch.device) -> None:
         wraps=HeliostatRayTracer.trace_rays,
     ) as mock_method:
         with pytest.raises(ValueError) as exc_info:
-            mock_raytracer.trace_rays = MagicMock(wraps=HeliostatRayTracer.trace_rays)
-            mock_raytracer.trace_rays(
-                self=mock_raytracer,
+            mock_ray_tracer.trace_rays = MagicMock(wraps=HeliostatRayTracer.trace_rays)
+            mock_ray_tracer.trace_rays(
+                self=mock_ray_tracer,
                 incident_ray_direction=torch.tensor(
                     [0.0, 1.0, 0.0, 0.0], device=device
                 ),

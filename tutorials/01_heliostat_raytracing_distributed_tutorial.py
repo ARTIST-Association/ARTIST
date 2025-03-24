@@ -34,20 +34,20 @@ with h5py.File(scenario_path) as scenario_file:
 # The incident ray direction needs to be normed.
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-scenario.heliostat_field.all_aim_points = scenario.get_target_area("reiceiver").center
+scenario.heliostat_field.all_aim_points = scenario.get_target_area("receiver").center
 
 # Align all heliostats.
 scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
     incident_ray_direction=incident_ray_direction, device=device
 )
 
-# Create a raytracer.
-raytracer = HeliostatRayTracer(
+# Create a ray tracer.
+ray_tracer = HeliostatRayTracer(
     scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
 )
 
-# Perform heliostat-based raytracing.
-final_bitmap = raytracer.trace_rays(
+# Perform heliostat-based ray tracing.
+final_bitmap = ray_tracer.trace_rays(
     incident_ray_direction=incident_ray_direction,
     target_area=scenario.get_target_area("receiver"),
     device=device,

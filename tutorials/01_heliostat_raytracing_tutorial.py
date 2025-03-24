@@ -123,11 +123,11 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 # Show the plot.
 plt.show()
 
-# Create a raytracer.
-raytracer = HeliostatRayTracer(scenario=scenario, batch_size=1)
+# Create a ray tracer.
+ray_tracer = HeliostatRayTracer(scenario=scenario, batch_size=1)
 
-# Perform heliostat-based raytracing.
-image_south = raytracer.trace_rays(
+# Perform heliostat-based ray tracing.
+image_south = ray_tracer.trace_rays(
     incident_ray_direction=incident_ray_direction_south,
     target_area=scenario.get_target_area("receiver"),
     device=device,
@@ -144,7 +144,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
-    Align the heliostat and perform heliostat raytracing.
+    Align the heliostat and perform heliostat ray tracing.
 
     Parameters
     ----------
@@ -163,8 +163,8 @@ def align_and_trace_rays(
         incident_ray_direction=light_direction, device=device
     )
 
-    # Perform heliostat-based raytracing.
-    return raytracer.trace_rays(
+    # Perform heliostat-based ray tracing.
+    return ray_tracer.trace_rays(
         incident_ray_direction=light_direction,
         target_area=scenario.get_target_area("receiver"),
         device=device,
@@ -175,7 +175,7 @@ def plot_multiple_images(
     *image_tensors: torch.Tensor, names: Optional[list[str]] = None
 ) -> None:
     """
-    Plot multiple receiver raytracing images in a grid.
+    Plot multiple receiver ray tracing images in a grid.
 
     This function is flexible and able to plot an arbitrary number of images depending on the number of image tensors
     provided. Note that the list of names must be the same length as the number of provided images, otherwise the images
@@ -224,7 +224,7 @@ incident_ray_direction_east = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
 incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
 incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
 
-# Perform alignment and raytracing to generate flux density images.
+# Perform alignment and ray tracing to generate flux density images.
 image_east = align_and_trace_rays(
     light_direction=incident_ray_direction_east, device=device
 )

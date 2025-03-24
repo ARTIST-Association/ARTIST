@@ -18,8 +18,8 @@ The tutorial will run through some basic concepts necessary to understanding ``A
 It is best if you already know about the following processes in ``ARTIST``
 
 - How to load a scenario.
-- Activating the kinematic in a heliostat to align this heliostat for raytracing.
-- Performing heliostat raytracing to generate a flux density image on the receiver.
+- Activating the kinematic in a heliostat to align this heliostat for ray tracing.
+- Performing heliostat ray tracing to generate a flux density image on the receiver.
 
 If you need help with this look into our other tutorials such as the tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
 
@@ -29,7 +29,7 @@ In the real world most components of the kinematic have mechanical errors. This 
 a heliostat along a specific angle, the heliostat might not end up pointing exactly at the specified aim point.
 In ``ARTIST`` we create a digital twin of a solar tower power plant. In the computer simulation, the heliostat will, per default,
 point exactly where we tell it to. To keep the predictions made with ``ARTIST`` as accurate as possible we need to
-consider the mechanical errors and offsets of the real-world kinematic. In the kinemactic calibration process the kinematic module
+consider the mechanical errors and offsets of the real-world kinematic. In the kinematic calibration process the kinematic module
 learns all offset or deviation parameters of the real-world kinematic, to mimic its behavior.
 Calibrating the kinematic in ``ARTIST`` requires calibration data, the flux density distributions used for the calibration
 can be gained by pointing single heliostats at calibration targets.
@@ -60,7 +60,7 @@ Now we have all the calibration data we need to calibrate the kinematic of the p
 Optimizable parameters
 ----------------------
 In the pre-generated scenario used in this tutorial, we use a rigid body kinematic. For this kinematic type
-there are alltogether 28 optimizable parameters. You can select all of them with the following code:
+there are altogether 28 optimizable parameters. You can select all of them with the following code:
 
 .. code-block::
 
@@ -107,7 +107,7 @@ We start the optimization process by calling:
 
 Currently there are two methods to calibrate the kinematic. Either we use geometric considerations and the
 motor positions from the calibration data or we optimize using flux density distributions and the differentiable
-raytracer. The kinematic calibration via the motor position is generally faster and produces better results in less
+ray tracer. The kinematic calibration via the motor position is generally faster and produces better results in less
 time. However, choosing the optimization method depends on the available calibration data. Both methods
 need information about:
 
@@ -122,21 +122,21 @@ Optimization methods
 --------------------
 Here is the workflow of the kinematic calibration with motor positions:
 
-- We start with default values for all optimizable paramters.
+- We start with default values for all optimizable parameters.
 - We calculate the preferred reflection direction of our heliostat through knowledge about the
   center of the calibration flux density distribution.
 - In the optimization loop we calculate the current orientation of the heliostat from the motor positions,
   then we calculate the actual reflection direction of the heliostat. The loss is defined by the
   difference between the actual reflection direction and the preferred reflection direction from the calibration data.
-- The optimizer updates the optimizable parametrs until it is accurate enough or the maximum number of epochs is reached.
+- The optimizer updates the optimizable parameters until it is accurate enough or the maximum number of epochs is reached.
 
-Here is the workflow of the kinematic calibration with the differentiable raytracer.
+Here is the workflow of the kinematic calibration with the differentiable ray tracer.
 
-- We start with default values for all optimizable paramters.
+- We start with default values for all optimizable parameters.
 - In the optimization loop we align the heliostat by providing the incident ray direction of the calibration data.
-  Then we create the Heliostat Raytracer by specifying the used calibration target instead of the revceiver. We trace the rays
+  Then we create the heliostat ray tracer by specifying the used calibration target instead of the receiver. We trace the rays
   and create a bitmap of the flux density distribution. From this distribution we calculate the center. The loss is defined as the
-  difference between the actual center from the raytraced distribution and the center of the calibration data.
-- The optimizer updates the optimizable parametrs until it is accurate enough or the maximum number of epochs is reached.
+  difference between the actual center from the ray traced distribution and the center of the calibration data.
+- The optimizer updates the optimizable parameters until it is accurate enough or the maximum number of epochs is reached.
 
-Both optimization methods return the optimized parameters and the optimized scenario that is ready to be used for raytracing.
+Both optimization methods return the optimized parameters and the optimized scenario that is ready to be used for ray tracing.

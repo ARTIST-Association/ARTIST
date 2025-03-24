@@ -15,7 +15,7 @@ from . import raytracing_utils
 from .rays import Rays
 
 log = logging.getLogger(__name__)
-"""A logger for the heliostat raytracer."""
+"""A logger for the heliostat ray tracer."""
 
 
 class DistortionsDataset(Dataset):
@@ -153,7 +153,7 @@ class RestrictedDistributedSampler(Sampler):
                 str(i) for i in range(self.number_of_active_ranks)
             )
             log.info(
-                f"The raytracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exitst, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
+                f"The ray tracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exist, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
             )
 
         # Only assign data to first active ranks.
@@ -181,18 +181,18 @@ class RestrictedDistributedSampler(Sampler):
 
 class HeliostatRayTracer:
     """
-    Implement the functionality for heliostat raytracing.
+    Implement the functionality for heliostat ray tracing.
 
     Attributes
     ----------
     scenario : Scenario
-        The scenario used to perform raytracing.
+        The scenario used to perform ray tracing.
     world_size : int
         The world size i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
     batch_size : int
-        The amount of samples (Heliostats) processed parallely within a single rank.
+        The amount of samples (Heliostats) processed parallel within a single rank.
     number_of_surface_points_per_heliostat : int
         The number of surface points on a single heliostat.
     distortions_dataset : DistortionsDataset
@@ -209,7 +209,7 @@ class HeliostatRayTracer:
     Methods
     -------
     trace_rays()
-        Perform heliostat raytracing.
+        Perform heliostat ray tracing.
     scatter_rays()
         Scatter the reflected rays around the preferred ray directions for each heliostat.
     sample_bitmap()
@@ -229,9 +229,9 @@ class HeliostatRayTracer:
         bitmap_resolution_u: int = 256,
     ) -> None:
         """
-        Initialize the heliostat raytracer.
+        Initialize the heliostat ray tracer.
 
-        "Heliostat"-tracing is one kind of raytracing applied in ARTIST. For this kind of raytracing,
+        "Heliostat"-tracing is one kind of ray tracing applied in ARTIST. For this kind of ray tracing,
         the rays are initialized on the heliostat. The rays originate in the discrete surface points.
         There they are multiplied, distorted, and scattered, and then they are sent to the target area.
         Letting the rays originate on the heliostat drastically reduces the number of rays that need
@@ -240,13 +240,13 @@ class HeliostatRayTracer:
         Parameters
         ----------
         scenario : Scenario
-            The scenario used to perform raytracing.
+            The scenario used to perform ray tracing.
         world_size : int
             The world size i.e., the overall number of processes (default is 1).
         rank : int
             The rank, i.e., individual process ID (default is 0).
         batch_size : int
-            The amount of samples (Heliostats) processed parallely within a single rank (default is 1).
+            The amount of samples (Heliostats) processed parallel within a single rank (default is 1).
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution_e : int
@@ -294,7 +294,7 @@ class HeliostatRayTracer:
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Perform heliostat raytracing.
+        Perform heliostat ray tracing.
 
         Scatter the rays according to the distortions, calculate the intersection with the target plane,
         and sample the resulting bitmap on the target area.
@@ -311,7 +311,7 @@ class HeliostatRayTracer:
         Raises
         ------
         ValueError
-            If not all heliostats used for raytracing have been aligned.
+            If not all heliostats used for ray tracing have been aligned.
 
         Returns
         -------
@@ -465,7 +465,7 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        # dx_intersections and dy_intersections contain itersection coordinates ranging from 0 to target_area.plane_e/_u.
+        # dx_intersections and dy_intersections contain intersection coordinates ranging from 0 to target_area.plane_e/_u.
         # x_intersections and y_intersections contain those intersection coordinates scaled to a range from 0 to bitmap_resolution_e/_u.
         # Additionally a mask is applied, only the intersections where intersection_indices == True are kept, the tensors are flattened.
         x_intersections = (

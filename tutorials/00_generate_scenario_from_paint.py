@@ -27,7 +27,7 @@ tower_file = pathlib.Path(
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
-# A tuple of: (helisotat-name, heliostat-properties.json, deflectometry.h5)
+# A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
         "name",
@@ -81,7 +81,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 target_area = [
     target_area
     for target_area in target_area_list_config.target_area_list
-    if target_area.target_area_key == config_dictionary.target_area_reveicer
+    if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
 heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(

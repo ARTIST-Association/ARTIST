@@ -208,7 +208,7 @@ class Scenario:
         )
         if target_area is None:
             raise ValueError(
-                f"No target area with the name {target_area_name} found in the sceanrio!"
+                f"No target area with the name {target_area_name} found in the scenario!"
             )
         else:
             return target_area

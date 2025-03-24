@@ -237,54 +237,6 @@ def translate_enu(
     return matrix
 
 
-def azimuth_elevation_to_enu(
-    azimuth: torch.Tensor,
-    elevation: torch.Tensor,
-    slant_range: float = 1.0,
-    degree: bool = True,
-    device: Union[torch.device, str] = "cuda",
-) -> torch.Tensor:
-    """
-    Transform coordinates from azimuth and elevation to east, north, up.
-
-    This method assumes a south-oriented azimuth-elevation coordiante system, where 0° points toward the south.
-
-    Parameters
-    ----------
-    azimuth : torch.Tensor
-        Azimuth, 0° points toward the south (degrees).
-    elevation : torch.Tensor
-        Elevation angle above horizon, neglecting aberrations (degrees).
-    slant_range : float
-        Slant range in meters (default is 1.0).
-    degree : bool
-        Whether input is given in degrees (default is True).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
-
-    Returns
-    -------
-    torch.Tensor
-        The east, north, up (ENU) coordinates.
-    """
-    if degree:
-        elevation = torch.deg2rad(elevation)
-        azimuth = torch.deg2rad(azimuth)
-
-    if azimuth < 0.0:
-        azimuth += torch.pi * 2
-
-    r = slant_range * torch.cos(elevation)
-
-    enu = torch.zeros(3, device=device)
-
-    enu[0] = r * torch.sin(azimuth)
-    enu[1] = -r * torch.cos(azimuth)
-    enu[2] = slant_range * torch.sin(elevation)
-
-    return enu
-
-
 def convert_3d_point_to_4d_format(
     point: torch.Tensor, device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
@@ -354,66 +306,6 @@ def convert_3d_direction_to_4d_format(
     )
     return torch.cat((direction, zeros_tensor), dim=-1)
 
-
-def convert_wgs84_coordinates_to_local_enu(
-    coordinates_to_transform: torch.Tensor,
-    reference_point: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
-) -> torch.Tensor:
-    """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
-
-    This function calculates the north and east offsets in meters of a coordinate from the reference point.
-    It converts the latitude and longitude to radians, calculates the radius of curvature values,
-    and then computes the offsets based on the differences between the coordinate and the refernce point.
-    Finally, it returns a tensor containing these offsets along with the altitude difference.
-
-    Parameters
-    ----------
-    coordinates_to_transform : torch.Tensor
-        The coordinates in latitude, longitude, altitude that are to be transformed.
-    reference_point : torch.Tensor
-        The center of origin of the ENU coordinate system in WGS84 coordinates.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
-
-    Returns
-    -------
-    torch.Tensor
-        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
-    """
-    device = torch.device(device)
-    wgs84_a = 6378137.0  # Major axis in meters
-    wgs84_b = 6356752.314245  # Minor axis in meters
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
-
-    # Convert latitude and longitude to radians.
-    lat_rad = torch.deg2rad(coordinates_to_transform[0])
-    lon_rad = torch.deg2rad(coordinates_to_transform[1])
-    alt = coordinates_to_transform[2] - reference_point[2]
-    lat_tower_rad = torch.deg2rad(reference_point[0])
-    lon_tower_rad = torch.deg2rad(reference_point[1])
-
-    # Calculate meridional radius of curvature for the first latitude.
-    sin_lat1 = torch.sin(lat_rad)
-    rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
-
-    # Calculate transverse radius of curvature for the first latitude.
-    rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
-
-    # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = lat_tower_rad - lat_rad
-    dlon_rad = lon_tower_rad - lon_rad
-
-    # Calculate north and east offsets in meters.
-    north_offset_m = dlat_rad * rm1
-    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
-
-    return torch.tensor(
-        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
-    )
-
-
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
     Normalize points in a tensor to the open interval of (0,1).
@@ -433,44 +325,6 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         (points[:] - min(points[:])) + 2e-5
     )
     return points_normalized
-
-
-def corner_points_to_plane(
-    upper_left: torch.Tensor,
-    upper_right: torch.Tensor,
-    lower_left: torch.Tensor,
-    lower_right: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    Span a plane from corner points.
-
-    Parameters
-    ----------
-    upper_left : torch.Tensor
-        The upper left corner coordinate.
-    upper_right : torch.Tensor
-        The upper right corner coordinate.
-    lower_left : torch.Tensor
-        The lower left corner coordinate.
-    lower_right : torch.Tensor
-        The lower right corner coordinate.
-
-    Returns
-    -------
-    torch.Tensor
-        The plane measurement in east direction.
-    torch.Tensor
-        The plane measurement in up direction.
-    """
-    plane_e = (
-        torch.abs(upper_right[0] - upper_left[0])
-        + torch.abs(lower_right[0] - lower_left[0])
-    ) / 2
-    plane_u = (
-        torch.abs(upper_left[2] - lower_left[2])
-        + torch.abs(upper_right[2] - lower_right[2])
-    ) / 2
-    return plane_e, plane_u
 
 
 def decompose_rotations(
@@ -575,7 +429,7 @@ def transform_initial_angle(
     initial_angle : torch.Tensor
         The initial angle, or offset along the east-axis.
     initial_orientation : torch.Tensor
-        The initial orientation of the coordiante system.
+        The initial orientation of the coordinate system.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -642,10 +496,10 @@ def get_center_of_mass(
     height, width = bitmap.shape
 
     # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_thresholded = torch.where(
+    flux_threshold = torch.where(
         bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device)
     )
-    total_intensity = flux_thresholded.sum()
+    total_intensity = flux_threshold.sum()
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
@@ -655,9 +509,9 @@ def get_center_of_mass(
     ) / height
 
     # Compute the center of intensity using weighted sums of the coordinates.
-    center_of_mass_e = (flux_thresholded.sum(dim=0) * e_indices).sum() / total_intensity
+    center_of_mass_e = (flux_threshold.sum(dim=0) * e_indices).sum() / total_intensity
     center_of_mass_u = 1 - (
-        (flux_thresholded.sum(dim=1) * u_indices).sum() / total_intensity
+        (flux_threshold.sum(dim=1) * u_indices).sum() / total_intensity
     )
 
     # Construct the coordinates relative to target center.
