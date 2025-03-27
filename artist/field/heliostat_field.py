@@ -195,7 +195,6 @@ class HeliostatField(torch.nn.Module):
         )
         all_initial_orientations = torch.zeros((number_of_heliostats, 4), device=device)
 
-        # TODO unterschiedliche Parameter Längen
         all_kinematic_deviation_parameters = torch.zeros(
             (number_of_heliostats, 18), device=device
         )

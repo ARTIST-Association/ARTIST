@@ -55,7 +55,7 @@ incident_ray_directions = (
 # Create a calibration scenario from the original scenario.
 # It contains a single heliostat, chosen by its index.
 calibration_scenario = scenario.create_calibration_scenario(
-    heliostat_index=2, device=device
+    heliostat_index=0, device=device
 )
 
 # Select the kinematic parameters to be optimized and calibrated.
