@@ -20,8 +20,8 @@ If you need help with this look into our other tutorials such as the tutorial on
 
 General Remarks
 ---------------
-The data structures in ``ARTIST`` are set up to handle all heliostat computations at the same time. For example if there are multiple heliostats
-in the same scenario, all heliostats are aligned in one step. The same is true for parts of the ray tracing. These calculations are internally implemented
+The data structures in ``ARTIST`` are set up to handle all heliostat computations in parallel even when using a single device. For example if there are multiple heliostats
+in the same scenario, all heliostats are aligned in the same step. The same is true for parts of the ray tracing. These calculations are internally implemented
 as large matrix-multiplications, which are highly efficient when using PyTorch on GPUs. The distributed ray tracing takes this parallelization further and
 can be used when its desired to calculate parallel on multiple devices. The Heliostat-Tracing process can be distributed and parallelized using Distributed Data Parallel.
 For the distributed ray tracing using DDP, the heliostat field is duplicated across all devices and the rays are separated into unique groups.
