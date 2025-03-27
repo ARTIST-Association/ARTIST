@@ -306,6 +306,7 @@ def convert_3d_direction_to_4d_format(
     )
     return torch.cat((direction, zeros_tensor), dim=-1)
 
+
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
     Normalize points in a tensor to the open interval of (0,1).

@@ -32,15 +32,15 @@ set_logger_config()
             "test_scenario_paint_single_heliostat",
             "AA39-calibration-properties",
             1e-7,
-            27,
-            0.0002,
+            30,
+            0.0005,
             0.1,
             18,
             0.1,
         ),
     ],
 )
-def test_alignment_optimizer_methods(
+def test_kinematic_optimizer(
     optimizer_method: str,
     scenario_name: str,
     calibration_file: str,
@@ -53,7 +53,7 @@ def test_alignment_optimizer_methods(
     device: torch.device,
 ) -> None:
     """
-    Test the alignment optimization methods.
+    Test the kinematic optimization methods.
 
     Parameters
     ----------
@@ -152,7 +152,7 @@ def test_alignment_optimizer_methods(
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_optimized_alignment_parameters"
+        / "tests/data/expected_optimized_kinematic_parameters"
         / f"{optimizer_method}_{device.type}.pt"
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
