@@ -1,8 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Iterator, Union
-
-if TYPE_CHECKING:
-    from artist.util.scenario import Scenario
+from typing import Iterator, Union
 
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
@@ -10,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 from artist.field.tower_target_area import TargetArea
 from artist.scene import LightSource
 from artist.util import utils
+from artist.util.scenario import Scenario
 
 from . import raytracing_utils
 from .rays import Rays
@@ -220,7 +218,7 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
-        scenario: "Scenario",
+        scenario: Scenario,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -584,34 +582,3 @@ class HeliostatRayTracer:
         )
 
         return total_bitmap
-
-    def normalize_bitmap(
-        self,
-        bitmap: torch.Tensor,
-        target_area: TargetArea,
-    ) -> torch.Tensor:
-        """
-        Normalize a bitmap.
-
-        Parameters
-        ----------
-        bitmap : torch.Tensor
-            The bitmap to be normalized.
-        target_area : TargetArea
-            The target area used to sample the bitmap on.
-
-        Returns
-        -------
-        torch.Tensor
-            The normalized bitmap.
-        """
-        bitmap_height = bitmap.shape[0]
-        bitmap_width = bitmap.shape[1]
-
-        plane_area = target_area.plane_e * target_area.plane_u
-        num_pixels = bitmap_height * bitmap_width
-        plane_area_per_pixel = plane_area / num_pixels
-
-        return bitmap / (
-            self.distortions_dataset.distortions_u.numel() * plane_area_per_pixel
-        )
