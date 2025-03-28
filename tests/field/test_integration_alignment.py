@@ -8,39 +8,39 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.util.scenario import Scenario
 
 
 @pytest.mark.parametrize(
     "incident_ray_direction, ray_direction_string, scenario_config",
     [
         (
-            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
             "stral_south",
             "test_scenario_stral_prototypes",
         ),
         (
-            torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            torch.tensor([[-1.0, 0.0, 0.0, 0.0]]),
             "stral_east",
             "test_scenario_stral_prototypes",
         ),
         (
-            torch.tensor([-1.0, 0.0, 0.0, 0.0]),
+            torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
             "stral_west",
             "test_scenario_stral_prototypes",
         ),
         (
-            torch.tensor([0.0, 0.0, 1.0, 0.0]),
+            torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             "stral_above",
             "test_scenario_stral_prototypes",
         ),
         (
-            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
             "individual_south",
             "test_scenario_stral_individual_measurements",
         ),
         (
-            torch.tensor([0.0, -1.0, 0.0, 0.0]),
+            torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
             "paint_south",
             "test_scenario_paint_single_heliostat",
         ),
@@ -53,13 +53,12 @@ def test_integration_alignment(
     device: torch.device,
 ) -> None:
     """
-    Align helisotats from different scenarios using the kinematic module to test the alignment process.
+    Align heliostats from different scenarios using the kinematic module to test the alignment process.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
-    calculate the preferred reflection direction.
-    Then perform heliostat based raytracing. This uses distortions based on the model of the sun to generate additional
-    rays, calculates the intersections on the receiver, and computes the bitmap.
-    Then normalize the bitmaps and compare them with the expected value.
+    calculate the preferred reflection direction. Then perform heliostat based ray tracing.
+    This uses distortions based on the model of the sun to generate additional rays, calculates the intersections
+    on the receiver, and computes the bitmap.
 
     Parameters
     ----------
@@ -90,21 +89,19 @@ def test_integration_alignment(
         )
 
     # Align heliostat.
-    scenario.heliostats.heliostat_list[
-        0
-    ].set_aligned_surface_with_incident_ray_direction(
+    scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction.to(device), device=device
     )
 
-    # Create raytracer - currently only possible for one heliostat.
-    raytracer = HeliostatRayTracer(scenario=scenario)
+    # Create a ray tracer.
+    ray_tracer = HeliostatRayTracer(scenario=scenario)
 
-    # Perform heliostat-based raytracing.
-    final_bitmap = raytracer.trace_rays(
-        incident_ray_direction=incident_ray_direction.to(device), device=device
+    # Perform heliostat-based ray tracing.
+    final_bitmap = ray_tracer.trace_rays(
+        incident_ray_direction=incident_ray_direction.to(device),
+        target_area=scenario.get_target_area("receiver"),
+        device=device,
     )
-
-    final_bitmap = raytracer.normalize_bitmap(final_bitmap)
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)

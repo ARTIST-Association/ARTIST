@@ -25,7 +25,7 @@ The Scenario structure of ``ARTIST`` has five main elements:
      may contain multiple target areas, ``ARTIST`` makes use of a scenario structure that allows for multiple target areas.
    - **Light Sources:** An ``ARTIST`` scenario also contains at least one light source. A light source models how the
      light, which is eventually reflected onto a receiver, is generated. A light source must have a type, for example, a
-     ``Sun``, and defines how many rays are to be sampled from this light source for raytracing. Since it may be
+     ``Sun``, and defines how many rays are to be sampled from this light source for ray tracing. Since it may be
      interesting to model multiple light sources for calibration purposes, the ``ARTIST`` scenario structure also
      supports more than one light source.
    - **Heliostats:** A Concentrating Solar Power Plant (CSP) relies on mirrors, so-called *heliostats*, to reflect the

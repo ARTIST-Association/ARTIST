@@ -1,13 +1,13 @@
 import pytest
 import torch
 
-from artist.util import utils
+from artist.util import paint_loader
 
 
 @pytest.mark.parametrize(
     "wgs84_coordinates, reference_point, expected_enu_coordinates",
     [
-        # Coordinates of Jülich power plant and multi-focus tower.
+        # Coordinates of Juelich power plant and multi-focus tower.
         (
             (
                 torch.tensor(
@@ -48,7 +48,7 @@ def test_wgs84_to_enu_converter(
     AssertionError
         If test does not complete as expected.
     """
-    calculated_enu_coordinates = utils.convert_wgs84_coordinates_to_local_enu(
+    calculated_enu_coordinates = paint_loader.convert_wgs84_coordinates_to_local_enu(
         wgs84_coordinates.to(device), reference_point.to(device), device
     )
 
