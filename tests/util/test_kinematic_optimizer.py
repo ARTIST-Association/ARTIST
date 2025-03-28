@@ -5,6 +5,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import config_dictionary, paint_loader, set_logger_config
 from artist.util.kinematic_optimizer import KinematicOptimizer
 from artist.util.scenario import Scenario
@@ -169,3 +170,26 @@ def test_kinematic_optimizer(
         atol=5e-2,
         rtol=5e-2,
     )
+
+    # Also assert if the align with motor position method works as expected.
+    if optimizer_method == config_dictionary.optimizer_use_motor_positions:
+        scenario.heliostat_field.align_surfaces_with_motor_positions(
+            motor_positions=all_calibration_motor_positions, device=device
+        )
+
+        ray_tracer = HeliostatRayTracer(scenario=scenario)
+
+        final_bitmap = ray_tracer.trace_rays(
+            incident_ray_direction=incident_ray_directions.to(device),
+            target_area=scenario.get_target_area(calibration_target_names[0]),
+            device=device,
+        )
+
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/expected_bitmaps_integration"
+            / f"motor_position_alignment_{device.type}.pt"
+        )
+
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
+        torch.testing.assert_close(final_bitmap, expected, atol=5e-4, rtol=5e-4)
