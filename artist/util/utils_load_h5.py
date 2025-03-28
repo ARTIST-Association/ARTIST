@@ -132,9 +132,6 @@ def kinematic_deviations(
             device=device,
         )
         number_of_actuators = config_dictionary.rigid_body_number_of_actuators
-    elif kinematic_type == "new_kinematic":
-        kinematic_deviations = new_kinematic_deviations()
-        number_of_actuators = 3
     else:
         raise ValueError(
             f"The kinematic type: {kinematic_type} is not yet implemented!"
@@ -432,18 +429,6 @@ def rigid_body_deviations(
     return kinematic_deviations
 
 
-def new_kinematic_deviations():
-    """
-    Define place-holder method for further kinematic types.
-
-    Returns
-    -------
-    torch.Tensor:
-        The kinematic deviation parameters.
-    """
-    pass
-
-
 def actuator_parameters(
     prototype: bool,
     scenario_file: h5py.File,
@@ -507,8 +492,6 @@ def actuator_parameters(
             heliostat_name=heliostat_name,
             device=device,
         )
-    elif actuator_type == "new_actuators":
-        actuator_parameters = parameters_new_actuators()
     else:
         raise ValueError(f"The actuator type: {actuator_type} is not yet implemented!")
 
@@ -671,15 +654,3 @@ def parameters_juelich_actuators(
         )
 
     return actuator_parameters
-
-
-def parameters_new_actuators() -> torch.Tensor:
-    """
-    Define place-holder method for further actuator types.
-
-    Returns
-    -------
-    torch.Tensor:
-        The actuator parameters.
-    """
-    pass
