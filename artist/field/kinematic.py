@@ -28,7 +28,7 @@ class Kinematic(torch.nn.Module):
 
     def align(
         self,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> None:
         """
         Align given surface points and surface normals according to an input.
 
