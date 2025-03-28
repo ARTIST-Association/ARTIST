@@ -30,7 +30,7 @@ set_logger_config()
         ),
         (
             "use_raytracing",
-            "test_scenario_paint_single_heliostat",
+            "test_scenario_paint_multiple_heliostats",
             "AA39-calibration-properties",
             1e-7,
             30,
@@ -95,9 +95,15 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
+    # Create a calibration scenario from the original scenario.
+    # It contains a single heliostat, chosen by its index.
+    calibration_scenario = scenario.create_calibration_scenario(
+        heliostat_index=0, device=device
+    )
+
     optimizable_parameters = [
-        scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
-        scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
+        calibration_scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
+        calibration_scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
     ]
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
@@ -122,7 +128,7 @@ def test_kinematic_optimizer(
         all_calibration_motor_positions,
     ) = paint_loader.extract_paint_calibration_data(
         calibration_properties_paths=calibration_properties_paths,
-        power_plant_position=scenario.power_plant_position,
+        power_plant_position=calibration_scenario.power_plant_position,
         device=device,
     )
 
@@ -132,7 +138,7 @@ def test_kinematic_optimizer(
 
     # Create alignment optimizer.
     alignment_optimizer = KinematicOptimizer(
-        scenario=scenario,
+        scenario=calibration_scenario,
         optimizer=optimizer,
         scheduler=scheduler,
     )
@@ -159,13 +165,13 @@ def test_kinematic_optimizer(
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(
-        scenario.heliostat_field.all_kinematic_deviation_parameters,
+        calibration_scenario.heliostat_field.all_kinematic_deviation_parameters,
         expected["kinematic_deviations"],
         atol=5e-2,
         rtol=5e-2,
     )
     torch.testing.assert_close(
-        scenario.heliostat_field.all_actuator_parameters,
+        calibration_scenario.heliostat_field.all_actuator_parameters,
         expected["actuator_parameters"],
         atol=5e-2,
         rtol=5e-2,
@@ -173,15 +179,17 @@ def test_kinematic_optimizer(
 
     # Also assert if the align with motor position method works as expected.
     if optimizer_method == config_dictionary.optimizer_use_motor_positions:
-        scenario.heliostat_field.align_surfaces_with_motor_positions(
+        calibration_scenario.heliostat_field.align_surfaces_with_motor_positions(
             motor_positions=all_calibration_motor_positions, device=device
         )
 
-        ray_tracer = HeliostatRayTracer(scenario=scenario)
+        ray_tracer = HeliostatRayTracer(scenario=calibration_scenario)
 
         final_bitmap = ray_tracer.trace_rays(
             incident_ray_direction=incident_ray_directions.to(device),
-            target_area=scenario.get_target_area(calibration_target_names[0]),
+            target_area=calibration_scenario.get_target_area(
+                calibration_target_names[0]
+            ),
             device=device,
         )
 
