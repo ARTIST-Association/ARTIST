@@ -33,7 +33,7 @@ def test_3d_point_converter(
     ----------
     point : torch.Tensor
         A 3d point.
-    exxpected : Optional[torch.Tensor]
+    expected : Optional[torch.Tensor]
         A 4d point or ``None`` if an error is expected.
     device : torch.device
         The device on which to initialize tensors.
@@ -89,7 +89,7 @@ def test_3d_direction_converter(
     ----------
     direction : torch.Tensor
         A 3d direction.
-    exxpected : Optional[torch.Tensor]
+    expected : Optional[torch.Tensor]
         A 4d direction or ``None`` if an error is expected.
     device : torch.device
         The device on which to initialize tensors.

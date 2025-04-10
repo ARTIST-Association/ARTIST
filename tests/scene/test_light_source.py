@@ -49,8 +49,8 @@ def calculate_expected(
     distribute = torch.distributions.MultivariateNormal(mean, covariance)
     distort_u, distort_e = distribute.sample(
         (
-            int(further_parameters["num_heliostats"] * further_parameters["num_rays"]),
-            further_parameters["num_facets"],
+            further_parameters["num_heliostats"],
+            further_parameters["num_rays"],
             further_parameters["num_points"],
         ),
     ).permute(3, 0, 1, 2)
@@ -138,7 +138,6 @@ def further_parameters_1() -> Dict[str, int]:
     return {
         "num_rays": 100,
         "num_points": 50,
-        "num_facets": 4,
         "num_heliostats": 1,
         "random_seed": 7,
     }
@@ -157,7 +156,6 @@ def further_parameters_2() -> Dict[str, int]:
     return {
         "num_rays": 100,
         "num_points": 50,
-        "num_facets": 7,
         "num_heliostats": 5,
         "random_seed": 7,
     }
@@ -176,7 +174,6 @@ def further_parameters_3() -> Dict[str, int]:
     return {
         "num_rays": 20,
         "num_points": 300,
-        "num_facets": 3,
         "num_heliostats": 8,
         "random_seed": 77,
     }
@@ -255,7 +252,6 @@ def test_light_sources(
             distortions_u, distortions_e = sun.get_distortions(
                 number_of_points=further_params_dict["num_points"],
                 number_of_heliostats=further_params_dict["num_heliostats"],
-                number_of_facets=further_params_dict["num_facets"],
                 random_seed=further_params_dict["random_seed"],
             )
             expected_u, expected_e = calculate_expected(

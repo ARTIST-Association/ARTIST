@@ -3,7 +3,7 @@ import torch
 
 class Rays:
     """
-    Model rays used for raytracing that have a direction vector and magnitude.
+    Model rays used for ray tracing that have a direction vector and magnitude.
 
     Attributes
     ----------
@@ -19,7 +19,7 @@ class Rays:
         """
         Initialize the ``Rays`` class.
 
-        The rays in ``ARTIST`` have a direction vector and a magnitude. They are used for raytracing.
+        The rays in ``ARTIST`` have a direction vector and a magnitude. They are used for ray tracing.
         The direction vector determines the direction of the rays, i.e., the path they are taking through space.
         The magnitude is important for considering atmospheric losses and cloud coverage. If a ray
         travels through a cloud, the magnitude changes.
@@ -34,13 +34,13 @@ class Rays:
         Raises
         ------
         ValueError
-            If the length of the ray directions does not match the length of the ray magnitudes.
+            If the shapes of the ray directions does not match the shapes of the ray magnitudes.
         """
         if (
-            (ray_directions.size(dim=0) != ray_magnitudes.size(dim=0))
-            or (ray_directions.size(dim=1) != ray_magnitudes.size(dim=1))
-            or (ray_directions.size(dim=2) != ray_magnitudes.size(dim=2))
+            ray_directions.shape[:-1] == ray_magnitudes.shape
+            and ray_directions.shape[-1] == 4
         ):
-            raise ValueError("Ray directions and magnitudes have differing sizes!")
-        self.ray_directions = ray_directions
-        self.ray_magnitudes = ray_magnitudes
+            self.ray_directions = ray_directions
+            self.ray_magnitudes = ray_magnitudes
+        else:
+            raise ValueError("Ray directions and magnitudes have incompatible sizes!")
