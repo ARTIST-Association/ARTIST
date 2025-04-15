@@ -44,7 +44,7 @@ def random_surface(
 
 def test_nurbs(device: torch.device) -> None:
     """
-    Test the NURBS surface only, without raytracing.
+    Test the NURBS surface only, without ray tracing.
 
     First, a random surface is generated, it consists of ``surface_points``.
     Then, all the NURBS parameters are initialized (evaluation points, control points, degree,...)
@@ -134,3 +134,46 @@ def test_nurbs(device: torch.device) -> None:
         print(loss.abs().mean())
 
     torch.testing.assert_close(points, surface_points, atol=1e-2, rtol=1e-2)
+
+
+def test_find_span(device: torch.device):
+    """
+    Test the find span method for non uniform knot vectors.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    degree = 3
+    evaluation_points = torch.linspace(1e-5, 1 - 1e-5, steps=20)
+
+    x, y = torch.meshgrid(
+        torch.linspace(1e-2, 1 - 1e-2, 6),
+        torch.linspace(1e-2, 1 - 1e-2, 6),
+        indexing="ij",
+    )
+    control_points = torch.stack([x, y], dim=-1)
+
+    knots = torch.tensor(
+        [0.0, 0.0, 0.0, 0.0, 0.1, 0.7, 1.0, 1.0, 1.0, 1.0], device=device
+    )
+
+    span = NURBSSurface.find_span(
+        degree=degree,
+        evaluation_points=evaluation_points,
+        knot_vector=knots,
+        control_points=control_points,
+        device=device,
+    )
+
+    expected = torch.tensor(
+        [3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5], device=device
+    )
+
+    torch.testing.assert_close(span, expected.to(device), atol=5e-4, rtol=5e-4)

@@ -66,10 +66,8 @@ The ``ARTIST`` repository is structured as shown below:
 │   └── ...
 ├── tests/
 │   ├── data
-│   │   ├── paint # Real measurements from the PAINT database that can be used in ARTIST.
-│   │   ├── scenario_generators
+│   │   ├── field_data # Real measurements from the PAINT database and STRAL that can be used in ARTIST.
 │   │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
-│   │   ├── stral # Real measurements from the STRAL software that can be used in ARTIST.
 │   │   └── ...
 │   ├── field
 │   ├── raytracing
@@ -78,6 +76,9 @@ The ``ARTIST`` repository is structured as shown below:
 │   └── ...
 └── tutorials # Tutorials to help you get started with ARTIST.
     ├── data # Data accessed in the tutorials.
+    │   ├── paint # Real measurements from the PAINT database.
+    │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
+    │   └── stral # Real measurements from STRAL.
     └── ...
 ```
 
