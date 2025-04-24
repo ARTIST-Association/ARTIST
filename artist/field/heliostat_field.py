@@ -196,10 +196,15 @@ class HeliostatField(torch.nn.Module):
         all_initial_orientations = torch.zeros((number_of_heliostats, 4), device=device)
 
         all_kinematic_deviation_parameters = torch.zeros(
-            (number_of_heliostats, 18), device=device
+            (
+                number_of_heliostats,
+                config_dictionary.rigid_body_number_of_deviation_parameters,
+            ),
+            device=device,
         )
         all_actuator_parameters = torch.zeros(
-            (number_of_heliostats, 7, 2), device=device
+            (number_of_heliostats, config_dictionary.number_of_actuator_parameters, 2),
+            device=device,
         )
 
         for index, heliostat_name in enumerate(
@@ -372,6 +377,7 @@ class HeliostatField(torch.nn.Module):
             device=device,
         )
 
+        # Note that heliostats have been aligned.
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
 
     def get_orientations_from_motor_positions(
@@ -447,6 +453,7 @@ class HeliostatField(torch.nn.Module):
             device=device,
         )
 
+        # Note that heliostats have been aligned.
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
 
     def forward(self) -> None:
