@@ -56,7 +56,7 @@ class LightSource(torch.nn.Module):
         Parameters
         ----------
         config_file : h5py.File
-            The HDF5 file containing the information about the light source.
+            The HDF5 file containing the information about the light sources.
         light_source_name : str, optional
             The name of the light source - used for logging.
         device : Union[torch.device, str]

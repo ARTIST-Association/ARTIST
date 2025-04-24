@@ -380,7 +380,8 @@ class HeliostatField(torch.nn.Module):
             surface_normals=self.all_surface_normals,
             device=device,
         )
-        # Note that heliostats have been aligned
+
+        # Note that heliostats have been aligned.
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
 
     def get_orientations_from_motor_positions(
@@ -455,7 +456,8 @@ class HeliostatField(torch.nn.Module):
             surface_normals=self.all_surface_normals,
             device=device,
         )
-        # Note that heliostats have been aligned
+
+        # Note that heliostats have been aligned.
         self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
 
     def forward(self) -> None:
