@@ -1,6 +1,5 @@
 import math
 import pathlib
-import subprocess
 from typing import Optional, Union
 
 import h5py
@@ -12,17 +11,9 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
 from artist.util.scenario import Scenario
 
-# If you have already generated the tutorial scenario yourself, you can leave this boolean as False. If not, set it to
-# true and a pre-generated scenario file will be downloaded for this tutorial!
-default = False
+# If you have already generated the tutorial scenario yourself, you can use that scenario or create and use any custom scenario.
+# Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
-
-if default:
-    url = "https://drive.google.com/uc?export=download&id=1X0bMmzwdlnk88bCaYM_sNUGaMxnMaRG8"
-    output_filename = "tutorial_scenario.h5"
-    command = ["wget", "-O", output_filename, url]
-    result = subprocess.run(command, capture_output=True, text=True)
-    scenario_path = pathlib.Path(output_filename)
 
 # Set up logger.
 set_logger_config()

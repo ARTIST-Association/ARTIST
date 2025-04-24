@@ -101,6 +101,8 @@ rigid_body_number_of_deviation_parameters = 18
 """Number of deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
+number_of_actuator_parameters = 7
+"""Number of actuator parameters for linear or ideal actuators."""
 kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
 kinematic_deviations_key = "deviations"
