@@ -118,7 +118,7 @@ for facet in facet_list:
     )
     # Use the NurbsFacet to create a NURBS surface
     nurbs_surface = nurbs_facet.create_nurbs_surface(device=device)
-    pts, _ = nurbs_surface.calculate_surface
+    pts, _ = nurbs_surface.calculate_surface_points_and_normals(device=device)
     pts = pts + translation_vector  # adjust by facet translation
     all_surface_points.append(pts)
 deflectometry_surface = torch.cat(all_surface_points, dim=0)
