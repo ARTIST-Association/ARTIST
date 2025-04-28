@@ -75,6 +75,10 @@ docs/_build/
 .pybuilder/
 target/
 
+# PyTorch model files
+*.pt
+*.pth
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
