@@ -40,6 +40,7 @@ class NurbsFacet(torch.nn.Module):
     def __init__(
         self,
         control_points: torch.Tensor,
+        ideal_control_points: torch.Tensor,
         degree_e: int,
         degree_n: int,
         number_eval_points_e: int,
@@ -79,6 +80,17 @@ class NurbsFacet(torch.nn.Module):
         """
         super().__init__()
         self.control_points = control_points
+
+        if ideal_control_points is None:
+            self.ideal_control_points = torch.zeros_like(self.control_points)
+        else:
+            if ideal_control_points.shape != self.control_points.shape:
+                raise ValueError(
+                    f"Ideal control points must have the same shape as control points! "
+                    f"Got {ideal_control_points.shape} vs {self.control_points.shape}."
+                )
+            self.ideal_control_points = ideal_control_points.detach().clone()
+
         self.degree_e = degree_e
         self.degree_n = degree_n
         self.number_eval_points_e = number_eval_points_e
