@@ -75,6 +75,11 @@ docs/_build/
 .pybuilder/
 target/
 
+# Image and document files
+*.png
+*.img 
+*.pdf
+
 # PyTorch model files
 *.pt
 *.pth
