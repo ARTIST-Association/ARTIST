@@ -73,6 +73,7 @@ class SurfaceConverter:
         tolerance: float = 3e-5,
         initial_learning_rate: float = 1e-3,
         max_epoch: int = 10000,
+        optimize_only_u: bool = True
     ) -> None:
         """
         Initialize the converter.
@@ -121,6 +122,9 @@ class SurfaceConverter:
         self.tolerance = tolerance
         self.initial_learning_rate = initial_learning_rate
         self.max_epoch = max_epoch
+        self.optimize_only_u = optimize_only_u
+        if not optimize_only_u:
+            log.warning("Warning: Optimizing E/N/U may cause errors in canting representation.")
 
     def fit_nurbs_surface(
         self,
@@ -221,9 +225,22 @@ class SurfaceConverter:
             control_points,
             device=device,
         )
+        if self.optimize_only_u:
+            control_points = control_points.detach()
+            optimizable_control_points = control_points[..., 2]
+            optimizable_control_points.requires_grad_(True)
+
+            # For optimization we will only update uu and reconstruct control_points during loss computation
+            params = [optimizable_control_points]
+        else:
+            optimizable_control_points = control_points
+            optimizable_control_points.requires_grad_(True)
+            params = [optimizable_control_points]
+
+
 
         # Optimize the control points of the NURBS surface.
-        optimizer = torch.optim.Adam([control_points], lr=initial_learning_rate)
+        optimizer = torch.optim.Adam(params, lr=initial_learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -235,6 +252,19 @@ class SurfaceConverter:
         loss = torch.inf
         epoch = 0
         while loss > tolerance and epoch <= max_epoch:
+
+            if self.optimize_only_u:
+                # Reconstruct control points
+                updated_control_points = torch.stack([
+                    control_points[..., 0],  # fixed E
+                    control_points[..., 1],  # fixed N
+                    optimizable_control_points  # optimized U
+                ], dim=-1)
+            else:
+                updated_control_points = optimizable_control_points
+
+            nurbs_surface.control_points = updated_control_points
+
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
                 device=device
             )
@@ -783,21 +813,12 @@ def create_point_cloud_with_fixed_aspect_ratio(total_heliostat_height, total_hel
     actual_point_count = num_points_east * num_points_north
     point_difference = actual_point_count - desired_points_per_facet
     if point_difference > 0:
-        print(f"Using {actual_point_count} points, which is {point_difference} more than requested {desired_points_per_facet}.")
+        log.info(f"Using {actual_point_count} points, which is {point_difference} more than requested {desired_points_per_facet}.")
     elif point_difference < 0:
-        print(f"Using {actual_point_count} points, which is {-point_difference} less than requested {desired_points_per_facet}.")
+        log.info(f"Using {actual_point_count} points, which is {-point_difference} less than requested {desired_points_per_facet}.")
     else:
-        print(f"Using exactly {actual_point_count} points as requested.")
+        log.info(f"Using exactly {actual_point_count} points as requested.")
 
     # --- Step 4: Repeat for all facets ---
     complete_point_cloud = facet_point_cloud.unsqueeze(0).repeat(number_facets, 1, 1)
     return complete_point_cloud
-
-
-
-
-
-
-
-#Facet Spans (East): [[-0.6374922394752502, 1.9569215510273352e-05, 0.0031505227088928223], [-0.6374922394752502, -1.9569215510273352e-05, 0.0031505227088928223], [-0.6374922394752502, -1.9569215510273352e-05, -0.0031505227088928223], [-0.6374922394752502, 1.9569215510273352e-
-#Facet Spans (North): [[-0.0, 0.8024845123291016, -0.004984567407518625], [-0.0, 0.8024845123291016, 0.004984567407518625], [-0.0, 0.8024845123291016, -0.004984567407518625], [-0.0, 0.8024845123291016, 0.004984567407518625]]

@@ -86,7 +86,7 @@ if __name__ == "__main__":
     heliostat_fp = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tests/data/field_data/AA39-heliostat-properties.json")
     cache_fp = pathlib.Path("cached_facet_list.pt")  # cache file in current directory
 
-    # Create a SurfaceConverter instance (using your desired parameters)
+    # Create a SurfaceConverter
     surface_converter = SurfaceConverter(step_size=1, max_epoch=20000, conversion_method=config_dictionary.convert_nurbs_from_points)
 
     # Get the facet list (either from cache or by generating it)
