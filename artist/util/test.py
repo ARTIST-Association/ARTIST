@@ -56,7 +56,7 @@ def get_or_create_facet_list(surface_converter,
 # Import your get_or_create_facet_list utility (e.g., from your test.py file)
 
 # Set device
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def save_surface_plot(surface_points: torch.Tensor, title: str, filename: str):
     """
@@ -99,43 +99,26 @@ if __name__ == "__main__":
     )
     print("Facet list loaded:", facet_list)
     
-
-    
-    # # Stack translation and canting vectors from all facets:
-    # facet_translation_vectors = torch.stack([f.translation_vector for f in facet_list])
-    # canting_e = torch.stack([f.canting_e for f in facet_list])
-    # canting_n = torch.stack([f.canting_n for f in facet_list])
-    
-    # # Generate the ideal Juelich heliostat surface.
-    # ideal_surface, _ = surface_converter.generate_ideal_juelich_heliostat_surface(
-    #     cantings_e=canting_e,
-    #     cantings_n=canting_n,
-    #     facet_translation_vectors=facet_translation_vectors,
-    #     number_of_surface_points=2000,
-    #     device=device
-    # )# ideal_surface_points is returned as a tensor with shape (number_of_facets, points_per_facet, 4)
-    
-
-    # To retrieve the deflectometry-based surface points, loop through each facet,
-    # create its NURBS surface, compute surface points and add the facet’s translation.
 all_surface_points = []
 for facet in facet_list:
+    control_points = facet.control_points.to(device)
+    translation_vector = facet.translation_vector.to(device)
     # Create a NurbsFacet instance from the configuration
     nurbs_facet = NurbsFacet(
-        control_points=facet.control_points,
+        control_points=control_points,
         degree_e=facet.degree_e,
         degree_n=facet.degree_n,
         number_eval_points_e=facet.number_eval_points_e,
         number_eval_points_n=facet.number_eval_points_n,
-        translation_vector=facet.translation_vector,
+        translation_vector=translation_vector,
         canting_e=facet.canting_n,
         canting_n=facet.canting_e,
     )
     # Use the NurbsFacet to create a NURBS surface
     nurbs_surface = nurbs_facet.create_nurbs_surface(device=device)
     pts, _ = nurbs_surface.calculate_surface_points_and_normals(device=device)
-    pts = pts + facet.translation_vector  # adjust by facet translation
+    pts = pts + translation_vector  # adjust by facet translation
     all_surface_points.append(pts)
 deflectometry_surface = torch.cat(all_surface_points, dim=0)
 # Save deflectometry surface plot.
-save_surface_plot(deflectometry_surface, title="Deflectometry Surface", filename="deflectometry_surface2.png")
+save_surface_plot(deflectometry_surface, title="Deflectometry Surface", filename="deflectometry_surface3.png")
