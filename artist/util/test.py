@@ -58,6 +58,7 @@ def get_or_create_facet_list(surface_converter,
 # Set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 def save_surface_plot(surface_points: torch.Tensor, title: str, filename: str):
     """
     Plot and save a set of 3D points as a scatter plot.
@@ -85,8 +86,8 @@ if __name__ == "__main__":
     deflectometry_fp = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tests/data/field_data/AA39-deflectometry.h5")
     heliostat_fp = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tests/data/field_data/AA39-heliostat-properties.json")
     cache_fp = pathlib.Path("cached_facet_list.pt")  # cache file in current directory
-
     # Create a SurfaceConverter
+
     surface_converter = SurfaceConverter(step_size=1, max_epoch=20000, conversion_method=config_dictionary.convert_nurbs_from_points)
 
     # Get the facet list (either from cache or by generating it)
@@ -111,12 +112,13 @@ for facet in facet_list:
         number_eval_points_e=facet.number_eval_points_e,
         number_eval_points_n=facet.number_eval_points_n,
         translation_vector=translation_vector,
+
         canting_e=facet.canting_n,
         canting_n=facet.canting_e,
     )
     # Use the NurbsFacet to create a NURBS surface
     nurbs_surface = nurbs_facet.create_nurbs_surface(device=device)
-    pts, _ = nurbs_surface.calculate_surface_points_and_normals(device=device)
+    pts, _ = nurbs_surface.calculate_surface
     pts = pts + translation_vector  # adjust by facet translation
     all_surface_points.append(pts)
 deflectometry_surface = torch.cat(all_surface_points, dim=0)
