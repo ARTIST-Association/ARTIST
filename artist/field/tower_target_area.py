@@ -17,6 +17,8 @@ class TargetArea(torch.nn.Module):
 
     Attributes
     ----------
+    name : str
+        The name of the target area.
     geometry : str
         The geometry of the target area, e.g., planar.
     center : torch.Tensor
@@ -106,7 +108,7 @@ class TargetArea(torch.nn.Module):
         config_file : h5py.File
             The HDF5 file containing the information about the target area.
         target_area_name : str
-            The name of the target area - used for logging.
+            The name of the target area, used for logging.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

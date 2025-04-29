@@ -23,7 +23,7 @@ def test_setup_distributed_environment(
 
     Parameters
     ----------
-    is_ditributed : bool
+    is_distributed : bool
         Distributed mode enabled or disabled.
     rank : int
         The rank of the current process.

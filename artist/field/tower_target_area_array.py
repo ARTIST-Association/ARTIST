@@ -66,7 +66,7 @@ class TargetAreaArray(torch.nn.Module):
         """
         log.info("Loading the tower target area array from an HDF5 file.")
         device = torch.device(device)
-        target_area_aray = [
+        target_area_array = [
             TargetArea.from_hdf5(
                 config_file=config_file[config_dictionary.target_area_key][
                     target_area_name
@@ -78,7 +78,7 @@ class TargetAreaArray(torch.nn.Module):
                 config_dictionary.target_area_key
             ].keys()
         ]
-        return cls(target_area_list=target_area_aray)
+        return cls(target_area_list=target_area_array)
 
     def forward(self) -> None:
         """

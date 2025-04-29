@@ -16,7 +16,7 @@ from artist.util.configuration_classes import (
 )
 
 log = logging.getLogger(__name__)
-"""A logger for the scenario_generator."""
+"""A logger for the scenario generator."""
 
 
 class ScenarioGenerator:
@@ -42,12 +42,8 @@ class ScenarioGenerator:
 
     Methods
     -------
-    flatten_dict()
-        Flatten nested dictionaries to first-level keys.
-    include_parameters()
-        Include the parameters from a parameter dictionary.
     generate_scenario()
-        Generate the scenario according to the given parameters.
+        Generate the scenario and save it as an HDF5 file.
     """
 
     def __init__(
@@ -81,9 +77,9 @@ class ScenarioGenerator:
         heliostat_list_config : HeliostatListConfig
             The heliostat_list configuration object.
         prototype_config : PrototypeConfig
-            The prototype configuration object,
+            The prototype configuration object.
         version : float
-            The version of the scenario generator being used (default: 1.0).
+            The version of the scenario generator being used (default is 1.0).
         """
         self.file_path = file_path
         if not self.file_path.parent.is_dir():
@@ -96,10 +92,10 @@ class ScenarioGenerator:
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
-        self.check_facet_and_point_size()
+        self._check_facet_and_point_size()
         self.version = version
 
-    def check_facet_and_point_size(self):
+    def _check_facet_and_point_size(self):
         """
         Check that each heliostat has the same number of facets and each facet the same number of evaluation points.
 
@@ -109,16 +105,16 @@ class ScenarioGenerator:
             If at least one heliostat has a different number of facets or one facet has a different number of evaluation
             points.
         """
-        # Define accepted number of facets based on the prototype
+        # Define accepted number of facets based on the prototype.
         accepted_number_of_facets = len(
             self.prototype_config.surface_prototype.facet_list
         )
-        # Define accepted number of points based on the prototype
+        # Define accepted number of points based on the prototype.
         accepted_number_of_points = (
             self.prototype_config.surface_prototype.facet_list[0].number_eval_points_e
             * self.prototype_config.surface_prototype.facet_list[0].number_eval_points_n
         )
-        # Check that every facet in the prototype has the same number of evaluation points
+        # Check that every facet in the prototype has the same number of evaluation points.
         if not all(
             self.prototype_config.surface_prototype.facet_list[i].number_eval_points_e
             * self.prototype_config.surface_prototype.facet_list[i].number_eval_points_n
@@ -129,7 +125,7 @@ class ScenarioGenerator:
                 "The number of evaluation points for each facet is different in the surface prototype!"
             )
 
-        # Check that every heliostat has the same number of facets and evaluation points
+        # Check that every heliostat has the same number of facets and evaluation points.
         for heliostat in self.heliostat_list_config.heliostat_list:
             if heliostat.surface:
                 if len(heliostat.surface.facet_list) != accepted_number_of_facets:
@@ -146,7 +142,7 @@ class ScenarioGenerator:
                         "The number of evaluation points for each facet is different in the individual heliostat!"
                     )
 
-    def flatten_dict(
+    def _flatten_dict(
         self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
     ) -> dict[str, Any]:
         """
@@ -176,12 +172,12 @@ class ScenarioGenerator:
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, MutableMapping):
-                yield from self.flatten_dict(v, new_key, sep=sep).items()
+                yield from self._flatten_dict(v, new_key, sep=sep).items()
             else:
                 yield new_key, v
 
     @staticmethod
-    def include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+    def _include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
         """
         Include the parameters from a parameter dictionary.
 
@@ -200,7 +196,7 @@ class ScenarioGenerator:
             file[f"{prefix}/{key}"] = value
 
     def generate_scenario(self) -> None:
-        """Generate the scenario according to the given parameters."""
+        """Generate the scenario and save it as an HDF5 file."""
         log.info(f"Generating a scenario saved to: {self.file_path}.")
         save_name = self.file_path.parent / (self.file_path.name + ".h5")
         with h5py.File(save_name, "w") as f:
@@ -210,50 +206,50 @@ class ScenarioGenerator:
 
             # Include parameters for the power plant.
             log.info("Including parameters for the power plant.")
-            self.include_parameters(
+            self._include_parameters(
                 file=f,
                 prefix=config_dictionary.power_plant_key,
-                parameters=self.flatten_dict(
+                parameters=self._flatten_dict(
                     self.power_plant_config.create_power_plant_dict()
                 ),
             )
 
             # Include parameters for the tower target areas.
             log.info("Including parameters for the target areas.")
-            self.include_parameters(
+            self._include_parameters(
                 file=f,
                 prefix=config_dictionary.target_area_key,
-                parameters=self.flatten_dict(
+                parameters=self._flatten_dict(
                     self.target_area_list_config.create_target_area_list_dict()
                 ),
             )
 
             # Include parameters for the light sources.
             log.info("Including parameters for the light sources.")
-            self.include_parameters(
+            self._include_parameters(
                 file=f,
                 prefix=config_dictionary.light_source_key,
-                parameters=self.flatten_dict(
+                parameters=self._flatten_dict(
                     self.light_source_list_config.create_light_source_list_dict()
                 ),
             )
 
             # Include parameters for the prototype.
             log.info("Including parameters for the prototype.")
-            self.include_parameters(
+            self._include_parameters(
                 file=f,
                 prefix=config_dictionary.prototype_key,
-                parameters=self.flatten_dict(
+                parameters=self._flatten_dict(
                     self.prototype_config.create_prototype_dict()
                 ),
             )
 
             # Include heliostat parameters.
             log.info("Including parameters for the heliostats.")
-            self.include_parameters(
+            self._include_parameters(
                 file=f,
                 prefix=config_dictionary.heliostat_key,
-                parameters=self.flatten_dict(
+                parameters=self._flatten_dict(
                     self.heliostat_list_config.create_heliostat_list_dict()
                 ),
             )
