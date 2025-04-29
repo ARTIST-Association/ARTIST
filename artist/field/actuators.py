@@ -23,8 +23,8 @@ class Actuators(torch.nn.Module):
         """
         Initialize abstract actuators.
 
-        The abstract actuator implements a template for the construction of inheriting actuators which can be
-        ideal or linear. An actuator is responsible for turning the heliostat surface in such a way that the
+        The abstract actuator implements a template for the construction of inheriting actuators.
+        An actuator is responsible for turning the heliostat surface in such a way that the
         heliostat reflects the incoming light onto the aim point on the tower. The abstract actuator specifies
         the functionality that must be implemented in the inheriting classes. These include one function to map
         the motor steps to angles and another one for the opposite conversion of angles to motor steps.
