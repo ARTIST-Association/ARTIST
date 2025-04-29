@@ -4,15 +4,8 @@ import torch
 
 from artist.field.actuators_ideal import IdealActuators
 from artist.field.actuators_linear import LinearActuators
-from artist.field.kinematic import (
-    Kinematic,
-)
+from artist.field.kinematic import Kinematic
 from artist.util import config_dictionary, utils
-
-actuator_type_mapping = {
-    0.0: LinearActuators,
-    1.0: IdealActuators,
-}
 
 
 class RigidBody(Kinematic):
@@ -102,15 +95,19 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        actuators_object = actuator_type_mapping[actuator_parameters[0, 0, 0].item()]
-        self.actuators = actuators_object(
-            clockwise_axis_movements=actuator_parameters[:, 1],
-            increments=actuator_parameters[:, 2],
-            initial_stroke_lengths=actuator_parameters[:, 3],
-            offsets=actuator_parameters[:, 4],
-            pivot_radii=actuator_parameters[:, 5],
-            initial_angles=actuator_parameters[:, 6],
-        )
+        if actuator_parameters.shape[1] == config_dictionary.number_of_linear_actuator_parameters:
+            self.actuators = LinearActuators(
+                clockwise_axis_movements=actuator_parameters[:, 0],
+                increments=actuator_parameters[:, 1],
+                initial_stroke_lengths=actuator_parameters[:, 2],
+                offsets=actuator_parameters[:, 3],
+                pivot_radii=actuator_parameters[:, 4],
+                initial_angles=actuator_parameters[:, 5],
+            )
+        if actuator_parameters.shape[1] == config_dictionary.number_of_ideal_actuator_parameters:
+            self.actuators = IdealActuators(
+                clockwise_axis_movements=actuator_parameters[:, 0],
+            )
 
     def incident_ray_direction_to_orientations(
         self,

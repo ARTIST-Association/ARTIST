@@ -15,13 +15,14 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device="cpu"
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
 
 # The distributed environment is setup and destroyed using a Generator object.
-environment_generator = utils.setup_distributed_environment(device=device)
+environment_generator = utils.setup_global_distributed_environment(device=device) 
 
 device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -34,24 +35,52 @@ with h5py.File(scenario_path) as scenario_file:
 # The incident ray direction needs to be normed.
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-scenario.heliostat_field.all_aim_points = scenario.get_target_area("receiver").center
+# Set the aim point for the heliostats.
+aim_point = scenario.get_target_area("receiver").center
 
-# Align all heliostats.
-scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction, device=device
+# TODO NUR FÜR DEN AKTUELLEN RANK DIE INFOS RAUSGEBEN
+# TODO DADURCH FOR LOOP ELIMINIERIEN
+heliostat_group_environment = utils.set_up_single_heliostat_group_distributed_environment(
+    rank=rank,
+    world_size=world_size,
+    heliostat_groups=scenario.heliostat_field.heliostat_groups
 )
 
-# Create a ray tracer.
-ray_tracer = HeliostatRayTracer(
-    scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
-)
+for heliostat_group, group_environment in heliostat_group_environment:
+    if rank in group_environment.ranks:
+        heliostat_group.aim_points = aim_point.unsqueeze(0).expand(heliostat_group.aim_points.shape[0], -1)
+        heliostat_group.align_surfaces_with_incident_ray_direction(
+            incident_ray_direction=incident_ray_direction,
+            device=device
+        )
 
-# Perform heliostat-based ray tracing.
-final_bitmap = ray_tracer.trace_rays(
-    incident_ray_direction=incident_ray_direction,
-    target_area=scenario.get_target_area("receiver"),
-    device=device,
-)
+        ray_tracer = HeliostatRayTracer(
+            scenario=scenario, world_size=world_size, rank=rank, batch_size=2, random_seed=rank
+        )
+
+        final_bitmap = ray_tracer.trace_rays(
+            incident_ray_direction=incident_ray_direction,
+            target_area=scenario.get_target_area("receiver"),
+            device=device,
+        )
+
+        if is_distributed:
+            torch.distributed.all_reduce(final_bitmap, 
+                                         op=torch.distributed.ReduceOp.SUM,
+                                         group=heliostat_group
+            )
+
+        
+
+
+
+
+
+
+
+
+
+
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
 plt.title(f"Flux Density Distribution from rank: {rank}")
