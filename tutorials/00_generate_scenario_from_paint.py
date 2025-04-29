@@ -23,30 +23,28 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "please/insert/the/path/to/the/tower/measurements/here/tower-measurements.json"
+    "please/insert/the/path/to/the/paint/data/here/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
-# A tuple of: (helisotat-name, heliostat-properties.json, deflectometry.h5)
+# A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
-        "name1",
+        "name",
         pathlib.Path(
-            "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
+            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
         ),
-        pathlib.Path(
-            "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
-        ),
+        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
-    (
-        "name2",
-        pathlib.Path(
-            "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
-        ),
-        pathlib.Path(
-            "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
-        ),
-    ),
+    # (
+    # "name2",
+    # pathlib.Path(
+    #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+    # ),
+    # pathlib.Path(
+    #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
+    # ),
+    # ),
     # ... Include as many as you want, but at least one!
 ]
 
@@ -83,7 +81,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 target_area = [
     target_area
     for target_area in target_area_list_config.target_area_list
-    if target_area.target_area_key == config_dictionary.target_area_reveicer
+    if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
 heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(

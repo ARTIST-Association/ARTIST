@@ -197,8 +197,7 @@ class Sun(LightSource):
     def get_distortions(
         self,
         number_of_points: int,
-        number_of_facets: int = 4,
-        number_of_heliostats: int = 1,
+        number_of_heliostats: int,
         random_seed: int = 7,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -221,10 +220,11 @@ class Sun(LightSource):
             The distortion in north and up direction.
         """
         torch.manual_seed(random_seed)
+        torch.cuda.manual_seed(random_seed)
         distortions_u, distortions_e = self.distribution.sample(
             (
-                int(number_of_heliostats * self.number_of_rays),
-                number_of_facets,
+                number_of_heliostats,
+                self.number_of_rays,
                 number_of_points,
             ),
         ).permute(3, 0, 1, 2)

@@ -1,29 +1,6 @@
-from typing import TYPE_CHECKING, Generator, Union
+from typing import Generator, Union
 
 import torch
-
-if TYPE_CHECKING:
-    from artist.field.kinematic_rigid_body import RigidBody
-
-
-def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """
-    Calculate the batch-wise dot product.
-
-    Parameters
-    ----------
-    x : torch.Tensor
-        Single tensor with dimension (1, 4).
-    y : torch.Tensor
-        Single tensor with dimension (N, 4).
-
-
-    Returns
-    -------
-    torch.Tensor
-        Dot product of x and y as a tensor with dimension (N, 1).
-    """
-    return (x * y).sum(-1).unsqueeze(-1)
 
 
 def rotate_distortions(
@@ -41,11 +18,16 @@ def rotate_distortions(
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians.
+        East rotation angles in radians.
     u : torch.Tensor
-        Up rotation angle in radians.
+        Up rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the sizes of the input tensors do not match.
 
     Returns
     -------
@@ -59,21 +41,24 @@ def rotate_distortions(
     device = torch.device(device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention
+    sin_e = -torch.sin(e)  # Heliostat convention.
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(e.shape, device=device)
     ones = torch.ones(e.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_u, -sin_u, zeros, zeros], dim=1),
-            torch.stack([cos_e * sin_u, cos_e * cos_u, sin_e, zeros], dim=1),
-            torch.stack([-sin_e * sin_u, -sin_e * cos_u, cos_e, zeros], dim=1),
-            torch.stack([zeros, zeros, zeros, ones], dim=1),
-        ],
-        dim=1,
-    ).permute(0, 3, 4, 1, 2)
+    matrix = torch.zeros(e.shape[0], e.shape[1], e.shape[2], 4, 4, device=device)
+
+    matrix[:, :, :, 0, 0] = cos_u
+    matrix[:, :, :, 0, 1] = -sin_u
+    matrix[:, :, :, 1, 0] = cos_e * sin_u
+    matrix[:, :, :, 1, 1] = cos_e * cos_u
+    matrix[:, :, :, 1, 2] = sin_e
+    matrix[:, :, :, 2, 0] = -sin_e * sin_u
+    matrix[:, :, :, 2, 1] = -sin_e * cos_u
+    matrix[:, :, :, 2, 2] = cos_e
+    matrix[:, :, :, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_e(
@@ -90,7 +75,7 @@ def rotate_e(
     Parameters
     ----------
     e : torch.Tensor
-        East rotation angle in radians.
+        East rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -102,17 +87,19 @@ def rotate_e(
     device = torch.device(device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention
-    zeros = torch.zeros(e.shape, device=device)
+    sin_e = -torch.sin(e)  # Heliostat convention.
     ones = torch.ones(e.shape, device=device)
-    return torch.stack(
-        [
-            torch.stack([ones, zeros, zeros, zeros]),
-            torch.stack([zeros, cos_e, sin_e, zeros]),
-            torch.stack([zeros, -sin_e, cos_e, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+
+    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = ones
+    matrix[:, 1, 1] = cos_e
+    matrix[:, 1, 2] = sin_e
+    matrix[:, 2, 1] = -sin_e
+    matrix[:, 2, 2] = cos_e
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_n(
@@ -128,7 +115,7 @@ def rotate_n(
     Parameters
     ----------
     n : torch.Tensor
-        North rotation angle in radians.
+        North rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -141,17 +128,18 @@ def rotate_n(
 
     cos_n = torch.cos(n)
     sin_n = torch.sin(n)
-    zeros = torch.zeros(n.shape, device=device)
     ones = torch.ones(n.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_n, zeros, -sin_n, zeros]),
-            torch.stack([zeros, ones, zeros, zeros]),
-            torch.stack([sin_n, zeros, cos_n, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(n.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = cos_n
+    matrix[:, 0, 2] = -sin_n
+    matrix[:, 1, 1] = ones
+    matrix[:, 2, 0] = sin_n
+    matrix[:, 2, 2] = cos_n
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def rotate_u(
@@ -167,7 +155,7 @@ def rotate_u(
     Parameters
     ----------
     u : torch.Tensor
-        Up rotation angle in radians.
+        Up rotation angles in radians.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -180,17 +168,18 @@ def rotate_u(
 
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    zeros = torch.zeros(u.shape, device=device)
     ones = torch.ones(u.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([cos_u, -sin_u, zeros, zeros]),
-            torch.stack([sin_u, cos_u, zeros, zeros]),
-            torch.stack([zeros, zeros, ones, zeros]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(u.shape[0], 4, 4, device=device)
+
+    matrix[:, 0, 0] = cos_u
+    matrix[:, 0, 1] = -sin_u
+    matrix[:, 1, 0] = sin_u
+    matrix[:, 1, 1] = cos_u
+    matrix[:, 2, 2] = ones
+    matrix[:, 3, 3] = ones
+
+    return matrix
 
 
 def translate_enu(
@@ -208,13 +197,18 @@ def translate_enu(
     Parameters
     ----------
     e : torch.Tensor
-        East translation.
+        East translations.
     n : torch.Tensor
-        North translation.
+        North translations.
     u : torch.Tensor
-        Up translation.
+        Up translations.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the sizes of the input tensors do not match.
 
     Returns
     -------
@@ -228,59 +222,19 @@ def translate_enu(
 
     device = torch.device(device)
 
-    zeros = torch.zeros(e.shape, device=device)
     ones = torch.ones(e.shape, device=device)
 
-    return torch.stack(
-        [
-            torch.stack([ones, zeros, zeros, e]),
-            torch.stack([zeros, ones, zeros, n]),
-            torch.stack([zeros, zeros, ones, u]),
-            torch.stack([zeros, zeros, zeros, ones]),
-        ],
-    ).squeeze(-1)
+    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
 
+    matrix[:, 0, 0] = ones
+    matrix[:, 0, 3] = e
+    matrix[:, 1, 1] = ones
+    matrix[:, 1, 3] = n
+    matrix[:, 2, 2] = ones
+    matrix[:, 2, 3] = u
+    matrix[:, 3, 3] = ones
 
-def azimuth_elevation_to_enu(
-    azimuth: torch.Tensor,
-    elevation: torch.Tensor,
-    slant_range: float = 1.0,
-    degree: bool = True,
-) -> torch.Tensor:
-    """
-    Coordinate transformation from azimuth and elevation to east, north, up.
-
-    Parameters
-    ----------
-    azimuth : torch.Tensor
-        Azimuth, clockwise from north (degrees).
-    elevation : torch.Tensor
-        Elevation angle above horizon, neglecting aberrations (degrees).
-    slant_range : float
-        Slant range (meters).
-    degree : bool
-        Whether input is given in degrees or radians.
-
-    Returns
-    -------
-    torch.Tensor
-        The east, north, up (enu) coordinates.
-    """
-    if degree:
-        elevation = torch.deg2rad(elevation)
-        azimuth = torch.deg2rad(azimuth)
-
-    r = slant_range * torch.cos(elevation)
-
-    enu = torch.stack(
-        [
-            r * torch.sin(azimuth),
-            -r * torch.cos(azimuth),
-            slant_range * torch.sin(elevation),
-        ],
-        dim=0,
-    )
-    return enu
+    return matrix
 
 
 def convert_3d_point_to_4d_format(
@@ -297,6 +251,11 @@ def convert_3d_point_to_4d_format(
         Input point in a 3D format.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the input is not 3D.
 
     Returns
     -------
@@ -326,6 +285,11 @@ def convert_3d_direction_to_4d_format(
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
+    Raises
+    ------
+    ValueError
+        If the input is not 3D.
+
     Returns
     -------
     torch.Tensor
@@ -341,118 +305,6 @@ def convert_3d_direction_to_4d_format(
         direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
     )
     return torch.cat((direction, zeros_tensor), dim=-1)
-
-
-def convert_wgs84_coordinates_to_local_enu(
-    coordinates_to_transform: torch.Tensor,
-    reference_point: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
-) -> torch.Tensor:
-    """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
-
-    This function calculates the north and east offsets in meters of a coordinate from the reference point.
-    It converts the latitude and longitude to radians, calculates the radius of curvature values,
-    and then computes the offsets based on the differences between the coordinate and the refernce point.
-    Finally, it returns a tensor containing these offsets along with the altitude difference.
-
-    Parameters
-    ----------
-    coordinates_to_transform : torch.Tensor
-        The coordinates in latitude, longitude, altitude that are to be transformed.
-    reference_point : torch.Tensor
-        The center of origin of the ENU coordinate system in WGS84 coordinates.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
-
-    Returns
-    -------
-    torch.Tensor
-        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
-    """
-    device = torch.device(device)
-    wgs84_a = 6378137.0  # Major axis in meters
-    wgs84_b = 6356752.314245  # Minor axis in meters
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
-
-    # Convert latitude and longitude to radians.
-    lat_rad = torch.deg2rad(coordinates_to_transform[0])
-    lon_rad = torch.deg2rad(coordinates_to_transform[1])
-    alt = coordinates_to_transform[2] - reference_point[2]
-    lat_tower_rad = torch.deg2rad(reference_point[0])
-    lon_tower_rad = torch.deg2rad(reference_point[1])
-
-    # Calculate meridional radius of curvature for the first latitude.
-    sin_lat1 = torch.sin(lat_rad)
-    rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
-
-    # Calculate transverse radius of curvature for the first latitude.
-    rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
-
-    # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = lat_tower_rad - lat_rad
-    dlon_rad = lon_tower_rad - lon_rad
-
-    # Calculate north and east offsets in meters.
-    north_offset_m = dlat_rad * rm1
-    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
-
-    return torch.tensor(
-        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
-    )
-
-
-def get_rigid_body_kinematic_parameters_from_scenario(
-    kinematic: "RigidBody",
-) -> list[torch.Tensor]:
-    """
-    Extract all deviation parameters and actuator parameters from a rigid body kinematic.
-
-    Parameters
-    ----------
-    kinematic : RigidBody
-        The kinematic from which to extract the parameters.
-
-    Returns
-    -------
-    list[torch.Tensor]
-        The parameters from the kinematic (requires_grad is True).
-    """
-    parameters_list = [
-        kinematic.deviation_parameters.first_joint_translation_e,
-        kinematic.deviation_parameters.first_joint_translation_n,
-        kinematic.deviation_parameters.first_joint_translation_u,
-        kinematic.deviation_parameters.first_joint_tilt_e,
-        kinematic.deviation_parameters.first_joint_tilt_n,
-        kinematic.deviation_parameters.first_joint_tilt_u,
-        kinematic.deviation_parameters.second_joint_translation_e,
-        kinematic.deviation_parameters.second_joint_translation_n,
-        kinematic.deviation_parameters.second_joint_translation_u,
-        kinematic.deviation_parameters.second_joint_tilt_e,
-        kinematic.deviation_parameters.second_joint_tilt_n,
-        kinematic.deviation_parameters.second_joint_tilt_u,
-        kinematic.deviation_parameters.concentrator_translation_e,
-        kinematic.deviation_parameters.concentrator_translation_n,
-        kinematic.deviation_parameters.concentrator_translation_u,
-        kinematic.deviation_parameters.concentrator_tilt_e,
-        kinematic.deviation_parameters.concentrator_tilt_n,
-        kinematic.deviation_parameters.concentrator_tilt_u,
-        kinematic.actuators.actuator_list[0].increment,
-        kinematic.actuators.actuator_list[0].initial_stroke_length,
-        kinematic.actuators.actuator_list[0].offset,
-        kinematic.actuators.actuator_list[0].pivot_radius,
-        kinematic.actuators.actuator_list[0].initial_angle,
-        kinematic.actuators.actuator_list[1].increment,
-        kinematic.actuators.actuator_list[1].initial_stroke_length,
-        kinematic.actuators.actuator_list[1].offset,
-        kinematic.actuators.actuator_list[1].pivot_radius,
-        kinematic.actuators.actuator_list[1].initial_angle,
-    ]
-    for parameter in parameters_list:
-        if parameter is not None:
-            parameter.requires_grad_()
-
-    return parameters_list
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
@@ -476,45 +328,7 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
     return points_normalized
 
 
-def corner_points_to_plane(
-    upper_left: torch.Tensor,
-    upper_right: torch.Tensor,
-    lower_left: torch.Tensor,
-    lower_right: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    Span a plane from corner points.
-
-    Parameters
-    ----------
-    upper_left : torch.Tensor
-        The upper left corner coordinate.
-    upper_right : torch.Tensor
-        The upper right corner coordinate.
-    lower_left : torch.Tensor
-        The lower left corner coordinate.
-    lower_right : torch.Tensor
-        The lower right corner coordinate.
-
-    Returns
-    -------
-    torch.Tensor
-        The plane measurement in east direction.
-    torch.Tensor
-        The plane measurement in up direction.
-    """
-    plane_e = (
-        torch.abs(upper_right[0] - upper_left[0])
-        + torch.abs(lower_right[0] - lower_left[0])
-    ) / 2
-    plane_u = (
-        torch.abs(upper_left[2] - lower_left[2])
-        + torch.abs(upper_right[2] - lower_right[2])
-    ) / 2
-    return plane_e, plane_u
-
-
-def decompose_rotation(
+def decompose_rotations(
     initial_vector: torch.Tensor,
     target_vector: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
@@ -542,29 +356,26 @@ def decompose_rotation(
 
     """
     device = torch.device(device)
-    # Normalize the input vectors
-    initial_vector = initial_vector / torch.linalg.norm(initial_vector)
-    target_vector = target_vector / torch.linalg.norm(target_vector)
 
-    # Compute the cross product (rotation axis)
+    # Normalize the input vectors.
+    initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
+    target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(
+        0
+    )
+
+    # Compute the cross product (rotation axis).
     r = torch.linalg.cross(initial_vector, target_vector)
-    r_norm = torch.linalg.norm(r)
 
-    # If the cross product is zero, the vectors are aligned; no rotation needed
-    if r_norm == 0:
-        return torch.tensor([0.0, 0.0, 0.0], device=device)
+    # Normalize the rotation axis.
+    r_normalized = torch.nn.functional.normalize(r, p=2, dim=1)
 
-    # Normalize the rotation axis
-    r_normalized = r / r_norm
+    # Compute the angle between the vectors.
+    theta = torch.arccos(torch.clamp(initial_vector @ target_vector.T, -1.0, 1.0))
 
-    # Compute the angle between the vectors
-    cos_theta = torch.clip(torch.dot(initial_vector, target_vector), -1.0, 1.0)
-    theta = torch.arccos(cos_theta)
-
-    # Decompose the angle along each axis
+    # Decompose the angle along each axis.
     theta_components = theta * r_normalized
 
-    return theta_components[0], theta_components[1], theta_components[2]
+    return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
 
 
 def angle_between_vectors(
@@ -619,7 +430,7 @@ def transform_initial_angle(
     initial_angle : torch.Tensor
         The initial angle, or offset along the east-axis.
     initial_orientation : torch.Tensor
-        The initial orientation of the coordiante system.
+        The initial orientation of the coordinate system.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -636,9 +447,9 @@ def transform_initial_angle(
     initial_orientation_with_offset = initial_orientation @ rotate_e(
         e=initial_angle,
         device=device,
-    )
+    ).squeeze(0)
 
-    # Compute the transformed angle relative to the reference orientation
+    # Compute the transformed angle relative to the reference orientation.
     transformed_initial_angle = angle_between_vectors(
         initial_orientation[:-1], initial_orientation_with_offset[:-1]
     ) - angle_between_vectors(
@@ -673,7 +484,7 @@ def get_center_of_mass(
     plane_u : float
         The height of the target surface.
     threshold : float
-        Determines how intense a pixel in the bitmap needs to be to be registered (default: 0.0).
+        Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -686,10 +497,10 @@ def get_center_of_mass(
     height, width = bitmap.shape
 
     # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_thresholded = torch.where(
+    flux_threshold = torch.where(
         bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device)
     )
-    total_intensity = flux_thresholded.sum()
+    total_intensity = flux_threshold.sum()
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
@@ -699,9 +510,9 @@ def get_center_of_mass(
     ) / height
 
     # Compute the center of intensity using weighted sums of the coordinates.
-    center_of_mass_e = (flux_thresholded.sum(dim=0) * e_indices).sum() / total_intensity
+    center_of_mass_e = (flux_threshold.sum(dim=0) * e_indices).sum() / total_intensity
     center_of_mass_u = 1 - (
-        (flux_thresholded.sum(dim=1) * u_indices).sum() / total_intensity
+        (flux_threshold.sum(dim=1) * u_indices).sum() / total_intensity
     )
 
     # Construct the coordinates relative to target center.
@@ -750,20 +561,20 @@ def setup_distributed_environment(
     rank, world_size = 0, 1
 
     try:
-        # Attempt to initialize the process group
+        # Attempt to initialize the process group.
         torch.distributed.init_process_group(backend=backend, init_method="env://")
         is_distributed = True
         world_size = torch.distributed.get_world_size()
         rank = torch.distributed.get_rank()
         if rank == 0:
-            print(f"Using device type: {device.type} and backend: {backend}")
-            print(f"Distributed Mode: {'Enabled' if is_distributed else 'Disabled'}")
+            print(f"Using device type: {device.type} and backend: {backend}.")
+            print(f"Distributed Mode: {'Enabled.' if is_distributed else 'Disabled.'}")
         print(
             f"Distributed process group initialized: Rank {rank}, World Size {world_size}"
         )
 
     except Exception:
-        print(f"Using device type: {device.type} and backend: {backend}")
+        print(f"Using device type: {device.type} and backend: {backend}.")
         print("Running in single-device mode.")
 
     if device.type == "cuda" and is_distributed:
