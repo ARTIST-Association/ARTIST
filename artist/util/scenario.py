@@ -154,17 +154,8 @@ class Scenario:
             device=device,
         )
 
-        number_of_heliostats = len(scenario_file[config_dictionary.heliostat_key])
-        number_of_surface_points_per_heliostat = (
-            len(prototype_surface.facet_list)
-            * prototype_surface.facet_list[0].number_eval_points_e
-            * prototype_surface.facet_list[0].number_eval_points_n
-        )
-
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
-            number_of_heliostats=number_of_heliostats,
-            number_of_surface_points_per_heliostat=number_of_surface_points_per_heliostat,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=prototype_initial_orientation,
             prototype_kinematic_deviations=prototype_kinematic_deviations,

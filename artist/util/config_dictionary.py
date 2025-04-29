@@ -101,8 +101,10 @@ rigid_body_number_of_deviation_parameters = 18
 """Number of deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
-number_of_actuator_parameters = 7
-"""Number of actuator parameters for linear or ideal actuators."""
+number_of_linear_actuator_parameters = 6
+"""Number of actuator parameters for linear actuators."""
+number_of_ideal_actuator_parameters = 1
+"""Number of actuator parameters for ideal actuators."""
 kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
 kinematic_deviations_key = "deviations"
@@ -129,10 +131,6 @@ ideal_actuator_key = "ideal"
 """Key defining that the actuator used is an ideal actuator."""
 linear_actuator_key = "linear"
 """Key defining that the actuator used is a linear actuator."""
-linear_actuator_number_of_parameters = 7
-"""Number of parameters for a single linear actuator."""
-ideal_actuator_number_of_parameters = 2
-"""Number of parameters for a single ideal actuator."""
 
 surface_prototype_key = "surface"
 """Key to access the surface prototype."""
@@ -175,6 +173,22 @@ optimizer_use_raytracing = "use_raytracing"
 optimizer_use_motor_positions = "use_motor_positions"
 """Defines that the alignment optimizer uses motor positions."""
 
+names = "names"
+"""Key to access heliostat names."""
+positions = "positions"
+"""Key to access heliostat positions."""
+aim_points = "aim_points"
+"""Key to access heliostat aim_points."""
+surface_points = "surface_points"
+"""Key to access surface points."""
+surface_normals = "surface_normals"
+"""Key to access surface normals."""
+initial_orientations = "initial_orientations"
+"""Key to access initial orientations of heliostats."""
+kinematic_deviation_parameters = "kinematic_deviation_parameters"
+"""Key to access kinematic deviation parameters of heliostats."""
+actuator_parameters = "actuator_parameters"
+"""Key to access actuator parameters of heliostats."""
 
 paint_target_area_geometry = "type"
 """Key to access the target area geometry in a ``PAINT`` tower.json file."""

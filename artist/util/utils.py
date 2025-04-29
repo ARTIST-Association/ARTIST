@@ -526,7 +526,7 @@ def get_center_of_mass(
     return center_coordinates
 
 
-def setup_distributed_environment(
+def setup_global_distributed_environment(
     device: Union[torch.device, str] = "cuda",
 ) -> Generator[tuple[torch.device, bool, int, int], None, None]:
     """
@@ -589,3 +589,16 @@ def setup_distributed_environment(
         if is_distributed:
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
+
+
+def set_up_single_heliostat_group_distributed_environment(rank, world_size, heliostat_groups):
+    assert world_size % len(heliostat_groups) == 0, "World size must be divisible by number of heliostat groups!"
+    ranks_per_heliostat_group = world_size // len(heliostat_groups)
+
+    heliostat_group_environment = []
+    for heliostat_group_id, heliostat_group in enumerate(heliostat_groups):
+        heliostat_group_ranks = list(range(heliostat_group_id * ranks_per_heliostat_group, (heliostat_group_id + 1) * ranks_per_heliostat_group))
+        environment = torch.distributed.new_group(ranks=heliostat_group_ranks)
+        heliostat_group_environment.append((heliostat_group, environment))
+
+    return heliostat_group_environment

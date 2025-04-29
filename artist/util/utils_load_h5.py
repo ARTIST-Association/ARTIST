@@ -480,16 +480,19 @@ def actuator_parameters(
     else:
         actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
 
-    if (
-        actuator_type == config_dictionary.linear_actuator_key
-        or actuator_type == config_dictionary.ideal_actuator_key
-    ):
-        actuator_parameters = parameters_juelich_actuators(
+    if actuator_type == config_dictionary.linear_actuator_key:
+        actuator_parameters = linear_actuators(
             actuator_config=actuator_config,
             number_of_actuators=number_of_actuators,
             initial_orientation=initial_orientation,
             log=log,
             heliostat_name=heliostat_name,
+            device=device,
+        )
+    elif actuator_type == config_dictionary.ideal_actuator_key:
+        actuator_parameters = ideal_actuators(
+            actuator_config=actuator_config,
+            number_of_actuators=number_of_actuators,
             device=device,
         )
     else:
@@ -498,7 +501,7 @@ def actuator_parameters(
     return actuator_parameters
 
 
-def parameters_juelich_actuators(
+def linear_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
     initial_orientation: torch.Tensor,
@@ -507,7 +510,7 @@ def parameters_juelich_actuators(
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
-    Load actuator parameters for juelich actuators from an HDF5 scenario file.
+    Load actuator parameters for linear actuators from an HDF5 scenario file.
 
     Parameters
     ----------
@@ -532,7 +535,7 @@ def parameters_juelich_actuators(
     Returns
     -------
     torch.Tensor
-        7 actuator parameters for for each linear actuator in the file.
+        6 actuator parameters for each linear actuator in the file.
     """
     device = torch.device(device)
 
@@ -543,16 +546,11 @@ def parameters_juelich_actuators(
         )
 
     actuator_parameters = torch.zeros(
-        (config_dictionary.linear_actuator_number_of_parameters, number_of_actuators),
+        (config_dictionary.number_of_linear_actuator_parameters, number_of_actuators),
         device=device,
     )
 
     for index, actuator in enumerate(actuator_config.keys()):
-        type = str(
-            actuator_config[actuator][config_dictionary.actuator_type_key][()].decode(
-                "utf-8"
-            )
-        )
         clockwise_axis_movement = bool(
             actuator_config[actuator][
                 config_dictionary.actuator_clockwise_axis_movement
@@ -608,33 +606,30 @@ def parameters_juelich_actuators(
                 f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
-        actuator_parameters[0, index] = (
-            0 if type == config_dictionary.linear_actuator_key else 1
-        )
 
-        actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
+        actuator_parameters[0, index] = 0 if not clockwise_axis_movement else 1
 
-        actuator_parameters[2, index] = (
+        actuator_parameters[1, index] = (
             torch.tensor(increment[()], dtype=torch.float, device=device)
             if increment
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[3, index] = (
+        actuator_parameters[2, index] = (
             torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
             if initial_stroke_length
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[4, index] = (
+        actuator_parameters[3, index] = (
             torch.tensor(offset[()], dtype=torch.float, device=device)
             if offset
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[5, index] = (
+        actuator_parameters[4, index] = (
             torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
             if pivot_radius
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[6, index] = (
+        actuator_parameters[5, index] = (
             torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
             else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -646,11 +641,62 @@ def parameters_juelich_actuators(
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator one needs to be transformed accordingly.
-    if actuator_parameters[0, 0] == 0.0:
-        actuator_parameters[6, 0] = utils.transform_initial_angle(
-            initial_angle=actuator_parameters[6, 0].unsqueeze(0),
-            initial_orientation=initial_orientation,
-            device=device,
+    actuator_parameters[5, 0] = utils.transform_initial_angle(
+        initial_angle=actuator_parameters[5, 0].unsqueeze(0),
+        initial_orientation=initial_orientation,
+        device=device,
+    )
+
+    return actuator_parameters
+
+
+def ideal_actuators(
+    actuator_config: h5py.File,
+    number_of_actuators: int,
+    device: Union[torch.device, str] = "cuda",
+) -> torch.Tensor:
+    """
+    Load actuator parameters for ideal actuators from an HDF5 scenario file.
+
+    Parameters
+    ----------
+    actuator_config : h5py.File
+        The opened scenario HDF5 file containing the information.
+    number_of_actuators : int
+        The number of actuators used for a specific kinematic.
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
+
+    Raises
+    ------
+    ValueError
+        If the file contains the wrong amount of actuators for a heliostat with a specific kinematic type.
+
+    Returns
+    -------
+    torch.Tensor
+        1 actuator parameter for each ideal actuator in the file.
+    """
+    device = torch.device(device)
+
+    if len(actuator_config.keys()) != number_of_actuators:
+        raise ValueError(
+            f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type."
+            f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
+
+    actuator_parameters = torch.zeros(
+        (config_dictionary.number_of_ideal_actuator_parameters, number_of_actuators),
+        device=device,
+    )
+
+    for index, actuator in enumerate(actuator_config.keys()):
+        clockwise_axis_movement = bool(
+            actuator_config[actuator][
+                config_dictionary.actuator_clockwise_axis_movement
+            ][()]
+        )
+
+        actuator_parameters[0, index] = 0 if not clockwise_axis_movement else 1
 
     return actuator_parameters
