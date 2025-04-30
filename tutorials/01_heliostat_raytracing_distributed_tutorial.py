@@ -15,14 +15,16 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-#device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-device="cpu"
+# device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
+scenario_path = pathlib.Path(
+    "tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # The distributed environment is setup and destroyed using a Generator object.
-environment_generator = utils.setup_global_distributed_environment(device=device) 
+environment_generator = utils.setup_global_distributed_environment(device=device)
 
 device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -40,22 +42,36 @@ aim_point = scenario.get_target_area("receiver").center
 
 # TODO NUR FÜR DEN AKTUELLEN RANK DIE INFOS RAUSGEBEN
 # TODO DADURCH FOR LOOP ELIMINIERIEN
-heliostat_group_environment = utils.set_up_single_heliostat_group_distributed_environment(
-    rank=rank,
-    world_size=world_size,
-    heliostat_groups=scenario.heliostat_field.heliostat_groups
+heliostat_group_to_rank_mapping = (
+    utils.set_up_single_heliostat_group_distributed_environment(
+        rank=rank,
+        world_size=world_size,
+        number_of_heliostat_groups=len(scenario.heliostat_field.heliostat_groups),
+    )
 )
 
-for heliostat_group, group_environment in heliostat_group_environment:
-    if rank in group_environment.ranks:
-        heliostat_group.aim_points = aim_point.unsqueeze(0).expand(heliostat_group.aim_points.shape[0], -1)
+
+for (
+    heliostat_group_index,
+    heliostat_group_ranks,
+    group_environment,
+) in heliostat_group_to_rank_mapping:
+    if rank in heliostat_group_ranks:
+        scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ].aim_points = aim_point.unsqueeze(0).expand(
+            heliostat_group.aim_points.shape[0], -1
+        )
         heliostat_group.align_surfaces_with_incident_ray_direction(
-            incident_ray_direction=incident_ray_direction,
-            device=device
+            incident_ray_direction=incident_ray_direction, device=device
         )
 
         ray_tracer = HeliostatRayTracer(
-            scenario=scenario, world_size=world_size, rank=rank, batch_size=2, random_seed=rank
+            scenario=scenario,
+            world_size=world_size,
+            rank=rank,
+            batch_size=2,
+            random_seed=rank,
         )
 
         final_bitmap = ray_tracer.trace_rays(
@@ -65,21 +81,9 @@ for heliostat_group, group_environment in heliostat_group_environment:
         )
 
         if is_distributed:
-            torch.distributed.all_reduce(final_bitmap, 
-                                         op=torch.distributed.ReduceOp.SUM,
-                                         group=heliostat_group
+            torch.distributed.all_reduce(
+                final_bitmap, op=torch.distributed.ReduceOp.SUM, group=heliostat_group
             )
-
-        
-
-
-
-
-
-
-
-
-
 
 
 plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
