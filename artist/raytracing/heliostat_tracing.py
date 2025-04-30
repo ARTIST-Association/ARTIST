@@ -4,6 +4,7 @@ from typing import Iterator, Union
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
+from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_area import TargetArea
 from artist.scene import LightSource
 from artist.util import utils
@@ -218,7 +219,8 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
-        scenario: Scenario,
+        heliostat_group: HeliostatGroup,
+        light_source: LightSource,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -237,8 +239,10 @@ class HeliostatRayTracer:
 
         Parameters
         ----------
-        scenario : Scenario
-            The scenario used to perform ray tracing.
+        number_of_heliostats : int
+            The total number of heliostats to be ray traced.
+        number_of_surface_points_per_heliostat : int
+            The number of surface points per heliostat. 
         world_size : int
             The world size i.e., the overall number of processes (default is 1).
         rank : int
@@ -252,20 +256,18 @@ class HeliostatRayTracer:
         bitmap_resolution_u : int
             The resolution of the bitmap in the up dimension (default is 256).
         """
-        self.scenario = scenario
         self.world_size = world_size
         self.rank = rank
         self.batch_size = batch_size
 
-        self.number_of_surface_points_per_heliostat = (
-            self.scenario.heliostat_field.all_current_aligned_surface_points.shape[1]
-        )
+        self.heliostat_group = heliostat_group
+        self.light_source = light_source
 
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
-            light_source=scenario.light_sources.light_source_list[0],
-            number_of_points_per_heliostat=self.number_of_surface_points_per_heliostat,
-            number_of_heliostats=self.scenario.heliostat_field.number_of_heliostats,
+            light_source=self.light_source,
+            number_of_points_per_heliostat=self.heliostat_group.surface_points.shape[1],
+            number_of_heliostats=self.heliostat_group.number_of_heliostats,
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -322,12 +324,12 @@ class HeliostatRayTracer:
             (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
-        if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1.0):
+        if not torch.all(self.heliostat_group.aligned_heliostats == 1.0):
             raise ValueError("Not all heliostats have been aligned.")
 
-        self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect(
+        self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incoming_ray_direction=incident_ray_direction,
-            reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals,
+            reflection_surface_normals=self.heliostat_group.current_aligned_surface_normals,
         )
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
@@ -338,7 +340,11 @@ class HeliostatRayTracer:
             ]
 
             rays = self.scatter_rays(
-                batch_u, batch_e, heliostat_indices_per_batch, device
+                preferred_reflection_directions=self.heliostat_group.preferred_reflection_directions,
+                distortion_u=batch_u,
+                distortion_e=batch_e,
+                heliostat_indices=heliostat_indices_per_batch,
+                device=device
             )
 
             intersections, absolute_intensities = (
@@ -346,7 +352,7 @@ class HeliostatRayTracer:
                     rays=rays,
                     plane_normal_vector=target_area.normal_vector,
                     plane_center=target_area.center,
-                    points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[
+                    points_at_ray_origin=self.heliostat_group.current_aligned_surface_points[
                         heliostat_indices_per_batch
                     ],
                 )
@@ -385,6 +391,7 @@ class HeliostatRayTracer:
 
     def scatter_rays(
         self,
+        preferred_reflection_directions: torch.Tensor,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
         heliostat_indices: list,
@@ -417,7 +424,7 @@ class HeliostatRayTracer:
 
         scattered_rays = (
             rotations
-            @ self.scenario.heliostat_field.all_preferred_reflection_directions[
+            @ preferred_reflection_directions[
                 heliostat_indices, :, :
             ]
             .unsqueeze(1)

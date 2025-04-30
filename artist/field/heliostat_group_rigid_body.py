@@ -46,8 +46,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         The aligned surface points of all heliostats in the group.
     current_aligned_surface_normals : torch.Tensor
         The aligned surface normals of all heliostats in the group.
-    rigid_body_kinematic : RigidBody
-        The kinematic of all heliostats in the group.
+    kinematic : RigidBody
+        The kinematic (rigid body) of all heliostats in the group.
 
     Methods
     -------
@@ -125,7 +125,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             self.surface_normals, device=device
         )
 
-        self.rigid_body_kinematic = RigidBody(
+        self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
             aim_points=self.aim_points,
@@ -157,7 +157,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.rigid_body_kinematic.align_surfaces_with_incident_ray_direction(
+        ) = self.kinematic.align_surfaces_with_incident_ray_direction(
             incident_ray_direction=incident_ray_direction,
             surface_points=self.surface_points,
             surface_normals=self.surface_normals,
@@ -190,7 +190,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = torch.device(device)
         
-        return self.rigid_body_kinematic.motor_positions_to_orientations(
+        return self.kinematic.motor_positions_to_orientations(
             motor_positions, device
         )
 
@@ -217,7 +217,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.rigid_body_kinematic.align_surfaces_with_motor_positions(
+        ) = self.kinematic.align_surfaces_with_motor_positions(
             motor_positions=motor_positions,
             surface_points=self.surface_points,
             surface_normals=self.surface_normals,
