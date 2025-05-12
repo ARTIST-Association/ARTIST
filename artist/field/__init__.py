@@ -10,8 +10,7 @@ from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.field.kinematic import Kinematic
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
-from artist.field.tower_target_area import TargetArea
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 
 __all__ = [
     "Actuators",
@@ -22,8 +21,7 @@ __all__ = [
     "HeliostatField",
     "HeliostatGroup",
     "HeliostatGroupRigidBody",
-    "TargetArea",
-    "TargetAreaArray",
+    "TowerTargetAreas",
     "Kinematic",
     "RigidBody",
 ]

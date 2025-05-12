@@ -13,7 +13,7 @@ from artist.field.kinematic import Kinematic
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
 from artist.field.tower_target_area import TargetArea
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source import LightSource
 from artist.scene.light_source_array import LightSourceArray
 from artist.scene.sun import Sun
@@ -28,7 +28,7 @@ from artist.util.nurbs import NURBSSurface
         NurbsFacet,
         HeliostatField,
         RigidBody,
-        TargetAreaArray,
+        TowerTargetAreas,
         TargetArea,
         Surface,
         LightSourceArray,

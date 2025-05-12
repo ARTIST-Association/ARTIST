@@ -18,7 +18,7 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_global_distributed_environment(device=device)
@@ -34,18 +34,31 @@ with h5py.File(scenario_path) as scenario_file:
 # The incident ray direction needs to be normed.
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
+heliostat_selection = ["AA39", "AA35"]
+
 bitmaps = []
 for group_index, group in enumerate(scenario.heliostat_field.heliostat_groups):
-    group.aim_points = scenario.get_target_area("receiver").center
+
+    if not heliostat_selection:
+        heliostat_indices = list(range(len(group.names)))
+    else:
+        heliostat_indices = [i for i, name in enumerate(group.names) if name in heliostat_selection]
+
+    target_area_index = scenario.target_areas.names.index("receiver")
+    group.aim_points = scenario.target_areas.centers[target_area_index]
 
     # Align all heliostats.
     group.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=incident_ray_direction, device=device
+        incident_ray_direction=incident_ray_direction, 
+        heliostat_indices=heliostat_indices,
+        device=device
     )
 
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
-        heliostat=group,
+        scenario=scenario,
+        heliostat_group=group,
+        heliostat_indices=heliostat_indices,
         light_source=scenario.light_sources.light_source_list[0],
         world_size=world_size, 
         rank=rank, 
@@ -56,7 +69,7 @@ for group_index, group in enumerate(scenario.heliostat_field.heliostat_groups):
     # Perform heliostat-based ray tracing.
     group_bitmap = ray_tracer.trace_rays(
         incident_ray_direction=incident_ray_direction,
-        target_area=scenario.get_target_area("receiver"),
+        target_area_indices=[target_area_index, target_area_index],
         device=device,
     )
 
