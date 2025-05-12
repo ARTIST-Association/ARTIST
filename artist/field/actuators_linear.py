@@ -86,7 +86,9 @@ class LinearActuators(Actuators):
         self.initial_angles = initial_angles
 
     def _motor_positions_to_absolute_angles(
-        self, motor_positions: torch.Tensor
+        self, 
+        heliostat_indices: list[int],
+        motor_positions: torch.Tensor
     ) -> torch.Tensor:
         """
         Convert motor steps into angles using actuator geometries.
@@ -105,15 +107,18 @@ class LinearActuators(Actuators):
         torch.Tensor
             The calculated absolute angles.
         """
-        stroke_lengths = motor_positions / self.increments + self.initial_stroke_lengths
-        calc_step_1 = self.offsets**2 + self.pivot_radii**2 - stroke_lengths**2
-        calc_step_2 = 2.0 * self.offsets * self.pivot_radii
+        stroke_lengths = motor_positions / self.increments[heliostat_indices] + self.initial_stroke_lengths[heliostat_indices]
+        calc_step_1 = self.offsets[heliostat_indices]**2 + self.pivot_radii[heliostat_indices]**2 - stroke_lengths**2
+        calc_step_2 = 2.0 * self.offsets[heliostat_indices] * self.pivot_radii[heliostat_indices]
         calc_step_3 = calc_step_1 / calc_step_2
         absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
         return absolute_angles
 
     def motor_positions_to_angles(
-        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self, 
+        heliostat_indices: list[int],
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
@@ -135,22 +140,27 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
         absolute_angles = self._motor_positions_to_absolute_angles(
+            heliostat_indices=heliostat_indices,
             motor_positions=motor_positions
         )
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
+            heliostat_indices=heliostat_indices,
             motor_positions=torch.zeros_like(motor_positions, device=device)
         )
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.initial_angles
-            + delta_angles * (self.clockwise_axis_movements == 1)
-            - delta_angles * (self.clockwise_axis_movements == 0)
+            self.initial_angles[heliostat_indices]
+            + delta_angles * (self.clockwise_axis_movements[heliostat_indices] == 1)
+            - delta_angles * (self.clockwise_axis_movements[heliostat_indices] == 0)
         )
         return relative_angles
 
     def angles_to_motor_positions(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self, 
+        heliostat_indices: list[str],
+        angles: torch.Tensor, 
+        device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.
@@ -173,23 +183,24 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
         delta_angles = torch.where(
-            self.clockwise_axis_movements == 1,
-            angles - self.initial_angles,
-            self.initial_angles - angles,
+            self.clockwise_axis_movements[heliostat_indices] == 1,
+            angles - self.initial_angles[heliostat_indices],
+            self.initial_angles[heliostat_indices] - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
+            heliostat_indices=heliostat_indices,
             motor_positions=torch.zeros_like(angles, device=device)
         )
         initial_angles = absolute_initial_angles - delta_angles
 
         calc_step_3 = torch.cos(initial_angles)
-        calc_step_2 = 2.0 * self.offsets * self.pivot_radii
+        calc_step_2 = 2.0 * self.offsets[heliostat_indices] * self.pivot_radii[heliostat_indices]
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_lengths = torch.sqrt(self.offsets**2 + self.pivot_radii**2 - calc_step_1)
+        stroke_lengths = torch.sqrt(self.offsets[heliostat_indices]**2 + self.pivot_radii[heliostat_indices]**2 - calc_step_1)
         motor_positions = (
-            stroke_lengths - self.initial_stroke_lengths
-        ) * self.increments
+            stroke_lengths - self.initial_stroke_lengths[heliostat_indices]
+        ) * self.increments[heliostat_indices]
         return motor_positions
 
     def forward(self) -> None:

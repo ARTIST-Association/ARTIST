@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
 from artist.field.tower_target_area import TargetArea
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary, utils_load_h5
 
@@ -43,7 +43,7 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        target_areas: TargetAreaArray,
+        target_areas: TowerTargetAreas,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -99,7 +99,7 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        target_areas = TargetAreaArray.from_hdf5(
+        target_areas = TowerTargetAreas.from_hdf5(
             config_file=scenario_file, device=device
         )
         light_sources = LightSourceArray.from_hdf5(
@@ -169,40 +169,7 @@ class Scenario:
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
-
-    def get_target_area(self, target_area_name: str) -> TargetArea:
-        """
-        Retrieve a specified target area from the scenario.
-
-        Parameters
-        ----------
-        target_area_name : str
-            The string name of the target area.
-
-        Raises
-        ------
-        ValueError
-            If no target area with the specified name exists.
-
-        Returns
-        -------
-        TargetArea
-            The specified target area.
-        """
-        target_area = next(
-            (
-                area
-                for area in self.target_areas.target_area_list
-                if area.name == target_area_name
-            ),
-            None,
-        )
-        if target_area is None:
-            raise ValueError(
-                f"No target area with the name {target_area_name} found in the scenario!"
-            )
-        else:
-            return target_area
+    
 
     def create_calibration_scenario(
         self,

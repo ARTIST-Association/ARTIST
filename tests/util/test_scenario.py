@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util.scenario import Scenario, TargetArea
 
 
@@ -32,7 +32,7 @@ def test_get_target_area(
     # Mock a target area.
     mock_target_area = MagicMock(spec=TargetArea)
     mock_target_area.name = "receiver"
-    mock_target_area_array = MagicMock(spec=TargetAreaArray)
+    mock_target_area_array = MagicMock(spec=TowerTargetAreas)
 
     # Mock the Scenario containing target_areas.
     mock_scenario = MagicMock(spec=Scenario)

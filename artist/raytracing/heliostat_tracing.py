@@ -219,7 +219,9 @@ class HeliostatRayTracer:
 
     def __init__(
         self,
+        scenario: Scenario,
         heliostat_group: HeliostatGroup,
+        heliostat_indices: list[int],
         light_source: LightSource,
         world_size: int = 1,
         rank: int = 0,
@@ -256,18 +258,22 @@ class HeliostatRayTracer:
         bitmap_resolution_u : int
             The resolution of the bitmap in the up dimension (default is 256).
         """
+        self.scenario = scenario
+        self.heliostat_group = heliostat_group
+        self.heliostat_indices = heliostat_indices
+
         self.world_size = world_size
         self.rank = rank
         self.batch_size = batch_size
 
-        self.heliostat_group = heliostat_group
+        # TODO lightsources parallel
         self.light_source = light_source
 
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=self.light_source,
-            number_of_points_per_heliostat=self.heliostat_group.surface_points.shape[1],
-            number_of_heliostats=self.heliostat_group.number_of_heliostats,
+            number_of_points_per_heliostat=self.heliostat_group.current_aligned_surface_points.shape[1],
+            number_of_heliostats=self.heliostat_group.current_aligned_surface_points.shape[0],
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -290,7 +296,7 @@ class HeliostatRayTracer:
     def trace_rays(
         self,
         incident_ray_direction: torch.Tensor,
-        target_area: TargetArea,
+        target_area_indices: list[int],
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -320,11 +326,12 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        final_bitmap = torch.zeros(
-            (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
+        flux_distributions = torch.tensor(
+            (len(self.scenario.target_areas.names), self.bitmap_resolution_u, self.bitmap_resolution_e),
+            device=device
         )
 
-        if not torch.all(self.heliostat_group.aligned_heliostats == 1.0):
+        if not torch.all(self.heliostat_group.aligned_heliostats[self.heliostat_indices] == 1.0):
             raise ValueError("Not all heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
@@ -350,8 +357,8 @@ class HeliostatRayTracer:
             intersections, absolute_intensities = (
                 raytracing_utils.line_plane_intersections(
                     rays=rays,
-                    plane_normal_vector=target_area.normal_vector,
-                    plane_center=target_area.center,
+                    target_area_indices=target_area_indices,
+                    target_areas=self.scenario.target_areas,
                     points_at_ray_origin=self.heliostat_group.current_aligned_surface_points[
                         heliostat_indices_per_batch
                     ],
@@ -377,7 +384,7 @@ class HeliostatRayTracer:
             )
 
             total_bitmap = self.sample_bitmap(
-                target_area=target_area,
+                target_area_dimension=self.scenario.target_areas.dimensions[target_area_index],
                 dx_intersections=dx_intersections,
                 dy_intersections=dy_intersections,
                 intersection_indices=intersection_indices,
@@ -438,7 +445,7 @@ class HeliostatRayTracer:
 
     def sample_bitmap(
         self,
-        target_area: TargetArea,
+        target_area_dimension: torch.Tensor,
         dx_intersections: torch.Tensor,
         dy_intersections: torch.Tensor,
         intersection_indices: torch.Tensor,
@@ -475,12 +482,12 @@ class HeliostatRayTracer:
         # Additionally a mask is applied, only the intersections where intersection_indices == True are kept, the tensors are flattened.
         x_intersections = (
             dx_intersections[intersection_indices]
-            / target_area.plane_e
+            / target_area_dimension[0]
             * self.bitmap_resolution_e
         )
         y_intersections = (
             dy_intersections[intersection_indices]
-            / target_area.plane_u
+            / target_area_dimension[1]
             * self.bitmap_resolution_u
         )
         absolute_intensities = absolute_intensities[intersection_indices]

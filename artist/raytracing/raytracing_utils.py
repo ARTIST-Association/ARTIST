@@ -1,5 +1,6 @@
 import torch
 
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.raytracing.rays import Rays
 
 
@@ -33,8 +34,8 @@ def reflect(
 
 def line_plane_intersections(
     rays: Rays,
-    plane_normal_vector: torch.Tensor,
-    plane_center: torch.Tensor,
+    target_area_indices: torch.Tensor,
+    target_areas: TowerTargetAreas,
     points_at_ray_origin: torch.Tensor,
     epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -70,7 +71,7 @@ def line_plane_intersections(
     # The relative intensity is calculated by taking the dot product (matrix multiplication) of the plane's
     # unit normal vector and the normalized ray-direction vectors, pointing from the plane to the source.
     # This determines how much the ray aligns with the plane normal.
-    relative_intensities = -rays.ray_directions @ plane_normal_vector
+    relative_intensities = (-rays.ray_directions * target_areas.normal_vectors[target_area_indices][:, None, None, :]).sum(dim=-1)
 
     if (relative_intensities <= epsilon).all():
         raise ValueError("No ray intersection on the front of the target area plane.")
@@ -81,7 +82,7 @@ def line_plane_intersections(
     # Next, calculate the scalar distance along the ray direction from the ray origin to the intersection point on the plane.
     # This indicates how far the intersection point is along the ray's direction.
     intersection_distances = (
-        (points_at_ray_origin - plane_center) @ plane_normal_vector
+        ((points_at_ray_origin - target_areas.centers[target_area_indices][:, None, :]) * target_areas.normal_vectors[target_area_indices][:, None, :]).sum(dim=-1)
     ).unsqueeze(1) / relative_intensities
 
     # Combine to get the intersections
@@ -92,7 +93,7 @@ def line_plane_intersections(
     # Calculate the absolute intensities of the rays hitting the target plane.
     # Use inverse-square law for distance attenuation from heliostat to target plane.
     distance_attenuations = (
-        1 / (torch.norm((points_at_ray_origin - plane_center), dim=-1) ** 2)
+        1 / (torch.norm(((points_at_ray_origin - target_areas.centers[target_area_indices][:, None, :])), dim=-1) ** 2)
     ).unsqueeze(1)
     absolute_intensities = (
         rays.ray_magnitudes * relative_intensities * distance_attenuations
