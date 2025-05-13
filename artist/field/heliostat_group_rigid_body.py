@@ -116,7 +116,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.number_of_heliostats = len(names)    
         self.names = names
         self.positions = positions
-        self.aim_points = aim_points
         self.surface_points = surface_points
         self.surface_normals = surface_normals
         self.initial_orientations = initial_orientations
@@ -137,7 +136,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
-            aim_points=self.aim_points,
+            aim_points=aim_points,
             actuator_parameters=self.actuator_parameters,
             initial_orientations=self.initial_orientations,
             deviation_parameters=self.kinematic_deviation_parameters,
@@ -147,7 +146,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     def align_surfaces_with_incident_ray_direction(
         self,
         incident_ray_direction: torch.Tensor,
-        heliostat_indices: torch.Tensor,
+        active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -169,14 +168,14 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             self.current_aligned_surface_normals,
         ) = self.kinematic.align_surfaces_with_incident_ray_direction(
             incident_ray_direction=incident_ray_direction,
-            heliostat_indices=heliostat_indices,
-            surface_points=self.surface_points[heliostat_indices],
-            surface_normals=self.surface_normals[heliostat_indices],
+            active_heliostats_indices=active_heliostats_indices,
+            surface_points=self.surface_points[active_heliostats_indices],
+            surface_normals=self.surface_normals[active_heliostats_indices],
             device=device,
         )
 
         # Note that all heliostats have been aligned.
-        self.aligned_heliostats[heliostat_indices] = 1.0
+        self.aligned_heliostats[active_heliostats_indices] = 1.0
 
 
     def get_orientations_from_motor_positions(

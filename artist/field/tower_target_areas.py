@@ -56,6 +56,8 @@ class TowerTargetAreas(torch.nn.Module):
         self.dimensions = dimensions
         self.curvatures = curvatures
 
+        self.number_of_target_areas = len(self.names)
+
     @classmethod
     def from_hdf5(
         cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
