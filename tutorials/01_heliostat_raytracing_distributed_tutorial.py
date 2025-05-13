@@ -34,31 +34,49 @@ with h5py.File(scenario_path) as scenario_file:
 # The incident ray direction needs to be normed.
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-heliostat_selection = ["AA39", "AA35"]
+active_heliostats = ["AA39", "AA31", "AB38"]
 
-bitmaps = []
-for group_index, group in enumerate(scenario.heliostat_field.heliostat_groups):
+heliostat_target_mapping = [
+    ("AA39", "receiver"),
+    #("AA39", "solar_tower_juelich_upper"),
+    ("AA31", "solar_tower_juelich_lower"),
+    ("AB38", "multi_focus_tower")
+]
 
-    if not heliostat_selection:
-        heliostat_indices = list(range(len(group.names)))
+final_flux_distributions = torch.zeros((
+    scenario.heliostat_field.number_of_heliostat_groups,
+    scenario.target_areas.number_of_target_areas,
+    256,
+    256,), device=device
+)
+
+#TODO mapping
+for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
+
+    if not active_heliostats:
+        active_heliostats_indices = list(range(heliostat_group.number_of_heliostats))
     else:
-        heliostat_indices = [i for i, name in enumerate(group.names) if name in heliostat_selection]
+        active_heliostats_indices = [i for i, name in enumerate(heliostat_group.names) if name in active_heliostats]
 
-    target_area_index = scenario.target_areas.names.index("receiver")
-    group.aim_points = scenario.target_areas.centers[target_area_index]
+    target_area_indices = torch.tensor(
+        [scenario.target_areas.names.index("multi_focus_tower"), 
+         scenario.target_areas.names.index("receiver"), 
+         scenario.target_areas.names.index("solar_tower_juelich_upper")
+        ], device=device)
+
+    heliostat_group.kinematic.aim_points[active_heliostats_indices] = scenario.target_areas.centers[target_area_indices]
 
     # Align all heliostats.
-    group.align_surfaces_with_incident_ray_direction(
+    heliostat_group.align_surfaces_with_incident_ray_direction(
         incident_ray_direction=incident_ray_direction, 
-        heliostat_indices=heliostat_indices,
+        active_heliostats_indices=active_heliostats_indices,
         device=device
     )
 
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
-        heliostat_group=group,
-        heliostat_indices=heliostat_indices,
+        heliostat_group_index=heliostat_group_index,
         light_source=scenario.light_sources.light_source_list[0],
         world_size=world_size, 
         rank=rank, 
@@ -67,17 +85,17 @@ for group_index, group in enumerate(scenario.heliostat_field.heliostat_groups):
     )
 
     # Perform heliostat-based ray tracing.
-    group_bitmap = ray_tracer.trace_rays(
+    group_bitmaps = ray_tracer.trace_rays(
         incident_ray_direction=incident_ray_direction,
-        target_area_indices=[target_area_index, target_area_index],
+        active_heliostats_indices=active_heliostats_indices,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
     if is_distributed:
-        torch.distributed.all_reduce(group_bitmap, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(group_bitmaps, op=torch.distributed.ReduceOp.SUM)
 
-    bitmaps.append(group_bitmap)
-
+    final_flux_distributions[heliostat_group_index] = group_bitmaps
 
 
 # Make sure the code after the yield statement in the environment Generator

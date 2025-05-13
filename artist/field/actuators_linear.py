@@ -87,7 +87,7 @@ class LinearActuators(Actuators):
 
     def _motor_positions_to_absolute_angles(
         self, 
-        heliostat_indices: list[int],
+        active_heliostats_indices: list[int],
         motor_positions: torch.Tensor
     ) -> torch.Tensor:
         """
@@ -107,16 +107,16 @@ class LinearActuators(Actuators):
         torch.Tensor
             The calculated absolute angles.
         """
-        stroke_lengths = motor_positions / self.increments[heliostat_indices] + self.initial_stroke_lengths[heliostat_indices]
-        calc_step_1 = self.offsets[heliostat_indices]**2 + self.pivot_radii[heliostat_indices]**2 - stroke_lengths**2
-        calc_step_2 = 2.0 * self.offsets[heliostat_indices] * self.pivot_radii[heliostat_indices]
+        stroke_lengths = motor_positions / self.increments[active_heliostats_indices] + self.initial_stroke_lengths[active_heliostats_indices]
+        calc_step_1 = self.offsets[active_heliostats_indices]**2 + self.pivot_radii[active_heliostats_indices]**2 - stroke_lengths**2
+        calc_step_2 = 2.0 * self.offsets[active_heliostats_indices] * self.pivot_radii[active_heliostats_indices]
         calc_step_3 = calc_step_1 / calc_step_2
         absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
         return absolute_angles
 
     def motor_positions_to_angles(
         self, 
-        heliostat_indices: list[int],
+        active_heliostats_indices: list[int],
         motor_positions: torch.Tensor,
         device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
@@ -140,25 +140,25 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
         absolute_angles = self._motor_positions_to_absolute_angles(
-            heliostat_indices=heliostat_indices,
+            active_heliostats_indices=active_heliostats_indices,
             motor_positions=motor_positions
         )
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
-            heliostat_indices=heliostat_indices,
+            active_heliostats_indices=active_heliostats_indices,
             motor_positions=torch.zeros_like(motor_positions, device=device)
         )
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.initial_angles[heliostat_indices]
-            + delta_angles * (self.clockwise_axis_movements[heliostat_indices] == 1)
-            - delta_angles * (self.clockwise_axis_movements[heliostat_indices] == 0)
+            self.initial_angles[active_heliostats_indices]
+            + delta_angles * (self.clockwise_axis_movements[active_heliostats_indices] == 1)
+            - delta_angles * (self.clockwise_axis_movements[active_heliostats_indices] == 0)
         )
         return relative_angles
 
     def angles_to_motor_positions(
         self, 
-        heliostat_indices: list[str],
+        active_heliostats_indices: list[str],
         angles: torch.Tensor, 
         device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
@@ -183,24 +183,24 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
         delta_angles = torch.where(
-            self.clockwise_axis_movements[heliostat_indices] == 1,
-            angles - self.initial_angles[heliostat_indices],
-            self.initial_angles[heliostat_indices] - angles,
+            self.clockwise_axis_movements[active_heliostats_indices] == 1,
+            angles - self.initial_angles[active_heliostats_indices],
+            self.initial_angles[active_heliostats_indices] - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
-            heliostat_indices=heliostat_indices,
+            active_heliostats_indices=active_heliostats_indices,
             motor_positions=torch.zeros_like(angles, device=device)
         )
         initial_angles = absolute_initial_angles - delta_angles
 
         calc_step_3 = torch.cos(initial_angles)
-        calc_step_2 = 2.0 * self.offsets[heliostat_indices] * self.pivot_radii[heliostat_indices]
+        calc_step_2 = 2.0 * self.offsets[active_heliostats_indices] * self.pivot_radii[active_heliostats_indices]
         calc_step_1 = calc_step_3 * calc_step_2
-        stroke_lengths = torch.sqrt(self.offsets[heliostat_indices]**2 + self.pivot_radii[heliostat_indices]**2 - calc_step_1)
+        stroke_lengths = torch.sqrt(self.offsets[active_heliostats_indices]**2 + self.pivot_radii[active_heliostats_indices]**2 - calc_step_1)
         motor_positions = (
-            stroke_lengths - self.initial_stroke_lengths[heliostat_indices]
-        ) * self.increments[heliostat_indices]
+            stroke_lengths - self.initial_stroke_lengths[active_heliostats_indices]
+        ) * self.increments[active_heliostats_indices]
         return motor_positions
 
     def forward(self) -> None:

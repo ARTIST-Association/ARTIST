@@ -79,6 +79,7 @@ class HeliostatField(torch.nn.Module):
         """
         super(HeliostatField, self).__init__()
         self.heliostat_groups = heliostat_groups
+        self.number_of_heliostat_groups = len(self.heliostat_groups)
 
     @classmethod
     def from_hdf5(
