@@ -5,7 +5,7 @@ from artist.raytracing.rays import Rays
 
 
 def reflect(
-    incoming_ray_direction: torch.Tensor, reflection_surface_normals: torch.Tensor
+    incoming_ray_directions: torch.Tensor, reflection_surface_normals: torch.Tensor
 ) -> torch.Tensor:
     """
     Reflect incoming rays given the normals of reflective surfaces.
@@ -23,10 +23,10 @@ def reflect(
         The reflected rays.
     """
     return (
-        incoming_ray_direction
+        incoming_ray_directions.unsqueeze(1)
         - 2
         * torch.sum(
-            incoming_ray_direction * reflection_surface_normals, dim=-1
+            incoming_ray_directions.unsqueeze(1) * reflection_surface_normals, dim=-1
         ).unsqueeze(-1)
         * reflection_surface_normals
     )

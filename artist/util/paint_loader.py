@@ -26,7 +26,7 @@ from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
-    calibration_properties_paths: list[pathlib.Path],
+    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
