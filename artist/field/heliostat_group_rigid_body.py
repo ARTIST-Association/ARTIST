@@ -143,9 +143,9 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device,
         )
 
-    def align_surfaces_with_incident_ray_direction(
+    def align_surfaces_with_incident_ray_directions(
         self,
-        incident_ray_direction: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
@@ -166,8 +166,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         (
             self.current_aligned_surface_points,
             self.current_aligned_surface_normals,
-        ) = self.kinematic.align_surfaces_with_incident_ray_direction(
-            incident_ray_direction=incident_ray_direction,
+        ) = self.kinematic.align_surfaces_with_incident_ray_directions(
+            incident_ray_directions=incident_ray_directions,
             active_heliostats_indices=active_heliostats_indices,
             surface_points=self.surface_points[active_heliostats_indices],
             surface_normals=self.surface_normals[active_heliostats_indices],

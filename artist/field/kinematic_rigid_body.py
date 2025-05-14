@@ -109,9 +109,9 @@ class RigidBody(Kinematic):
                 clockwise_axis_movements=actuator_parameters[:, 0],
             )
 
-    def incident_ray_direction_to_orientations(
+    def incident_ray_directions_to_orientations(
         self,
-        incident_ray_direction: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         active_heliostats_indices: list[int],
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
@@ -216,11 +216,11 @@ class RigidBody(Kinematic):
             )
 
             # Compute desired normals.
-            desired_reflection_direction = torch.nn.functional.normalize(
+            desired_reflection_directions = torch.nn.functional.normalize(
                 self.aim_points[active_heliostats_indices] - concentrator_origins, p=2, dim=1
             )
             desired_concentrator_normals = torch.nn.functional.normalize(
-                -incident_ray_direction + desired_reflection_direction, p=2, dim=1
+                -incident_ray_directions + desired_reflection_directions, p=2, dim=1
             )
 
             # Compute epoch loss.
@@ -301,9 +301,9 @@ class RigidBody(Kinematic):
             )
         )
 
-    def align_surfaces_with_incident_ray_direction(
+    def align_surfaces_with_incident_ray_directions(
         self,
-        incident_ray_direction: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         active_heliostats_indices: list[int],
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
@@ -332,8 +332,8 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        orientations = self.incident_ray_direction_to_orientations(
-            incident_ray_direction, 
+        orientations = self.incident_ray_directions_to_orientations(
+            incident_ray_directions, 
             active_heliostats_indices=active_heliostats_indices,
             device=device
         )

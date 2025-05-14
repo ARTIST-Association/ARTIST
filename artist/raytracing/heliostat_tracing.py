@@ -291,7 +291,7 @@ class HeliostatRayTracer:
 
     def trace_rays(
         self,
-        incident_ray_direction: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         active_heliostats_indices: list[int],
         target_area_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
@@ -332,7 +332,7 @@ class HeliostatRayTracer:
             raise ValueError("Not all heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
-            incoming_ray_direction=incident_ray_direction,
+            incoming_ray_directions=incident_ray_directions,
             reflection_surface_normals=self.heliostat_group.current_aligned_surface_normals,
         )
 
@@ -459,6 +459,7 @@ class HeliostatRayTracer:
         plane_centers_e = target_areas.centers[target_area_indices][:, 0].unsqueeze(1).unsqueeze(2)
         plane_centers_u = target_areas.centers[target_area_indices][:, 2].unsqueeze(1).unsqueeze(2)
         total_intersections = intersections.shape[1] * intersections.shape[2]
+        absolute_intensities = absolute_intensities.reshape(-1, total_intersections)
 
         dx_intersections = (
             intersections[:, :, :, 0]
@@ -485,12 +486,12 @@ class HeliostatRayTracer:
             dx_intersections
             / plane_widths
             * self.bitmap_resolution_e
-        )
+        ).reshape(-1, total_intersections)
         y_intersections = (
             dy_intersections
             / plane_heights
             * self.bitmap_resolution_u
-        )
+        ).reshape(-1, total_intersections)
 
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
@@ -507,12 +508,12 @@ class HeliostatRayTracer:
 
         # The lower-valued neighboring pixels (for x this corresponds to 1
         # and 4, for y to 3 and 4).
-        x_indices_low = x_intersections.to(torch.int32).reshape(-1, total_intersections)
-        y_indices_low = y_intersections.to(torch.int32).reshape(-1, total_intersections)
+        x_indices_low = x_intersections.to(torch.int32)
+        y_indices_low = y_intersections.to(torch.int32)
         # The higher-valued neighboring pixels (for x this corresponds to 2
         # and 3, for y to 1 and 2).
-        x_indices_high = (x_indices_low + 1).reshape(-1, total_intersections)
-        y_indices_high = (y_indices_low + 1).reshape(-1, total_intersections)
+        x_indices_high = (x_indices_low + 1)
+        y_indices_high = (y_indices_low + 1)
 
         x_indices = torch.zeros((intersections.shape[0], total_intersections * 4), device=device, dtype=torch.int32)
 

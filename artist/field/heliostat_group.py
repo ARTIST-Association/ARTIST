@@ -98,7 +98,7 @@ class HeliostatGroup(torch.nn.Module):
 
     def align_surfaces_with_incident_ray_direction(
         self,
-        incident_ray_direction: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
         active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
