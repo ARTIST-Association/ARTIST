@@ -4,6 +4,7 @@ from typing import Iterator, Union
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
+from artist.field.heliostat_group import HeliostatGroup
 from artist.scene import LightSource
 from artist.util import utils
 from artist.util.scenario import Scenario
@@ -218,8 +219,7 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: Scenario,
-        heliostat_group_index: int,
-        light_source: LightSource,
+        heliostat_group: HeliostatGroup,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,
@@ -256,14 +256,14 @@ class HeliostatRayTracer:
             The resolution of the bitmap in the up dimension (default is 256).
         """
         self.scenario = scenario
-        self.heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+        self.heliostat_group = heliostat_group
 
         self.world_size = world_size
         self.rank = rank
         self.batch_size = batch_size
 
-        # TODO lightsources parallel
-        self.light_source = light_source
+        # TODO lightsources parallel?
+        self.light_source = scenario.light_sources.light_source_list[0]
 
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
@@ -292,7 +292,7 @@ class HeliostatRayTracer:
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: list[int],
+        active_heliostats_indices: torch.Tensor,
         target_area_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
@@ -324,7 +324,7 @@ class HeliostatRayTracer:
         device = torch.device(device)
 
         flux_distributions = torch.zeros(
-            (self.scenario.target_areas.number_of_target_areas, self.bitmap_resolution_u, self.bitmap_resolution_e),
+            (self.heliostat_group.number_of_heliostats, self.bitmap_resolution_u, self.bitmap_resolution_e),
             device=device
         )
 
@@ -367,6 +367,7 @@ class HeliostatRayTracer:
                 absolute_intensities=absolute_intensities,
                 target_areas=self.scenario.target_areas,
                 target_area_indices=target_area_indices,
+                heliostat_indices=active_heliostats_indices,
                 device=device,
             )
 
@@ -427,6 +428,7 @@ class HeliostatRayTracer:
         absolute_intensities: torch.Tensor,
         target_areas: torch.Tensor,
         target_area_indices: torch.Tensor,
+        heliostat_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -579,18 +581,19 @@ class HeliostatRayTracer:
 
         final_intersection_indices = intersection_indices_1.reshape(-1, total_intersections).repeat(1, 4) & intersection_indices_2
         mask = final_intersection_indices.flatten()
-        target_area_indices = target_area_indices.repeat_interleave(total_intersections * 4)
+        heliostat_indices = heliostat_indices.repeat_interleave(total_intersections * 4)
 
         # Flux density map for heliostat field
-        total_bitmaps = torch.zeros(
-            (target_areas.number_of_target_areas, self.bitmap_resolution_u, self.bitmap_resolution_e),
+        bitmaps_per_heliostat = torch.zeros(
+            (self.heliostat_group.number_of_heliostats, self.bitmap_resolution_u, self.bitmap_resolution_e),
             dtype=dx_intersections.dtype,
             device=device,
         )
+
         # Add up all distributed intensities in the corresponding indices.
-        total_bitmaps.index_put_(
+        bitmaps_per_heliostat.index_put_(
             (
-                target_area_indices[mask],
+                heliostat_indices[mask],
                 self.bitmap_resolution_u - 1 - y_indices[final_intersection_indices],
                 self.bitmap_resolution_e - 1 - x_indices[final_intersection_indices],
             ),
@@ -598,4 +601,4 @@ class HeliostatRayTracer:
             accumulate=True,
         )
 
-        return total_bitmaps
+        return bitmaps_per_heliostat

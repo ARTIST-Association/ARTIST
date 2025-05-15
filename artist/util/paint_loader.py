@@ -22,12 +22,13 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.util.scenario import Scenario
 from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
     heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
-    power_plant_position: torch.Tensor,
+    scenario: Scenario,
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -55,58 +56,65 @@ def extract_paint_calibration_data(
     """
     device = torch.device(device)
 
-    number_of_calibrations = len(calibration_properties_paths)
+    total_number_of_calibrations = sum(len(paths) for _, paths in heliostat_calibration_mapping)
+    #calibrations_per_heliostat = torch.tensor([[len(paths)] for _, paths in heliostat_calibration_mapping])
 
+    heliostat_names = []
     calibration_target_names = []
-    center_calibration_images = torch.zeros((number_of_calibrations, 4), device=device)
-    sun_positions_enu = torch.zeros((number_of_calibrations, 4), device=device)
-    all_motor_positions = torch.zeros((number_of_calibrations, 2), device=device)
+    center_calibration_images = torch.zeros((total_number_of_calibrations, 4), device=device)
+    sun_positions_enu = torch.zeros((total_number_of_calibrations, 4), device=device)
+    all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
 
-    for index, path in enumerate(calibration_properties_paths):
-        with open(path, "r") as file:
-            calibration_dict = json.load(file)
-            calibration_target_names.append(
-                calibration_dict[config_dictionary.paint_calibration_target]
-            )
-            center_calibration_image = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    calibration_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
-                    ],
-                    dtype=torch.float64,
+    index = 0
+    for mapping in heliostat_calibration_mapping:
+        for path in mapping[1]:
+            heliostat_names.append(mapping[0])
+            with open(path, "r") as file:
+                calibration_dict = json.load(file)
+                calibration_target_names.append(
+                    calibration_dict[config_dictionary.paint_calibration_target]
+                )
+                center_calibration_image = convert_wgs84_coordinates_to_local_enu(
+                    torch.tensor(
+                        calibration_dict[config_dictionary.paint_focal_spot][
+                            config_dictionary.paint_utis
+                        ],
+                        dtype=torch.float64,
+                        device=device,
+                    ),
+                    scenario.power_plant_position,
                     device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
-                center_calibration_image, device=device
-            )
-            sun_azimuth = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_azimuth], device=device
-            )
-            sun_elevation = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_elevation], device=device
-            )
-            sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                azimuth_elevation_to_enu(
-                    sun_azimuth, sun_elevation, degree=True, device=device
-                ),
-                device=device,
-            )
-            all_motor_positions[index] = torch.tensor(
-                [
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_first_axis
+                )
+                center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
+                    center_calibration_image, device=device
+                )
+                sun_azimuth = torch.tensor(
+                    calibration_dict[config_dictionary.paint_sun_azimuth], device=device
+                )
+                sun_elevation = torch.tensor(
+                    calibration_dict[config_dictionary.paint_sun_elevation], device=device
+                )
+                sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
+                    azimuth_elevation_to_enu(
+                        sun_azimuth, sun_elevation, degree=True, device=device
+                    ),
+                    device=device,
+                )
+                all_motor_positions[index] = torch.tensor(
+                    [
+                        calibration_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_first_axis
+                        ],
+                        calibration_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_second_axis
+                        ],
                     ],
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_second_axis
-                    ],
-                ],
-                device=device,
-            )
+                    device=device,
+                )
+            index += 1
 
     return (
+        heliostat_names,
         calibration_target_names,
         center_calibration_images,
         sun_positions_enu,

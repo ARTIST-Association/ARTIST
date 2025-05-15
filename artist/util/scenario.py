@@ -1,12 +1,11 @@
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import h5py
 import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
-from artist.field.tower_target_area import TargetArea
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary, utils_load_h5
@@ -170,6 +169,41 @@ class Scenario:
             heliostat_field=heliostat_field,
         )
     
+
+    def index_mapping(
+        self,
+        mapping: Optional[list[tuple[str, str, torch.Tensor]]],
+        heliostat_group_index: int,
+        device: Union[torch.device, str] = "cuda"
+    ) -> None:
+        device = torch.device(device)
+
+        all_heliostat_name_indices = {heliostat_name: index for index, heliostat_name in enumerate(self.heliostat_field.heliostat_groups[heliostat_group_index].names)}
+        all_target_area_indices = {target_area_name: index for index, target_area_name in enumerate(self.target_areas.names)}
+
+        single_target_area_index = 1
+        single_incident_ray_direction_index = 0
+
+        if mapping is None:
+            all_incident_ray_directions = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
+            heliostat_target_mapping = torch.tensor([
+                [i, single_target_area_index, single_incident_ray_direction_index]
+                for i in range(self.heliostat_field.heliostat_groups[heliostat_group_index].number_of_heliostats)
+            ], device=device)
+        else:
+            all_incident_ray_directions = torch.stack([t for _, _, t in mapping])
+            heliostat_target_mapping = torch.tensor([
+                [all_heliostat_name_indices[heliostat_name], all_target_area_indices[target_area_name], index]
+                for index, (heliostat_name, target_area_name, _) in enumerate(mapping)
+                if heliostat_name in all_heliostat_name_indices and target_area_name in all_target_area_indices
+            ], device=device)
+        
+        active_heliostats_indices = heliostat_target_mapping[:, 0]
+        target_area_indices = heliostat_target_mapping[:, 1]
+        incident_ray_direction_indices = heliostat_target_mapping[:, 2]
+
+        return all_incident_ray_directions, incident_ray_direction_indices, active_heliostats_indices, target_area_indices
+        
 
     def create_calibration_scenario(
         self,

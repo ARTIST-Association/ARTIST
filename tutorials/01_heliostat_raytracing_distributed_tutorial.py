@@ -15,7 +15,7 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
 # scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
@@ -34,7 +34,7 @@ with h5py.File(scenario_path) as scenario_file:
 
 # The incident ray direction needs to be normed.
 heliostat_target_sun_mapping_string = [
-    ("AB38", "multi_focus_tower", torch.tensor([.0, 1.0, 0.0, 0.0], device=device)),
+    ("AB38", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
     ("AA31", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
     ("AA35", "solar_tower_juelich_lower", torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)),
     ("AA39", "solar_tower_juelich_lower", torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)),
@@ -48,33 +48,13 @@ final_flux_distributions = torch.zeros((
     256,), device=device
 )
 
-#TODO mapping
 for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
 
-    all_heliostat_name_indices = {heliostat_name: index for index, heliostat_name in enumerate(heliostat_group.names)}
-    all_target_area_indices = {target_area_name: index for index, target_area_name in enumerate(scenario.target_areas.names)}
-    #all_incident_ray_direction_indices = {incident_ray_direction: index for index, incident_ray_direction in enumerate(incident_ray_directions)}
-
-    single_target_area_index = 1
-    single_incident_ray_direction_index = 0
-
-    if heliostat_target_sun_mapping_string is None:
-        all_incident_ray_directions = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
-        heliostat_target_mapping = torch.tensor([
-            [i, single_target_area_index, single_incident_ray_direction_index]
-            for i in range(heliostat_group.number_of_heliostats)
-        ], device=device)
-    else:
-        all_incident_ray_directions = torch.stack([t for _, _, t in heliostat_target_sun_mapping_string])
-        heliostat_target_mapping = torch.tensor([
-            [all_heliostat_name_indices[heliostat_name], all_target_area_indices[target_area_name], index]
-            for index, (heliostat_name, target_area_name, _) in enumerate(heliostat_target_sun_mapping_string)
-            if heliostat_name in all_heliostat_name_indices and target_area_name in all_target_area_indices
-        ], device=device)
-    
-    active_heliostats_indices = heliostat_target_mapping[:, 0]
-    target_area_indices = heliostat_target_mapping[:, 1]
-    incident_ray_direction_indices = heliostat_target_mapping[:, 2]
+    all_incident_ray_directions, incident_ray_direction_indices, active_heliostats_indices, target_area_indices = scenario.index_mapping(
+        mapping=heliostat_target_sun_mapping_string,
+        heliostat_group_index=heliostat_group_index,
+        device=device
+    )
 
     heliostat_group.kinematic.aim_points[active_heliostats_indices] = scenario.target_areas.centers[target_area_indices]
 
@@ -88,8 +68,7 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
-        heliostat_group_index=heliostat_group_index,
-        light_source=scenario.light_sources.light_source_list[0],
+        heliostat_group=heliostat_group,
         world_size=world_size, 
         rank=rank, 
         batch_size=4, 

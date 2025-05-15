@@ -5,6 +5,7 @@ import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, _LRScheduler
 
+from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import utils
@@ -41,6 +42,7 @@ class KinematicOptimizer:
     def __init__(
         self,
         scenario: Scenario,
+        calibration_group: HeliostatGroup,
         optimizer: Optimizer,
         scheduler: Union[_LRScheduler, ReduceLROnPlateau],
     ) -> None:
@@ -58,6 +60,7 @@ class KinematicOptimizer:
         """
         log.info("Create a kinematic optimizer.")
         self.scenario = scenario
+        self.calibration_group=calibration_group
         self.optimizer = optimizer
         self.scheduler = scheduler
 
@@ -67,7 +70,7 @@ class KinematicOptimizer:
         max_epoch: int,
         center_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        calibration_target_names: Optional[list[str]] = None,
+        target_area_indices: Optional[torch.Tensor] = None,
         motor_positions: Optional[torch.Tensor] = None,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
@@ -108,11 +111,11 @@ class KinematicOptimizer:
                 device=device,
             )
 
-        elif calibration_target_names is not None:
+        elif motor_positions is None:
             self._optimize_kinematic_parameters_with_raytracing(
                 tolerance=tolerance,
                 max_epoch=max_epoch,
-                calibration_target_names=calibration_target_names,
+                target_area_indices=target_area_indices,
                 center_calibration_images=center_calibration_images,
                 incident_ray_directions=incident_ray_directions,
                 num_log=num_log,
@@ -218,7 +221,7 @@ class KinematicOptimizer:
         self,
         tolerance: float,
         max_epoch: int,
-        calibration_target_names: list[str],
+        target_area_indices: torch.Tensor,
         center_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         num_log: int = 3,
@@ -253,63 +256,64 @@ class KinematicOptimizer:
         loss = torch.inf
         epoch = 0
 
+        active_heliostats_indices = torch.arange(target_area_indices.shape[0], device=device)
+        unique_heliostats = list(set(self.calibration_group.names))
+        heliostat_duplicates_mapping = []
+        for heliostat in unique_heliostats:
+            heliostat_duplicates_mapping.append([i for i, s in enumerate(self.calibration_group.names) if s == heliostat])
+
         # Create a ray tracer.
-        ray_tracer = HeliostatRayTracer(scenario=self.scenario, batch_size=1)
+        ray_tracer = HeliostatRayTracer(
+            scenario=self.scenario,
+            heliostat_group=self.calibration_group,
+            batch_size=target_area_indices.shape[0]
+        )
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
-            total_loss = 0.0
             self.optimizer.zero_grad()
 
-            for (
-                calibration_target_name,
-                incident_ray_direction,
-                center_calibration_image,
-            ) in zip(
-                calibration_target_names,
-                incident_ray_directions,
-                center_calibration_images,
-            ):
-                calibration_target = self.scenario.get_target_area(
-                    calibration_target_name
-                )
+            # Align heliostats.
+            self.calibration_group.align_surfaces_with_incident_ray_directions(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_indices=active_heliostats_indices,
+                device=device
+            )
 
-                self.scenario.heliostat_field.all_aim_points = (
-                    calibration_target.center.expand(
-                        self.scenario.heliostat_field.number_of_heliostats, -1
-                    )
-                )
+            # Perform heliostat-based ray tracing.
+            flux_distributions = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_indices=active_heliostats_indices,
+                target_area_indices=target_area_indices,
+                device=device,
+            )
 
-                # Align heliostat.
-                self.scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-                    incident_ray_direction=incident_ray_direction, device=device
-                )
+            centers = utils.get_center_of_mass(
+                bitmaps=flux_distributions,
+                target_centers=self.scenario.target_areas.centers[target_area_indices],
+                target_widths=self.scenario.target_areas.dimensions[target_area_indices][:, 0],
+                target_heights=self.scenario.target_areas.dimensions[target_area_indices][:, 1],
+                device=device,
+            )
 
-                # Perform heliostat-based ray tracing.
-                final_bitmap = ray_tracer.trace_rays(
-                    incident_ray_direction=incident_ray_direction,
-                    target_area=calibration_target,
-                    device=device,
-                )
+            loss = (centers - center_calibration_images).abs().mean()
+            loss.backward()
 
-                center = utils.get_center_of_mass(
-                    bitmap=final_bitmap,
-                    target_center=calibration_target.center,
-                    plane_e=calibration_target.plane_e,
-                    plane_u=calibration_target.plane_u,
-                    device=device,
-                )
-
-                loss = (center - center_calibration_image).abs().mean()
-                loss.backward()
-                total_loss += loss
+            with torch.no_grad():
+                for param_group in self.optimizer.param_groups:
+                    for parameter in param_group["params"]:
+                        for group in heliostat_duplicates_mapping:
+                            averaged_gradients = parameter.grad[group].mean(dim=0, keepdim=True)
+                            parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
-            self.scheduler.step(total_loss)
+            #self.scheduler.step(loss)
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {total_loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
+
+        return self.calibration_group.kinematic_deviation_parameters, self.calibration_group.actuator_parameters

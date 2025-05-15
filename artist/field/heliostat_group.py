@@ -96,7 +96,7 @@ class HeliostatGroup(torch.nn.Module):
         """
         super().__init__()
 
-    def align_surfaces_with_incident_ray_direction(
+    def align_surfaces_with_incident_ray_directions(
         self,
         incident_ray_directions: torch.Tensor,
         active_heliostats_indices: torch.Tensor,

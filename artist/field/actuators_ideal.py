@@ -23,7 +23,7 @@ class IdealActuators(Actuators):
     :class:`Actuator` : Reference to the parent class.
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, actuator_parameters:torch.Tensor) -> None:
         pass
 
     def motor_positions_to_angles(
