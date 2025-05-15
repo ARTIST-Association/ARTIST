@@ -97,16 +97,11 @@ class RigidBody(Kinematic):
 
         if actuator_parameters.shape[1] == config_dictionary.number_of_linear_actuator_parameters:
             self.actuators = LinearActuators(
-                clockwise_axis_movements=actuator_parameters[:, 0],
-                increments=actuator_parameters[:, 1],
-                initial_stroke_lengths=actuator_parameters[:, 2],
-                offsets=actuator_parameters[:, 3],
-                pivot_radii=actuator_parameters[:, 4],
-                initial_angles=actuator_parameters[:, 5],
+                actuator_parameters=actuator_parameters,
             )
         if actuator_parameters.shape[1] == config_dictionary.number_of_ideal_actuator_parameters:
             self.actuators = IdealActuators(
-                clockwise_axis_movements=actuator_parameters[:, 0],
+                actuator_parameters=actuator_parameters,
             )
 
     def incident_ray_directions_to_orientations(
