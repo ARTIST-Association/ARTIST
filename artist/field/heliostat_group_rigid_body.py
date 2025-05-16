@@ -16,6 +16,9 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     The rigid body kinematic works with either linear or ideal actuators. Heliostats with
     differing actuator types belong to different groups even if the kinematic type is the same.
     The `HeliostatGroupRigidBody` can be used for the initialization of both groups.
+    Individual heliostats in the same group are not saved as separate entities, instead 
+    separate tensors for each heliostat property exist. Each property tensor or list contains 
+    information about this property for all heliostats within this group.
 
     Attributes
     ----------
@@ -25,8 +28,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         The string names of each heliostat in the group in order.
     positions : torch.Tensor
         The positions of all heliostats in the group.
-    aim_points : torch.Tensor
-        The aim points of all heliostats in the group.
     surface_points : torch.Tensor
         The surface points of all heliostats in the group.
     surface_normals : torch.Tensor
@@ -51,7 +52,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
 
     Methods
     -------
-    align_surfaces_with_incident_ray_direction()
+    align_surfaces_with_incident_ray_directions()
         Align all surface points and surface normals of all heliostats in the group.
     get_orientations_from_motor_positions()
         Compute the orientations of all heliostats given some motor positions.
@@ -111,6 +112,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             kinematic_deviation_parameters=kinematic_deviation_parameters,
             actuator_parameters=actuator_parameters
         )
+
         device = torch.device(device)
 
         self.number_of_heliostats = len(names)    
@@ -152,12 +154,17 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         Align all surface points and surface normals of all heliostats in the group.
 
-        This method uses the incident ray direction to align the heliostats.
+        This method uses incident ray directions to align the heliostats. It is possible to
+        have different incident ray directions for different helisotats, for example during
+        calibration tasks. Heliostats can be selected and deselected if only a subset should
+        be aligned with the active heliostat indices parameter.
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
+        incident_ray_directions : torch.Tensor
             The incident ray direction.
+        active_heliostats_indices: torch.Tensor
+            The indices of the active heliostats that will be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """

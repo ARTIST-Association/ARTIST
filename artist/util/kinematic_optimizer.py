@@ -12,7 +12,7 @@ from artist.util import utils
 from artist.util.scenario import Scenario
 
 log = logging.getLogger(__name__)
-"""A logger for the alignment optimizer."""
+"""A logger for the kinematic optimizer."""
 
 
 class KinematicOptimizer:
@@ -28,6 +28,8 @@ class KinematicOptimizer:
     ----------
     scenario : Scenario
         The scenario.
+    calibration_group : HeliostatGroup
+        The heliostat group to be calibrated.
     optimizer : Optimizer
         The optimizer.
     scheduler : Union[_LRScheduler, ReduceLROnPlateau]
@@ -53,6 +55,8 @@ class KinematicOptimizer:
         ----------
         scenario : Scenario
             The scenario.
+        calibration_group : HeliostatGroup
+            The heliostat group to be calibrated.
         optimizer : Optimizer
             The optimizer.
         scheduler : Union[_LRScheduler, ReduceLROnPlateau]
@@ -68,7 +72,7 @@ class KinematicOptimizer:
         self,
         tolerance: float,
         max_epoch: int,
-        center_calibration_images: torch.Tensor,
+        centers_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         target_area_indices: Optional[torch.Tensor] = None,
         motor_positions: Optional[torch.Tensor] = None,
@@ -84,12 +88,12 @@ class KinematicOptimizer:
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_images : torch.Tensor
+        centers_calibration_images : torch.Tensor
             The centers of the calibration flux densities.
         incident_ray_directions : torch.Tensor
-            The incident ray directions specified in the calibration.
-        calibration_target_names : Optional[list[str]]
-            The name of the calibration targets (default is None).
+            The incident ray directions specified in the calibrations.
+        target_area_indices : Optional[torch.Tensor]
+            The indices of the target area for each calibration (default is None).
         motor_positions : Optional[torch.Tensor]
             The motor positions specified in the calibration files (default is None).
         num_log : int
@@ -104,7 +108,7 @@ class KinematicOptimizer:
             self._optimize_kinematic_parameters_with_motor_positions(
                 tolerance=tolerance,
                 max_epoch=max_epoch,
-                center_calibration_images=center_calibration_images,
+                centers_calibration_images=centers_calibration_images,
                 incident_ray_directions=incident_ray_directions,
                 all_motor_positions=motor_positions,
                 num_log=num_log,
@@ -116,7 +120,7 @@ class KinematicOptimizer:
                 tolerance=tolerance,
                 max_epoch=max_epoch,
                 target_area_indices=target_area_indices,
-                center_calibration_images=center_calibration_images,
+                centers_calibration_images=centers_calibration_images,
                 incident_ray_directions=incident_ray_directions,
                 num_log=num_log,
                 device=device,
@@ -127,7 +131,7 @@ class KinematicOptimizer:
         self,
         tolerance: float,
         max_epoch: int,
-        center_calibration_images: torch.Tensor,
+        centers_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         all_motor_positions: torch.Tensor,
         num_log: int = 3,
@@ -145,7 +149,7 @@ class KinematicOptimizer:
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        center_calibration_images : torch.Tensor
+        centers_calibration_images : torch.Tensor
             The center of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration data.
@@ -163,7 +167,7 @@ class KinematicOptimizer:
 
         preferred_reflection_direction_calibrations = torch.nn.functional.normalize(
             (
-                center_calibration_images
+                centers_calibration_images
                 - self.scenario.heliostat_field.all_heliostat_positions
             ),
             p=2,
@@ -222,17 +226,16 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         target_area_indices: torch.Tensor,
-        center_calibration_images: torch.Tensor,
+        centers_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> None:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Optimize the kinematic parameters using ray tracing.
 
-        This optimizer method optimizes the kinematic parameters by extracting the focus point
-        of a calibration image and using heliostat-tracing. This method is slower than the other
-        optimization method found in the kinematic optimizer.
+        This optimizer method optimizes the kinematic parameters by extracting the focus points
+        of a calibration images and using heliostat-tracing.
 
         Parameters
         ----------
@@ -240,9 +243,9 @@ class KinematicOptimizer:
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        calibration_target_names : list[str]
-            The name of the calibration targets.
-        center_calibration_images : torch.Tensor
+        target_area_indices : torch.Tensor
+            The indices of the target area for each calibration.
+        centers_calibration_images : torch.Tensor
             The centers of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration data.
@@ -250,9 +253,17 @@ class KinematicOptimizer:
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
+        
+        Returns
+        -------
+        torch.Tensor
+            The calibrated kinematic deviation parameters.
+        torch.Tensor
+            The calibrated actuator parameters.
         """
         log.info("Kinematic optimization with ray tracing.")
         device = torch.device(device)
+        
         loss = torch.inf
         epoch = 0
 
@@ -269,6 +280,7 @@ class KinematicOptimizer:
             batch_size=target_area_indices.shape[0]
         )
 
+        # Start the optimization.
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
@@ -296,9 +308,13 @@ class KinematicOptimizer:
                 device=device,
             )
 
-            loss = (centers - center_calibration_images).abs().mean()
+            loss = (centers - centers_calibration_images).abs().mean()
             loss.backward()
 
+            # Since each heliostat has multiple calibration datapoints, each heliostat appears multiple times
+            # in the calibration group. The kinematic and actuator parameters are duplicated per datapoint for
+            # each heliostat. Since each calibration has equal power on the gradients, the gradients of the parameters
+            # for each heliostat are averaged.
             with torch.no_grad():
                 for param_group in self.optimizer.param_groups:
                     for parameter in param_group["params"]:
@@ -307,7 +323,7 @@ class KinematicOptimizer:
                             parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
-            #self.scheduler.step(loss)
+            self.scheduler.step(loss)
 
             if epoch % log_step == 0:
                 log.info(

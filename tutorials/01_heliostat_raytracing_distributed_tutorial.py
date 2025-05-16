@@ -51,7 +51,7 @@ final_flux_distributions = torch.zeros((
 for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
 
     all_incident_ray_directions, incident_ray_direction_indices, active_heliostats_indices, target_area_indices = scenario.index_mapping(
-        mapping=heliostat_target_sun_mapping_string,
+        string_mapping=heliostat_target_sun_mapping_string,
         heliostat_group_index=heliostat_group_index,
         device=device
     )

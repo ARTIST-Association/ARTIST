@@ -8,22 +8,38 @@ from typing_extensions import Self
 from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
-"""A logger for the tower target area array."""
+"""A logger for the tower target areas."""
 
 
 class TowerTargetAreas(torch.nn.Module):
     """
     Wrap the list of tower target areas as a ``torch.nn.Module`` to allow gradient calculation.
 
+    Individual target areas are not saved as separate entities, instead separate tensors for each 
+    target area property exist. Each property tensor or list contains information about this property 
+    for all target areas.
+
     Attributes
     ----------
-    target_area_list : list[TargetArea]
-        A list of target areas included in the scenario.
+    names : list[str]
+        The names of each target area.
+    geometries : list[str]
+        THe type of geometry of each target area.
+    centers : torch.Tensor
+        The center coordinate of each target area.
+    normal_vectors : torch.Tensor
+        The normal vector of each target area.
+    dimensions : torch.Tensor
+        The dimensions of each target area (width and height).
+    curvatures : torch.Tensor
+        The curvature of the target area (0.0 if not applicable).
+    number_of_target_areas : int
+        The total number of target areas on all towers in the scenario.
 
     Methods
     -------
     from_hdf5()
-        Load the list of target areas from an HDF5 file.
+        Load all target areas from an HDF5 file.
     forward()
         Specify the forward pass.
     """
@@ -45,10 +61,21 @@ class TowerTargetAreas(torch.nn.Module):
 
         Parameters
         ----------
-        target_area_list : List[TargetArea]
-            The list of target areas included in the scenario.
+        names : list[str]
+            The names of each target area.
+        geometries : list[str]
+            THe type of geometry of each target area.
+        centers : torch.Tensor
+            The center coordinate of each target area.
+        normal_vectors : torch.Tensor
+            The normal vector of each target area.
+        dimensions : torch.Tensor
+            The dimensions of each target area (width and height).
+        curvatures : torch.Tensor
+            The curvature of the target area (0.0 if not applicable).
         """
         super().__init__()
+
         self.names = names
         self.geometries = geometries
         self.centers = centers
@@ -63,7 +90,7 @@ class TowerTargetAreas(torch.nn.Module):
         cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
     ) -> Self:
         """
-        Load a tower target array from an HDF5 file.
+        Load all target areas from an HDF5 file.
 
         Parameters
         ----------
@@ -74,10 +101,10 @@ class TowerTargetAreas(torch.nn.Module):
 
         Returns
         -------
-        TargetAreaArray
-            The target area array loaded from the HDF5 file.
+        TowerTargetAreas
+            The target areas loaded from the HDF5 file.
         """
-        log.info("Loading the tower target area array from an HDF5 file.")
+        log.info("Loading the tower target areas from an HDF5 file.")
         device = torch.device(device)
 
         number_of_target_areas = len(config_file[config_dictionary.target_area_key])

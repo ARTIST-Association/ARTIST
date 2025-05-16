@@ -14,41 +14,9 @@ class HeliostatGroup(torch.nn.Module):
     field. The abstract base class defines an align function that all heliostat groups need to overwrite
     in order to align the heliostats within this group.
 
-    Attributes
-    ----------
-    number_of_heliostats : int
-        The number of heliostats in the group.
-    names : list[str]
-        The string names of each heliostat in the group in order.
-    positions : torch.Tensor
-        The positions of all heliostats in the group.
-    aim_points : torch.Tensor
-        The aim points of all heliostats in the group.
-    surface_points : torch.Tensor
-        The surface points of all heliostats in the group.
-    surface_normals : torch.Tensor
-        The surface normals of all heliostats in the group.
-    initial_orientations : torch.Tensor
-        The initial orientations of all heliostats in the group.
-    kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats in the group.
-    actuator_parameters : torch.Tensor
-        The actuator parameters of all actuators in the group.
-    aligned_heliostats : torch.Tensor
-        Information about alignment of heliostats.
-        Unaligned heliostats marked with 0, aligned heliostats marked with 1.
-    preferred_reflection_directions : torch.Tensor
-        The preferred reflection directions of all heliostats in the group.
-    current_aligned_surface_points : torch.Tensor
-        The aligned surface points of all heliostats in the group.
-    current_aligned_surface_normals : torch.Tensor
-        The aligned surface normals of all heliostats in the group.
-    kinematic : RigidBody
-        The kinematic (rigid body) of all heliostats in the group.
-
     Methods
     -------
-    align_surfaces_with_incident_ray_direction()
+    align_surfaces_with_incident_ray_directions()
         Align all surface points and surface normals of all heliostats in the group.
     get_orientations_from_motor_positions()
         Compute the orientations of all heliostats given some motor positions.

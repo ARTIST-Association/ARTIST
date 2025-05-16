@@ -475,14 +475,14 @@ def get_center_of_mass(
 
     Parameters
     ----------
-    bitmap : torch.Tensor
-        The flux density in form of a bitmap.
-    target_center : torch.Tensor
-        The position of the center of the target.
-    plane_e : float
-        The width of the target surface.
-    plane_u : float
-        The height of the target surface.
+    bitmaps : torch.Tensor
+        The flux densities in form of bitmaps.
+    target_centers : torch.Tensor
+        The positions of the centers of the targets.
+    target_widths : float
+        The widths of the target surfaces.
+    target_heights : float
+        The heights of the target surfaces.
     threshold : float
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : Union[torch.device, str]
@@ -491,7 +491,7 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        The coordinates of the flux density center of mass.
+        The coordinates of the flux density centers of mass.
     """
     device = torch.device(device)
     _, heights, widths = bitmaps.shape
@@ -509,13 +509,13 @@ def get_center_of_mass(
         torch.arange(heights, dtype=torch.float32, device=device) + 0.5
     ) / heights
 
-    # Compute the center of intensity using weighted sums of the coordinates.
+    # Compute the centers of intensity using weighted sums of the coordinates.
     center_of_masses_e = torch.sum((flux_thresholds.sum(dim=1).unsqueeze(1) * e_indices), dim=-1).squeeze(-1) / total_intensities
     center_of_masses_u = 1 - (
         torch.sum((flux_thresholds.sum(dim=2).unsqueeze(1) * u_indices), dim=-1).squeeze(-1) / total_intensities
     )
 
-    # Construct the coordinates relative to target center.
+    # Construct the coordinates relative to target centers.
     de = torch.zeros((bitmaps.shape[0], 4), device=device)
     de[:, 0] = -target_widths
     du = torch.zeros((bitmaps.shape[0], 4), device=device)
@@ -592,21 +592,3 @@ def setup_global_distributed_environment(
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
 
-
-def set_up_single_heliostat_group_distributed_environment(
-    rank, world_size, number_of_heliostat_groups
-):
-    assert world_size % number_of_heliostat_groups == 0, (
-        "World size must be divisible by number of heliostat groups!"
-    )
-    ranks_per_heliostat_group = world_size // number_of_heliostat_groups
-
-    heliostat_group_to_rank_mapping = []
-    for i in range(number_of_heliostat_groups):
-        heliostat_group_ranks = list(
-            range(i * ranks_per_heliostat_group, (i + 1) * ranks_per_heliostat_group)
-        )
-        environment = torch.distributed.new_group(ranks=heliostat_group_ranks)
-        heliostat_group_to_rank_mapping.append((i, heliostat_group_ranks, environment))
-
-    return heliostat_group_to_rank_mapping

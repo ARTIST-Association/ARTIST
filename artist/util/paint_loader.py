@@ -36,10 +36,10 @@ def extract_paint_calibration_data(
 
     Parameters
     ----------
-    calibration_properties_paths : list[pathlib.Path]
-        The paths to the calibration properties files.
-    power_plant_position : torch.Tensor
-        The position of the power plant in latitude, longitude and elevation.
+    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
+        The mapping of heliostats and their calibration data files.
+    scenario : Scenario
+        The current scenario.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -57,11 +57,10 @@ def extract_paint_calibration_data(
     device = torch.device(device)
 
     total_number_of_calibrations = sum(len(paths) for _, paths in heliostat_calibration_mapping)
-    #calibrations_per_heliostat = torch.tensor([[len(paths)] for _, paths in heliostat_calibration_mapping])
 
     heliostat_names = []
     calibration_target_names = []
-    center_calibration_images = torch.zeros((total_number_of_calibrations, 4), device=device)
+    centers_calibration_images = torch.zeros((total_number_of_calibrations, 4), device=device)
     sun_positions_enu = torch.zeros((total_number_of_calibrations, 4), device=device)
     all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
 
@@ -85,7 +84,7 @@ def extract_paint_calibration_data(
                     scenario.power_plant_position,
                     device=device,
                 )
-                center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
+                centers_calibration_images[index] = utils.convert_3d_point_to_4d_format(
                     center_calibration_image, device=device
                 )
                 sun_azimuth = torch.tensor(
@@ -116,7 +115,7 @@ def extract_paint_calibration_data(
     return (
         heliostat_names,
         calibration_target_names,
-        center_calibration_images,
+        centers_calibration_images,
         sun_positions_enu,
         all_motor_positions,
     )

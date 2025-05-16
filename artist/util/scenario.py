@@ -22,8 +22,8 @@ class Scenario:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant as latitude, longitude, altitude.
-    target_areas : TargetAreaArray
-        A list of tower target areas included in the scenario.
+    target_areas : TowerTargetAreas
+        All target areas on all towers of the power plant.
     light_sources : LightSourceArray
         A list of light sources included in the scenario.
     heliostat_field : HeliostatField
@@ -33,10 +33,8 @@ class Scenario:
     -------
     load_scenario_from_hdf5()
         Class method to load the scenario from an HDF5 file.
-    get_target_area()
-        Retrieve a specified target area from the scenario.
-    create_calibration_scenario()
-        Create a calibration scenario with a single heliostat from an existing scenario.
+    index_mapping()
+        Create an index mapping from heliostat names, target area names and incident ray directions.
     """
 
     def __init__(
@@ -172,10 +170,33 @@ class Scenario:
 
     def index_mapping(
         self,
-        mapping: Optional[list[tuple[str, str, torch.Tensor]]],
+        string_mapping: Optional[list[tuple[str, str, torch.Tensor]]],
         heliostat_group_index: int,
         device: Union[torch.device, str] = "cuda"
-    ) -> None:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Create an index mapping from heliostat names, target area names and incident ray directions.
+
+        Parameters
+        ----------
+        string_mapping : (Optional[list[tuple[str, str, torch.Tensor]]])
+            Strings that map heliostats to target areas and incident ray direction tensors.
+        heliostat_group_index : int
+            The index of the current heliostat group.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+
+        Returns
+        -------
+        torch.Tensor
+            All incident ray directions for the heliostats in this scenario.
+        torch.Tensor
+            The indices of incident ray directions for all heliostats in order.
+        torch.Tensor
+            The indices of all active heliostats in order.
+        torch.Tensor
+            The indices of target areas for all heliostats in order.            
+        """
         device = torch.device(device)
 
         all_heliostat_name_indices = {heliostat_name: index for index, heliostat_name in enumerate(self.heliostat_field.heliostat_groups[heliostat_group_index].names)}
@@ -184,17 +205,17 @@ class Scenario:
         single_target_area_index = 1
         single_incident_ray_direction_index = 0
 
-        if mapping is None:
+        if string_mapping is None:
             all_incident_ray_directions = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
             heliostat_target_mapping = torch.tensor([
                 [i, single_target_area_index, single_incident_ray_direction_index]
                 for i in range(self.heliostat_field.heliostat_groups[heliostat_group_index].number_of_heliostats)
             ], device=device)
         else:
-            all_incident_ray_directions = torch.stack([t for _, _, t in mapping])
+            all_incident_ray_directions = torch.stack([t for _, _, t in string_mapping])
             heliostat_target_mapping = torch.tensor([
                 [all_heliostat_name_indices[heliostat_name], all_target_area_indices[target_area_name], index]
-                for index, (heliostat_name, target_area_name, _) in enumerate(mapping)
+                for index, (heliostat_name, target_area_name, _) in enumerate(string_mapping)
                 if heliostat_name in all_heliostat_name_indices and target_area_name in all_target_area_indices
             ], device=device)
         
@@ -204,62 +225,6 @@ class Scenario:
 
         return all_incident_ray_directions, incident_ray_direction_indices, active_heliostats_indices, target_area_indices
         
-
-    def create_calibration_scenario(
-        self,
-        heliostat_index: int,
-        device: Union[torch.device, str] = "cuda",
-    ) -> "Scenario":
-        """
-        Create a calibration scenario with a single heliostat from an existing scenario.
-
-        Parameters
-        ----------
-        heliostat_index : int
-            The index of the heliostat from the original scenario.
-        device : device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        Scenario
-            The calibration scenario.
-        """
-        device = torch.device(device)
-
-        heliostat_index = torch.tensor([heliostat_index], device=device)
-
-        heliostat_field = HeliostatField(
-            number_of_heliostats=1,
-            all_heliostat_names=[
-                self.heliostat_field.all_heliostat_names[heliostat_index]
-            ],
-            all_heliostat_positions=self.heliostat_field.all_heliostat_positions[
-                heliostat_index
-            ],
-            all_aim_points=self.heliostat_field.all_aim_points[heliostat_index],
-            all_surface_points=self.heliostat_field.all_surface_points[heliostat_index],
-            all_surface_normals=self.heliostat_field.all_surface_normals[
-                heliostat_index
-            ],
-            all_initial_orientations=self.heliostat_field.all_initial_orientations[
-                heliostat_index
-            ],
-            all_kinematic_deviation_parameters=self.heliostat_field.all_kinematic_deviation_parameters[
-                heliostat_index
-            ],
-            all_actuator_parameters=self.heliostat_field.all_actuator_parameters[
-                heliostat_index
-            ],
-            device=device,
-        )
-
-        return Scenario(
-            power_plant_position=self.power_plant_position,
-            target_areas=self.target_areas,
-            light_sources=self.light_sources,
-            heliostat_field=heliostat_field,
-        )
 
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""

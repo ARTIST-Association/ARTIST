@@ -36,6 +36,8 @@ class HeliostatField(torch.nn.Module):
     ----------
     heliostat_groups : list[HeliostatGroup]
         A list containing all heliostat groups.
+    number_of_heliostat_groups : int
+        The number of different heliostat groups in the heliostat field.
 
     Methods
     -------
@@ -52,32 +54,12 @@ class HeliostatField(torch.nn.Module):
         """
         Initialize the heliostat field with heliostat groups.
 
-        Individual heliostats are not saved as separate entities, instead separate tensors
-        for each heliostat property exist. Each property tensor contains information about this
-        property for all heliostats in the field.
-
         Parameters
         ----------
-        number_of_heliostats : int
-            The number of heliostats in the field.
-        all_heliostat_names : list[str]
-            The string names of each heliostat in the field in the correct order.
-        all_heliostat_positions : torch.Tensor
-            The heliostat positions of all heliostats in the field.
-        all_aim_points : torch.Tensor
-            The aim points of all heliostats in the field.
-        all_surface_points : torch.Tensor
-            The surface points of all heliostats in the field.
-        all_surface_normals : torch.Tensor
-            The surface normals of all heliostats in the field.
-        all_initial_orientations : torch.Tensor
-            The initial orientations of all heliostats in the field.
-        all_kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats in the field.
-        all_actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the field.
+        heliostat_groups : list[HeliostatGroup]
         """
         super(HeliostatField, self).__init__()
+
         self.heliostat_groups = heliostat_groups
         self.number_of_heliostat_groups = len(self.heliostat_groups)
 
