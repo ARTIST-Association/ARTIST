@@ -13,13 +13,13 @@ from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can use that scenario or create and use any custom scenario.
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype.h5")
 
 # Set up logger.
 set_logger_config()
 
 # Set the device.
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_path:
@@ -30,33 +30,50 @@ with h5py.File(scenario_path) as scenario_path:
 # Inspect the scenario.
 print(scenario)
 print(f"The light source is a {scenario.light_sources.light_source_list[0]}.")
-print(f"The first target area is a {scenario.target_areas.target_area_list[0].name}.")
+print(f"The first target area is a {scenario.target_areas.names[0]}.")
 print(
-    f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}."
+    f"The first heliostat in the first group in the field is heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]}."
 )
 print(
-    f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0].tolist()}."
+    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is located at: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
 )
 print(
-    f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0].tolist()}."
+    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
 )
 
-# Define the incident ray direction.
+# Let's say we only want to consider one Heliostat for the beginning.
+# We will choose the first Heliostat, with index 0 by activating it.
+active_heliostats_indices = torch.tensor([0], device=device)
+
+# This means we only need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
-# The incident ray direction needs to be normed.
-incident_ray_direction_south = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
+# Incident ray directions need to be normed.
+incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 
-# Save original surface points of the first heliostat in the scenario.
-original_surface_points = scenario.heliostat_field.all_surface_points[0]
+# Save the original surface points of the one active heliostat.
+original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points[active_heliostats_indices]
 
-# Align all heliostats.
-scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction_south, device=device
+# Set the aimpoint for our heliostat. The aim point is part of the kinematic.
+# Let's say we want to aim at the center of the receiver.
+# As examined earlier, the receiver is at index 0 of the target areas.
+aim_point = scenario.target_areas.centers[0]
+scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[active_heliostats_indices] = aim_point
+
+# Align the heliostat(s).
+scenario.heliostat_field.heliostat_groups[0].align_surfaces_with_incident_ray_directions(
+    incident_ray_directions=incident_ray_directions,
+    active_heliostats_indices=active_heliostats_indices,
+    device=device
 )
 
-aligned_surface_points = scenario.heliostat_field.all_current_aligned_surface_points[0]
+# Save the aligned surface points of the one active heliostat.
+# The original surface points are saved for all heliostats, active or not.
+# The aligned surface points are saved only for the active/current/aligned heliostats.
+# That is why we do not need to select specific indices here.
+aligned_surface_points = scenario.heliostat_field.heliostat_groups[0].current_aligned_surface_points
 
-# Define colors for each facet.
+# Let's plot the original and the aligned surface points.
+# Define colors for each facet of the heliostat.
 colors = ["r", "g", "b", "y"]
 
 # Create a 3D plot.
@@ -71,17 +88,17 @@ ax2 = fig.add_subplot(122, projection="3d")
 
 # Plot each facet of the first heliostat in the scenario.
 number_of_facets = 4
-number_of_surface_points_per_facet = original_surface_points.shape[0]
+number_of_surface_points_per_facet = original_surface_points.shape[1]
 batch_size = number_of_surface_points_per_facet // number_of_facets
 for i in range(number_of_facets):
     start = i * batch_size
     end = start + batch_size
-    e_origin = original_surface_points[start:end, 0].cpu().detach().numpy()
-    n_origin = original_surface_points[start:end, 1].cpu().detach().numpy()
-    u_origin = original_surface_points[start:end, 2].cpu().detach().numpy()
-    e_aligned = aligned_surface_points[start:end, 0].cpu().detach().numpy()
-    n_aligned = aligned_surface_points[start:end, 1].cpu().detach().numpy()
-    u_aligned = aligned_surface_points[start:end, 2].cpu().detach().numpy()
+    e_origin = original_surface_points[0, start:end, 0].cpu().detach().numpy()
+    n_origin = original_surface_points[0, start:end, 1].cpu().detach().numpy()
+    u_origin = original_surface_points[0, start:end, 2].cpu().detach().numpy()
+    e_aligned = aligned_surface_points[0, start:end, 0].cpu().detach().numpy()
+    n_aligned = aligned_surface_points[0, start:end, 1].cpu().detach().numpy()
+    u_aligned = aligned_surface_points[0, start:end, 2].cpu().detach().numpy()
     ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i + 1}")
     ax2.scatter(
         e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i + 1}"
@@ -115,32 +132,47 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 plt.show()
 
 # Create a ray tracer.
-ray_tracer = HeliostatRayTracer(scenario=scenario, batch_size=1)
+ray_tracer = HeliostatRayTracer(
+    scenario=scenario,
+    heliostat_group=scenario.heliostat_field.heliostat_groups[0],
+)
+
+# Before we beginn the raytracing we need to define which target area on the tower should be considered.
+# It makes sense to specify the receiver here again, as we set the aim point of our heliostat to the receiver's center.
+target_area_indices=torch.tensor([0], device=device)
 
 # Perform heliostat-based ray tracing.
 image_south = ray_tracer.trace_rays(
-    incident_ray_direction=incident_ray_direction_south,
-    target_area=scenario.get_target_area("receiver"),
+    incident_ray_directions=incident_ray_directions,
+    active_heliostats_indices=active_heliostats_indices,
+    target_area_indices=target_area_indices,
     device=device,
 )
 
 # Plot the result.
 fig, ax = plt.subplots(figsize=(6, 6))
-ax.imshow(image_south.cpu().detach().numpy(), cmap="inferno")
+ax.imshow(image_south[0].cpu().detach().numpy(), cmap="inferno")
 tight_layout()
 
 
 # Define helper functions to enable us to repeat the process!
 def align_and_trace_rays(
-    light_direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    light_direction: torch.Tensor, 
+    active_heliostats_indices: torch.Tensor,
+    target_area_indices: torch.Tensor,
+    device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat ray tracing.
 
     Parameters
     ----------
-    light_direction : torch.Tensor
+    light_directions : torch.Tensor
         The direction of the incoming light on the heliostat.
+    active_heliostats_indices : torch.Tensor
+        The indices of the active heliostats to be aligned.
+    target_area_indices : torch.Tensor
+        The indices of the target areas for each active heliostat.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -150,14 +182,17 @@ def align_and_trace_rays(
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
     # Align all heliostats.
-    scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=light_direction, device=device
+    scenario.heliostat_field.heliostat_groups[0].align_surfaces_with_incident_ray_directions(
+        incident_ray_directions=light_direction,
+        active_heliostats_indices=active_heliostats_indices,
+        device=device
     )
 
     # Perform heliostat-based ray tracing.
     return ray_tracer.trace_rays(
-        incident_ray_direction=light_direction,
-        target_area=scenario.get_target_area("receiver"),
+        incident_ray_directions=light_direction,
+        active_heliostats_indices=active_heliostats_indices,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -207,30 +242,40 @@ def plot_multiple_images(
 
     plt.tight_layout()
     plt.show()
+    plt.savefig("tutorial3.png")
 
 
 # Consider multiple incident ray directions and plot the result.
 # Define light directions.
-incident_ray_direction_east = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
-incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
-incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
+incident_ray_direction_east = torch.tensor([[-1.0, 0.0, 0.0, 0.0]], device=device)
+incident_ray_direction_west = torch.tensor([[1.0, 0.0, 0.0, 0.0]], device=device)
+incident_ray_direction_above = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=device)
 
 # Perform alignment and ray tracing to generate flux density images.
 image_east = align_and_trace_rays(
-    light_direction=incident_ray_direction_east, device=device
+    light_direction=incident_ray_direction_east,
+    active_heliostats_indices=active_heliostats_indices,
+    target_area_indices=target_area_indices,
+    device=device
 )
 image_west = align_and_trace_rays(
-    light_direction=incident_ray_direction_west, device=device
+    light_direction=incident_ray_direction_west,
+    active_heliostats_indices=active_heliostats_indices,
+    target_area_indices=target_area_indices,
+    device=device
 )
 image_above = align_and_trace_rays(
-    light_direction=incident_ray_direction_above, device=device
+    light_direction=incident_ray_direction_above,
+    active_heliostats_indices=active_heliostats_indices,
+    target_area_indices=target_area_indices,
+    device=device
 )
 
 # Plot the resulting images.
 plot_multiple_images(
-    image_south,
-    image_east,
-    image_west,
-    image_above,
+    image_south[0],
+    image_east[0],
+    image_west[0],
+    image_above[0],
     names=["South", "East", "West", "Above"],
 )
