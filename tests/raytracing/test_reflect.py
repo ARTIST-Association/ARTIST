@@ -5,27 +5,21 @@ from artist.raytracing import raytracing_utils
 
 
 @pytest.mark.parametrize(
-    "incoming_ray_direction, surface_normals, expected_reflection",
+    "incident_ray_directions, surface_normals, expected_reflection",
     [
         (
-            torch.tensor([1.0, 1.0, 1.0, 0.0]),
-            torch.tensor([0.0, 0.0, 1.0, 0.0]),
-            torch.tensor([1.0, 1.0, -1.0, 0.0]),
-        ),
-        (
-            torch.tensor([1.0, 1.0, 1.0, 0.0]),
-            torch.tensor([0.0, 1.0, 0.0, 0.0]),
-            torch.tensor([1.0, -1.0, 1.0, 0.0]),
-        ),
-        (
-            torch.tensor([1.0, 1.0, 1.0, 0.0]),
-            torch.tensor([1.0, 0.0, 0.0, 0.0]),
-            torch.tensor([-1.0, 1.0, 1.0, 0.0]),
-        ),
-        (
-            torch.tensor([2.0, 1.0, 3.0, 0.0]),
-            torch.tensor([0.3, 0.6, 0.7, 0.0]),
-            torch.tensor([0.0200, -2.9600, -1.6200, 0.0000]),
+            torch.tensor([[1.0, 1.0, 1.0, 0.0],
+                          [1.0, 1.0, 1.0, 0.0],
+                          [1.0, 1.0, 1.0, 0.0],
+                          [2.0, 1.0, 3.0, 0.0]]),
+            torch.tensor([[0.0, 0.0, 1.0, 0.0],
+                          [0.0, 1.0, 0.0, 0.0],
+                          [1.0, 0.0, 0.0, 0.0],
+                          [0.3, 0.6, 0.7, 0.0]]),
+            torch.tensor([[1.0, 1.0, -1.0, 0.0],
+                          [1.0, -1.0, 1.0, 0.0],
+                          [-1.0, 1.0, 1.0, 0.0],
+                          [0.0200, -2.9600, -1.6200, 0.0000]]),
         ),
         (
             torch.tensor([1.0, 1.0, 1.0, 0.0]),
@@ -39,7 +33,7 @@ from artist.raytracing import raytracing_utils
     ],
 )
 def test_reflect_function(
-    incoming_ray_direction: torch.Tensor,
+    incident_ray_directions: torch.Tensor,
     surface_normals: torch.Tensor,
     expected_reflection: torch.Tensor,
     device: torch.device,
@@ -49,7 +43,7 @@ def test_reflect_function(
 
     Parameters
     ----------
-    incoming_ray_direction : torch.Tensor
+    incident_ray_directions : torch.Tensor
         The direction of the incoming ray to be reflected.
     surface_normals : torch.Tensor
         The surface normals of the reflective surface.
@@ -64,7 +58,7 @@ def test_reflect_function(
         If test does not complete as expected.
     """
     reflection = raytracing_utils.reflect(
-        incoming_ray_direction=incoming_ray_direction.to(device),
+        incident_ray_directions=incident_ray_directions.to(device),
         reflection_surface_normals=surface_normals.to(device),
     )
 

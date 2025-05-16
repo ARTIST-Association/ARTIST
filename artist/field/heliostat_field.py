@@ -166,6 +166,7 @@ class HeliostatField(torch.nn.Module):
                 log.info(
                     "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                 )
+                kinematic_type = config_dictionary.rigid_body_key
                 initial_orientation = prototype_initial_orientation
                 kinematic_deviations = prototype_kinematic_deviations
 
@@ -203,6 +204,7 @@ class HeliostatField(torch.nn.Module):
                 log.info(
                     "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                 )
+                actuator_type=config_dictionary.ideal_actuator_key
                 actuator_parameters = prototype_actuators
 
             surface = Surface(surface_config)
