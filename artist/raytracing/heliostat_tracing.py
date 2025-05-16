@@ -185,14 +185,16 @@ class HeliostatRayTracer:
     ----------
     scenario : Scenario
         The scenario used to perform ray tracing.
+    heliostat_group : HeliostatGroup
+        The selected heliostat group containing active heliostats.
     world_size : int
         The world size i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
     batch_size : int
         The amount of samples (Heliostats) processed parallel within a single rank.
-    number_of_surface_points_per_heliostat : int
-        The number of surface points on a single heliostat.
+    light_source : LightSource
+        The light source emitting the traced rays.
     distortions_dataset : DistortionsDataset
         The dataset containing the distortions for ray scattering.
     distortions_sampler : RestrictedDistributedSampler
@@ -210,10 +212,8 @@ class HeliostatRayTracer:
         Perform heliostat ray tracing.
     scatter_rays()
         Scatter the reflected rays around the preferred ray directions for each heliostat.
-    sample_bitmap()
-        Sample a bitmap (flux density distribution) of the reflected rays on the target area.
-    normalize_bitmap()
-        Normalize a bitmap.
+    sample_bitmaps()
+        Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
     """
 
     def __init__(
@@ -231,17 +231,17 @@ class HeliostatRayTracer:
         Initialize the heliostat ray tracer.
 
         "Heliostat"-tracing is one kind of ray tracing applied in ARTIST. For this kind of ray tracing,
-        the rays are initialized on the heliostat. The rays originate in the discrete surface points.
-        There they are multiplied, distorted, and scattered, and then they are sent to the target area.
-        Letting the rays originate on the heliostat drastically reduces the number of rays that need
+        the rays are initialized on the heliostats. The rays originate in the discrete surface points.
+        There they are multiplied, distorted, and scattered, and then they are sent to the aim points.
+        Letting the rays originate on the heliostats, drastically reduces the number of rays that need
         to be traced.
 
         Parameters
         ----------
-        number_of_heliostats : int
-            The total number of heliostats to be ray traced.
-        number_of_surface_points_per_heliostat : int
-            The number of surface points per heliostat. 
+        scenario : Scenario
+            The scenario used to perform ray tracing.
+        heliostat_group : HeliostatGroup
+            The selected heliostat group containing active heliostats.
         world_size : int
             The world size i.e., the overall number of processes (default is 1).
         rank : int
@@ -262,7 +262,6 @@ class HeliostatRayTracer:
         self.rank = rank
         self.batch_size = batch_size
 
-        # TODO lightsources parallel?
         self.light_source = scenario.light_sources.light_source_list[0]
 
         # Create distortions dataset.
@@ -299,15 +298,19 @@ class HeliostatRayTracer:
         """
         Perform heliostat ray tracing.
 
-        Scatter the rays according to the distortions, calculate the intersection with the target plane,
-        and sample the resulting bitmap on the target area.
+        Scatter the rays according to the distortions, calculate the intersections with the target planes,
+        and sample the resulting bitmaps on the target areas. The bitmaps are generated seperatly for each
+        active heliostat and can be accessed individually or they can be combined to get the total flux
+        density distribution for all heliostats on all target areas.
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
-        target_area : TargetArea
-            The target area used to sample the bitmap on.
+        incident_ray_directions : torch.Tensor
+            The direction of the incident rays as seen from the heliostats.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that are considered for raytracing.
+        target_area_indices : torch.Tensor
+            The indices of the target areas for each active heliostat.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -319,7 +322,7 @@ class HeliostatRayTracer:
         Returns
         -------
         torch.Tensor
-            The resulting bitmap.
+            The resulting bitmaps per heliostat.
         """
         device = torch.device(device)
 
@@ -329,10 +332,10 @@ class HeliostatRayTracer:
         )
 
         if not torch.all(self.heliostat_group.aligned_heliostats[active_heliostats_indices] == 1.0):
-            raise ValueError("Not all heliostats have been aligned.")
+            raise ValueError("Not all active heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
-            incoming_ray_directions=incident_ray_directions,
+            incident_ray_directions=incident_ray_directions,
             reflection_surface_normals=self.heliostat_group.current_aligned_surface_normals,
         )
 
@@ -344,7 +347,6 @@ class HeliostatRayTracer:
             ]
 
             rays = self.scatter_rays(
-                preferred_reflection_directions=self.heliostat_group.preferred_reflection_directions,
                 distortion_u=batch_u,
                 distortion_e=batch_e,
                 heliostat_indices=heliostat_indices_per_batch,
@@ -356,16 +358,15 @@ class HeliostatRayTracer:
                     rays=rays,
                     target_area_indices=target_area_indices,
                     target_areas=self.scenario.target_areas,
-                    points_at_ray_origin=self.heliostat_group.current_aligned_surface_points[
+                    points_at_ray_origins=self.heliostat_group.current_aligned_surface_points[
                         heliostat_indices_per_batch
                     ],
                 )
             )
 
-            bitmaps = self.sample_bitmap(
+            bitmaps = self.sample_bitmaps(
                 intersections=intersections,
                 absolute_intensities=absolute_intensities,
-                target_areas=self.scenario.target_areas,
                 target_area_indices=target_area_indices,
                 heliostat_indices=active_heliostats_indices,
                 device=device,
@@ -377,10 +378,9 @@ class HeliostatRayTracer:
 
     def scatter_rays(
         self,
-        preferred_reflection_directions: torch.Tensor,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
-        heliostat_indices: list,
+        heliostat_indices: list[int],
         device: Union[torch.device, str] = "cuda",
     ) -> Rays:
         """
@@ -392,7 +392,7 @@ class HeliostatRayTracer:
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
-        heliostat_indices : list
+        heliostat_indices : list[int]
             The indices of the heliostats considered in the current batch.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
@@ -400,7 +400,7 @@ class HeliostatRayTracer:
         Returns
         -------
         Rays
-            Scattered rays around the preferred directions.
+            Scattered rays around the preferred reflection directions.
         """
         device = torch.device(device)
 
@@ -410,7 +410,7 @@ class HeliostatRayTracer:
 
         scattered_rays = (
             rotations
-            @ preferred_reflection_directions[
+            @ self.heliostat_group.preferred_reflection_directions[
                 heliostat_indices, :, :
             ]
             .unsqueeze(1)
@@ -422,47 +422,47 @@ class HeliostatRayTracer:
             ray_magnitudes=torch.ones(scattered_rays.shape[:-1], device=device),
         )
 
-    def sample_bitmap(
+    def sample_bitmaps(
         self,
         intersections: torch.Tensor,
         absolute_intensities: torch.Tensor,
-        target_areas: torch.Tensor,
         target_area_indices: torch.Tensor,
         heliostat_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Sample a bitmap (flux density distribution) of the reflected rays on the target area.
+        Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
+
+        The bitmaps are saved for each active heliostat seperatly.
 
         Parameters
         ----------
-        target_area : TargetArea
-            The target area used to sample the bitmap on.
-        dx_intersections : torch.Tensor
-            The x-position of the intersection with the target area, scaled to the bitmap resolution.
-        dy_intersections : torch.Tensor
-            The y-position of the intersection with the target area, scaled to the bitmap resolution.
-        intersection_indices : torch.Tensor
-            Indices of the pixels.
+        intersections : torch.Tensor
+            The intersections of rays on the target area planes for each heliostat.
         absolute_intensities : torch.Tensor
-            The absolute intensities of the rays hitting the target plane.
+            The absolute intensities of the rays hitting the target planes for each heliostat.
+        target_area_indices : torch.Tensor
+            The indices of target areas on which each heliostat should be raytraced.
+        heliostat_indices : torch.Tensor
+            The indices of active heliostats processed in this sampling step.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
         torch.Tensor
-            The flux density distribution of the reflected rays on the target area.
+            The flux density distributions of the reflected rays on the target areas for each active heliostat.
         """
         device = torch.device(device)
 
-        plane_widths = target_areas.dimensions[target_area_indices][:, 0].unsqueeze(1).unsqueeze(2) 
-        plane_heights = target_areas.dimensions[target_area_indices][:, 1].unsqueeze(1).unsqueeze(2) 
-        plane_centers_e = target_areas.centers[target_area_indices][:, 0].unsqueeze(1).unsqueeze(2)
-        plane_centers_u = target_areas.centers[target_area_indices][:, 2].unsqueeze(1).unsqueeze(2)
+        plane_widths = self.scenario.target_areas.dimensions[target_area_indices][:, 0].unsqueeze(1).unsqueeze(2) 
+        plane_heights = self.scenario.target_areas.dimensions[target_area_indices][:, 1].unsqueeze(1).unsqueeze(2) 
+        plane_centers_e = self.scenario.target_areas.centers[target_area_indices][:, 0].unsqueeze(1).unsqueeze(2)
+        plane_centers_u = self.scenario.target_areas.centers[target_area_indices][:, 2].unsqueeze(1).unsqueeze(2)
         total_intersections = intersections.shape[1] * intersections.shape[2]
         absolute_intensities = absolute_intensities.reshape(-1, total_intersections)
 
+        # Determine the x- and y-positions of the intersections with the target areas, scaled to the bitmap resolutions.
         dx_intersections = (
             intersections[:, :, :, 0]
             + plane_widths / 2 
@@ -474,6 +474,7 @@ class HeliostatRayTracer:
             - plane_centers_u
         )
 
+        # Selection of valid intersection indices within the bounds of the target areas or within a little boundary outside the target areas.
         intersection_indices_1 = (
             (-1 <= dx_intersections)
             & (dx_intersections < plane_widths + 1)
@@ -512,6 +513,7 @@ class HeliostatRayTracer:
         # and 4, for y to 3 and 4).
         x_indices_low = x_intersections.to(torch.int32)
         y_indices_low = y_intersections.to(torch.int32)
+
         # The higher-valued neighboring pixels (for x this corresponds to 2
         # and 3, for y to 1 and 2).
         x_indices_high = (x_indices_low + 1)
@@ -568,10 +570,10 @@ class HeliostatRayTracer:
         )
         intensities[:, total_intersections * 3 :] = intensities_pixel_4.reshape(-1, total_intersections)
 
-        # For distribution, we regard even those neighboring pixels that are
-        # _not_ part of the image. That is why here, we set up a mask to
-        # choose only those indices that are actually in the bitmap (i.e. we
-        # prevent out-of-bounds access).
+        # For the distributions, we regarded even those neighboring pixels that are
+        # _not_ part of the image but within a little boundary outside of the image as well. 
+        # That is why here, we set up a mask to choose only those indices that are actually 
+        # in the bitmap (i.e. we prevent out-of-bounds access).
         intersection_indices_2 = (
             (0 <= x_indices)
             & (x_indices < self.bitmap_resolution_e)
@@ -583,7 +585,7 @@ class HeliostatRayTracer:
         mask = final_intersection_indices.flatten()
         heliostat_indices = heliostat_indices.repeat_interleave(total_intersections * 4)
 
-        # Flux density map for heliostat field
+        # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
             (self.heliostat_group.number_of_heliostats, self.bitmap_resolution_u, self.bitmap_resolution_e),
             dtype=dx_intersections.dtype,

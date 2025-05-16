@@ -47,30 +47,19 @@ class LinearActuators(Actuators):
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. The clockwise axis movement attribute describes
-        the turning direction of the actuator. The linear actuator is further parametrized by five parameters.
-        These are the increment, which stores the information about the stroke length change per motor step,
-        the initial stroke length, and an offset that describes the difference between the linear actuator's
+        A linear actuator describes movement within a 2D plane. The actuator parameters tensor for linear
+        actuators includes seven parameters. Ordered by index, the first actuator parameter indicates the
+        type of the actuator and the second parameter describes the turning direction of the actuator. 
+        The next five parameters are the increment, which stores the information about the stroke length change 
+        per motor step, the initial stroke length, and an offset that describes the difference between the linear actuator's
         pivoting point and the point around which the actuator is allowed to pivot. Next, the actuator's pivoting
         radius is described by the pivot radius and lastly, the initial angle indicates the angle that the
         actuator introduces to the manipulated coordinate system at the initial stroke length.
 
         Parameters
         ----------
-        clockwise_axis_movements : bool
-            Turning directions of the joints.
-        increments : torch.Tensor
-            The stroke length changes per motor step.
-        initial_stroke_lengths : torch.Tensor
-            The stroke lengths for a motor step of 0.
-        offsets : torch.Tensor
-            The offsets between the linear actuators' pivoting points and the points
-            around which the actuators are allowed to pivot.
-        pivot_radii : torch.Tensor
-            The actuators' pivoting radii.
-        initial_angle : torch.Tensor
-            The angles that the actuators introduce to the manipulated coordinate systems
-            at the initial stroke lengths.
+        actuator_parameters : torch.Tensor
+            The seven actuator parameters.
         """
         super().__init__()
         self.actuator_parameters=actuator_parameters

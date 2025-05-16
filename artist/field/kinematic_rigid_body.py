@@ -31,10 +31,10 @@ class RigidBody(Kinematic):
 
     Methods
     -------
-    incident_ray_direction_to_orientations()
-        Compute orientation matrices given an incident ray direction.
-    align_surfaces_with_incident_ray_direction()
-        Align given surface points and surface normals according to an incident ray direction.
+    incident_ray_directions_to_orientations()
+        Compute orientation matrices given incident ray directions.
+    align_surfaces_with_incident_ray_directions()
+        Align given surface points and surface normals according to incident ray directions.
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions..
     align_surfaces_with_motor_positions()
@@ -60,7 +60,7 @@ class RigidBody(Kinematic):
         """
         Initialize a rigid body kinematic.
 
-        The rigid body kinematic determines a transformation matrices that are applied to the heliostat surfaces in order to
+        The rigid body kinematic determines transformation matrices that are applied to the heliostat surfaces in order to
         align them. The heliostats then reflect the incoming light according to the provided aim points. The rigid body
         kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
         Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
@@ -107,18 +107,20 @@ class RigidBody(Kinematic):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: list[int],
+        active_heliostats_indices: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute orientation matrices given an incident ray direction.
+        Compute orientation matrices given incident ray directions.
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
+        incident_ray_directions : torch.Tensor
+            The directions of the incident rays as seen from the heliostats.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats to be aligned.
         max_num_iterations : int
             Maximum number of iterations (default is 2).
         min_eps : float
@@ -305,12 +307,14 @@ class RigidBody(Kinematic):
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Align given surface points and surface normals according to an incident ray direction.
+        Align given surface points and surface normals according to incident ray directions.
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
-            The direction of the incident ray as seen from the heliostat.
+        incident_ray_directions : torch.Tensor
+            The directions of the incident rays as seen from the heliostats.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats to be aligned.
         surface_points : torch.Tensor
             The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor

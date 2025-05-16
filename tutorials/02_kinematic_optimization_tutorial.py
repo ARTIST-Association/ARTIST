@@ -48,7 +48,7 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
     (
         calibration_heliostat_names,
         calibration_target_names,
-        center_calibration_images,
+        centers_calibration_images,
         sun_positions,
         all_calibration_motor_positions,
     ) = paint_loader.extract_paint_calibration_data(
@@ -127,7 +127,7 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
     calibrated_kinematic_deviation_parameters, calibrated_actuator_parameters = kinematic_optimizer.optimize(
         tolerance=tolerance,
         max_epoch=max_epoch,
-        center_calibration_images=center_calibration_images,
+        centers_calibration_images=centers_calibration_images,
         incident_ray_directions=incident_ray_directions,
         target_area_indices=target_area_indices,
         motor_positions=all_calibration_motor_positions,
