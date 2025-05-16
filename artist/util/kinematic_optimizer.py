@@ -78,7 +78,7 @@ class KinematicOptimizer:
         motor_positions: Optional[torch.Tensor] = None,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> None:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Optimize the kinematic parameters.
 
@@ -100,6 +100,13 @@ class KinematicOptimizer:
             Number of log messages during training (default is 3).
         device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
+        
+        Returns
+        -------
+        torch.Tensor
+            The calibrated kinematic deviation parameters.
+        torch.Tensor
+            The calibrated actuator parameters.
         """
         log.info("Start the kinematic calibration.")
         device = torch.device(device)
@@ -110,7 +117,7 @@ class KinematicOptimizer:
                 max_epoch=max_epoch,
                 centers_calibration_images=centers_calibration_images,
                 incident_ray_directions=incident_ray_directions,
-                all_motor_positions=motor_positions,
+                motor_positions=motor_positions,
                 num_log=num_log,
                 device=device,
             )
@@ -126,6 +133,8 @@ class KinematicOptimizer:
                 device=device,
             )
         log.info("Kinematic parameters optimized.")
+    
+        return self.calibration_group.kinematic_deviation_parameters, self.calibration_group.actuator_parameters
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
@@ -133,7 +142,7 @@ class KinematicOptimizer:
         max_epoch: int,
         centers_calibration_images: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        all_motor_positions: torch.Tensor,
+        motor_positions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
@@ -141,7 +150,7 @@ class KinematicOptimizer:
         Optimize the kinematic parameters using the motor positions.
 
         This optimizer method optimizes the kinematic parameters by extracting the motor positions
-        and incident ray direction from a specific calibration and using the scene's geometry.
+        and incident ray directions from calibration data and using the scene's geometry.
 
         Parameters
         ----------
@@ -150,10 +159,10 @@ class KinematicOptimizer:
         max_epoch : int
             The maximum number of optimization epochs.
         centers_calibration_images : torch.Tensor
-            The center of the calibration flux densities.
+            The centers of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration data.
-        all_motor_positions : torch.Tensor
+        motor_positions : torch.Tensor
             The motor positions specified in the calibration data.
         num_log : int
             Number of log messages during training (default is 3).
@@ -165,10 +174,16 @@ class KinematicOptimizer:
         loss = torch.inf
         epoch = 0
 
-        preferred_reflection_direction_calibrations = torch.nn.functional.normalize(
+        active_heliostats_indices = torch.arange(motor_positions.shape[0], device=device)
+        unique_heliostats = list(set(self.calibration_group.names))
+        heliostat_duplicates_mapping = []
+        for heliostat in unique_heliostats:
+            heliostat_duplicates_mapping.append([i for i, s in enumerate(self.calibration_group.names) if s == heliostat])
+
+        preferred_reflection_directions_calibration = torch.nn.functional.normalize(
             (
                 centers_calibration_images
-                - self.scenario.heliostat_field.all_heliostat_positions
+                - self.calibration_group.positions
             ),
             p=2,
             dim=1,
@@ -176,50 +191,54 @@ class KinematicOptimizer:
 
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
-            total_loss = 0.0
             self.optimizer.zero_grad()
 
-            for (
-                motor_positions,
-                incident_ray_direction,
-                preferred_reflection_direction_calibration,
-            ) in zip(
-                all_motor_positions,
-                incident_ray_directions,
-                preferred_reflection_direction_calibrations,
-            ):
-                orientation = (
-                    self.scenario.heliostat_field.get_orientations_from_motor_positions(
-                        motor_positions=motor_positions, device=device
-                    )
-                )
 
-                preferred_reflection_direction = raytracing_utils.reflect(
-                    incoming_ray_direction=incident_ray_direction,
-                    reflection_surface_normals=orientation[:, 0:4, 2],
+            orientations = (
+                self.calibration_group.get_orientations_from_motor_positions(
+                    motor_positions=motor_positions, 
+                    active_heliostats_indices=active_heliostats_indices,
+                    device=device
                 )
+            )
 
-                loss = (
-                    (
-                        preferred_reflection_direction
-                        - preferred_reflection_direction_calibration
-                    )
-                    .abs()
-                    .mean()
+            preferred_reflection_directions = raytracing_utils.reflect(
+                incident_ray_directions=incident_ray_directions,
+                reflection_surface_normals=orientations[:, 0:4, 2].unsqueeze(1),
+            )
+
+            loss = (
+                (
+                    preferred_reflection_directions.squeeze(1)
+                    - preferred_reflection_directions_calibration
                 )
+                .abs()
+                .mean()
+            )
 
-                loss.backward()
-                total_loss += loss
+            loss.backward()
+
+            # Since each heliostat has multiple calibration datapoints, each heliostat appears multiple times
+            # in the calibration group. The kinematic and actuator parameters are duplicated per datapoint for
+            # each heliostat. Since each calibration has equal power on the gradients, the gradients of the parameters
+            # for each heliostat are averaged.
+            with torch.no_grad():
+                for param_group in self.optimizer.param_groups:
+                    for parameter in param_group["params"]:
+                        for group in heliostat_duplicates_mapping:
+                            averaged_gradients = parameter.grad[group].mean(dim=0, keepdim=True)
+                            parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
-            self.scheduler.step(total_loss)
+            #self.scheduler.step(loss)
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {total_loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
+
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -230,12 +249,12 @@ class KinematicOptimizer:
         incident_ray_directions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> None:
         """
         Optimize the kinematic parameters using ray tracing.
 
         This optimizer method optimizes the kinematic parameters by extracting the focus points
-        of a calibration images and using heliostat-tracing.
+        of calibration images and using heliostat-tracing.
 
         Parameters
         ----------
@@ -253,13 +272,6 @@ class KinematicOptimizer:
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
-        
-        Returns
-        -------
-        torch.Tensor
-            The calibrated kinematic deviation parameters.
-        torch.Tensor
-            The calibrated actuator parameters.
         """
         log.info("Kinematic optimization with ray tracing.")
         device = torch.device(device)
@@ -332,4 +344,3 @@ class KinematicOptimizer:
 
             epoch += 1
 
-        return self.calibration_group.kinematic_deviation_parameters, self.calibration_group.actuator_parameters

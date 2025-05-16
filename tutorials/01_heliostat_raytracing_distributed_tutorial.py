@@ -98,13 +98,13 @@ except StopIteration:
 
 
 plt.imshow(final_flux_distributions[0, 0].cpu().detach(), cmap="inferno")
-plt.savefig("multi_focus_AA31_AB38_same.png")
+plt.savefig("test1.png")
 
 # plt.imshow(final_flux_distributions[0, 1].cpu().detach(), cmap="inferno")
 # plt.savefig("receiver_AB38.png")
 
 plt.imshow(final_flux_distributions[0, 2].cpu().detach(), cmap="inferno")
-plt.savefig("solar_tower_lower_AA35_AA39_different_sun.png")
+plt.savefig("test2.png")
 
 # plt.imshow(final_flux_distributions[0, 3].cpu().detach(), cmap="inferno")
 # plt.savefig("solar_tower_upper_AA31_mit_AB38_mft.png")
