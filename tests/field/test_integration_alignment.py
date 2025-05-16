@@ -12,7 +12,7 @@ from artist.util.scenario import Scenario
 
 
 @pytest.mark.parametrize(
-    "incident_ray_direction, ray_direction_string, scenario_config",
+    "incident_ray_directions, ray_direction_string, scenario_config",
     [
         (
             torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
@@ -47,7 +47,7 @@ from artist.util.scenario import Scenario
     ],
 )
 def test_integration_alignment(
-    incident_ray_direction: torch.Tensor,
+    incident_ray_directions: torch.Tensor,
     ray_direction_string: str,
     scenario_config: str,
     device: torch.device,
@@ -62,8 +62,8 @@ def test_integration_alignment(
 
     Parameters
     ----------
-    incident_ray_direction : torch.Tensor
-        The incident ray direction used for the test.
+    incident_ray_directions : torch.Tensor
+        The incident ray directions used for the test.
     ray_direction_string : str
         String value describing the ray direction.
     scenario_config : str
@@ -89,17 +89,23 @@ def test_integration_alignment(
         )
 
     # Align heliostat.
-    scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=incident_ray_direction.to(device), device=device
+    scenario.heliostat_field.heliostat_groups[0].align_surfaces_with_incident_ray_directions(
+        incident_ray_directions=incident_ray_directions.to(device),
+        active_heliostats_indices=torch.tensor([0], device=device),
+        device=device
     )
 
     # Create a ray tracer.
-    ray_tracer = HeliostatRayTracer(scenario=scenario)
+    ray_tracer = HeliostatRayTracer(
+        scenario=scenario,
+        heliostat_group=scenario.heliostat_field.heliostat_groups[0]
+    )
 
     # Perform heliostat-based ray tracing.
-    final_bitmap = ray_tracer.trace_rays(
-        incident_ray_direction=incident_ray_direction.to(device),
-        target_area=scenario.get_target_area("receiver"),
+    final_bitmaps = ray_tracer.trace_rays(
+        incident_ray_directions=incident_ray_directions.to(device),
+        active_heliostats_indices=torch.tensor([0], device=device),
+        target_area_indices=torch.tensor([scenario.target_areas.names.index("receiver")], device=device),
         device=device,
     )
 
@@ -109,4 +115,4 @@ def test_integration_alignment(
         / f"{ray_direction_string}_{device.type}.pt"
     )
     expected = torch.load(expected_path, map_location=device, weights_only=True)
-    torch.testing.assert_close(final_bitmap, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(final_bitmaps[0], expected, atol=5e-4, rtol=5e-4)

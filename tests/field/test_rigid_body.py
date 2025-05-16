@@ -7,70 +7,7 @@ from artist.field.kinematic_rigid_body import (
 
 
 @pytest.fixture
-def actuator_parameters(device: torch.device) -> torch.Tensor:
-    """
-    Define actuator parameters used in tests.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    torch.Tensor
-        The actuator parameters for two ideal actuators.
-    """
-    parameters = torch.zeros((1, 7, 2), device=device)
-
-    parameters[:, 0, :] = 1
-    parameters[:, 1, 1] = 1
-
-    return parameters
-
-
-@pytest.fixture
-def initial_orientation_south(device: torch.device) -> torch.Tensor:
-    """
-    Define initial orientation vector for a south-orientated heliostat.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    torch.Tensor
-        Initial kinematic orientation vector for a south-orientated heliostat.
-    """
-    initial_orientation_south = torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device)
-    return initial_orientation_south
-
-
-@pytest.fixture
-def initial_orientation_up(device: torch.device) -> torch.Tensor:
-    """
-    Define initial orientation vector for an up-orientated heliostat.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    torch.Tensor
-        Initial kinematic orientation vector for an up-orientated heliostat.
-    """
-    initial_orientation_up = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
-    return initial_orientation_up
-
-
-@pytest.fixture
 def kinematic_model_1(
-    actuator_parameters: torch.Tensor,
-    initial_orientation_south: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
@@ -78,10 +15,6 @@ def kinematic_model_1(
 
     Parameters
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
-    initial_orientation_south : torch.Tensor
-        The kinematic initial orientation.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -90,23 +23,53 @@ def kinematic_model_1(
     RigidBody
         The kinematic model.
     """
-    position = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
-    aim_point = torch.tensor([[0.0, -10.0, 0.0, 1.0]], device=device)
+    positions = torch.tensor([[0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 1.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0]], device=device)
+    aim_points = torch.tensor([[0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -9.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0]], device=device)
+    initial_orientations = torch.tensor([[0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, 0.0, 1.0, 0.0],
+                                        [0.0, 0.0, 1.0, 0.0],
+                                        [0.0, 0.0, 1.0, 0.0],
+                                        [0.0, 0.0, 1.0, 0.0]], device=device)
+
+    # Ideal actuators
+    actuator_parameters = torch.zeros((10, 1, 2), device=device)
+    actuator_parameters[:, 0, 1] = 1
+
     return RigidBody(
-        number_of_heliostats=1,
-        heliostat_positions=position,
-        aim_points=aim_point,
+        number_of_heliostats=10,
+        heliostat_positions=positions,
+        aim_points=aim_points,
         actuator_parameters=actuator_parameters,
-        initial_orientations=initial_orientation_south,
-        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
+        initial_orientations=initial_orientations,
+        deviation_parameters=torch.zeros((10, 18), dtype=torch.float, device=device),
         device=device,
     )
-
 
 @pytest.fixture
 def kinematic_model_2(
-    actuator_parameters: torch.Tensor,
-    initial_orientation_south: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
@@ -114,10 +77,6 @@ def kinematic_model_2(
 
     Parameters
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
-    initial_orientation_south : torch.Tensor
-        The kinematic initial orientation.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -126,51 +85,27 @@ def kinematic_model_2(
     RigidBody
         The kinematic model.
     """
-    position = torch.tensor([[0.0, 1.0, 0.0, 1.0]], device=device)
-    aim_point = torch.tensor([[0.0, -9.0, 0.0, 1.0]], device=device)
+    positions = torch.tensor([[0.0, 0.0, 0.0, 1.0],
+                             [0.0, 1.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.0, 1.0]], device=device)
+    aim_points = torch.tensor([[0.0, -10.0, 0.0, 1.0],
+                              [0.0, -9.0, 0.0, 1.0],
+                              [0.0, -10.0, 0.0, 1.0]], device=device)
+    initial_orientations = torch.tensor([[0.0, -1.0, 0.0, 0.0],
+                                        [0.0, -1.0, 0.0, 0.0],
+                                        [0.0, 0.0, 1.0, 0.0]], device=device)
+
+    # Ideal actuators
+    actuator_parameters = torch.zeros((3, 1, 2), device=device)
+    actuator_parameters[:, 0, 1] = 1
+
     return RigidBody(
-        number_of_heliostats=1,
-        heliostat_positions=position,
-        aim_points=aim_point,
+        number_of_heliostats=3,
+        heliostat_positions=positions,
+        aim_points=aim_points,
         actuator_parameters=actuator_parameters,
-        initial_orientations=initial_orientation_south,
-        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
-        device=device,
-    )
-
-
-@pytest.fixture
-def kinematic_model_3(
-    actuator_parameters: torch.Tensor,
-    initial_orientation_up: torch.Tensor,
-    device: torch.device,
-) -> RigidBody:
-    """
-    Create a kinematic model to use in the test.
-
-    Parameters
-    ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
-    initial_orientation_up : torch.Tensor
-        The kinematic initial orientation offsets.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    RigidBody
-        The kinematic model.
-    """
-    position = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
-    aim_point = torch.tensor([[0.0, -10.0, 0.0, 1.0]], device=device)
-    return RigidBody(
-        number_of_heliostats=1,
-        heliostat_positions=position,
-        aim_points=aim_point,
-        actuator_parameters=actuator_parameters,
-        initial_orientations=initial_orientation_up,
-        deviation_parameters=torch.zeros((1, 18), dtype=torch.float, device=device),
+        initial_orientations=initial_orientations,
+        deviation_parameters=torch.zeros((3, 18), dtype=torch.float, device=device),
         device=device,
     )
 
@@ -178,10 +113,19 @@ def kinematic_model_3(
 @pytest.mark.parametrize(
     "kinematic_model_fixture, input, method, expected",
     [
-        (
+        (   
             "kinematic_model_1",
-            torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
+            torch.tensor([[0.0, 0.0, -1.0, 0.0],
+                          [-1.0, 0.0, 0.0, 0.0],
+                          [0.0, 1.0, 0.0, 0.0],
+                          [1.0, 0.0, 0.0, 0.0],
+                          [0.0000, 0.7071, -0.7071, 0.0000],
+                          [0.0, 0.0, -1.0, 0.0],
+                          [0.0, 0.0, -1.0, 0.0],
+                          [0.0, 1.0, 0.0, 0.0],
+                          [-1.0, 0.0, 0.0, 0.0],
+                          [1.0, 0.0, 0.0, 0.0]]),
+            "incident_ray_directions_to_orientations",
             torch.tensor(
                 [
                     [
@@ -199,16 +143,7 @@ def kinematic_model_3(
                             0,
                         ],
                         [0, 0, 0, 1],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_1",
-            torch.tensor([[-1.0, 0.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [
                             torch.cos(torch.tensor(torch.pi / 4)),
@@ -224,31 +159,13 @@ def kinematic_model_3(
                         ],
                         [0.0, 0.0, 1.0, 0.0],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_1",
-            torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
                         [0.0, 1.0, 0.0, 0.0],
                         [0.0, 0.0, 1.0, 0.0],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_1",
-            torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [
                             torch.cos(torch.tensor(-torch.pi / 4)),
@@ -264,16 +181,7 @@ def kinematic_model_3(
                         ],
                         [0.0, 0.0, 1.0, 0.0],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_1",
-            torch.tensor([[0.0000, 0.7071, -0.7071, 0.0000]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
                         [
@@ -289,16 +197,7 @@ def kinematic_model_3(
                             0.0,
                         ],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_2",
-            torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
                         [
@@ -314,16 +213,7 @@ def kinematic_model_3(
                             0.0,
                         ],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_3",
-            torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
                         [
@@ -339,16 +229,7 @@ def kinematic_model_3(
                             0.0,
                         ],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_3",
-            torch.tensor([[0.0, 1.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
                         [
@@ -364,16 +245,7 @@ def kinematic_model_3(
                             0.0,
                         ],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_3",
-            torch.tensor([[-1.0, 0.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [
                             torch.cos(torch.tensor(torch.pi / 4)),
@@ -389,16 +261,7 @@ def kinematic_model_3(
                         ],
                         [0.0, 1.0, 0.0, 0.0],
                         [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_3",
-            torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
-            "incident_ray_direction_to_orientations",
-            torch.tensor(
-                [
+                    ],
                     [
                         [
                             torch.cos(torch.tensor(-torch.pi / 4)),
@@ -419,8 +282,11 @@ def kinematic_model_3(
             ),
         ),
         (
-            "kinematic_model_1",
-            torch.tensor([[0.0, 0.0]]),
+            "kinematic_model_2",
+            torch.tensor([[0.0, 0.0],
+                          [5.0, 1000.0],
+                          [10.0, 40.0]]
+                        ),
             "motor_positions_to_orientations",
             torch.tensor(
                 [
@@ -428,17 +294,8 @@ def kinematic_model_3(
                         [1.0, 0.0, 0.0, 0.0],
                         [0.0, 1.0, 0.0, 0.0],
                         [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_2",
-            torch.tensor([[5.0, 1000.0]]),
-            "motor_positions_to_orientations",
-            torch.tensor(
-                [
+                        [0.0, 0.0, 0.0, 1.0]
+                    ],
                     [
                         [
                             0.562379062176,
@@ -463,22 +320,13 @@ def kinematic_model_3(
                             0.000000000000,
                             0.000000000000,
                             1.000000000000,
-                        ],
-                    ]
-                ]
-            ),
-        ),
-        (
-            "kinematic_model_3",
-            torch.tensor([[10.0, 40.0]]),
-            "motor_positions_to_orientations",
-            torch.tensor(
-                [
+                        ]
+                    ],
                     [
                         [-6.6694e-01, 3.2570e-08, 7.4511e-01, 0.0000e00],
                         [-6.2520e-01, 5.4402e-01, -5.5961e-01, 0.0000e00],
                         [-4.0536e-01, -8.3907e-01, -3.6283e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00]
                     ]
                 ]
             ),
@@ -519,5 +367,7 @@ def test_orientation_matrix(
     get_orientation = getattr(request.getfixturevalue(kinematic_model_fixture), method)
 
     # Check if the orientation matrix is correct.
-    orientation_matrix = get_orientation(input.to(device), device=device)
+    orientation_matrix = get_orientation(input.to(device),
+                                         active_heliostats_indices=torch.arange(0, input.shape[0], device=device),
+                                         device=device)
     torch.testing.assert_close(orientation_matrix, expected.to(device))

@@ -85,8 +85,6 @@ def test_heliostat_field_load_from_hdf5_errors(
     with pytest.raises(ValueError) as exc_info:
         HeliostatField.from_hdf5(
             config_file=mock_h5_file,
-            number_of_heliostats=1,
-            number_of_surface_points_per_heliostat=10,
             prototype_surface=prototype_surface,
             prototype_initial_orientation=None,
             prototype_kinematic_deviations=prototype_kinematic,
