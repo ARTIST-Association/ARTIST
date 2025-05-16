@@ -87,22 +87,22 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
     ]
 
     # Set up optimizer and scheduler.
-    tolerance = 1e-7
-    max_epoch = 150
-    initial_learning_rate = 0.01
+    tolerance = 0.0005
+    max_epoch = 1000
+    initial_learning_rate = 0.0001
     learning_rate_factor = 0.1
     learning_rate_patience = 20
     learning_rate_threshold = 0.1
 
-    use_ray_tracing = True
+    use_ray_tracing = False
     if use_ray_tracing:
         all_calibration_motor_positions = None
         tolerance = 0.035
-        max_epoch = 1000
+        max_epoch = 10000
         initial_learning_rate = 0.002
         learning_rate_factor = 0.1
-        learning_rate_patience = 18
-        learning_rate_threshold = 0.1
+        learning_rate_patience = 50
+        learning_rate_threshold = 50
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_learning_rate)
 

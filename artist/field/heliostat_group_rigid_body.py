@@ -188,6 +188,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
+        active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -197,6 +198,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+        active_heliostats_indices: torch.Tensor
+            The indices of the active heliostats that will be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -208,13 +211,16 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         device = torch.device(device)
         
         return self.kinematic.motor_positions_to_orientations(
-            motor_positions, device
+            motor_positions=motor_positions,
+            active_heliostats_indices=active_heliostats_indices,
+            device=device
         )
 
     
     def align_surfaces_with_motor_positions(
         self,
         motor_positions: torch.Tensor,
+    	active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -226,6 +232,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+        active_heliostats_indices: torch.Tensor
+            The indices of the active heliostats that will be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """

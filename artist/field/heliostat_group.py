@@ -79,6 +79,8 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The incident ray direction.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats to be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -92,6 +94,7 @@ class HeliostatGroup(torch.nn.Module):
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
+        active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -101,6 +104,8 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats to be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -114,6 +119,7 @@ class HeliostatGroup(torch.nn.Module):
     def align_surfaces_with_motor_positions(
         self,
         motor_positions: torch.Tensor,
+        active_heliostats_indices: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -125,6 +131,8 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats to be aligned.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

@@ -66,7 +66,7 @@ class LinearActuators(Actuators):
 
     def _motor_positions_to_absolute_angles(
         self, 
-        active_heliostats_indices: list[int],
+        active_heliostats_indices: torch.Tensor,
         motor_positions: torch.Tensor
     ) -> torch.Tensor:
         """
@@ -78,6 +78,8 @@ class LinearActuators(Actuators):
 
         Parameters
         ----------
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that will be aligned.
         motor_positions : torch.Tensor
             The motor positions.
 
@@ -95,7 +97,7 @@ class LinearActuators(Actuators):
 
     def motor_positions_to_angles(
         self, 
-        active_heliostats_indices: list[int],
+        active_heliostats_indices: torch.Tensor,
         motor_positions: torch.Tensor,
         device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
@@ -107,6 +109,8 @@ class LinearActuators(Actuators):
 
         Parameters
         ----------
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that will be aligned.
         motor_positions : torch.Tensor
             The motor positions.
         device : Union[torch.device, str]
@@ -137,7 +141,7 @@ class LinearActuators(Actuators):
 
     def angles_to_motor_positions(
         self, 
-        active_heliostats_indices: list[str],
+        active_heliostats_indices:torch.Tensor,
         angles: torch.Tensor, 
         device: Union[torch.device, str] = "cuda"
     ) -> torch.Tensor:
@@ -150,6 +154,8 @@ class LinearActuators(Actuators):
 
         Parameters
         ----------
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that will be aligned.
         angles : torch.Tensor
             The joint angles.
         device : Union[torch.device, str]
