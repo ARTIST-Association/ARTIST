@@ -500,19 +500,29 @@ def get_center_of_mass(
     flux_thresholds = torch.where(
         bitmaps >= threshold, bitmaps, torch.zeros_like(bitmaps, device=device)
     )
-    total_intensities = flux_thresholds.sum(dim=(1,2))
+    total_intensities = flux_thresholds.sum(dim=(1, 2))
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
-    e_indices = (torch.arange(widths, dtype=torch.float32, device=device) + 0.5) / widths
+    e_indices = (
+        torch.arange(widths, dtype=torch.float32, device=device) + 0.5
+    ) / widths
     u_indices = (
         torch.arange(heights, dtype=torch.float32, device=device) + 0.5
     ) / heights
 
     # Compute the centers of intensity using weighted sums of the coordinates.
-    center_of_masses_e = torch.sum((flux_thresholds.sum(dim=1).unsqueeze(1) * e_indices), dim=-1).squeeze(-1) / total_intensities
+    center_of_masses_e = (
+        torch.sum(
+            (flux_thresholds.sum(dim=1).unsqueeze(1) * e_indices), dim=-1
+        ).squeeze(-1)
+        / total_intensities
+    )
     center_of_masses_u = 1 - (
-        torch.sum((flux_thresholds.sum(dim=2).unsqueeze(1) * u_indices), dim=-1).squeeze(-1) / total_intensities
+        torch.sum(
+            (flux_thresholds.sum(dim=2).unsqueeze(1) * u_indices), dim=-1
+        ).squeeze(-1)
+        / total_intensities
     )
 
     # Construct the coordinates relative to target centers.
@@ -522,7 +532,10 @@ def get_center_of_mass(
     du[:, 2] = target_heights
 
     center_coordinates = (
-        target_centers - 0.5 * (de + du) + center_of_masses_e.unsqueeze(-1) * de + center_of_masses_u.unsqueeze(-1) * du
+        target_centers
+        - 0.5 * (de + du)
+        + center_of_masses_e.unsqueeze(-1) * de
+        + center_of_masses_u.unsqueeze(-1) * du
     )
 
     return center_coordinates
@@ -591,4 +604,3 @@ def setup_global_distributed_environment(
         if is_distributed:
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
-

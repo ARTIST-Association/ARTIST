@@ -24,12 +24,16 @@ def test_abstract_actuators(
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_actuator.motor_positions_to_angles(
-            torch.tensor([0.0, 0.0], device=device)
+            active_heliostats_indices=torch.tensor([0], device=device),
+            motor_positions=torch.tensor([0.0, 0.0], device=device),
+            device=device,
         )
     assert "Must be overridden!" in str(exc_info.value)
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_actuator.angles_to_motor_positions(
-            torch.tensor([0.0, 0.0], device=device)
+            active_heliostats_indices=torch.tensor([0], device=device),
+            angles=torch.tensor([0.0, 0.0], device=device),
+            device=device,
         )
     assert "Must be overridden!" in str(exc_info.value)

@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Union
+from typing import Any, Union
 
 import h5py
 import torch.nn
@@ -28,8 +28,8 @@ class HeliostatField(torch.nn.Module):
     """
     The heliostat field.
 
-    A heliostat field consists of one or multiple heliostat groups. Each heliostat group contains all 
-    heliostats with a specific kinematic type and actuator type. The heliostats in the field are aligned 
+    A heliostat field consists of one or multiple heliostat groups. Each heliostat group contains all
+    heliostats with a specific kinematic type and actuator type. The heliostats in the field are aligned
     individually to reflect the incoming light in a way that ensures maximum efficiency for the whole power plant.
 
     Attributes
@@ -105,11 +105,11 @@ class HeliostatField(torch.nn.Module):
 
         log.info("Loading a heliostat field from an HDF5 file.")
 
-        grouped_field_data = defaultdict(lambda: defaultdict(list))
+        grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
 
-        for heliostat_name in (
-            config_file[config_dictionary.heliostat_key].keys()
-        ):
+        for heliostat_name in config_file[config_dictionary.heliostat_key].keys():
             single_heliostat_config = config_file[config_dictionary.heliostat_key][
                 heliostat_name
             ]
@@ -204,14 +204,16 @@ class HeliostatField(torch.nn.Module):
                 log.info(
                     "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                 )
-                actuator_type=config_dictionary.ideal_actuator_key
+                actuator_type = config_dictionary.ideal_actuator_key
                 actuator_parameters = prototype_actuators
 
             surface = Surface(surface_config)
 
             heliostat_group_key = "" + kinematic_type + "_" + actuator_type
 
-            grouped_field_data[heliostat_group_key][config_dictionary.names].append(heliostat_name)
+            grouped_field_data[heliostat_group_key][config_dictionary.names].append(
+                heliostat_name
+            )
             grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
                 torch.tensor(
                     single_heliostat_config[config_dictionary.heliostat_position][()],
@@ -219,47 +221,71 @@ class HeliostatField(torch.nn.Module):
                     device=device,
                 )
             )
-            grouped_field_data[heliostat_group_key][config_dictionary.aim_points].append(
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.aim_points
+            ].append(
                 torch.tensor(
                     single_heliostat_config[config_dictionary.heliostat_aim_point][()],
                     dtype=torch.float,
                     device=device,
                 )
             )
-            grouped_field_data[heliostat_group_key][config_dictionary.surface_points].append(
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.surface_points
+            ].append(
                 surface.get_surface_points_and_normals(device=device)[0].reshape(-1, 4)
             )
-            grouped_field_data[heliostat_group_key][config_dictionary.surface_normals].append(
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.surface_normals
+            ].append(
                 surface.get_surface_points_and_normals(device=device)[1].reshape(-1, 4)
             )
-            grouped_field_data[heliostat_group_key][config_dictionary.initial_orientations].append(
-                initial_orientation
-            )
-            grouped_field_data[heliostat_group_key][config_dictionary.kinematic_deviation_parameters].append(
-                kinematic_deviations
-            )
-            grouped_field_data[heliostat_group_key][config_dictionary.actuator_parameters].append(
-                actuator_parameters
-            )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.initial_orientations
+            ].append(initial_orientation)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.kinematic_deviation_parameters
+            ].append(kinematic_deviations)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.actuator_parameters
+            ].append(actuator_parameters)
 
         for group in grouped_field_data:
             for key in grouped_field_data[group]:
                 if key != config_dictionary.names:
-                    grouped_field_data[group][key] = torch.stack(grouped_field_data[group][key])
+                    grouped_field_data[group][key] = torch.stack(
+                        grouped_field_data[group][key]
+                    )
 
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
             heliostat_groups.append(
                 heliostat_group_type_mapping[heliostat_group_name](
-                    names = grouped_field_data[heliostat_group_name][config_dictionary.names],
-                    positions = grouped_field_data[heliostat_group_name][config_dictionary.positions],
-                    aim_points = grouped_field_data[heliostat_group_name][config_dictionary.aim_points],
-                    surface_points = grouped_field_data[heliostat_group_name][config_dictionary.surface_points],
-                    surface_normals = grouped_field_data[heliostat_group_name][config_dictionary.surface_normals],
-                    initial_orientations = grouped_field_data[heliostat_group_name][config_dictionary.initial_orientations],
-                    kinematic_deviation_parameters = grouped_field_data[heliostat_group_name][config_dictionary.kinematic_deviation_parameters],
-                    actuator_parameters = grouped_field_data[heliostat_group_name][config_dictionary.actuator_parameters],
-                    device=device
+                    names=grouped_field_data[heliostat_group_name][
+                        config_dictionary.names
+                    ],
+                    positions=grouped_field_data[heliostat_group_name][
+                        config_dictionary.positions
+                    ],
+                    aim_points=grouped_field_data[heliostat_group_name][
+                        config_dictionary.aim_points
+                    ],
+                    surface_points=grouped_field_data[heliostat_group_name][
+                        config_dictionary.surface_points
+                    ],
+                    surface_normals=grouped_field_data[heliostat_group_name][
+                        config_dictionary.surface_normals
+                    ],
+                    initial_orientations=grouped_field_data[heliostat_group_name][
+                        config_dictionary.initial_orientations
+                    ],
+                    kinematic_deviation_parameters=grouped_field_data[
+                        heliostat_group_name
+                    ][config_dictionary.kinematic_deviation_parameters],
+                    actuator_parameters=grouped_field_data[heliostat_group_name][
+                        config_dictionary.actuator_parameters
+                    ],
+                    device=device,
                 )
             )
             log.info(
@@ -267,7 +293,7 @@ class HeliostatField(torch.nn.Module):
             )
 
         return cls(
-    	    heliostat_groups=heliostat_groups,
+            heliostat_groups=heliostat_groups,
         )
 
     def forward(self) -> None:

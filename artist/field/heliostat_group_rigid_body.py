@@ -9,6 +9,7 @@ from artist.field.kinematic_rigid_body import RigidBody
 log = logging.getLogger(__name__)
 """A logger for the heliostat groups with a rigid body kinematic."""
 
+
 class HeliostatGroupRigidBody(HeliostatGroup):
     """
     The groups of heliostats using a rigid body kinematic.
@@ -16,8 +17,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     The rigid body kinematic works with either linear or ideal actuators. Heliostats with
     differing actuator types belong to different groups even if the kinematic type is the same.
     The `HeliostatGroupRigidBody` can be used for the initialization of both groups.
-    Individual heliostats in the same group are not saved as separate entities, instead 
-    separate tensors for each heliostat property exist. Each property tensor or list contains 
+    Individual heliostats in the same group are not saved as separate entities, instead
+    separate tensors for each heliostat property exist. Each property tensor or list contains
     information about this property for all heliostats within this group.
 
     Attributes
@@ -108,12 +109,12 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             surface_normals=surface_normals,
             initial_orientations=initial_orientations,
             kinematic_deviation_parameters=kinematic_deviation_parameters,
-            actuator_parameters=actuator_parameters
+            actuator_parameters=actuator_parameters,
         )
 
         device = torch.device(device)
 
-        self.number_of_heliostats = len(names)    
+        self.number_of_heliostats = len(names)
         self.names = names
         self.positions = positions
         self.surface_points = surface_points
@@ -182,7 +183,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         # Note that all heliostats have been aligned.
         self.aligned_heliostats[active_heliostats_indices] = 1.0
 
-
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
@@ -207,14 +207,13 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The orientations of the heliostats for the given motor positions.
         """
         device = torch.device(device)
-        
+
         return self.kinematic.motor_positions_to_orientations(
             motor_positions=motor_positions,
             active_heliostats_indices=active_heliostats_indices,
-            device=device
+            device=device,
         )
 
-   
     def forward(self) -> None:
         """
         Specify the forward pass.

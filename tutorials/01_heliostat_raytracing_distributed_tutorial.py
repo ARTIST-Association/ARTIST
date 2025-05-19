@@ -19,7 +19,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
 # scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
-scenario_path = pathlib.Path("tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
+scenario_path = pathlib.Path(
+    "tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_global_distributed_environment(device=device)
@@ -36,48 +38,71 @@ with h5py.File(scenario_path) as scenario_file:
 heliostat_target_sun_mapping_string = [
     ("AB38", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
     ("AA31", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    ("AA35", "solar_tower_juelich_lower", torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)),
-    ("AA39", "solar_tower_juelich_lower", torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)),
+    (
+        "AA35",
+        "solar_tower_juelich_lower",
+        torch.tensor([1.0, 0.0, 0.0, 0.0], device=device),
+    ),
+    (
+        "AA39",
+        "solar_tower_juelich_lower",
+        torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device),
+    ),
 ]
-#heliostat_target_sun_mapping_string = None
+# heliostat_target_sun_mapping_string = None
 
-final_flux_distributions = torch.zeros((
-    scenario.heliostat_field.number_of_heliostat_groups,
-    scenario.target_areas.number_of_target_areas,
-    256,
-    256,), device=device
+final_flux_distributions = torch.zeros(
+    (
+        scenario.heliostat_field.number_of_heliostat_groups,
+        scenario.target_areas.number_of_target_areas,
+        256,
+        256,
+    ),
+    device=device,
 )
 
-for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-
-    all_incident_ray_directions, incident_ray_direction_indices, active_heliostats_indices, target_area_indices = scenario.index_mapping(
+for heliostat_group_index, heliostat_group in enumerate(
+    scenario.heliostat_field.heliostat_groups
+):
+    (
+        all_incident_ray_directions,
+        incident_ray_direction_indices,
+        active_heliostats_indices,
+        target_area_indices,
+    ) = scenario.index_mapping(
         string_mapping=heliostat_target_sun_mapping_string,
         heliostat_group_index=heliostat_group_index,
-        device=device
+        device=device,
     )
 
-    heliostat_group.kinematic.aim_points[active_heliostats_indices] = scenario.target_areas.centers[target_area_indices]
+    heliostat_group.kinematic.aim_points[active_heliostats_indices] = (
+        scenario.target_areas.centers[target_area_indices]
+    )
 
     # Align all heliostats.
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        incident_ray_directions=all_incident_ray_directions[incident_ray_direction_indices], 
+        incident_ray_directions=all_incident_ray_directions[
+            incident_ray_direction_indices
+        ],
         active_heliostats_indices=active_heliostats_indices,
-        device=device
+        device=device,
     )
 
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
-        world_size=world_size, 
-        rank=rank, 
-        batch_size=4, 
-        random_seed=rank
+        world_size=world_size,
+        rank=rank,
+        batch_size=4,
+        random_seed=rank,
     )
 
     # Perform heliostat-based ray tracing.
     group_bitmaps = ray_tracer.trace_rays(
-        incident_ray_directions=all_incident_ray_directions[incident_ray_direction_indices],
+        incident_ray_directions=all_incident_ray_directions[
+            incident_ray_direction_indices
+        ],
         active_heliostats_indices=active_heliostats_indices,
         target_area_indices=target_area_indices,
         device=device,

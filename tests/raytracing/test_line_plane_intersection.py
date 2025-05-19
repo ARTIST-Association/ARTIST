@@ -62,6 +62,7 @@ def target_area_1(
         curvatures=curvatures,
     )
 
+
 @pytest.fixture
 def target_area_2(
     device: torch.device,
@@ -92,6 +93,7 @@ def target_area_2(
         dimensions=dimensions,
         curvatures=curvatures,
     )
+
 
 @pytest.mark.parametrize(
     (

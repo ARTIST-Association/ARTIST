@@ -71,7 +71,10 @@ def line_plane_intersections(
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
     # unit normal vectors and the normalized ray-direction vectors, pointing from the planes to the sources.
     # This determines how much the rays align with the plane normals.
-    relative_intensities = (-rays.ray_directions * target_areas.normal_vectors[target_area_indices][:, None, None, :]).sum(dim=-1)
+    relative_intensities = (
+        -rays.ray_directions
+        * target_areas.normal_vectors[target_area_indices][:, None, None, :]
+    ).sum(dim=-1)
 
     if (relative_intensities <= epsilon).all():
         raise ValueError("No ray intersections on the front of the target area planes.")
@@ -82,7 +85,13 @@ def line_plane_intersections(
     # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection points on the planes.
     # This indicates how far the intersection points are along the rays' directions.
     intersection_distances = (
-        ((points_at_ray_origins - target_areas.centers[target_area_indices][:, None, :]) * target_areas.normal_vectors[target_area_indices][:, None, :]).sum(dim=-1)
+        (
+            (
+                points_at_ray_origins
+                - target_areas.centers[target_area_indices][:, None, :]
+            )
+            * target_areas.normal_vectors[target_area_indices][:, None, :]
+        ).sum(dim=-1)
     ).unsqueeze(1) / relative_intensities
 
     # Combine to get the intersections
@@ -93,7 +102,17 @@ def line_plane_intersections(
     # Calculate the absolute intensities of the rays hitting the target planes.
     # Use the inverse-square law for distance attenuations from the heliostats to target planes.
     distance_attenuations = (
-        1 / (torch.norm(((points_at_ray_origins - target_areas.centers[target_area_indices][:, None, :])), dim=-1) ** 2)
+        1
+        / (
+            torch.norm(
+                (
+                    points_at_ray_origins
+                    - target_areas.centers[target_area_indices][:, None, :]
+                ),
+                dim=-1,
+            )
+            ** 2
+        )
     ).unsqueeze(1)
     absolute_intensities = (
         rays.ray_magnitudes * relative_intensities * distance_attenuations
