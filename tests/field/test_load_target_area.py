@@ -65,6 +65,15 @@ def test_target_area_from_hdf5(
             config_dictionary.target_area_curvature_e: mock_curvature_e,
             config_dictionary.target_area_curvature_u: mock_curvature_u,
         }[key]
+        mock_level_receiver.__getitem__.return_value = [
+            config_dictionary.target_area_geometry,
+            config_dictionary.target_area_position_center,
+            config_dictionary.target_area_normal_vector,
+            config_dictionary.target_area_plane_e,
+            config_dictionary.target_area_plane_u,
+            config_dictionary.target_area_curvature_e,
+            config_dictionary.target_area_curvature_u,
+        ]
     else:
         mock_level_receiver.__getitem__.side_effect = lambda key: {
             config_dictionary.target_area_geometry: mock_geometry,
