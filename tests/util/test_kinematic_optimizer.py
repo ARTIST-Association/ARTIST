@@ -90,46 +90,29 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    for heliostat_group_index, heliostat_group in enumerate(
-        scenario.heliostat_field.heliostat_groups
-    ):
-        # Load the calibration data.
+    for heliostat_group in scenario.heliostat_field.heliostat_groups:
         (
-            calibration_heliostat_names,
-            calibration_target_names,
             centers_calibration_images,
             sun_positions,
             all_calibration_motor_positions,
+            heliostat_indices,
+            target_area_indices,
         ) = paint_loader.extract_paint_calibration_data(
             heliostat_calibration_mapping=[
                 (heliostat_name, paths)
                 for heliostat_name, paths in heliostat_calibration_mapping
                 if heliostat_name in heliostat_group.names
             ],
+            heliostat_names=heliostat_group.names,
+            target_area_names=scenario.target_areas.names,
             power_plant_position=scenario.power_plant_position,
             device=device,
-        )
-        heliostat_index_map = {
-            name: index for index, name in enumerate(heliostat_group.names)
-        }
-        heliostat_indices = [
-            heliostat_index_map[name] for name in calibration_heliostat_names
-        ]
-        target_area_index_map = {
-            target_area_name: index
-            for index, target_area_name in enumerate(scenario.target_areas.names)
-        }
-        target_area_indices = torch.tensor(
-            [
-                target_area_index_map[target_area_name]
-                for target_area_name in calibration_target_names
-            ]
         )
 
         # create calibration group
         heliostat_group_class = type(heliostat_group)
         calibration_group = heliostat_group_class(
-            names=calibration_heliostat_names,
+            names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
             positions=heliostat_group.positions[heliostat_indices],
             aim_points=scenario.target_areas.centers[target_area_indices],
             surface_points=heliostat_group.surface_points[heliostat_indices],

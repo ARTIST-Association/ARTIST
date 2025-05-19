@@ -171,8 +171,12 @@ class Scenario:
         self,
         string_mapping: Optional[list[tuple[str, str, torch.Tensor]]],
         heliostat_group_index: int,
+        default_incident_ray_direction: torch.Tensor = torch.tensor(
+            [0.0, 1.0, 0.0, 0.0]
+        ),
+        default_target_area_index: int = 1,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Create an index mapping from heliostat names, target area names and incident ray directions.
 
@@ -189,8 +193,6 @@ class Scenario:
         -------
         torch.Tensor
             All incident ray directions for the heliostats in this scenario.
-        torch.Tensor
-            The indices of incident ray directions for all heliostats in order.
         torch.Tensor
             The indices of all active heliostats in order.
         torch.Tensor
@@ -209,16 +211,16 @@ class Scenario:
             for index, target_area_name in enumerate(self.target_areas.names)
         }
 
-        single_target_area_index = 1
-        single_incident_ray_direction_index = 0
-
         if string_mapping is None:
-            all_incident_ray_directions = torch.tensor(
-                [0.0, 1.0, 0.0, 0.0], device=device
-            )
+            all_incident_ray_directions = default_incident_ray_direction.expand(
+                self.heliostat_field.heliostat_groups[
+                    heliostat_group_index
+                ].number_of_heliostats,
+                4,
+            ).to(device=device)
             heliostat_target_mapping = torch.tensor(
                 [
-                    [i, single_target_area_index, single_incident_ray_direction_index]
+                    [i, default_target_area_index]
                     for i in range(
                         self.heliostat_field.heliostat_groups[
                             heliostat_group_index
@@ -234,11 +236,8 @@ class Scenario:
                     [
                         all_heliostat_name_indices[heliostat_name],
                         all_target_area_indices[target_area_name],
-                        index,
                     ]
-                    for index, (heliostat_name, target_area_name, _) in enumerate(
-                        string_mapping
-                    )
+                    for heliostat_name, target_area_name, _ in (string_mapping)
                     if heliostat_name in all_heliostat_name_indices
                     and target_area_name in all_target_area_indices
                 ],
@@ -247,11 +246,9 @@ class Scenario:
 
         active_heliostats_indices = heliostat_target_mapping[:, 0]
         target_area_indices = heliostat_target_mapping[:, 1]
-        incident_ray_direction_indices = heliostat_target_mapping[:, 2]
 
         return (
             all_incident_ray_directions,
-            incident_ray_direction_indices,
             active_heliostats_indices,
             target_area_indices,
         )

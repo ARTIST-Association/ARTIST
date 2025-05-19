@@ -13,15 +13,13 @@ from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can use that scenario or create and use any custom scenario.
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set up logger.
 set_logger_config()
 
 # Set the device.
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_path:
