@@ -9,6 +9,7 @@ from artist.field.actuators_ideal import IdealActuators
 from artist.field.actuators_linear import LinearActuators
 from artist.field.facets_nurbs import NurbsFacet
 from artist.field.heliostat_field import HeliostatField
+from artist.field.heliostat_group import HeliostatGroup
 from artist.field.kinematic import Kinematic
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
@@ -75,6 +76,7 @@ def test_forward_errors_of_subclasses(
         Actuators,
         Kinematic,
         LightSource,
+        HeliostatGroup,
     ],
 )
 def test_forward_errors_of_base_classes(
