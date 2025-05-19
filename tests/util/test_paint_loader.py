@@ -15,36 +15,39 @@ from artist.util.configuration_classes import (
 
 
 @pytest.mark.parametrize(
-    "file_path, power_plant_position, expected_list",
+    "heliostat_calibration_mapping, power_plant_position, expected_list",
     [
         (
             [
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-calibration-properties.json"
+                ("AA39", 
+                    [pathlib.Path(ARTIST_ROOT)  / pathlib.Path("tests/data/field_data/AA39-calibration-properties_1.json"),
+                     pathlib.Path(ARTIST_ROOT)  / pathlib.Path("tests/data/field_data/AA39-calibration-properties_2.json")
+                    ]
+                )
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
-                ["solar_tower_juelich_lower"],
+                ["AA39", "AA39"],   
+                ["solar_tower_juelich_lower", "multi_focus_tower"],
                 torch.tensor(
                     [
-                        [
-                            -2.182222127914,
-                            -3.326076745987,
-                            35.364322662354,
-                            1.000000000000,
-                        ]
+                        [  0.184468090534,  -3.326076745987,  35.798927307129,   1.000000000000],
+                        [-17.408864974976,  -2.928076744080,  51.611988067627,   1.000000000000]
                     ]
                 ),
                 torch.tensor(
-                    [[-0.586044907570, -0.430229485035, 0.686625063419, 1.000000000000]]
+                    [
+                        [ 0.094675041735, -0.492933481932,  0.864900708199,  1.000000000000],
+                        [ 0.274074256420, -0.439921498299,  0.855191409588,  1.000000000000]
+                    ]
                 ),
-                torch.tensor([[29863.0, 62548.0]]),
+                torch.tensor([[28061.0, 47874.0], [22585.0, 48224.0]]),
             ],
         )
     ],
 )
 def test_extract_paint_calibration_data(
-    file_path: list[pathlib.Path],
+    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
     expected_list: list[torch.Tensor],
     device: torch.device,
@@ -54,8 +57,8 @@ def test_extract_paint_calibration_data(
 
     Parameters
     ----------
-    file_path : list[pathlib.Path]
-        The path to the calibration file.
+    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
+        The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
         The power plant position.
     expected_list : list[torch.Tensor]
@@ -70,7 +73,7 @@ def test_extract_paint_calibration_data(
     """
     extracted_list = list(
         paint_loader.extract_paint_calibration_data(
-            calibration_properties_paths=file_path,
+            heliostat_calibration_mapping=heliostat_calibration_mapping,
             power_plant_position=power_plant_position.to(device),
             device=device,
         )

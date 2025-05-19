@@ -53,7 +53,7 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
         all_calibration_motor_positions,
     ) = paint_loader.extract_paint_calibration_data(
         heliostat_calibration_mapping=[(heliostat_name, paths) for heliostat_name, paths in heliostat_calibration_mapping if heliostat_name in heliostat_group.names],
-        scenario=scenario,
+        power_plant_position=scenario.power_plant_position,
         device=device,
     )
     heliostat_index_map = {name: index for index, name in enumerate(heliostat_group.names)}
@@ -90,9 +90,6 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
     tolerance = 0.0005
     max_epoch = 1000
     initial_learning_rate = 0.0001
-    learning_rate_factor = 0.1
-    learning_rate_patience = 20
-    learning_rate_threshold = 0.1
 
     use_ray_tracing = False
     if use_ray_tracing:
@@ -100,27 +97,14 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
         tolerance = 0.035
         max_epoch = 10000
         initial_learning_rate = 0.002
-        learning_rate_factor = 0.1
-        learning_rate_patience = 50
-        learning_rate_threshold = 50
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_learning_rate)
-
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=learning_rate_factor,
-        patience=learning_rate_patience,
-        threshold=learning_rate_threshold,
-        threshold_mode="abs",
-    )
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
         scenario=scenario,
         calibration_group=calibration_group,
         optimizer=optimizer,
-        scheduler=scheduler,
     )
 
     # Calibrate the kinematic.
@@ -134,6 +118,3 @@ for heliostat_group_index, heliostat_group in enumerate(scenario.heliostat_field
         num_log=max_epoch,
         device=device,
     )
-
-
-

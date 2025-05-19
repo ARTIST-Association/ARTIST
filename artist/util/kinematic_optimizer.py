@@ -3,7 +3,6 @@ from typing import Optional, Union
 
 import torch
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import ReduceLROnPlateau, _LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing import raytracing_utils
@@ -32,8 +31,6 @@ class KinematicOptimizer:
         The heliostat group to be calibrated.
     optimizer : Optimizer
         The optimizer.
-    scheduler : Union[_LRScheduler, ReduceLROnPlateau]
-        The learning rate scheduler.
 
     Methods
     -------
@@ -46,7 +43,6 @@ class KinematicOptimizer:
         scenario: Scenario,
         calibration_group: HeliostatGroup,
         optimizer: Optimizer,
-        scheduler: Union[_LRScheduler, ReduceLROnPlateau],
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -59,14 +55,11 @@ class KinematicOptimizer:
             The heliostat group to be calibrated.
         optimizer : Optimizer
             The optimizer.
-        scheduler : Union[_LRScheduler, ReduceLROnPlateau]
-            The learning rate scheduler.
         """
         log.info("Create a kinematic optimizer.")
         self.scenario = scenario
         self.calibration_group=calibration_group
         self.optimizer = optimizer
-        self.scheduler = scheduler
 
     def optimize(
         self,
@@ -204,12 +197,12 @@ class KinematicOptimizer:
 
             preferred_reflection_directions = raytracing_utils.reflect(
                 incident_ray_directions=incident_ray_directions,
-                reflection_surface_normals=orientations[:, 0:4, 2].unsqueeze(1),
+                reflection_surface_normals=orientations[:, 0:4, 2],
             )
 
             loss = (
                 (
-                    preferred_reflection_directions.squeeze(1)
+                    preferred_reflection_directions
                     - preferred_reflection_directions_calibration
                 )
                 .abs()
@@ -230,7 +223,6 @@ class KinematicOptimizer:
                             parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
-            #self.scheduler.step(loss)
 
             if epoch % log_step == 0:
                 log.info(
@@ -335,7 +327,6 @@ class KinematicOptimizer:
                             parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
-            self.scheduler.step(loss)
 
             if epoch % log_step == 0:
                 log.info(

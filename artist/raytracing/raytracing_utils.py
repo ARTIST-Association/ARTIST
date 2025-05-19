@@ -23,10 +23,10 @@ def reflect(
         The reflected rays.
     """
     return (
-        incident_ray_directions.unsqueeze(1)
+        incident_ray_directions
         - 2
         * torch.sum(
-            incident_ray_directions.unsqueeze(1) * reflection_surface_normals, dim=-1
+            incident_ray_directions * reflection_surface_normals, dim=-1
         ).unsqueeze(-1)
         * reflection_surface_normals
     )
