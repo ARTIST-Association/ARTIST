@@ -56,8 +56,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         Align all surface points and surface normals of all heliostats in the group.
     get_orientations_from_motor_positions()
         Compute the orientations of all heliostats given some motor positions.
-    align_surfaces_with_motor_positions()
-        Align all surface points and surface normals of all heliostats in the group.
     forward()
         Specify the forward pass.
 
@@ -216,42 +214,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device
         )
 
-    
-    def align_surfaces_with_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-    	active_heliostats_indices: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> None:
-        """
-        Align all surface points and surface normals of all heliostats in the group.
-
-        This method uses the motor positions to align the heliostats.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        active_heliostats_indices: torch.Tensor
-            The indices of the active heliostats that will be aligned.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-        """
-        device = torch.device(device)
-
-        (
-            self.current_aligned_surface_points,
-            self.current_aligned_surface_normals,
-        ) = self.kinematic.align_surfaces_with_motor_positions(
-            motor_positions=motor_positions,
-            surface_points=self.surface_points,
-            surface_normals=self.surface_normals,
-            device=device,
-        )
-
-        # Note that all heliostats have been aligned.
-        self.aligned_heliostats = torch.ones_like(self.aligned_heliostats)
-
+   
     def forward(self) -> None:
         """
         Specify the forward pass.

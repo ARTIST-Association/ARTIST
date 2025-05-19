@@ -451,44 +451,6 @@ class RigidBody(Kinematic):
             )
         )
 
-    def align_surfaces_with_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        surface_points: torch.Tensor,
-        surface_normals: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Align given surface points and surface normals according to motor positions.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        surface_points : torch.Tensor
-            The points on the surface of the heliostats that reflect the light.
-        surface_normals : torch.Tensor
-            The normals to the surface points.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        torch.Tensor
-            The aligned surface points.
-        torch.Tensor
-            The aligned surface normals.
-        """
-        device = torch.device(device)
-
-        orientations = self.motor_positions_to_orientations(
-            motor_positions, device=device
-        )
-
-        aligned_surface_points = surface_points @ orientations.transpose(1, 2)
-        aligned_surface_normals = surface_normals @ orientations.transpose(1, 2)
-
-        return aligned_surface_points, aligned_surface_normals
 
     def forward(self) -> None:
         """

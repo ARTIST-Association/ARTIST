@@ -335,7 +335,7 @@ class HeliostatRayTracer:
             raise ValueError("Not all active heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
-            incident_ray_directions=incident_ray_directions,
+            incident_ray_directions=incident_ray_directions.unsqueeze(1),
             reflection_surface_normals=self.heliostat_group.current_aligned_surface_normals,
         )
 

@@ -22,13 +22,12 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
-from artist.util.scenario import Scenario
 from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
     heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
-    scenario: Scenario,
+    power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -38,8 +37,8 @@ def extract_paint_calibration_data(
     ----------
     heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
         The mapping of heliostats and their calibration data files.
-    scenario : Scenario
-        The current scenario.
+    power_plant_position : torch.Tensor
+        The power plant position.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
@@ -81,7 +80,7 @@ def extract_paint_calibration_data(
                         dtype=torch.float64,
                         device=device,
                     ),
-                    scenario.power_plant_position,
+                    power_plant_position,
                     device=device,
                 )
                 centers_calibration_images[index] = utils.convert_3d_point_to_4d_format(
