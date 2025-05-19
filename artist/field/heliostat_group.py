@@ -20,8 +20,6 @@ class HeliostatGroup(torch.nn.Module):
         Align all surface points and surface normals of all heliostats in the group.
     get_orientations_from_motor_positions()
         Compute the orientations of all heliostats given some motor positions.
-    align_surfaces_with_motor_positions()
-        Align all surface points and surface normals of all heliostats in the group.
     forward()
         Specify the forward pass.
     """
@@ -99,33 +97,6 @@ class HeliostatGroup(torch.nn.Module):
     ) -> torch.Tensor:
         """
         Compute the orientations of all heliostats given some motor positions.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats to be aligned.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called (abstract base class method).
-        """
-        raise NotImplementedError("Must be overridden!")
-
-    def align_surfaces_with_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        active_heliostats_indices: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> None:
-        """
-        Align all surface points and surface normals of all heliostats in the group.
-
-        This method uses the motor positions to align the heliostats.
 
         Parameters
         ----------
