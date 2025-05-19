@@ -32,13 +32,18 @@ class Actuators(torch.nn.Module):
         super().__init__()
 
     def motor_positions_to_angles(
-        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self,
+        active_heliostats_indices: torch.Tensor,
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
 
         Parameters
         ----------
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that will be aligned.
         motor_positions : torch.Tensor
             The motor positions.
         device : Union[torch.device, str]
@@ -52,13 +57,18 @@ class Actuators(torch.nn.Module):
         raise NotImplementedError("Must be overridden!")
 
     def angles_to_motor_positions(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self,
+        active_heliostats_indices: torch.Tensor,
+        angles: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.
 
         Parameters
         ----------
+        active_heliostats_indices : torch.Tensor
+            The indices of the active heliostats that will be aligned.
         angles : torch.Tensor
             The joint angles.
         device : Union[torch.device, str]

@@ -29,7 +29,7 @@ def extract_paint_calibration_data(
     heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
-) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[list[str], list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
 
@@ -45,6 +45,8 @@ def extract_paint_calibration_data(
     Returns
     -------
     list[str]
+        The names of the heliostats.
+    list[str]
         The names of the calibration targets.
     torch.Tensor
         The calibration flux density centers.
@@ -55,11 +57,15 @@ def extract_paint_calibration_data(
     """
     device = torch.device(device)
 
-    total_number_of_calibrations = sum(len(paths) for _, paths in heliostat_calibration_mapping)
+    total_number_of_calibrations = sum(
+        len(paths) for _, paths in heliostat_calibration_mapping
+    )
 
     heliostat_names = []
     calibration_target_names = []
-    centers_calibration_images = torch.zeros((total_number_of_calibrations, 4), device=device)
+    centers_calibration_images = torch.zeros(
+        (total_number_of_calibrations, 4), device=device
+    )
     sun_positions_enu = torch.zeros((total_number_of_calibrations, 4), device=device)
     all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
 
@@ -90,7 +96,8 @@ def extract_paint_calibration_data(
                     calibration_dict[config_dictionary.paint_sun_azimuth], device=device
                 )
                 sun_elevation = torch.tensor(
-                    calibration_dict[config_dictionary.paint_sun_elevation], device=device
+                    calibration_dict[config_dictionary.paint_sun_elevation],
+                    device=device,
                 )
                 sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
                     azimuth_elevation_to_enu(

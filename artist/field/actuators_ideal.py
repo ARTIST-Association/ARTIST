@@ -23,14 +23,14 @@ class IdealActuators(Actuators):
     :class:`Actuator` : Reference to the parent class.
     """
 
-    def __init__(self, actuator_parameters:torch.Tensor) -> None:
+    def __init__(self, actuator_parameters: torch.Tensor) -> None:
         pass
 
     def motor_positions_to_angles(
         self,
         active_heliostats_indices: torch.Tensor,
-        motor_positions: torch.Tensor, 
-        device: Union[torch.device, str] = "cuda"
+        motor_positions: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
@@ -54,8 +54,8 @@ class IdealActuators(Actuators):
     def angles_to_motor_positions(
         self,
         active_heliostats_indices: torch.Tensor,
-        angles: torch.Tensor, 
-        device: Union[torch.device, str] = "cuda"
+        angles: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.

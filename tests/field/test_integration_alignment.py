@@ -89,23 +89,26 @@ def test_integration_alignment(
         )
 
     # Align heliostat.
-    scenario.heliostat_field.heliostat_groups[0].align_surfaces_with_incident_ray_directions(
+    scenario.heliostat_field.heliostat_groups[
+        0
+    ].align_surfaces_with_incident_ray_directions(
         incident_ray_directions=incident_ray_directions.to(device),
         active_heliostats_indices=torch.tensor([0], device=device),
-        device=device
+        device=device,
     )
 
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
-        scenario=scenario,
-        heliostat_group=scenario.heliostat_field.heliostat_groups[0]
+        scenario=scenario, heliostat_group=scenario.heliostat_field.heliostat_groups[0]
     )
 
     # Perform heliostat-based ray tracing.
     final_bitmaps = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions.to(device),
         active_heliostats_indices=torch.tensor([0], device=device),
-        target_area_indices=torch.tensor([scenario.target_areas.names.index("receiver")], device=device),
+        target_area_indices=torch.tensor(
+            [scenario.target_areas.names.index("receiver")], device=device
+        ),
         device=device,
     )
 

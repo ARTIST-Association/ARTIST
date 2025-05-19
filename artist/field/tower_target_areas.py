@@ -15,8 +15,8 @@ class TowerTargetAreas(torch.nn.Module):
     """
     Wrap the list of tower target areas as a ``torch.nn.Module`` to allow gradient calculation.
 
-    Individual target areas are not saved as separate entities, instead separate tensors for each 
-    target area property exist. Each property tensor or list contains information about this property 
+    Individual target areas are not saved as separate entities, instead separate tensors for each
+    target area property exist. Each property tensor or list contains information about this property
     for all target areas.
 
     Attributes
@@ -51,7 +51,8 @@ class TowerTargetAreas(torch.nn.Module):
         centers: torch.Tensor,
         normal_vectors: torch.Tensor,
         dimensions: torch.Tensor,
-        curvatures: torch.Tensor):
+        curvatures: torch.Tensor,
+    ):
         """
         Initialize the target area array.
 
@@ -116,38 +117,60 @@ class TowerTargetAreas(torch.nn.Module):
         dimensions = torch.zeros((number_of_target_areas, 2), device=device)
         curvatures = torch.zeros((number_of_target_areas, 2), device=device)
 
-        for index, target_area_name in (
-            enumerate(config_file[config_dictionary.target_area_key].keys())
+        for index, target_area_name in enumerate(
+            config_file[config_dictionary.target_area_key].keys()
         ):
-            single_target_area_config = config_file[config_dictionary.target_area_key][target_area_name]
+            single_target_area_config = config_file[config_dictionary.target_area_key][
+                target_area_name
+            ]
             names.append(target_area_name)
-            geometries.append(single_target_area_config[config_dictionary.target_area_geometry][()].decode(
-                "utf-8"
-            ))
+            geometries.append(
+                single_target_area_config[config_dictionary.target_area_geometry][
+                    ()
+                ].decode("utf-8")
+            )
             centers[index] = torch.tensor(
-                single_target_area_config[config_dictionary.target_area_position_center][()],
+                single_target_area_config[
+                    config_dictionary.target_area_position_center
+                ][()],
                 dtype=torch.float,
                 device=device,
             )
             normal_vectors[index] = torch.tensor(
-                single_target_area_config[config_dictionary.target_area_normal_vector][()],
+                single_target_area_config[config_dictionary.target_area_normal_vector][
+                    ()
+                ],
                 dtype=torch.float,
                 device=device,
             )
-            dimensions[index, 0] = float(single_target_area_config[config_dictionary.target_area_plane_e][()])
-            dimensions[index, 1] = float(single_target_area_config[config_dictionary.target_area_plane_u][()])
+            dimensions[index, 0] = float(
+                single_target_area_config[config_dictionary.target_area_plane_e][()]
+            )
+            dimensions[index, 1] = float(
+                single_target_area_config[config_dictionary.target_area_plane_u][()]
+            )
 
-            if config_dictionary.target_area_curvature_e in single_target_area_config.keys():
+            if (
+                config_dictionary.target_area_curvature_e
+                in single_target_area_config.keys()
+            ):
                 curvatures[index, 0] = float(
-                    single_target_area_config[config_dictionary.target_area_curvature_e][()]
+                    single_target_area_config[
+                        config_dictionary.target_area_curvature_e
+                    ][()]
                 )
             else:
                 log.warning(
                     f"No curvature in the east direction set for the {target_area_name}!"
                 )
-            if config_dictionary.target_area_curvature_u in single_target_area_config.keys():
+            if (
+                config_dictionary.target_area_curvature_u
+                in single_target_area_config.keys()
+            ):
                 curvatures[index, 1] = float(
-                    single_target_area_config[config_dictionary.target_area_curvature_u][()]
+                    single_target_area_config[
+                        config_dictionary.target_area_curvature_u
+                    ][()]
                 )
             else:
                 log.warning(

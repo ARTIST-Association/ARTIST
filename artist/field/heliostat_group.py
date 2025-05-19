@@ -10,7 +10,7 @@ class HeliostatGroup(torch.nn.Module):
     Abstract base class for all heliostat groups.
 
     The abstract heliostat group implements a template for the construction of inheriting heliostat groups, each
-    with a specific kinematic type and specific actuator type. All heliostat groups together form the overall heliostat 
+    with a specific kinematic type and specific actuator type. All heliostat groups together form the overall heliostat
     field. The abstract base class defines an align function that all heliostat groups need to overwrite
     in order to align the heliostats within this group.
 
@@ -25,7 +25,7 @@ class HeliostatGroup(torch.nn.Module):
     forward()
         Specify the forward pass.
     """
-    
+
     def __init__(
         self,
         names: list[str],
@@ -90,7 +90,7 @@ class HeliostatGroup(torch.nn.Module):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must be overridden!")
-    
+
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
