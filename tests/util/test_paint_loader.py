@@ -35,8 +35,6 @@ from artist.util.configuration_classes import (
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             [
-                ["AA39", "AA39"],
-                ["solar_tower_juelich_lower", "multi_focus_tower"],
                 torch.tensor(
                     [
                         [
@@ -70,6 +68,8 @@ from artist.util.configuration_classes import (
                     ]
                 ),
                 torch.tensor([[28061.0, 47874.0], [22585.0, 48224.0]]),
+                torch.tensor([1, 1]),
+                torch.tensor([3, 0]),
             ],
         )
     ],
@@ -103,18 +103,19 @@ def test_extract_paint_calibration_data(
         paint_loader.extract_paint_calibration_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             power_plant_position=power_plant_position.to(device),
+            heliostat_names=["AA31", "AA39"],
+            target_area_names=[
+                "multi_focus_tower",
+                "receiver",
+                "solar_tower_juelich_upper",
+                "solar_tower_juelich_lower",
+            ],
             device=device,
         )
     )
 
     for actual, expected in zip(extracted_list, expected_list):
-        if isinstance(actual, torch.Tensor) and isinstance(expected, torch.Tensor):
-            torch.testing.assert_close(
-                actual, expected.to(device), atol=5e-4, rtol=5e-4
-            )
-        else:
-            for actual_element, expected_element in zip(actual, expected):
-                assert actual_element == expected_element
+        torch.testing.assert_close(actual, expected.to(device), atol=5e-4, rtol=5e-4)
 
 
 @pytest.mark.parametrize(
