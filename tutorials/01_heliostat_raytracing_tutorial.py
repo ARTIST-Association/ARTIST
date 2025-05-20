@@ -11,7 +11,8 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
 from artist.util.scenario import Scenario
 
-# If you have already generated the tutorial scenario yourself, you can use that scenario or create and use any custom scenario.
+# If you have already generated the tutorial scenario yourself, you can use that scenario,
+# create and use any custom scenario, or use one provided in the artist/tutorials/data/scenarios directory.
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
@@ -45,7 +46,11 @@ print(
 # We will choose the first Heliostat, with index 0 by activating it.
 active_heliostats_indices = torch.tensor([0], device=device)
 
-# This means we only need to define a single incident ray direction.
+# Each heliostat has an aim point, it makes sense to choose an aimpoint on one of the target areas.
+# We select the first target area as the designated target for this heliostat.
+target_area_indices = torch.tensor([0], device=device)
+
+# Since we only have one helisotat we need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
 # Incident ray directions need to be normed.
 incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
@@ -58,7 +63,7 @@ original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_p
 # Set the aimpoint for our heliostat. The aim point is part of the kinematic.
 # Let's say we want to aim at the center of the receiver.
 # As examined earlier, the receiver is at index 0 of the target areas.
-aim_point = scenario.target_areas.centers[0]
+aim_point = scenario.target_areas.centers[target_area_indices]
 scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[
     active_heliostats_indices
 ] = aim_point
@@ -144,10 +149,6 @@ ray_tracer = HeliostatRayTracer(
     scenario=scenario,
     heliostat_group=scenario.heliostat_field.heliostat_groups[0],
 )
-
-# Before we beginn the raytracing we need to define which target area on the tower should be considered.
-# It makes sense to specify the receiver here again, as we set the aim point of our heliostat to the receiver's center.
-target_area_indices = torch.tensor([0], device=device)
 
 # Perform heliostat-based ray tracing.
 image_south = ray_tracer.trace_rays(
