@@ -57,6 +57,7 @@ class HeliostatField(torch.nn.Module):
         Parameters
         ----------
         heliostat_groups : list[HeliostatGroup]
+            A list containing all heliostat groups.
         """
         super(HeliostatField, self).__init__()
 
@@ -209,7 +210,7 @@ class HeliostatField(torch.nn.Module):
 
             surface = Surface(surface_config)
 
-            heliostat_group_key = "" + kinematic_type + "_" + actuator_type
+            heliostat_group_key = f"{kinematic_type}_{actuator_type}"
 
             grouped_field_data[heliostat_group_key][config_dictionary.names].append(
                 heliostat_name

@@ -58,7 +58,7 @@ for heliostat_group_index, heliostat_group in enumerate(
     # Load the calibration data.
     (
         centers_calibration_images,
-        sun_positions,
+        light_source_positions,
         calibration_motor_positions,
         heliostat_indices,
         target_area_indices,
@@ -92,7 +92,7 @@ for heliostat_group_index, heliostat_group in enumerate(
 
     # The incident ray direction needs to be normed.
     incident_ray_directions = (
-        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
     )
 
     # Select the kinematic parameters to be optimized and calibrated.

@@ -7,7 +7,7 @@ def rotate_distortions(
     e: torch.Tensor, u: torch.Tensor, device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
-    Rotate the distortions for the sun.
+    Rotate the distortions for the light source.
 
     Rotate around the up and then the east axis in this very order in a right-handed east-north-up
     coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.,

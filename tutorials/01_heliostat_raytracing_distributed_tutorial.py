@@ -32,10 +32,10 @@ with h5py.File(scenario_path) as scenario_file:
 
 # Specify a mapping of active heliostats, their targets, and the incident ray directions.
 # If no mapping is provided, the default activates all heliostats, the target is the receiver for all heliostats
-# and the sun is in the south for all heliostats.
-heliostat_target_sun_mapping_string = None
+# and the light source is in the south for all heliostats.
+heliostat_target_light_source_mapping_string = None
 # if you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-# heliostat_target_sun_mapping_string = [
+# heliostat_target_light_source_mapping_string = [
 #     ("heliostat_name_1", "target_name_3", incident_ray_direction_tensor_1),
 #     ("heliostat_name_2", "target_name_1", incident_ray_direction_tensor_1),
 #     ("heliostat_name_3", "target_name_2", incident_ray_direction_tensor_2),
@@ -62,7 +62,7 @@ for heliostat_group_index, heliostat_group in enumerate(
         active_heliostats_indices,
         target_area_indices,
     ) = scenario.index_mapping(
-        string_mapping=heliostat_target_sun_mapping_string,
+        string_mapping=heliostat_target_light_source_mapping_string,
         heliostat_group_index=heliostat_group_index,
         device=device,
     )

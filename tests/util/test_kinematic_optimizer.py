@@ -93,7 +93,7 @@ def test_kinematic_optimizer(
     for heliostat_group in scenario.heliostat_field.heliostat_groups:
         (
             centers_calibration_images,
-            sun_positions,
+            light_source_positions,
             all_calibration_motor_positions,
             heliostat_indices,
             target_area_indices,
@@ -128,7 +128,7 @@ def test_kinematic_optimizer(
         )
 
         incident_ray_directions = (
-            torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - sun_positions
+            torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
         )
 
         optimizable_parameters = [

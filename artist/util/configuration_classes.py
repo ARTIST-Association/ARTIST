@@ -204,9 +204,9 @@ class LightSourceConfig:
     distribution_type : str
         The distribution type used to model the light source.
     mean : float, optional
-        The mean used for modeling the sun.
+        The mean used for modeling the light source.
     covariance : float, optional
-        The covariance used for modeling the sun.
+        The covariance used for modeling the light source.
 
     Methods
     -------
@@ -237,9 +237,9 @@ class LightSourceConfig:
         distribution_type : str
             The distribution type used to model the light source.
         mean : float, optional
-            The mean used for modeling the sun.
+            The mean used for modeling the light source.
         covariance : float, optional
-            The covariance used for modeling the sun.
+            The covariance used for modeling the light source.
 
         Raises
         ------
