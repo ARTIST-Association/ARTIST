@@ -192,7 +192,7 @@ Therefore, we make use of our knowledge regarding the:
 - Kinematic model,
 
 to align the heliostats in an optimal position for reflection. To perform this orientation, we need an *incident ray
-direction*, i.e., a direction vector, originating in the sun position and pointing towards the heliostat field.
+direction*, i.e., a direction vector, originating in the light source position and pointing towards the heliostat field.
 ``ARTIST`` can accomodate heliostats with various differnt kinematic and actuator types. Since each kinematic type and
 actuator type computes the orientations of aligned heliostats slightly different, we need to seperate the heliostats into
 ``HeliostatGroup`` groups. ``ARTIST`` handels this automatically.

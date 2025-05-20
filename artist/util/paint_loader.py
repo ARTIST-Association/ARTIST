@@ -53,7 +53,7 @@ def extract_paint_calibration_data(
     torch.Tensor
         The calibration flux density centers.
     torch.Tensor
-        The sun positions.
+        The light source positions.
     torch.Tensor
         The motor positions.
     torch.Tensor
@@ -72,7 +72,9 @@ def extract_paint_calibration_data(
     centers_calibration_images = torch.zeros(
         (total_number_of_calibrations, 4), device=device
     )
-    sun_positions_enu = torch.zeros((total_number_of_calibrations, 4), device=device)
+    light_source_positions_enu = torch.zeros(
+        (total_number_of_calibrations, 4), device=device
+    )
     all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
 
     index = 0
@@ -98,16 +100,20 @@ def extract_paint_calibration_data(
                 centers_calibration_images[index] = utils.convert_3d_point_to_4d_format(
                     center_calibration_image, device=device
                 )
-                sun_azimuth = torch.tensor(
-                    calibration_dict[config_dictionary.paint_sun_azimuth], device=device
-                )
-                sun_elevation = torch.tensor(
-                    calibration_dict[config_dictionary.paint_sun_elevation],
+                light_source_azimuth = torch.tensor(
+                    calibration_dict[config_dictionary.paint_light_source_azimuth],
                     device=device,
                 )
-                sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
+                light_source_elevation = torch.tensor(
+                    calibration_dict[config_dictionary.paint_light_source_elevation],
+                    device=device,
+                )
+                light_source_positions_enu[index] = utils.convert_3d_point_to_4d_format(
                     azimuth_elevation_to_enu(
-                        sun_azimuth, sun_elevation, degree=True, device=device
+                        light_source_azimuth,
+                        light_source_elevation,
+                        degree=True,
+                        device=device,
                     ),
                     device=device,
                 )
@@ -143,7 +149,7 @@ def extract_paint_calibration_data(
 
     return (
         centers_calibration_images,
-        sun_positions_enu,
+        light_source_positions_enu,
         all_motor_positions,
         heliostat_indices,
         target_area_indices,

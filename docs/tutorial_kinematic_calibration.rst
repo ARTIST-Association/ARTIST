@@ -74,7 +74,7 @@ You can specify as many as you want for each helisotat. The data is loaded with 
     # Load the calibration data.
     (
         centers_calibration_images,
-        sun_positions,
+        light_source_positions,
         calibration_motor_positions,
         heliostat_indices,
         target_area_indices,
