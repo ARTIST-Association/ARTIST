@@ -37,40 +37,85 @@ can be gained by pointing single heliostats at calibration targets.
 Loading the Calibration Data
 ----------------------------
 Calibration data can be accessed from the ``PAINT`` database: https://paint-database.org/.
-To load the calibration data into the ``ARTIST`` environment we use the ``paint_loader`` and specify
-the ``calibration_properties_path`` by providing a valid path and the ``power_plant_position``, so that coordinates
-can be transformed into the local ENU coordinate system used in ``ARTIST``.
+Multiple heliostats can be calibrated at once and each heliostat can be calibrated with multiple calibration data points at once.
+To load the calibration data into the ``ARTIST`` environment we use a heliostat to calibration file mapping and the ``paint_loader``.
+
+The mapping from heliostat to calibration files should follow this pattern:
+
+.. code-block::
+    # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
+    heliostat_calibration_mapping = [
+        (
+            "heliostat_name_1",
+            [
+                pathlib.Path(
+                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                ),
+            ],
+        ),
+        (
+            "heliostat_name_2",
+            [
+                pathlib.Path(
+                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                ),
+                pathlib.Path(
+                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                ),
+            ],
+        ),
+    ]
+
+In this mapping the first heliostat would have one calibration file and the second heliostat would have two.
+You can specify as many as you want for each helisotat. The data is loaded with the ``paint_loader`` like this:
 
 .. code-block::
 
     # Load the calibration data.
     (
-        calibration_target_names,
-        center_calibration_images,
+        centers_calibration_images,
         sun_positions,
-        all_calibration_motor_positions,
+        calibration_motor_positions,
+        heliostat_indices,
+        target_area_indices,
     ) = paint_loader.extract_paint_calibration_data(
-        calibration_properties_paths=calibration_properties_paths,
+        heliostat_calibration_mapping=[
+            (heliostat_name, paths)
+            for heliostat_name, paths in heliostat_calibration_mapping
+            if heliostat_name in heliostat_group.names
+        ],
+        heliostat_names=heliostat_group.names,
+        target_area_names=scenario.target_areas.names,
         power_plant_position=scenario.power_plant_position,
         device=device,
     )
 
 Now we have all the calibration data we need to calibrate the kinematic of the provided scenario.
 
-Calibration Scenario and Optimizable Parameters
+Calibration Group and Optimizable Parameters
 -----------------------------------------------
-Currently, only one heliostat can be calibrated at a time. If your scenario contains multiple heliostats, you can
-create a calibration scenario with a single heliostat like this:
+Since we are only selecting a subset of all heliostats in the scenario and some helisotats need to be
+replicated, if they have multiple calibration files assigned to them, we need to set up a new ``HeliostatGroup``.
 
 .. code-block::
 
-    # Create a calibration scenario from the original scenario.
-    # It contains a single heliostat, chosen by its index.
-    calibration_scenario = scenario.create_calibration_scenario(
-        heliostat_index=0, device=device
+    # Create calibration group
+    heliostat_group_class = type(heliostat_group)
+    calibration_group = heliostat_group_class(
+        names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
+        positions=heliostat_group.positions[heliostat_indices],
+        aim_points=scenario.target_areas.centers[target_area_indices],
+        surface_points=heliostat_group.surface_points[heliostat_indices],
+        surface_normals=heliostat_group.surface_normals[heliostat_indices],
+        initial_orientations=heliostat_group.initial_orientations[heliostat_indices],
+        kinematic_deviation_parameters=heliostat_group.kinematic_deviation_parameters[
+            heliostat_indices
+        ],
+        actuator_parameters=heliostat_group.actuator_parameters[heliostat_indices],
+        device=device,
     )
 
-This heliostat uses a rigid body kinematic. For this kinematic type there are altogether 28 optimizable parameters.
+For this kinematic type there are altogether 28 optimizable parameters.
 18 parameters are kinematic deviation parameters, and then there are 5 actuator parameters for each actuator.
 You can select all of them with the following code:
 
@@ -78,8 +123,8 @@ You can select all of them with the following code:
 
     # Select the kinematic parameters to be optimized and calibrated.
     optimizable_parameters = [
-        calibration_scenario.heliostat_field.all_kinematic_deviation_parameters.requires_grad_(),
-        calibration_scenario.heliostat_field.all_actuator_parameters.requires_grad_(),
+        calibration_group.kinematic_deviation_parameters.requires_grad_(),
+        calibration_group.actuator_parameters.requires_grad_(),
     ]
 
 Setting up the ``KinematicOptimizer``
@@ -91,16 +136,16 @@ creating an ``KinematicOptimizer`` object as shown below:
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
-        scenario=calibration_scenario,
+        scenario=scenario,
+        calibration_group=calibration_group,
         optimizer=optimizer,
-        scheduler=scheduler,
     )
 
 This object defines the following kinematic optimizer properties:
 
 - The ``scenario`` provides all of the environment variables.
+- The ``calibration_group`` contains all (replicated) heliostats.
 - The ``optimizer`` is a ``torch.optim.Optimizer`` like ``torch.optim.Adam`` that contains the optimizable parameters.
-- The ``scheduler`` is a ``torch.optim.lr_scheduler`` like ``torch.optim.lr_scheduler.ReduceLROnPlateau``.
 
 Optimizing the parameters
 -------------------------
@@ -110,28 +155,30 @@ We start the optimization process by calling:
 .. code-block::
 
     # Calibrate the kinematic.
-    kinematic_optimizer.optimize(
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        center_calibration_images=center_calibration_images,
-        incident_ray_directions=incident_ray_directions,
-        calibration_target_names=calibration_target_names,
-        motor_positions=all_calibration_motor_positions,
-        num_log=max_epoch,
-        device=device,
+    calibrated_kinematic_deviation_parameters, calibrated_actuator_parameters = (
+        kinematic_optimizer.optimize(
+            tolerance=tolerance,
+            max_epoch=max_epoch,
+            centers_calibration_images=centers_calibration_images,
+            incident_ray_directions=incident_ray_directions,
+            target_area_indices=target_area_indices,
+            motor_positions=calibration_motor_positions,
+            num_log=max_epoch,
+            device=device,
+        )
     )
 
 Currently there are two methods to calibrate the kinematic. Either we use geometric considerations and the
 motor positions from the calibration data or we optimize using flux density distributions and the differentiable
-ray tracer. The kinematic calibration via the motor position is generally faster. However, choosing the optimization
-method depends on the available calibration data. Both methods need information about:
+ray tracer. Choosing the optimization method depends on the available calibration data.
+Both methods need information about:
 
-- The center of the measured flux density distribution,
-- The incident ray direction during the measurement,
+- The centers of the measured flux density distributions,
+- The incident ray directions during the measurements,
 
-The faster calibration via the ``motor_positions`` additionally needs information about the motor positions
-that were measured during the data acquisition. The ``motor_positions`` is an optional parameter in the ``optimize()``
-function above. Since we included them here, the calibration happens via the motor positions.
+The calibration via the ``motor_positions`` additionally needs information about the motor positions
+that were measured during the calibration data acquisition. The ``motor_positions`` is an optional
+parameter in the ``optimize()`` function above. Since we included them here, the calibration happens via the motor positions.
 
 Optimization methods
 --------------------

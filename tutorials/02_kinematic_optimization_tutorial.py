@@ -59,7 +59,7 @@ for heliostat_group_index, heliostat_group in enumerate(
     (
         centers_calibration_images,
         sun_positions,
-        all_calibration_motor_positions,
+        calibration_motor_positions,
         heliostat_indices,
         target_area_indices,
     ) = paint_loader.extract_paint_calibration_data(
@@ -74,7 +74,7 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    # create calibration group
+    # Create calibration group
     heliostat_group_class = type(heliostat_group)
     calibration_group = heliostat_group_class(
         names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
@@ -108,7 +108,7 @@ for heliostat_group_index, heliostat_group in enumerate(
 
     use_ray_tracing = False
     if use_ray_tracing:
-        all_calibration_motor_positions = None
+        calibration_motor_positions = None
         tolerance = 0.035
         max_epoch = 10000
         initial_learning_rate = 0.002
@@ -130,7 +130,7 @@ for heliostat_group_index, heliostat_group in enumerate(
             centers_calibration_images=centers_calibration_images,
             incident_ray_directions=incident_ray_directions,
             target_area_indices=target_area_indices,
-            motor_positions=all_calibration_motor_positions,
+            motor_positions=calibration_motor_positions,
             num_log=max_epoch,
             device=device,
         )
