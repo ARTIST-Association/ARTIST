@@ -1,6 +1,6 @@
 """Heliostat group in ARTIST."""
 
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -17,9 +17,9 @@ class HeliostatGroup(torch.nn.Module):
     Methods
     -------
     align_surfaces_with_incident_ray_directions()
-        Align all surface points and surface normals of all heliostats in the group.
+        Align surface points and surface normals with incident ray directions.
     get_orientations_from_motor_positions()
-        Compute the orientations of all heliostats given some motor positions.
+        Compute the orientations of heliostats given some motor positions.
     forward()
         Specify the forward pass.
     """
@@ -65,7 +65,7 @@ class HeliostatGroup(torch.nn.Module):
     def align_surfaces_with_incident_ray_directions(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -77,8 +77,9 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The incident ray direction.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats to be aligned.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -92,18 +93,19 @@ class HeliostatGroup(torch.nn.Module):
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
-        Compute the orientations of all heliostats given some motor positions.
+        Compute the orientations of heliostats given some motor positions.
 
         Parameters
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats to be aligned.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

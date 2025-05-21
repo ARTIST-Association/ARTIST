@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
@@ -34,9 +36,9 @@ def reflect(
 
 def line_plane_intersections(
     rays: Rays,
-    target_areas: TowerTargetAreas,
-    target_area_indices: torch.Tensor,
     points_at_ray_origins: torch.Tensor,
+    target_areas: TowerTargetAreas,
+    target_area_indices: Optional[torch.Tensor] = None,
     epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
@@ -46,12 +48,13 @@ def line_plane_intersections(
     ----------
     rays : Rays
         The rays.
-    target_areas : TowerTargetAreas
-        All possible tower target areas with their properties.
-    target_area_indices : torch.Tensor
-        The indices of target areas corresponding to each heliostat.
     points_at_ray_origins : torch.Tensor
         The surface points of the ray origins.
+    target_areas : TowerTargetAreas
+        All possible tower target areas with their properties.
+    target_area_indices : Optional[torch.Tensor]
+        The indices of target areas corresponding to each heliostat (default is None).
+        If none are provided, the first target area of the scenario will be linked to all heliostats.
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
 
@@ -67,6 +70,9 @@ def line_plane_intersections(
     torch.Tensor
         The absolute intensities of the rays hitting the target planes.
     """
+    if target_area_indices is None:
+        target_area_indices = torch.zeros(points_at_ray_origins.shape[0])
+
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
     # unit normal vectors and the normalized ray-direction vectors, pointing from the planes to the sources.

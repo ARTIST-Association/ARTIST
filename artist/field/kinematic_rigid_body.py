@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -113,7 +113,7 @@ class RigidBody(Kinematic):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
         device: Union[torch.device, str] = "cuda",
@@ -125,8 +125,9 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats to be aligned.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         max_num_iterations : int
             Maximum number of iterations (default is 2).
         min_eps : float
@@ -141,6 +142,11 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
+        if active_heliostats_indices is None:
+            active_heliostats_indices = torch.arange(
+                self.number_of_heliostats, device=device
+            )
+
         motor_positions = torch.zeros(
             (
                 len(active_heliostats_indices),
@@ -151,8 +157,8 @@ class RigidBody(Kinematic):
         last_iteration_loss = None
         for _ in range(max_num_iterations):
             joint_angles = self.actuators.motor_positions_to_angles(
-                active_heliostats_indices=active_heliostats_indices,
                 motor_positions=motor_positions,
+                active_heliostats_indices=active_heliostats_indices,
                 device=device,
             )
 
@@ -294,8 +300,8 @@ class RigidBody(Kinematic):
             )
 
             motor_positions = self.actuators.angles_to_motor_positions(
-                active_heliostats_indices=active_heliostats_indices,
                 angles=joint_angles,
+                active_heliostats_indices=active_heliostats_indices,
                 device=device,
             )
 
@@ -325,9 +331,9 @@ class RigidBody(Kinematic):
     def align_surfaces_with_incident_ray_directions(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: list[int],
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -337,12 +343,13 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats to be aligned.
         surface_points : torch.Tensor
             The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
             The normals to the surface points.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -354,6 +361,11 @@ class RigidBody(Kinematic):
             The aligned surface normals.
         """
         device = torch.device(device)
+
+        if active_heliostats_indices is None:
+            active_heliostats_indices = torch.arange(
+                self.number_of_heliostats, device=device
+            )
 
         orientations = self.incident_ray_directions_to_orientations(
             incident_ray_directions,
@@ -369,7 +381,7 @@ class RigidBody(Kinematic):
     def motor_positions_to_orientations(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -379,8 +391,9 @@ class RigidBody(Kinematic):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices: torch.Tensor
-            The indices of the active heliostats that will be aligned.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -391,9 +404,14 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
+        if active_heliostats_indices is None:
+            active_heliostats_indices = torch.arange(
+                self.number_of_heliostats, device=device
+            )
+
         joint_angles = self.actuators.motor_positions_to_angles(
-            active_heliostats_indices=active_heliostats_indices,
             motor_positions=motor_positions,
+            active_heliostats_indices=active_heliostats_indices,
             device=device,
         )
 
