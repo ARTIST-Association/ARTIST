@@ -107,7 +107,7 @@ number_of_ideal_actuator_parameters = 1
 """Number of actuator parameters for ideal actuators."""
 kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
-kinematic_deviations_key = "deviations"
+kinematic_deviations = "deviations"
 """Key to access the kinematic deviations."""
 
 actuator_clockwise_axis_movement = "clockwise_axis_movement"

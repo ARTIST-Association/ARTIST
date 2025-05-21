@@ -174,75 +174,75 @@ def rigid_body_deviations(
     )
 
     first_joint_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_translation_e}"
     )
     first_joint_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_translation_n}"
     )
     first_joint_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_translation_u}"
     )
     first_joint_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_tilt_e}"
     )
     first_joint_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_tilt_n}"
     )
     first_joint_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_tilt_u}"
     )
     second_joint_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_translation_e}"
     )
     second_joint_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_translation_n}"
     )
     second_joint_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_translation_u}"
     )
     second_joint_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_tilt_e}"
     )
     second_joint_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_tilt_n}"
     )
     second_joint_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_tilt_u}"
     )
     concentrator_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_translation_e}"
     )
     concentrator_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_translation_n}"
     )
     concentrator_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_translation_u}"
     )
     concentrator_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_tilt_e}"
     )
     concentrator_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_tilt_n}"
     )
     concentrator_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations_key}/"
+        f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_tilt_u}"
     )
     if first_joint_translation_e is None:
