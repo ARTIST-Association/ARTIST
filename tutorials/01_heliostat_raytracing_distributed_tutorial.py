@@ -17,7 +17,9 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = utils.setup_global_distributed_environment(device=device)
@@ -30,18 +32,18 @@ with h5py.File(scenario_path) as scenario_file:
         scenario_file=scenario_file, device=device
     )
 
-# Specify a mapping of active heliostats, their targets, and the incident ray directions.
-# If no mapping is provided, the default activates all heliostats, the target is the receiver for all heliostats
-# and the light source is in the south for all heliostats.
-heliostat_target_light_source_mapping_string = None
-# if you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-# heliostat_target_light_source_mapping_string = [
-#     ("heliostat_name_1", "target_name_3", incident_ray_direction_tensor_1),
-#     ("heliostat_name_2", "target_name_1", incident_ray_direction_tensor_1),
-#     ("heliostat_name_3", "target_name_2", incident_ray_direction_tensor_2),
-#     ("heliostat_name_4", "target_name_1", incident_ray_direction_tensor_3),
-# ]
+incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
+# heliostat_target_light_source_mapping = None
+
+# If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
+heliostat_target_light_source_mapping = [
+    ("AA39", "receiver", incident_ray_direction),
+    ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
+]
+# If no mapping is provided, the default activates all heliostats, the selected target is the first target
+# found in the scenario for all heliostats, and the incident ray direction specified above will be set for
+# all heliostats.
 
 bitmap_resolution_e, bitmap_resolution_u = 256, 256
 final_flux_distributions = torch.zeros(
@@ -57,15 +59,21 @@ final_flux_distributions = torch.zeros(
 for heliostat_group_index, heliostat_group in enumerate(
     scenario.heliostat_field.heliostat_groups
 ):
-    (
-        incident_ray_directions,
-        active_heliostats_indices,
-        target_area_indices,
-    ) = scenario.index_mapping(
-        string_mapping=heliostat_target_light_source_mapping_string,
-        heliostat_group_index=heliostat_group_index,
-        device=device,
+    incident_ray_directions = incident_ray_direction.expand(
+        heliostat_group.number_of_heliostats
     )
+    active_heliostats_indices = None
+    target_area_indices = None
+    if heliostat_target_light_source_mapping:
+        (
+            incident_ray_directions,
+            active_heliostats_indices,
+            target_area_indices,
+        ) = scenario.index_mapping(
+            string_mapping=heliostat_target_light_source_mapping,
+            heliostat_group_index=heliostat_group_index,
+            device=device,
+        )
 
     heliostat_group.kinematic.aim_points[active_heliostats_indices] = (
         scenario.target_areas.centers[target_area_indices]
