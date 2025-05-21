@@ -69,9 +69,8 @@ class HeliostatField(torch.nn.Module):
         cls,
         config_file: h5py.File,
         prototype_surface: SurfaceConfig,
-        prototype_initial_orientation: torch.Tensor,
-        prototype_kinematic_deviations: torch.Tensor,
-        prototype_actuators: torch.Tensor,
+        prototype_kinematic: dict[str, Union[str, torch.Tensor]],
+        prototype_actuators: dict[str, Union[str, torch.Tensor]],
         device: Union[torch.device, str] = "cuda",
     ) -> Self:
         """
@@ -83,12 +82,10 @@ class HeliostatField(torch.nn.Module):
             The HDF5 file containing the configuration to be loaded.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if a heliostat has no individual surface.
-        prototype_initial_orientation : torch.Tensor
-            The prototype for the initial orientation to be used if a heliostat has no individual initial orientation.
-        prototype_kinematic_deviations : torch.Tensor
-            The prototype for the kinematic deviations to be used if a heliostat has no individual kinematic deviations.
-        prototype_actuators : torch.Tensor
-            The prototype for the actuators to be used if a heliostat has no individual actuators.
+        prototype_kinematic : dict[str, Union[str, torch.Tensor]]
+            The prototype for the kinematic, including type, initial orientation and deviations.
+        prototype_actuators : dict[str, Union[str, torch.Tensor]]
+            The prototype for the actuators, including type and parameters.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -160,16 +157,20 @@ class HeliostatField(torch.nn.Module):
                     )
                 )
             else:
-                if prototype_kinematic_deviations is None:
+                if prototype_kinematic is None:
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
                 log.info(
                     "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                 )
-                kinematic_type = config_dictionary.rigid_body_key
-                initial_orientation = prototype_initial_orientation
-                kinematic_deviations = prototype_kinematic_deviations
+                kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
+                initial_orientation = prototype_kinematic[
+                    config_dictionary.kinematic_initial_orientation
+                ]
+                kinematic_deviations = prototype_kinematic[
+                    config_dictionary.kinematic_deviations
+                ]
 
             if (
                 config_dictionary.heliostat_actuator_key
@@ -205,8 +206,10 @@ class HeliostatField(torch.nn.Module):
                 log.info(
                     "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                 )
-                actuator_type = config_dictionary.ideal_actuator_key
-                actuator_parameters = prototype_actuators
+                actuator_type = prototype_actuators[config_dictionary.actuator_type_key]
+                actuator_parameters = prototype_actuators[
+                    config_dictionary.actuator_parameters_key
+                ]
 
             surface = Surface(surface_config)
 

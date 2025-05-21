@@ -129,6 +129,12 @@ class Scenario:
             )
         )
 
+        prototype_kinematic = {
+            config_dictionary.kinematic_type: prototype_kinematic_type,
+            config_dictionary.kinematic_initial_orientation: prototype_initial_orientation,
+            config_dictionary.kinematic_deviations: prototype_kinematic_deviations,
+        }
+
         prototype_actuator_keys = list(
             scenario_file[config_dictionary.prototype_key][
                 config_dictionary.actuators_prototype_key
@@ -141,7 +147,7 @@ class Scenario:
             "utf-8"
         )
 
-        prototype_actuators = utils_load_h5.actuator_parameters(
+        prototype_actuator_parameters = utils_load_h5.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
@@ -151,11 +157,15 @@ class Scenario:
             device=device,
         )
 
+        prototype_actuators = {
+            config_dictionary.actuator_type_key: prototype_actuator_type,
+            config_dictionary.actuator_parameters_key: prototype_actuator_parameters,
+        }
+
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
             prototype_surface=prototype_surface,
-            prototype_initial_orientation=prototype_initial_orientation,
-            prototype_kinematic_deviations=prototype_kinematic_deviations,
+            prototype_kinematic=prototype_kinematic,
             prototype_actuators=prototype_actuators,
             device=device,
         )

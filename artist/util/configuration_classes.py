@@ -788,7 +788,7 @@ class KinematicConfig:
         if self.deviations is not None:
             kinematic_dict.update(
                 {
-                    config_dictionary.kinematic_deviations_key: self.deviations.create_kinematic_deviations_dict()
+                    config_dictionary.kinematic_deviations: self.deviations.create_kinematic_deviations_dict()
                 }
             )
         return kinematic_dict
