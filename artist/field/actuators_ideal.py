@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -23,11 +23,14 @@ class IdealActuators(Actuators):
     :class:`Actuator` : Reference to the parent class.
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, actuator_parameters: torch.Tensor) -> None:
         pass
 
     def motor_positions_to_angles(
-        self, motor_positions: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self,
+        motor_positions: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
@@ -36,6 +39,9 @@ class IdealActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -47,7 +53,10 @@ class IdealActuators(Actuators):
         return motor_positions
 
     def angles_to_motor_positions(
-        self, angles: torch.Tensor, device: Union[torch.device, str] = "cuda"
+        self,
+        angles: torch.Tensor,
+        active_heliostats_indices: Optional[torch.Tensor] = None,
+        device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.
@@ -56,6 +65,9 @@ class IdealActuators(Actuators):
         ----------
         angles : torch.Tensor
             The joint angles.
+        active_heliostats_indices : Optional[torch.Tensor]
+            The indices of the active heliostats that will be aligned (default is None).
+            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

@@ -2,7 +2,6 @@ import pathlib
 
 import h5py
 import torch
-from matplotlib import pyplot as plt
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config, utils
@@ -18,10 +17,12 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # The distributed environment is setup and destroyed using a Generator object.
-environment_generator = utils.setup_distributed_environment(device=device)
+environment_generator = utils.setup_global_distributed_environment(device=device)
 
 device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -31,34 +32,85 @@ with h5py.File(scenario_path) as scenario_file:
         scenario_file=scenario_file, device=device
     )
 
-# The incident ray direction needs to be normed.
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-scenario.heliostat_field.all_aim_points = scenario.get_target_area("receiver").center
+# heliostat_target_light_source_mapping = None
 
-# Align all heliostats.
-scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-    incident_ray_direction=incident_ray_direction, device=device
-)
+# If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
+heliostat_target_light_source_mapping = [
+    ("AA39", "receiver", incident_ray_direction),
+    ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
+]
+# If no mapping is provided, the default activates all heliostats, the selected target is the first target
+# found in the scenario for all heliostats, and the incident ray direction specified above will be set for
+# all heliostats.
 
-# Create a ray tracer.
-ray_tracer = HeliostatRayTracer(
-    scenario=scenario, world_size=world_size, rank=rank, batch_size=4, random_seed=rank
-)
-
-# Perform heliostat-based ray tracing.
-final_bitmap = ray_tracer.trace_rays(
-    incident_ray_direction=incident_ray_direction,
-    target_area=scenario.get_target_area("receiver"),
+bitmap_resolution_e, bitmap_resolution_u = 256, 256
+final_flux_distributions = torch.zeros(
+    (
+        scenario.heliostat_field.number_of_heliostat_groups,
+        scenario.target_areas.number_of_target_areas,
+        bitmap_resolution_e,
+        bitmap_resolution_u,
+    ),
     device=device,
 )
 
-plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-plt.title(f"Flux Density Distribution from rank: {rank}")
-plt.savefig(f"distributed_flux_rank_{rank}.png")
+for heliostat_group_index, heliostat_group in enumerate(
+    scenario.heliostat_field.heliostat_groups
+):
+    incident_ray_directions = incident_ray_direction.expand(
+        heliostat_group.number_of_heliostats
+    )
+    active_heliostats_indices = None
+    target_area_indices = None
+    if heliostat_target_light_source_mapping:
+        (
+            incident_ray_directions,
+            active_heliostats_indices,
+            target_area_indices,
+        ) = scenario.index_mapping(
+            string_mapping=heliostat_target_light_source_mapping,
+            heliostat_group_index=heliostat_group_index,
+            device=device,
+        )
 
-if is_distributed:
-    torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+    heliostat_group.kinematic.aim_points[active_heliostats_indices] = (
+        scenario.target_areas.centers[target_area_indices]
+    )
+
+    # Align all heliostats.
+    heliostat_group.align_surfaces_with_incident_ray_directions(
+        incident_ray_directions=incident_ray_directions,
+        active_heliostats_indices=active_heliostats_indices,
+        device=device,
+    )
+
+    # Create a ray tracer.
+    ray_tracer = HeliostatRayTracer(
+        scenario=scenario,
+        heliostat_group=heliostat_group,
+        world_size=world_size,
+        rank=rank,
+        batch_size=4,
+        random_seed=rank,
+        bitmap_resolution_e=bitmap_resolution_e,
+        bitmap_resolution_u=bitmap_resolution_u,
+    )
+
+    # Perform heliostat-based ray tracing.
+    group_bitmaps = ray_tracer.trace_rays(
+        incident_ray_directions=incident_ray_directions,
+        active_heliostats_indices=active_heliostats_indices,
+        target_area_indices=target_area_indices,
+        device=device,
+    )
+
+    if is_distributed:
+        torch.distributed.all_reduce(group_bitmaps, op=torch.distributed.ReduceOp.SUM)
+
+    final_flux_distributions[heliostat_group_index] = group_bitmaps
+
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.
@@ -66,7 +118,3 @@ try:
     next(environment_generator)
 except StopIteration:
     pass
-
-plt.imshow(final_bitmap.cpu().detach(), cmap="inferno")
-plt.title("Total Flux Density Distribution")
-plt.savefig("distributed_final_flux.png")

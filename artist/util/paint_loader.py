@@ -26,91 +26,133 @@ from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
-    calibration_properties_paths: list[pathlib.Path],
+    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
+    heliostat_names: list[str],
+    target_area_names: list[str],
     device: Union[torch.device, str] = "cuda",
-) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
 
     Parameters
     ----------
-    calibration_properties_paths : list[pathlib.Path]
-        The paths to the calibration properties files.
+    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
+        The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
-        The position of the power plant in latitude, longitude and elevation.
+        The power plant position.
+    heliostat_names : list[str]
+        All possible heliostat names.
+    target_area_names : list[str]
+        All possible target area names.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
-    list[str]
-        The names of the calibration targets.
     torch.Tensor
         The calibration flux density centers.
     torch.Tensor
-        The sun positions.
+        The light source positions.
     torch.Tensor
         The motor positions.
+    torch.Tensor
+        The heliostat indices in order.
+    torch.Tensor
+        The target area indices in order.
     """
     device = torch.device(device)
 
-    number_of_calibrations = len(calibration_properties_paths)
+    total_number_of_calibrations = sum(
+        len(paths) for _, paths in heliostat_calibration_mapping
+    )
 
+    calibration_heliostat_names = []
     calibration_target_names = []
-    center_calibration_images = torch.zeros((number_of_calibrations, 4), device=device)
-    sun_positions_enu = torch.zeros((number_of_calibrations, 4), device=device)
-    all_motor_positions = torch.zeros((number_of_calibrations, 2), device=device)
+    centers_calibration_images = torch.zeros(
+        (total_number_of_calibrations, 4), device=device
+    )
+    light_source_positions_enu = torch.zeros(
+        (total_number_of_calibrations, 4), device=device
+    )
+    all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
 
-    for index, path in enumerate(calibration_properties_paths):
-        with open(path, "r") as file:
-            calibration_dict = json.load(file)
-            calibration_target_names.append(
-                calibration_dict[config_dictionary.paint_calibration_target]
-            )
-            center_calibration_image = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    calibration_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
-                    ],
-                    dtype=torch.float64,
+    index = 0
+    for mapping in heliostat_calibration_mapping:
+        for path in mapping[1]:
+            calibration_heliostat_names.append(mapping[0])
+            with open(path, "r") as file:
+                calibration_dict = json.load(file)
+                calibration_target_names.append(
+                    calibration_dict[config_dictionary.paint_calibration_target]
+                )
+                center_calibration_image = convert_wgs84_coordinates_to_local_enu(
+                    torch.tensor(
+                        calibration_dict[config_dictionary.paint_focal_spot][
+                            config_dictionary.paint_utis
+                        ],
+                        dtype=torch.float64,
+                        device=device,
+                    ),
+                    power_plant_position,
                     device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
-                center_calibration_image, device=device
-            )
-            sun_azimuth = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_azimuth], device=device
-            )
-            sun_elevation = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_elevation], device=device
-            )
-            sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                azimuth_elevation_to_enu(
-                    sun_azimuth, sun_elevation, degree=True, device=device
-                ),
-                device=device,
-            )
-            all_motor_positions[index] = torch.tensor(
-                [
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_first_axis
+                )
+                centers_calibration_images[index] = utils.convert_3d_point_to_4d_format(
+                    center_calibration_image, device=device
+                )
+                light_source_azimuth = torch.tensor(
+                    calibration_dict[config_dictionary.paint_light_source_azimuth],
+                    device=device,
+                )
+                light_source_elevation = torch.tensor(
+                    calibration_dict[config_dictionary.paint_light_source_elevation],
+                    device=device,
+                )
+                light_source_positions_enu[index] = utils.convert_3d_point_to_4d_format(
+                    azimuth_elevation_to_enu(
+                        light_source_azimuth,
+                        light_source_elevation,
+                        degree=True,
+                        device=device,
+                    ),
+                    device=device,
+                )
+                all_motor_positions[index] = torch.tensor(
+                    [
+                        calibration_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_first_axis
+                        ],
+                        calibration_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_second_axis
+                        ],
                     ],
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_second_axis
-                    ],
-                ],
-                device=device,
-            )
+                    device=device,
+                )
+            index += 1
+
+    heliostat_index_map = {name: index for index, name in enumerate(heliostat_names)}
+    heliostat_indices = torch.tensor(
+        [heliostat_index_map[name] for name in calibration_heliostat_names],
+        device=device,
+    )
+    target_area_index_map = {
+        target_area_name: index
+        for index, target_area_name in enumerate(target_area_names)
+    }
+    target_area_indices = torch.tensor(
+        [
+            target_area_index_map[target_area_name]
+            for target_area_name in calibration_target_names
+        ],
+        device=device,
+    )
 
     return (
-        calibration_target_names,
-        center_calibration_images,
-        sun_positions_enu,
+        centers_calibration_images,
+        light_source_positions_enu,
         all_motor_positions,
+        heliostat_indices,
+        target_area_indices,
     )
 
 

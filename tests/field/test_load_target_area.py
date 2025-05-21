@@ -1,13 +1,16 @@
 import h5py
+import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.field.tower_target_area import TargetArea
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import config_dictionary
 
 
+@pytest.mark.parametrize("curvature", [True, False])
 def test_target_area_from_hdf5(
     mocker: MockerFixture,
+    curvature: bool,
     device: torch.device,
 ) -> None:
     """
@@ -17,6 +20,8 @@ def test_target_area_from_hdf5(
     ----------
     mocker : MockerFixture
         A pytest-mocker fixture used to create mock objects.
+    curvature : bool
+        Target area has a curvature or not.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -49,32 +54,50 @@ def test_target_area_from_hdf5(
     mock_curvature_u = mocker.MagicMock()
     mock_curvature_u.__getitem__.return_value = 2.0
 
-    # Combine all keys into one `side_effect`.
+    mock_level_receiver = mocker.MagicMock()
+    if curvature:
+        mock_level_receiver.__getitem__.side_effect = lambda key: {
+            config_dictionary.target_area_geometry: mock_geometry,
+            config_dictionary.target_area_position_center: mock_center,
+            config_dictionary.target_area_normal_vector: mock_normal,
+            config_dictionary.target_area_plane_e: mock_plane_e,
+            config_dictionary.target_area_plane_u: mock_plane_u,
+            config_dictionary.target_area_curvature_e: mock_curvature_e,
+            config_dictionary.target_area_curvature_u: mock_curvature_u,
+        }[key]
+        mock_level_receiver.keys.return_value = [
+            config_dictionary.target_area_geometry,
+            config_dictionary.target_area_position_center,
+            config_dictionary.target_area_normal_vector,
+            config_dictionary.target_area_plane_e,
+            config_dictionary.target_area_plane_u,
+            config_dictionary.target_area_curvature_e,
+            config_dictionary.target_area_curvature_u,
+        ]
+    else:
+        mock_level_receiver.__getitem__.side_effect = lambda key: {
+            config_dictionary.target_area_geometry: mock_geometry,
+            config_dictionary.target_area_position_center: mock_center,
+            config_dictionary.target_area_normal_vector: mock_normal,
+            config_dictionary.target_area_plane_e: mock_plane_e,
+            config_dictionary.target_area_plane_u: mock_plane_u,
+        }[key]
+
+    mock_level_target_areas = mocker.MagicMock()
+    mock_level_target_areas.__getitem__.side_effect = lambda key: {
+        config_dictionary.target_area_receiver: mock_level_receiver
+    }[key]
+    mock_level_target_areas.keys.return_value = [config_dictionary.target_area_receiver]
+    mock_level_target_areas.__len__.return_value = 1
+
     mock_h5_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_geometry: mock_geometry,
-        config_dictionary.target_area_position_center: mock_center,
-        config_dictionary.target_area_normal_vector: mock_normal,
-        config_dictionary.target_area_plane_e: mock_plane_e,
-        config_dictionary.target_area_plane_u: mock_plane_u,
-        config_dictionary.target_area_curvature_e: mock_curvature_e,
-        config_dictionary.target_area_curvature_u: mock_curvature_u,
+        config_dictionary.target_area_key: mock_level_target_areas
     }[key]
 
-    mock_h5_file.keys.return_value = [
-        config_dictionary.target_area_geometry,
-        config_dictionary.target_area_position_center,
-        config_dictionary.target_area_normal_vector,
-        config_dictionary.target_area_plane_e,
-        config_dictionary.target_area_plane_u,
-        config_dictionary.target_area_curvature_e,
-        config_dictionary.target_area_curvature_u,
-    ]
-
     # Perform the test.
-    target_area = TargetArea.from_hdf5(
+    target_areas = TowerTargetAreas.from_hdf5(
         config_file=mock_h5_file,
-        target_area_name="receiver",
         device=device,
     )
 
-    assert isinstance(target_area, TargetArea)
+    assert isinstance(target_areas, TowerTargetAreas)

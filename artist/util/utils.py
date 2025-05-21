@@ -7,7 +7,7 @@ def rotate_distortions(
     e: torch.Tensor, u: torch.Tensor, device: Union[torch.device, str] = "cuda"
 ) -> torch.Tensor:
     """
-    Rotate the distortions for the sun.
+    Rotate the distortions for the light source.
 
     Rotate around the up and then the east axis in this very order in a right-handed east-north-up
     coordinate system. Positive angles result in a rotation in the mathematical direction of rotation, i.e.,
@@ -460,10 +460,10 @@ def transform_initial_angle(
 
 
 def get_center_of_mass(
-    bitmap: torch.Tensor,
-    target_center: torch.Tensor,
-    plane_e: float,
-    plane_u: float,
+    bitmaps: torch.Tensor,
+    target_centers: torch.Tensor,
+    target_widths: float,
+    target_heights: float,
     threshold: float = 0.0,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
@@ -475,14 +475,14 @@ def get_center_of_mass(
 
     Parameters
     ----------
-    bitmap : torch.Tensor
-        The flux density in form of a bitmap.
-    target_center : torch.Tensor
-        The position of the center of the target.
-    plane_e : float
-        The width of the target surface.
-    plane_u : float
-        The height of the target surface.
+    bitmaps : torch.Tensor
+        The flux densities in form of bitmaps.
+    target_centers : torch.Tensor
+        The positions of the centers of the targets.
+    target_widths : float
+        The widths of the target surfaces.
+    target_heights : float
+        The heights of the target surfaces.
     threshold : float
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : Union[torch.device, str]
@@ -491,42 +491,57 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        The coordinates of the flux density center of mass.
+        The coordinates of the flux density centers of mass.
     """
     device = torch.device(device)
-    height, width = bitmap.shape
+    _, heights, widths = bitmaps.shape
 
     # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_threshold = torch.where(
-        bitmap >= threshold, bitmap, torch.zeros_like(bitmap, device=device)
+    flux_thresholds = torch.where(
+        bitmaps >= threshold, bitmaps, torch.zeros_like(bitmaps, device=device)
     )
-    total_intensity = flux_threshold.sum()
+    total_intensities = flux_thresholds.sum(dim=(1, 2))
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
-    e_indices = (torch.arange(width, dtype=torch.float32, device=device) + 0.5) / width
+    e_indices = (
+        torch.arange(widths, dtype=torch.float32, device=device) + 0.5
+    ) / widths
     u_indices = (
-        torch.arange(height, dtype=torch.float32, device=device) + 0.5
-    ) / height
+        torch.arange(heights, dtype=torch.float32, device=device) + 0.5
+    ) / heights
 
-    # Compute the center of intensity using weighted sums of the coordinates.
-    center_of_mass_e = (flux_threshold.sum(dim=0) * e_indices).sum() / total_intensity
-    center_of_mass_u = 1 - (
-        (flux_threshold.sum(dim=1) * u_indices).sum() / total_intensity
+    # Compute the centers of intensity using weighted sums of the coordinates.
+    center_of_masses_e = (
+        torch.sum(
+            (flux_thresholds.sum(dim=1).unsqueeze(1) * e_indices), dim=-1
+        ).squeeze(-1)
+        / total_intensities
+    )
+    center_of_masses_u = 1 - (
+        torch.sum(
+            (flux_thresholds.sum(dim=2).unsqueeze(1) * u_indices), dim=-1
+        ).squeeze(-1)
+        / total_intensities
     )
 
-    # Construct the coordinates relative to target center.
-    de = torch.tensor([-plane_e, 0.0, 0.0, 0.0], device=device)
-    du = torch.tensor([0.0, 0.0, plane_u, 0.0], device=device)
+    # Construct the coordinates relative to target centers.
+    de = torch.zeros((bitmaps.shape[0], 4), device=device)
+    de[:, 0] = -target_widths
+    du = torch.zeros((bitmaps.shape[0], 4), device=device)
+    du[:, 2] = target_heights
 
     center_coordinates = (
-        target_center - 0.5 * (de + du) + center_of_mass_e * de + center_of_mass_u * du
+        target_centers
+        - 0.5 * (de + du)
+        + center_of_masses_e.unsqueeze(-1) * de
+        + center_of_masses_u.unsqueeze(-1) * du
     )
 
     return center_coordinates
 
 
-def setup_distributed_environment(
+def setup_global_distributed_environment(
     device: Union[torch.device, str] = "cuda",
 ) -> Generator[tuple[torch.device, bool, int, int], None, None]:
     """

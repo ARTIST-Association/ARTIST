@@ -204,9 +204,9 @@ class LightSourceConfig:
     distribution_type : str
         The distribution type used to model the light source.
     mean : float, optional
-        The mean used for modeling the sun.
+        The mean used for modeling the light source.
     covariance : float, optional
-        The covariance used for modeling the sun.
+        The covariance used for modeling the light source.
 
     Methods
     -------
@@ -237,9 +237,9 @@ class LightSourceConfig:
         distribution_type : str
             The distribution type used to model the light source.
         mean : float, optional
-            The mean used for modeling the sun.
+            The mean used for modeling the light source.
         covariance : float, optional
-            The covariance used for modeling the sun.
+            The covariance used for modeling the light source.
 
         Raises
         ------
@@ -788,7 +788,7 @@ class KinematicConfig:
         if self.deviations is not None:
             kinematic_dict.update(
                 {
-                    config_dictionary.kinematic_deviations_key: self.deviations.create_kinematic_deviations_dict()
+                    config_dictionary.kinematic_deviations: self.deviations.create_kinematic_deviations_dict()
                 }
             )
         return kinematic_dict

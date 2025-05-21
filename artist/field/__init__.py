@@ -5,11 +5,12 @@ from artist.field.actuators_ideal import IdealActuators
 from artist.field.actuators_linear import LinearActuators
 from artist.field.facets_nurbs import NurbsFacet
 from artist.field.heliostat_field import HeliostatField
+from artist.field.heliostat_group import HeliostatGroup
+from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.field.kinematic import Kinematic
 from artist.field.kinematic_rigid_body import RigidBody
 from artist.field.surface import Surface
-from artist.field.tower_target_area import TargetArea
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 
 __all__ = [
     "Actuators",
@@ -18,8 +19,9 @@ __all__ = [
     "Surface",
     "NurbsFacet",
     "HeliostatField",
-    "TargetArea",
-    "TargetAreaArray",
+    "HeliostatGroup",
+    "HeliostatGroupRigidBody",
+    "TowerTargetAreas",
     "Kinematic",
     "RigidBody",
 ]

@@ -1,13 +1,12 @@
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import h5py
 import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
-from artist.field.tower_target_area import TargetArea
-from artist.field.tower_target_area_array import TargetAreaArray
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary, utils_load_h5
 
@@ -23,8 +22,8 @@ class Scenario:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant as latitude, longitude, altitude.
-    target_areas : TargetAreaArray
-        A list of tower target areas included in the scenario.
+    target_areas : TowerTargetAreas
+        All target areas on all towers of the power plant.
     light_sources : LightSourceArray
         A list of light sources included in the scenario.
     heliostat_field : HeliostatField
@@ -34,16 +33,14 @@ class Scenario:
     -------
     load_scenario_from_hdf5()
         Class method to load the scenario from an HDF5 file.
-    get_target_area()
-        Retrieve a specified target area from the scenario.
-    create_calibration_scenario()
-        Create a calibration scenario with a single heliostat from an existing scenario.
+    index_mapping()
+        Create an index mapping from heliostat names, target area names and incident ray directions.
     """
 
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        target_areas: TargetAreaArray,
+        target_areas: TowerTargetAreas,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -99,7 +96,7 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        target_areas = TargetAreaArray.from_hdf5(
+        target_areas = TowerTargetAreas.from_hdf5(
             config_file=scenario_file, device=device
         )
         light_sources = LightSourceArray.from_hdf5(
@@ -132,6 +129,12 @@ class Scenario:
             )
         )
 
+        prototype_kinematic = {
+            config_dictionary.kinematic_type: prototype_kinematic_type,
+            config_dictionary.kinematic_initial_orientation: prototype_initial_orientation,
+            config_dictionary.kinematic_deviations: prototype_kinematic_deviations,
+        }
+
         prototype_actuator_keys = list(
             scenario_file[config_dictionary.prototype_key][
                 config_dictionary.actuators_prototype_key
@@ -144,7 +147,7 @@ class Scenario:
             "utf-8"
         )
 
-        prototype_actuators = utils_load_h5.actuator_parameters(
+        prototype_actuator_parameters = utils_load_h5.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
@@ -154,20 +157,15 @@ class Scenario:
             device=device,
         )
 
-        number_of_heliostats = len(scenario_file[config_dictionary.heliostat_key])
-        number_of_surface_points_per_heliostat = (
-            len(prototype_surface.facet_list)
-            * prototype_surface.facet_list[0].number_eval_points_e
-            * prototype_surface.facet_list[0].number_eval_points_n
-        )
+        prototype_actuators = {
+            config_dictionary.actuator_type_key: prototype_actuator_type,
+            config_dictionary.actuator_parameters_key: prototype_actuator_parameters,
+        }
 
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
-            number_of_heliostats=number_of_heliostats,
-            number_of_surface_points_per_heliostat=number_of_surface_points_per_heliostat,
             prototype_surface=prototype_surface,
-            prototype_initial_orientation=prototype_initial_orientation,
-            prototype_kinematic_deviations=prototype_kinematic_deviations,
+            prototype_kinematic=prototype_kinematic,
             prototype_actuators=prototype_actuators,
             device=device,
         )
@@ -179,101 +177,97 @@ class Scenario:
             heliostat_field=heliostat_field,
         )
 
-    def get_target_area(self, target_area_name: str) -> TargetArea:
-        """
-        Retrieve a specified target area from the scenario.
-
-        Parameters
-        ----------
-        target_area_name : str
-            The string name of the target area.
-
-        Raises
-        ------
-        ValueError
-            If no target area with the specified name exists.
-
-        Returns
-        -------
-        TargetArea
-            The specified target area.
-        """
-        target_area = next(
-            (
-                area
-                for area in self.target_areas.target_area_list
-                if area.name == target_area_name
-            ),
-            None,
-        )
-        if target_area is None:
-            raise ValueError(
-                f"No target area with the name {target_area_name} found in the scenario!"
-            )
-        else:
-            return target_area
-
-    def create_calibration_scenario(
+    def index_mapping(
         self,
-        heliostat_index: int,
+        string_mapping: Optional[list[tuple[str, str, torch.Tensor]]],
+        heliostat_group_index: int,
+        default_incident_ray_direction: torch.Tensor = torch.tensor(
+            [0.0, 1.0, 0.0, 0.0]
+        ),
+        default_target_area_index: int = 1,
         device: Union[torch.device, str] = "cuda",
-    ) -> "Scenario":
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Create a calibration scenario with a single heliostat from an existing scenario.
+        Create an index mapping from heliostat names, target area names and incident ray directions.
 
         Parameters
         ----------
-        heliostat_index : int
-            The index of the heliostat from the original scenario.
-        device : device : Union[torch.device, str]
+        string_mapping : (Optional[list[tuple[str, str, torch.Tensor]]])
+            Strings that map heliostats to target areas and incident ray direction tensors.
+        heliostat_group_index : int
+            The index of the current heliostat group.
+        device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
         Returns
         -------
-        Scenario
-            The calibration scenario.
+        torch.Tensor
+            All incident ray directions for the heliostats in this scenario.
+        torch.Tensor
+            The indices of all active heliostats in order.
+        torch.Tensor
+            The indices of target areas for all heliostats in order.
         """
         device = torch.device(device)
 
-        heliostat_index = torch.tensor([heliostat_index], device=device)
+        all_heliostat_name_indices = {
+            heliostat_name: index
+            for index, heliostat_name in enumerate(
+                self.heliostat_field.heliostat_groups[heliostat_group_index].names
+            )
+        }
+        all_target_area_indices = {
+            target_area_name: index
+            for index, target_area_name in enumerate(self.target_areas.names)
+        }
 
-        heliostat_field = HeliostatField(
-            number_of_heliostats=1,
-            all_heliostat_names=[
-                self.heliostat_field.all_heliostat_names[heliostat_index]
-            ],
-            all_heliostat_positions=self.heliostat_field.all_heliostat_positions[
-                heliostat_index
-            ],
-            all_aim_points=self.heliostat_field.all_aim_points[heliostat_index],
-            all_surface_points=self.heliostat_field.all_surface_points[heliostat_index],
-            all_surface_normals=self.heliostat_field.all_surface_normals[
-                heliostat_index
-            ],
-            all_initial_orientations=self.heliostat_field.all_initial_orientations[
-                heliostat_index
-            ],
-            all_kinematic_deviation_parameters=self.heliostat_field.all_kinematic_deviation_parameters[
-                heliostat_index
-            ],
-            all_actuator_parameters=self.heliostat_field.all_actuator_parameters[
-                heliostat_index
-            ],
-            device=device,
-        )
+        if string_mapping is None:
+            all_incident_ray_directions = default_incident_ray_direction.expand(
+                self.heliostat_field.heliostat_groups[
+                    heliostat_group_index
+                ].number_of_heliostats,
+                4,
+            ).to(device=device)
+            heliostat_target_mapping = torch.tensor(
+                [
+                    [i, default_target_area_index]
+                    for i in range(
+                        self.heliostat_field.heliostat_groups[
+                            heliostat_group_index
+                        ].number_of_heliostats
+                    )
+                ],
+                device=device,
+            )
+        else:
+            all_incident_ray_directions = torch.stack([t for _, _, t in string_mapping])
+            heliostat_target_mapping = torch.tensor(
+                [
+                    [
+                        all_heliostat_name_indices[heliostat_name],
+                        all_target_area_indices[target_area_name],
+                    ]
+                    for heliostat_name, target_area_name, _ in (string_mapping)
+                    if heliostat_name in all_heliostat_name_indices
+                    and target_area_name in all_target_area_indices
+                ],
+                device=device,
+            )
 
-        return Scenario(
-            power_plant_position=self.power_plant_position,
-            target_areas=self.target_areas,
-            light_sources=self.light_sources,
-            heliostat_field=heliostat_field,
+        active_heliostats_indices = heliostat_target_mapping[:, 0]
+        target_area_indices = heliostat_target_mapping[:, 1]
+
+        return (
+            all_incident_ray_directions,
+            active_heliostats_indices,
+            target_area_indices,
         )
 
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""
         return (
             f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
-            f" with {len(self.target_areas.target_area_list)} Target Area(s),"
+            f" with {len(self.target_areas.names)} Target Area(s),"
             f" {len(self.light_sources.light_source_list)} Light Source(s),"
-            f" and {self.heliostat_field.number_of_heliostats} Heliostat(s)."
+            f" and {sum(len(group.names) for group in self.heliostat_field.heliostat_groups)} Heliostat(s)."
         )
