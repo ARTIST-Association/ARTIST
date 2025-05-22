@@ -21,7 +21,6 @@ __all__ = [
     "Surface",
     "NurbsFacet",
     "Heliostat",
-    "HeliostatField",
     "TargetArea",
     "TargetAreaArray",
     "Kinematic",
