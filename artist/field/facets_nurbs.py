@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 
 import torch
 
@@ -11,8 +11,10 @@ class NurbsFacet(torch.nn.Module):
 
     Attributes
     ----------
-    control_points : torch.Tensor
-        The control points of the NURBS surface.
+    control_points_ideal : torch.Tensor
+        The control points of the ideal NURBS surface derived from e.g. construction files like CAD. All z values are 0 if not given.
+    control_points_measured : torch.Tensor
+        The control points of the NURBS surface given as the difference to the ideal.
     degree_e : int
         The degree of the NURBS surface in the east direction.
     degree_n : int
@@ -39,74 +41,40 @@ class NurbsFacet(torch.nn.Module):
 
     def __init__(
         self,
-        control_points: torch.Tensor,
-        ideal_control_points: torch.Tensor,
         degree_e: int,
         degree_n: int,
         number_eval_points_e: int,
         number_eval_points_n: int,
         translation_vector: torch.Tensor,
-        canting_e: torch.Tensor,
-        canting_n: torch.Tensor,
+        control_points: torch.Tensor,
     ) -> None:
-        """
-        Initialize a NURBS facet.
-
-        The heliostat surface can be divided into facets. In ARTIST, the surfaces are modeled using
-        Non-Uniform Rational B-Splines (NURBS). Thus, each facet is an individual NURBS surface. The
-        NURBS surface is created by specifying several parameters. For a detailed description of these
-        parameters see the `NURBS-tutorial`. For now, note that the NURBS surfaces can be formed through
-        control points, two degrees, the number of evaluation points in east and north direction, a
-        translation vector to match the facets to their position, and canting vectors.
-
-        Parameters
-        ----------
-        control_points : torch.Tensor
-            The control points of the NURBS surface.
-        degree_e : int
-            The degree of the NURBS surface in the east direction.
-        degree_n : int
-            The degree of the NURBS surface in the north direction.
-        number_eval_points_e : int
-            The number of evaluation points for the NURBS surface in the east direction.
-        number_eval_points_n : int
-            The number of evaluation points for the NURBS surface in the north direction.
-        translation_vector : torch.Tensor
-            The translation_vector of the facet.
-        canting_e : torch.Tensor
-            The canting vector in the east direction of the facet.
-        canting_n : torch.Tensor
-            The canting vector in the north direction of the facet.
-        """
         super().__init__()
-        self.control_points = control_points
 
-        if ideal_control_points is None:
-            self.ideal_control_points = torch.zeros_like(self.control_points)
-        else:
-            if ideal_control_points.shape != self.control_points.shape:
-                raise ValueError(
-                    f"Ideal control points must have the same shape as control points! "
-                    f"Got {ideal_control_points.shape} vs {self.control_points.shape}."
-                )
-            self.ideal_control_points = ideal_control_points.detach().clone()
+        self.control_points = control_points
 
         self.degree_e = degree_e
         self.degree_n = degree_n
         self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
         self.translation_vector = translation_vector
-        self.canting_e = canting_e
-        self.canting_n = canting_n
 
     def create_nurbs_surface(
-        self, device: Union[torch.device, str] = "cuda"
+        self,
+        control_point_type: Optional[str] = None, 
+        device: Union[torch.device, str] = "cuda"
+
     ) -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
 
         Parameters
         ----------
+        control_point_type : Optional[str]
+            The type of control points to use.
+            String options are:
+            - "ideal": Use the ideal/prototyped control points.
+            - "measured": Use the measured/derived control points.
+            - None: Use the combined control points.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -133,14 +101,23 @@ class NurbsFacet(torch.nn.Module):
         evaluation_points_e = evaluation_points[:, 0]
         evaluation_points_n = evaluation_points[:, 1]
 
+        if control_point_type == "ideal":
+            control_points = self.control_points_ideal
+        elif control_point_type == "measured":
+            control_points = self.control_points_measured
+        else:
+            control_points = self.control_points
+
         nurbs_surface = NURBSSurface(
-            self.degree_e,
-            self.degree_n,
-            evaluation_points_e,
-            evaluation_points_n,
-            self.control_points,
-            device,
+            degree_e = self.degree_e,
+            degree_n = self.degree_n,
+            evaluation_points_e = evaluation_points_e,
+            evaluation_points_n = evaluation_points_n,
+            control_points= control_points,
+            device = device,
         )
+
+
         return nurbs_surface
 
     def forward(self) -> None:

@@ -132,13 +132,17 @@ class ScenarioGenerator:
         # Check that every heliostat has the same number of facets and evaluation points
         for heliostat in self.heliostat_list_config.heliostat_list:
             if heliostat.surface:
-                if len(heliostat.surface.facet_list) != accepted_number_of_facets:
+                if len(heliostat.surface.facets) and len(heliostat.surface.facets_measured) and len(heliostat.surface.facets_ideal) != accepted_number_of_facets:
                     raise ValueError(
                         "Individual heliostats must all have the same number of facets!"
                     )
                 if not all(
-                    heliostat.surface.facet_list[i].number_eval_points_e
-                    * heliostat.surface.facet_list[i].number_eval_points_n
+                    heliostat.surface.facets[i].number_eval_points_e
+                    * heliostat.surface.facets[i].number_eval_points_n and
+                    heliostat.surface.facets_ideal[i].number_eval_points_e
+                    * heliostat.surface.facets_ideal[i].number_eval_points_n and
+                    heliostat.surface.facets_measured[i].number_eval_points_e
+                    * heliostat.surface.facets_measured[i].number_eval_points_n
                     == accepted_number_of_points
                     for i in range(accepted_number_of_facets)
                 ):
