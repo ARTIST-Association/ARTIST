@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 
 import torch
 
@@ -66,7 +66,11 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points_n : torch.Tensor
             The evaluation points in north direction.
         control_points : torch.Tensor
-            The control_points.
+            The control_points with canting and if existent with surface deformations.
+        control_points_prototype : Optional[torch.Tensor]
+            The prototype control points of the NURBS surface including canting.
+        control_points_measured : Optional[torch.Tensor]
+            The measured control points of the NURBS surface excluding canting.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
@@ -76,11 +80,17 @@ class NURBSSurface(torch.nn.Module):
         self.degree_n = degree_n
         self.evaluation_points_e = evaluation_points_e
         self.evaluation_points_n = evaluation_points_n
+
+        if control_points is None:
+            raise ValueError("Control points must be provided.")
         self.control_points = control_points
-        self.knot_vector_e, self.knot_vector_n = self.calculate_knots(device)
+        
+        self.knot_vector_e, self.knot_vector_n = self.calculate_knots(device = device)
 
     def calculate_knots(
-        self, device: Union[torch.device, str] = "cuda"
+        self, 
+        from_control_point_type: Union[str, None] = None,
+        device: Union[torch.device, str] = "cuda"
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the knot vectors in the east and north direction.
@@ -93,6 +103,12 @@ class NURBSSurface(torch.nn.Module):
 
         Parameters
         ----------
+        from_control_point_type : Union[str, None]
+            The type of control points to use.
+            String options are:
+            - "ideal": Use the ideal/prototyped control points.
+            - "measured": Use the measured/derived control points.
+            - None: Use the combined control points.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -103,10 +119,16 @@ class NURBSSurface(torch.nn.Module):
         torch.Tensor
             The knots in north direction.
         """
+        if from_control_point_type == "ideal":
+            control_points = self.control_points_prototype
+        elif from_control_point_type == "measured":
+            control_points = self.control_points_measured
+        else:  # None
+            control_points = self.control_points
         device = torch.device(device)
 
-        num_control_points_e = self.control_points.shape[0]
-        num_control_points_n = self.control_points.shape[1]
+        num_control_points_e = control_points.shape[0]
+        num_control_points_n = control_points.shape[1]
 
         knots_e = torch.zeros(num_control_points_e + self.degree_e + 1, device=device)
         num_knot_vals = len(knots_e[self.degree_e : -self.degree_e])
@@ -316,7 +338,8 @@ class NURBSSurface(torch.nn.Module):
         return derivatives
 
     def calculate_surface_points_and_normals(
-        self, device: Union[torch.device, str] = "cuda"
+        self, 
+        device: Union[torch.device, str] = "cuda"
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the surface points and normals of the NURBS surface.
