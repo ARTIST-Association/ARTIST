@@ -1,10 +1,32 @@
 from typing import TYPE_CHECKING, Generator, Union
-
+import pathlib
+import matplotlib.pyplot as plt
 import torch
-
 if TYPE_CHECKING:
     from artist.field.kinematic_rigid_body import RigidBody
 
+from artist.util.configuration_classes import FacetConfig
+
+def save_surface_plot(surface_points: torch.Tensor, title: str, filename: str):
+    """
+    Plot and save a set of 3D points as a scatter plot.
+    
+    Parameters
+    ----------
+    surface_points : torch.Tensor
+        Tensor of shape (N, 4); only the first three dimensions are plotted.
+    title : str
+        Title for the plot.
+    filename : str
+        File path where the plot will be saved.
+    """
+    pts = surface_points[:, :3].detach().cpu().numpy()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], s=1)
+    ax.set_title(title)
+    plt.savefig(filename)
+    plt.close(fig)
 
 def batch_dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
@@ -725,6 +747,48 @@ def get_center_of_mass(
     return center_coordinates
 
 
+def get_or_create_facet_list(surface_converter,
+                             deflectometry_file_path: pathlib.Path,
+                             heliostat_file_path: pathlib.Path,
+                             device: torch.device,
+                             cache_file_path: pathlib.Path) -> list[FacetConfig]:
+    """
+    Retrieves the facet list from a cache file if it exists. Otherwise, generates the facet list,
+    saves it to the cache file, and returns the generated data.
+
+    Parameters
+    ----------
+    surface_converter : SurfaceConverter
+        An instance of SurfaceConverter used to generate the facet list.
+    deflectometry_file_path : pathlib.Path
+        Path to the deflectometry data file.
+    heliostat_file_path : pathlib.Path
+        Path to the heliostat properties file.
+    device : torch.device
+        The device on which the computation runs.
+    cache_file_path : pathlib.Path
+        File path where the facet list is cached.
+
+    Returns
+    -------
+    any
+        The facet list generated from the input files.
+    """
+    if cache_file_path.exists():
+        with torch.serialization.safe_globals([FacetConfig]):
+            facet_list = torch.load(cache_file_path)
+        print(f"Loading cached facet list from {cache_file_path}")
+    else:
+        print("Cached facet list not found. Generating facet list...")
+        facet_list = surface_converter.generate_surface_config_from_paint(
+            deflectometry_file_path=deflectometry_file_path,
+            heliostat_file_path=heliostat_file_path,
+            device=device,
+        )
+        torch.save(facet_list, cache_file_path)
+        print(f"Facet list saved to {cache_file_path}")
+    return facet_list
+
 def setup_distributed_environment(
     device: Union[torch.device, str] = "cuda",
 ) -> Generator[tuple[torch.device, bool, int, int], None, None]:
@@ -810,3 +874,4 @@ def enu_to_angles(enu_vector):
     # Elevation: angle above the horizontal plane
     elevation = torch.atan2(up, horizontal_dist)
     return azimuth, elevation
+
