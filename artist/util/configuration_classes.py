@@ -1,5 +1,6 @@
 from typing import Any, Optional
 
+
 import torch
 
 from artist.util import config_dictionary
@@ -377,8 +378,6 @@ class FacetConfig:
         number_eval_points_e: int,
         number_eval_points_n: int,
         translation_vector: torch.Tensor,
-        canting_e: torch.Tensor,
-        canting_n: torch.Tensor,
     ) -> None:
         """
         Initialize the facet configuration.
@@ -411,8 +410,6 @@ class FacetConfig:
         self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
         self.translation_vector = translation_vector
-        self.canting_e = canting_e
-        self.canting_n = canting_n
 
     def create_facet_dict(self) -> dict[str, Any]:
         """
@@ -430,8 +427,6 @@ class FacetConfig:
             config_dictionary.facet_number_eval_e: self.number_eval_points_e,
             config_dictionary.facet_number_eval_n: self.number_eval_points_n,
             config_dictionary.facets_translation_vector: self.translation_vector,
-            config_dictionary.facets_canting_e: self.canting_e,
-            config_dictionary.facets_canting_n: self.canting_n,
         }
 
 
@@ -1141,9 +1136,9 @@ class PrototypeConfig:
             A dictionary containing the prototypes.
         """
         return {
-            config_dictionary.surface_prototype_key: self.surface_prototype.create_surface_dict(),
-            config_dictionary.kinematic_prototype_key: self.kinematic_prototype.create_kinematic_dict(),
-            config_dictionary.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
+            config_dictionary.heliostat_surface_prototype_key: self.surface_prototype.create_surface_dict(),
+            config_dictionary.heliostat_kinematic_prototype_key: self.kinematic_prototype.create_kinematic_dict(),
+            config_dictionary.heliostat_actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
         }
 
 
@@ -1180,7 +1175,7 @@ class HeliostatConfig:
         id: int,
         position: torch.Tensor,
         aim_point: torch.Tensor,
-        surface: Optional[SurfaceConfig] = None,
+        surface = None, #TODO
         kinematic: Optional[KinematicConfig] = None,
         actuators: Optional[ActuatorListConfig] = None,
     ) -> None:
@@ -1229,7 +1224,9 @@ class HeliostatConfig:
         if self.surface is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_surface_key: self.surface.create_surface_dict()
+                    config_dictionary.heliostat_surface_key: self.surface.surface_config.create_surface_dict(),
+                    config_dictionary.heliostat_surface_measured_key: self.surface.surface_config_measured.create_surface_dict(),
+                    config_dictionary.heliostat_surface_ideal_key: self.surface.surface_config_ideal.create_surface_dict()
                 }
             )
         if self.kinematic is not None:
