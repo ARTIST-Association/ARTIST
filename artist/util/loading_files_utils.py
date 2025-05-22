@@ -1,17 +1,20 @@
+import pathlib, json
 from ast import Tuple
 import logging
-from typing import Optional, Union
-from artist.field import surface
+from typing import Optional, Union                     
+from artist.field.surface import Surface
 from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig, SurfaceConfig
 import h5py
 import torch
+import numpy as np
 
+log = logging.getLogger(__name__)
 
 def surface_config(prototype: bool,
                    scenario_file: h5py.File,
                    device: Union[torch.device, str] = "cuda"
-) -> SurfaceConfig:
+) -> Surface:
     """
     Load a surface configuration from an HDF5 scenario file.
 
@@ -30,53 +33,79 @@ def surface_config(prototype: bool,
         The surface configuration.
     """
     device = torch.device(device)
-    if prototype:
-        facet_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.surface_prototype_key
-        ][config_dictionary.facets_key]
+    if prototype: #TODO Same as below
+        facet_config = scenario_file[config_dictionary.heliostat_surface_key][config_dictionary.facets_key]
+        facet_config_ideal = scenario_file[config_dictionary.heliostat_surface_ideal_key][config_dictionary.facets_key]
+        facet_config_measured = scenario_file[config_dictionary.heliostat_measured_surface_key][config_dictionary.facets_key]
     else:
         facet_config = scenario_file[config_dictionary.heliostat_surface_key][config_dictionary.facets_key]
+        facet_config_ideal = scenario_file[config_dictionary.heliostat_surface_ideal_key][config_dictionary.facets_key]
+        facet_config_measured = scenario_file[config_dictionary.heliostat_surface_measured_key][config_dictionary.facets_key]
 
-    facet_list = [
-        FacetConfig(
-            facet_key="",
-            control_points=torch.tensor(
-                facet_config[facet][config_dictionary.facet_control_points][()],
-                dtype=torch.float,
-                device=device,
-            ),
-            degree_e=int(
-                facet_config[facet][config_dictionary.facet_degree_e][()]
-            ),
-            degree_n=int(
-                facet_config[facet][config_dictionary.facet_degree_n][()]
-            ),
-            number_eval_points_e=int(
-                facet_config[facet][config_dictionary.facet_number_eval_e][()]
-            ),
-            number_eval_points_n=int(
-                facet_config[facet][config_dictionary.facet_number_eval_n][()]
-            ),
-            translation_vector=torch.tensor(
-                facet_config[facet][config_dictionary.facets_translation_vector][()],
-                dtype=torch.float,
-                device=device,
-            ),
-            canting_e=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_e][()],
-                dtype=torch.float,
-                device=device,
-            ),
-            canting_n=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_n][()],
-                dtype=torch.float,
-                device=device,
-            ),
-        )
-        for facet in facet_config.keys()
-    ]
+    if prototype:
+        facet_lists = {} #TODO this is the same for if and else. prototype has do be redone
+        for cfg, suffix in zip(
+            [facet_config, facet_config_ideal, facet_config_measured],
+            ["", "_ideal", "_measured"]
+        ):
+            facet_lists[suffix] = [
+                FacetConfig(
+                    facet_key=facet,
+                    control_points=torch.tensor(
+                        cfg[facet][config_dictionary.facet_control_points][()],
+                        dtype=torch.float,
+                        device=device,
+                    ),
+                    degree_e=int(cfg[facet][config_dictionary.facet_degree_e][()]),
+                    degree_n=int(cfg[facet][config_dictionary.facet_degree_n][()]),
+                    number_eval_points_e=int(cfg[facet][config_dictionary.facet_number_eval_e][()]),
+                    number_eval_points_n=int(cfg[facet][config_dictionary.facet_number_eval_n][()]),
+                    translation_vector=torch.tensor(
+                        cfg[facet][config_dictionary.facets_translation_vector][()],
+                        dtype=torch.float,
+                        device=device,
+                    ),
+                )
+                for facet in cfg.keys()
+            ]
+        facet_list = facet_lists[""]
+        facet_list_ideal = facet_lists["_ideal"]
+        facet_list_measured = facet_lists["_measured"]
+    else:
+        facet_lists = {}
+        for cfg, suffix in zip(
+            [facet_config, facet_config_ideal, facet_config_measured],
+            ["", "_ideal", "_measured"]
+        ):
+            facet_lists[suffix] = [
+                FacetConfig(
+                    facet_key=facet,
+                    control_points=torch.tensor(
+                        cfg[facet][config_dictionary.facet_control_points][()],
+                        dtype=torch.float,
+                        device=device,
+                    ),
+                    degree_e=int(cfg[facet][config_dictionary.facet_degree_e][()]),
+                    degree_n=int(cfg[facet][config_dictionary.facet_degree_n][()]),
+                    number_eval_points_e=int(cfg[facet][config_dictionary.facet_number_eval_e][()]),
+                    number_eval_points_n=int(cfg[facet][config_dictionary.facet_number_eval_n][()]),
+                    translation_vector=torch.tensor(
+                        cfg[facet][config_dictionary.facets_translation_vector][()],
+                        dtype=torch.float,
+                        device=device,
+                    ),
+                )
+                for facet in cfg.keys()
+            ]
+        facet_list = facet_lists[""]
+        facet_list_ideal = facet_lists["_ideal"]
+        facet_list_measured = facet_lists["_measured"]
+
     surface_config = SurfaceConfig(facet_list=facet_list)
-    return surface_config
+    surface_config_ideal = SurfaceConfig(facet_list=facet_list_ideal)
+    surface_config_measured = SurfaceConfig(facet_list=facet_list_measured)
+    surface = Surface(surface_config=surface_config, surface_config_ideal=surface_config_ideal, surface_config_measured=surface_config_measured)
+    return surface
 
 
 def kinematic_deviations(prototype: bool,
@@ -120,7 +149,7 @@ def kinematic_deviations(prototype: bool,
 
     if prototype:
         kinematic_deviations_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.kinematic_prototype_key
+            config_dictionary.heliostat_kinematic_prototype_key
         ][config_dictionary.kinematic_deviations_key]
     else:
         kinematic_deviations_config = scenario_file[config_dictionary.heliostat_kinematic_key][config_dictionary.kinematic_deviations_key]
@@ -494,7 +523,7 @@ def actuator_parameters(prototype: bool,
 
     if prototype:
         actuator_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
+            config_dictionary.heliostat_actuators_prototype_key
         ]
     else:
         actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
@@ -732,3 +761,73 @@ def parameters_ideal_actuators(
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
 
     return actuator_parameters
+
+
+def load_surface_points_and_normals_from_h5(file_path, config_dictionary, number_of_facets, device):
+    surface_points_with_facets_list = []
+    surface_normals_with_facets_list = []
+    with h5py.File(file_path, "r") as file:
+        for f in range(number_of_facets):
+            points_np = np.array(file[f"{config_dictionary.paint_facet}{f+1}"][config_dictionary.paint_surface_points])
+            points = torch.tensor(points_np, device=device)
+
+            normals_np = np.array(file[f"{config_dictionary.paint_facet}{f+1}"][config_dictionary.paint_surface_normals])
+            normals = torch.tensor(normals_np, device=device)
+
+            surface_points_with_facets_list.append(points)
+            surface_normals_with_facets_list.append(normals)
+    return surface_points_with_facets_list, surface_normals_with_facets_list
+
+
+def load_heliostat_properties_file(
+        heliostat_file_path: pathlib.Path,
+        config_dictionary: dict = config_dictionary,
+        device : Union[torch.device, str] = "cuda",
+
+    ) -> dict:
+        """
+        Load the heliostat properties from a JSON file.
+
+        Parameters
+        ----------
+        heliostat_file_path : pathlib.Path
+            Path to the JSON file containing heliostat properties.
+
+        Returns
+        -------
+        dict
+            Dictionary containing heliostat properties.
+        """
+        log.info("Reading PAINT heliostat properties from file.")
+        with open(heliostat_file_path, "r") as file:
+            heliostat_dict = json.load(file)
+            number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
+                config_dictionary.paint_number_of_facets
+            ]
+            heliostat_height = heliostat_dict[config_dictionary.paint_heliostat_height]
+            heliostat_width = heliostat_dict[config_dictionary.paint_heliostat_width]
+
+            facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
+            canting_e = torch.empty(number_of_facets, 3, device=device)
+            canting_n = torch.empty(number_of_facets, 3, device=device)
+            for facet in range(number_of_facets):
+                facet_data = heliostat_dict[config_dictionary.paint_facet_properties][
+                    config_dictionary.paint_facets
+                ][facet]
+                facet_translation_vectors[facet, :] = torch.tensor(
+                    facet_data[config_dictionary.paint_translation_vetor], device=device
+                )
+                canting_e[facet, :] = torch.tensor(
+                    facet_data[config_dictionary.paint_canting_e], device=device
+                )
+                canting_n[facet, :] = torch.tensor(
+                    facet_data[config_dictionary.paint_canting_n], device=device
+                )
+        return (
+            number_of_facets,
+            heliostat_height,
+            heliostat_width,
+            facet_translation_vectors,
+            canting_e,
+            canting_n,
+        )    
