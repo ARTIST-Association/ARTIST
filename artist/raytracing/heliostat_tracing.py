@@ -318,6 +318,7 @@ class HeliostatRayTracer:
         self,
         incident_ray_direction: torch.Tensor,
         target_area: TargetArea,
+        surface_mode: Union[str, None] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -344,14 +345,27 @@ class HeliostatRayTracer:
             (self.bitmap_resolution_u, self.bitmap_resolution_e), device=device
         )
 
+        if surface_mode is None:
+            normals = self.scenario.heliostat_field.all_current_aligned_surface_normals
+        elif surface_mode == "ideal":
+            normals = self.scenario.heliostat_field.all_current_aligned_surface_points_prototype
+        elif surface_mode == "measured":
+            normals = self.scenario.heliostat_field.all_current_aligned_surface_points_measured
+
         if not torch.all(self.scenario.heliostat_field.all_aligned_heliostats == 1):
             raise ValueError("Not all heliostats have been aligned.")
         self.scenario.heliostat_field.all_preferred_reflection_directions = raytracing_utils.reflect_all(incoming_ray_direction=incident_ray_direction,
-                                                                                         reflection_surface_normals=self.scenario.heliostat_field.all_current_aligned_surface_normals)
+                                                                                         reflection_surface_normals=normals)
+
 
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
-
+            if surface_mode is None:
+                points = self.scenario.heliostat_field.all_current_aligned_surface_points
+            elif surface_mode == "ideal":
+                points = self.scenario.heliostat_field.all_current_aligned_surface_points_prototype
+            elif surface_mode == "measured":
+                points = self.scenario.heliostat_field.all_current_aligned_surface_points_measured
             sampler_indices = list(self.distortions_sampler)
             
             heliostat_indices = sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]
@@ -363,7 +377,7 @@ class HeliostatRayTracer:
                 rays=rays,
                 plane_normal_vector=target_area.normal_vector,
                 plane_center=target_area.center,
-                points_at_ray_origin=self.scenario.heliostat_field.all_current_aligned_surface_points[heliostat_indices],
+                points_at_ray_origin=points,
             )
             #torch.cuda.empty_cache()
 
