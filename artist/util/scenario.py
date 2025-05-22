@@ -1,6 +1,6 @@
 import logging
 from typing import Union
-from artist.util import config_dictionary, utils_load_h5
+from artist.util import config_dictionary, loading_files_utils
 from typing_extensions import Self
 from artist.field.heliostat_field import HeliostatField
 from artist.field.tower_target_area import TargetArea
@@ -99,54 +99,51 @@ class Scenario:
             config_file=scenario_file, device=device
         )
 
-        prototype_surface = utils_load_h5.surface_config(prototype=True,
-                                                         scenario_file=scenario_file,
-                                                         device=device)
+        # prototype_surface = loading_files_utils.surface_config(prototype=False,
+        #                                                  scenario_file=scenario_file,
+        #                                                  device=device)
 
-        prototype_initial_orientation = torch.tensor(
-            scenario_file[config_dictionary.prototype_key][
-                config_dictionary.kinematic_prototype_key
-            ][config_dictionary.kinematic_initial_orientation][()],
-            dtype=torch.float,
-            device=device,
-        )
+        # prototype_initial_orientation = torch.tensor(
+        #     scenario_file[config_dictionary.prototype_key][
+        #         config_dictionary.heliostat_kinematic_prototype_key
+        #     ][config_dictionary.kinematic_initial_orientation][()],
+        #     dtype=torch.float,
+        #     device=device,
+        # )
 
-        prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][config_dictionary.kinematic_prototype_key][config_dictionary.kinematic_type][()].decode("utf-8")
+        # prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][config_dictionary.heliostat_kinematic_prototype_key][config_dictionary.kinematic_type][()].decode("utf-8")
 
-        prototype_kinematic_deviations, number_of_actuators = utils_load_h5.kinematic_deviations(
-            prototype=True,
-            kinematic_type=prototype_kinematic_type,
-            scenario_file=scenario_file,
-            log=log,
-            device=device
-        )
+        # prototype_kinematic_deviations, number_of_actuators = loading_files_utils.kinematic_deviations(
+        #     prototype=True,
+        #     kinematic_type=prototype_kinematic_type,
+        #     scenario_file=scenario_file,
+        #     log=log,
+        #     device=device
+        # )
 
-        prototype_actuator_keys = list(scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
-        ].keys())
+        # prototype_actuator_keys = list(scenario_file[config_dictionary.prototype_key][
+        #     config_dictionary.heliostat_actuators_prototype_key
+        # ].keys())
 
-        prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
-        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
+        # prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
+        #     config_dictionary.heliostat_actuators_prototype_key
+        # ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode("utf-8")
             
-        prototype_actuators = utils_load_h5.actuator_parameters(
-            prototype=True,
-            scenario_file=scenario_file,
-            actuator_type=prototype_actuator_type,
-            number_of_actuators=number_of_actuators,
-            initial_orientation=prototype_initial_orientation,
-            log=log,
-            device=device
-        )
+        # prototype_actuators = loading_files_utils.actuator_parameters(
+        #     prototype=True,
+        #     scenario_file=scenario_file,
+        #     actuator_type=prototype_actuator_type,
+        #     number_of_actuators=number_of_actuators,
+        #     initial_orientation=prototype_initial_orientation,
+        #     log=log,
+        #     device=device
+        # )
 
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
-            prototype_surface=prototype_surface,
-            prototype_initial_orientation=prototype_initial_orientation,
-            prototype_kinematic_deviations=prototype_kinematic_deviations,
-            prototype_actuators=prototype_actuators,
             device=device,
         )
+                         
 
         return cls(
             power_plant_position=power_plant_position,
