@@ -6,6 +6,7 @@ import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_field import HeliostatField
+from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary, utils_load_h5
@@ -180,11 +181,11 @@ class Scenario:
     def index_mapping(
         self,
         string_mapping: Optional[list[tuple[str, str, torch.Tensor]]],
-        heliostat_group_index: int,
+        heliostat_group: HeliostatGroup,
         default_incident_ray_direction: torch.Tensor = torch.tensor(
             [0.0, 1.0, 0.0, 0.0]
         ),
-        default_target_area_index: int = 1,
+        default_target_area_index: int = 0,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -210,57 +211,27 @@ class Scenario:
         """
         device = torch.device(device)
 
-        all_heliostat_name_indices = {
-            heliostat_name: index
-            for index, heliostat_name in enumerate(
-                self.heliostat_field.heliostat_groups[heliostat_group_index].names
-            )
-        }
-        all_target_area_indices = {
-            target_area_name: index
-            for index, target_area_name in enumerate(self.target_areas.names)
-        }
+        active_heliostats_mask = torch.zeros(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
+        target_area_mask = torch.zeros(len(string_mapping), dtype=torch.int32, device=device)
+        incident_ray_directions = torch.zeros((len(string_mapping), 4), device=device)
+        
+        heliostat_to_target = {heliostat: (target, light_direction) for heliostat, target, light_direction in string_mapping}
 
-        if string_mapping is None:
-            all_incident_ray_directions = default_incident_ray_direction.expand(
-                self.heliostat_field.heliostat_groups[
-                    heliostat_group_index
-                ].number_of_heliostats,
-                4,
-            ).to(device=device)
-            heliostat_target_mapping = torch.tensor(
-                [
-                    [i, default_target_area_index]
-                    for i in range(
-                        self.heliostat_field.heliostat_groups[
-                            heliostat_group_index
-                        ].number_of_heliostats
-                    )
-                ],
-                device=device,
-            )
-        else:
-            all_incident_ray_directions = torch.stack([t for _, _, t in string_mapping])
-            heliostat_target_mapping = torch.tensor(
-                [
-                    [
-                        all_heliostat_name_indices[heliostat_name],
-                        all_target_area_indices[target_area_name],
-                    ]
-                    for heliostat_name, target_area_name, _ in (string_mapping)
-                    if heliostat_name in all_heliostat_name_indices
-                    and target_area_name in all_target_area_indices
-                ],
-                device=device,
-            )
-
-        active_heliostats_indices = heliostat_target_mapping[:, 0]
-        target_area_indices = heliostat_target_mapping[:, 1]
+        active_index = 0
+        for heliostat_index, name in enumerate(heliostat_group.names):
+            if name in heliostat_to_target:
+                target_name, direction = heliostat_to_target[name]
+                active_heliostats_mask[heliostat_index] = 1
+                target_area_mask[active_index] = self.target_areas.names.index(target_name)
+                incident_ray_directions[active_index] = direction
+                active_index += 1
+            else:
+                active_heliostats_mask[heliostat_index] = 0
 
         return (
-            all_incident_ray_directions,
-            active_heliostats_indices,
-            target_area_indices,
+            active_heliostats_mask,
+            target_area_mask,
+            incident_ray_directions,
         )
 
     def __repr__(self) -> str:

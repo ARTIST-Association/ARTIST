@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -123,17 +123,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.kinematic_deviation_parameters = kinematic_deviation_parameters
         self.actuator_parameters = actuator_parameters
 
-        self.aligned_heliostats = torch.zeros(self.number_of_heliostats, device=device)
-        self.preferred_reflection_directions = torch.zeros_like(
-            self.surface_normals, device=device
-        )
-        self.current_aligned_surface_points = torch.zeros_like(
-            self.surface_points, device=device
-        )
-        self.current_aligned_surface_normals = torch.zeros_like(
-            self.surface_normals, device=device
-        )
-
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
@@ -144,10 +133,18 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device,
         )
 
+        self.aligned_heliostats = torch.zeros(self.number_of_heliostats, device=device)
+        self.number_of_active_heliostats = 0
+        self.active_heliostats_mask = None
+        self.active_surface_points = None
+        self.active_surface_normals = None
+        self.preferred_reflection_directions = None
+
+
     def align_surfaces_with_incident_ray_directions(
         self,
+        aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -160,39 +157,33 @@ class HeliostatGroupRigidBody(HeliostatGroup):
 
         Parameters
         ----------
+        aim_points : torch.Tensor
+            The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
             The incident ray direction.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                self.number_of_heliostats, device=device
-            )
+        self.kinematic.aim_points=aim_points
 
         (
-            self.current_aligned_surface_points,
-            self.current_aligned_surface_normals,
+            self.active_surface_points,
+            self.active_surface_normals,
         ) = self.kinematic.align_surfaces_with_incident_ray_directions(
             incident_ray_directions=incident_ray_directions,
-            surface_points=self.surface_points[active_heliostats_indices],
-            surface_normals=self.surface_normals[active_heliostats_indices],
-            active_heliostats_indices=active_heliostats_indices,
+            surface_points=self.active_surface_points,
+            surface_normals=self.active_surface_normals,
             device=device,
         )
 
         # Note that all heliostats have been aligned.
-        self.aligned_heliostats[active_heliostats_indices] = 1.0
+        self.aligned_heliostats[self.active_heliostats_mask !=0] = 1.0
 
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -202,9 +193,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -215,16 +203,23 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                self.number_of_heliostats, device=device
-            )
-
         return self.kinematic.motor_positions_to_orientations(
             motor_positions=motor_positions,
-            active_heliostats_indices=active_heliostats_indices,
             device=device,
         )
+    
+    def activate_heliostats(self, active_heliostats_mask: torch.Tensor):
+        # Select and repeat indices of all heliostat and kinematic parameters once.
+        self.number_of_active_heliostats = active_heliostats_mask.sum().item()
+        self.active_heliostats_mask = active_heliostats_mask
+        self.active_surface_points = self.surface_points.repeat_interleave(active_heliostats_mask, dim=0)
+        self.active_surface_normals = self.surface_normals.repeat_interleave(active_heliostats_mask, dim=0)
+        self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
+        self.kinematic.active_heliostat_positions = self.kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+        self.kinematic.active_initial_orientations = self.kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+        self.kinematic.active_deviation_parameters = self.kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+        self.kinematic.actuators.active_actuator_parameters = self.kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+
 
     def forward(self) -> None:
         """

@@ -604,3 +604,19 @@ def setup_global_distributed_environment(
         if is_distributed:
             torch.distributed.barrier()
             torch.distributed.destroy_process_group()
+
+
+def broadcast_tensor_selection(tensor: torch.Tensor, index: torch.Tensor, dim: int = 0):
+    if (index != 0).sum() == 1:
+
+        slice = tensor[torch.argmax(index).item()]
+        size = list(slice.shape)
+        size.insert(dim, index.sum())
+        stride = list(slice.stride())
+        stride.insert(dim, 0)
+
+        return slice.as_strided(size=size, stride=stride)
+    
+    else:
+
+        return tensor[index]

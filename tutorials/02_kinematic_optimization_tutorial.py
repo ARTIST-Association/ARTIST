@@ -17,33 +17,44 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
 heliostat_calibration_mapping = [
     (
-        "heliostat_name_1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
             ),
-            # pathlib.Path(
-            #     "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
-            # ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+            ),
         ],
     ),
-    # (
-    #     "heliostat_name_2",
-    #     [
-    #         pathlib.Path(
-    #             "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
-    #         ),
-    #         pathlib.Path(
-    #             "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
-    #         ),
-    #     ],
-    # ),
+    (
+        "AA31",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
+            ),
+        ],
+    ),
 ]
 
 # Load the scenario.
@@ -57,11 +68,11 @@ for heliostat_group_index, heliostat_group in enumerate(
 ):
     # Load the calibration data.
     (
-        centers_calibration_images,
-        light_source_positions,
-        calibration_motor_positions,
-        heliostat_indices,
-        target_area_indices,
+        focal_spots_calibration,
+        incident_ray_directions_calibration,
+        motor_positions_calibration,
+        heliostats_mask_calibration,
+        target_area_mask_calibration,
     ) = paint_loader.extract_paint_calibration_data(
         heliostat_calibration_mapping=[
             (heliostat_name, paths)
@@ -74,31 +85,10 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    # Create calibration group
-    heliostat_group_class = type(heliostat_group)
-    calibration_group = heliostat_group_class(
-        names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
-        positions=heliostat_group.positions[heliostat_indices],
-        aim_points=scenario.target_areas.centers[target_area_indices],
-        surface_points=heliostat_group.surface_points[heliostat_indices],
-        surface_normals=heliostat_group.surface_normals[heliostat_indices],
-        initial_orientations=heliostat_group.initial_orientations[heliostat_indices],
-        kinematic_deviation_parameters=heliostat_group.kinematic_deviation_parameters[
-            heliostat_indices
-        ],
-        actuator_parameters=heliostat_group.actuator_parameters[heliostat_indices],
-        device=device,
-    )
-
-    # The incident ray direction needs to be normed.
-    incident_ray_directions = (
-        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
-    )
-
     # Select the kinematic parameters to be optimized and calibrated.
     optimizable_parameters = [
-        calibration_group.kinematic_deviation_parameters.requires_grad_(),
-        calibration_group.actuator_parameters.requires_grad_(),
+        heliostat_group.kinematic_deviation_parameters.requires_grad_(),
+        heliostat_group.actuator_parameters.requires_grad_(),
     ]
 
     # Set up optimizer and scheduler.
@@ -108,30 +98,29 @@ for heliostat_group_index, heliostat_group in enumerate(
 
     use_ray_tracing = False
     if use_ray_tracing:
-        calibration_motor_positions = None
+        motor_positions_calibration = None
         tolerance = 0.035
-        max_epoch = 10000
-        initial_learning_rate = 0.002
+        max_epoch = 1000
+        initial_learning_rate = 0.0005
 
     optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_learning_rate)
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
         scenario=scenario,
-        calibration_group=calibration_group,
+        heliostat_group=heliostat_group,
         optimizer=optimizer,
     )
 
     # Calibrate the kinematic.
-    calibrated_kinematic_deviation_parameters, calibrated_actuator_parameters = (
-        kinematic_optimizer.optimize(
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            centers_calibration_images=centers_calibration_images,
-            incident_ray_directions=incident_ray_directions,
-            target_area_indices=target_area_indices,
-            motor_positions=calibration_motor_positions,
-            num_log=max_epoch,
-            device=device,
-        )
+    kinematic_optimizer.optimize(
+        focal_spots_calibration=focal_spots_calibration,
+        incident_ray_directions=incident_ray_directions_calibration,
+        active_heliostats_mask=heliostats_mask_calibration,
+        target_area_mask_calibration=target_area_mask_calibration,
+        motor_positions_calibration=motor_positions_calibration,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
+        num_log=max_epoch,
+        device=device,
     )

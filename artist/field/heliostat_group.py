@@ -65,7 +65,7 @@ class HeliostatGroup(torch.nn.Module):
     def align_surfaces_with_incident_ray_directions(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
+        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -77,9 +77,9 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         incident_ray_direction : torch.Tensor
             The incident ray direction.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
+        active_heliostats_mask : Optional[torch.Tensor]
+            A mask for the active heliostats that will be aligned (default is None).
+            If no mask is provided, all heliostats will be activated.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -93,7 +93,7 @@ class HeliostatGroup(torch.nn.Module):
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
+        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -103,9 +103,9 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
+        active_heliostats_mask : Optional[torch.Tensor]
+            A mask for the active heliostats that will be aligned (default is None).
+            If no mask is provided, all heliostats will be activated.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

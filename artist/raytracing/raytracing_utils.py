@@ -38,7 +38,7 @@ def line_plane_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreas,
-    target_area_indices: Optional[torch.Tensor] = None,
+    target_area_mask: Optional[torch.Tensor] = None,
     epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
@@ -52,7 +52,7 @@ def line_plane_intersections(
         The surface points of the ray origins.
     target_areas : TowerTargetAreas
         All possible tower target areas with their properties.
-    target_area_indices : Optional[torch.Tensor]
+    target_area_mask : Optional[torch.Tensor]
         The indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
     epsilon : float
@@ -70,8 +70,8 @@ def line_plane_intersections(
     torch.Tensor
         The absolute intensities of the rays hitting the target planes.
     """
-    if target_area_indices is None:
-        target_area_indices = torch.zeros(points_at_ray_origins.shape[0])
+    if target_area_mask is None:
+        target_area_mask = torch.zeros(points_at_ray_origins.shape[0])
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
@@ -79,7 +79,7 @@ def line_plane_intersections(
     # This determines how much the rays align with the plane normals.
     relative_intensities = (
         -rays.ray_directions
-        * target_areas.normal_vectors[target_area_indices][:, None, None, :]
+        * target_areas.normal_vectors[target_area_mask][:, None, None, :]
     ).sum(dim=-1)
 
     if (relative_intensities <= epsilon).all():
@@ -94,9 +94,9 @@ def line_plane_intersections(
         (
             (
                 points_at_ray_origins
-                - target_areas.centers[target_area_indices][:, None, :]
+                - target_areas.centers[target_area_mask][:, None, :]
             )
-            * target_areas.normal_vectors[target_area_indices][:, None, :]
+            * target_areas.normal_vectors[target_area_mask][:, None, :]
         ).sum(dim=-1)
     ).unsqueeze(1) / relative_intensities
 
@@ -113,7 +113,7 @@ def line_plane_intersections(
             torch.norm(
                 (
                     points_at_ray_origins
-                    - target_areas.centers[target_area_indices][:, None, :]
+                    - target_areas.centers[target_area_mask][:, None, :]
                 ),
                 dim=-1,
             )

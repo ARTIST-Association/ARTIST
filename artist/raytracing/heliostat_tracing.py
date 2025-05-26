@@ -146,13 +146,6 @@ class RestrictedDistributedSampler(Sampler):
 
         # Adjust num_replicas if dataset is smaller than world_size.
         self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
-        if self.rank == 0:
-            active_ranks_string = ", ".join(
-                str(i) for i in range(self.number_of_active_ranks)
-            )
-            log.info(
-                f"The ray tracer found {self.number_of_samples} set(s) of ray-samples to parallelize over. As {self.world_size} processes exist, the following the ranks: [{active_ranks_string}] will receive data, while all others (if more exist) are left idle."
-            )
 
         # Only assign data to first active ranks.
         self.number_of_samples_per_rank = (
@@ -267,12 +260,10 @@ class HeliostatRayTracer:
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=self.light_source,
-            number_of_points_per_heliostat=self.heliostat_group.current_aligned_surface_points.shape[
+            number_of_points_per_heliostat=self.heliostat_group.active_surface_points.shape[
                 1
             ],
-            number_of_heliostats=self.heliostat_group.current_aligned_surface_points.shape[
-                0
-            ],
+            number_of_heliostats=self.heliostat_group.number_of_active_heliostats,
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
@@ -295,8 +286,7 @@ class HeliostatRayTracer:
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
-        target_area_indices: Optional[torch.Tensor] = None,
+        target_area_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -311,10 +301,7 @@ class HeliostatRayTracer:
         ----------
         incident_ray_directions : torch.Tensor
             The direction of the incident rays as seen from the heliostats.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that are considered for raytracing (default is None).
-            If none are provided, all will be selected.
-        target_area_indices : Optional[torch.Tensor]
+        target_area_mask : Optional[torch.Tensor]
             The indices of the target areas for each active heliostat (default is None).
             If none are provided, the first target area of the scenario will be linked to all heliostats.
         device : Union[torch.device, str]
@@ -332,46 +319,40 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                incident_ray_directions.shape[0], device=device
-            )
-
-        if target_area_indices is None:
-            target_area_indices = torch.zeros_like(
-                active_heliostats_indices, device=device
+        if target_area_mask is None:
+            target_area_mask = torch.zeros(
+                self.heliostat_group.number_of_active_heliostats, device=device
             )
 
         flux_distributions = torch.zeros(
             (
-                self.heliostat_group.number_of_heliostats,
+                self.heliostat_group.number_of_active_heliostats,
                 self.bitmap_resolution_u,
                 self.bitmap_resolution_e,
             ),
             device=device,
         )
 
-        if not torch.all(
-            self.heliostat_group.aligned_heliostats[active_heliostats_indices] == 1.0
-        ):
-            raise ValueError("Not all active heliostats have been aligned.")
+        # if not torch.all(
+        #     self.heliostat_group.aligned_heliostats[active_heliostats_indices] == 1.0
+        # ):
+        #     raise ValueError("Not all active heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(1),
-            reflection_surface_normals=self.heliostat_group.current_aligned_surface_normals,
+            reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
-
-            heliostat_indices_per_batch = sampler_indices[
-                batch_index * self.batch_size : (batch_index + 1) * self.batch_size
-            ]
+            
+            active_heliostats_mask_batch = torch.zeros(self.heliostat_group.number_of_active_heliostats, dtype=torch.bool, device=device)
+            active_heliostats_mask_batch[sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]] = True
 
             rays = self.scatter_rays(
                 distortion_u=batch_u,
                 distortion_e=batch_e,
-                heliostat_indices=heliostat_indices_per_batch,
+                original_ray_direction=self.heliostat_group.preferred_reflection_directions[active_heliostats_mask_batch],
                 device=device,
             )
 
@@ -379,11 +360,11 @@ class HeliostatRayTracer:
                 raytracing_utils.line_plane_intersections(
                     rays=rays,
                     target_areas=self.scenario.target_areas,
-                    target_area_indices=target_area_indices[
-                        heliostat_indices_per_batch
+                    target_area_mask=target_area_mask[
+                        active_heliostats_mask_batch
                     ],
-                    points_at_ray_origins=self.heliostat_group.current_aligned_surface_points[
-                        heliostat_indices_per_batch
+                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
                     ],
                 )
             )
@@ -391,8 +372,7 @@ class HeliostatRayTracer:
             bitmaps = self.sample_bitmaps(
                 intersections=intersections,
                 absolute_intensities=absolute_intensities,
-                heliostat_indices=active_heliostats_indices,
-                target_area_indices=target_area_indices[heliostat_indices_per_batch],
+                target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,
             )
 
@@ -404,7 +384,7 @@ class HeliostatRayTracer:
         self,
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
-        heliostat_indices: Optional[torch.Tensor] = None,
+        original_ray_direction: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> Rays:
         """
@@ -416,9 +396,8 @@ class HeliostatRayTracer:
             The distortions in up direction (angles for scattering).
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
-        heliostat_indices : Optional[torch.Tensor]
-            The indices of the heliostats that are considered for raytracing (default is None).
-            If none are provided, all will be selected.
+        original_ray_direction : torch.Tensor
+            The ray direction around which to scatter.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -429,20 +408,12 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        if heliostat_indices is None:
-            heliostat_indices = torch.arange(distortion_e.shape[0], device=device)
-
         rotations = utils.rotate_distortions(
             u=distortion_u, e=distortion_e, device=device
         )
 
         scattered_rays = (
-            rotations
-            @ self.heliostat_group.preferred_reflection_directions[
-                heliostat_indices, :, :
-            ]
-            .unsqueeze(1)
-            .unsqueeze(-1)
+            rotations @ original_ray_direction.unsqueeze(1).unsqueeze(-1)
         ).squeeze(-1)
 
         return Rays(
@@ -454,8 +425,7 @@ class HeliostatRayTracer:
         self,
         intersections: torch.Tensor,
         absolute_intensities: torch.Tensor,
-        heliostat_indices: Optional[torch.Tensor] = None,
-        target_area_indices: Optional[torch.Tensor] = None,
+        target_area_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -469,10 +439,7 @@ class HeliostatRayTracer:
             The intersections of rays on the target area planes for each heliostat.
         absolute_intensities : torch.Tensor
             The absolute intensities of the rays hitting the target planes for each heliostat.
-        heliostat_indices : Optional[torch.Tensor]
-            The indices of the heliostats that are considered for the sampling (default is None).
-            If none are provided, all will be selected.
-        target_area_indices : Optional[torch.Tensor]
+        target_area_mask : Optional[torch.Tensor]
             The indices of target areas on which each heliostat should be raytraced (default is None).
             If none are provided, the first target area of the scenario will be linked to all heliostats.
         device : Union[torch.device, str]
@@ -485,29 +452,26 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        if heliostat_indices is None:
-            heliostat_indices = torch.arange(intersections.shape[0], device=device)
-
-        if target_area_indices is None:
-            target_area_indices = torch.zeros_like(heliostat_indices, device=device)
+        if target_area_mask is None:
+            target_area_mask = torch.zeros(intersections.shape([0]), device=device)
 
         plane_widths = (
-            self.scenario.target_areas.dimensions[target_area_indices][:, 0]
+            self.scenario.target_areas.dimensions[target_area_mask][:, 0]
             .unsqueeze(1)
             .unsqueeze(2)
         )
         plane_heights = (
-            self.scenario.target_areas.dimensions[target_area_indices][:, 1]
+            self.scenario.target_areas.dimensions[target_area_mask][:, 1]
             .unsqueeze(1)
             .unsqueeze(2)
         )
         plane_centers_e = (
-            self.scenario.target_areas.centers[target_area_indices][:, 0]
+            self.scenario.target_areas.centers[target_area_mask][:, 0]
             .unsqueeze(1)
             .unsqueeze(2)
         )
         plane_centers_u = (
-            self.scenario.target_areas.centers[target_area_indices][:, 2]
+            self.scenario.target_areas.centers[target_area_mask][:, 2]
             .unsqueeze(1)
             .unsqueeze(2)
         )
@@ -646,12 +610,12 @@ class HeliostatRayTracer:
             & intersection_indices_2
         )
         mask = final_intersection_indices.flatten()
-        heliostat_indices = heliostat_indices.repeat_interleave(total_intersections * 4)
+        heliostat_indices = torch.arange(self.heliostat_group.number_of_active_heliostats, device=device).repeat_interleave(total_intersections * 4)
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
             (
-                self.heliostat_group.number_of_heliostats,
+                self.heliostat_group.number_of_active_heliostats,
                 self.bitmap_resolution_u,
                 self.bitmap_resolution_e,
             ),
