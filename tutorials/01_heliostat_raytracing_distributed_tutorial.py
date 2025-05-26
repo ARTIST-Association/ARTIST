@@ -70,9 +70,7 @@ for heliostat_group_index, heliostat_group in enumerate(
         )
 
     # Activate heliostats
-    heliostat_group.activate_heliostats(
-        active_heliostats_mask=active_heliostats_mask
-    )
+    heliostat_group.activate_heliostats(active_heliostats_mask=active_heliostats_mask)
 
     # Align heliostats.
     heliostat_group.align_surfaces_with_incident_ray_directions(

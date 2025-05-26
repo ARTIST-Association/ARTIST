@@ -105,7 +105,7 @@ class KinematicOptimizer:
             The calibrated actuator parameters.
         """
         log.info("Start the kinematic calibration.")
-        
+
         device = torch.device(device)
 
         if motor_positions_calibration is not None:
@@ -131,7 +131,7 @@ class KinematicOptimizer:
                 num_log=num_log,
                 device=device,
             )
-        
+
         log.info("Kinematic parameters optimized.")
 
     def _optimize_kinematic_parameters_with_motor_positions(
@@ -169,14 +169,19 @@ class KinematicOptimizer:
             The device on which to initialize tensors (default is cuda).
         """
         log.info("Kinematic calibration with motor positions.")
-        
+
         device = torch.device(device)
-        
+
         loss = torch.inf
         epoch = 0
 
         preferred_reflection_directions_calibration = torch.nn.functional.normalize(
-            (focal_spots_calibration - self.heliostat_group.positions.repeat_interleave(active_heliostats_mask, dim=0)),
+            (
+                focal_spots_calibration
+                - self.heliostat_group.positions.repeat_interleave(
+                    active_heliostats_mask, dim=0
+                )
+            ),
             p=2,
             dim=1,
         )
@@ -257,7 +262,7 @@ class KinematicOptimizer:
             The device on which to initialize tensors (default is cuda).
         """
         log.info("Kinematic optimization with ray tracing.")
-        
+
         device = torch.device(device)
 
         loss = torch.inf
@@ -275,7 +280,9 @@ class KinematicOptimizer:
 
             # Align heliostats.
             self.heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[target_area_mask_calibration],
+                aim_points=self.scenario.target_areas.centers[
+                    target_area_mask_calibration
+                ],
                 incident_ray_directions=incident_ray_directions,
                 device=device,
             )
@@ -297,7 +304,9 @@ class KinematicOptimizer:
             # Determine the focal spots of all flux density distributions
             focal_spots = utils.get_center_of_mass(
                 bitmaps=flux_distributions,
-                target_centers=self.scenario.target_areas.centers[target_area_mask_calibration],
+                target_centers=self.scenario.target_areas.centers[
+                    target_area_mask_calibration
+                ],
                 target_widths=self.scenario.target_areas.dimensions[
                     target_area_mask_calibration
                 ][:, 0],
