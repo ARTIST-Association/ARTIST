@@ -278,18 +278,14 @@ class RigidBody(Kinematic):
             )
 
             # Calculate joint 1 angles.
-            a = -torch.cos(
-                self.active_deviation_parameters[:, 6]
-            ) * torch.cos(joint_angles[:, 1].clone()) + torch.sin(
-                self.active_deviation_parameters[:, 6]
-            ) * torch.sin(
+            a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(
+                joint_angles[:, 1].clone()
+            ) + torch.sin(self.active_deviation_parameters[:, 6]) * torch.sin(
                 self.active_deviation_parameters[:, 7]
             ) * torch.sin(joint_angles[:, 1].clone())
-            b = -torch.sin(
-                self.active_deviation_parameters[:, 6]
-            ) * torch.cos(joint_angles[:, 1].clone()) - torch.cos(
-                self.active_deviation_parameters[:, 6]
-            ) * torch.sin(
+            b = -torch.sin(self.active_deviation_parameters[:, 6]) * torch.cos(
+                joint_angles[:, 1].clone()
+            ) - torch.cos(self.active_deviation_parameters[:, 6]) * torch.sin(
                 self.active_deviation_parameters[:, 7]
             ) * torch.sin(joint_angles[:, 1].clone())
 
@@ -419,26 +415,18 @@ class RigidBody(Kinematic):
         )
 
         joint_rotations[:, 0] = (
-            utils.rotate_n(
-                n=self.active_deviation_parameters[:, 4], device=device
-            )
-            @ utils.rotate_u(
-                u=self.active_deviation_parameters[:, 5], device=device
-            )
+            utils.rotate_n(n=self.active_deviation_parameters[:, 4], device=device)
+            @ utils.rotate_u(u=self.active_deviation_parameters[:, 5], device=device)
             @ utils.translate_enu(
                 e=self.active_deviation_parameters[:, 0],
                 n=self.active_deviation_parameters[:, 1],
                 u=self.active_deviation_parameters[:, 2],
                 device=device,
             )
-            @ utils.rotate_e(
-                e=joint_angles[:, 0], device=device
-            )
+            @ utils.rotate_e(e=joint_angles[:, 0], device=device)
         )
         joint_rotations[:, 1] = (
-            utils.rotate_e(
-                e=self.active_deviation_parameters[:, 9], device=device
-            )
+            utils.rotate_e(e=self.active_deviation_parameters[:, 9], device=device)
             @ utils.rotate_n(
                 n=self.active_deviation_parameters[:, 10],
                 device=device,
@@ -449,9 +437,7 @@ class RigidBody(Kinematic):
                 u=self.active_deviation_parameters[:, 8],
                 device=device,
             )
-            @ utils.rotate_u(
-                u=joint_angles[:, 1], device=device
-            )
+            @ utils.rotate_u(u=joint_angles[:, 1], device=device)
         )
 
         orientations = (

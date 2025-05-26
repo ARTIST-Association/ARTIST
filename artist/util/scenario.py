@@ -211,18 +211,27 @@ class Scenario:
         """
         device = torch.device(device)
 
-        active_heliostats_mask = torch.zeros(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
-        target_area_mask = torch.zeros(len(string_mapping), dtype=torch.int32, device=device)
+        active_heliostats_mask = torch.zeros(
+            heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
+        )
+        target_area_mask = torch.zeros(
+            len(string_mapping), dtype=torch.int32, device=device
+        )
         incident_ray_directions = torch.zeros((len(string_mapping), 4), device=device)
-        
-        heliostat_to_target = {heliostat: (target, light_direction) for heliostat, target, light_direction in string_mapping}
+
+        heliostat_to_target = {
+            heliostat: (target, light_direction)
+            for heliostat, target, light_direction in string_mapping
+        }
 
         active_index = 0
         for heliostat_index, name in enumerate(heliostat_group.names):
             if name in heliostat_to_target:
                 target_name, direction = heliostat_to_target[name]
                 active_heliostats_mask[heliostat_index] = 1
-                target_area_mask[active_index] = self.target_areas.names.index(target_name)
+                target_area_mask[active_index] = self.target_areas.names.index(
+                    target_name
+                )
                 incident_ray_directions[active_index] = direction
                 active_index += 1
             else:

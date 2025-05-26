@@ -92,10 +92,7 @@ def line_plane_intersections(
     # This indicates how far the intersection points are along the rays' directions.
     intersection_distances = (
         (
-            (
-                points_at_ray_origins
-                - target_areas.centers[target_area_mask][:, None, :]
-            )
+            (points_at_ray_origins - target_areas.centers[target_area_mask][:, None, :])
             * target_areas.normal_vectors[target_area_mask][:, None, :]
         ).sum(dim=-1)
     ).unsqueeze(1) / relative_intensities

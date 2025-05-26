@@ -608,7 +608,6 @@ def setup_global_distributed_environment(
 
 def broadcast_tensor_selection(tensor: torch.Tensor, index: torch.Tensor, dim: int = 0):
     if (index != 0).sum() == 1:
-
         slice = tensor[torch.argmax(index).item()]
         size = list(slice.shape)
         size.insert(dim, index.sum())
@@ -616,7 +615,6 @@ def broadcast_tensor_selection(tensor: torch.Tensor, index: torch.Tensor, dim: i
         stride.insert(dim, 0)
 
         return slice.as_strided(size=size, stride=stride)
-    
-    else:
 
+    else:
         return tensor[index]
