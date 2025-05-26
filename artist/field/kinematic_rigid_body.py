@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -15,15 +15,23 @@ class RigidBody(Kinematic):
     Attributes
     ----------
     number_of_heliostats : int
-        The number of heliostats using this rigid body kinematic.
+        The number of total heliostats using this rigid body kinematic.
     heliostat_positions : torch.Tensor
-        The positions of the heliostats.
+        The positions of all heliostats.
+    initial_orientations : torch.Tensor
+        The initial orientation offsets of all heliostats.
+    deviation_parameters : torch.Tensor
+        The kinematic deviation parameters of all heliostats.
+    number_of_active_heliostats int
+        The number of activated heliostats.
+    active_heliostat_positions : torch.Tensor
+        The positions of all activated heliostats.
+    active_initial_orientations : torch.Tensor
+        The initial orientations of all activated heliostats
+    active_deviation_parameters : torch.Tensor
+        The deviation parameters of all activated heliostats.
     aim_points : torch.Tensor
         The aim points of the heliostats.
-    initial_orientations : torch.Tensor
-        The initial orientation offsets of the heliostats.
-    deviation_parameters : torch.Tensor
-        The deviation parameters for the kinematic.
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematic.
     actuators : Actuators
@@ -51,10 +59,10 @@ class RigidBody(Kinematic):
         self,
         number_of_heliostats: int,
         heliostat_positions: torch.Tensor,
-        aim_points: torch.Tensor,
-        actuator_parameters: torch.Tensor,
         initial_orientations: torch.Tensor,
         deviation_parameters: torch.Tensor,
+        aim_points: torch.Tensor,
+        actuator_parameters: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -71,14 +79,14 @@ class RigidBody(Kinematic):
             The number of heliostats using this rigid body kinematic.
         heliostat_positions : torch.Tensor
             The positions of the heliostats.
-        aim_points : torch.Tensor
-            The aim points of the heliostats.
-        actuator_parameters : torch.Tensor
-            The actuator parameters.
         initial_orientations : torch.Tensor
             The initial orientation offsets of the heliostats.
         deviation_parameters : torch.Tensor
             The deviation parameters for the kinematic.
+        aim_points : torch.Tensor
+            The aim points of the heliostats.
+        actuator_parameters : torch.Tensor
+            The actuator parameters.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
@@ -87,9 +95,15 @@ class RigidBody(Kinematic):
 
         self.number_of_heliostats = number_of_heliostats
         self.heliostat_positions = heliostat_positions
-        self.aim_points = aim_points
         self.initial_orientations = initial_orientations
         self.deviation_parameters = deviation_parameters
+
+        self.number_of_active_heliostats = None
+        self.active_heliostat_positions = None
+        self.active_initial_orientations = None
+        self.active_deviation_parameters = None
+
+        self.aim_points = aim_points
 
         self.artist_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
@@ -113,7 +127,6 @@ class RigidBody(Kinematic):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
         device: Union[torch.device, str] = "cuda",
@@ -125,9 +138,6 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         max_num_iterations : int
             Maximum number of iterations (default is 2).
         min_eps : float
@@ -142,14 +152,9 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                self.number_of_heliostats, device=device
-            )
-
         motor_positions = torch.zeros(
             (
-                len(active_heliostats_indices),
+                self.number_of_active_heliostats,
                 config_dictionary.rigid_body_number_of_actuators,
             ),
             device=device,
@@ -158,7 +163,6 @@ class RigidBody(Kinematic):
         for _ in range(max_num_iterations):
             joint_angles = self.actuators.motor_positions_to_angles(
                 motor_positions=motor_positions,
-                active_heliostats_indices=active_heliostats_indices,
                 device=device,
             )
 
@@ -166,15 +170,15 @@ class RigidBody(Kinematic):
 
             # Account for positions.
             initial_orientations = initial_orientations @ utils.translate_enu(
-                e=self.heliostat_positions[active_heliostats_indices, 0],
-                n=self.heliostat_positions[active_heliostats_indices, 1],
-                u=self.heliostat_positions[active_heliostats_indices, 2],
+                e=self.active_heliostat_positions[:, 0],
+                n=self.active_heliostat_positions[:, 1],
+                u=self.active_heliostat_positions[:, 2],
                 device=device,
             )
 
             joint_rotations = torch.zeros(
                 (
-                    len(active_heliostats_indices),
+                    self.number_of_active_heliostats,
                     config_dictionary.rigid_body_number_of_actuators,
                     4,
                     4,
@@ -184,34 +188,34 @@ class RigidBody(Kinematic):
 
             joint_rotations[:, 0] = (
                 utils.rotate_n(
-                    n=self.deviation_parameters[active_heliostats_indices, 4],
+                    n=self.active_deviation_parameters[:, 4],
                     device=device,
                 )
                 @ utils.rotate_u(
-                    u=self.deviation_parameters[active_heliostats_indices, 5],
+                    u=self.active_deviation_parameters[:, 5],
                     device=device,
                 )
                 @ utils.translate_enu(
-                    e=self.deviation_parameters[active_heliostats_indices, 0],
-                    n=self.deviation_parameters[active_heliostats_indices, 1],
-                    u=self.deviation_parameters[active_heliostats_indices, 2],
+                    e=self.active_deviation_parameters[:, 0],
+                    n=self.active_deviation_parameters[:, 1],
+                    u=self.active_deviation_parameters[:, 2],
                     device=device,
                 )
                 @ utils.rotate_e(e=joint_angles[:, 0], device=device)
             )
             joint_rotations[:, 1] = (
                 utils.rotate_e(
-                    e=self.deviation_parameters[active_heliostats_indices, 9],
+                    e=self.active_deviation_parameters[:, 9],
                     device=device,
                 )
                 @ utils.rotate_n(
-                    n=self.deviation_parameters[active_heliostats_indices, 10],
+                    n=self.active_deviation_parameters[:, 10],
                     device=device,
                 )
                 @ utils.translate_enu(
-                    e=self.deviation_parameters[active_heliostats_indices, 6],
-                    n=self.deviation_parameters[active_heliostats_indices, 7],
-                    u=self.deviation_parameters[active_heliostats_indices, 8],
+                    e=self.active_deviation_parameters[:, 6],
+                    n=self.active_deviation_parameters[:, 7],
+                    u=self.active_deviation_parameters[:, 8],
                     device=device,
                 )
                 @ utils.rotate_u(u=joint_angles[:, 1], device=device)
@@ -222,9 +226,9 @@ class RigidBody(Kinematic):
                 @ joint_rotations[:, 0]
                 @ joint_rotations[:, 1]
                 @ utils.translate_enu(
-                    e=self.deviation_parameters[active_heliostats_indices, 12],
-                    n=self.deviation_parameters[active_heliostats_indices, 13],
-                    u=self.deviation_parameters[active_heliostats_indices, 14],
+                    e=self.active_deviation_parameters[:, 12],
+                    n=self.active_deviation_parameters[:, 13],
+                    u=self.active_deviation_parameters[:, 14],
                     device=device,
                 )
             )
@@ -238,7 +242,7 @@ class RigidBody(Kinematic):
 
             # Compute desired normals.
             desired_reflection_directions = torch.nn.functional.normalize(
-                self.aim_points[active_heliostats_indices] - concentrator_origins,
+                self.aim_points - concentrator_origins,
                 p=2,
                 dim=1,
             )
@@ -261,7 +265,7 @@ class RigidBody(Kinematic):
             # Analytical Solution
             joint_angles = torch.zeros(
                 (
-                    len(active_heliostats_indices),
+                    self.number_of_active_heliostats,
                     config_dictionary.rigid_body_number_of_actuators,
                 ),
                 device=device,
@@ -270,23 +274,23 @@ class RigidBody(Kinematic):
             # Calculate joint 2 angles.
             joint_angles[:, 1] = -torch.arcsin(
                 -desired_concentrator_normals[:, 0]
-                / torch.cos(self.deviation_parameters[active_heliostats_indices, 7])
+                / torch.cos(self.active_deviation_parameters[:, 7])
             )
 
             # Calculate joint 1 angles.
             a = -torch.cos(
-                self.deviation_parameters[active_heliostats_indices, 6]
+                self.active_deviation_parameters[:, 6]
             ) * torch.cos(joint_angles[:, 1].clone()) + torch.sin(
-                self.deviation_parameters[active_heliostats_indices, 6]
+                self.active_deviation_parameters[:, 6]
             ) * torch.sin(
-                self.deviation_parameters[active_heliostats_indices, 7]
+                self.active_deviation_parameters[:, 7]
             ) * torch.sin(joint_angles[:, 1].clone())
             b = -torch.sin(
-                self.deviation_parameters[active_heliostats_indices, 6]
+                self.active_deviation_parameters[:, 6]
             ) * torch.cos(joint_angles[:, 1].clone()) - torch.cos(
-                self.deviation_parameters[active_heliostats_indices, 6]
+                self.active_deviation_parameters[:, 6]
             ) * torch.sin(
-                self.deviation_parameters[active_heliostats_indices, 7]
+                self.active_deviation_parameters[:, 7]
             ) * torch.sin(joint_angles[:, 1].clone())
 
             joint_angles[:, 0] = (
@@ -301,12 +305,11 @@ class RigidBody(Kinematic):
 
             motor_positions = self.actuators.angles_to_motor_positions(
                 angles=joint_angles,
-                active_heliostats_indices=active_heliostats_indices,
                 device=device,
             )
 
         east_angles, north_angles, up_angles = utils.decompose_rotations(
-            initial_vector=self.initial_orientations[active_heliostats_indices, :-1],
+            initial_vector=self.active_initial_orientations[:, :-1],
             target_vector=self.artist_standard_orientation[:-1],
             device=device,
         )
@@ -333,7 +336,6 @@ class RigidBody(Kinematic):
         incident_ray_directions: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -347,9 +349,6 @@ class RigidBody(Kinematic):
             The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
             The normals to the surface points.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -362,14 +361,8 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                self.number_of_heliostats, device=device
-            )
-
         orientations = self.incident_ray_directions_to_orientations(
-            incident_ray_directions,
-            active_heliostats_indices=active_heliostats_indices,
+            incident_ray_directions=incident_ray_directions,
             device=device,
         )
 
@@ -381,7 +374,6 @@ class RigidBody(Kinematic):
     def motor_positions_to_orientations(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -391,9 +383,6 @@ class RigidBody(Kinematic):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -404,14 +393,8 @@ class RigidBody(Kinematic):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                self.number_of_heliostats, device=device
-            )
-
         joint_angles = self.actuators.motor_positions_to_angles(
             motor_positions=motor_positions,
-            active_heliostats_indices=active_heliostats_indices,
             device=device,
         )
 
@@ -419,15 +402,15 @@ class RigidBody(Kinematic):
 
         # Account for positions.
         initial_orientations = initial_orientations @ utils.translate_enu(
-            e=self.heliostat_positions[active_heliostats_indices, 0],
-            n=self.heliostat_positions[active_heliostats_indices, 1],
-            u=self.heliostat_positions[active_heliostats_indices, 2],
+            e=self.active_heliostat_positions[:, 0],
+            n=self.active_heliostat_positions[:, 1],
+            u=self.active_heliostat_positions[:, 2],
             device=device,
         )
 
         joint_rotations = torch.zeros(
             (
-                self.number_of_heliostats,
+                self.number_of_active_heliostats,
                 config_dictionary.rigid_body_number_of_actuators,
                 4,
                 4,
@@ -437,54 +420,54 @@ class RigidBody(Kinematic):
 
         joint_rotations[:, 0] = (
             utils.rotate_n(
-                n=self.deviation_parameters[active_heliostats_indices, 4], device=device
+                n=self.active_deviation_parameters[:, 4], device=device
             )
             @ utils.rotate_u(
-                u=self.deviation_parameters[active_heliostats_indices, 5], device=device
+                u=self.active_deviation_parameters[:, 5], device=device
             )
             @ utils.translate_enu(
-                e=self.deviation_parameters[active_heliostats_indices, 0],
-                n=self.deviation_parameters[active_heliostats_indices, 1],
-                u=self.deviation_parameters[active_heliostats_indices, 2],
+                e=self.active_deviation_parameters[:, 0],
+                n=self.active_deviation_parameters[:, 1],
+                u=self.active_deviation_parameters[:, 2],
                 device=device,
             )
             @ utils.rotate_e(
-                e=joint_angles[active_heliostats_indices, 0], device=device
+                e=joint_angles[:, 0], device=device
             )
         )
-        joint_rotations[active_heliostats_indices, 1] = (
+        joint_rotations[:, 1] = (
             utils.rotate_e(
-                e=self.deviation_parameters[active_heliostats_indices, 9], device=device
+                e=self.active_deviation_parameters[:, 9], device=device
             )
             @ utils.rotate_n(
-                n=self.deviation_parameters[active_heliostats_indices, 10],
+                n=self.active_deviation_parameters[:, 10],
                 device=device,
             )
             @ utils.translate_enu(
-                e=self.deviation_parameters[active_heliostats_indices, 6],
-                n=self.deviation_parameters[active_heliostats_indices, 7],
-                u=self.deviation_parameters[active_heliostats_indices, 8],
+                e=self.active_deviation_parameters[:, 6],
+                n=self.active_deviation_parameters[:, 7],
+                u=self.active_deviation_parameters[:, 8],
                 device=device,
             )
             @ utils.rotate_u(
-                u=joint_angles[active_heliostats_indices, 1], device=device
+                u=joint_angles[:, 1], device=device
             )
         )
 
         orientations = (
             initial_orientations
-            @ joint_rotations[active_heliostats_indices, 0]
-            @ joint_rotations[active_heliostats_indices, 1]
+            @ joint_rotations[:, 0]
+            @ joint_rotations[:, 1]
             @ utils.translate_enu(
-                e=self.deviation_parameters[active_heliostats_indices, 12],
-                n=self.deviation_parameters[active_heliostats_indices, 13],
-                u=self.deviation_parameters[active_heliostats_indices, 14],
+                e=self.active_deviation_parameters[:, 12],
+                n=self.active_deviation_parameters[:, 13],
+                u=self.active_deviation_parameters[:, 14],
                 device=device,
             )
         )
 
         east_angles, north_angles, up_angles = utils.decompose_rotations(
-            initial_vector=self.initial_orientations[active_heliostats_indices, :-1],
+            initial_vector=self.active_initial_orientations[:, :-1],
             target_vector=self.artist_standard_orientation[:-1],
             device=device,
         )

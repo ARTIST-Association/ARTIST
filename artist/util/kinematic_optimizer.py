@@ -27,7 +27,7 @@ class KinematicOptimizer:
     ----------
     scenario : Scenario
         The scenario.
-    calibration_group : HeliostatGroup
+    heliostat_group : HeliostatGroup
         The heliostat group to be calibrated.
     optimizer : Optimizer
         The optimizer.
@@ -41,7 +41,7 @@ class KinematicOptimizer:
     def __init__(
         self,
         scenario: Scenario,
-        calibration_group: HeliostatGroup,
+        heliostat_group: HeliostatGroup,
         optimizer: Optimizer,
     ) -> None:
         """
@@ -51,24 +51,25 @@ class KinematicOptimizer:
         ----------
         scenario : Scenario
             The scenario.
-        calibration_group : HeliostatGroup
+        heliostat_group : HeliostatGroup
             The heliostat group to be calibrated.
         optimizer : Optimizer
             The optimizer.
         """
         log.info("Create a kinematic optimizer.")
         self.scenario = scenario
-        self.calibration_group = calibration_group
+        self.heliostat_group = heliostat_group
         self.optimizer = optimizer
 
     def optimize(
         self,
-        tolerance: float,
-        max_epoch: int,
-        centers_calibration_images: torch.Tensor,
+        focal_spots_calibration: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        target_area_indices: Optional[torch.Tensor] = None,
-        motor_positions: Optional[torch.Tensor] = None,
+        active_heliostats_mask: torch.Tensor,
+        target_area_mask_calibration: Optional[torch.Tensor] = None,
+        motor_positions_calibration: Optional[torch.Tensor] = None,
+        tolerance: float = 5e-5,
+        max_epoch: int = 10000,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -77,18 +78,20 @@ class KinematicOptimizer:
 
         Parameters
         ----------
+        focal_spots_calibration : torch.Tensor
+            The center coordinates of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibrations.
+        active_heliostats_mask : torch.Tensor
+            A mask for the selected heliostats for calibration.
+        target_area_mask_calibration : Optional[torch.Tensor]
+            The indices of the target area for each calibration (default is None).
+        motor_positions_calibration : Optional[torch.Tensor]
+            The motor positions specified in the calibration files (default is None).
         tolerance : float
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        centers_calibration_images : torch.Tensor
-            The centers of the calibration flux densities.
-        incident_ray_directions : torch.Tensor
-            The incident ray directions specified in the calibrations.
-        target_area_indices : Optional[torch.Tensor]
-            The indices of the target area for each calibration (default is None).
-        motor_positions : Optional[torch.Tensor]
-            The motor positions specified in the calibration files (default is None).
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str] = "cuda"
@@ -102,43 +105,43 @@ class KinematicOptimizer:
             The calibrated actuator parameters.
         """
         log.info("Start the kinematic calibration.")
+        
         device = torch.device(device)
 
-        if motor_positions is not None:
+        if motor_positions_calibration is not None:
             self._optimize_kinematic_parameters_with_motor_positions(
+                focal_spots_calibration=focal_spots_calibration,
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                motor_positions_calibration=motor_positions_calibration,
                 tolerance=tolerance,
                 max_epoch=max_epoch,
-                centers_calibration_images=centers_calibration_images,
-                incident_ray_directions=incident_ray_directions,
-                motor_positions=motor_positions,
                 num_log=num_log,
                 device=device,
             )
 
-        elif motor_positions is None:
+        elif motor_positions_calibration is None:
             self._optimize_kinematic_parameters_with_raytracing(
+                focal_spots_calibration=focal_spots_calibration,
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask_calibration=target_area_mask_calibration,
                 tolerance=tolerance,
                 max_epoch=max_epoch,
-                target_area_indices=target_area_indices,
-                centers_calibration_images=centers_calibration_images,
-                incident_ray_directions=incident_ray_directions,
                 num_log=num_log,
                 device=device,
             )
+        
         log.info("Kinematic parameters optimized.")
-
-        return (
-            self.calibration_group.kinematic_deviation_parameters,
-            self.calibration_group.actuator_parameters,
-        )
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
+        focal_spots_calibration: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
+        active_heliostats_mask: torch.Tensor,
+        motor_positions_calibration: torch.Tensor,
         tolerance: float,
         max_epoch: int,
-        centers_calibration_images: torch.Tensor,
-        incident_ray_directions: torch.Tensor,
-        motor_positions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
@@ -150,42 +153,30 @@ class KinematicOptimizer:
 
         Parameters
         ----------
+        focal_spots_calibration : torch.Tensor
+            The center coordinates of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibration data.
+        motor_positions_calibration : torch.Tensor
+            The motor positions specified in the calibration data.
         tolerance : float
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        centers_calibration_images : torch.Tensor
-            The centers of the calibration flux densities.
-        incident_ray_directions : torch.Tensor
-            The incident ray directions specified in the calibration data.
-        motor_positions : torch.Tensor
-            The motor positions specified in the calibration data.
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
         log.info("Kinematic calibration with motor positions.")
+        
         device = torch.device(device)
+        
         loss = torch.inf
         epoch = 0
 
-        active_heliostats_indices = torch.arange(
-            motor_positions.shape[0], device=device
-        )
-        unique_heliostats = list(set(self.calibration_group.names))
-        heliostat_duplicates_mapping = []
-        for heliostat in unique_heliostats:
-            heliostat_duplicates_mapping.append(
-                [
-                    i
-                    for i, s in enumerate(self.calibration_group.names)
-                    if s == heliostat
-                ]
-            )
-
         preferred_reflection_directions_calibration = torch.nn.functional.normalize(
-            (centers_calibration_images - self.calibration_group.positions),
+            (focal_spots_calibration - self.heliostat_group.positions.repeat_interleave(active_heliostats_mask, dim=0)),
             p=2,
             dim=1,
         )
@@ -194,12 +185,18 @@ class KinematicOptimizer:
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
 
-            orientations = self.calibration_group.get_orientations_from_motor_positions(
-                motor_positions=motor_positions,
-                active_heliostats_indices=active_heliostats_indices,
+            # Activate heliostats
+            self.heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask
+            )
+
+            # Retrieve the orientation of the heliostats for given motor positions.
+            orientations = self.heliostat_group.get_orientations_from_motor_positions(
+                motor_positions=motor_positions_calibration,
                 device=device,
             )
 
+            # Determine the preferred reflection directions for each heliostat.
             preferred_reflection_directions = raytracing_utils.reflect(
                 incident_ray_directions=incident_ray_directions,
                 reflection_surface_normals=orientations[:, 0:4, 2],
@@ -216,19 +213,6 @@ class KinematicOptimizer:
 
             loss.backward()
 
-            # Since each heliostat has multiple calibration datapoints, each heliostat appears multiple times
-            # in the calibration group. The kinematic and actuator parameters are duplicated per datapoint for
-            # each heliostat. Since each calibration has equal power on the gradients, the gradients of the parameters
-            # for each heliostat are averaged.
-            with torch.no_grad():
-                for param_group in self.optimizer.param_groups:
-                    for parameter in param_group["params"]:
-                        for group in heliostat_duplicates_mapping:
-                            averaged_gradients = parameter.grad[group].mean(
-                                dim=0, keepdim=True
-                            )
-                            parameter.grad[group] = averaged_gradients
-
             self.optimizer.step()
 
             if epoch % log_step == 0:
@@ -240,11 +224,12 @@ class KinematicOptimizer:
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
+        focal_spots_calibration: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
+        active_heliostats_mask: torch.Tensor,
+        target_area_mask_calibration: torch.Tensor,
         tolerance: float,
         max_epoch: int,
-        target_area_indices: torch.Tensor,
-        centers_calibration_images: torch.Tensor,
-        incident_ray_directions: torch.Tensor,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
@@ -256,101 +241,80 @@ class KinematicOptimizer:
 
         Parameters
         ----------
+        focal_spots_calibration : torch.Tensor
+            The center coordinates of the calibration flux densities.
+        incident_ray_directions : torch.Tensor
+            The incident ray directions specified in the calibration data.
+        target_area_mask_calibration : Optional[torch.Tensor]
+            The indices of the target area for each calibration (default is None).
         tolerance : float
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
-        target_area_indices : torch.Tensor
-            The indices of the target area for each calibration.
-        centers_calibration_images : torch.Tensor
-            The centers of the calibration flux densities.
-        incident_ray_directions : torch.Tensor
-            The incident ray directions specified in the calibration data.
         num_log : int
             Number of log messages during training (default is 3).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
         log.info("Kinematic optimization with ray tracing.")
+        
         device = torch.device(device)
 
         loss = torch.inf
         epoch = 0
-
-        active_heliostats_indices = torch.arange(
-            target_area_indices.shape[0], device=device
-        )
-        unique_heliostats = list(set(self.calibration_group.names))
-        heliostat_duplicates_mapping = []
-        for heliostat in unique_heliostats:
-            heliostat_duplicates_mapping.append(
-                [
-                    i
-                    for i, s in enumerate(self.calibration_group.names)
-                    if s == heliostat
-                ]
-            )
-
-        # Create a ray tracer.
-        ray_tracer = HeliostatRayTracer(
-            scenario=self.scenario,
-            heliostat_group=self.calibration_group,
-            batch_size=target_area_indices.shape[0],
-        )
 
         # Start the optimization.
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
 
+            # Activate heliostats
+            self.heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask
+            )
+
             # Align heliostats.
-            self.calibration_group.align_surfaces_with_incident_ray_directions(
+            self.heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=self.scenario.target_areas.centers[target_area_mask_calibration],
                 incident_ray_directions=incident_ray_directions,
-                active_heliostats_indices=active_heliostats_indices,
                 device=device,
+            )
+
+            # Create a ray tracer.
+            ray_tracer = HeliostatRayTracer(
+                scenario=self.scenario,
+                heliostat_group=self.heliostat_group,
+                batch_size=self.heliostat_group.number_of_active_heliostats,
             )
 
             # Perform heliostat-based ray tracing.
             flux_distributions = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
-                active_heliostats_indices=active_heliostats_indices,
-                target_area_indices=target_area_indices,
+                target_area_mask=target_area_mask_calibration,
                 device=device,
             )
 
-            centers = utils.get_center_of_mass(
+            # Determine the focal spots of all flux density distributions
+            focal_spots = utils.get_center_of_mass(
                 bitmaps=flux_distributions,
-                target_centers=self.scenario.target_areas.centers[target_area_indices],
+                target_centers=self.scenario.target_areas.centers[target_area_mask_calibration],
                 target_widths=self.scenario.target_areas.dimensions[
-                    target_area_indices
+                    target_area_mask_calibration
                 ][:, 0],
                 target_heights=self.scenario.target_areas.dimensions[
-                    target_area_indices
+                    target_area_mask_calibration
                 ][:, 1],
                 device=device,
             )
 
-            loss = (centers - centers_calibration_images).abs().mean()
+            loss = (focal_spots - focal_spots_calibration).abs().mean()
             loss.backward()
-
-            # Since each heliostat has multiple calibration datapoints, each heliostat appears multiple times
-            # in the calibration group. The kinematic and actuator parameters are duplicated per datapoint for
-            # each heliostat. Since each calibration has equal power on the gradients, the gradients of the parameters
-            # for each heliostat are averaged.
-            with torch.no_grad():
-                for param_group in self.optimizer.param_groups:
-                    for parameter in param_group["params"]:
-                        for group in heliostat_duplicates_mapping:
-                            averaged_gradients = parameter.grad[group].mean(
-                                dim=0, keepdim=True
-                            )
-                            parameter.grad[group] = averaged_gradients
 
             self.optimizer.step()
 
             if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1

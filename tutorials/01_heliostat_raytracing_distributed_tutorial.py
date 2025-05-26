@@ -49,7 +49,6 @@ bitmap_resolution_e, bitmap_resolution_u = 256, 256
 final_flux_distributions = torch.zeros(
     (
         scenario.heliostat_field.number_of_heliostat_groups,
-        scenario.target_areas.number_of_target_areas,
         bitmap_resolution_e,
         bitmap_resolution_u,
     ),
@@ -59,30 +58,26 @@ final_flux_distributions = torch.zeros(
 for heliostat_group_index, heliostat_group in enumerate(
     scenario.heliostat_field.heliostat_groups
 ):
-    incident_ray_directions = incident_ray_direction.expand(
-        heliostat_group.number_of_heliostats
-    )
-    active_heliostats_indices = None
-    target_area_indices = None
     if heliostat_target_light_source_mapping:
         (
+            active_heliostats_mask,
+            target_area_mask,
             incident_ray_directions,
-            active_heliostats_indices,
-            target_area_indices,
         ) = scenario.index_mapping(
             string_mapping=heliostat_target_light_source_mapping,
-            heliostat_group_index=heliostat_group_index,
+            heliostat_group=heliostat_group,
             device=device,
         )
 
-    heliostat_group.kinematic.aim_points[active_heliostats_indices] = (
-        scenario.target_areas.centers[target_area_indices]
+    # Activate heliostats
+    heliostat_group.activate_heliostats(
+        active_heliostats_mask=active_heliostats_mask
     )
 
-    # Align all heliostats.
+    # Align heliostats.
     heliostat_group.align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=incident_ray_directions,
-        active_heliostats_indices=active_heliostats_indices,
         device=device,
     )
 
@@ -99,17 +94,16 @@ for heliostat_group_index, heliostat_group in enumerate(
     )
 
     # Perform heliostat-based ray tracing.
-    group_bitmaps = ray_tracer.trace_rays(
+    group_bitmap = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        target_area_mask=target_area_mask,
         device=device,
     )
 
     if is_distributed:
-        torch.distributed.all_reduce(group_bitmaps, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(group_bitmap, op=torch.distributed.ReduceOp.SUM)
 
-    final_flux_distributions[heliostat_group_index] = group_bitmaps
+    final_flux_distributions[heliostat_group_index] = group_bitmap.sum(dim=0)
 
 
 # Make sure the code after the yield statement in the environment Generator

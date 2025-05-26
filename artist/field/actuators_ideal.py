@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -29,7 +29,6 @@ class IdealActuators(Actuators):
     def motor_positions_to_angles(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -39,9 +38,6 @@ class IdealActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -55,7 +51,6 @@ class IdealActuators(Actuators):
     def angles_to_motor_positions(
         self,
         angles: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -65,9 +60,6 @@ class IdealActuators(Actuators):
         ----------
         angles : torch.Tensor
             The joint angles.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

@@ -1,5 +1,6 @@
 import json
 import pathlib
+from collections import Counter, defaultdict
 from typing import Union
 
 import torch
@@ -31,7 +32,7 @@ def extract_paint_calibration_data(
     heliostat_names: list[str],
     target_area_names: list[str],
     device: Union[torch.device, str] = "cuda",
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
 
@@ -51,110 +52,77 @@ def extract_paint_calibration_data(
     Returns
     -------
     torch.Tensor
-        The calibration flux density centers.
+        The calibration focal spots.
     torch.Tensor
         The light source positions.
     torch.Tensor
         The motor positions.
     torch.Tensor
-        The heliostat indices in order.
+        A mask for active heliostats.
     torch.Tensor
-        The target area indices in order.
+        A mask with heliostat replications.
+    torch.Tensor
+        The target area mapping for the heliostats.
     """
     device = torch.device(device)
+    target_indices = {name: index for index, name in enumerate(target_area_names)}
 
-    total_number_of_calibrations = sum(
-        len(paths) for _, paths in heliostat_calibration_mapping
+    # Gather calibration data
+    replication_counter = Counter()
+    calibration_data_per_heliostat = defaultdict(list)
+
+    for heliostat_name, paths in heliostat_calibration_mapping:
+        for path in paths:
+            with open(path, "r") as f:
+                calibration_data_dict = json.load(f)
+            replication_counter[heliostat_name] += 1
+
+            calibration_data_per_heliostat[heliostat_name].append([
+                target_indices[calibration_data_dict[config_dictionary.paint_calibration_target]],
+                calibration_data_dict[config_dictionary.paint_focal_spot][config_dictionary.paint_utis],
+                calibration_data_dict[config_dictionary.paint_light_source_azimuth],
+                calibration_data_dict[config_dictionary.paint_light_source_elevation],
+                [
+                    calibration_data_dict[config_dictionary.paint_motor_positions][config_dictionary.paint_first_axis],
+                    calibration_data_dict[config_dictionary.paint_motor_positions][config_dictionary.paint_second_axis],
+                ]
+            ])
+
+    total_samples = sum(replication_counter[name] for name in heliostat_names)
+    calibration_replications = torch.tensor(
+        [replication_counter[name] for name in heliostat_names], device=device
     )
 
-    calibration_heliostat_names = []
-    calibration_target_names = []
-    centers_calibration_images = torch.zeros(
-        (total_number_of_calibrations, 4), device=device
-    )
-    light_source_positions_enu = torch.zeros(
-        (total_number_of_calibrations, 4), device=device
-    )
-    all_motor_positions = torch.zeros((total_number_of_calibrations, 2), device=device)
+    target_area_mapping = torch.empty(total_samples, device=device, dtype=torch.long)
+    focal_spots_global = torch.empty((total_samples, 3), device=device)
+    azimuths = torch.empty(total_samples, device=device)
+    elevations = torch.empty(total_samples, device=device)
+    motor_positions = torch.empty((total_samples, 2), device=device)
 
     index = 0
-    for mapping in heliostat_calibration_mapping:
-        for path in mapping[1]:
-            calibration_heliostat_names.append(mapping[0])
-            with open(path, "r") as file:
-                calibration_dict = json.load(file)
-                calibration_target_names.append(
-                    calibration_dict[config_dictionary.paint_calibration_target]
-                )
-                center_calibration_image = convert_wgs84_coordinates_to_local_enu(
-                    torch.tensor(
-                        calibration_dict[config_dictionary.paint_focal_spot][
-                            config_dictionary.paint_utis
-                        ],
-                        dtype=torch.float64,
-                        device=device,
-                    ),
-                    power_plant_position,
-                    device=device,
-                )
-                centers_calibration_images[index] = utils.convert_3d_point_to_4d_format(
-                    center_calibration_image, device=device
-                )
-                light_source_azimuth = torch.tensor(
-                    calibration_dict[config_dictionary.paint_light_source_azimuth],
-                    device=device,
-                )
-                light_source_elevation = torch.tensor(
-                    calibration_dict[config_dictionary.paint_light_source_elevation],
-                    device=device,
-                )
-                light_source_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                    azimuth_elevation_to_enu(
-                        light_source_azimuth,
-                        light_source_elevation,
-                        degree=True,
-                        device=device,
-                    ),
-                    device=device,
-                )
-                all_motor_positions[index] = torch.tensor(
-                    [
-                        calibration_dict[config_dictionary.paint_motor_positions][
-                            config_dictionary.paint_first_axis
-                        ],
-                        calibration_dict[config_dictionary.paint_motor_positions][
-                            config_dictionary.paint_second_axis
-                        ],
-                    ],
-                    device=device,
-                )
+    for name in heliostat_names:
+        for target_index, focal_spot, azimuth, elevation, motor_pos in calibration_data_per_heliostat.get(name, []):
+            target_area_mapping[index] = target_index
+            focal_spots_global[index] = torch.tensor(focal_spot, device=device)
+            azimuths[index] = azimuth
+            elevations[index] = elevation
+            motor_positions[index] = torch.tensor(motor_pos, device=device)
             index += 1
 
-    heliostat_index_map = {name: index for index, name in enumerate(heliostat_names)}
-    heliostat_indices = torch.tensor(
-        [heliostat_index_map[name] for name in calibration_heliostat_names],
-        device=device,
-    )
-    target_area_index_map = {
-        target_area_name: index
-        for index, target_area_name in enumerate(target_area_names)
-    }
-    target_area_indices = torch.tensor(
-        [
-            target_area_index_map[target_area_name]
-            for target_area_name in calibration_target_names
-        ],
-        device=device,
-    )
+    focal_spots_enu = convert_wgs84_coordinates_to_local_enu(focal_spots_global, power_plant_position, device=device)
+    focal_spots = utils.convert_3d_point_to_4d_format(focal_spots_enu, device=device)
+
+    light_source_positions_enu = azimuth_elevation_to_enu(azimuths, elevations, degree=True, device=device)
+    light_source_positions = utils.convert_3d_point_to_4d_format(light_source_positions_enu, device=device)
+    incident_ray_directions = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
 
     return (
-        centers_calibration_images,
-        light_source_positions_enu,
-        all_motor_positions,
-        heliostat_indices,
-        target_area_indices,
+        focal_spots,
+        incident_ray_directions,
+        motor_positions,
+        calibration_replications,
+        target_area_mapping,
     )
-
 
 def extract_paint_tower_measurements(
     tower_measurements_path: pathlib.Path,
@@ -545,16 +513,15 @@ def azimuth_elevation_to_enu(
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
 
-    if azimuth < 0.0:
-        azimuth += torch.pi * 2
+    azimuth[azimuth < 0] += 2 * torch.pi
 
     r = slant_range * torch.cos(elevation)
 
-    enu = torch.zeros(3, device=device)
+    enu = torch.zeros((azimuth.shape[0], 3), device=device)
 
-    enu[0] = r * torch.sin(azimuth)
-    enu[1] = -r * torch.cos(azimuth)
-    enu[2] = slant_range * torch.sin(elevation)
+    enu[:, 0] = r * torch.sin(azimuth)
+    enu[:, 1] = -r * torch.cos(azimuth)
+    enu[:, 2] = slant_range * torch.sin(elevation)
 
     return enu
 
@@ -584,38 +551,39 @@ def convert_wgs84_coordinates_to_local_enu(
     Returns
     -------
     torch.Tensor
-        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
+        The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
     """
     device = torch.device(device)
+
+    transformed_coordinates = torch.zeros_like(coordinates_to_transform, dtype=torch.float32, device=device)
+
     wgs84_a = 6378137.0  # Major axis in meters
     wgs84_b = 6356752.314245  # Minor axis in meters
     wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
 
     # Convert latitude and longitude to radians.
-    lat_rad = torch.deg2rad(coordinates_to_transform[0])
-    lon_rad = torch.deg2rad(coordinates_to_transform[1])
-    alt = coordinates_to_transform[2] - reference_point[2]
-    lat_tower_rad = torch.deg2rad(reference_point[0])
-    lon_tower_rad = torch.deg2rad(reference_point[1])
+    latitudes = torch.deg2rad(coordinates_to_transform[:, 0])
+    longitudes = torch.deg2rad(coordinates_to_transform[:, 1])
+    latitude_refernce_point = torch.deg2rad(reference_point[0])
+    longitude_reference_point = torch.deg2rad(reference_point[1])
 
     # Calculate meridional radius of curvature for the first latitude.
-    sin_lat1 = torch.sin(lat_rad)
+    sin_lat1 = torch.sin(latitudes)
     rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
 
     # Calculate transverse radius of curvature for the first latitude.
     rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
 
     # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = lat_tower_rad - lat_rad
-    dlon_rad = lon_tower_rad - lon_rad
+    dlat_rad = latitude_refernce_point - latitudes
+    dlon_rad = longitude_reference_point - longitudes
 
     # Calculate north and east offsets in meters.
-    north_offset_m = dlat_rad * rm1
-    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
+    transformed_coordinates[:, 0] = - (dlon_rad * rn1 * torch.cos(latitudes))
+    transformed_coordinates[:, 1] = - (dlat_rad * rm1)
+    transformed_coordinates[:, 2] = coordinates_to_transform[:, 2] - reference_point[2]
 
-    return torch.tensor(
-        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
-    )
+    return transformed_coordinates
 
 
 def corner_points_to_plane(

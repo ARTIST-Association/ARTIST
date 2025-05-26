@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -11,20 +11,10 @@ class LinearActuators(Actuators):
 
     Attributes
     ----------
-    clockwise_axis_movements : bool
-        Turning directions of the joints.
-    increments : torch.Tensor
-        The stroke length changes per motor step.
-    initial_stroke_lengths : torch.Tensor
-        The stroke lengths for a motor step of 0.
-    offsets : torch.Tensor
-        The offsets between the linear actuators' pivoting points and the points
-        around which the actuators are allowed to pivot.
-    pivot_radii : torch.Tensor
-        The actuators' pivoting radii.
-    initial_angle : torch.Tensor
-        The angles that the actuators introduce to the manipulated coordinate systems
-        at the initial stroke lengths.
+    actuator_parameters : torch.Tensor
+        The actuator parameters for all heliostats.
+    active_actuator_parameters : torch.Tensor
+        The actuator parameters of the activated heliostats.
 
     Methods
     -------
@@ -48,8 +38,7 @@ class LinearActuators(Actuators):
         Initialize linear actuators.
 
         A linear actuator describes movement within a 2D plane. The actuator parameters tensor for linear
-        actuators includes seven parameters. Ordered by index, the first actuator parameter indicates the
-        type of the actuator and the second parameter describes the turning direction of the actuator.
+        actuators includes six parameters. Ordered by index, the first parameter describes the turning direction of the actuator.
         The next five parameters are the increment, which stores the information about the stroke length change
         per motor step, the initial stroke length, and an offset that describes the difference between the linear actuator's
         pivoting point and the point around which the actuator is allowed to pivot. Next, the actuator's pivoting
@@ -59,13 +48,17 @@ class LinearActuators(Actuators):
         Parameters
         ----------
         actuator_parameters : torch.Tensor
-            The seven actuator parameters.
+            The six actuator parameters.
         """
         super().__init__()
+        
         self.actuator_parameters = actuator_parameters
 
+        self.active_actuator_parameters = None
+
+
     def _motor_positions_to_absolute_angles(
-        self, motor_positions: torch.Tensor, active_heliostats_indices: torch.Tensor
+        self, motor_positions: torch.Tensor
     ) -> torch.Tensor:
         """
         Convert motor steps into angles using actuator geometries.
@@ -78,8 +71,6 @@ class LinearActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : torch.Tensor
-            The indices of the active heliostats that will be aligned.
 
         Returns
         -------
@@ -87,18 +78,18 @@ class LinearActuators(Actuators):
             The calculated absolute angles.
         """
         stroke_lengths = (
-            motor_positions / self.actuator_parameters[active_heliostats_indices, 1]
-            + self.actuator_parameters[active_heliostats_indices, 2]
+            motor_positions / self.active_actuator_parameters[:, 1]
+            + self.active_actuator_parameters[:, 2]
         )
         calc_step_1 = (
-            self.actuator_parameters[active_heliostats_indices, 3] ** 2
-            + self.actuator_parameters[active_heliostats_indices, 4] ** 2
+            self.active_actuator_parameters[:, 3] ** 2
+            + self.active_actuator_parameters[:, 4] ** 2
             - stroke_lengths**2
         )
         calc_step_2 = (
             2.0
-            * self.actuator_parameters[active_heliostats_indices, 3]
-            * self.actuator_parameters[active_heliostats_indices, 4]
+            * self.active_actuator_parameters[:, 3]
+            * self.active_actuator_parameters[:, 4]
         )
         calc_step_3 = calc_step_1 / calc_step_2
         absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
@@ -107,7 +98,6 @@ class LinearActuators(Actuators):
     def motor_positions_to_angles(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -120,9 +110,6 @@ class LinearActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -133,34 +120,26 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(
-                motor_positions.shape[0], device=device
-            )
-
         absolute_angles = self._motor_positions_to_absolute_angles(
             motor_positions=motor_positions,
-            active_heliostats_indices=active_heliostats_indices,
         )
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
             motor_positions=torch.zeros_like(motor_positions, device=device),
-            active_heliostats_indices=active_heliostats_indices,
         )
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.actuator_parameters[active_heliostats_indices, 5]
+            self.active_actuator_parameters[:, 5]
             + delta_angles
-            * (self.actuator_parameters[active_heliostats_indices, 0] == 1)
+            * (self.active_actuator_parameters[:, 0] == 1)
             - delta_angles
-            * (self.actuator_parameters[active_heliostats_indices, 0] == 0)
+            * (self.active_actuator_parameters[:, 0] == 0)
         )
         return relative_angles
 
     def angles_to_motor_positions(
         self,
         angles: torch.Tensor,
-        active_heliostats_indices: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -174,9 +153,6 @@ class LinearActuators(Actuators):
         ----------
         angles : torch.Tensor
             The joint angles.
-        active_heliostats_indices : Optional[torch.Tensor]
-            The indices of the active heliostats that will be aligned (default is None).
-            If none are provided, all will be selected.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -187,36 +163,33 @@ class LinearActuators(Actuators):
         """
         device = torch.device(device)
 
-        if active_heliostats_indices is None:
-            active_heliostats_indices = torch.arange(angles.shape[0], device=device)
-
         delta_angles = torch.where(
-            self.actuator_parameters[active_heliostats_indices, 0] == 1,
-            angles - self.actuator_parameters[active_heliostats_indices, 5],
-            self.actuator_parameters[active_heliostats_indices, 5] - angles,
+            self.active_actuator_parameters[:, 0] == 1,
+            angles - self.active_actuator_parameters[:, 5],
+            self.active_actuator_parameters[:, 5] - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
-            active_heliostats_indices=active_heliostats_indices,
             motor_positions=torch.zeros_like(angles, device=device),
         )
+
         initial_angles = absolute_initial_angles - delta_angles
 
         calc_step_3 = torch.cos(initial_angles)
         calc_step_2 = (
             2.0
-            * self.actuator_parameters[active_heliostats_indices, 3]
-            * self.actuator_parameters[active_heliostats_indices, 4]
+            * self.active_actuator_parameters[:, 3]
+            * self.active_actuator_parameters[:, 4]
         )
         calc_step_1 = calc_step_3 * calc_step_2
         stroke_lengths = torch.sqrt(
-            self.actuator_parameters[active_heliostats_indices, 3] ** 2
-            + self.actuator_parameters[active_heliostats_indices, 4] ** 2
+            self.active_actuator_parameters[:, 3] ** 2
+            + self.active_actuator_parameters[:, 4] ** 2
             - calc_step_1
         )
         motor_positions = (
-            stroke_lengths - self.actuator_parameters[active_heliostats_indices, 2]
-        ) * self.actuator_parameters[active_heliostats_indices, 1]
+            stroke_lengths - self.active_actuator_parameters[:, 2]
+        ) * self.active_actuator_parameters[:, 1]
         return motor_positions
 
     def forward(self) -> None:
