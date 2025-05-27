@@ -136,7 +136,7 @@ class HeliostatGroup(torch.nn.Module):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must be overridden!")
-    
+
     def activate_heliostats(self, active_heliostats_mask: torch.Tensor) -> None:
         """
         Activate certain heliostats for alignment, raytracing or calibration.
@@ -144,7 +144,7 @@ class HeliostatGroup(torch.nn.Module):
         Select and repeat indices of all active heliostat and kinematic parameters once according
         to the mask. Doing this once instead of slicing everytime when accessing one
         of those parameter tensors saves memory.
-        
+
         Parameters
         ----------
         active_heliostats_mask : torch.Tensor
@@ -153,14 +153,33 @@ class HeliostatGroup(torch.nn.Module):
         """
         self.number_of_active_heliostats = active_heliostats_mask.sum().item()
         self.active_heliostats_mask = active_heliostats_mask
-        self.active_surface_points = self.surface_points.repeat_interleave(active_heliostats_mask, dim=0)
-        self.active_surface_normals = self.surface_normals.repeat_interleave(active_heliostats_mask, dim=0)
+        self.active_surface_points = self.surface_points.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_surface_normals = self.surface_normals.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
         self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-        self.kinematic.active_heliostat_positions = self.kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_initial_orientations = self.kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_deviation_parameters = self.kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.actuators.active_actuator_parameters = self.kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-
+        self.kinematic.active_heliostat_positions = (
+            self.kinematic.heliostat_positions.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_initial_orientations = (
+            self.kinematic.initial_orientations.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_deviation_parameters = (
+            self.kinematic.deviation_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.actuators.active_actuator_parameters = (
+            self.kinematic.actuators.actuator_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
 
     def forward(self) -> None:
         """

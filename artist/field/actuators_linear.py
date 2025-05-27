@@ -129,10 +129,8 @@ class LinearActuators(Actuators):
 
         relative_angles = (
             self.active_actuator_parameters[:, 6]
-            + delta_angles
-            * (self.active_actuator_parameters[:, 1] == 1)
-            - delta_angles
-            * (self.active_actuator_parameters[:, 1] == 0)
+            + delta_angles * (self.active_actuator_parameters[:, 1] == 1)
+            - delta_angles * (self.active_actuator_parameters[:, 1] == 0)
         )
         return relative_angles
 

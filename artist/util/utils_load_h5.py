@@ -606,7 +606,7 @@ def linear_actuators(
                 f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
-        
+
         actuator_parameters[0, index] = config_dictionary.linear_actuator_int
 
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1

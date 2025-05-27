@@ -285,7 +285,6 @@ def test_line_plane_intersection(
                 points_at_ray_origins=points_at_ray_origins.to(device),
                 target_areas=request.getfixturevalue(target_areas_fixture),
                 target_area_mask=torch.tensor([0], device=device),
-                
             )
         assert "No ray intersections on the front of the target area planes." in str(
             exc_info.value

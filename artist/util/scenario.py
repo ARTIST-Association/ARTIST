@@ -210,18 +210,35 @@ class Scenario:
             The indices of target areas for all heliostats in order.
         """
         device = torch.device(device)
-         
-        if string_mapping is None:
-            active_heliostats_mask = torch.ones(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
-            target_area_mask = torch.tensor(default_target_area_index, device=device).expand(heliostat_group.number_of_heliostats)
-            incident_ray_directions = default_incident_ray_direction.expand(heliostat_group.number_of_heliostats, -1)
-        else:
-            heliostat_name_to_index = {heliostat_name: index for index, heliostat_name in enumerate(heliostat_group.names)}
-            active_heliostats_mask = torch.zeros(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
-            target_area_mask = torch.empty(len(string_mapping), dtype=torch.int32, device=device)
-            incident_ray_directions = torch.empty((len(string_mapping), 4), device=device)
 
-            for i, (heliostat_name, target_name, direction) in enumerate(string_mapping):
+        if string_mapping is None:
+            active_heliostats_mask = torch.ones(
+                heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
+            )
+            target_area_mask = torch.tensor(
+                default_target_area_index, device=device
+            ).expand(heliostat_group.number_of_heliostats)
+            incident_ray_directions = default_incident_ray_direction.expand(
+                heliostat_group.number_of_heliostats, -1
+            )
+        else:
+            heliostat_name_to_index = {
+                heliostat_name: index
+                for index, heliostat_name in enumerate(heliostat_group.names)
+            }
+            active_heliostats_mask = torch.zeros(
+                heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
+            )
+            target_area_mask = torch.empty(
+                len(string_mapping), dtype=torch.int32, device=device
+            )
+            incident_ray_directions = torch.empty(
+                (len(string_mapping), 4), device=device
+            )
+
+            for i, (heliostat_name, target_name, direction) in enumerate(
+                string_mapping
+            ):
                 if heliostat_name in heliostat_group.names:
                     heliostat_index = heliostat_name_to_index[heliostat_name]
                     target_index = self.target_areas.names.index(target_name)
