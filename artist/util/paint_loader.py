@@ -145,104 +145,77 @@ def extract_paint_tower_measurements(
     TargetAreaListConfig
         The configuration of the tower target areas.
     """
+    device = torch.device(device)
+
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
-        power_plant_position = torch.tensor(
-            tower_dict[config_dictionary.paint_power_plant_properties][
-                config_dictionary.paint_coordinates
-            ],
+
+    power_plant_position = torch.tensor(
+        tower_dict[config_dictionary.paint_power_plant_properties][
+            config_dictionary.paint_coordinates
+        ],
+        dtype=torch.float64,
+        device=device,
+    )
+
+    target_area_config_list = []
+    
+    for target_area in list(tower_dict.keys())[1:]:
+        
+        prefix = "receiver_outer_" if target_area == config_dictionary.target_area_receiver else ""
+        
+        target_area_corners = [
+            f"{prefix}{config_dictionary.paint_upper_left}",
+            f"{prefix}{config_dictionary.paint_lower_left}",
+            f"{prefix}{config_dictionary.paint_upper_right}",
+            f"{prefix}{config_dictionary.paint_lower_right}",
+        ]
+
+        target_area_corner_points_wgs84 = torch.tensor(
+            [tower_dict[target_area][config_dictionary.paint_coordinates][corner] for corner in target_area_corners],
             dtype=torch.float64,
             device=device,
         )
 
-        target_areas = list(tower_dict.keys())[1:]
-        target_area_config_list = []
+        corner_points_enu = convert_wgs84_coordinates_to_local_enu(
+            target_area_corner_points_wgs84, power_plant_position, device=device
+        )
 
-        for target_area in target_areas:
-            geometry = tower_dict[target_area][
-                config_dictionary.paint_target_area_geometry
-            ]
+        upper_left, lower_left, upper_right, lower_right = corner_points_enu
+        plane_e, plane_u = corner_points_to_plane(
+            upper_left, upper_right, lower_left, lower_right
+        )
 
-            center_lat_lon = torch.tensor(
-                tower_dict[target_area][config_dictionary.paint_coordinates][
-                    config_dictionary.paint_center
-                ],
-                dtype=torch.float64,
-                device=device,
-            )
-            center_3d = convert_wgs84_coordinates_to_local_enu(
-                center_lat_lon, power_plant_position, device=device
-            )
-            center = utils.convert_3d_point_to_4d_format(center_3d, device=device)
-            normal_vector = utils.convert_3d_direction_to_4d_format(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_normal_vector],
-                    device=device,
-                ),
-                device=device,
-            )
+        center_lat_lon = torch.tensor(
+            [tower_dict[target_area][config_dictionary.paint_coordinates][
+                config_dictionary.paint_center
+            ]],
+            dtype=torch.float64,
+            device=device,
+        )
+        center_enu = convert_wgs84_coordinates_to_local_enu(
+            center_lat_lon, power_plant_position, device=device
+        )
+        center = utils.convert_3d_point_to_4d_format(center_enu, device=device)
 
-            prefix = ""
-            if target_area == config_dictionary.target_area_receiver:
-                prefix = "receiver_outer_"
-            upper_left = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_upper_left}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
+        normal_vector = utils.convert_3d_direction_to_4d_format(
+            torch.tensor(
+                [tower_dict[target_area][config_dictionary.paint_normal_vector]],
                 device=device,
-            )
-            lower_left = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_lower_left}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            upper_right = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_upper_right}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            lower_right = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_lower_right}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            plane_e, plane_u = corner_points_to_plane(
-                upper_left, upper_right, lower_left, lower_right
-            )
+            ),
+            device=device,
+        )
 
-            tower_area_config = TargetAreaConfig(
-                target_area_key=target_area,
-                geometry=geometry,
-                center=center,
-                normal_vector=normal_vector,
-                plane_e=plane_e,
-                plane_u=plane_u,
-            )
+        tower_area_config = TargetAreaConfig(
+            target_area_key=target_area,
+            geometry=tower_dict[target_area][config_dictionary.paint_target_area_geometry],
+            center=center,
+            normal_vector=normal_vector,
+            plane_e=plane_e,
+            plane_u=plane_u,
+        )
 
-            target_area_config_list.append(tower_area_config)
+        target_area_config_list.append(tower_area_config)
 
     # Create the power plant configuration.
     power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)

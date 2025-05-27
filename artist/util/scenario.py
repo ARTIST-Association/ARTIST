@@ -180,8 +180,8 @@ class Scenario:
 
     def index_mapping(
         self,
-        string_mapping: Optional[list[tuple[str, str, torch.Tensor]]],
         heliostat_group: HeliostatGroup,
+        string_mapping: Optional[list[tuple[str, str, torch.Tensor]]] = None,
         default_incident_ray_direction: torch.Tensor = torch.tensor(
             [0.0, 1.0, 0.0, 0.0]
         ),
@@ -210,23 +210,24 @@ class Scenario:
             The indices of target areas for all heliostats in order.
         """
         device = torch.device(device)
+         
+        if string_mapping is None:
+            active_heliostats_mask = torch.ones(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
+            target_area_mask = torch.tensor(default_target_area_index, device=device).expand(heliostat_group.number_of_heliostats)
+            incident_ray_directions = default_incident_ray_direction.expand(heliostat_group.number_of_heliostats, -1)
+        else:
+            heliostat_name_to_index = {heliostat_name: index for index, heliostat_name in enumerate(heliostat_group.names)}
+            active_heliostats_mask = torch.zeros(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
+            target_area_mask = torch.empty(len(string_mapping), dtype=torch.int32, device=device)
+            incident_ray_directions = torch.empty((len(string_mapping), 4), device=device)
 
-        active_heliostats_mask = torch.zeros(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device)
-        target_area_mask = torch.zeros(len(string_mapping), dtype=torch.int32, device=device)
-        incident_ray_directions = torch.zeros((len(string_mapping), 4), device=device)
-        
-        heliostat_to_target = {heliostat: (target, light_direction) for heliostat, target, light_direction in string_mapping}
-
-        active_index = 0
-        for heliostat_index, name in enumerate(heliostat_group.names):
-            if name in heliostat_to_target:
-                target_name, direction = heliostat_to_target[name]
-                active_heliostats_mask[heliostat_index] = 1
-                target_area_mask[active_index] = self.target_areas.names.index(target_name)
-                incident_ray_directions[active_index] = direction
-                active_index += 1
-            else:
-                active_heliostats_mask[heliostat_index] = 0
+            for i, (heliostat_name, target_name, direction) in enumerate(string_mapping):
+                if heliostat_name in heliostat_group.names:
+                    heliostat_index = heliostat_name_to_index[heliostat_name]
+                    target_index = self.target_areas.names.index(target_name)
+                    active_heliostats_mask[heliostat_index] += 1
+                    target_area_mask[i] = target_index
+                    incident_ray_directions[i] = direction
 
         return (
             active_heliostats_mask,

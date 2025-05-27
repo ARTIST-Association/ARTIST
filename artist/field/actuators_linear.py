@@ -78,18 +78,18 @@ class LinearActuators(Actuators):
             The calculated absolute angles.
         """
         stroke_lengths = (
-            motor_positions / self.active_actuator_parameters[:, 1]
-            + self.active_actuator_parameters[:, 2]
+            motor_positions / self.active_actuator_parameters[:, 2]
+            + self.active_actuator_parameters[:, 3]
         )
         calc_step_1 = (
-            self.active_actuator_parameters[:, 3] ** 2
-            + self.active_actuator_parameters[:, 4] ** 2
+            self.active_actuator_parameters[:, 4] ** 2
+            + self.active_actuator_parameters[:, 5] ** 2
             - stroke_lengths**2
         )
         calc_step_2 = (
             2.0
-            * self.active_actuator_parameters[:, 3]
             * self.active_actuator_parameters[:, 4]
+            * self.active_actuator_parameters[:, 5]
         )
         calc_step_3 = calc_step_1 / calc_step_2
         absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
@@ -129,11 +129,11 @@ class LinearActuators(Actuators):
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.active_actuator_parameters[:, 5]
+            self.active_actuator_parameters[:, 6]
             + delta_angles
-            * (self.active_actuator_parameters[:, 0] == 1)
+            * (self.active_actuator_parameters[:, 1] == 1)
             - delta_angles
-            * (self.active_actuator_parameters[:, 0] == 0)
+            * (self.active_actuator_parameters[:, 1] == 0)
         )
         return relative_angles
 
@@ -164,9 +164,9 @@ class LinearActuators(Actuators):
         device = torch.device(device)
 
         delta_angles = torch.where(
-            self.active_actuator_parameters[:, 0] == 1,
-            angles - self.active_actuator_parameters[:, 5],
-            self.active_actuator_parameters[:, 5] - angles,
+            self.active_actuator_parameters[:, 1] == 1,
+            angles - self.active_actuator_parameters[:, 6],
+            self.active_actuator_parameters[:, 6] - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
@@ -178,18 +178,18 @@ class LinearActuators(Actuators):
         calc_step_3 = torch.cos(initial_angles)
         calc_step_2 = (
             2.0
-            * self.active_actuator_parameters[:, 3]
             * self.active_actuator_parameters[:, 4]
+            * self.active_actuator_parameters[:, 5]
         )
         calc_step_1 = calc_step_3 * calc_step_2
         stroke_lengths = torch.sqrt(
-            self.active_actuator_parameters[:, 3] ** 2
-            + self.active_actuator_parameters[:, 4] ** 2
+            self.active_actuator_parameters[:, 4] ** 2
+            + self.active_actuator_parameters[:, 5] ** 2
             - calc_step_1
         )
         motor_positions = (
-            stroke_lengths - self.active_actuator_parameters[:, 2]
-        ) * self.active_actuator_parameters[:, 1]
+            stroke_lengths - self.active_actuator_parameters[:, 3]
+        ) * self.active_actuator_parameters[:, 2]
         return motor_positions
 
     def forward(self) -> None:

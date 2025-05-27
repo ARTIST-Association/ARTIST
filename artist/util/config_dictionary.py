@@ -101,9 +101,9 @@ rigid_body_number_of_deviation_parameters = 18
 """Number of deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
-number_of_linear_actuator_parameters = 6
+number_of_linear_actuator_parameters = 7
 """Number of actuator parameters for linear actuators."""
-number_of_ideal_actuator_parameters = 1
+number_of_ideal_actuator_parameters = 2
 """Number of actuator parameters for ideal actuators."""
 kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
@@ -129,8 +129,12 @@ actuator_parameters_key = "parameters"
 """Key to access the actuator parameters."""
 ideal_actuator_key = "ideal"
 """Key defining that the actuator used is an ideal actuator."""
+ideal_actuator_int = 1
+"""Int defining that the actuator used is an ideal actuator."""
 linear_actuator_key = "linear"
-"""Key defining that the actuator used is a linear actuator."""
+"""Int defining that the actuator used is a linear actuator."""
+linear_actuator_int = 0
+
 
 surface_prototype_key = "surface"
 """Key to access the surface prototype."""

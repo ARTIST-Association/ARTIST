@@ -6,19 +6,13 @@ import h5py
 import torch.nn
 from typing_extensions import Self
 
+from artist.field import field_mappings
 from artist.field.heliostat_group import HeliostatGroup
-from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.field.surface import Surface
 from artist.util import config_dictionary, utils_load_h5
 from artist.util.configuration_classes import (
     SurfaceConfig,
 )
-
-heliostat_group_type_mapping = {
-    "rigid_body_linear": HeliostatGroupRigidBody,
-    "rigid_body_ideal": HeliostatGroupRigidBody,
-}
-"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct heliostat group type."""
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
@@ -264,7 +258,7 @@ class HeliostatField(torch.nn.Module):
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
             heliostat_groups.append(
-                heliostat_group_type_mapping[heliostat_group_name](
+                field_mappings.heliostat_group_type_mapping[heliostat_group_name](
                     names=grouped_field_data[heliostat_group_name][
                         config_dictionary.names
                     ],

@@ -2,8 +2,7 @@ from typing import Union
 
 import torch
 
-from artist.field.actuators_ideal import IdealActuators
-from artist.field.actuators_linear import LinearActuators
+from artist.field import field_mappings
 from artist.field.kinematic import Kinematic
 from artist.util import config_dictionary, utils
 
@@ -109,20 +108,10 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        if (
-            actuator_parameters.shape[1]
-            == config_dictionary.number_of_linear_actuator_parameters
-        ):
-            self.actuators = LinearActuators(
-                actuator_parameters=actuator_parameters,
-            )
-        if (
-            actuator_parameters.shape[1]
-            == config_dictionary.number_of_ideal_actuator_parameters
-        ):
-            self.actuators = IdealActuators(
-                actuator_parameters=actuator_parameters,
-            )
+        self.actuators = field_mappings.actuator_type_mapping[actuator_parameters[0, 0, 0].item()](
+            actuator_parameters=actuator_parameters
+        )
+
 
     def incident_ray_directions_to_orientations(
         self,

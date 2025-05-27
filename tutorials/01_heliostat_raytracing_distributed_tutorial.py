@@ -34,16 +34,13 @@ with h5py.File(scenario_path) as scenario_file:
 
 incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
-# heliostat_target_light_source_mapping = None
+heliostat_target_light_source_mapping = None
 
 # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
 heliostat_target_light_source_mapping = [
     ("AA39", "receiver", incident_ray_direction),
     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
 ]
-# If no mapping is provided, the default activates all heliostats, the selected target is the first target
-# found in the scenario for all heliostats, and the incident ray direction specified above will be set for
-# all heliostats.
 
 bitmap_resolution_e, bitmap_resolution_u = 256, 256
 final_flux_distributions = torch.zeros(
@@ -58,16 +55,19 @@ final_flux_distributions = torch.zeros(
 for heliostat_group_index, heliostat_group in enumerate(
     scenario.heliostat_field.heliostat_groups
 ):
-    if heliostat_target_light_source_mapping:
-        (
-            active_heliostats_mask,
-            target_area_mask,
-            incident_ray_directions,
-        ) = scenario.index_mapping(
-            string_mapping=heliostat_target_light_source_mapping,
-            heliostat_group=heliostat_group,
-            device=device,
-        )
+    # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
+    # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
+    # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an 
+    # incident ray direction "north" (meaning the sun position is directly in the south) for all heliostats.
+    (
+        active_heliostats_mask,
+        target_area_mask,
+        incident_ray_directions,
+    ) = scenario.index_mapping(
+        heliostat_group=heliostat_group,
+        string_mapping=heliostat_target_light_source_mapping,
+        device=device,
+    )
 
     # Activate heliostats
     heliostat_group.activate_heliostats(

@@ -194,7 +194,7 @@ def further_parameters_3() -> Dict[str, int]:
         ("sun", "distribution_parameters_4", "further_parameters_2", True),
     ],
 )
-def test_light_sources(
+def test_load_sun_and_get_distortions(
     request: pytest.FixtureRequest,
     light_source: str,
     distribution_parameters_fixture: str,
