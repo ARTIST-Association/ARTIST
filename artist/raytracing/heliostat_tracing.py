@@ -333,10 +333,8 @@ class HeliostatRayTracer:
             device=device,
         )
 
-        # if not torch.all(
-        #     self.heliostat_group.aligned_heliostats[active_heliostats_indices] == 1.0
-        # ):
-        #     raise ValueError("Not all active heliostats have been aligned.")
+        if self.heliostat_group.number_of_active_heliostats == 0 or self.heliostat_group.number_of_active_heliostats != self.heliostat_group.aligned_heliostats:
+            raise ValueError("No heliostats are active or not all active heliostats have been aligned.")
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(1),

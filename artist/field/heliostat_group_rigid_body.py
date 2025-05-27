@@ -114,15 +114,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
 
         device = torch.device(device)
 
-        self.number_of_heliostats = len(names)
-        self.names = names
-        self.positions = positions
-        self.surface_points = surface_points
-        self.surface_normals = surface_normals
-        self.initial_orientations = initial_orientations
-        self.kinematic_deviation_parameters = kinematic_deviation_parameters
-        self.actuator_parameters = actuator_parameters
-
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
@@ -132,13 +123,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             deviation_parameters=self.kinematic_deviation_parameters,
             device=device,
         )
-
-        self.aligned_heliostats = torch.zeros(self.number_of_heliostats, device=device)
-        self.number_of_active_heliostats = 0
-        self.active_heliostats_mask = None
-        self.active_surface_points = None
-        self.active_surface_normals = None
-        self.preferred_reflection_directions = None
 
 
     def align_surfaces_with_incident_ray_directions(
@@ -178,8 +162,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device,
         )
 
-        # Note that all heliostats have been aligned.
-        self.aligned_heliostats[self.active_heliostats_mask !=0] = 1.0
+        # Note that all active heliostats have been aligned.
+        self.aligned_heliostats = self.active_surface_points.shape[0]
 
     def get_orientations_from_motor_positions(
         self,
@@ -207,19 +191,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             motor_positions=motor_positions,
             device=device,
         )
-    
-    def activate_heliostats(self, active_heliostats_mask: torch.Tensor):
-        # Select and repeat indices of all heliostat and kinematic parameters once.
-        self.number_of_active_heliostats = active_heliostats_mask.sum().item()
-        self.active_heliostats_mask = active_heliostats_mask
-        self.active_surface_points = self.surface_points.repeat_interleave(active_heliostats_mask, dim=0)
-        self.active_surface_normals = self.surface_normals.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-        self.kinematic.active_heliostat_positions = self.kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_initial_orientations = self.kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_deviation_parameters = self.kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.actuators.active_actuator_parameters = self.kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-
 
     def forward(self) -> None:
         """

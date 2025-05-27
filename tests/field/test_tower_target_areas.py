@@ -8,7 +8,7 @@ from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize("curvature", [True, False])
-def test_target_area_from_hdf5(
+def test_target_area_load_from_hdf5(
     mocker: MockerFixture,
     curvature: bool,
     device: torch.device,

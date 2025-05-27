@@ -8,6 +8,81 @@ from artist.raytracing import raytracing_utils
 from artist.raytracing.rays import Rays
 
 
+@pytest.mark.parametrize(
+    "incident_ray_directions, surface_normals, expected_reflection",
+    [
+        (
+            torch.tensor(
+                [
+                    [1.0, 1.0, 1.0, 0.0],
+                    [1.0, 1.0, 1.0, 0.0],
+                    [1.0, 1.0, 1.0, 0.0],
+                    [2.0, 1.0, 3.0, 0.0],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.3, 0.6, 0.7, 0.0],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [1.0, 1.0, -1.0, 0.0],
+                    [1.0, -1.0, 1.0, 0.0],
+                    [-1.0, 1.0, 1.0, 0.0],
+                    [0.0200, -2.9600, -1.6200, 0.0000],
+                ]
+            ),
+        ),
+        (
+            torch.tensor([1.0, 1.0, 1.0, 0.0]),
+            torch.tensor(
+                [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]]
+            ),
+            torch.tensor(
+                [[-1.0, 1.0, 1.0, 0.0], [1.0, -1.0, 1.0, 0.0], [1.0, 1.0, -1.0, 0.0]]
+            ),
+        ),
+    ],
+)
+def test_reflect_function(
+    incident_ray_directions: torch.Tensor,
+    surface_normals: torch.Tensor,
+    expected_reflection: torch.Tensor,
+    device: torch.device,
+) -> None:
+    """
+    Test the reflection function by reflecting various rays from different surfaces.
+
+    Parameters
+    ----------
+    incident_ray_directions : torch.Tensor
+        The direction of the incoming ray to be reflected.
+    surface_normals : torch.Tensor
+        The surface normals of the reflective surface.
+    expected_reflection : torch.Tensor
+        The expected direction of the reflected rays.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    reflection = raytracing_utils.reflect(
+        incident_ray_directions=incident_ray_directions.to(device),
+        reflection_surface_normals=surface_normals.to(device),
+    )
+
+    torch.testing.assert_close(
+        reflection, expected_reflection.to(device), rtol=1e-4, atol=1e-4
+    )
+
+
 @pytest.fixture
 def rays(request: pytest.FixtureRequest, device: torch.device) -> Rays:
     """
@@ -207,9 +282,10 @@ def test_line_plane_intersection(
         with pytest.raises(ValueError) as exc_info:
             raytracing_utils.line_plane_intersections(
                 rays=rays,
-                target_areas=request.getfixturevalue(target_areas_fixture),
-                target_area_indices=torch.tensor([0], device=device),
                 points_at_ray_origins=points_at_ray_origins.to(device),
+                target_areas=request.getfixturevalue(target_areas_fixture),
+                target_area_mask=torch.tensor([0], device=device),
+                
             )
         assert "No ray intersections on the front of the target area planes." in str(
             exc_info.value
@@ -218,9 +294,9 @@ def test_line_plane_intersection(
         # Check if the intersections match the expected intersections.
         intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
             rays=rays,
-            target_areas=request.getfixturevalue(target_areas_fixture),
-            target_area_indices=torch.tensor([0], device=device),
             points_at_ray_origins=points_at_ray_origins.to(device),
+            target_areas=request.getfixturevalue(target_areas_fixture),
+            target_area_mask=torch.tensor([0], device=device),
         )
         torch.testing.assert_close(
             intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4
