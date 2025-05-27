@@ -108,10 +108,9 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.actuators = field_mappings.actuator_type_mapping[actuator_parameters[0, 0, 0].item()](
-            actuator_parameters=actuator_parameters
-        )
-
+        self.actuators = field_mappings.actuator_type_mapping[
+            actuator_parameters[0, 0, 0].item()
+        ](actuator_parameters=actuator_parameters)
 
     def incident_ray_directions_to_orientations(
         self,

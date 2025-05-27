@@ -190,11 +190,14 @@ def extract_paint_tower_measurements(
     )
 
     target_area_config_list = []
-    
+
     for target_area in list(tower_dict.keys())[1:]:
-        
-        prefix = "receiver_outer_" if target_area == config_dictionary.target_area_receiver else ""
-        
+        prefix = (
+            "receiver_outer_"
+            if target_area == config_dictionary.target_area_receiver
+            else ""
+        )
+
         target_area_corners = [
             f"{prefix}{config_dictionary.paint_upper_left}",
             f"{prefix}{config_dictionary.paint_lower_left}",
@@ -203,7 +206,10 @@ def extract_paint_tower_measurements(
         ]
 
         target_area_corner_points_wgs84 = torch.tensor(
-            [tower_dict[target_area][config_dictionary.paint_coordinates][corner] for corner in target_area_corners],
+            [
+                tower_dict[target_area][config_dictionary.paint_coordinates][corner]
+                for corner in target_area_corners
+            ],
             dtype=torch.float64,
             device=device,
         )
@@ -218,9 +224,11 @@ def extract_paint_tower_measurements(
         )
 
         center_lat_lon = torch.tensor(
-            [tower_dict[target_area][config_dictionary.paint_coordinates][
-                config_dictionary.paint_center
-            ]],
+            [
+                tower_dict[target_area][config_dictionary.paint_coordinates][
+                    config_dictionary.paint_center
+                ]
+            ],
             dtype=torch.float64,
             device=device,
         )
@@ -239,7 +247,9 @@ def extract_paint_tower_measurements(
 
         tower_area_config = TargetAreaConfig(
             target_area_key=target_area,
-            geometry=tower_dict[target_area][config_dictionary.paint_target_area_geometry],
+            geometry=tower_dict[target_area][
+                config_dictionary.paint_target_area_geometry
+            ],
             center=center,
             normal_vector=normal_vector,
             plane_e=plane_e,

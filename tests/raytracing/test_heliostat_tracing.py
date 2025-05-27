@@ -10,7 +10,9 @@ from artist.util.scenario import Scenario
 
 
 @pytest.fixture(params=[(0, 0), (0, 4), (3, 2)])
-def mock_scenario(request: pytest.FixtureRequest,) -> Scenario:
+def mock_scenario(
+    request: pytest.FixtureRequest,
+) -> Scenario:
     """
     Define a mock scenario used in tests.
 
@@ -35,7 +37,9 @@ def mock_scenario(request: pytest.FixtureRequest,) -> Scenario:
     return mock_scenario
 
 
-def test_trace_rays_unaligned_heliostats_error(mock_scenario: Scenario,device: torch.device) -> None:
+def test_trace_rays_unaligned_heliostats_error(
+    mock_scenario: Scenario, device: torch.device
+) -> None:
     """
     Test that unanligned heliostats raise ValueError while raytracing.
 
@@ -66,10 +70,19 @@ def test_trace_rays_unaligned_heliostats_error(mock_scenario: Scenario,device: t
             mock_ray_tracer.trace_rays(
                 self=mock_ray_tracer,
                 incident_ray_directions=torch.tensor(
-                    [[0.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0],[0.0, 1.0, 0.0, 0.0]], device=device
+                    [
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                    ],
+                    device=device,
                 ),
                 target_area_mask=torch.tensor([0, 0, 0, 0], device=device),
                 device=device,
             )
             mock_method.assert_called_once()
-        assert "No heliostats are active or not all active heliostats have been aligned." in str(exc_info.value)
+        assert (
+            "No heliostats are active or not all active heliostats have been aligned."
+            in str(exc_info.value)
+        )
