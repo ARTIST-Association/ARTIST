@@ -343,14 +343,24 @@ class HeliostatRayTracer:
 
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
-            
-            active_heliostats_mask_batch = torch.zeros(self.heliostat_group.number_of_active_heliostats, dtype=torch.bool, device=device)
-            active_heliostats_mask_batch[sampler_indices[batch_index * self.batch_size : (batch_index + 1) * self.batch_size]] = True
+
+            active_heliostats_mask_batch = torch.zeros(
+                self.heliostat_group.number_of_active_heliostats,
+                dtype=torch.bool,
+                device=device,
+            )
+            active_heliostats_mask_batch[
+                sampler_indices[
+                    batch_index * self.batch_size : (batch_index + 1) * self.batch_size
+                ]
+            ] = True
 
             rays = self.scatter_rays(
                 distortion_u=batch_u,
                 distortion_e=batch_e,
-                original_ray_direction=self.heliostat_group.preferred_reflection_directions[active_heliostats_mask_batch],
+                original_ray_direction=self.heliostat_group.preferred_reflection_directions[
+                    active_heliostats_mask_batch
+                ],
                 device=device,
             )
 
@@ -358,9 +368,7 @@ class HeliostatRayTracer:
                 raytracing_utils.line_plane_intersections(
                     rays=rays,
                     target_areas=self.scenario.target_areas,
-                    target_area_mask=target_area_mask[
-                        active_heliostats_mask_batch
-                    ],
+                    target_area_mask=target_area_mask[active_heliostats_mask_batch],
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
                     ],
@@ -608,7 +616,9 @@ class HeliostatRayTracer:
             & intersection_indices_2
         )
         mask = final_intersection_indices.flatten()
-        heliostat_indices = torch.arange(self.heliostat_group.number_of_active_heliostats, device=device).repeat_interleave(total_intersections * 4)
+        heliostat_indices = torch.arange(
+            self.heliostat_group.number_of_active_heliostats, device=device
+        ).repeat_interleave(total_intersections * 4)
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(

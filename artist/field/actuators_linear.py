@@ -51,11 +51,10 @@ class LinearActuators(Actuators):
             The six actuator parameters.
         """
         super().__init__()
-        
+
         self.actuator_parameters = actuator_parameters
 
         self.active_actuator_parameters = None
-
 
     def _motor_positions_to_absolute_angles(
         self, motor_positions: torch.Tensor
