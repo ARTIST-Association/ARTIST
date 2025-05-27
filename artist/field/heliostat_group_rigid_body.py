@@ -150,7 +150,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = torch.device(device)
 
-        self.kinematic.aim_points=aim_points
+        self.kinematic.aim_points = aim_points
 
         (
             self.active_surface_points,
