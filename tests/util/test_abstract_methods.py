@@ -21,11 +21,11 @@ def test_abstract_actuators(
     AssertionError
         If test does not complete as expected.
     """
-    abstract_actuator = Actuators()
+    actuator_parameters = torch.rand((3, 7, 2))
+    abstract_actuator = Actuators(actuator_parameters=actuator_parameters)
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_actuator.motor_positions_to_angles(
-            active_heliostats_indices=torch.tensor([0], device=device),
             motor_positions=torch.tensor([0.0, 0.0], device=device),
             device=device,
         )
@@ -33,7 +33,6 @@ def test_abstract_actuators(
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_actuator.angles_to_motor_positions(
-            active_heliostats_indices=torch.tensor([0], device=device),
             angles=torch.tensor([0.0, 0.0], device=device),
             device=device,
         )
@@ -70,8 +69,8 @@ def test_abstract_heliostat_group(
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=torch.tensor([0.0, -10.0, 0.0, 0.0], device=device),
             incident_ray_directions=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-            active_heliostats_indices=torch.tensor([0, 0], device=device),
             device=device,
         )
     assert "Must be overridden!" in str(exc_info.value)
@@ -79,7 +78,6 @@ def test_abstract_heliostat_group(
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_heliostat_group.get_orientations_from_motor_positions(
             motor_positions=torch.tensor([0.0, 0.0], device=device),
-            active_heliostats_indices=torch.tensor([0, 0], device=device),
             device=device,
         )
     assert "Must be overridden!" in str(exc_info.value)

@@ -124,7 +124,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device,
         )
 
-
     def align_surfaces_with_incident_ray_directions(
         self,
         aim_points: torch.Tensor,

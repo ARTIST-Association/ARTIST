@@ -50,11 +50,7 @@ class LinearActuators(Actuators):
         actuator_parameters : torch.Tensor
             The six actuator parameters.
         """
-        super().__init__()
-
-        self.actuator_parameters = actuator_parameters
-
-        self.active_actuator_parameters = None
+        super().__init__(actuator_parameters=actuator_parameters)
 
     def _motor_positions_to_absolute_angles(
         self, motor_positions: torch.Tensor
@@ -129,10 +125,8 @@ class LinearActuators(Actuators):
 
         relative_angles = (
             self.active_actuator_parameters[:, 6]
-            + delta_angles
-            * (self.active_actuator_parameters[:, 1] == 1)
-            - delta_angles
-            * (self.active_actuator_parameters[:, 1] == 0)
+            + delta_angles * (self.active_actuator_parameters[:, 1] == 1)
+            - delta_angles * (self.active_actuator_parameters[:, 1] == 0)
         )
         return relative_angles
 

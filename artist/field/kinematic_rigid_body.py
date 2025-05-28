@@ -97,10 +97,16 @@ class RigidBody(Kinematic):
         self.initial_orientations = initial_orientations
         self.deviation_parameters = deviation_parameters
 
-        self.number_of_active_heliostats = None
-        self.active_heliostat_positions = None
-        self.active_initial_orientations = None
-        self.active_deviation_parameters = None
+        self.number_of_active_heliostats = 0
+        self.active_heliostat_positions = torch.empty_like(
+            heliostat_positions, device=device
+        )
+        self.active_initial_orientations = torch.empty_like(
+            initial_orientations, device=device
+        )
+        self.active_deviation_parameters = torch.empty_like(
+            deviation_parameters, device=device
+        )
 
         self.aim_points = aim_points
 
@@ -108,10 +114,9 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.actuators = field_mappings.actuator_type_mapping[actuator_parameters[0, 0, 0].item()](
-            actuator_parameters=actuator_parameters
-        )
-
+        self.actuators = field_mappings.actuator_type_mapping[
+            actuator_parameters[0, 0, 0].item()
+        ](actuator_parameters=actuator_parameters)
 
     def incident_ray_directions_to_orientations(
         self,

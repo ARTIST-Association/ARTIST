@@ -24,9 +24,9 @@ set_logger_config()
         ),
         (
             "use_raytracing",
-            0.005,
+            0.0005,
             15,
-            0.001,
+            0.0001,
         ),
     ],
 )
@@ -90,13 +90,13 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    for heliostat_group in scenario.heliostat_field.heliostat_groups:
+    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         (
-            centers_calibration_images,
-            light_source_positions,
-            all_calibration_motor_positions,
-            heliostat_indices,
-            target_area_indices,
+            focal_spots_calibration,
+            incident_ray_directions_calibration,
+            motor_positions_calibration,
+            heliostats_mask_calibration,
+            target_area_mask_calibration,
         ) = paint_loader.extract_paint_calibration_data(
             heliostat_calibration_mapping=[
                 (heliostat_name, paths)
@@ -109,75 +109,54 @@ def test_kinematic_optimizer(
             device=device,
         )
 
-        # create calibration group
-        heliostat_group_class = type(heliostat_group)
-        calibration_group = heliostat_group_class(
-            names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
-            positions=heliostat_group.positions[heliostat_indices],
-            aim_points=scenario.target_areas.centers[target_area_indices],
-            surface_points=heliostat_group.surface_points[heliostat_indices],
-            surface_normals=heliostat_group.surface_normals[heliostat_indices],
-            initial_orientations=heliostat_group.initial_orientations[
-                heliostat_indices
-            ],
-            kinematic_deviation_parameters=heliostat_group.kinematic_deviation_parameters[
-                heliostat_indices
-            ],
-            actuator_parameters=heliostat_group.actuator_parameters[heliostat_indices],
-            device=device,
-        )
-
-        incident_ray_directions = (
-            torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
-        )
-
+        # Select the kinematic parameters to be optimized and calibrated.
         optimizable_parameters = [
-            calibration_group.kinematic_deviation_parameters.requires_grad_(),
-            calibration_group.actuator_parameters.requires_grad_(),
+            heliostat_group.kinematic_deviation_parameters.requires_grad_(),
+            heliostat_group.actuator_parameters.requires_grad_(),
         ]
 
         optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
 
-        # Create alignment optimizer.
+        # Create the kinematic optimizer.
         kinematic_optimizer = KinematicOptimizer(
             scenario=scenario,
-            calibration_group=calibration_group,
+            heliostat_group=heliostat_group,
             optimizer=optimizer,
         )
 
         if optimizer_method == config_dictionary.optimizer_use_raytracing:
-            all_calibration_motor_positions = None
+            motor_positions_calibration = None
 
-        calibrated_kinematic_deviation_parameters, calibrated_actuator_parameters = (
-            kinematic_optimizer.optimize(
-                tolerance=tolerance,
-                max_epoch=max_epoch,
-                centers_calibration_images=centers_calibration_images,
-                incident_ray_directions=incident_ray_directions,
-                target_area_indices=target_area_indices,
-                motor_positions=all_calibration_motor_positions,
-                num_log=max_epoch,
-                device=device,
-            )
+        # Calibrate the kinematic.
+        kinematic_optimizer.optimize(
+            focal_spots_calibration=focal_spots_calibration,
+            incident_ray_directions=incident_ray_directions_calibration,
+            active_heliostats_mask=heliostats_mask_calibration,
+            target_area_mask_calibration=target_area_mask_calibration,
+            motor_positions_calibration=motor_positions_calibration,
+            tolerance=tolerance,
+            max_epoch=max_epoch,
+            num_log=max_epoch,
+            device=device,
         )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_optimized_kinematic_parameters"
-        / f"{optimizer_method}_{device.type}.pt"
-    )
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/expected_optimized_kinematic_parameters"
+            / f"{optimizer_method}_group{index}_{device.type}.pt"
+        )
 
-    expected = torch.load(expected_path, map_location=device, weights_only=True)
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(
-        calibrated_kinematic_deviation_parameters,
-        expected["kinematic_deviations"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
-    torch.testing.assert_close(
-        calibrated_actuator_parameters,
-        expected["actuator_parameters"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
+        torch.testing.assert_close(
+            heliostat_group.kinematic_deviation_parameters,
+            expected["kinematic_deviations"],
+            atol=5e-2,
+            rtol=5e-2,
+        )
+        torch.testing.assert_close(
+            heliostat_group.actuator_parameters,
+            expected["actuator_parameters"],
+            atol=5e-2,
+            rtol=5e-2,
+        )

@@ -60,20 +60,12 @@ original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_p
     active_heliostats_indices
 ]
 
-# Set the aimpoint for our heliostat. The aim point is part of the kinematic.
-# Let's say we want to aim at the center of the receiver.
-# As examined earlier, the receiver is at index 0 of the target areas.
-aim_point = scenario.target_areas.centers[target_area_indices]
-scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[
-    active_heliostats_indices
-] = aim_point
-
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
     0
 ].align_surfaces_with_incident_ray_directions(
+    aim_points=scenario.target_areas.centers[target_area_indices],
     incident_ray_directions=incident_ray_directions,
-    active_heliostats_indices=active_heliostats_indices,
     device=device,
 )
 
@@ -153,8 +145,7 @@ ray_tracer = HeliostatRayTracer(
 # Perform heliostat-based ray tracing.
 image_south = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
-    active_heliostats_indices=active_heliostats_indices,
-    target_area_indices=target_area_indices,
+    target_area_mask=target_area_indices,
     device=device,
 )
 
@@ -194,16 +185,15 @@ def align_and_trace_rays(
     scenario.heliostat_field.heliostat_groups[
         0
     ].align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[target_area_indices],
         incident_ray_directions=light_direction,
-        active_heliostats_indices=active_heliostats_indices,
         device=device,
     )
 
     # Perform heliostat-based ray tracing.
     return ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        target_area_mask=target_area_indices,
         device=device,
     )
 

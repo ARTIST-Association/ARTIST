@@ -72,7 +72,7 @@ class KinematicOptimizer:
         max_epoch: int = 10000,
         num_log: int = 3,
         device: Union[torch.device, str] = "cuda",
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> None:
         """
         Optimize the kinematic parameters.
 
@@ -96,13 +96,6 @@ class KinematicOptimizer:
             Number of log messages during training (default is 3).
         device : Union[torch.device, str] = "cuda"
             The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        torch.Tensor
-            The calibrated kinematic deviation parameters.
-        torch.Tensor
-            The calibrated actuator parameters.
         """
         log.info("Start the kinematic calibration.")
 

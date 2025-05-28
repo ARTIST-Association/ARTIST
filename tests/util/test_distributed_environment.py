@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from artist.util.utils import setup_global_distributed_environment
+from artist.util.distributed_environment import setup_global_distributed_environment
 
 
 @pytest.mark.parametrize(

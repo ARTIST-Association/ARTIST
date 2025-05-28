@@ -36,8 +36,16 @@ from artist.util.scenario import Scenario
                 ("AA39", "receiver", torch.tensor([1.0, 0.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([0.0, 0.0, -1.0, 0.0])),
                 ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-                ("AA39", "solar_tower_juelich_lower", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-                ("AA39", "solar_tower_juelich_upper", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                (
+                    "AA39",
+                    "solar_tower_juelich_lower",
+                    torch.tensor([0.0, 1.0, 0.0, 0.0]),
+                ),
+                (
+                    "AA39",
+                    "solar_tower_juelich_upper",
+                    torch.tensor([0.0, 1.0, 0.0, 0.0]),
+                ),
             ],
             "test_scenario_paint_single_heliostat",
         ),
@@ -121,7 +129,7 @@ def test_integration_alignment(
             heliostat_group=heliostat_group,
             bitmap_resolution_e=bitmap_resolution_e,
             bitmap_resolution_u=bitmap_resolution_u,
-            batch_size=10
+            batch_size=10,
         )
 
         # Perform heliostat-based ray tracing.
@@ -131,7 +139,14 @@ def test_integration_alignment(
             device=device,
         )
 
-        group_bitmaps_per_target = torch.zeros((scenario.target_areas.number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u), device=device)
+        group_bitmaps_per_target = torch.zeros(
+            (
+                scenario.target_areas.number_of_target_areas,
+                bitmap_resolution_e,
+                bitmap_resolution_u,
+            ),
+            device=device,
+        )
         for index in range(scenario.target_areas.number_of_target_areas):
             mask = target_area_mask == index
             if mask.any():
