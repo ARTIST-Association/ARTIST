@@ -44,11 +44,11 @@ print(
 
 # Let's say we only want to consider one Heliostat for the beginning.
 # We will choose the first Heliostat, with index 0 by activating it.
-active_heliostats_indices = torch.tensor([0], device=device)
+active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
 # Each heliostat has an aim point, it makes sense to choose an aimpoint on one of the target areas.
 # We select the first target area as the designated target for this heliostat.
-target_area_indices = torch.tensor([0], device=device)
+target_area_mask = torch.tensor([0], device=device)
 
 # Since we only have one helisotat we need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
@@ -56,15 +56,18 @@ target_area_indices = torch.tensor([0], device=device)
 incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 
 # Save the original surface points of the one active heliostat.
-original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points[
-    active_heliostats_indices
-]
+original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points
+
+# Activate heliostats, only activated heliostats will be aligned or raytraced.
+scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+    active_heliostats_mask=active_heliostats_mask
+)
 
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
     0
 ].align_surfaces_with_incident_ray_directions(
-    aim_points=scenario.target_areas.centers[target_area_indices],
+    aim_points=scenario.target_areas.centers[target_area_mask],
     incident_ray_directions=incident_ray_directions,
     device=device,
 )
@@ -75,7 +78,7 @@ scenario.heliostat_field.heliostat_groups[
 # That is why we do not need to select specific indices here.
 aligned_surface_points = scenario.heliostat_field.heliostat_groups[
     0
-].current_aligned_surface_points
+].active_surface_points
 
 # Let's plot the original and the aligned surface points.
 # Define colors for each facet of the heliostat.
@@ -135,6 +138,7 @@ fig.legend(handles, labels, loc="upper center", ncols=4)
 
 # Show the plot.
 plt.show()
+plt.savefig("tut_1.png")
 
 # Create a ray tracer.
 ray_tracer = HeliostatRayTracer(
@@ -145,7 +149,7 @@ ray_tracer = HeliostatRayTracer(
 # Perform heliostat-based ray tracing.
 image_south = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
-    target_area_mask=target_area_indices,
+    target_area_mask=target_area_mask,
     device=device,
 )
 
@@ -153,13 +157,14 @@ image_south = ray_tracer.trace_rays(
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.imshow(image_south[0].cpu().detach().numpy(), cmap="inferno")
 tight_layout()
+plt.savefig("tut_2.png")
 
 
 # Define helper functions to enable us to repeat the process!
 def align_and_trace_rays(
     light_direction: torch.Tensor,
-    active_heliostats_indices: torch.Tensor,
-    target_area_indices: torch.Tensor,
+    active_heliostats_mask: torch.Tensor,
+    target_area_mask: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
@@ -167,11 +172,11 @@ def align_and_trace_rays(
 
     Parameters
     ----------
-    light_directions : torch.Tensor
+    light_direction : torch.Tensor
         The direction of the incoming light on the heliostat.
-    active_heliostats_indices : torch.Tensor
-        The indices of the active heliostats to be aligned.
-    target_area_indices : torch.Tensor
+    active_heliostats_mask : torch.Tensor
+        A mask for the active heliostats.
+    target_area_mask : torch.Tensor
         The indices of the target areas for each active heliostat.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
@@ -181,11 +186,16 @@ def align_and_trace_rays(
     torch.Tensor
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
+    # Activate heliostats
+    scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+        active_heliostats_mask=active_heliostats_mask
+    )
+
     # Align all heliostats.
     scenario.heliostat_field.heliostat_groups[
         0
     ].align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=light_direction,
         device=device,
     )
@@ -193,7 +203,7 @@ def align_and_trace_rays(
     # Perform heliostat-based ray tracing.
     return ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
-        target_area_mask=target_area_indices,
+        target_area_mask=target_area_mask,
         device=device,
     )
 
@@ -243,7 +253,7 @@ def plot_multiple_images(
 
     plt.tight_layout()
     plt.show()
-    plt.savefig("tutorial3.png")
+    plt.savefig("tut_3.png")
 
 
 # Consider multiple incident ray directions and plot the result.
@@ -255,20 +265,20 @@ incident_ray_direction_above = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=devi
 # Perform alignment and ray tracing to generate flux density images.
 image_east = align_and_trace_rays(
     light_direction=incident_ray_direction_east,
-    active_heliostats_indices=active_heliostats_indices,
-    target_area_indices=target_area_indices,
+    active_heliostats_mask=active_heliostats_mask,
+    target_area_mask=target_area_mask,
     device=device,
 )
 image_west = align_and_trace_rays(
     light_direction=incident_ray_direction_west,
-    active_heliostats_indices=active_heliostats_indices,
-    target_area_indices=target_area_indices,
+    active_heliostats_mask=active_heliostats_mask,
+    target_area_mask=target_area_mask,
     device=device,
 )
 image_above = align_and_trace_rays(
     light_direction=incident_ray_direction_above,
-    active_heliostats_indices=active_heliostats_indices,
-    target_area_indices=target_area_indices,
+    active_heliostats_mask=active_heliostats_mask,
+    target_area_mask=target_area_mask,
     device=device,
 )
 

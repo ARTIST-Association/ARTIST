@@ -17,44 +17,32 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
 heliostat_calibration_mapping = [
     (
-        "AA39",
+        "name1",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
-            ),
+            # pathlib.Path(
+            #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            # ),
+            # ....
         ],
     ),
     (
-        "AA31",
+        "name2",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
         ],
     ),
+    # ...
 ]
 
 # Load the scenario.
