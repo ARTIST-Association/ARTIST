@@ -166,15 +166,28 @@ Selecting Active Heliostats and Target Areas
 In ARTIST the information about the helisotats is saved per heliostat property. There is one tensor containing
 all heliostat positions from a specific heliostat group. Similarly there is one tensor containing all aim points and so on.
 To address a specific heliostat, it is important to know its index. To activate one or more heliostats for the
-alignment process or raytracing, you can specify these indices in the ``active_heliostats_indices`` tensor, like this:
+alignment process or raytracing, you can mark the entry at the heliostat index with a 1 in the ``active_heliostats_mask`` tensor,
+like this:
 
 .. code-block::
+
+    # Let's say we only want to consider one Heliostat for the beginning.
     # We will choose the first Heliostat, with index 0 by activating it.
-    active_heliostats_indices = torch.tensor([0], device=device)
+    active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
+
+Then we activate these heliostats by calling the ``activate_heliostats()`` method:
+
+.. code-block::
+
+    # Activate heliostats, only activated heliostats will be aligned or raytraced.
+    scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+        active_heliostats_mask=active_heliostats_mask
+    )
 
 The same is true for the target areas.
 
 .. code-block::
+
     # We select the first target area as the designated target for this heliostat.
     target_area_indices = torch.tensor([0], device=device)
 
@@ -204,8 +217,8 @@ Given an *incident ray direction*, we can align the heliostats with the followin
     scenario.heliostat_field.heliostat_groups[
         0
     ].align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=incident_ray_directions,
-        active_heliostats_indices=active_heliostats_indices,
         device=device,
     )
 
@@ -263,8 +276,7 @@ desired incident ray directions, the active heliostat indices and the target are
     # Perform heliostat-based ray tracing.
     image_south = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        target_area_mask=target_area_mask,
         device=device,
     )
 
@@ -290,22 +302,23 @@ ray tracing with the following code:
     # Perform alignment and ray tracing to generate flux density images.
     image_east = align_and_trace_rays(
         light_direction=incident_ray_direction_east,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
         device=device,
     )
     image_west = align_and_trace_rays(
         light_direction=incident_ray_direction_west,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
         device=device,
     )
     image_above = align_and_trace_rays(
         light_direction=incident_ray_direction_above,
-        active_heliostats_indices=active_heliostats_indices,
-        target_area_indices=target_area_indices,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
         device=device,
     )
+
 
 If we were to now plot the results of all four considered incident ray directions, we get the following image:
 

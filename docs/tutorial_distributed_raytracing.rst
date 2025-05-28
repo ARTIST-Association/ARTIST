@@ -58,7 +58,7 @@ All of this is handled by running the following code:
 .. code-block::
 
     # The distributed environment is setup and destroyed using a Generator object.
-    environment_generator = utils.setup_distributed_environment(device=device)
+    environment_generator = setup_global_distributed_environment(device=device)
 
     device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -112,7 +112,9 @@ The only step left is to add up all of those bitmaps to receive the total Flux D
 .. code-block::
 
     if is_distributed:
-        torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(
+            group_bitmaps_per_heliostat, op=torch.distributed.ReduceOp.SUM
+        )
 
 The total Flux Density Distribution now looks like this:
 
