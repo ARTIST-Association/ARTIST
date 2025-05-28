@@ -10,7 +10,7 @@ from artist.util.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaConfig,
+    TargetAreaListConfig,
 )
 
 
@@ -123,7 +123,7 @@ def test_extract_paint_calibration_data(
     [
         (
             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/tower-measurements.json",
-            [PowerPlantConfig, TargetAreaConfig],
+            [PowerPlantConfig, TargetAreaListConfig],
             torch.tensor(
                 [50.913421122593, 6.387824755875, 87.000000000000], dtype=torch.float64
             ),
@@ -143,8 +143,8 @@ def test_extract_paint_calibration_data(
                 torch.tensor(
                     [[0.000000000000, 0.906307816505, -0.422618269920, 0.000000000000]]
                 ),
-                torch.tensor(4.528313636780, device="cuda:0"),
-                torch.tensor(5.218500137329, device="cuda:0"),
+                torch.tensor(4.528313636780),
+                torch.tensor(5.218500137329),
             ],
         )
     ],

@@ -31,7 +31,7 @@ def mock_scenario(
     mock_heliostat_group = MagicMock(spec=HeliostatGroupRigidBody)
     mock_heliostat_group.number_of_heliostats = 4
     mock_heliostat_group.number_of_active_heliostats = request.param[0]
-    mock_heliostat_group.aligned_heliostats = request.param[1]
+    mock_heliostat_group.number_of_aligned_heliostats = request.param[1]
     mock_scenario.heliostat_field = mock_heliostat_field
     mock_scenario.heliostat_field.heliostat_groups = [mock_heliostat_group]
     return mock_scenario
