@@ -46,24 +46,26 @@ The mapping from heliostat to calibration files should follow this pattern:
     # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
     heliostat_calibration_mapping = [
         (
-            "heliostat_name_1",
+            "name1",
             [
                 pathlib.Path(
-                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                    "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
                 ),
+                # pathlib.Path(
+                #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                # ),
+                # ....
             ],
         ),
         (
-            "heliostat_name_2",
+            "name2",
             [
                 pathlib.Path(
-                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
-                ),
-                pathlib.Path(
-                    "please/insert/the/path/to/the/calibration/data/here/calibration-properties.json"
+                    "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
                 ),
             ],
         ),
+        # ...
     ]
 
 In this mapping the first heliostat would have one calibration file and the second heliostat would have two.
@@ -73,11 +75,11 @@ You can specify as many as you want for each helisotat. The data is loaded with 
 
     # Load the calibration data.
     (
-        centers_calibration_images,
-        light_source_positions,
-        calibration_motor_positions,
-        heliostat_indices,
-        target_area_indices,
+        focal_spots_calibration,
+        incident_ray_directions_calibration,
+        motor_positions_calibration,
+        heliostats_mask_calibration,
+        target_area_mask_calibration,
     ) = paint_loader.extract_paint_calibration_data(
         heliostat_calibration_mapping=[
             (heliostat_name, paths)
@@ -92,29 +94,6 @@ You can specify as many as you want for each helisotat. The data is loaded with 
 
 Now we have all the calibration data we need to calibrate the kinematic of the provided scenario.
 
-Calibration Group and Optimizable Parameters
------------------------------------------------
-Since we are only selecting a subset of all heliostats in the scenario and some helisotats need to be
-replicated, if they have multiple calibration files assigned to them, we need to set up a new ``HeliostatGroup``.
-
-.. code-block::
-
-    # Create calibration group
-    heliostat_group_class = type(heliostat_group)
-    calibration_group = heliostat_group_class(
-        names=[heliostat_group.names[i] for i in heliostat_indices.tolist()],
-        positions=heliostat_group.positions[heliostat_indices],
-        aim_points=scenario.target_areas.centers[target_area_indices],
-        surface_points=heliostat_group.surface_points[heliostat_indices],
-        surface_normals=heliostat_group.surface_normals[heliostat_indices],
-        initial_orientations=heliostat_group.initial_orientations[heliostat_indices],
-        kinematic_deviation_parameters=heliostat_group.kinematic_deviation_parameters[
-            heliostat_indices
-        ],
-        actuator_parameters=heliostat_group.actuator_parameters[heliostat_indices],
-        device=device,
-    )
-
 For this kinematic type there are altogether 28 optimizable parameters.
 18 parameters are kinematic deviation parameters, and then there are 5 actuator parameters for each actuator.
 You can select all of them with the following code:
@@ -123,8 +102,8 @@ You can select all of them with the following code:
 
     # Select the kinematic parameters to be optimized and calibrated.
     optimizable_parameters = [
-        calibration_group.kinematic_deviation_parameters.requires_grad_(),
-        calibration_group.actuator_parameters.requires_grad_(),
+        heliostat_group.kinematic_deviation_parameters.requires_grad_(),
+        heliostat_group.actuator_parameters.requires_grad_(),
     ]
 
 Setting up the ``KinematicOptimizer``
@@ -155,18 +134,18 @@ We start the optimization process by calling:
 .. code-block::
 
     # Calibrate the kinematic.
-    calibrated_kinematic_deviation_parameters, calibrated_actuator_parameters = (
-        kinematic_optimizer.optimize(
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            centers_calibration_images=centers_calibration_images,
-            incident_ray_directions=incident_ray_directions,
-            target_area_indices=target_area_indices,
-            motor_positions=calibration_motor_positions,
-            num_log=max_epoch,
-            device=device,
-        )
+    kinematic_optimizer.optimize(
+        focal_spots_calibration=focal_spots_calibration,
+        incident_ray_directions=incident_ray_directions_calibration,
+        active_heliostats_mask=heliostats_mask_calibration,
+        target_area_mask_calibration=target_area_mask_calibration,
+        motor_positions_calibration=motor_positions_calibration,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
+        num_log=max_epoch,
+        device=device,
     )
+
 
 Currently there are two methods to calibrate the kinematic. Either we use geometric considerations and the
 motor positions from the calibration data or we optimize using flux density distributions and the differentiable
