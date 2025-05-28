@@ -133,24 +133,17 @@ def test_integration_alignment(
         )
 
         # Perform heliostat-based ray tracing.
-        group_bitmaps = ray_tracer.trace_rays(
+        group_bitmaps_per_heliostat = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             target_area_mask=target_area_mask,
             device=device,
         )
 
-        group_bitmaps_per_target = torch.zeros(
-            (
-                scenario.target_areas.number_of_target_areas,
-                bitmap_resolution_e,
-                bitmap_resolution_u,
-            ),
+        group_bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+            bitmaps_per_heliostat=group_bitmaps_per_heliostat,
+            target_area_mask=target_area_mask,
             device=device,
         )
-        for index in range(scenario.target_areas.number_of_target_areas):
-            mask = target_area_mask == index
-            if mask.any():
-                group_bitmaps_per_target[index] = group_bitmaps[mask].sum(dim=0)
 
         flux_distributions = flux_distributions + group_bitmaps_per_target
 

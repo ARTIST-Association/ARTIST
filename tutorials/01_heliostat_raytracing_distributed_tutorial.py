@@ -18,9 +18,7 @@ set_logger_config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = setup_global_distributed_environment(device=device)
@@ -38,15 +36,15 @@ incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 heliostat_target_light_source_mapping = None
 
 # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-heliostat_target_light_source_mapping = [
-    ("AA39", "receiver", incident_ray_direction),
-    ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
-]
+# heliostat_target_light_source_mapping = [
+#     ("AA39", "receiver", incident_ray_direction),
+#     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
+# ]
 
 bitmap_resolution_e, bitmap_resolution_u = 256, 256
-final_flux_distributions = torch.zeros(
+flux_distributions = torch.zeros(
     (
-        scenario.heliostat_field.number_of_heliostat_groups,
+        scenario.target_areas.number_of_target_areas,
         bitmap_resolution_e,
         bitmap_resolution_u,
     ),
@@ -93,17 +91,24 @@ for heliostat_group_index, heliostat_group in enumerate(
     )
 
     # Perform heliostat-based ray tracing.
-    group_bitmap = ray_tracer.trace_rays(
+    group_bitmaps_per_heliostat = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         target_area_mask=target_area_mask,
         device=device,
     )
 
     if is_distributed:
-        torch.distributed.all_reduce(group_bitmap, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(
+            group_bitmaps_per_heliostat, op=torch.distributed.ReduceOp.SUM
+        )
 
-    final_flux_distributions[heliostat_group_index] = group_bitmap.sum(dim=0)
+    group_bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+        bitmaps_per_heliostat=group_bitmaps_per_heliostat,
+        target_area_mask=target_area_mask,
+        device=device,
+    )
 
+    flux_distributions = flux_distributions + group_bitmaps_per_target
 
 # Make sure the code after the yield statement in the environment Generator
 # is called, to clean up the distributed process group.

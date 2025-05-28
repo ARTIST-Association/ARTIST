@@ -232,7 +232,7 @@ def extract_paint_tower_measurements(
         center_enu = convert_wgs84_coordinates_to_local_enu(
             center_lat_lon, power_plant_position, device=device
         )
-        center = utils.convert_3d_point_to_4d_format(center_enu, device=device)
+        center = utils.convert_3d_point_to_4d_format(center_enu[0], device=device)
 
         normal_vector = utils.convert_3d_direction_to_4d_format(
             torch.tensor(
@@ -314,7 +314,7 @@ def extract_paint_heliostats(
                 device=device,
             )
             heliostat_position = utils.convert_3d_point_to_4d_format(
-                heliostat_position_3d, device=device
+                heliostat_position_3d[0], device=device
             )
 
             # Generate surface configuration from data.

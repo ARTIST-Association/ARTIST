@@ -207,6 +207,8 @@ class HeliostatRayTracer:
         Scatter the reflected rays around the preferred ray directions for each heliostat.
     sample_bitmaps()
         Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
+    get_bitmaps_per_target.
+        Transform bitmaps per heliostat to bitmaps per target area.
     """
 
     def __init__(
@@ -649,3 +651,43 @@ class HeliostatRayTracer:
         )
 
         return bitmaps_per_heliostat
+
+    def get_bitmaps_per_target(
+        self,
+        bitmaps_per_heliostat: torch.Tensor,
+        target_area_mask: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> torch.Tensor:
+        """
+        Transform bitmaps per heliostat to bitmaps per target area.
+
+        Parameters
+        ----------
+        bitmaps_per_heliostat : torch.Tensor
+            Bitmaps per heliostat.
+        target_area_mask : torch.Tensor
+            The mapping from heliostat to target area.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
+
+        Returns
+        -------
+        torch.Tensor
+            Bitmaps per target area.
+        """
+        device = torch.device(device)
+
+        group_bitmaps_per_target = torch.zeros(
+            (
+                self.scenario.target_areas.number_of_target_areas,
+                self.bitmap_resolution_e,
+                self.bitmap_resolution_u,
+            ),
+            device=device,
+        )
+        for index in range(self.scenario.target_areas.number_of_target_areas):
+            mask = target_area_mask == index
+            if mask.any():
+                group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(dim=0)
+
+        return group_bitmaps_per_target
