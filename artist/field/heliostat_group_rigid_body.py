@@ -39,17 +39,20 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         The kinematic deviation parameters of all heliostats in the group.
     actuator_parameters : torch.Tensor
         The actuator parameters of all actuators in the group.
-    aligned_heliostats : torch.Tensor
-        Information about alignment of heliostats.
-        Unaligned heliostats marked with 0, aligned heliostats marked with 1.
+    kinematic : RigidBody
+        The kinematic (rigid body kinematic) of all heliostats in the group.
+    number_of_aligned_heliostats : int
+        The number of aligned heliostats.
+    number_of_active_heliostats : int
+        The number of active heliostats.
+    active_heliostats_mask : torch.Tensor
+        A mask defining which heliostats are activated.
+    active_surface_points : torch.Tensor
+        The surface points of all active heliostats in the group, these can be aligned.
+    active_surface_normals : torch.Tensor
+        The surface normals of all active heliostats in the group, these can be aligned.
     preferred_reflection_directions : torch.Tensor
         The preferred reflection directions of all heliostats in the group.
-    current_aligned_surface_points : torch.Tensor
-        The aligned surface points of all heliostats in the group.
-    current_aligned_surface_normals : torch.Tensor
-        The aligned surface normals of all heliostats in the group.
-    kinematic : RigidBody
-        The kinematic (rigid body) of all heliostats in the group.
 
     Methods
     -------
@@ -143,7 +146,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         aim_points : torch.Tensor
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
-            The incident ray direction.
+            The incident ray directions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """

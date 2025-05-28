@@ -192,12 +192,20 @@ class Scenario:
         """
         Create an index mapping from heliostat names, target area names and incident ray directions.
 
+        If no mapping is provided, a default mapping for all heliostats within this group will be created.
+        The target area will be the first found in this scenario, and the default light direction will come from
+        sun positioned in the south.
+
         Parameters
         ----------
-        string_mapping : (Optional[list[tuple[str, str, torch.Tensor]]])
-            Strings that map heliostats to target areas and incident ray direction tensors.
-        heliostat_group_index : int
-            The index of the current heliostat group.
+        heliostat_group : HeliostatGroup
+            The current heliostat group.
+        string_mapping : Optional[list[tuple[str, str, torch.Tensor]]]
+            Strings that map heliostats to target areas and incident ray direction tensors (default is None).
+        default_incident_ray_direction : torch.Tensor
+            The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+        default_target_are_index : int
+            The default target area index (default is 0).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

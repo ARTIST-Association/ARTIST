@@ -9,6 +9,13 @@ class IdealActuators(Actuators):
     """
     Implement the behavior of ideal actuators.
 
+    Attributes
+    ----------
+    actuator_parameters : torch.Tensor
+        The actuator parameters.
+    active_actuator_parameters : torch.Tensor
+        The active actuator parameters.
+
     Methods
     -------
     motor_positions_to_angles()
@@ -24,6 +31,14 @@ class IdealActuators(Actuators):
     """
 
     def __init__(self, actuator_parameters: torch.Tensor) -> None:
+        """
+        Initialize ideal actuators.
+
+        Parameters
+        ----------
+        actuator_parameters : torch.Tensor
+            The two actuator parameters.
+        """
         super().__init__(actuator_parameters=actuator_parameters)
 
     def motor_positions_to_angles(

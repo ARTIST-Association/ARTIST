@@ -71,7 +71,7 @@ def test_heliostat_field_load_from_hdf5_errors(
     ----------
     mocker : MockerFixture
         A pytest-mocker fixture used to create mock objects.
-    prototype_surface : Optional[MagicMock]
+    prototype_surface : SurfaceConfig
         The mock prototype surface.
     prototype_kinematic : dict[str, Union[str, torch.Tensor]]
         The mock prototype kinematic.
