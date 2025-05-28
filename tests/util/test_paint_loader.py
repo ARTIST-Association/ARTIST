@@ -132,12 +132,10 @@ def test_extract_paint_calibration_data(
                 "convex_cylinder",
                 torch.tensor(
                     [
-                        [
-                            3.860326111317e-02,
-                            -5.029551386833e-01,
-                            5.522674942017e01,
-                            1.000000000000e00,
-                        ]
+                        3.860326111317e-02,
+                        -5.029551386833e-01,
+                        5.522674942017e01,
+                        1.000000000000e00,
                     ]
                 ),
                 torch.tensor(
@@ -236,7 +234,7 @@ def test_extract_paint_tower_measurements(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [[11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]]
+                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
