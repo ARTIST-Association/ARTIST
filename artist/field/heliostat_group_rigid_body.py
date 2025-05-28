@@ -165,7 +165,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         )
 
         # Note that all active heliostats have been aligned.
-        self.aligned_heliostats = self.active_surface_points.shape[0]
+        self.number_of_aligned_heliostats = self.active_surface_points.shape[0]
 
     def get_orientations_from_motor_positions(
         self,
