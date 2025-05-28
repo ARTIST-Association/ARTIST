@@ -237,6 +237,19 @@ class Scenario:
             incident_ray_directions = torch.empty(
                 (len(string_mapping), 4), device=device
             )
+            heliostat_name_to_index = {
+                heliostat_name: index
+                for index, heliostat_name in enumerate(heliostat_group.names)
+            }
+            active_heliostats_mask = torch.zeros(
+                heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
+            )
+            target_area_mask = torch.empty(
+                len(string_mapping), dtype=torch.int32, device=device
+            )
+            incident_ray_directions = torch.empty(
+                (len(string_mapping), 4), device=device
+            )
 
             for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
                 string_mapping
