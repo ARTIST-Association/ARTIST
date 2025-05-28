@@ -24,7 +24,7 @@ class IdealActuators(Actuators):
     """
 
     def __init__(self, actuator_parameters: torch.Tensor) -> None:
-        self.actuator_parameters = actuator_parameters
+        super().__init__(actuator_parameters=actuator_parameters)
 
     def motor_positions_to_angles(
         self,

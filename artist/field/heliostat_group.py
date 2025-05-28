@@ -1,6 +1,6 @@
 """Heliostat group in ARTIST."""
 
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -78,15 +78,23 @@ class HeliostatGroup(torch.nn.Module):
 
         self.aligned_heliostats = 0
         self.number_of_active_heliostats = 0
-        self.active_heliostats_mask = None
-        self.active_surface_points = None
-        self.active_surface_normals = None
-        self.preferred_reflection_directions = None
+        self.active_heliostats_mask = torch.empty(
+            self.number_of_heliostats, device=device
+        )
+        self.active_surface_points = torch.empty_like(
+            self.surface_points, device=device
+        )
+        self.active_surface_normals = torch.empty_like(
+            self.surface_normals, device=device
+        )
+        self.preferred_reflection_directions = torch.empty(
+            (self.number_of_heliostats, 4), device=device
+        )
 
     def align_surfaces_with_incident_ray_directions(
         self,
+        aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -96,11 +104,10 @@ class HeliostatGroup(torch.nn.Module):
 
         Parameters
         ----------
-        incident_ray_direction : torch.Tensor
+        aim_points : torch.Tensor
+            The aim points for all active heliostats.
+        incident_ray_directions : torch.Tensor
             The incident ray direction.
-        active_heliostats_mask : Optional[torch.Tensor]
-            A mask for the active heliostats that will be aligned (default is None).
-            If no mask is provided, all heliostats will be activated.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -114,7 +121,6 @@ class HeliostatGroup(torch.nn.Module):
     def get_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
-        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -124,9 +130,6 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        active_heliostats_mask : Optional[torch.Tensor]
-            A mask for the active heliostats that will be aligned (default is None).
-            If no mask is provided, all heliostats will be activated.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -136,7 +139,7 @@ class HeliostatGroup(torch.nn.Module):
             Whenever called (abstract base class method).
         """
         raise NotImplementedError("Must be overridden!")
-    
+
     def activate_heliostats(self, active_heliostats_mask: torch.Tensor) -> None:
         """
         Activate certain heliostats for alignment, raytracing or calibration.
@@ -144,7 +147,7 @@ class HeliostatGroup(torch.nn.Module):
         Select and repeat indices of all active heliostat and kinematic parameters once according
         to the mask. Doing this once instead of slicing everytime when accessing one
         of those parameter tensors saves memory.
-        
+
         Parameters
         ----------
         active_heliostats_mask : torch.Tensor
@@ -153,14 +156,33 @@ class HeliostatGroup(torch.nn.Module):
         """
         self.number_of_active_heliostats = active_heliostats_mask.sum().item()
         self.active_heliostats_mask = active_heliostats_mask
-        self.active_surface_points = self.surface_points.repeat_interleave(active_heliostats_mask, dim=0)
-        self.active_surface_normals = self.surface_normals.repeat_interleave(active_heliostats_mask, dim=0)
+        self.active_surface_points = self.surface_points.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_surface_normals = self.surface_normals.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
         self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-        self.kinematic.active_heliostat_positions = self.kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_initial_orientations = self.kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.active_deviation_parameters = self.kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-        self.kinematic.actuators.active_actuator_parameters = self.kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-
+        self.kinematic.active_heliostat_positions = (
+            self.kinematic.heliostat_positions.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_initial_orientations = (
+            self.kinematic.initial_orientations.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_deviation_parameters = (
+            self.kinematic.deviation_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.actuators.active_actuator_parameters = (
+            self.kinematic.actuators.actuator_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
 
     def forward(self) -> None:
         """

@@ -19,6 +19,8 @@ class Actuators(torch.nn.Module):
 
     def __init__(
         self,
+        actuator_parameters: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Initialize abstract actuators.
@@ -30,6 +32,14 @@ class Actuators(torch.nn.Module):
         the motor steps to angles and another one for the opposite conversion of angles to motor steps.
         """
         super().__init__()
+
+        device = torch.device(device)
+
+        self.actuator_parameters = actuator_parameters
+
+        self.active_actuator_parameters = torch.empty_like(
+            self.actuator_parameters, device=device
+        )
 
     def motor_positions_to_angles(
         self,

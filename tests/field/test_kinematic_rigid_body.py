@@ -84,7 +84,7 @@ def kinematic_model_linear(
     linear_actuator_parameters[:, 5, 1] = 0.309
     linear_actuator_parameters[:, 6, 0] = -1.570796
     linear_actuator_parameters[:, 6, 1] = 0.959931
-    
+
     return RigidBody(
         number_of_heliostats=6,
         heliostat_positions=heliostat_positions,
@@ -217,7 +217,6 @@ def kinematic_model_ideal_2(
         deviation_parameters=torch.zeros((3, 18), dtype=torch.float, device=device),
         device=device,
     )
-
 
 
 @pytest.mark.parametrize(
@@ -479,13 +478,25 @@ def test_incident_ray_direction_to_orientation(
     """
     kinematic = request.getfixturevalue(kinematic_model_fixture)
 
-    active_heliostats_mask = torch.ones(kinematic.number_of_heliostats, dtype=torch.int32, device=device)
+    active_heliostats_mask = torch.ones(
+        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+    )
 
     kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematic.active_heliostat_positions = kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.active_initial_orientations = kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.active_deviation_parameters = kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.actuators.active_actuator_parameters = kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematic.active_heliostat_positions = (
+        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_initial_orientations = (
+        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_deviation_parameters = (
+        kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.actuators.active_actuator_parameters = (
+        kinematic.actuators.actuator_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
 
     orientation_matrix = kinematic.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
@@ -501,95 +512,124 @@ def test_incident_ray_direction_to_orientation(
     [
         (
             "kinematic_model_linear",
-            torch.tensor([[0.0, 0.0], 
-                          [5.0, 1000.0], 
-                          [10.0, 40.0],
-                          [0.0, 0.0], 
-                          [5.0, 1000.0], 
-                          [10.0, 40.0],]),
-            torch.tensor([[[ 5.7358e-01, -8.1915e-01,  0.0000e+00,  1.4544e-01],
-         [ 2.5715e-07,  1.8006e-07,  1.0000e+00, -8.9500e-02],
-         [-8.1915e-01, -5.7358e-01,  3.1392e-07,  1.0184e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[ 5.9221e-01, -8.0578e-01,  0.0000e+00,  1.4307e-01],
-         [ 8.2862e-05,  6.0899e-05,  1.0000e+00, -8.9511e-02],
-         [-8.0578e-01, -5.9221e-01,  1.0283e-04,  1.0514e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[ 5.7434e-01, -8.1862e-01,  0.0000e+00,  1.4535e-01],
-         [ 1.6830e-04,  1.1808e-04,  1.0000e+00, -8.9521e-02],
-         [-8.1862e-01, -5.7434e-01,  2.0559e-04,  1.0196e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[ 5.7358e-01, -8.1915e-01,  0.0000e+00,  1.4544e-01],
-         [ 2.5715e-07,  1.8006e-07,  1.0000e+00, -8.9500e-02],
-         [-8.1915e-01, -5.7358e-01,  3.1392e-07,  1.0184e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[ 5.9221e-01, -8.0578e-01,  0.0000e+00,  1.4307e-01],
-         [ 8.2862e-05,  6.0899e-05,  1.0000e+00, -8.9511e-02],
-         [-8.0578e-01, -5.9221e-01,  1.0283e-04,  1.0514e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[ 5.7434e-01, -8.1862e-01,  0.0000e+00,  1.4535e-01],
-         [ 1.6830e-04,  1.1808e-04,  1.0000e+00,  9.1048e-01],
-         [-8.1862e-01, -5.7434e-01,  2.0559e-04,  1.0196e-01],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]]],
-        ),
+            torch.tensor(
+                [
+                    [0.0, 0.0],
+                    [5.0, 1000.0],
+                    [10.0, 40.0],
+                    [0.0, 0.0],
+                    [5.0, 1000.0],
+                    [10.0, 40.0],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [
+                        [5.7358e-01, -8.1915e-01, 0.0000e00, 1.4544e-01],
+                        [2.5715e-07, 1.8006e-07, 1.0000e00, -8.9500e-02],
+                        [-8.1915e-01, -5.7358e-01, 3.1392e-07, 1.0184e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [5.9221e-01, -8.0578e-01, 0.0000e00, 1.4307e-01],
+                        [8.2862e-05, 6.0899e-05, 1.0000e00, -8.9511e-02],
+                        [-8.0578e-01, -5.9221e-01, 1.0283e-04, 1.0514e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [5.7434e-01, -8.1862e-01, 0.0000e00, 1.4535e-01],
+                        [1.6830e-04, 1.1808e-04, 1.0000e00, -8.9521e-02],
+                        [-8.1862e-01, -5.7434e-01, 2.0559e-04, 1.0196e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [5.7358e-01, -8.1915e-01, 0.0000e00, 1.4544e-01],
+                        [2.5715e-07, 1.8006e-07, 1.0000e00, -8.9500e-02],
+                        [-8.1915e-01, -5.7358e-01, 3.1392e-07, 1.0184e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [5.9221e-01, -8.0578e-01, 0.0000e00, 1.4307e-01],
+                        [8.2862e-05, 6.0899e-05, 1.0000e00, -8.9511e-02],
+                        [-8.0578e-01, -5.9221e-01, 1.0283e-04, 1.0514e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [5.7434e-01, -8.1862e-01, 0.0000e00, 1.4535e-01],
+                        [1.6830e-04, 1.1808e-04, 1.0000e00, 9.1048e-01],
+                        [-8.1862e-01, -5.7434e-01, 2.0559e-04, 1.0196e-01],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                ],
+            ),
         ),
         (
             "kinematic_model_ideal_1",
             torch.tensor([[26651, 15875]]),
-            torch.tensor([[[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  0.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  0.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  0.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  0.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  0.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01,  5.0753e-01,  0.0000e+00,  0.0000e+00],
-         [ 3.2746e-01,  5.5592e-01,  7.6402e-01,  1.0000e+00],
-         [ 3.8777e-01,  6.5830e-01, -6.4519e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01, -2.2185e-08, -5.0753e-01,  0.0000e+00],
-         [ 3.2746e-01,  7.6402e-01, -5.5592e-01,  0.0000e+00],
-         [ 3.8777e-01, -6.4519e-01, -6.5830e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01, -2.2185e-08, -5.0753e-01,  0.0000e+00],
-         [ 3.2746e-01,  7.6402e-01, -5.5592e-01,  0.0000e+00],
-         [ 3.8777e-01, -6.4519e-01, -6.5830e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01, -2.2185e-08, -5.0753e-01,  0.0000e+00],
-         [ 3.2746e-01,  7.6402e-01, -5.5592e-01,  0.0000e+00],
-         [ 3.8777e-01, -6.4519e-01, -6.5830e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]],
-
-        [[-8.6163e-01, -2.2185e-08, -5.0753e-01,  0.0000e+00],
-         [ 3.2746e-01,  7.6402e-01, -5.5592e-01,  0.0000e+00],
-         [ 3.8777e-01, -6.4519e-01, -6.5830e-01,  0.0000e+00],
-         [ 0.0000e+00,  0.0000e+00,  0.0000e+00,  1.0000e+00]]])
+            torch.tensor(
+                [
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
+                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 1.0000e00],
+                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, -2.2185e-08, -5.0753e-01, 0.0000e00],
+                        [3.2746e-01, 7.6402e-01, -5.5592e-01, 0.0000e00],
+                        [3.8777e-01, -6.4519e-01, -6.5830e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, -2.2185e-08, -5.0753e-01, 0.0000e00],
+                        [3.2746e-01, 7.6402e-01, -5.5592e-01, 0.0000e00],
+                        [3.8777e-01, -6.4519e-01, -6.5830e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, -2.2185e-08, -5.0753e-01, 0.0000e00],
+                        [3.2746e-01, 7.6402e-01, -5.5592e-01, 0.0000e00],
+                        [3.8777e-01, -6.4519e-01, -6.5830e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                    [
+                        [-8.6163e-01, -2.2185e-08, -5.0753e-01, 0.0000e00],
+                        [3.2746e-01, 7.6402e-01, -5.5592e-01, 0.0000e00],
+                        [3.8777e-01, -6.4519e-01, -6.5830e-01, 0.0000e00],
+                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                    ],
+                ]
+            ),
         ),
         (
             "kinematic_model_ideal_2",
@@ -669,13 +709,25 @@ def test_motor_positions_to_orientations(
     """
     kinematic = request.getfixturevalue(kinematic_model_fixture)
 
-    active_heliostats_mask = torch.ones(kinematic.number_of_heliostats, dtype=torch.int32, device=device)
+    active_heliostats_mask = torch.ones(
+        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+    )
 
     kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematic.active_heliostat_positions = kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.active_initial_orientations = kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.active_deviation_parameters = kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
-    kinematic.actuators.active_actuator_parameters = kinematic.actuators.actuator_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematic.active_heliostat_positions = (
+        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_initial_orientations = (
+        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_deviation_parameters = (
+        kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.actuators.active_actuator_parameters = (
+        kinematic.actuators.actuator_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
 
     orientation_matrix = kinematic.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),
