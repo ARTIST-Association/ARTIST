@@ -16,12 +16,47 @@ class HeliostatGroup(torch.nn.Module):
     field. The abstract base class defines an align function that all heliostat groups need to overwrite
     in order to align the heliostats within this group.
 
+    Attributes
+    ----------
+    number_of_heliostats : int
+        The number of heliostats in the group.
+    names : list[str]
+        The string names of each heliostat in the group in order.
+    positions : torch.Tensor
+        The positions of all heliostats in the group.
+    surface_points : torch.Tensor
+        The surface points of all heliostats in the group.
+    surface_normals : torch.Tensor
+        The surface normals of all heliostats in the group.
+    initial_orientations : torch.Tensor
+        The initial orientations of all heliostats in the group.
+    kinematic_deviation_parameters : torch.Tensor
+        The kinematic deviation parameters of all heliostats in the group.
+    actuator_parameters : torch.Tensor
+        The actuator parameters of all actuators in the group.
+    kinematic : Kinematic
+        The kinematic of all heliostats in the group.
+    number_of_aligned_heliostats : int
+        The number of aligned heliostats.
+    number_of_active_heliostats : int
+        The number of active heliostats.
+    active_heliostats_mask : torch.Tensor
+        A mask defining which heliostats are activated.
+    active_surface_points : torch.Tensor
+        The surface points of all active heliostats in the group, these can be aligned.
+    active_surface_normals : torch.Tensor
+        The surface normals of all active heliostats in the group, these can be aligned.
+    preferred_reflection_directions : torch.Tensor
+        The preferred reflection directions of all heliostats in the group.
+
     Methods
     -------
     align_surfaces_with_incident_ray_directions()
         Align surface points and surface normals with incident ray directions.
     get_orientations_from_motor_positions()
         Compute the orientations of heliostats given some motor positions.
+    activate_heliostats()
+        Activate certain heliostats for alignment, raytracing or calibration.
     forward()
         Specify the forward pass.
     """
@@ -63,6 +98,7 @@ class HeliostatGroup(torch.nn.Module):
             The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
+
         device = torch.device(device)
 
         self.number_of_heliostats = len(names)
@@ -76,7 +112,7 @@ class HeliostatGroup(torch.nn.Module):
 
         self.kinematic = Kinematic()
 
-        self.aligned_heliostats = 0
+        self.number_of_aligned_heliostats = 0
         self.number_of_active_heliostats = 0
         self.active_heliostats_mask = torch.empty(
             self.number_of_heliostats, device=device
@@ -107,7 +143,7 @@ class HeliostatGroup(torch.nn.Module):
         aim_points : torch.Tensor
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
-            The incident ray direction.
+            The incident ray directions.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 

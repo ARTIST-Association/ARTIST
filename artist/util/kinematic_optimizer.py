@@ -113,7 +113,7 @@ class KinematicOptimizer:
                 device=device,
             )
 
-        elif motor_positions_calibration is None:
+        else:
             self._optimize_kinematic_parameters_with_raytracing(
                 focal_spots_calibration=focal_spots_calibration,
                 incident_ray_directions=incident_ray_directions,
@@ -150,6 +150,9 @@ class KinematicOptimizer:
             The center coordinates of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration data.
+        active_heliostats_mask : torch.Tensor
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
         motor_positions_calibration : torch.Tensor
             The motor positions specified in the calibration data.
         tolerance : float
@@ -243,6 +246,9 @@ class KinematicOptimizer:
             The center coordinates of the calibration flux densities.
         incident_ray_directions : torch.Tensor
             The incident ray directions specified in the calibration data.
+        active_heliostats_mask : torch.Tensor
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
         target_area_mask_calibration : Optional[torch.Tensor]
             The indices of the target area for each calibration (default is None).
         tolerance : float

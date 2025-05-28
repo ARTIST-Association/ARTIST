@@ -35,7 +35,7 @@ def kinematic_model_linear(
     device: torch.device,
 ) -> RigidBody:
     """
-    Create rigid body kinematic with linear actuators and deviation parameters.
+    Create a rigid body kinematic with linear actuators and deviation parameters.
 
     Parameters
     ----------
@@ -101,7 +101,7 @@ def kinematic_model_ideal_1(
     device: torch.device,
 ) -> RigidBody:
     """
-    Create rigid body kinematic with ideal actuators and no deviation parameters.
+    Create a rigid body kinematic with ideal actuators and no deviation parameters.
 
     Parameters
     ----------
@@ -462,7 +462,7 @@ def test_incident_ray_direction_to_orientation(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    kinematic_model : RigidBody
+    kinematic_model_fixture : str
         The kinematic model fixture used to select the kinematic model used in the test case.
     incident_ray_directions : torch.Tensor
         The incident ray direction considered.
@@ -693,10 +693,10 @@ def test_motor_positions_to_orientations(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    kinematic_model : RigidBody
+    kinematic_model_fixture : str
         The kinematic model fixture used to select the kinematic model used in the test case.
-    incident_ray_directions : torch.Tensor
-        The incident ray direction considered.
+    motor_positions : torch.Tensor
+        The motor positions.
     expected : torch.Tensor
         The expected orientation matrix.
     device : torch.device

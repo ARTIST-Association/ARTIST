@@ -12,9 +12,9 @@ class LinearActuators(Actuators):
     Attributes
     ----------
     actuator_parameters : torch.Tensor
-        The actuator parameters for all heliostats.
+        The actuator parameters.
     active_actuator_parameters : torch.Tensor
-        The actuator parameters of the activated heliostats.
+        The active actuator parameters.
 
     Methods
     -------
@@ -37,18 +37,19 @@ class LinearActuators(Actuators):
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. The actuator parameters tensor for linear
-        actuators includes six parameters. Ordered by index, the first parameter describes the turning direction of the actuator.
-        The next five parameters are the increment, which stores the information about the stroke length change
-        per motor step, the initial stroke length, and an offset that describes the difference between the linear actuator's
-        pivoting point and the point around which the actuator is allowed to pivot. Next, the actuator's pivoting
-        radius is described by the pivot radius and lastly, the initial angle indicates the angle that the
-        actuator introduces to the manipulated coordinate system at the initial stroke length.
+        A linear actuator describes movement within a 2D plane. One linear actuator has seven parameters.
+        Ordered by index, the first parameter describes the type of the actuator, i.e. linear, the second parameter
+        describes the turning direction of the actuator. The next five parameters are the increment, which stores
+        the information about the stroke length change per motor step, the initial stroke length, and an offset
+        that describes the difference between the linear actuator's pivoting point and the point around which the
+        actuator is allowed to pivot. Next, the actuator's pivoting radius is described by the pivot radius and
+        lastly, the initial angle indicates the angle that the actuator introduces to the manipulated coordinate
+        system at the initial stroke length.
 
         Parameters
         ----------
         actuator_parameters : torch.Tensor
-            The six actuator parameters.
+            The seven actuator parameters.
         """
         super().__init__(actuator_parameters=actuator_parameters)
 

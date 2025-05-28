@@ -8,7 +8,9 @@ from artist import ARTIST_ROOT
 from artist.util import paint_loader
 from artist.util.configuration_classes import (
     HeliostatListConfig,
+    PowerPlantConfig,
     PrototypeConfig,
+    TargetAreaConfig,
 )
 
 
@@ -117,10 +119,11 @@ def test_extract_paint_calibration_data(
 
 
 @pytest.mark.parametrize(
-    "file_path, expected_power_plant_position, expected_receiver_properties",
+    "file_path, expected_types, expected_power_plant_position, expected_receiver_properties",
     [
         (
             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/tower-measurements.json",
+            [PowerPlantConfig, TargetAreaConfig],
             torch.tensor(
                 [50.913421122593, 6.387824755875, 87.000000000000], dtype=torch.float64
             ),
@@ -148,6 +151,7 @@ def test_extract_paint_calibration_data(
 )
 def test_extract_paint_tower_measurements(
     file_path: pathlib.Path,
+    expected_types: list[Any],
     expected_power_plant_position: torch.Tensor,
     expected_receiver_properties: torch.Tensor,
     device: torch.device,
@@ -160,7 +164,11 @@ def test_extract_paint_tower_measurements(
     file_path : pathlib.Path
         The path to the tower file.
     expected_types : list[Any]
-        The expected extracted data.
+        The expected extracted data types.
+    expected_power_plant_position : torch.Tensor
+        The expected power plant position.
+    expected_receiver_properties : torch.Tensor
+        The expected receiver properties.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -174,6 +182,9 @@ def test_extract_paint_tower_measurements(
             tower_measurements_path=file_path, device=device
         )
     )
+
+    assert isinstance(extracted_list[0], expected_types[0])
+    assert isinstance(extracted_list[1], expected_types[1])
 
     torch.testing.assert_close(
         extracted_list[0].power_plant_position, expected_power_plant_position.to(device)
@@ -244,7 +255,7 @@ def test_extract_paint_heliostats(
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int,
     expected_types: list[Any],
-    expected_heliostat,
+    expected_heliostat: list[Any],
     device: torch.device,
 ) -> None:
     """
@@ -261,7 +272,9 @@ def test_extract_paint_heliostats(
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS.
     expected_types : list[Any]
-        The expected extracted data.
+        The expected extracted data types.
+    expected_heliostat : list[Union[torch.Tensor, int, str]],
+        The expected extracted heliostat data.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -280,8 +293,8 @@ def test_extract_paint_heliostats(
         )
     )
 
-    for actual, expected in zip(extracted_list, expected_types):
-        assert isinstance(actual, expected)
+    assert isinstance(extracted_list[0], expected_types[0])
+    assert isinstance(extracted_list[1], expected_types[1])
 
     assert (
         extracted_list[0].heliostat_list[0].name
@@ -411,8 +424,8 @@ def test_azimuth_elevation_to_enu(
     azimuth: torch.Tensor,
     elevation: torch.Tensor,
     degree: bool,
-    device: torch.device,
     expected: torch.Tensor,
+    device: torch.device,
 ) -> None:
     """
     Test the azimuth, elevation to east, north, up converter.
@@ -425,10 +438,10 @@ def test_azimuth_elevation_to_enu(
         The elevation angle.
     degree : bool
         Angles in degree.
-    device : torch.device
-        The device on which to initialize tensors.
     expected : torch.Tensor
         The expected coordinates in the ENU (east, north, up) coordinate system.
+    device : torch.device
+        The device on which to initialize tensors.
 
     Raises
     ------

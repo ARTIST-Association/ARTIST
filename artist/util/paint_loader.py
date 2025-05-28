@@ -63,6 +63,7 @@ def extract_paint_calibration_data(
         The target area mapping for the heliostats.
     """
     device = torch.device(device)
+
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
     # Gather calibration data
@@ -293,6 +294,8 @@ def extract_paint_heliostats(
     PrototypeConfig
         The configuration for a heliostat prototype.
     """
+    device = torch.device(device)
+
     prototype_facet_list = None
     prototype_kinematic = None
     prototype_actuator_list = None
@@ -519,6 +522,8 @@ def azimuth_elevation_to_enu(
     torch.Tensor
         The east, north, up (ENU) coordinates.
     """
+    device = torch.device(device)
+
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)

@@ -7,6 +7,13 @@ class Actuators(torch.nn.Module):
     """
     Implement the abstract behavior of actuators.
 
+    Attributes
+    ----------
+    actuator_parameters : torch.Tensor
+        The actuator parameters.
+    active_actuator_parameters : torch.Tensor
+        The active actuator parameters.
+
     Methods
     -------
     motor_positions_to_angles()

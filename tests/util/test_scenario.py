@@ -54,7 +54,14 @@ from artist.util.scenario import Scenario
             (
                 torch.tensor([1, 0, 3, 0], dtype=torch.int32),
                 torch.tensor([0, 1, 3, 3], dtype=torch.int32),
-                torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
+                torch.tensor(
+                    [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [1.0, 0.0, 0.0, 0.0],
+                    ]
+                ),
             ),
         ),
         (
@@ -95,9 +102,9 @@ from artist.util.scenario import Scenario
 )
 def test_index_mapping(
     mapping: Optional[list[tuple[str, str, torch.Tensor]]],
+    default_incident_ray_direction: torch.Tensor,
+    default_target_area_index: int,
     expected: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-    default_incident_ray_direction,
-    default_target_area_index,
     device: torch.device,
 ) -> None:
     """
@@ -107,6 +114,10 @@ def test_index_mapping(
     ----------
     mapping : Optional[list[tuple[str, str, torch.Tensor]]]
         The mapping of heliostats, target areas and incident ray directions.
+    default_incident_ray_direction : torch.Tensor
+        The default incident ray direction.
+    default_target_area_index : int
+        The default target area index.
     expected : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
         The expected values.
     device : torch.device
@@ -154,7 +165,7 @@ def test_index_mapping(
                 default_target_area_index=default_target_area_index,
                 device=device,
             )
-        ) 
+        )
 
     torch.testing.assert_close(
         active_heliostats_mask.to(device),

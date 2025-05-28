@@ -21,14 +21,14 @@ class RigidBody(Kinematic):
         The initial orientation offsets of all heliostats.
     deviation_parameters : torch.Tensor
         The kinematic deviation parameters of all heliostats.
-    number_of_active_heliostats int
-        The number of activated heliostats.
+    number_of_active_heliostats : int
+        The number of active heliostats.
     active_heliostat_positions : torch.Tensor
-        The positions of all activated heliostats.
+        The positions of all active heliostats.
     active_initial_orientations : torch.Tensor
-        The initial orientations of all activated heliostats
+        The initial orientations of all active heliostats
     active_deviation_parameters : torch.Tensor
-        The deviation parameters of all activated heliostats.
+        The deviation parameters of all active heliostats.
     aim_points : torch.Tensor
         The aim points of the heliostats.
     artist_standard_orientation : torch.Tensor
@@ -43,9 +43,7 @@ class RigidBody(Kinematic):
     align_surfaces_with_incident_ray_directions()
         Align given surface points and surface normals according to incident ray directions.
     motor_positions_to_orientations()
-        Compute orientation matrices given the motor positions..
-    align_surfaces_with_motor_positions()
-        Align given surface points and surface normals according to motor positions.
+        Compute orientation matrices given the motor positions.
     forward()
         Specify the forward pass.
 

@@ -435,7 +435,7 @@ def actuator_parameters(
     actuator_type: str,
     number_of_actuators: int,
     initial_orientation: torch.Tensor,
-    log=logging.Logger,
+    log: logging.Logger,
     heliostat_name: Optional[str] = None,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
@@ -505,7 +505,7 @@ def linear_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
     initial_orientation: torch.Tensor,
-    log=logging.Logger,
+    log: logging.Logger,
     heliostat_name: Optional[str] = None,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
