@@ -54,7 +54,14 @@ from artist.util.scenario import Scenario
             (
                 torch.tensor([1, 0, 3, 0], dtype=torch.int32),
                 torch.tensor([0, 1, 3, 3], dtype=torch.int32),
-                torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
+                torch.tensor(
+                    [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [1.0, 0.0, 0.0, 0.0],
+                    ]
+                ),
             ),
         ),
         (
@@ -154,7 +161,7 @@ def test_index_mapping(
                 default_target_area_index=default_target_area_index,
                 device=device,
             )
-        ) 
+        )
 
     torch.testing.assert_close(
         active_heliostats_mask.to(device),
