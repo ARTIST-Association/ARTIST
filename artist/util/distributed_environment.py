@@ -1,4 +1,3 @@
-
 from typing import Generator, Union
 
 import torch
