@@ -24,7 +24,7 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
     actuator_parameters[:, 1, :] = 1
 
     return HeliostatGroupRigidBody(
-        names=["heliostat_1, heliostat_2", "heliostat_3"],
+        names=["heliostat_1", "heliostat_2", "heliostat_3"],
         positions=torch.tensor(
             [[1.0, 0.0, 0.0, 1.0], [2.0, 0.0, 0.0, 1.0], [3.0, 0.0, 0.0, 1.0]],
             device=device,
@@ -51,6 +51,7 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
         (torch.tensor([1, 1, 1]), 3),
         (torch.tensor([1, 0, 1]), 2),
         (torch.tensor([6, 0, 1]), 7),
+        (None, 3),
     ],
 )
 def test_activate_heliostats(
@@ -78,9 +79,14 @@ def test_activate_heliostats(
     AssertionError
         If test does not complete as expected.
     """
-    heliostat_group.activate_heliostats(
-        active_heliostats_mask=active_heliostats_mask.to(device)
-    )
+    if active_heliostats_mask is None:
+        heliostat_group.activate_heliostats(device=device)
+
+    else:
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask.to(device),
+            device=device,
+        )
     assert heliostat_group.number_of_active_heliostats == expected_size
 
     group_attributes = ["active_surface_points", "active_surface_normals"]

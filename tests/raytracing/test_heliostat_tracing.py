@@ -1,4 +1,3 @@
-from typing import Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,17 +9,10 @@ from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util.scenario import Scenario
 
 
-@pytest.fixture(params=[(0, 0), (0, 4), (3, 2)])
-def mock_scenario(
-    request: pytest.FixtureRequest,
-) -> Scenario:
+@pytest.fixture()
+def mock_scenario() -> Scenario:
     """
     Define a mock scenario used in tests.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
 
     Returns
     -------
@@ -30,43 +22,31 @@ def mock_scenario(
     mock_scenario = MagicMock(spec=Scenario)
     mock_heliostat_field = MagicMock(spec=HeliostatField)
     mock_heliostat_group = MagicMock(spec=HeliostatGroupRigidBody)
-    mock_heliostat_group.number_of_heliostats = 4
-    mock_heliostat_group.number_of_active_heliostats = request.param[0]
-    mock_heliostat_group.number_of_aligned_heliostats = request.param[1]
     mock_scenario.heliostat_field = mock_heliostat_field
     mock_scenario.heliostat_field.heliostat_groups = [mock_heliostat_group]
     return mock_scenario
 
 
-@pytest.fixture(params=[torch.tensor([0, 0, 0, 0]), None])
-def target_area_mask(
-    request: pytest.FixtureRequest, device: torch.device
-) -> Union[torch.Tensor, None]:
-    """
-    Create a target area mask or None to use in the test.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    Union[torch.Tensor, None]
-        The target area mask.
-    """
-    mask = request.param
-
-    if mask is not None:
-        mask = mask.to(device)
-    return mask
-
-
+@pytest.mark.parametrize(
+    "active_heliostats_mask_scenario, active_heliostats_mask, expected",
+    [
+        (
+            torch.tensor([0, 0, 1, 0], dtype=torch.int32),
+            torch.tensor([0, 1, 1, 0], dtype=torch.int32),
+            "Some heliostats were not aligned and cannot be raytraced.",
+        ),
+        (
+            torch.tensor([0, 5, 1, 0], dtype=torch.int32),
+            torch.tensor([1, 1, 0, 1], dtype=torch.int32),
+            "Some heliostats were not aligned and cannot be raytraced.",
+        ),
+    ],
+)
 def test_trace_rays_unaligned_heliostats_error(
     mock_scenario: Scenario,
-    target_area_mask: Union[torch.Tensor, None],
+    active_heliostats_mask_scenario: torch.Tensor,
+    active_heliostats_mask: torch.Tensor,
+    expected: str,
     device: torch.device,
 ) -> None:
     """
@@ -76,8 +56,12 @@ def test_trace_rays_unaligned_heliostats_error(
     ----------
     mock_scenario : Scenario
         A mocked scenario.
-    target_area_mask : Union[torch.Tensor, None]
-        The target area mask.
+    active_heliostats_mask_scenario : torch.Tensor
+        The active heliostats mask defined in the scenario.
+    active_heliostat_mask : torch.Tensor
+        The active heliostats mask given to the trace rays method.
+    expected : str
+        The expected error message.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -86,6 +70,9 @@ def test_trace_rays_unaligned_heliostats_error(
     AssertionError
         If test does not complete as expected.
     """
+    mock_scenario.heliostat_field.heliostat_groups[
+        0
+    ].active_heliostats_mask = active_heliostats_mask_scenario
     mock_ray_tracer = MagicMock(spec=HeliostatRayTracer)
     mock_ray_tracer.scenario = mock_scenario
     mock_ray_tracer.heliostat_group = mock_scenario.heliostat_field.heliostat_groups[0]
@@ -96,7 +83,7 @@ def test_trace_rays_unaligned_heliostats_error(
         "artist.raytracing.heliostat_tracing.HeliostatRayTracer.trace_rays",
         wraps=HeliostatRayTracer.trace_rays,
     ) as mock_method:
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(AssertionError) as exc_info:
             mock_ray_tracer.trace_rays = MagicMock(wraps=HeliostatRayTracer.trace_rays)
             mock_ray_tracer.trace_rays(
                 self=mock_ray_tracer,
@@ -109,11 +96,10 @@ def test_trace_rays_unaligned_heliostats_error(
                     ],
                     device=device,
                 ),
-                target_area_mask=target_area_mask,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=torch.tensor([0]),
                 device=device,
             )
             mock_method.assert_called_once()
-        assert (
-            "No heliostats are active or not all active heliostats have been aligned."
-            in str(exc_info.value)
-        )
+
+        assert expected in str(exc_info.value)

@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -104,6 +104,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
+        device = torch.device(device)
+
         super().__init__(
             names=names,
             positions=positions,
@@ -115,8 +117,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             actuator_parameters=actuator_parameters,
             device=device,
         )
-
-        device = torch.device(device)
 
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
@@ -132,6 +132,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self,
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
+        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -148,12 +149,20 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
             The incident ray directions.
+        active_heliostats_mask : Optional[torch.Tensor]
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
+            If no mask is provided, all heliostats in the scenario will be activated once.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
         device = torch.device(device)
 
         self.kinematic.aim_points = aim_points
+
+        self.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
+        )
 
         (
             self.active_surface_points,

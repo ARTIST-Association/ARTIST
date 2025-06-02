@@ -69,6 +69,7 @@ scenario.heliostat_field.heliostat_groups[
 ].align_surfaces_with_incident_ray_directions(
     aim_points=scenario.target_areas.centers[target_area_mask],
     incident_ray_directions=incident_ray_directions,
+    active_heliostats_mask=active_heliostats_mask,
     device=device,
 )
 
@@ -149,6 +150,7 @@ ray_tracer = HeliostatRayTracer(
 # Perform heliostat-based ray tracing.
 image_south = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
+    active_heliostats_mask=active_heliostats_mask,
     target_area_mask=target_area_mask,
     device=device,
 )
@@ -197,12 +199,14 @@ def align_and_trace_rays(
     ].align_surfaces_with_incident_ray_directions(
         aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=light_direction,
+        active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
 
     # Perform heliostat-based ray tracing.
     return ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
+        active_heliostats_mask=active_heliostats_mask,
         target_area_mask=target_area_mask,
         device=device,
     )

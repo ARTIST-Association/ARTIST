@@ -272,17 +272,13 @@ class KinematicOptimizer:
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
 
-            # Activate heliostats
-            self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask
-            )
-
             # Align heliostats.
             self.heliostat_group.align_surfaces_with_incident_ray_directions(
                 aim_points=self.scenario.target_areas.centers[
                     target_area_mask_calibration
                 ],
                 incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
 
@@ -296,6 +292,7 @@ class KinematicOptimizer:
             # Perform heliostat-based ray tracing.
             flux_distributions = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
                 target_area_mask=target_area_mask_calibration,
                 device=device,
             )

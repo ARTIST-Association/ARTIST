@@ -183,10 +183,10 @@ class Scenario:
         self,
         heliostat_group: HeliostatGroup,
         string_mapping: Optional[list[tuple[str, str, torch.Tensor]]] = None,
-        default_incident_ray_direction: torch.Tensor = torch.tensor(
+        single_incident_ray_direction: torch.Tensor = torch.tensor(
             [0.0, 1.0, 0.0, 0.0]
         ),
-        default_target_area_index: int = 0,
+        single_target_area_index: int = 0,
         device: Union[torch.device, str] = "cuda",
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -202,9 +202,9 @@ class Scenario:
             The current heliostat group.
         string_mapping : Optional[list[tuple[str, str, torch.Tensor]]]
             Strings that map heliostats to target areas and incident ray direction tensors (default is None).
-        default_incident_ray_direction : torch.Tensor
+        single_incident_ray_direction : torch.Tensor
             The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
-        default_target_are_index : int
+        single_target_area_index : int
             The default target area index (default is 0).
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
@@ -222,16 +222,55 @@ class Scenario:
         data_per_heliostat = defaultdict(list)
 
         if string_mapping is None:
+            if (
+                single_incident_ray_direction.shape != torch.Size([4])
+                or single_incident_ray_direction[3] != 0.0
+                or torch.norm(single_incident_ray_direction) != 1.0
+            ):
+                raise ValueError(
+                    "The specified single incident ray direction is invalid. Please provide a normalized 4D tensor with last element 0.0."
+                )
+            if single_target_area_index >= self.target_areas.number_of_target_areas:
+                raise ValueError(
+                    f"The specified single target area index is invalid. Only {self.target_areas.number_of_target_areas} target areas exist in this scenario."
+                )
             active_heliostats_mask = torch.ones(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
             target_area_mask = torch.tensor(
-                default_target_area_index, dtype=torch.int32, device=device
+                single_target_area_index, dtype=torch.int32, device=device
             ).expand(heliostat_group.number_of_heliostats)
-            incident_ray_directions = default_incident_ray_direction.expand(
+            incident_ray_directions = single_incident_ray_direction.expand(
                 heliostat_group.number_of_heliostats, -1
-            )
+            ).to(device)
         else:
+            errors = []
+            for i, (heliostat_name, target_name, light_direction) in enumerate(
+                string_mapping
+            ):
+                if heliostat_name not in [
+                    heliostat_name
+                    for heliostat_name in heliostat_group.names
+                    for heliostat_group in self.heliostat_field.heliostat_groups
+                ]:
+                    errors.append(
+                        f"Invalid heliostat '{heliostat_name}' (Found at index {i} of provided mapping) not found in this scenario."
+                    )
+                if target_name not in self.target_areas.names:
+                    errors.append(
+                        f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
+                    )
+                if (
+                    light_direction.shape != torch.Size([4])
+                    or light_direction[3] != 0.0
+                    or torch.norm(light_direction) != 1.0
+                ):
+                    errors.append(
+                        f"Invalid incident ray direction (Found at index {i} of provided mapping). This must be a normalized 4D tensor with last element 0.0."
+                    )
+            if errors:
+                raise ValueError(" ".join(errors))
+
             heliostat_name_to_index = {
                 heliostat_name: index
                 for index, heliostat_name in enumerate(heliostat_group.names)
