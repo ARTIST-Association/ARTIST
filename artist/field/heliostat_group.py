@@ -1,6 +1,6 @@
 """Heliostat group in ARTIST."""
 
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -131,6 +131,7 @@ class HeliostatGroup(torch.nn.Module):
         self,
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
+        active_heliostats_mask: Optional[torch.Tensor] = None,
         device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
@@ -144,6 +145,10 @@ class HeliostatGroup(torch.nn.Module):
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
             The incident ray directions.
+        active_heliostats_mask : Optional[torch.Tensor]
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
+            If no mask is provided, all heliostats in the scenario will be activated once.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -176,7 +181,11 @@ class HeliostatGroup(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def activate_heliostats(self, active_heliostats_mask: torch.Tensor) -> None:
+    def activate_heliostats(
+        self,
+        active_heliostats_mask: Optional[torch.Tensor] = None,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
         """
         Activate certain heliostats for alignment, raytracing or calibration.
 
@@ -186,10 +195,20 @@ class HeliostatGroup(torch.nn.Module):
 
         Parameters
         ----------
-        active_heliostats_mask : torch.Tensor
-            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
+        active_heliostats_mask : Optional[torch.Tensor]
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
+            If no mask is provided, all heliostats in the scenario will be activated once.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
+        device = torch.device(device)
+
+        if active_heliostats_mask is None:
+            active_heliostats_mask = torch.ones(
+                self.number_of_heliostats, dtype=torch.int32, device=device
+            )
+
         self.number_of_active_heliostats = active_heliostats_mask.sum().item()
         self.active_heliostats_mask = active_heliostats_mask
         self.active_surface_points = self.surface_points.repeat_interleave(

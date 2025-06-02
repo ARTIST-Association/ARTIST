@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Optional, Union
+from typing import Iterator, Union
 
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
@@ -288,7 +288,8 @@ class HeliostatRayTracer:
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
-        target_area_mask: Optional[torch.Tensor] = None,
+        active_heliostats_mask: torch.Tensor,
+        target_area_mask: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -303,9 +304,11 @@ class HeliostatRayTracer:
         ----------
         incident_ray_directions : torch.Tensor
             The direction of the incident rays as seen from the heliostats.
-        target_area_mask : Optional[torch.Tensor]
-            The indices of the target areas for each active heliostat (default is None).
-            If none are provided, the first target area of the scenario will be linked to all heliostats.
+        active_heliostats_mask : torch.Tensor
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
+        target_area_mask : torch.Tensor
+            The indices of the target areas for each active heliostat.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -321,10 +324,9 @@ class HeliostatRayTracer:
         """
         device = torch.device(device)
 
-        if target_area_mask is None:
-            target_area_mask = torch.zeros(
-                self.heliostat_group.number_of_active_heliostats, device=device
-            )
+        assert torch.equal(
+            self.heliostat_group.active_heliostats_mask, active_heliostats_mask
+        ), "Some heliostats were not aligned and cannot be raytraced."
 
         flux_distributions = torch.zeros(
             (
@@ -334,15 +336,6 @@ class HeliostatRayTracer:
             ),
             device=device,
         )
-
-        if (
-            self.heliostat_group.number_of_active_heliostats == 0
-            or self.heliostat_group.number_of_active_heliostats
-            != self.heliostat_group.number_of_aligned_heliostats
-        ):
-            raise ValueError(
-                "No heliostats are active or not all active heliostats have been aligned."
-            )
 
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(1),
@@ -387,6 +380,7 @@ class HeliostatRayTracer:
             bitmaps = self.sample_bitmaps(
                 intersections=intersections,
                 absolute_intensities=absolute_intensities,
+                active_heliostats_mask=active_heliostats_mask_batch,
                 target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,
             )
@@ -440,7 +434,8 @@ class HeliostatRayTracer:
         self,
         intersections: torch.Tensor,
         absolute_intensities: torch.Tensor,
-        target_area_mask: Optional[torch.Tensor] = None,
+        active_heliostats_mask: torch.Tensor,
+        target_area_mask: torch.Tensor,
         device: Union[torch.device, str] = "cuda",
     ) -> torch.Tensor:
         """
@@ -454,9 +449,10 @@ class HeliostatRayTracer:
             The intersections of rays on the target area planes for each heliostat.
         absolute_intensities : torch.Tensor
             The absolute intensities of the rays hitting the target planes for each heliostat.
-        target_area_mask : Optional[torch.Tensor]
-            The indices of target areas on which each heliostat should be raytraced (default is None).
-            If none are provided, the first target area of the scenario will be linked to all heliostats.
+        active_heliostats_mask : torch.Tensor
+            Used to map bitmaps per heliostat to correct index.
+        target_area_mask : torch.Tensor
+            The indices of target areas on which each heliostat should be raytraced.
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
 
@@ -466,9 +462,6 @@ class HeliostatRayTracer:
             The flux density distributions of the reflected rays on the target areas for each active heliostat.
         """
         device = torch.device(device)
-
-        if target_area_mask is None:
-            target_area_mask = torch.zeros(intersections.shape([0]), device=device)
 
         plane_widths = (
             self.scenario.target_areas.dimensions[target_area_mask][:, 0]
@@ -626,7 +619,7 @@ class HeliostatRayTracer:
         )
         mask = final_intersection_indices.flatten()
         heliostat_indices = torch.arange(
-            self.heliostat_group.number_of_active_heliostats, device=device
+            target_area_mask.shape[0], device=device
         ).repeat_interleave(total_intersections * 4)
 
         # Flux density maps for each active heliostat.
@@ -643,7 +636,8 @@ class HeliostatRayTracer:
         # Add up all distributed intensities in the corresponding indices.
         bitmaps_per_heliostat.index_put_(
             (
-                heliostat_indices[mask],
+                heliostat_indices[mask]
+                + torch.nonzero(active_heliostats_mask)[0].item(),
                 self.bitmap_resolution_u - 1 - y_indices[final_intersection_indices],
                 self.bitmap_resolution_e - 1 - x_indices[final_intersection_indices],
             ),

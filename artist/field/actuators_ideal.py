@@ -45,6 +45,8 @@ class IdealActuators(Actuators):
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
+        device = torch.device(device)
+
         super().__init__(actuator_parameters=actuator_parameters, device=device)
 
     def motor_positions_to_angles(

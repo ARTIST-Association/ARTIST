@@ -68,13 +68,11 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    # Activate heliostats
-    heliostat_group.activate_heliostats(active_heliostats_mask=active_heliostats_mask)
-
     # Align heliostats.
     heliostat_group.align_surfaces_with_incident_ray_directions(
         aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=incident_ray_directions,
+        active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
 
@@ -84,7 +82,7 @@ for heliostat_group_index, heliostat_group in enumerate(
         heliostat_group=heliostat_group,
         world_size=world_size,
         rank=rank,
-        batch_size=4,
+        batch_size=2,
         random_seed=rank,
         bitmap_resolution_e=bitmap_resolution_e,
         bitmap_resolution_u=bitmap_resolution_u,
@@ -93,6 +91,7 @@ for heliostat_group_index, heliostat_group in enumerate(
     # Perform heliostat-based ray tracing.
     group_bitmaps_per_heliostat = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
+        active_heliostats_mask=active_heliostats_mask,
         target_area_mask=target_area_mask,
         device=device,
     )
