@@ -33,6 +33,7 @@ class LinearActuators(Actuators):
     def __init__(
         self,
         actuator_parameters: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
     ) -> None:
         """
         Initialize linear actuators.
@@ -50,8 +51,10 @@ class LinearActuators(Actuators):
         ----------
         actuator_parameters : torch.Tensor
             The seven actuator parameters.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
-        super().__init__(actuator_parameters=actuator_parameters)
+        super().__init__(actuator_parameters=actuator_parameters, device=device)
 
     def _motor_positions_to_absolute_angles(
         self, motor_positions: torch.Tensor

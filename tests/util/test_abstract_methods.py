@@ -22,7 +22,9 @@ def test_abstract_actuators(
         If test does not complete as expected.
     """
     actuator_parameters = torch.rand((3, 7, 2))
-    abstract_actuator = Actuators(actuator_parameters=actuator_parameters)
+    abstract_actuator = Actuators(
+        actuator_parameters=actuator_parameters, device=device
+    )
 
     with pytest.raises(NotImplementedError) as exc_info:
         abstract_actuator.motor_positions_to_angles(
