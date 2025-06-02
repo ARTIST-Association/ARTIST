@@ -41,8 +41,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         The actuator parameters of all actuators in the group.
     kinematic : RigidBody
         The kinematic (rigid body kinematic) of all heliostats in the group.
-    number_of_aligned_heliostats : int
-        The number of aligned heliostats.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostats_mask : torch.Tensor
@@ -173,9 +171,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             surface_normals=self.active_surface_normals,
             device=device,
         )
-
-        # Note that all active heliostats have been aligned.
-        self.number_of_aligned_heliostats = self.active_surface_points.shape[0]
 
     def get_orientations_from_motor_positions(
         self,

@@ -87,8 +87,9 @@ class RigidBody(Kinematic):
         device : Union[torch.device, str]
             The device on which to initialize tensors (default is cuda).
         """
-        super().__init__()
         device = torch.device(device)
+
+        super().__init__()
 
         self.number_of_heliostats = number_of_heliostats
         self.heliostat_positions = heliostat_positions

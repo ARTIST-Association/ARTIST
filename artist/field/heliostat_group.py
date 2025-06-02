@@ -36,8 +36,6 @@ class HeliostatGroup(torch.nn.Module):
         The actuator parameters of all actuators in the group.
     kinematic : Kinematic
         The kinematic of all heliostats in the group.
-    number_of_aligned_heliostats : int
-        The number of aligned heliostats.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostats_mask : torch.Tensor
@@ -112,7 +110,6 @@ class HeliostatGroup(torch.nn.Module):
 
         self.kinematic = Kinematic()
 
-        self.number_of_aligned_heliostats = 0
         self.number_of_active_heliostats = 0
         self.active_heliostats_mask = torch.empty(
             self.number_of_heliostats, device=device
