@@ -113,6 +113,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             initial_orientations=initial_orientations,
             kinematic_deviation_parameters=kinematic_deviation_parameters,
             actuator_parameters=actuator_parameters,
+            device=device,
         )
 
         device = torch.device(device)
