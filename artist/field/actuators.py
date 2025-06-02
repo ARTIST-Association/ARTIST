@@ -37,6 +37,13 @@ class Actuators(torch.nn.Module):
         heliostat reflects the incoming light onto the aim point on the tower. The abstract actuator specifies
         the functionality that must be implemented in the inheriting classes. These include one function to map
         the motor steps to angles and another one for the opposite conversion of angles to motor steps.
+
+        Parameters
+        ----------
+        actuator_parameters : torch.Tensor
+            The two actuator parameters.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
         super().__init__()
 
