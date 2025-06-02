@@ -30,7 +30,11 @@ class IdealActuators(Actuators):
     :class:`Actuator` : Reference to the parent class.
     """
 
-    def __init__(self, actuator_parameters: torch.Tensor) -> None:
+    def __init__(
+        self,
+        actuator_parameters: torch.Tensor,
+        device: Union[torch.device, str] = "cuda",
+    ) -> None:
         """
         Initialize ideal actuators.
 
@@ -38,8 +42,10 @@ class IdealActuators(Actuators):
         ----------
         actuator_parameters : torch.Tensor
             The two actuator parameters.
+        device : Union[torch.device, str]
+            The device on which to initialize tensors (default is cuda).
         """
-        super().__init__(actuator_parameters=actuator_parameters)
+        super().__init__(actuator_parameters=actuator_parameters, device=device)
 
     def motor_positions_to_angles(
         self,
