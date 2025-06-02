@@ -375,11 +375,12 @@ class HeliostatRayTracer:
             intersections, absolute_intensities = (
                 raytracing_utils.line_plane_intersections(
                     rays=rays,
-                    target_areas=self.scenario.target_areas,
-                    target_area_mask=target_area_mask[active_heliostats_mask_batch],
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
                     ],
+                    target_areas=self.scenario.target_areas,
+                    target_area_mask=target_area_mask[active_heliostats_mask_batch],
+                    device=device,
                 )
             )
 
