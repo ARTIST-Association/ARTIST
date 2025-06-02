@@ -1,3 +1,4 @@
+from typing import Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -37,8 +38,36 @@ def mock_scenario(
     return mock_scenario
 
 
+@pytest.fixture(params=[torch.tensor([0, 0, 0, 0]), None])
+def target_area_mask(
+    request: pytest.FixtureRequest, device: torch.device
+) -> Union[torch.Tensor, None]:
+    """
+    Create a target area mask or None to use in the test.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    Union[torch.Tensor, None]
+        The target area mask.
+    """
+    mask = request.param
+
+    if mask is not None:
+        mask = mask.to(device)
+    return mask
+
+
 def test_trace_rays_unaligned_heliostats_error(
-    mock_scenario: Scenario, device: torch.device
+    mock_scenario: Scenario,
+    target_area_mask: Union[torch.Tensor, None],
+    device: torch.device,
 ) -> None:
     """
     Test that unanligned heliostats raise ValueError while raytracing.
@@ -47,6 +76,8 @@ def test_trace_rays_unaligned_heliostats_error(
     ----------
     mock_scenario : Scenario
         A mocked scenario.
+    target_area_mask : Union[torch.Tensor, None]
+        The target area mask.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -78,7 +109,7 @@ def test_trace_rays_unaligned_heliostats_error(
                     ],
                     device=device,
                 ),
-                target_area_mask=torch.tensor([0, 0, 0, 0], device=device),
+                target_area_mask=target_area_mask,
                 device=device,
             )
             mock_method.assert_called_once()

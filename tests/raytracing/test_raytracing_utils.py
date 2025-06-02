@@ -170,6 +170,32 @@ def target_area_2(
     )
 
 
+@pytest.fixture(params=[torch.tensor([0]), None])
+def target_area_mask(
+    request: pytest.FixtureRequest, device: torch.device
+) -> Union[torch.Tensor, None]:
+    """
+    Create a target area mask or None to use in the test.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The pytest fixture used to consider different test cases.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    Union[torch.Tensor, None]
+        The target area mask.
+    """
+    mask = request.param
+
+    if mask is not None:
+        mask = mask.to(device)
+    return mask
+
+
 @pytest.mark.parametrize(
     (
         "rays",
@@ -243,6 +269,7 @@ def target_area_2(
 )
 def test_line_plane_intersection(
     request: pytest.FixtureRequest,
+    target_area_mask: Union[torch.Tensor, None],
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
@@ -257,6 +284,8 @@ def test_line_plane_intersection(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
+    target_area_mask : Union[torch.Tensor, None]
+        The target area mask.
     rays : Rays
         The rays with directions and magnitudes.
     plane_normal_vectors : torch.Tensor
@@ -284,7 +313,8 @@ def test_line_plane_intersection(
                 rays=rays,
                 points_at_ray_origins=points_at_ray_origins.to(device),
                 target_areas=request.getfixturevalue(target_areas_fixture),
-                target_area_mask=torch.tensor([0], device=device),
+                target_area_mask=target_area_mask,
+                device=device,
             )
         assert "No ray intersections on the front of the target area planes." in str(
             exc_info.value
@@ -295,7 +325,8 @@ def test_line_plane_intersection(
             rays=rays,
             points_at_ray_origins=points_at_ray_origins.to(device),
             target_areas=request.getfixturevalue(target_areas_fixture),
-            target_area_mask=torch.tensor([0], device=device),
+            target_area_mask=target_area_mask,
+            device=device,
         )
         torch.testing.assert_close(
             intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4

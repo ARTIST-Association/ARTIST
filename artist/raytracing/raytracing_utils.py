@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -40,6 +40,7 @@ def line_plane_intersections(
     target_areas: TowerTargetAreas,
     target_area_mask: Optional[torch.Tensor] = None,
     epsilon: float = 1e-6,
+    device: Union[torch.device, str] = "cuda",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute line-plane intersections of the rays and the (receiver) planes.
@@ -57,6 +58,8 @@ def line_plane_intersections(
         If none are provided, the first target area of the scenario will be linked to all heliostats.
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
+    device : Union[torch.device, str]
+        The device on which to initialize tensors (default is cuda).
 
     Raises
     ------
@@ -71,7 +74,9 @@ def line_plane_intersections(
         The absolute intensities of the rays hitting the target planes.
     """
     if target_area_mask is None:
-        target_area_mask = torch.zeros(points_at_ray_origins.shape[0])
+        target_area_mask = torch.zeros(
+            points_at_ray_origins.shape[0], dtype=torch.int32, device=device
+        )
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
