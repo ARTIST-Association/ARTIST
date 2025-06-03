@@ -5,7 +5,10 @@ import torch
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
-from artist.util.distributed_environment import setup_global_distributed_environment
+from artist.util.environment_setup import (
+    get_device,
+    setup_global_distributed_environment,
+)
 from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
@@ -15,10 +18,10 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # The distributed environment is setup and destroyed using a Generator object.
 environment_generator = setup_global_distributed_environment(device=device)

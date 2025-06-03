@@ -1,7 +1,7 @@
 import json
 import pathlib
 from collections import Counter, defaultdict
-from typing import Union
+from typing import Optional
 
 import torch
 
@@ -23,6 +23,7 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.util.environment_setup import get_device
 from artist.util.surface_converter import SurfaceConverter
 
 
@@ -31,7 +32,7 @@ def extract_paint_calibration_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
@@ -46,8 +47,10 @@ def extract_paint_calibration_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -62,7 +65,7 @@ def extract_paint_calibration_data(
     torch.Tensor
         The target area mapping for the heliostats.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
@@ -153,8 +156,7 @@ def extract_paint_calibration_data(
 
 
 def extract_paint_tower_measurements(
-    tower_measurements_path: pathlib.Path,
-    device: Union[torch.device, str] = "cuda",
+    tower_measurements_path: pathlib.Path, device: Optional[torch.device] = None
 ) -> tuple[PowerPlantConfig, TargetAreaListConfig]:
     """
     Extract tower data from a ``PAINT`` tower measurements file for scenario generation.
@@ -163,8 +165,10 @@ def extract_paint_tower_measurements(
     ----------
     tower_measurements_path : pathlib.Path
         The path to the tower measurement file.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -173,7 +177,7 @@ def extract_paint_tower_measurements(
     TargetAreaListConfig
         The configuration of the tower target areas.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
@@ -269,7 +273,7 @@ def extract_paint_heliostats(
     power_plant_position: torch.Tensor,
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
@@ -284,8 +288,10 @@ def extract_paint_heliostats(
         The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS (default is 400).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -294,7 +300,7 @@ def extract_paint_heliostats(
     PrototypeConfig
         The configuration for a heliostat prototype.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     prototype_facet_list = None
     prototype_kinematic = None
@@ -497,7 +503,7 @@ def azimuth_elevation_to_enu(
     elevation: torch.Tensor,
     slant_range: float = 1.0,
     degree: bool = True,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from azimuth and elevation to east, north, up.
@@ -514,15 +520,17 @@ def azimuth_elevation_to_enu(
         Slant range in meters (default is 1.0).
     degree : bool
         Whether input is given in degrees (default is True).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         The east, north, up (ENU) coordinates.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if degree:
         elevation = torch.deg2rad(elevation)
@@ -544,7 +552,7 @@ def azimuth_elevation_to_enu(
 def convert_wgs84_coordinates_to_local_enu(
     coordinates_to_transform: torch.Tensor,
     reference_point: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
@@ -560,15 +568,17 @@ def convert_wgs84_coordinates_to_local_enu(
         The coordinates in latitude, longitude, altitude that are to be transformed.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     transformed_coordinates = torch.zeros_like(
         coordinates_to_transform, dtype=torch.float32, device=device

@@ -1,9 +1,10 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.raytracing.rays import Rays
+from artist.util.environment_setup import get_device
 
 
 def reflect(
@@ -40,7 +41,7 @@ def line_plane_intersections(
     target_areas: TowerTargetAreas,
     target_area_mask: Optional[torch.Tensor] = None,
     epsilon: float = 1e-6,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute line-plane intersections of the rays and the (receiver) planes.
@@ -58,8 +59,10 @@ def line_plane_intersections(
         If none are provided, the first target area of the scenario will be linked to all heliostats.
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -73,6 +76,8 @@ def line_plane_intersections(
     torch.Tensor
         The absolute intensities of the rays hitting the target planes.
     """
+    device = get_device(device=device)
+
     if target_area_mask is None:
         target_area_mask = torch.zeros(
             points_at_ray_origins.shape[0], dtype=torch.int32, device=device

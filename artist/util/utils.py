@@ -1,10 +1,12 @@
-from typing import Union
+from typing import Optional
 
 import torch
 
+from artist.util.environment_setup import get_device
+
 
 def rotate_distortions(
-    e: torch.Tensor, u: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    e: torch.Tensor, u: torch.Tensor, device: Optional[torch.device] = None
 ) -> torch.Tensor:
     """
     Rotate the distortions for the light source.
@@ -21,8 +23,10 @@ def rotate_distortions(
         East rotation angles in radians.
     u : torch.Tensor
         Up rotation angles in radians.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -34,11 +38,12 @@ def rotate_distortions(
     torch.Tensor
         Corresponding rotation matrix.
     """
+    device = get_device(device=device)
+
     if e.shape != u.shape:
         raise ValueError(
             "The two tensors containing angles for the east and up rotation must have the same shape."
         )
-    device = torch.device(device)
 
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat convention.
@@ -61,9 +66,7 @@ def rotate_distortions(
     return matrix
 
 
-def rotate_e(
-    e: torch.Tensor, device: Union[torch.device, str] = "cuda"
-) -> torch.Tensor:
+def rotate_e(e: torch.Tensor, device: Optional[torch.device] = None) -> torch.Tensor:
     """
     Rotate around the east axis.
 
@@ -76,15 +79,17 @@ def rotate_e(
     ----------
     e : torch.Tensor
         East rotation angles in radians.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         Corresponding rotation matrix.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     cos_e = torch.cos(e)
     sin_e = -torch.sin(e)  # Heliostat convention.
@@ -102,9 +107,7 @@ def rotate_e(
     return matrix
 
 
-def rotate_n(
-    n: torch.Tensor, device: Union[torch.device, str] = "cuda"
-) -> torch.Tensor:
+def rotate_n(n: torch.Tensor, device: Optional[torch.device] = None) -> torch.Tensor:
     """
     Rotate around the north axis.
 
@@ -116,15 +119,17 @@ def rotate_n(
     ----------
     n : torch.Tensor
         North rotation angles in radians.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         Corresponding rotation matrix.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     cos_n = torch.cos(n)
     sin_n = torch.sin(n)
@@ -142,9 +147,7 @@ def rotate_n(
     return matrix
 
 
-def rotate_u(
-    u: torch.Tensor, device: Union[torch.device, str] = "cuda"
-) -> torch.Tensor:
+def rotate_u(u: torch.Tensor, device: Optional[torch.device] = None) -> torch.Tensor:
     """
     Rotate around the up axis.
 
@@ -156,15 +159,17 @@ def rotate_u(
     ----------
     u : torch.Tensor
         Up rotation angles in radians.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         Corresponding rotation matrix.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
@@ -186,7 +191,7 @@ def translate_enu(
     e: torch.Tensor,
     n: torch.Tensor,
     u: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Translate in all directions.
@@ -202,8 +207,10 @@ def translate_enu(
         North translations.
     u : torch.Tensor
         Up translations.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -215,12 +222,12 @@ def translate_enu(
     torch.Tensor
         Corresponding rotation matrix.
     """
+    device = get_device(device=device)
+
     if not (e.shape == u.shape == n.shape):
         raise ValueError(
             "The three tensors containing the east, north, and up translations must have the same shape."
         )
-
-    device = torch.device(device)
 
     ones = torch.ones(e.shape, device=device)
 
@@ -238,7 +245,7 @@ def translate_enu(
 
 
 def convert_3d_point_to_4d_format(
-    point: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    point: torch.Tensor, device: Optional[torch.device] = None
 ) -> torch.Tensor:
     """
     Append ones to the last dimension of a 3D point vector.
@@ -249,8 +256,10 @@ def convert_3d_point_to_4d_format(
     ----------
     point : torch.Tensor
         Input point in a 3D format.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -262,7 +271,8 @@ def convert_3d_point_to_4d_format(
     torch.Tensor
         Point vector with ones appended at the last dimension.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
+
     if point.size(dim=-1) != 3:
         raise ValueError(f"Expected a 3D point but got a point of shape {point.shape}!")
 
@@ -271,7 +281,7 @@ def convert_3d_point_to_4d_format(
 
 
 def convert_3d_direction_to_4d_format(
-    direction: torch.Tensor, device: Union[torch.device, str] = "cuda"
+    direction: torch.Tensor, device: Optional[torch.device] = None
 ) -> torch.Tensor:
     """
     Append zeros to the last dimension of a 3D direction vector.
@@ -282,8 +292,10 @@ def convert_3d_direction_to_4d_format(
     ----------
     direction : torch.Tensor
         Input direction in a 3D format.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -295,7 +307,8 @@ def convert_3d_direction_to_4d_format(
     torch.Tensor
         Direction vector with ones appended at the last dimension.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
+
     if direction.size(dim=-1) != 3:
         raise ValueError(
             f"Expected a 3D direction but got a direction of shape {direction.shape}!"
@@ -331,7 +344,7 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
 def decompose_rotations(
     initial_vector: torch.Tensor,
     target_vector: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Get the individual angles along the east-, north- and up-axis, to rotate and initial vector into a target vector.
@@ -342,8 +355,10 @@ def decompose_rotations(
         The initial vector.
     rotated_vector : torch.Tensor
         The rotated vector.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -355,7 +370,7 @@ def decompose_rotations(
         The angle for the up-axis rotation.
 
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
@@ -413,7 +428,7 @@ def angle_between_vectors(
 def transform_initial_angle(
     initial_angle: torch.Tensor,
     initial_orientation: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Compute the transformed angle of an initial angle in a rotated coordinate system.
@@ -431,15 +446,18 @@ def transform_initial_angle(
         The initial angle, or offset along the east-axis.
     initial_orientation : torch.Tensor
         The initial orientation of the coordinate system.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         The transformed angle in the rotated coordinate system.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
+
     # ``ARTIST`` is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
     artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
@@ -465,7 +483,7 @@ def get_center_of_mass(
     target_widths: float,
     target_heights: float,
     threshold: float = 0.0,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Calculate the coordinates of the flux density center of mass.
@@ -485,15 +503,18 @@ def get_center_of_mass(
         The heights of the target surfaces.
     threshold : float
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         The coordinates of the flux density centers of mass.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
+
     _, heights, widths = bitmaps.shape
 
     # Threshold the bitmap values. Any values below the threshold are set to zero.

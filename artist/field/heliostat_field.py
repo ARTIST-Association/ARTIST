@@ -1,18 +1,18 @@
 import logging
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import h5py
 import torch.nn
 from typing_extensions import Self
 
-from artist.field import field_mappings
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
-from artist.util import config_dictionary, utils_load_h5
+from artist.util import config_dictionary, type_mappings, utils_load_h5
 from artist.util.configuration_classes import (
     SurfaceConfig,
 )
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
@@ -53,7 +53,7 @@ class HeliostatField(torch.nn.Module):
         heliostat_groups : list[HeliostatGroup]
             A list containing all heliostat groups.
         """
-        super(HeliostatField, self).__init__()
+        super().__init__()
 
         self.heliostat_groups = heliostat_groups
         self.number_of_heliostat_groups = len(self.heliostat_groups)
@@ -65,7 +65,7 @@ class HeliostatField(torch.nn.Module):
         prototype_surface: SurfaceConfig,
         prototype_kinematic: dict[str, Union[str, torch.Tensor]],
         prototype_actuators: dict[str, Union[str, torch.Tensor]],
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -80,8 +80,10 @@ class HeliostatField(torch.nn.Module):
             The prototype for the kinematic, including type, initial orientation and deviations.
         prototype_actuators : dict[str, Union[str, torch.Tensor]]
             The prototype for the actuators, including type and parameters.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
@@ -93,7 +95,7 @@ class HeliostatField(torch.nn.Module):
         HeliostatField
             The heliostat field loaded from the HDF5 file.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         log.info("Loading a heliostat field from an HDF5 file.")
 
@@ -258,7 +260,7 @@ class HeliostatField(torch.nn.Module):
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
             heliostat_groups.append(
-                field_mappings.heliostat_group_type_mapping[heliostat_group_name](
+                type_mappings.heliostat_group_type_mapping[heliostat_group_name](
                     names=grouped_field_data[heliostat_group_name][
                         config_dictionary.names
                     ],

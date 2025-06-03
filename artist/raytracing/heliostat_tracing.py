@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Union
+from typing import Iterator, Optional
 
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scene import LightSource
 from artist.util import utils
+from artist.util.environment_setup import get_device
 from artist.util.scenario import Scenario
 
 from . import raytracing_utils
@@ -290,7 +291,7 @@ class HeliostatRayTracer:
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
         target_area_mask: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Perform heliostat ray tracing.
@@ -309,8 +310,10 @@ class HeliostatRayTracer:
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
         target_area_mask : torch.Tensor
             The indices of the target areas for each active heliostat.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
@@ -322,7 +325,7 @@ class HeliostatRayTracer:
         torch.Tensor
             The resulting bitmaps per heliostat.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         assert torch.equal(
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
@@ -394,7 +397,7 @@ class HeliostatRayTracer:
         distortion_u: torch.Tensor,
         distortion_e: torch.Tensor,
         original_ray_direction: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> Rays:
         """
         Scatter the reflected rays around the preferred ray directions for each heliostat.
@@ -407,15 +410,17 @@ class HeliostatRayTracer:
             The distortions in east direction (angles for scattering).
         original_ray_direction : torch.Tensor
             The ray direction around which to scatter.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         Rays
             Scattered rays around the preferred reflection directions.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         rotations = utils.rotate_distortions(
             u=distortion_u, e=distortion_e, device=device
@@ -436,7 +441,7 @@ class HeliostatRayTracer:
         absolute_intensities: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
         target_area_mask: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
@@ -453,15 +458,17 @@ class HeliostatRayTracer:
             Used to map bitmaps per heliostat to correct index.
         target_area_mask : torch.Tensor
             The indices of target areas on which each heliostat should be raytraced.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The flux density distributions of the reflected rays on the target areas for each active heliostat.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         plane_widths = (
             self.scenario.target_areas.dimensions[target_area_mask][:, 0]
@@ -651,7 +658,7 @@ class HeliostatRayTracer:
         self,
         bitmaps_per_heliostat: torch.Tensor,
         target_area_mask: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Transform bitmaps per heliostat to bitmaps per target area.
@@ -662,15 +669,17 @@ class HeliostatRayTracer:
             Bitmaps per heliostat.
         target_area_mask : torch.Tensor
             The mapping from heliostat to target area.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             Bitmaps per target area.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         group_bitmaps_per_target = torch.zeros(
             (

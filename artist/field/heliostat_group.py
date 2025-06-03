@@ -1,10 +1,11 @@
 """Heliostat group in ARTIST."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
 from artist.field.kinematic import Kinematic
+from artist.util.environment_setup import get_device
 
 
 class HeliostatGroup(torch.nn.Module):
@@ -69,7 +70,7 @@ class HeliostatGroup(torch.nn.Module):
         initial_orientations: torch.Tensor,
         kinematic_deviation_parameters: torch.Tensor,
         actuator_parameters: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Initialize the heliostat group.
@@ -92,12 +93,14 @@ class HeliostatGroup(torch.nn.Module):
             The kinematic deviation parameters of all heliostats in the group.
         actuator_parameters : torch.Tensor
             The actuator parameters of all actuators in the group.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
         super().__init__()
 
-        device = torch.device(device)
+        device = get_device(device=device)
 
         self.number_of_heliostats = len(names)
         self.names = names
@@ -129,7 +132,7 @@ class HeliostatGroup(torch.nn.Module):
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: Optional[torch.Tensor] = None,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Align all surface points and surface normals of all heliostats in the group.
@@ -146,8 +149,10 @@ class HeliostatGroup(torch.nn.Module):
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
@@ -157,9 +162,7 @@ class HeliostatGroup(torch.nn.Module):
         raise NotImplementedError("Must be overridden!")
 
     def get_orientations_from_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
     ) -> torch.Tensor:
         """
         Compute the orientations of heliostats given some motor positions.
@@ -168,8 +171,10 @@ class HeliostatGroup(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
@@ -181,7 +186,7 @@ class HeliostatGroup(torch.nn.Module):
     def activate_heliostats(
         self,
         active_heliostats_mask: Optional[torch.Tensor] = None,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Activate certain heliostats for alignment, raytracing or calibration.
@@ -196,10 +201,12 @@ class HeliostatGroup(torch.nn.Module):
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         if active_heliostats_mask is None:
             active_heliostats_mask = torch.ones(

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch.optim import Optimizer
@@ -8,6 +8,7 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing import raytracing_utils
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import utils
+from artist.util.environment_setup import get_device
 from artist.util.scenario import Scenario
 
 log = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ class KinematicOptimizer:
         tolerance: float = 5e-5,
         max_epoch: int = 10000,
         num_log: int = 3,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Optimize the kinematic parameters.
@@ -94,12 +95,14 @@ class KinematicOptimizer:
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Union[torch.device, str] = "cuda"
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        log.info("Start the kinematic calibration.")
+        device = get_device(device=device)
 
-        device = torch.device(device)
+        log.info("Start the kinematic calibration.")
 
         if motor_positions_calibration is not None:
             self._optimize_kinematic_parameters_with_motor_positions(
@@ -136,7 +139,7 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Optimize the kinematic parameters using the motor positions.
@@ -161,12 +164,14 @@ class KinematicOptimizer:
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        log.info("Kinematic calibration with motor positions.")
+        device = get_device(device=device)
 
-        device = torch.device(device)
+        log.info("Kinematic calibration with motor positions.")
 
         loss = torch.inf
         epoch = 0
@@ -232,7 +237,7 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Optimize the kinematic parameters using ray tracing.
@@ -257,12 +262,14 @@ class KinematicOptimizer:
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        log.info("Kinematic optimization with ray tracing.")
+        device = get_device(device=device)
 
-        device = torch.device(device)
+        log.info("Kinematic optimization with ray tracing.")
 
         loss = torch.inf
         epoch = 0

@@ -1,10 +1,11 @@
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.kinematic_rigid_body import RigidBody
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat groups with a rigid body kinematic."""
@@ -76,7 +77,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         initial_orientations: torch.Tensor,
         kinematic_deviation_parameters: torch.Tensor,
         actuator_parameters: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Initialize a heliostat group with a rigid body kinematic and linear or ideal actuator type.
@@ -99,11 +100,11 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The kinematic deviation parameters of all heliostats in the group.
         actuator_parameters : torch.Tensor
             The actuator parameters of all actuators in the group.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        device = torch.device(device)
-
         super().__init__(
             names=names,
             positions=positions,
@@ -131,7 +132,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: Optional[torch.Tensor] = None,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Align surface points and surface normals with incident ray directions.
@@ -151,10 +152,12 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         self.kinematic.aim_points = aim_points
 
@@ -173,9 +176,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         )
 
     def get_orientations_from_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
     ) -> torch.Tensor:
         """
         Compute the orientations of heliostats given some motor positions.
@@ -184,15 +185,17 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The orientations of the heliostats for the given motor positions.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         return self.kinematic.motor_positions_to_orientations(
             motor_positions=motor_positions,

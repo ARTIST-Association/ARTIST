@@ -1,10 +1,10 @@
-from typing import Union
+from typing import Optional
 
 import torch
 
-from artist.field import field_mappings
 from artist.field.kinematic import Kinematic
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary, type_mappings, utils
+from artist.util.environment_setup import get_device
 
 
 class RigidBody(Kinematic):
@@ -60,7 +60,7 @@ class RigidBody(Kinematic):
         deviation_parameters: torch.Tensor,
         aim_points: torch.Tensor,
         actuator_parameters: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> None:
         """
         Initialize a rigid body kinematic.
@@ -84,12 +84,14 @@ class RigidBody(Kinematic):
             The aim points of the heliostats.
         actuator_parameters : torch.Tensor
             The actuator parameters.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        device = torch.device(device)
-
         super().__init__()
+
+        device = get_device(device=device)
 
         self.number_of_heliostats = number_of_heliostats
         self.heliostat_positions = heliostat_positions
@@ -113,7 +115,7 @@ class RigidBody(Kinematic):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.actuators = field_mappings.actuator_type_mapping[
+        self.actuators = type_mappings.actuator_type_mapping[
             actuator_parameters[0, 0, 0].item()
         ](actuator_parameters=actuator_parameters, device=device)
 
@@ -122,7 +124,7 @@ class RigidBody(Kinematic):
         incident_ray_directions: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.
@@ -135,15 +137,17 @@ class RigidBody(Kinematic):
             Maximum number of iterations (default is 2).
         min_eps : float
             Convergence criterion (default is 0.0001).
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The orientation matrices.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         motor_positions = torch.zeros(
             (
@@ -325,7 +329,7 @@ class RigidBody(Kinematic):
         incident_ray_directions: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to incident ray directions.
@@ -338,8 +342,10 @@ class RigidBody(Kinematic):
             The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
             The normals to the surface points.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
@@ -348,7 +354,7 @@ class RigidBody(Kinematic):
         torch.Tensor
             The aligned surface normals.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         orientations = self.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
@@ -361,9 +367,7 @@ class RigidBody(Kinematic):
         return aligned_surface_points, aligned_surface_normals
 
     def motor_positions_to_orientations(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
     ) -> torch.Tensor:
         """
         Compute orientation matrices given the motor positions.
@@ -372,15 +376,17 @@ class RigidBody(Kinematic):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The orientation matrices.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         joint_angles = self.actuators.motor_positions_to_angles(
             motor_positions=motor_positions,

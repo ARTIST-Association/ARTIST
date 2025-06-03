@@ -1,11 +1,12 @@
 import logging
-from typing import Union
+from typing import Optional
 
 import h5py
 import torch.nn
 from typing_extensions import Self
 
 from artist.util import config_dictionary
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the tower target areas."""
@@ -88,7 +89,7 @@ class TowerTargetAreas(torch.nn.Module):
 
     @classmethod
     def from_hdf5(
-        cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
+        cls, config_file: h5py.File, device: Optional[torch.device] = None
     ) -> Self:
         """
         Load all target areas from an HDF5 file.
@@ -97,16 +98,19 @@ class TowerTargetAreas(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         TowerTargetAreas
             The target areas loaded from the HDF5 file.
         """
+        device = get_device(device=device)
+
         log.info("Loading the tower target areas from an HDF5 file.")
-        device = torch.device(device)
 
         number_of_target_areas = len(config_file[config_dictionary.target_area_key])
 
