@@ -4,6 +4,7 @@ import h5py
 import torch
 
 from artist.util import paint_loader, set_logger_config
+from artist.util.environment_setup import get_device
 from artist.util.kinematic_optimizer import KinematicOptimizer
 from artist.util.scenario import Scenario
 
@@ -14,7 +15,7 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set the device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = get_device()
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")

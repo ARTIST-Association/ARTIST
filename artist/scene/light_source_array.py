@@ -1,16 +1,13 @@
 import logging
-from typing import Union
+from typing import Optional
 
 import h5py
 import torch.nn
 from typing_extensions import Self
 
 from artist.scene.light_source import LightSource
-from artist.scene.sun import Sun
-from artist.util import config_dictionary
-
-light_source_type_mapping = {config_dictionary.sun_key: Sun}
-"""A type mapping dictionary that allows ARTIST to automatically infer the correct light source type."""
+from artist.util import config_dictionary, type_mappings
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the light source array."""
@@ -51,7 +48,7 @@ class LightSourceArray(torch.nn.Module):
 
     @classmethod
     def from_hdf5(
-        cls, config_file: h5py.File, device: Union[torch.device, str] = "cuda"
+        cls, config_file: h5py.File, device: Optional[torch.device] = None
     ) -> Self:
         """
         Load a light source array from an HDF5 file.
@@ -60,16 +57,20 @@ class LightSourceArray(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         LightSourceArray
             The light source array loaded from the HDF5 file.
         """
+        device = get_device(device=device)
+
         log.info("Loading a light source array from an HDF5 file.")
-        device = torch.device(device)
+
         light_source_array = []
         # Iterate through each light source configuration in the list of light source configurations.
         for ls in config_file[config_dictionary.light_source_key].keys():
@@ -79,7 +80,7 @@ class LightSourceArray(torch.nn.Module):
             # Try to load a light source from the given configuration. This will fail, if ARTIST
             # does not recognize the light source type defined in the configuration.
             try:
-                ls_object = light_source_type_mapping[mapping_key]
+                ls_object = type_mappings.light_source_type_mapping[mapping_key]
                 light_source_array.append(
                     ls_object.from_hdf5(
                         config_file=config_file[config_dictionary.light_source_key][ls],

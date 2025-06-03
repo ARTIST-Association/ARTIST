@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Optional
 
 import h5py
 import torch
@@ -11,6 +11,7 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary, utils_load_h5
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
@@ -71,7 +72,7 @@ class Scenario:
 
     @classmethod
     def load_scenario_from_hdf5(
-        cls, scenario_file: h5py.File, device: Union[torch.device, str] = "cuda"
+        cls, scenario_file: h5py.File, device: Optional[torch.device] = None
     ) -> Self:
         """
         Class method to load the scenario from an HDF5 file.
@@ -80,18 +81,21 @@ class Scenario:
         ----------
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         Scenario
             The ``ARTIST`` scenario loaded from the HDF5 file.
         """
+        device = get_device(device=device)
+
         log.info(
             f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
         )
-        device = torch.device(device)
 
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][
@@ -187,7 +191,7 @@ class Scenario:
             [0.0, 1.0, 0.0, 0.0]
         ),
         single_target_area_index: int = 0,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Create an index mapping from heliostat names, target area names and incident ray directions.
@@ -206,8 +210,10 @@ class Scenario:
             The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
         single_target_area_index : int
             The default target area index (default is 0).
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
@@ -218,7 +224,8 @@ class Scenario:
         torch.Tensor
             The indices of target areas for all heliostats in order.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
+
         data_per_heliostat = defaultdict(list)
 
         if string_mapping is None:

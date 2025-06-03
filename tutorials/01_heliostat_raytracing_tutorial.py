@@ -9,6 +9,7 @@ from matplotlib.pyplot import tight_layout
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
+from artist.util.environment_setup import get_device
 from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can use that scenario,
@@ -20,7 +21,7 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 set_logger_config()
 
 # Set the device.
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = get_device()
 
 # Load the scenario.
 with h5py.File(scenario_path) as scenario_path:

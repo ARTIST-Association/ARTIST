@@ -1,8 +1,9 @@
-from typing import Union
+from typing import Optional
 
 import torch
 
 from artist.field.actuators import Actuators
+from artist.util.environment_setup import get_device
 
 
 class LinearActuators(Actuators):
@@ -31,9 +32,7 @@ class LinearActuators(Actuators):
     """
 
     def __init__(
-        self,
-        actuator_parameters: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        self, actuator_parameters: torch.Tensor, device: Optional[torch.device] = None
     ) -> None:
         """
         Initialize linear actuators.
@@ -51,11 +50,11 @@ class LinearActuators(Actuators):
         ----------
         actuator_parameters : torch.Tensor
             The seven actuator parameters.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
         """
-        device = torch.device(device)
-
         super().__init__(actuator_parameters=actuator_parameters, device=device)
 
     def _motor_positions_to_absolute_angles(
@@ -97,9 +96,7 @@ class LinearActuators(Actuators):
         return absolute_angles
 
     def motor_positions_to_angles(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
@@ -111,15 +108,17 @@ class LinearActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The joint angles corresponding to the motor positions.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         absolute_angles = self._motor_positions_to_absolute_angles(
             motor_positions=motor_positions,
@@ -139,7 +138,7 @@ class LinearActuators(Actuators):
     def angles_to_motor_positions(
         self,
         angles: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.
@@ -152,15 +151,17 @@ class LinearActuators(Actuators):
         ----------
         angles : torch.Tensor
             The joint angles.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
             The motor steps.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         delta_angles = torch.where(
             self.active_actuator_parameters[:, 1] == 1,

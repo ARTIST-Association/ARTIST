@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import h5py
 import torch
@@ -41,6 +41,7 @@ class LightSource(torch.nn.Module):
             The number of sent-out rays sampled from the sun distribution.
         """
         super().__init__()
+
         self.number_of_rays = number_of_rays
 
     @classmethod
@@ -48,7 +49,7 @@ class LightSource(torch.nn.Module):
         cls,
         config_file: h5py.File,
         light_source_name: Optional[str] = None,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> Self:
         """
         Load the light source from an HDF5 file.
@@ -59,8 +60,10 @@ class LightSource(torch.nn.Module):
             The HDF5 file containing the information about the light sources.
         light_source_name : str, optional
             The name of the light source - used for logging.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------

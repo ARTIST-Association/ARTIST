@@ -1,6 +1,7 @@
 from artist.field.actuators_ideal import IdealActuators
 from artist.field.actuators_linear import LinearActuators
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
+from artist.scene.sun import Sun
 from artist.util import config_dictionary
 
 heliostat_group_type_mapping = {
@@ -14,3 +15,6 @@ actuator_type_mapping = {
     config_dictionary.ideal_actuator_int: IdealActuators,
 }
 """A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct actuator type."""
+
+light_source_type_mapping = {config_dictionary.sun_key: Sun}
+"""A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct light source type."""

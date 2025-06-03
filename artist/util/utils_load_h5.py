@@ -1,15 +1,16 @@
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import h5py
 import torch
 
 from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig, SurfaceConfig
+from artist.util.environment_setup import get_device
 
 
 def surface_config(
-    prototype: bool, scenario_file: h5py.File, device: Union[torch.device, str] = "cuda"
+    prototype: bool, scenario_file: h5py.File, device: Optional[torch.device] = None
 ) -> SurfaceConfig:
     """
     Load a surface configuration from an HDF5 scenario file.
@@ -20,15 +21,17 @@ def surface_config(
         Loading a prototype or an individual surface configuration.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     SurfaceConfig
         The surface configuration.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if prototype:
         facet_config = scenario_file[config_dictionary.prototype_key][
@@ -83,7 +86,7 @@ def kinematic_deviations(
     scenario_file: h5py.File,
     log: logging.Logger,
     heliostat_name: Optional[str] = None,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[torch.Tensor, int]:
     """
     Load kinematic deviations from an HDF5 scenario file.
@@ -100,8 +103,10 @@ def kinematic_deviations(
         The logger for the scenario loader.
     heliostat_name : Optional[str]
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -115,7 +120,7 @@ def kinematic_deviations(
     int
         The number of actuators needed for this kinematic type.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if prototype:
         kinematic_config = scenario_file[config_dictionary.prototype_key][
@@ -144,7 +149,7 @@ def rigid_body_deviations(
     kinematic_config: h5py.File,
     log: logging.Logger,
     heliostat_name: Optional[str] = None,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Load kinematic deviations for a rigid body kinematic from an HDF5 scenario file.
@@ -157,15 +162,17 @@ def rigid_body_deviations(
         The logger for the scenario loader.
     heliostat_name : Optional[str]
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         18 deviation parameters for the rigid body kinematic.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     kinematic_deviations = torch.zeros(
         config_dictionary.rigid_body_number_of_deviation_parameters,
@@ -437,7 +444,7 @@ def actuator_parameters(
     initial_orientation: torch.Tensor,
     log: logging.Logger,
     heliostat_name: Optional[str] = None,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters from an HDF5 scenario file.
@@ -458,8 +465,10 @@ def actuator_parameters(
         The logger for the scenario loader.
     heliostat_name : Optional[str]
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -471,7 +480,7 @@ def actuator_parameters(
     torch.Tensor
         Actuator parameters for for each actuator in the file.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if prototype:
         actuator_config = scenario_file[config_dictionary.prototype_key][
@@ -507,7 +516,7 @@ def linear_actuators(
     initial_orientation: torch.Tensor,
     log: logging.Logger,
     heliostat_name: Optional[str] = None,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters for linear actuators from an HDF5 scenario file.
@@ -524,8 +533,10 @@ def linear_actuators(
         The logger for the scenario loader.
     heliostat_name : Optional[str]
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -535,9 +546,9 @@ def linear_actuators(
     Returns
     -------
     torch.Tensor
-        6 actuator parameters for each linear actuator in the file.
+        Seven actuator parameters for each linear actuator in the file.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if len(actuator_config.keys()) != number_of_actuators:
         raise ValueError(
@@ -655,7 +666,7 @@ def linear_actuators(
 def ideal_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters for ideal actuators from an HDF5 scenario file.
@@ -666,8 +677,10 @@ def ideal_actuators(
         The opened scenario HDF5 file containing the information.
     number_of_actuators : int
         The number of actuators used for a specific kinematic.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Raises
     ------
@@ -677,9 +690,9 @@ def ideal_actuators(
     Returns
     -------
     torch.Tensor
-        1 actuator parameter for each ideal actuator in the file.
+        Two actuator parameters for each ideal actuator in the file.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
     if len(actuator_config.keys()) != number_of_actuators:
         raise ValueError(
