@@ -1,13 +1,16 @@
+import os
 import platform
 
 import pytest
 import torch
 
 
-@pytest.fixture(params=[torch.device("cpu"), "gpu"], ids=["cpu", "gpu"])
+@pytest.fixture(params=["cpu", "gpu"])
 def device(request: pytest.FixtureRequest) -> torch.device:
     """
     Return the device on which to initialize tensors.
+
+    The "gpu" device is skipped in CI environments.
 
     Parameters
     ----------
@@ -19,11 +22,18 @@ def device(request: pytest.FixtureRequest) -> torch.device:
     torch.device
         The device on which to initialize tensors.
     """
-    device = request.param
-    if device == "gpu":
+    param = request.param
+
+    if param == "gpu":
+        if os.environ.get("CI", "false").lower() == "true":
+            pytest.skip("Skipping GPU test in CI environment")
+
         os_name = platform.system()
-        if os_name == "Linux" or os_name == "Windows":
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if os_name in {"Linux", "Windows"}:
+            return torch.device("cuda" if torch.cuda.is_available() else "cpu")
         elif os_name == "Darwin":
-            device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    return device
+            return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        else:
+            return torch.device("cpu")
+
+    return torch.device("cpu")
