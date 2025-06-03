@@ -4,7 +4,10 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from artist.util.environment_setup import setup_global_distributed_environment
+from artist.util.environment_setup import (
+    get_device,
+    setup_global_distributed_environment,
+)
 
 
 @pytest.mark.parametrize(
@@ -15,7 +18,7 @@ from artist.util.environment_setup import setup_global_distributed_environment
         (False, 0, 1),
     ],
 )
-def test_setup_distributed_environment(
+def test_setup_global_distributed_environment(
     is_distributed: bool, rank: int, world_size: int, device: torch.device
 ) -> None:
     """
@@ -107,3 +110,51 @@ def test_setup_distributed_environment(
 
             mock_barrier.assert_called_once()
             mock_destroy_pg.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "os_name, cuda_available, mps_available, expected",
+    [
+        ("Linux", True, False, "cuda"),
+        ("Linux", False, False, "cpu"),
+        ("Windows", True, False, "cuda"),
+        ("Windows", False, False, "cpu"),
+        ("Darwin", False, True, "mps"),
+        ("Darwin", False, False, "cpu"),
+        ("InvalidOS", False, False, "cpu"),
+    ],
+)
+def test_get_device_logic(
+    monkeypatch: pytest.MonkeyPatch,
+    os_name: str,
+    cuda_available: bool,
+    mps_available: bool,
+    expected: str,
+) -> None:
+    """
+    Test the the get device method.
+
+    Parameters
+    ----------
+    monkeypatch : MonkeyPatch
+        Pytest's monkeypatch fixture for patching system or hardware states.
+    os_name : str
+        Name of the operating system.
+    cuda_available : bool
+        Simulated CUDA availability.
+    mps_available : bool
+        Simulated MPS availability.
+    expected : str
+        Expected `device.type` returned by `get_device`.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    monkeypatch.setattr("platform.system", lambda: os_name)
+    monkeypatch.setattr("torch.cuda.is_available", lambda: cuda_available)
+    monkeypatch.setattr("torch.backends.mps.is_available", lambda: mps_available)
+
+    device = get_device()
+    assert device.type == expected

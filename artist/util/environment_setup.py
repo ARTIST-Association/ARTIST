@@ -105,7 +105,7 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
             log.info(
                 f"OS: {os_name}, cuda available: {torch.cuda.is_available()}, selected device type: {device.type}"
             )
-        elif os_name == "darwin":
+        elif os_name == "Darwin":
             device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
             log.info(
                 f"OS: Mac, mps available: {torch.backends.mps.is_available()}, selected device type: {device.type}"
