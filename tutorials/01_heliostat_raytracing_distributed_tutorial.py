@@ -6,7 +6,6 @@ import torch
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
 from artist.util.environment_setup import (
-    get_device,
     setup_global_distributed_environment,
 )
 from artist.util.scenario import Scenario
@@ -17,14 +16,11 @@ torch.cuda.manual_seed(7)
 # Set up logger
 set_logger_config()
 
-# Set the device
-device = get_device()
-
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # The distributed environment is setup and destroyed using a Generator object.
-environment_generator = setup_global_distributed_environment(device=device)
+environment_generator = setup_global_distributed_environment()
 
 device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -85,7 +81,7 @@ for heliostat_group_index, heliostat_group in enumerate(
         heliostat_group=heliostat_group,
         world_size=world_size,
         rank=rank,
-        batch_size=2,
+        batch_size=4,
         random_seed=rank,
         bitmap_resolution_e=bitmap_resolution_e,
         bitmap_resolution_u=bitmap_resolution_u,
@@ -99,16 +95,16 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    if is_distributed:
-        torch.distributed.all_reduce(
-            group_bitmaps_per_heliostat, op=torch.distributed.ReduceOp.SUM
-        )
-
     group_bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
         bitmaps_per_heliostat=group_bitmaps_per_heliostat,
         target_area_mask=target_area_mask,
         device=device,
     )
+
+    if is_distributed:
+        torch.distributed.all_reduce(
+            flux_distributions, op=torch.distributed.ReduceOp.SUM
+        )
 
     flux_distributions = flux_distributions + group_bitmaps_per_target
 
