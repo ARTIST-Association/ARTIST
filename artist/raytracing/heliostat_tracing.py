@@ -625,9 +625,13 @@ class HeliostatRayTracer:
             & intersection_indices_2
         )
         mask = final_intersection_indices.flatten()
-        heliostat_indices = torch.arange(
-            target_area_mask.shape[0], device=device
-        ).repeat_interleave(total_intersections * 4)
+
+        active_heliostat_indices = torch.nonzero(
+            active_heliostats_mask, as_tuple=False
+        ).squeeze()
+        heliostat_indices = torch.repeat_interleave(
+            active_heliostat_indices, total_intersections * 4
+        )
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
@@ -643,8 +647,7 @@ class HeliostatRayTracer:
         # Add up all distributed intensities in the corresponding indices.
         bitmaps_per_heliostat.index_put_(
             (
-                heliostat_indices[mask]
-                + torch.nonzero(active_heliostats_mask)[0].item(),
+                heliostat_indices[mask],
                 self.bitmap_resolution_u - 1 - y_indices[final_intersection_indices],
                 self.bitmap_resolution_e - 1 - x_indices[final_intersection_indices],
             ),
