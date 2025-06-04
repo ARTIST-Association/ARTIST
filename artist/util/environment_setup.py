@@ -4,6 +4,8 @@ from typing import Generator, Optional
 
 import torch
 
+from artist.util import config_dictionary
+
 log = logging.getLogger(__name__)
 """A logger for the environment."""
 
@@ -100,12 +102,12 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
 
         os_name = platform.system()
 
-        if os_name == "Linux" or os_name == "Windows":
+        if os_name == config_dictionary.linux or os_name == config_dictionary.windows:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             log.info(
                 f"OS: {os_name}, cuda available: {torch.cuda.is_available()}, selected device type: {device.type}"
             )
-        elif os_name == "Darwin":
+        elif os_name == config_dictionary.mac:
             device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
             log.info(
                 f"OS: Mac, mps available: {torch.backends.mps.is_available()}, selected device type: {device.type}"
