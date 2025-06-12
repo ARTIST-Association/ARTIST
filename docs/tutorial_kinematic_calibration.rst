@@ -43,6 +43,7 @@ To load the calibration data into the ``ARTIST`` environment we use a heliostat 
 The mapping from heliostat to calibration files should follow this pattern:
 
 .. code-block::
+
     # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
     heliostat_calibration_mapping = [
         (
@@ -68,7 +69,7 @@ The mapping from heliostat to calibration files should follow this pattern:
         # ...
     ]
 
-In this mapping the first heliostat would have one calibration file and the second heliostat would have two.
+In this mapping the first heliostat would have two calibration files and the second heliostat would have one.
 You can specify as many as you want for each helisotat. The data is loaded with the ``paint_loader`` like this:
 
 .. code-block::
