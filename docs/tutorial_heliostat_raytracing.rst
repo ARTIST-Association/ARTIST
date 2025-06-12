@@ -12,26 +12,25 @@ This tutorial provides a brief introduction to ``ARTIST`` showcasing how Heliost
 will run through some basic concepts necessary to understanding ``ARTIST`` including:
 
 - How to load a scenario.
-- Activating the kinematic in a heliostat to align this heliostat for ray tracing.
-- Performing heliostat ray tracing to generate a flux density image on the receiver.
+- How to select specific helisotats for alignment and raytracing.
+- Activating the kinematic in the heliostats to align the heliostats for ray tracing.
+- Performing heliostat ray tracing to generate flux density images on the target areas on the tower.
 
 Loading a Scenario
 ------------------
 Before we load the scenario, you need to decide which scenario file to use. This tutorial is based on a simple scenario
 which you can create in the tutorial on :ref:`generating a scenario <tutorial_generating_scenario>`. However, since generating a
-scenario involves training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided the
-scenario file online for your convenience.
+scenario involves training Non-Uniform Rational B-Splines (NURBS) and may take a while, we have also provided some
+scenario files in the artist tutorials directory.
 
-Therefore, the first step is to decide if you want to use your previously created scenario or the online version. If
-you want to use the online version, you must adjust the boolean ``DOWNLOAD_DATA`` to ``True``. If not, you need to adjust
-the path and name of the ``scenario_file`` variable:
+Please adjust the path and name of the ``scenario_file`` variable:
 
 .. code-block::
 
-    USE_DOWNLOADED_DATA = False   # Select true if you want to use downloaded data.
-    scenario_file = "please/insert/the/path/to/your/scenario/here/name.h5" # Adjust if you want to use your local scenario.
+    # Specify the path to your scenario.h5 file.
+    scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
-Once you have adjusted these parameters, you can load a scenario in ``ARTIST`` by simply calling the
+Once you have adjusted this parameter, you can load a scenario in ``ARTIST`` by simply calling the
 ``load_scenario_from_hdf5()`` method, which is a ``Python`` ``classmethod`` that initializes a ``Scenario`` object based on
 the configuration contained in the HDF5 file:
 
@@ -137,13 +136,17 @@ what type of light source and target area is included:
 
     # Inspect the scenario.
     print(scenario)
-    print(f"The light source is a {scenario.light_sources.light_source_list[0]}")
+    print(f"The light source is a {scenario.light_sources.light_source_list[0]}.")
+    print(f"The first target area is a {scenario.target_areas.names[0]}.")
     print(
-        f"The first target area is a {scenario.target_areas.target_area_list[0].name}."
+        f"The first heliostat in the first group in the field is heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]}."
     )
-    print(f"The first heliostat in the field is heliostat {scenario.heliostat_field.all_heliostat_names[0]}")
-    print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is located at: {scenario.heliostat_field.all_heliostat_positions[0].tolist()}")
-    print(f"Heliostat {scenario.heliostat_field.all_heliostat_names[0]} is aiming at: {scenario.heliostat_field.all_aim_points[0].tolist()}")
+    print(
+        f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is located at: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
+    )
+    print(
+        f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
+    )
 
 This code generates the following output:
 
@@ -151,11 +154,42 @@ This code generates the following output:
 
     ARTIST Scenario containing:
             A Power Plant located at: [0.0, 0.0, 0.0] with 1 Target Area(s), 1 Light Source(s), and 1 Heliostat(s).
-    The light source is a Sun()
+    The light source is a Sun().
     The first target area is a receiver.
-    The first heliostat in the field is heliostat heliostat_1
-    Heliostat heliostat_1 is located at: [0.0, 5.0, 0.0, 1.0]
-    Heliostat heliostat_1 is aiming at: [0.0, -50.0, 0.0, 1.0]
+    The first heliostat in the first group in the field is heliostat heliostat_1.
+    Heliostat heliostat_1 is located at: [0.0, 5.0, 0.0, 1.0].
+    Heliostat heliostat_1 is aiming at: [0.0, -50.0, 0.0, 1.0].
+
+
+Selecting Active Heliostats and Target Areas
+--------------------------------------------
+In ARTIST the information about the helisotats is saved per heliostat property. There is one tensor containing
+all heliostat positions from a specific heliostat group. Similarly there is one tensor containing all aim points and so on.
+To address a specific heliostat, it is important to know its index. To activate one or more heliostats for the
+alignment process or raytracing, you can mark the entry at the heliostat index with a 1 in the ``active_heliostats_mask`` tensor,
+like this:
+
+.. code-block::
+
+    # Let's say we only want to consider one Heliostat for the beginning.
+    # We will choose the first Heliostat, with index 0 by activating it.
+    active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
+
+Then we activate these heliostats by calling the ``activate_heliostats()`` method:
+
+.. code-block::
+
+    # Activate heliostats, only activated heliostats will be aligned or raytraced.
+    scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+        active_heliostats_mask=active_heliostats_mask
+    )
+
+The same is true for the target areas.
+
+.. code-block::
+
+    # We select the first target area as the designated target for this heliostat.
+    target_area_indices = torch.tensor([0], device=device)
 
 
 Aligning Heliostats
@@ -171,15 +205,21 @@ Therefore, we make use of our knowledge regarding the:
 - Kinematic model,
 
 to align the heliostats in an optimal position for reflection. To perform this orientation, we need an *incident ray
-direction*, i.e., a direction vector, originating in the sun position and pointing towards the heliostat field.
+direction*, i.e., a direction vector, originating in the light source position and pointing towards the heliostat field.
+``ARTIST`` can accomodate heliostats with various differnt kinematic and actuator types. Since each kinematic type and
+actuator type computes the orientations of aligned heliostats slightly different, we need to seperate the heliostats into
+``HeliostatGroup`` groups. ``ARTIST`` handels this automatically.
 Given an *incident ray direction*, we can align the heliostats with the following code:
 
 .. code-block::
 
-    # Align all heliostats
-    scenario.heliostat_field.align_surfaces_with_incident_ray_direction(
-        incident_ray_direction=incident_ray_direction_south,
-        device=device
+    # Align the heliostat(s).
+    scenario.heliostat_field.heliostat_groups[
+        0
+    ].align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[target_area_mask],
+        incident_ray_directions=incident_ray_directions,
+        device=device,
     )
 
 We can compare the original surface and the aligned surface of the first heliostat in the heliostat field
@@ -213,14 +253,14 @@ efficient. Concretely, the heliostat ray tracing involves three main steps:
 
 Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class! Therefore, ray tracing
 with ``ARTIST`` involves two simple lines of code. First, we define the ``HeliostatRayTracer``. A ``HeliostatRayTracer``
-only requires a ``Scenario`` object as an argument, but in this tutorial we additionally define the ``batch_size``.
-The ``batch_size`` defines the number of heliostats that are traced at once:
+only requires a ``Scenario`` object as an argument and the specification of which ``HelisotatGroup`` is currently regarded.
 
 .. code-block::
 
-    # Create ray tracer
+    # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
-        scenario=scenario, batch_size=1
+        scenario=scenario,
+        heliostat_group=scenario.heliostat_field.heliostat_groups[0],
     )
 
 Internally, a ``HeliostatRayTracer`` uses a ``torch.Dataset`` to generate rays and the distortion of the preferred
@@ -229,15 +269,15 @@ runs parallel for all heliostats in the scenario. It is further possible to use 
 to split the computation along multiple devices. See the tutorial on :ref:`distributed raytracing. <tutorial_distributed_raytracing>
 
 With everything now set up, we can generate a flux density image by calling the ``trace_rays()`` function with the
-desired incident ray direction and a target area (for this tutorial we use the receiver).
+desired incident ray directions, the active heliostat indices and the target area indices (for this tutorial we use the receiver).
 
 .. code-block::
 
     # Perform heliostat-based ray tracing.
     image_south = ray_tracer.trace_rays(
-        incident_ray_direction=incident_ray_direction_south,
-        target_area=scenario.get_target_area("receiver"),
-        device=device
+        incident_ray_directions=incident_ray_directions,
+        target_area_mask=target_area_mask,
+        device=device,
     )
 
 If we plot the output, we get the following flux density image!
@@ -255,20 +295,30 @@ ray tracing with the following code:
 .. code-block::
 
     # Define light directions.
-    incident_ray_direction_east = torch.tensor([-1.0, 0.0, 0.0, 0.0], device=device)
-    incident_ray_direction_west = torch.tensor([1.0, 0.0, 0.0, 0.0], device=device)
-    incident_ray_direction_above = torch.tensor([0.0, 0.0, -1.0, 0.0], device=device)
+    incident_ray_direction_east = torch.tensor([[-1.0, 0.0, 0.0, 0.0]], device=device)
+    incident_ray_direction_west = torch.tensor([[1.0, 0.0, 0.0, 0.0]], device=device)
+    incident_ray_direction_above = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=device)
 
     # Perform alignment and ray tracing to generate flux density images.
     image_east = align_and_trace_rays(
-        light_direction=incident_ray_direction_east, device=device
+        light_direction=incident_ray_direction_east,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
+        device=device,
     )
     image_west = align_and_trace_rays(
-        light_direction=incident_ray_direction_west, device=device
+        light_direction=incident_ray_direction_west,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
+        device=device,
     )
     image_above = align_and_trace_rays(
-        light_direction=incident_ray_direction_above, device=device
+        light_direction=incident_ray_direction_above,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
+        device=device,
     )
+
 
 If we were to now plot the results of all four considered incident ray directions, we get the following image:
 

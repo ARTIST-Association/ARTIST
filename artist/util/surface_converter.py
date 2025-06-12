@@ -2,7 +2,7 @@ import json
 import logging
 import pathlib
 import struct
-from typing import Union
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -10,6 +10,7 @@ import torch
 
 from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig
+from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger(__name__)
@@ -104,10 +105,8 @@ class SurfaceConverter:
             Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
         max_epoch : int
             Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
-
         """
         self.step_size = step_size
-
         self.number_eval_points_e = number_eval_points_e
         self.number_eval_points_n = number_eval_points_n
         self.conversion_method = conversion_method
@@ -131,7 +130,7 @@ class SurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 2500,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> NURBSSurface:
         """
         Fit the NURBS surface given the conversion method.
@@ -164,15 +163,18 @@ class SurfaceConverter:
             Initial learning rate for the learning rate scheduler (default: 1e-1).
         max_epoch : int, optional
             Maximum number of epochs for optimization (default: 2500).
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         NURBSSurface
             A NURBS surface.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
+
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
         evaluation_points = surface_points.clone()
         evaluation_points[:, 2] = 0
@@ -265,7 +267,7 @@ class SurfaceConverter:
         facet_translation_vectors: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a data source.
@@ -282,16 +284,19 @@ class SurfaceConverter:
             The canting vector per facet in east direction.
         canting_n : torch.Tensor
             The canting vector per facet in north direction.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
+        device = get_device(device=device)
+
         log.info("Beginning generation of the surface configuration based on data.")
-        device = torch.device(device)
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
@@ -375,9 +380,7 @@ class SurfaceConverter:
         return facet_config_list
 
     def generate_surface_config_from_stral(
-        self,
-        stral_file_path: pathlib.Path,
-        device: Union[torch.device, str] = "cuda",
+        self, stral_file_path: pathlib.Path, device: Optional[torch.device] = None
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
@@ -386,16 +389,19 @@ class SurfaceConverter:
         ----------
         stral_file_path : pathlib.Path
             The file path to the ``STRAL`` data that will be converted.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
+        device = get_device(device=device)
+
         log.info("Beginning extraction of data from ```STRAL``` file.")
-        device = torch.device(device)
 
         # Create structures for reading ``STRAL`` file.
         surface_header_struct = struct.Struct("=5f2I2f")
@@ -468,7 +474,7 @@ class SurfaceConverter:
         self,
         heliostat_file_path: pathlib.Path,
         deflectometry_file_path: pathlib.Path,
-        device: Union[torch.device, str] = "cuda",
+        device: Optional[torch.device] = None,
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``PAINT`` dataset.
@@ -479,14 +485,18 @@ class SurfaceConverter:
             The file path to the ``PAINT`` deflectometry data that will be converted.
         heliostat_file_path : pathlib.Path
             The file path to the ``PAINT`` heliostat properties data that will be converted.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
+        device = get_device(device=device)
+
         log.info("Beginning extraction of data from ```PAINT``` file.")
         # Reading ``PAINT`` heliostat json file.
         with open(heliostat_file_path, "r") as file:

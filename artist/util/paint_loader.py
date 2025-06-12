@@ -1,6 +1,7 @@
 import json
 import pathlib
-from typing import Union
+from collections import Counter, defaultdict
+from typing import Optional
 
 import torch
 
@@ -22,101 +23,140 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.util.environment_setup import get_device
 from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(
-    calibration_properties_paths: list[pathlib.Path],
+    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
-) -> tuple[list[str], torch.Tensor, torch.Tensor, torch.Tensor]:
+    heliostat_names: list[str],
+    target_area_names: list[str],
+    device: Optional[torch.device] = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
 
     Parameters
     ----------
-    calibration_properties_paths : list[pathlib.Path]
-        The paths to the calibration properties files.
+    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
+        The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
-        The position of the power plant in latitude, longitude and elevation.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+        The power plant position.
+    heliostat_names : list[str]
+        All possible heliostat names.
+    target_area_names : list[str]
+        All possible target area names.
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
-    list[str]
-        The names of the calibration targets.
     torch.Tensor
-        The calibration flux density centers.
+        The calibration focal spots.
     torch.Tensor
-        The sun positions.
+        The light source positions.
     torch.Tensor
         The motor positions.
+    torch.Tensor
+        A mask with active heliostats and their replications.
+    torch.Tensor
+        The target area mapping for the heliostats.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
 
-    number_of_calibrations = len(calibration_properties_paths)
+    target_indices = {name: index for index, name in enumerate(target_area_names)}
 
-    calibration_target_names = []
-    center_calibration_images = torch.zeros((number_of_calibrations, 4), device=device)
-    sun_positions_enu = torch.zeros((number_of_calibrations, 4), device=device)
-    all_motor_positions = torch.zeros((number_of_calibrations, 2), device=device)
+    # Gather calibration data
+    replication_counter: Counter[str] = Counter()
+    calibration_data_per_heliostat = defaultdict(list)
 
-    for index, path in enumerate(calibration_properties_paths):
-        with open(path, "r") as file:
-            calibration_dict = json.load(file)
-            calibration_target_names.append(
-                calibration_dict[config_dictionary.paint_calibration_target]
-            )
-            center_calibration_image = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    calibration_dict[config_dictionary.paint_focal_spot][
+    for heliostat_name, paths in heliostat_calibration_mapping:
+        for path in paths:
+            with open(path, "r") as f:
+                calibration_data_dict = json.load(f)
+            replication_counter[heliostat_name] += 1
+
+            calibration_data_per_heliostat[heliostat_name].append(
+                [
+                    target_indices[
+                        calibration_data_dict[
+                            config_dictionary.paint_calibration_target
+                        ]
+                    ],
+                    calibration_data_dict[config_dictionary.paint_focal_spot][
                         config_dictionary.paint_utis
                     ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            center_calibration_images[index] = utils.convert_3d_point_to_4d_format(
-                center_calibration_image, device=device
-            )
-            sun_azimuth = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_azimuth], device=device
-            )
-            sun_elevation = torch.tensor(
-                calibration_dict[config_dictionary.paint_sun_elevation], device=device
-            )
-            sun_positions_enu[index] = utils.convert_3d_point_to_4d_format(
-                azimuth_elevation_to_enu(
-                    sun_azimuth, sun_elevation, degree=True, device=device
-                ),
-                device=device,
-            )
-            all_motor_positions[index] = torch.tensor(
-                [
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_first_axis
+                    calibration_data_dict[config_dictionary.paint_light_source_azimuth],
+                    calibration_data_dict[
+                        config_dictionary.paint_light_source_elevation
                     ],
-                    calibration_dict[config_dictionary.paint_motor_positions][
-                        config_dictionary.paint_second_axis
+                    [
+                        calibration_data_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_first_axis
+                        ],
+                        calibration_data_dict[config_dictionary.paint_motor_positions][
+                            config_dictionary.paint_second_axis
+                        ],
                     ],
-                ],
-                device=device,
+                ]
             )
 
+    total_samples = sum(replication_counter[name] for name in heliostat_names)
+    calibration_replications = torch.tensor(
+        [replication_counter[name] for name in heliostat_names], device=device
+    )
+
+    target_area_mapping = torch.empty(total_samples, device=device, dtype=torch.long)
+    focal_spots_global = torch.empty((total_samples, 3), device=device)
+    azimuths = torch.empty(total_samples, device=device)
+    elevations = torch.empty(total_samples, device=device)
+    motor_positions = torch.empty((total_samples, 2), device=device)
+
+    index = 0
+    for name in heliostat_names:
+        for (
+            target_index,
+            focal_spot,
+            azimuth,
+            elevation,
+            motor_pos,
+        ) in calibration_data_per_heliostat.get(name, []):
+            target_area_mapping[index] = target_index
+            focal_spots_global[index] = torch.tensor(focal_spot, device=device)
+            azimuths[index] = azimuth
+            elevations[index] = elevation
+            motor_positions[index] = torch.tensor(motor_pos, device=device)
+            index += 1
+
+    focal_spots_enu = convert_wgs84_coordinates_to_local_enu(
+        focal_spots_global, power_plant_position, device=device
+    )
+    focal_spots = utils.convert_3d_point_to_4d_format(focal_spots_enu, device=device)
+
+    light_source_positions_enu = azimuth_elevation_to_enu(
+        azimuths, elevations, degree=True, device=device
+    )
+    light_source_positions = utils.convert_3d_point_to_4d_format(
+        light_source_positions_enu, device=device
+    )
+    incident_ray_directions = (
+        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
+    )
+
     return (
-        calibration_target_names,
-        center_calibration_images,
-        sun_positions_enu,
-        all_motor_positions,
+        focal_spots,
+        incident_ray_directions,
+        motor_positions,
+        calibration_replications,
+        target_area_mapping,
     )
 
 
 def extract_paint_tower_measurements(
-    tower_measurements_path: pathlib.Path,
-    device: Union[torch.device, str] = "cuda",
+    tower_measurements_path: pathlib.Path, device: Optional[torch.device] = None
 ) -> tuple[PowerPlantConfig, TargetAreaListConfig]:
     """
     Extract tower data from a ``PAINT`` tower measurements file for scenario generation.
@@ -125,8 +165,10 @@ def extract_paint_tower_measurements(
     ----------
     tower_measurements_path : pathlib.Path
         The path to the tower measurement file.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -135,104 +177,87 @@ def extract_paint_tower_measurements(
     TargetAreaListConfig
         The configuration of the tower target areas.
     """
+    device = get_device(device=device)
+
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
-        power_plant_position = torch.tensor(
-            tower_dict[config_dictionary.paint_power_plant_properties][
-                config_dictionary.paint_coordinates
+
+    power_plant_position = torch.tensor(
+        tower_dict[config_dictionary.paint_power_plant_properties][
+            config_dictionary.paint_coordinates
+        ],
+        dtype=torch.float64,
+        device=device,
+    )
+
+    target_area_config_list = []
+
+    for target_area in list(tower_dict.keys())[1:]:
+        prefix = (
+            "receiver_outer_"
+            if target_area == config_dictionary.target_area_receiver
+            else ""
+        )
+
+        target_area_corners = [
+            f"{prefix}{config_dictionary.paint_upper_left}",
+            f"{prefix}{config_dictionary.paint_lower_left}",
+            f"{prefix}{config_dictionary.paint_upper_right}",
+            f"{prefix}{config_dictionary.paint_lower_right}",
+        ]
+
+        target_area_corner_points_wgs84 = torch.tensor(
+            [
+                tower_dict[target_area][config_dictionary.paint_coordinates][corner]
+                for corner in target_area_corners
             ],
             dtype=torch.float64,
             device=device,
         )
 
-        target_areas = list(tower_dict.keys())[1:]
-        target_area_config_list = []
+        corner_points_enu = convert_wgs84_coordinates_to_local_enu(
+            target_area_corner_points_wgs84, power_plant_position, device=device
+        )
 
-        for target_area in target_areas:
-            geometry = tower_dict[target_area][
-                config_dictionary.paint_target_area_geometry
-            ]
+        upper_left, lower_left, upper_right, lower_right = corner_points_enu
+        plane_e, plane_u = corner_points_to_plane(
+            upper_left, upper_right, lower_left, lower_right
+        )
 
-            center_lat_lon = torch.tensor(
+        center_lat_lon = torch.tensor(
+            [
                 tower_dict[target_area][config_dictionary.paint_coordinates][
                     config_dictionary.paint_center
-                ],
-                dtype=torch.float64,
-                device=device,
-            )
-            center_3d = convert_wgs84_coordinates_to_local_enu(
-                center_lat_lon, power_plant_position, device=device
-            )
-            center = utils.convert_3d_point_to_4d_format(center_3d, device=device)
-            normal_vector = utils.convert_3d_direction_to_4d_format(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_normal_vector],
-                    device=device,
-                ),
-                device=device,
-            )
+                ]
+            ],
+            dtype=torch.float64,
+            device=device,
+        )
+        center_enu = convert_wgs84_coordinates_to_local_enu(
+            center_lat_lon, power_plant_position, device=device
+        )
+        center = utils.convert_3d_point_to_4d_format(center_enu[0], device=device)
 
-            prefix = ""
-            if target_area == config_dictionary.target_area_receiver:
-                prefix = "receiver_outer_"
-            upper_left = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_upper_left}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
+        normal_vector = utils.convert_3d_direction_to_4d_format(
+            torch.tensor(
+                [tower_dict[target_area][config_dictionary.paint_normal_vector]],
                 device=device,
-            )
-            lower_left = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_lower_left}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            upper_right = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_upper_right}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            lower_right = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    tower_dict[target_area][config_dictionary.paint_coordinates][
-                        f"{prefix}{config_dictionary.paint_lower_right}"
-                    ],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
-                device=device,
-            )
-            plane_e, plane_u = corner_points_to_plane(
-                upper_left, upper_right, lower_left, lower_right
-            )
+            ),
+            device=device,
+        )
 
-            tower_area_config = TargetAreaConfig(
-                target_area_key=target_area,
-                geometry=geometry,
-                center=center,
-                normal_vector=normal_vector,
-                plane_e=plane_e,
-                plane_u=plane_u,
-            )
+        tower_area_config = TargetAreaConfig(
+            target_area_key=target_area,
+            geometry=tower_dict[target_area][
+                config_dictionary.paint_target_area_geometry
+            ],
+            center=center,
+            normal_vector=normal_vector,
+            plane_e=plane_e,
+            plane_u=plane_u,
+        )
 
-            target_area_config_list.append(tower_area_config)
+        target_area_config_list.append(tower_area_config)
 
     # Create the power plant configuration.
     power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
@@ -248,7 +273,7 @@ def extract_paint_heliostats(
     power_plant_position: torch.Tensor,
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
@@ -263,8 +288,10 @@ def extract_paint_heliostats(
         The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS (default is 400).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
@@ -273,6 +300,8 @@ def extract_paint_heliostats(
     PrototypeConfig
         The configuration for a heliostat prototype.
     """
+    device = get_device(device=device)
+
     prototype_facet_list = None
     prototype_kinematic = None
     prototype_actuator_list = None
@@ -283,7 +312,7 @@ def extract_paint_heliostats(
             heliostat_dict = json.load(file)
             heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
                 torch.tensor(
-                    heliostat_dict[config_dictionary.paint_heliostat_position],
+                    [heliostat_dict[config_dictionary.paint_heliostat_position]],
                     dtype=torch.float64,
                     device=device,
                 ),
@@ -291,7 +320,7 @@ def extract_paint_heliostats(
                 device=device,
             )
             heliostat_position = utils.convert_3d_point_to_4d_format(
-                heliostat_position_3d, device=device
+                heliostat_position_3d[0], device=device
             )
 
             # Generate surface configuration from data.
@@ -474,7 +503,7 @@ def azimuth_elevation_to_enu(
     elevation: torch.Tensor,
     slant_range: float = 1.0,
     degree: bool = True,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from azimuth and elevation to east, north, up.
@@ -491,28 +520,31 @@ def azimuth_elevation_to_enu(
         Slant range in meters (default is 1.0).
     degree : bool
         Whether input is given in degrees (default is True).
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
         The east, north, up (ENU) coordinates.
     """
+    device = get_device(device=device)
+
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
 
-    if azimuth < 0.0:
-        azimuth += torch.pi * 2
+    azimuth[azimuth < 0] += 2 * torch.pi
 
     r = slant_range * torch.cos(elevation)
 
-    enu = torch.zeros(3, device=device)
+    enu = torch.zeros((azimuth.shape[0], 3), device=device)
 
-    enu[0] = r * torch.sin(azimuth)
-    enu[1] = -r * torch.cos(azimuth)
-    enu[2] = slant_range * torch.sin(elevation)
+    enu[:, 0] = r * torch.sin(azimuth)
+    enu[:, 1] = -r * torch.cos(azimuth)
+    enu[:, 2] = slant_range * torch.sin(elevation)
 
     return enu
 
@@ -520,7 +552,7 @@ def azimuth_elevation_to_enu(
 def convert_wgs84_coordinates_to_local_enu(
     coordinates_to_transform: torch.Tensor,
     reference_point: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: Optional[torch.device] = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
@@ -536,44 +568,49 @@ def convert_wgs84_coordinates_to_local_enu(
         The coordinates in latitude, longitude, altitude that are to be transformed.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : Optional[torch.device]
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA, MPS, or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
-        The east offset in meters, north offset in meters, and the altitude difference from the reference point.
+        The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
     """
-    device = torch.device(device)
+    device = get_device(device=device)
+
+    transformed_coordinates = torch.zeros_like(
+        coordinates_to_transform, dtype=torch.float32, device=device
+    )
+
     wgs84_a = 6378137.0  # Major axis in meters
     wgs84_b = 6356752.314245  # Minor axis in meters
     wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
 
     # Convert latitude and longitude to radians.
-    lat_rad = torch.deg2rad(coordinates_to_transform[0])
-    lon_rad = torch.deg2rad(coordinates_to_transform[1])
-    alt = coordinates_to_transform[2] - reference_point[2]
-    lat_tower_rad = torch.deg2rad(reference_point[0])
-    lon_tower_rad = torch.deg2rad(reference_point[1])
+    latitudes = torch.deg2rad(coordinates_to_transform[:, 0])
+    longitudes = torch.deg2rad(coordinates_to_transform[:, 1])
+    latitude_refernce_point = torch.deg2rad(reference_point[0])
+    longitude_reference_point = torch.deg2rad(reference_point[1])
 
     # Calculate meridional radius of curvature for the first latitude.
-    sin_lat1 = torch.sin(lat_rad)
+    sin_lat1 = torch.sin(latitudes)
     rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
 
     # Calculate transverse radius of curvature for the first latitude.
     rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
 
     # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = lat_tower_rad - lat_rad
-    dlon_rad = lon_tower_rad - lon_rad
+    dlat_rad = latitude_refernce_point - latitudes
+    dlon_rad = longitude_reference_point - longitudes
 
     # Calculate north and east offsets in meters.
-    north_offset_m = dlat_rad * rm1
-    east_offset_m = dlon_rad * rn1 * torch.cos(lat_rad)
+    transformed_coordinates[:, 0] = -(dlon_rad * rn1 * torch.cos(latitudes))
+    transformed_coordinates[:, 1] = -(dlat_rad * rm1)
+    transformed_coordinates[:, 2] = coordinates_to_transform[:, 2] - reference_point[2]
 
-    return torch.tensor(
-        [-east_offset_m, -north_offset_m, alt], dtype=torch.float32, device=device
-    )
+    return transformed_coordinates
 
 
 def corner_points_to_plane(

@@ -1,16 +1,18 @@
 import logging
-from typing import Union
+from collections import defaultdict
+from typing import Any, Optional, Union
 
 import h5py
 import torch.nn
 from typing_extensions import Self
 
-from artist.field.kinematic_rigid_body import RigidBody
+from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
-from artist.util import config_dictionary, utils_load_h5
+from artist.util import config_dictionary, type_mappings, utils_load_h5
 from artist.util.configuration_classes import (
     SurfaceConfig,
 )
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
@@ -20,131 +22,50 @@ class HeliostatField(torch.nn.Module):
     """
     The heliostat field.
 
-    A heliostat field consists of one or many heliostats that have a unique position in the field. The
-    heliostats in the field are aligned individually to reflect the incoming light in a way that
-    ensures maximum efficiency for the whole power plant.
-
+    A heliostat field consists of one or multiple heliostat groups. Each heliostat group contains all
+    heliostats with a specific kinematic type and actuator type. The heliostats in the field are aligned
+    individually to reflect the incoming light in a way that ensures maximum efficiency for the whole power plant.
 
     Attributes
     ----------
-    number_of_heliostats : int
-        The number of heliostats in the field.
-    all_heliostat_names : list[str]
-        The string names of each heliostat in the field in the correct order.
-    all_heliostat_positions : torch.Tensor
-        The heliostat positions of all heliostats in the field.
-    all_aim_points : torch.Tensor
-        The aim points of all heliostats in the field.
-    all_surface_points : torch.Tensor
-        The surface points of all heliostats in the field.
-    all_surface_normals : torch.Tensor
-        The surface normals of all heliostats in the field.
-    all_initial_orientations : torch.Tensor
-        The initial orientations of all heliostats in the field.
-    all_kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats in the field.
-    all_actuator_parameters : torch.Tensor
-        The actuator parameters of all actuators in the field.
-    all_aligned_heliostats : torch.Tensor
-        Information about alignment of heliostats.
-        Unaligned heliostats marked with 0, aligned heliostats marked with 1.
-    all_preferred_reflection_directions : torch.Tensor
-        The preferred reflection directions of all heliostats in the field.
-    all_current_aligned_surface_points : torch.Tensor
-        The aligned surface points of all heliostats in the field.
-    all_current_aligned_surface_normals : torch.Tensor
-        The aligned surface normals of all heliostats in the field.
+    heliostat_groups : list[HeliostatGroup]
+        A list containing all heliostat groups.
+    number_of_heliostat_groups : int
+        The number of different heliostat groups in the heliostat field.
 
     Methods
     -------
     from_hdf5()
         Load a heliostat field from an HDF5 file.
-    align_surfaces_with_incident_ray_direction()
-        Align all surface points and surface normals of all heliostats in the field.
-    get_orientations_from_motor_positions()
-        Compute the orientations of all heliostats given some motor positions.
-    align_surfaces_with_motor_positions()
-        Align all surface points and surface normals of all heliostats in the field.
     forward()
         Specify the forward pass.
     """
 
     def __init__(
         self,
-        number_of_heliostats: int,
-        all_heliostat_names: list[str],
-        all_heliostat_positions: torch.Tensor,
-        all_aim_points: torch.Tensor,
-        all_surface_points: torch.Tensor,
-        all_surface_normals: torch.Tensor,
-        all_initial_orientations: torch.Tensor,
-        all_kinematic_deviation_parameters: torch.Tensor,
-        all_actuator_parameters: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        heliostat_groups: list[HeliostatGroup],
     ) -> None:
         """
-        Initialize the heliostat field.
-
-        Individual heliostats are not saved as separate entities, instead separate tensors
-        for each heliostat property exist. Each property tensor contains information about this
-        property for all heliostats in the field.
+        Initialize the heliostat field with heliostat groups.
 
         Parameters
         ----------
-        number_of_heliostats : int
-            The number of heliostats in the field.
-        all_heliostat_names : list[str]
-            The string names of each heliostat in the field in the correct order.
-        all_heliostat_positions : torch.Tensor
-            The heliostat positions of all heliostats in the field.
-        all_aim_points : torch.Tensor
-            The aim points of all heliostats in the field.
-        all_surface_points : torch.Tensor
-            The surface points of all heliostats in the field.
-        all_surface_normals : torch.Tensor
-            The surface normals of all heliostats in the field.
-        all_initial_orientations : torch.Tensor
-            The initial orientations of all heliostats in the field.
-        all_kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats in the field.
-        all_actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the field.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        heliostat_groups : list[HeliostatGroup]
+            A list containing all heliostat groups.
         """
-        super(HeliostatField, self).__init__()
-        self.number_of_heliostats = number_of_heliostats
-        self.all_heliostat_names = all_heliostat_names
-        self.all_heliostat_positions = all_heliostat_positions
-        self.all_aim_points = all_aim_points
-        self.all_surface_points = all_surface_points
-        self.all_surface_normals = all_surface_normals
-        self.all_initial_orientations = all_initial_orientations
-        self.all_kinematic_deviation_parameters = all_kinematic_deviation_parameters
-        self.all_actuator_parameters = all_actuator_parameters
+        super().__init__()
 
-        self.all_aligned_heliostats = torch.zeros(number_of_heliostats, device=device)
-        self.all_preferred_reflection_directions = torch.zeros_like(
-            all_surface_normals, device=device
-        )
-        self.all_current_aligned_surface_points = torch.zeros_like(
-            all_surface_points, device=device
-        )
-        self.all_current_aligned_surface_normals = torch.zeros_like(
-            all_surface_normals, device=device
-        )
+        self.heliostat_groups = heliostat_groups
+        self.number_of_heliostat_groups = len(self.heliostat_groups)
 
     @classmethod
     def from_hdf5(
         cls,
         config_file: h5py.File,
-        number_of_heliostats: int,
-        number_of_surface_points_per_heliostat: int,
         prototype_surface: SurfaceConfig,
-        prototype_initial_orientation: torch.Tensor,
-        prototype_kinematic_deviations: torch.Tensor,
-        prototype_actuators: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
+        prototype_kinematic: dict[str, Union[str, torch.Tensor]],
+        prototype_actuators: dict[str, Union[str, torch.Tensor]],
+        device: Optional[torch.device] = None,
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -153,20 +74,16 @@ class HeliostatField(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
-        number_of_heliostats : int
-            The number of heliostats.
-        number_of_surface_points_per_heliostat : int
-            The number of surface points per heliostat.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if a heliostat has no individual surface.
-        prototype_initial_orientation : torch.Tensor
-            The prototype for the initial orientation to be used if a heliostat has no individual initial orientation.
-        prototype_kinematic_deviations : torch.Tensor
-            The prototype for the kinematic deviations to be used if a heliostat has no individual kinematic deviations.
-        prototype_actuators : torch.Tensor
-            The prototype for the actuators to be used if a heliostat has no individual actuators.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        prototype_kinematic : dict[str, Union[str, torch.Tensor]]
+            The prototype for the kinematic, including type, initial orientation and deviations.
+        prototype_actuators : dict[str, Union[str, torch.Tensor]]
+            The prototype for the actuators, including type and parameters.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
@@ -178,44 +95,15 @@ class HeliostatField(torch.nn.Module):
         HeliostatField
             The heliostat field loaded from the HDF5 file.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
 
         log.info("Loading a heliostat field from an HDF5 file.")
 
-        all_heliostat_names = []
-        all_heliostat_positions = torch.zeros((number_of_heliostats, 4), device=device)
-        all_aim_points = torch.zeros((number_of_heliostats, 4), device=device)
-        all_surface_points = torch.zeros(
-            (number_of_heliostats, number_of_surface_points_per_heliostat, 4),
-            device=device,
-        )
-        all_surface_normals = torch.zeros(
-            (number_of_heliostats, number_of_surface_points_per_heliostat, 4),
-            device=device,
-        )
-        all_initial_orientations = torch.zeros((number_of_heliostats, 4), device=device)
-
-        all_kinematic_deviation_parameters = torch.zeros(
-            (
-                number_of_heliostats,
-                config_dictionary.rigid_body_number_of_deviation_parameters,
-            ),
-            device=device,
-        )
-        all_actuator_parameters = torch.zeros(
-            (
-                number_of_heliostats,
-                config_dictionary.number_of_linear_actuator_parameters,
-                2,
-            ),
-            device=device,
+        grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
+            lambda: defaultdict(list)
         )
 
-        for index, heliostat_name in enumerate(
-            config_file[config_dictionary.heliostat_key].keys()
-        ):
-            all_heliostat_names.append(heliostat_name)
-
+        for heliostat_name in config_file[config_dictionary.heliostat_key].keys():
             single_heliostat_config = config_file[config_dictionary.heliostat_key][
                 heliostat_name
             ]
@@ -265,15 +153,20 @@ class HeliostatField(torch.nn.Module):
                     )
                 )
             else:
-                if prototype_kinematic_deviations is None:
+                if prototype_kinematic is None:
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
                 log.info(
                     "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                 )
-                initial_orientation = prototype_initial_orientation
-                kinematic_deviations = prototype_kinematic_deviations
+                kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
+                initial_orientation = prototype_kinematic[
+                    config_dictionary.kinematic_initial_orientation
+                ]
+                kinematic_deviations = prototype_kinematic[
+                    config_dictionary.kinematic_deviations
+                ]
 
             if (
                 config_dictionary.heliostat_actuator_key
@@ -309,154 +202,99 @@ class HeliostatField(torch.nn.Module):
                 log.info(
                     "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                 )
-                actuator_parameters = prototype_actuators
+                actuator_type = prototype_actuators[config_dictionary.actuator_type_key]
+                actuator_parameters = prototype_actuators[
+                    config_dictionary.actuator_parameters_key
+                ]
 
-            all_heliostat_positions[index] = torch.tensor(
-                single_heliostat_config[config_dictionary.heliostat_position][()],
-                dtype=torch.float,
-                device=device,
-            )
-            all_aim_points[index] = torch.tensor(
-                single_heliostat_config[config_dictionary.heliostat_aim_point][()],
-                dtype=torch.float,
-                device=device,
-            )
             surface = Surface(surface_config)
-            all_surface_points[index], all_surface_normals[index] = (
-                tensor.reshape(-1, 4)
-                for tensor in surface.get_surface_points_and_normals(device=device)
+
+            heliostat_group_key = f"{kinematic_type}_{actuator_type}"
+
+            grouped_field_data[heliostat_group_key][config_dictionary.names].append(
+                heliostat_name
             )
-            all_initial_orientations[index] = initial_orientation
-            all_kinematic_deviation_parameters[index] = kinematic_deviations
-            all_actuator_parameters[index] = actuator_parameters
+            grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
+                torch.tensor(
+                    single_heliostat_config[config_dictionary.heliostat_position][()],
+                    dtype=torch.float,
+                    device=device,
+                )
+            )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.aim_points
+            ].append(
+                torch.tensor(
+                    single_heliostat_config[config_dictionary.heliostat_aim_point][()],
+                    dtype=torch.float,
+                    device=device,
+                )
+            )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.surface_points
+            ].append(
+                surface.get_surface_points_and_normals(device=device)[0].reshape(-1, 4)
+            )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.surface_normals
+            ].append(
+                surface.get_surface_points_and_normals(device=device)[1].reshape(-1, 4)
+            )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.initial_orientations
+            ].append(initial_orientation)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.kinematic_deviation_parameters
+            ].append(kinematic_deviations)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.actuator_parameters
+            ].append(actuator_parameters)
+
+        for group in grouped_field_data:
+            for key in grouped_field_data[group]:
+                if key != config_dictionary.names:
+                    grouped_field_data[group][key] = torch.stack(
+                        grouped_field_data[group][key]
+                    )
+
+        heliostat_groups = []
+        for heliostat_group_name in grouped_field_data.keys():
+            heliostat_groups.append(
+                type_mappings.heliostat_group_type_mapping[heliostat_group_name](
+                    names=grouped_field_data[heliostat_group_name][
+                        config_dictionary.names
+                    ],
+                    positions=grouped_field_data[heliostat_group_name][
+                        config_dictionary.positions
+                    ],
+                    aim_points=grouped_field_data[heliostat_group_name][
+                        config_dictionary.aim_points
+                    ],
+                    surface_points=grouped_field_data[heliostat_group_name][
+                        config_dictionary.surface_points
+                    ],
+                    surface_normals=grouped_field_data[heliostat_group_name][
+                        config_dictionary.surface_normals
+                    ],
+                    initial_orientations=grouped_field_data[heliostat_group_name][
+                        config_dictionary.initial_orientations
+                    ],
+                    kinematic_deviation_parameters=grouped_field_data[
+                        heliostat_group_name
+                    ][config_dictionary.kinematic_deviation_parameters],
+                    actuator_parameters=grouped_field_data[heliostat_group_name][
+                        config_dictionary.actuator_parameters
+                    ],
+                    device=device,
+                )
+            )
+            log.info(
+                f"Added a heliostat group with kinematic type: {kinematic_type}, and actuator type: {actuator_type}, to the heliostat field."
+            )
 
         return cls(
-            number_of_heliostats=number_of_heliostats,
-            all_heliostat_names=all_heliostat_names,
-            all_heliostat_positions=all_heliostat_positions,
-            all_aim_points=all_aim_points,
-            all_surface_points=all_surface_points,
-            all_surface_normals=all_surface_normals,
-            all_initial_orientations=all_initial_orientations,
-            all_kinematic_deviation_parameters=all_kinematic_deviation_parameters,
-            all_actuator_parameters=all_actuator_parameters,
-            device=device,
+            heliostat_groups=heliostat_groups,
         )
-
-    def align_surfaces_with_incident_ray_direction(
-        self,
-        incident_ray_direction: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> None:
-        """
-        Align all surface points and surface normals of all heliostats in the field.
-
-        This method uses the incident ray direction to align the heliostats.
-
-        Parameters
-        ----------
-        incident_ray_direction : torch.Tensor
-            The incident ray direction.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-        """
-        device = torch.device(device)
-
-        rigid_body_kinematic = RigidBody(
-            number_of_heliostats=self.number_of_heliostats,
-            heliostat_positions=self.all_heliostat_positions,
-            aim_points=self.all_aim_points,
-            actuator_parameters=self.all_actuator_parameters,
-            initial_orientations=self.all_initial_orientations,
-            deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device,
-        )
-        (
-            self.all_current_aligned_surface_points,
-            self.all_current_aligned_surface_normals,
-        ) = rigid_body_kinematic.align_surfaces_with_incident_ray_direction(
-            incident_ray_direction=incident_ray_direction,
-            surface_points=self.all_surface_points,
-            surface_normals=self.all_surface_normals,
-            device=device,
-        )
-        # Note that heliostats have been aligned
-        self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
-
-    def get_orientations_from_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> torch.Tensor:
-        """
-        Compute the orientations of all heliostats given some motor positions.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-
-        Returns
-        -------
-        torch.Tensor
-            The orientations of the heliostats for the given motor positions.
-        """
-        device = torch.device(device)
-
-        rigid_body_kinematic = RigidBody(
-            number_of_heliostats=self.number_of_heliostats,
-            heliostat_positions=self.all_heliostat_positions,
-            aim_points=self.all_aim_points,
-            actuator_parameters=self.all_actuator_parameters,
-            initial_orientations=self.all_initial_orientations,
-            deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device,
-        )
-        return rigid_body_kinematic.motor_positions_to_orientations(
-            motor_positions, device
-        )
-
-    def align_surfaces_with_motor_positions(
-        self,
-        motor_positions: torch.Tensor,
-        device: Union[torch.device, str] = "cuda",
-    ) -> None:
-        """
-        Align all surface points and surface normals of all heliostats in the field.
-
-        This method uses the motor positions to align the heliostats.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
-        """
-        device = torch.device(device)
-
-        rigid_body_kinematic = RigidBody(
-            number_of_heliostats=self.number_of_heliostats,
-            heliostat_positions=self.all_heliostat_positions,
-            aim_points=self.all_aim_points,
-            actuator_parameters=self.all_actuator_parameters,
-            initial_orientations=self.all_initial_orientations,
-            deviation_parameters=self.all_kinematic_deviation_parameters,
-            device=device,
-        )
-        (
-            self.all_current_aligned_surface_points,
-            self.all_current_aligned_surface_normals,
-        ) = rigid_body_kinematic.align_surfaces_with_motor_positions(
-            motor_positions=motor_positions,
-            surface_points=self.all_surface_points,
-            surface_normals=self.all_surface_normals,
-            device=device,
-        )
-        # Note that heliostats have been aligned
-        self.all_aligned_heliostats = torch.ones_like(self.all_aligned_heliostats)
 
     def forward(self) -> None:
         """

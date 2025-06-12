@@ -1,7 +1,8 @@
-from typing import Union
+from typing import Optional
 
 import torch
 
+from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
 
 
@@ -77,6 +78,7 @@ class NurbsFacet(torch.nn.Module):
             The canting vector in the north direction of the facet.
         """
         super().__init__()
+
         self.control_points = control_points
         self.degree_e = degree_e
         self.degree_n = degree_n
@@ -87,22 +89,25 @@ class NurbsFacet(torch.nn.Module):
         self.canting_n = canting_n
 
     def create_nurbs_surface(
-        self, device: Union[torch.device, str] = "cuda"
+        self, device: Optional[torch.device] = None
     ) -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
 
         Parameters
         ----------
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
         NURBSSurface
             The NURBS surface of one facet.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
+
         # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
         # defined evaluation points.
         evaluation_points_rows = torch.linspace(
