@@ -1,0 +1,202 @@
+import logging
+from typing import Optional
+
+import h5py
+import torch.nn
+from typing_extensions import Self
+
+from artist.util import config_dictionary
+from artist.util.environment_setup import get_device
+
+log = logging.getLogger(__name__)
+"""A logger for the tower target areas."""
+
+
+class TowerTargetAreas(torch.nn.Module):
+    """
+    Wrap the list of tower target areas as a ``torch.nn.Module`` to allow gradient calculation.
+
+    Individual target areas are not saved as separate entities, instead separate tensors for each
+    target area property exist. Each property tensor or list contains information about this property
+    for all target areas.
+
+    Attributes
+    ----------
+    names : list[str]
+        The names of each target area.
+    geometries : list[str]
+        THe type of geometry of each target area.
+    centers : torch.Tensor
+        The center coordinate of each target area.
+    normal_vectors : torch.Tensor
+        The normal vector of each target area.
+    dimensions : torch.Tensor
+        The dimensions of each target area (width and height).
+    curvatures : torch.Tensor
+        The curvature of the target area (0.0 if not applicable).
+    number_of_target_areas : int
+        The total number of target areas on all towers in the scenario.
+
+    Methods
+    -------
+    from_hdf5()
+        Load all target areas from an HDF5 file.
+    forward()
+        Specify the forward pass.
+    """
+
+    def __init__(
+        self,
+        names: list[str],
+        geometries: list[str],
+        centers: torch.Tensor,
+        normal_vectors: torch.Tensor,
+        dimensions: torch.Tensor,
+        curvatures: torch.Tensor,
+    ):
+        """
+        Initialize the target area array.
+
+        A target area array consists of one or more target areas that are positioned
+        on the solar tower, in front of the heliostats. The target area array is provided
+        with a list of target areas to initialize the target areas.
+
+        Parameters
+        ----------
+        names : list[str]
+            The names of each target area.
+        geometries : list[str]
+            THe type of geometry of each target area.
+        centers : torch.Tensor
+            The center coordinate of each target area.
+        normal_vectors : torch.Tensor
+            The normal vector of each target area.
+        dimensions : torch.Tensor
+            The dimensions of each target area (width and height).
+        curvatures : torch.Tensor
+            The curvature of the target area (0.0 if not applicable).
+        """
+        super().__init__()
+
+        self.names = names
+        self.geometries = geometries
+        self.centers = centers
+        self.normal_vectors = normal_vectors
+        self.dimensions = dimensions
+        self.curvatures = curvatures
+
+        self.number_of_target_areas = len(self.names)
+
+    @classmethod
+    def from_hdf5(
+        cls, config_file: h5py.File, device: Optional[torch.device] = None
+    ) -> Self:
+        """
+        Load all target areas from an HDF5 file.
+
+        Parameters
+        ----------
+        config_file : h5py.File
+            The HDF5 file containing the configuration to be loaded.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
+
+        Returns
+        -------
+        TowerTargetAreas
+            The target areas loaded from the HDF5 file.
+        """
+        device = get_device(device=device)
+
+        log.info("Loading the tower target areas from an HDF5 file.")
+
+        number_of_target_areas = len(config_file[config_dictionary.target_area_key])
+
+        names = []
+        geometries = []
+        centers = torch.zeros((number_of_target_areas, 4), device=device)
+        normal_vectors = torch.zeros((number_of_target_areas, 4), device=device)
+        dimensions = torch.zeros((number_of_target_areas, 2), device=device)
+        curvatures = torch.zeros((number_of_target_areas, 2), device=device)
+
+        for index, target_area_name in enumerate(
+            config_file[config_dictionary.target_area_key].keys()
+        ):
+            single_target_area_config = config_file[config_dictionary.target_area_key][
+                target_area_name
+            ]
+            names.append(target_area_name)
+            geometries.append(
+                single_target_area_config[config_dictionary.target_area_geometry][
+                    ()
+                ].decode("utf-8")
+            )
+            centers[index] = torch.tensor(
+                single_target_area_config[
+                    config_dictionary.target_area_position_center
+                ][()],
+                dtype=torch.float,
+                device=device,
+            )
+            normal_vectors[index] = torch.tensor(
+                single_target_area_config[config_dictionary.target_area_normal_vector][
+                    ()
+                ],
+                dtype=torch.float,
+                device=device,
+            )
+            dimensions[index, 0] = float(
+                single_target_area_config[config_dictionary.target_area_plane_e][()]
+            )
+            dimensions[index, 1] = float(
+                single_target_area_config[config_dictionary.target_area_plane_u][()]
+            )
+
+            if (
+                config_dictionary.target_area_curvature_e
+                in single_target_area_config.keys()
+            ):
+                curvatures[index, 0] = float(
+                    single_target_area_config[
+                        config_dictionary.target_area_curvature_e
+                    ][()]
+                )
+            else:
+                log.warning(
+                    f"No curvature in the east direction set for the {target_area_name}!"
+                )
+            if (
+                config_dictionary.target_area_curvature_u
+                in single_target_area_config.keys()
+            ):
+                curvatures[index, 1] = float(
+                    single_target_area_config[
+                        config_dictionary.target_area_curvature_u
+                    ][()]
+                )
+            else:
+                log.warning(
+                    f"No curvature in the up direction set for the {target_area_name}!"
+                )
+
+        return cls(
+            names=names,
+            geometries=geometries,
+            centers=centers,
+            normal_vectors=normal_vectors,
+            dimensions=dimensions,
+            curvatures=curvatures,
+        )
+
+    def forward(self) -> None:
+        """
+        Specify the forward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called.
+        """
+        raise NotImplementedError("Not Implemented!")

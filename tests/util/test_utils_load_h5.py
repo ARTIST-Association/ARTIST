@@ -65,7 +65,11 @@ def test_load_kinematic_deviations(
         ),
         (
             "linear",
-            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type. Expected 2 actuators, found 1 actuator(s).",
+            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type. Expected 2 actuators, found 0 actuator(s).",
+        ),
+        (
+            "ideal",
+            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type. Expected 2 actuators, found 0 actuator(s).",
         ),
     ],
 )
@@ -93,16 +97,10 @@ def test_load_actuator_parameters(
     """
     scenario_file = mocker.MagicMock(spec=h5py.File)
 
-    mock_level_2 = mocker.MagicMock()
-
-    mock_level_1 = mocker.MagicMock()
-    mock_level_1.__getitem__.side_effect = lambda key: {
-        config_dictionary.sun_key: mock_level_2
-    }[key]
-    mock_level_1.keys.return_value = [config_dictionary.sun_key]
+    mock_level_actuators = mocker.MagicMock()
 
     scenario_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.heliostat_actuator_key: mock_level_1
+        config_dictionary.heliostat_actuator_key: mock_level_actuators
     }[key]
 
     log = mocker.MagicMock(spec=logging.Logger)

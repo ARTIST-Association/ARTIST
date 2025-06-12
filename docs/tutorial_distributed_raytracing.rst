@@ -29,6 +29,27 @@ The distributed devices handle only a portion of the overall rays but they have 
 heliostat, for ray tracing with DDP the rays are split along the heliostat dimension. This means each rank handles the rays of specific heliostats.
 Overly simplified, in a scenario with 2000 heliostats and 4 ranks, this can be imagined as the first rank handling all rays of the first 500 heliostats and so on.
 
+
+The mapping between active heliostats, target areas and incident ray directions.
+--------------------------------------------------------------------------------
+``ARTIST`` offers the flexibility, to activate and deactivate certain helisotats in the scenario, to have some heliostats aim at one target area, while others aim
+elsewhere and also to have different incident ray directions for different heliostats in the same alignment and raytracing process. Differing incident ray
+directions for different heliostats may not make much sense in the usual operation of the power plant, but this is very useful for calibration tasks.
+To map each helisotat with its designated target area and incident ray direction you can use a mapping of this kind:
+
+.. code-block::
+
+    heliostat_target_light_source_mapping_string = [
+        ("heliostat_name_1", "target_name_3", incident_ray_direction_tensor_1),
+        ("heliostat_name_2", "target_name_1", incident_ray_direction_tensor_1),
+        ("heliostat_name_3", "target_name_2", incident_ray_direction_tensor_2),
+        ("heliostat_name_4", "target_name_1", incident_ray_direction_tensor_3),
+    ]
+
+If no mapping is provided, a default mapping for all heliostats within this group will be created. The default mapping will map all heliostats to the default
+``single_incident_ray_direction``, which simualtes a light source positioned in the south and the default ``single_target_area_index``, which is 0. To overwrite
+these defaults, please provide a ``single_incident_ray_direction`` or a ``single_target_area_index``.
+
 The Distributed Environment
 ---------------------------
 Based on the available devices, the environment is initialized with the appropriate communication backend.
@@ -39,7 +60,7 @@ All of this is handled by running the following code:
 .. code-block::
 
     # The distributed environment is setup and destroyed using a Generator object.
-    environment_generator = utils.setup_distributed_environment(device=device)
+    environment_generator = setup_global_distributed_environment(device=device)
 
     device, is_distributed, rank, world_size = next(environment_generator)
 
@@ -48,9 +69,16 @@ This completely sets up the distributed environment. To use it during the ray tr
 
 .. code-block::
 
-    # Create ray tracer
-    ray tracer = HeliostatRayTracer(
-        scenario=scenario, world_size=world_size, rank=rank, batch_size=500, random_seed=rank
+    # Create a ray tracer.
+    ray_tracer = HeliostatRayTracer(
+        scenario=scenario,
+        heliostat_group=heliostat_group,
+        world_size=world_size,
+        rank=rank,
+        batch_size=4,
+        random_seed=rank,
+        bitmap_resolution_e=bitmap_resolution_e,
+        bitmap_resolution_u=bitmap_resolution_u,
     )
 
 
@@ -86,7 +114,9 @@ The only step left is to add up all of those bitmaps to receive the total Flux D
 .. code-block::
 
     if is_distributed:
-        torch.distributed.all_reduce(final_bitmap, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(
+            group_bitmaps_per_heliostat, op=torch.distributed.ReduceOp.SUM
+        )
 
 The total Flux Density Distribution now looks like this:
 

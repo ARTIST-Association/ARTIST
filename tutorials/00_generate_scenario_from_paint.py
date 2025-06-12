@@ -7,6 +7,7 @@ from artist.util.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
 )
+from artist.util.environment_setup import get_device
 from artist.util.scenario_generator import ScenarioGenerator
 
 # Set up logger
@@ -16,7 +17,7 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 # Set the device.
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = get_device()
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")

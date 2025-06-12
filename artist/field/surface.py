@@ -1,9 +1,10 @@
-from typing import Union
+from typing import Optional
 
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
 from artist.util.configuration_classes import SurfaceConfig
+from artist.util.environment_setup import get_device
 
 
 class Surface(torch.nn.Module):
@@ -38,6 +39,7 @@ class Surface(torch.nn.Module):
             The surface configuration parameters used to construct the surface.
         """
         super().__init__()
+
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,
@@ -53,15 +55,17 @@ class Surface(torch.nn.Module):
         ]
 
     def get_surface_points_and_normals(
-        self, device: Union[torch.device, str] = "cuda"
+        self, device: Optional[torch.device] = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
         Parameters
         ----------
-        device : Union[torch.device, str]
-            The device on which to initialize tensors (default is cuda).
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Returns
         -------
@@ -70,7 +74,8 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
-        device = torch.device(device)
+        device = get_device(device=device)
+
         eval_point_per_facet = (
             self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
         )
