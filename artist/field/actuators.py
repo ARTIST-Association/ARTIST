@@ -41,7 +41,7 @@ class Actuators(torch.nn.Module):
         Parameters
         ----------
         actuator_parameters : torch.Tensor
-            The two actuator parameters.
+            The actuator parameters.
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
