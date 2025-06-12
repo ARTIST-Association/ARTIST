@@ -7,10 +7,14 @@ from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import config_dictionary
 
 
-@pytest.mark.parametrize("curvature", [True, False])
+@pytest.mark.parametrize(
+    "curvature, expected_curvature",
+    [(True, torch.tensor([[1.0, 2.0]])), (False, torch.tensor([[0.0, 0.0]]))],
+)
 def test_target_area_load_from_hdf5(
     mocker: MockerFixture,
     curvature: bool,
+    expected_curvature: torch.Tensor,
     device: torch.device,
 ) -> None:
     """
@@ -22,6 +26,8 @@ def test_target_area_load_from_hdf5(
         A pytest-mocker fixture used to create mock objects.
     curvature : bool
         Target area has a curvature or not.
+    expected_curvature : torch.Tensor
+        The expected curvature.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -101,3 +107,26 @@ def test_target_area_load_from_hdf5(
     )
 
     assert isinstance(target_areas, TowerTargetAreas)
+    assert target_areas.names == [config_dictionary.target_area_receiver]
+    assert target_areas.geometries == ["planar"]
+    torch.testing.assert_close(
+        target_areas.centers,
+        torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),
+        atol=1e-5,
+        rtol=1e-5,
+    )
+    torch.testing.assert_close(
+        target_areas.normal_vectors,
+        torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device),
+        atol=1e-5,
+        rtol=1e-5,
+    )
+    torch.testing.assert_close(
+        target_areas.dimensions,
+        torch.tensor([[2.0, 2.0]], device=device),
+        atol=1e-5,
+        rtol=1e-5,
+    )
+    torch.testing.assert_close(
+        target_areas.curvatures, expected_curvature.to(device), atol=1e-5, rtol=1e-5
+    )
