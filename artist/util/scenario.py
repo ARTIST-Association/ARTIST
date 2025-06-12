@@ -199,8 +199,10 @@ class Scenario:
         Create an index mapping from heliostat names, target area names and incident ray directions.
 
         If no mapping is provided, a default mapping for all heliostats within this group will be created.
-        The target area will be the first found in this scenario, and the default light direction will come from
-        sun positioned in the south.
+        The default mapping will map all heliostats to the default ``single_incident_ray_direction``, which
+        simualtes a light source positioned in the south and the default ``single_target_area_index``, which
+        is 0. To overwrite these defaults, please provide a ``single_incident_ray_direction`` or a
+        ``single_target_area_index``.
 
         Parameters
         ----------

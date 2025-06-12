@@ -56,7 +56,7 @@ for heliostat_group_index, heliostat_group in enumerate(
     # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
     # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
     # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
-    # incident ray direction "north" (meaning the sun position is directly in the south) for all heliostats.
+    # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
     (
         active_heliostats_mask,
         target_area_mask,

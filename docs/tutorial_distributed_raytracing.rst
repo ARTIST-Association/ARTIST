@@ -38,6 +38,7 @@ directions for different heliostats may not make much sense in the usual operati
 To map each helisotat with its designated target area and incident ray direction you can use a mapping of this kind:
 
 .. code-block::
+
     heliostat_target_light_source_mapping_string = [
         ("heliostat_name_1", "target_name_3", incident_ray_direction_tensor_1),
         ("heliostat_name_2", "target_name_1", incident_ray_direction_tensor_1),
@@ -45,8 +46,9 @@ To map each helisotat with its designated target area and incident ray direction
         ("heliostat_name_4", "target_name_1", incident_ray_direction_tensor_3),
     ]
 
-If you do not specify a custom mapping, all helisotats from that scenario will be activated, with a default light source position in the south and the default target area is the receiver.
-
+If no mapping is provided, a default mapping for all heliostats within this group will be created. The default mapping will map all heliostats to the default
+``single_incident_ray_direction``, which simualtes a light source positioned in the south and the default ``single_target_area_index``, which is 0. To overwrite
+these defaults, please provide a ``single_incident_ray_direction`` or a ``single_target_area_index``.
 
 The Distributed Environment
 ---------------------------
