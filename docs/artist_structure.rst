@@ -6,8 +6,32 @@ Understanding ``ARTIST`` Modules: Interactions and User Guidelines
 Batch Processing
 ----------------
 ``artist`` uses batch processing to parallely align thousands of heliostats and trace millions of rays all at the same time. This is possible because we mainly use tensors to
-represent the data in our scenarios.
-...TODO!!!
+represent the data in our scenarios. Tensors in ``PyTorch`` are highly efficient when dealing with large data and matrix multiplications, particularly when computing on GPUs.
+On the other hand, the same tensor operations on CPUs are significantly slower. This is why we highly recommend running ``artist`` on GPUs. Even on a single GPU, ``artist`` can
+compute alignment and raytracing for many heliostats in parallel. To facilitate this we save heliostat and tower data per property, not per object, in large, multidimensional tensors.
+For example, heliostats have the following properties:
+
+- ``positions``
+- ``surface_points``
+- ``surface_normals``
+- ``initial_orientations``
+- ``kinematic_deviation_parameters``
+- ``actuator_parameters``
+- ``...``
+
+If we imagine a helisotat field with N=2000 heliostats, there will not be 2000 heliostat-objects, these individual objects do not exist! Instead we have one multidimensional tensor
+for each heliostat property, saving property data from each heliostat at specific indices. This results in tensors looking like this:
+
+- ``positions``, where ``torch.Size([N, D])``
+- ``surface_points``, where ``torch.Size([N, P, D])``
+- ``surface_normals``, where ``torch.Size([N, P, D])``
+- ``initial_orientations``, where ``torch.Size([N, D])``
+- ``kinematic_deviation_parameters``, where ``torch.Size([N, K])``
+- ``actuator_parameters``, where ``torch.Size([N, P, A])``
+- ``...``
+
+TODO!!
+
 
 Heliostat Groups
 ----------------
