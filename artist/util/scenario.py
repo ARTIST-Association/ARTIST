@@ -53,6 +53,7 @@ class Scenario:
         A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
         least one target area that is a receiver, at least one light source and at least one heliostat in a heliostat field.
         ``ARTIST`` also supports scenarios that contain multiple target areas, multiple light sources, and multiple heliostats.
+        (Note: Currently only a single light source can be provided.)
 
         Parameters
         ----------
@@ -62,6 +63,7 @@ class Scenario:
             A list of tower target areas included in the scenario.
         light_sources : LightSourceArray
             A list of light sources included in the scenario.
+            Currently only a single light source can be provided.
         heliostat_field : HeliostatField
             A field of heliostats included in the scenario.
         """
