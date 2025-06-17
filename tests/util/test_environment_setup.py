@@ -6,7 +6,7 @@ import torch
 
 from artist.util.environment_setup import (
     get_device,
-    setup_global_distributed_environment,
+    setup_distributed_environment,
 )
 
 
@@ -62,7 +62,7 @@ def test_setup_global_distributed_environment(
             patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
         ):
             # Test the generator
-            gen = setup_global_distributed_environment(device=device)
+            gen = setup_distributed_environment(device=device)
             device, is_distributed_out, rank_out, world_size_out = next(gen)
 
             # Assert outputs
@@ -91,7 +91,7 @@ def test_setup_global_distributed_environment(
             patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
         ):
             # Test the generator
-            gen = setup_global_distributed_environment(device=device)
+            gen = setup_distributed_environment(device=device)
             device, is_distributed_out, rank_out, world_size_out = next(gen)
 
             # Assert outputs
