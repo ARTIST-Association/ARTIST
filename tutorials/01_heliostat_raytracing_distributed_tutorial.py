@@ -18,7 +18,7 @@ set_logger_config()
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+    "tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups.h5"
 )
 
 heliostat_group_assignments = {0: [0, 1], 1: [2, 3]}
@@ -40,11 +40,6 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-
-    # Artificially add another heliostat group
-    scenario.heliostat_field.heliostat_groups.append(
-        scenario.heliostat_field.heliostat_groups[0]
-    )
 
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
@@ -104,11 +99,22 @@ with setup_distributed_environment(
         device=device,
     )
 
+    import matplotlib.pyplot as plt
+    plt.imshow(bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"group_{group_id}_rank_{rank}_target_0")
+
     if is_distributed:
         torch.distributed.all_reduce(
             bitmaps_per_target, op=torch.distributed.ReduceOp.SUM, group=subgroup
         )
 
+    plt.imshow(bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"reduced_group_{group_id}_rank_{rank}_target_0")
+
+    if is_distributed:
         torch.distributed.all_reduce(
             bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
+
+    plt.imshow(bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"final_group_{group_id}_rank_{rank}_target_0")

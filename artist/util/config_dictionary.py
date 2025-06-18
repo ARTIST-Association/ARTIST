@@ -194,6 +194,9 @@ kinematic_deviation_parameters = "kinematic_deviation_parameters"
 actuator_parameters = "actuator_parameters"
 """Key to access actuator parameters of heliostats."""
 
+heliostat_group_type = "type"
+"""Key to access the heliostat group type."""
+
 paint_target_area_geometry = "type"
 """Key to access the target area geometry in a ``PAINT`` tower.json file."""
 paint_calibration_target = "target_name"

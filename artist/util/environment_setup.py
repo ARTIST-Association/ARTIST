@@ -111,7 +111,7 @@ def create_subgroup_for_single_rank(
             group_id = index
             group_ranks = ranks
             group = torch.distributed.new_group(ranks=group_ranks)
-            log.info(f"Rank {rank} joined group '{group_id}' with ranks {group_ranks}")
+            log.info(f"Rank {rank} joined heliostat group '{group_id}' with ranks {group_ranks}")
             group_rank = group_ranks.index(rank)
             group_world_size = len(group_ranks)
             return group_id, group_rank, group_world_size, group
@@ -197,10 +197,6 @@ def setup_distributed_environment(
         )
     finally:
         if is_distributed:
-            print(
-                f"[Rank: {rank}, group: {heliostat_group_id}, device: {torch.cuda.current_device()}] Entering final barrier",
-                flush=True,
-            )
             torch.distributed.barrier(
                 device_ids=[torch.cuda.current_device()]
                 if torch.distributed.get_backend() == "nccl"
