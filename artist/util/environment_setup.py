@@ -1,6 +1,7 @@
 import logging
 import platform
 from contextlib import contextmanager
+from itertools import cycle, islice
 from typing import Generator, Optional
 
 import torch
@@ -75,9 +76,8 @@ def initialize_ddp_environment(
 
 
 def create_subgroup_for_single_rank(
-    rank: int, heliostat_group_map: Optional[dict[int, list[int]]]
+    rank: int, ranks_to_groups_mapping: dict[int, list[int]]
 ) -> tuple[
-    Optional[int],
     Optional[int],
     Optional[int],
     Optional[torch.distributed.ProcessGroup],
@@ -89,13 +89,11 @@ def create_subgroup_for_single_rank(
     ----------
     rank : int
         The current process (rank).
-    heliostat_group_map : Optional[dict[int, list[int]]]
+    ranks_to_groups_mapping : dict[int, list[int]]
         The mapping from rank to heliostat group.
 
     Returns
     -------
-        Optional[int]
-            The heliostat group id.
         Optional[int]
             The rank within the heliostat group.
         Optional[int]
@@ -103,36 +101,31 @@ def create_subgroup_for_single_rank(
         Optional[torch.distributed.ProcessGroup]]
             The distributed process group.
     """
-    if not heliostat_group_map:
-        return None, None, None, None
+    for heliostat_group_index, heliostat_group_ranks in ranks_to_groups_mapping.items():
+        if rank in heliostat_group_ranks:
+            process_subgroup = torch.distributed.new_group(ranks=heliostat_group_ranks)
+            log.info(f"Rank {rank} joined heliostat group '{heliostat_group_index}' with ranks {heliostat_group_ranks}")
+            heliostat_group_rank = heliostat_group_ranks.index(rank)
+            heliostat_group_world_size = len(heliostat_group_ranks)
+            return heliostat_group_rank, heliostat_group_world_size, process_subgroup
 
-    for index, ranks in heliostat_group_map.items():
-        if rank in ranks:
-            group_id = index
-            group_ranks = ranks
-            group = torch.distributed.new_group(ranks=group_ranks)
-            log.info(f"Rank {rank} joined heliostat group '{group_id}' with ranks {group_ranks}")
-            group_rank = group_ranks.index(rank)
-            group_world_size = len(group_ranks)
-            return group_id, group_rank, group_world_size, group
-
-    return None, None, None, None
+    return None, None, None
 
 
 @contextmanager
 def setup_distributed_environment(
+    number_of_heliostat_groups: int,
     device: Optional[torch.device] = None,
-    heliostat_group_assignments: Optional[dict[str, list[int]]] = None,
 ) -> Generator[
     tuple[
         torch.device,
         bool,
         int,
-        Optional[int],
         int,
-        Optional[int],
-        Optional[int],
         Optional[torch.distributed.ProcessGroup],
+        dict[int, list[int]],
+        int,
+        int
     ],
     None,
     None,
@@ -157,43 +150,46 @@ def setup_distributed_environment(
         Whether the environment is running in distributed mode.
     rank : int
         The global rank of the current process.
-    heliostat_group_rank : Optional[int]
-        The rank of the current process within its assigned subgroup (if any).
     world_size : int
         Total number of processes in the global process group.
-    heliostat_group_world_size : Optional[int]
-        Number of processes in the current process's subgroup (if any).
-    heliostat_group_id : Optional[int]
-        ID of the subgroup this rank belongs to.
     process_subgroup : Optional[torch.distributed.ProcessGroup]
-        The ProcessGroup object representing the subgroup (if any).
+        The ProcessGroup object representing the subgroup.
+    ranks_to_groups_mapping : dict[int, list[int]]
+        The mapping from rank to heliostat group.
+    heliostat_group_rank : int
+        The rank of the current process within its assigned subgroup.
+    heliostat_group_world_size : Optional[int]
+        Number of processes in the current process subgroup.
     """
     device, is_distributed, rank, world_size = initialize_ddp_environment(device)
 
-    (
-        heliostat_group_id,
-        heliostat_group_rank,
-        heliostat_group_world_size,
-        process_subgroup,
-    ) = (None, None, None, None)
+    ranks_to_groups_mapping = distribute_groups_among_ranks(
+        world_size=world_size,
+        number_of_heliostat_groups=number_of_heliostat_groups
+    )
     if is_distributed:
         (
-            heliostat_group_id,
             heliostat_group_rank,
             heliostat_group_world_size,
             process_subgroup,
-        ) = create_subgroup_for_single_rank(rank, heliostat_group_assignments)
-
+        ) = create_subgroup_for_single_rank(
+            rank=rank,
+            ranks_to_groups_mapping=ranks_to_groups_mapping)
+    else:
+        heliostat_group_rank = 0
+        heliostat_group_world_size = 1
+        process_subgroup = None
+    
     try:
         yield (
             device,
             is_distributed,
             rank,
-            heliostat_group_rank,
             world_size,
-            heliostat_group_world_size,
-            heliostat_group_id,
             process_subgroup,
+            ranks_to_groups_mapping,
+            heliostat_group_rank,
+            heliostat_group_world_size,
         )
     finally:
         if is_distributed:
@@ -203,6 +199,67 @@ def setup_distributed_environment(
                 else None
             )
             torch.distributed.destroy_process_group()
+
+def distribute_groups_among_ranks(world_size: int, 
+                                  number_of_heliostat_groups: int) -> dict[int, list[int]]:
+    """
+    Distribute ranks among groups in round-robin fashion.
+    
+    If there are fewer ranks than groups, it repeats ranks to ensure 
+    each group gets at least one rank.
+    
+    Parameters
+    ----------
+    world_size : int
+        Total number of processes in the global process group.
+    number_of_heliostat_groups : int
+
+    Returns
+    -------
+    dict[int, list[int]]: A dictionary mapping group names to lists of assigned elements.
+    """
+    groups_to_ranks_mapping = {i: [] for i in range(world_size)}
+    if world_size < number_of_heliostat_groups:
+        groups = list(range(number_of_heliostat_groups))
+    else:
+        groups = list(islice(cycle(groups), world_size))
+
+    group_iters = cycle(groups_to_ranks_mapping.values())
+    for group in groups:
+        next(group_iters).append(group)
+
+    return groups_to_ranks_mapping
+
+def distribute_ranks_among_groups(world_size: int, 
+                                  number_of_heliostat_groups: int) -> dict[int, list[int]]:
+    """
+    Distribute ranks among groups in round-robin fashion.
+    
+    If there are fewer ranks than groups, it repeats ranks to ensure 
+    each group gets at least one rank.
+    
+    Parameters
+    ----------
+    world_size : int
+        Total number of processes in the global process group.
+    number_of_heliostat_groups : int
+
+    Returns
+    -------
+    dict[int, list[int]]: A dictionary mapping group names to lists of assigned elements.
+    """
+    ranks_to_groups_mapping = {i: [] for i in range(number_of_heliostat_groups)}
+    ranks = list(range(world_size))
+
+    repeated_elements = list(islice(cycle(ranks), number_of_heliostat_groups))
+    remaining_elements = ranks[number_of_heliostat_groups:]
+    all_elements = repeated_elements + remaining_elements
+
+    group_iters = cycle(ranks_to_groups_mapping.values())
+    for element in all_elements:
+        next(group_iters).append(element)
+
+    return ranks_to_groups_mapping
 
 
 def get_device(device: Optional[torch.device] = None) -> torch.device:

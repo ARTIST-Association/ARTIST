@@ -1,13 +1,12 @@
 import pathlib
+from collections import defaultdict
 
 import h5py
 import torch
 
 from artist.raytracing.heliostat_tracing import HeliostatRayTracer
 from artist.util import set_logger_config
-from artist.util.environment_setup import (
-    setup_distributed_environment,
-)
+from artist.util.environment_setup import get_device, setup_distributed_environment
 from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
@@ -16,31 +15,69 @@ torch.cuda.manual_seed(7)
 # Set up logger
 set_logger_config()
 
+# Set device type.
+device = get_device()
+
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
     "tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups.h5"
 )
 
-heliostat_group_assignments = {0: [0, 1], 1: [2, 3]}
+# world_size = 1
+# one rank: 0
+# 0 : 0
+# 1 : 0
+# 2 : 0
+# rank 0:   groups: 0, 1, 2     hg_world_size: 1        hg_rank: 0
+
+# world_size = 2
+# two ranks: 0, 1
+# 0 : 0
+# 1 : 1
+# 2 : 0
+# rank 0:   groups: 0, 2        hg_world_size: 1        hg_rank: 0
+# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0 
+
+# world_size = 3
+# three ranks: 0, 1, 2
+# 0 : 0
+# 1 : 1
+# 2 : 2
+# rank 0:   groups: 0           hg_world_size: 1        hg_rank: 0
+# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0
+# rank 2:   groups: 2           hg_world_size: 1        hg_rank: 0
+
+# world_size = 4
+# four ranks: 0, 1, 2, 3
+# 0 : 0, 3
+# 1 : 1
+# 2 : 2
+# rank 0:   groups: 0           hg_world_size: 2        hg_rank: 0
+# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0
+# rank 2:   groups: 2           hg_world_size: 1        hg_rank: 0
+# rank 3:   groups: 0           hg_world_size: 2        hg_rank: 1
+
+number_of_heliostat_groups = 2
 
 with setup_distributed_environment(
-    heliostat_group_assignments=heliostat_group_assignments
+    number_of_heliostat_groups = number_of_heliostat_groups,
+    device=device,
 ) as (
     device,
     is_distributed,
     rank,
-    heliostat_group_rank,
     world_size,
+    process_subgroup,
+    ranks_to_groups_mapping,
+    heliostat_group_rank,
     heliostat_group_world_size,
-    group_id,
-    subgroup,
 ):
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-
+    
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
     heliostat_target_light_source_mapping = None
@@ -51,70 +88,88 @@ with setup_distributed_environment(
     #     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
     # ]
 
-    heliostat_group = scenario.heliostat_field.heliostat_groups[group_id]
+    #TODO
+    groups_to_rank_mapping = defaultdict(list)
+    [groups_to_rank_mapping[rank].append(group) for group, ranks in ranks_to_groups_mapping.items() for rank in ranks]
 
-    # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
-    # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
-    # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
-    # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
-    (
-        active_heliostats_mask,
-        target_area_mask,
-        incident_ray_directions,
-    ) = scenario.index_mapping(
-        heliostat_group=heliostat_group,
-        string_mapping=heliostat_target_light_source_mapping,
-        device=device,
+    bitmap_resolution_e = 256
+    bitmap_resolution_u = 256
+    combined_bitmaps_per_target = torch.zeros(
+        (scenario.target_areas.number_of_target_areas,
+         bitmap_resolution_e,
+         bitmap_resolution_u),
+        device=device
     )
 
-    # Align heliostats.
-    heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
-        incident_ray_directions=incident_ray_directions,
-        active_heliostats_mask=active_heliostats_mask,
-        device=device,
-    )
+    for group_index in groups_to_rank_mapping[rank]:
+        heliostat_group = scenario.heliostat_field.heliostat_groups[group_index]
 
-    # Create a ray tracer.
-    ray_tracer = HeliostatRayTracer(
-        scenario=scenario,
-        heliostat_group=heliostat_group,
-        world_size=heliostat_group_world_size,
-        rank=heliostat_group_rank,
-        batch_size=4,
-        random_seed=rank,
-    )
+        # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
+        # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
+        # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
+        # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
+        (
+            active_heliostats_mask,
+            target_area_mask,
+            incident_ray_directions,
+        ) = scenario.index_mapping(
+            heliostat_group=heliostat_group,
+            string_mapping=heliostat_target_light_source_mapping,
+            device=device,
+        )
 
-    # Perform heliostat-based ray tracing.
-    bitmaps_per_heliostat = ray_tracer.trace_rays(
-        incident_ray_directions=incident_ray_directions,
-        active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
-        device=device,
-    )
+        # Align heliostats.
+        heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=scenario.target_areas.centers[target_area_mask],
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
 
-    bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-        bitmaps_per_heliostat=bitmaps_per_heliostat,
-        target_area_mask=target_area_mask,
-        device=device,
-    )
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(
+            scenario=scenario,
+            heliostat_group=heliostat_group,
+            world_size=heliostat_group_world_size,
+            rank=heliostat_group_rank,
+            batch_size=4,
+            random_seed=heliostat_group_rank,
+            bitmap_resolution_e=bitmap_resolution_e,
+            bitmap_resolution_u=bitmap_resolution_u
+        )
 
-    import matplotlib.pyplot as plt
-    plt.imshow(bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"group_{group_id}_rank_{rank}_target_0")
+        # Perform heliostat-based ray tracing.
+        bitmaps_per_heliostat = ray_tracer.trace_rays(
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            target_area_mask=target_area_mask,
+            device=device,
+        )
+
+        bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+            bitmaps_per_heliostat=bitmaps_per_heliostat,
+            target_area_mask=target_area_mask,
+            device=device,
+        )
+
+        import matplotlib.pyplot as plt
+        plt.imshow(bitmaps_per_target[0].cpu().detach())
+        plt.savefig(f"z_3_group_{group_index}_rank_{rank}_target_0")
+
+        combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
+
+    print(f"rank {rank}: {process_subgroup}")
 
     if is_distributed:
         torch.distributed.all_reduce(
-            bitmaps_per_target, op=torch.distributed.ReduceOp.SUM, group=subgroup
+            combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM, group=process_subgroup
         )
+        plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
+        plt.savefig(f"z_3_reduced_rank_{rank}_target_0")
 
-    plt.imshow(bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"reduced_group_{group_id}_rank_{rank}_target_0")
-
-    if is_distributed:
         torch.distributed.all_reduce(
-            bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
+            combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
-
-    plt.imshow(bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"final_group_{group_id}_rank_{rank}_target_0")
+    
+    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"z_3_final_rank_{rank}_target_0")
