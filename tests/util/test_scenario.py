@@ -101,7 +101,7 @@ from artist.util.scenario import Scenario
         (
             [
                 (
-                    "invalid_heliostat_name_1",
+                    "AA39",
                     "receiver",
                     torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 ),
@@ -112,14 +112,14 @@ from artist.util.scenario import Scenario
                 ),
                 ("AA31", "multi_focus_tower", torch.tensor([1.0, 0.0, 1.0])),
                 (
-                    "invalid_heliostat_name_2",
+                    "AA31",
                     "invalid_target_name_2",
                     torch.tensor([1.0, 0.0, 1.0, 0.0]),
                 ),
             ],
             None,
             None,
-            "Invalid heliostat 'invalid_heliostat_name_1' (Found at index 0 of provided mapping) not found in this scenario. Invalid target 'invalid_target_name_1' (Found at index 1 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 2 of provided mapping). This must be a normalized 4D tensor with last element 0.0. Invalid heliostat 'invalid_heliostat_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid target 'invalid_target_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 3 of provided mapping). This must be a normalized 4D tensor with last element 0.0.",
+            "Invalid target 'invalid_target_name_1' (Found at index 1 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 2 of provided mapping). This must be a normalized 4D tensor with last element 0.0. Invalid target 'invalid_target_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 3 of provided mapping). This must be a normalized 4D tensor with last element 0.0.",
         ),
         (
             None,
