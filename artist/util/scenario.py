@@ -255,18 +255,14 @@ class Scenario:
                 heliostat_group.number_of_heliostats, -1
             ).to(device)
         else:
+            filtered_mapping = [
+                mapping for mapping in string_mapping
+                if mapping[0] in heliostat_group.names
+            ]
             errors = []
             for i, (heliostat_name, target_name, light_direction) in enumerate(
-                string_mapping
+                filtered_mapping
             ):
-                if heliostat_name not in [
-                    heliostat_name
-                    for heliostat_name in heliostat_group.names
-                    for heliostat_group in self.heliostat_field.heliostat_groups
-                ]:
-                    errors.append(
-                        f"Invalid heliostat '{heliostat_name}' (Found at index {i} of provided mapping) not found in this scenario."
-                    )
                 if target_name not in self.target_areas.names:
                     errors.append(
                         f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
@@ -290,10 +286,10 @@ class Scenario:
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
             target_area_mask = torch.empty(
-                len(string_mapping), dtype=torch.int32, device=device
+                len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
-                (len(string_mapping), 4), device=device
+                (len(filtered_mapping), 4), device=device
             )
             heliostat_name_to_index = {
                 heliostat_name: index
@@ -303,14 +299,14 @@ class Scenario:
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
             target_area_mask = torch.empty(
-                len(string_mapping), dtype=torch.int32, device=device
+                len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
-                (len(string_mapping), 4), device=device
+                (len(filtered_mapping), 4), device=device
             )
 
             for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
-                string_mapping
+                filtered_mapping
             ):
                 if heliostat_name in heliostat_group.names:
                     active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1

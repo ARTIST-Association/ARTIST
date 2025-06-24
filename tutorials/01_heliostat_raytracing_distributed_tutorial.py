@@ -1,5 +1,4 @@
 import pathlib
-from collections import defaultdict
 
 import h5py
 import torch
@@ -19,45 +18,10 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
-# world_size = 1
-# one rank: 0
-# 0 : 0
-# 1 : 0
-# 2 : 0
-# rank 0:   groups: 0, 1, 2     hg_world_size: 1        hg_rank: 0
-
-# world_size = 2
-# two ranks: 0, 1
-# 0 : 0
-# 1 : 1
-# 2 : 0
-# rank 0:   groups: 0, 2        hg_world_size: 1        hg_rank: 0
-# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0 
-
-# world_size = 3
-# three ranks: 0, 1, 2
-# 0 : 0
-# 1 : 1
-# 2 : 2
-# rank 0:   groups: 0           hg_world_size: 1        hg_rank: 0
-# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0
-# rank 2:   groups: 2           hg_world_size: 1        hg_rank: 0
-
-# world_size = 4
-# four ranks: 0, 1, 2, 3
-# 0 : 0, 3
-# 1 : 1
-# 2 : 2
-# rank 0:   groups: 0           hg_world_size: 2        hg_rank: 0
-# rank 1:   groups: 1           hg_world_size: 1        hg_rank: 0
-# rank 2:   groups: 2           hg_world_size: 1        hg_rank: 0
-# rank 3:   groups: 0           hg_world_size: 2        hg_rank: 1
-
-number_of_heliostat_groups = 2
+# Set the number of heliostat groups, this is needed for process group assignment.
+number_of_heliostat_groups = 1
 
 with setup_distributed_environment(
     number_of_heliostat_groups = number_of_heliostat_groups,
@@ -65,10 +29,11 @@ with setup_distributed_environment(
 ) as (
     device,
     is_distributed,
+    is_nested,
     rank,
     world_size,
     process_subgroup,
-    ranks_to_groups_mapping,
+    groups_to_ranks_mapping,
     heliostat_group_rank,
     heliostat_group_world_size,
 ):
@@ -88,10 +53,6 @@ with setup_distributed_environment(
     #     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
     # ]
 
-    #TODO
-    groups_to_rank_mapping = defaultdict(list)
-    [groups_to_rank_mapping[rank].append(group) for group, ranks in ranks_to_groups_mapping.items() for rank in ranks]
-
     bitmap_resolution_e = 256
     bitmap_resolution_u = 256
     combined_bitmaps_per_target = torch.zeros(
@@ -101,7 +62,7 @@ with setup_distributed_environment(
         device=device
     )
 
-    for group_index in groups_to_rank_mapping[rank]:
+    for group_index in groups_to_ranks_mapping[rank]:
         heliostat_group = scenario.heliostat_field.heliostat_groups[group_index]
 
         # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
@@ -152,24 +113,15 @@ with setup_distributed_environment(
             device=device,
         )
 
-        import matplotlib.pyplot as plt
-        plt.imshow(bitmaps_per_target[0].cpu().detach())
-        plt.savefig(f"z_3_group_{group_index}_rank_{rank}_target_0")
-
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-    print(f"rank {rank}: {process_subgroup}")
-
-    if is_distributed:
+    if is_nested:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM, group=process_subgroup
         )
-        plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-        plt.savefig(f"z_3_reduced_rank_{rank}_target_0")
 
+    if is_distributed:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
     
-    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"z_3_final_rank_{rank}_target_0")
