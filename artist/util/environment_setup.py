@@ -95,17 +95,17 @@ def create_subgroups_for_nested_ddp(
 
     Returns
     -------
-    Optional[int]
+    int
         The rank within the heliostat group.
-    Optional[int]
+    int
         The world size of the heliostat group.
     Optional[torch.distributed.ProcessGroup]]
         The distributed process group.
     """
     ranks_to_groups_mapping = defaultdict(list)
-    for rank, groups in groups_to_ranks_mapping.items():
+    for single_rank, groups in groups_to_ranks_mapping.items():
         for group in groups:
-            ranks_to_groups_mapping[group].append(rank)
+            ranks_to_groups_mapping[group].append(single_rank)
 
     group_handles = {}
     heliostat_group_rank = 0

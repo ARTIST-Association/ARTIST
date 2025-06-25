@@ -122,7 +122,7 @@ with setup_distributed_environment(
         import matplotlib.pyplot as plt
 
         plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-        plt.savefig(f"combined_{rank}.png")
+        plt.savefig(f"z_4_combined_{rank}.png")
 
     if is_nested:
         torch.distributed.all_reduce(
@@ -131,7 +131,7 @@ with setup_distributed_environment(
             group=process_subgroup,
         )
     plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"reduced_{rank}.png")
+    plt.savefig(f"z_4_reduced_{rank}.png")
 
     if is_distributed:
         torch.distributed.all_reduce(
@@ -139,4 +139,4 @@ with setup_distributed_environment(
         )
 
     plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"final_{rank}.png")
+    plt.savefig(f"z_4_final_{rank}.png")
