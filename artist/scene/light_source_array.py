@@ -69,7 +69,8 @@ class LightSourceArray(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        log.info("Loading a light source array from an HDF5 file.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Loading a light source array from an HDF5 file.")
 
         light_source_array = []
         # Iterate through each light source configuration in the list of light source configurations.

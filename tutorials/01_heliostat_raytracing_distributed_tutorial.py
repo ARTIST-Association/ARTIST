@@ -18,9 +18,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = 2
@@ -119,24 +117,14 @@ with setup_distributed_environment(
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-        import matplotlib.pyplot as plt
-
-        plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-        plt.savefig(f"z_4_combined_{rank}.png")
-
     if is_nested:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
             group=process_subgroup,
         )
-    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"z_4_reduced_{rank}.png")
 
     if is_distributed:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
-
-    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
-    plt.savefig(f"z_4_final_{rank}.png")

@@ -90,9 +90,10 @@ class Sun(LightSource):
             ]
             == config_dictionary.light_source_distribution_is_normal
         ):
-            log.info(
-                "Initializing a sun modeled with a multivariate normal distribution."
-            )
+            if torch.distributed.get_rank() == 0:
+                log.info(
+                    "Initializing a sun modeled with a multivariate normal distribution."
+                )
             mean = torch.tensor(
                 [
                     self.distribution_parameters[config_dictionary.light_source_mean],
@@ -150,7 +151,7 @@ class Sun(LightSource):
         """
         device = get_device(device=device)
 
-        if light_source_name:
+        if light_source_name and torch.distributed.get_rank() == 0:
             log.info(f"Loading {light_source_name} from an HDF5 file.")
 
         number_of_rays = int(
