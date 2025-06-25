@@ -97,7 +97,8 @@ class HeliostatField(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        log.info("Loading a heliostat field from an HDF5 file.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Loading a heliostat field from an HDF5 file.")
 
         grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
             lambda: defaultdict(list)
@@ -122,9 +123,10 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
                     )
-                log.info(
-                    "Individual surface parameters not provided - loading a heliostat with the surface prototype."
-                )
+                if torch.distributed.get_rank() == 0:
+                    log.info(
+                        "Individual surface parameters not provided - loading a heliostat with the surface prototype."
+                    )
                 surface_config = prototype_surface
 
             if (
@@ -157,9 +159,10 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
-                log.info(
-                    "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
-                )
+                if torch.distributed.get_rank() == 0:
+                    log.info(
+                        "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
+                    )
                 kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
                 initial_orientation = prototype_kinematic[
                     config_dictionary.kinematic_initial_orientation
@@ -199,9 +202,10 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
                     )
-                log.info(
-                    "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
-                )
+                if torch.distributed.get_rank() == 0:
+                    log.info(
+                        "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
+                    )
                 actuator_type = prototype_actuators[config_dictionary.actuator_type_key]
                 actuator_parameters = prototype_actuators[
                     config_dictionary.actuator_parameters_key
@@ -296,9 +300,10 @@ class HeliostatField(torch.nn.Module):
                     device=device,
                 )
             )
-            log.info(
-                f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
-            )
+            if torch.distributed.get_rank() == 0:
+                log.info(
+                    f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
+                )
 
         return cls(
             heliostat_groups=heliostat_groups,

@@ -95,9 +95,10 @@ class Scenario:
         """
         device = get_device(device=device)
 
-        log.info(
-            f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
-        )
+        if torch.distributed.get_rank() == 0:
+            log.info(
+                f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+            )
 
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][

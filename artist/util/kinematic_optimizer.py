@@ -57,7 +57,8 @@ class KinematicOptimizer:
         optimizer : Optimizer
             The optimizer.
         """
-        log.info("Create a kinematic optimizer.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Create a kinematic optimizer.")
         self.scenario = scenario
         self.heliostat_group = heliostat_group
         self.optimizer = optimizer
@@ -102,7 +103,8 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        log.info("Start the kinematic calibration.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Start the kinematic calibration.")
 
         if motor_positions_calibration is not None:
             self._optimize_kinematic_parameters_with_motor_positions(
@@ -127,8 +129,8 @@ class KinematicOptimizer:
                 num_log=num_log,
                 device=device,
             )
-
-        log.info("Kinematic parameters optimized.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Kinematic parameters optimized.")
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
@@ -171,7 +173,8 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        log.info("Kinematic calibration with motor positions.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Kinematic calibration with motor positions.")
 
         loss = torch.inf
         epoch = 0
@@ -221,7 +224,7 @@ class KinematicOptimizer:
 
             self.optimizer.step()
 
-            if epoch % log_step == 0:
+            if epoch % log_step == 0 and torch.distributed.get_rank() == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
@@ -269,7 +272,8 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        log.info("Kinematic optimization with ray tracing.")
+        if torch.distributed.get_rank() == 0:
+            log.info("Kinematic optimization with ray tracing.")
 
         loss = torch.inf
         epoch = 0
@@ -324,7 +328,7 @@ class KinematicOptimizer:
 
             self.optimizer.step()
 
-            if epoch % log_step == 0:
+            if epoch % log_step == 0 and torch.distributed.get_rank() == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
