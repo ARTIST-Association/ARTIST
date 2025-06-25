@@ -256,7 +256,8 @@ class Scenario:
             ).to(device)
         else:
             filtered_mapping = [
-                mapping for mapping in string_mapping
+                mapping
+                for mapping in string_mapping
                 if mapping[0] in heliostat_group.names
             ]
             errors = []

@@ -214,7 +214,9 @@ class HeliostatField(torch.nn.Module):
             grouped_field_data[heliostat_group_key][config_dictionary.names].append(
                 heliostat_name
             )
-            grouped_field_data[heliostat_group_key][config_dictionary.heliostat_group_type] = kinematic_type, actuator_type
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.heliostat_group_type
+            ] = [kinematic_type, actuator_type]
 
             grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
                 torch.tensor(
@@ -254,7 +256,11 @@ class HeliostatField(torch.nn.Module):
 
         for group in grouped_field_data:
             for key in grouped_field_data[group]:
-                if key not in [config_dictionary.names, config_dictionary.kinematic_type, config_dictionary.actuator_type_key]:
+                if key not in [
+                    config_dictionary.names,
+                    config_dictionary.kinematic_type,
+                    config_dictionary.actuator_type_key,
+                ]:
                     grouped_field_data[group][key] = torch.stack(
                         grouped_field_data[group][key]
                     )

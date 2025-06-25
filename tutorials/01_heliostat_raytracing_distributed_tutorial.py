@@ -18,13 +18,15 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups.h5"
+)
 
 # Set the number of heliostat groups, this is needed for process group assignment.
-number_of_heliostat_groups = 1
+number_of_heliostat_groups = 2
 
 with setup_distributed_environment(
-    number_of_heliostat_groups = number_of_heliostat_groups,
+    number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as (
     device,
@@ -42,7 +44,7 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-    
+
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
 
     heliostat_target_light_source_mapping = None
@@ -56,10 +58,12 @@ with setup_distributed_environment(
     bitmap_resolution_e = 256
     bitmap_resolution_u = 256
     combined_bitmaps_per_target = torch.zeros(
-        (scenario.target_areas.number_of_target_areas,
-         bitmap_resolution_e,
-         bitmap_resolution_u),
-        device=device
+        (
+            scenario.target_areas.number_of_target_areas,
+            bitmap_resolution_e,
+            bitmap_resolution_u,
+        ),
+        device=device,
     )
 
     for group_index in groups_to_ranks_mapping[rank]:
@@ -96,7 +100,7 @@ with setup_distributed_environment(
             batch_size=4,
             random_seed=heliostat_group_rank,
             bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u
+            bitmap_resolution_u=bitmap_resolution_u,
         )
 
         # Perform heliostat-based ray tracing.
@@ -115,13 +119,24 @@ with setup_distributed_environment(
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
+        import matplotlib.pyplot as plt
+
+        plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
+        plt.savefig(f"combined_{rank}.png")
+
     if is_nested:
         torch.distributed.all_reduce(
-            combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM, group=process_subgroup
+            combined_bitmaps_per_target,
+            op=torch.distributed.ReduceOp.SUM,
+            group=process_subgroup,
         )
+    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"reduced_{rank}.png")
 
     if is_distributed:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
-    
+
+    plt.imshow(combined_bitmaps_per_target[0].cpu().detach())
+    plt.savefig(f"final_{rank}.png")
