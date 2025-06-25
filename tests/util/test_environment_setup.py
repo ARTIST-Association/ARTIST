@@ -8,21 +8,20 @@ from artist.util.environment_setup import (
     create_subgroups_for_nested_ddp,
     distribute_groups_among_ranks,
     get_device,
-    setup_distributed_environment,
+    initialize_ddp_environment,
 )
 
 
 @pytest.mark.parametrize(
-    "is_distributed, is_nested, number_of_heliostat_groups, rank, world_size",
+    "is_distributed, rank, world_size",
     [
-        (True, False, 3, 0, 2),
-        (True, True, 2, 1, 3),
-        (False, False, 3, 0, 1),
-        (False, False, 1, 0, 1),
+        (True, 0, 2),
+        (True, 1, 3),
+        (False, 0, 1),
     ],
 )
-def test_setup_global_distributed_environment(
-    is_distributed: bool, is_nested: bool, number_of_heliostat_groups: int, rank: int, world_size: int, device: torch.device
+def test_initialize_ddp_environment(
+    is_distributed: bool, rank: int, world_size: int, device: torch.device
 ) -> None:
     """
     Test the setup of the distributed environment.
@@ -31,10 +30,6 @@ def test_setup_global_distributed_environment(
     ----------
     is_distributed : bool
         Distributed mode enabled or disabled.
-    is_nested : bool
-        Nested DDP setup or not.
-    number_of_heliostat_groups : int
-        The number of heliostat groups.
     rank : int
         The rank of the current process.
     world_size : int
@@ -65,43 +60,18 @@ def test_setup_global_distributed_environment(
                 return_value=int(mock_env["WORLD_SIZE"]),
             ),
             patch("torch.distributed.get_rank", return_value=int(mock_env["RANK"])),
-            patch("torch.distributed.barrier") as mock_barrier,
-            patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
         ):
-            with setup_distributed_environment(
-                number_of_heliostat_groups=number_of_heliostat_groups,
-                device=device
-            ) as (
-                device, 
-                is_distributed_out,
-                is_nested_out,
-                rank_out,
-                world_size_out,
-                process_subgroup_out,
-                groups_to_ranks_mapping,
-                heliostat_group_rank_out, 
-                heliostat_group_world_size_out,
-            ):
-                # Assert outputs
-                assert is_distributed_out == is_distributed
-                assert is_nested_out == is_nested
-                assert rank_out == rank
-                assert world_size_out == world_size
-                assert process_subgroup_out is None
-                assert groups_to_ranks_mapping ==  {
-                    0: list(range(number_of_heliostat_groups))
-                }
-                assert heliostat_group_rank_out == 0
-                assert heliostat_group_world_size_out == 1
+            device, is_distributed_out, rank_out, world_size_out = (
+                initialize_ddp_environment(device=device)
+            )
 
-                mock_init_pg.assert_called_once()
-                mock_barrier.assert_not_called()
+            assert is_distributed_out == is_distributed
+            assert rank_out == rank
+            assert world_size_out == world_size
 
-                # Ensure cleanup
-                mock_destroy_pg.assert_not_called()
+            mock_init_pg.assert_called_once()
 
     if is_distributed:
-        # Patch environment variables
         with (
             patch.dict(os.environ, mock_env, clear=True),
             patch("torch.distributed.init_process_group") as mock_init_pg,
@@ -110,66 +80,32 @@ def test_setup_global_distributed_environment(
                 return_value=int(mock_env["WORLD_SIZE"]),
             ),
             patch("torch.distributed.get_rank", return_value=int(mock_env["RANK"])),
-            patch("torch.distributed.barrier") as mock_barrier,
-            patch("torch.distributed.destroy_process_group") as mock_destroy_pg,
         ):
-            with setup_distributed_environment(
-                number_of_heliostat_groups=number_of_heliostat_groups,
-                device=device
-            ) as (
-                device, 
-                is_distributed_out,
-                is_nested_out,
-                rank_out,
-                world_size_out,
-                process_subgroup_out,
-                groups_to_ranks_mapping,
-                heliostat_group_rank_out, 
-                heliostat_group_world_size_out,
-            ):
-                # Assert outputs
-                assert is_distributed_out == is_distributed
-                assert rank_out == rank
-                assert world_size_out == world_size
+            device, is_distributed_out, rank_out, world_size_out = (
+                initialize_ddp_environment(device=device)
+            )
 
-                mock_init_pg.assert_called_once_with(
-                    backend="nccl" if device.type == "cuda" else "gloo",
-                    init_method="env://",
-                )
-                mock_barrier.assert_not_called()
+            assert is_distributed_out == is_distributed
+            assert rank_out == rank
+            assert world_size_out == world_size
 
-                mock_barrier.assert_called_once()
-                mock_destroy_pg.assert_called_once()
+            mock_init_pg.assert_called_once_with(
+                backend="nccl" if device.type == "cuda" else "gloo",
+                init_method="env://",
+            )
 
 
 @pytest.mark.parametrize(
     "rank, groups_to_ranks_mapping, expected",
     [
-        (0,
-         {
-            0: [0, 1, 2]
-         },
-         (0, 1)
-        ),
-        (2,
-         {
-            0: [0, 1, 2]
-         },
-         (None, None)
-        ),
-        (4,
-         {
-            0: [0], 1: [1], 2: [2], 3: [0], 4: [1]
-         },
-         (1, 2)
-        ),
+        (0, {0: [0, 1, 2]}, (0, 1)),
+        (2, {0: [0, 1, 2]}, (None, None)),
+        (4, {0: [0], 1: [1], 2: [2], 3: [0], 4: [1]}, (1, 2)),
     ],
 )
 def test_create_subgroups_for_nested_ddp(
-        rank: int,
-        groups_to_ranks_mapping: dict[int, list[int]],
-        expected: tuple[int, int]
-    ):
+    rank: int, groups_to_ranks_mapping: dict[int, list[int]], expected: tuple[int, int]
+):
     """
     Test the creation of process subgroups.
 
@@ -188,36 +124,21 @@ def test_create_subgroups_for_nested_ddp(
         If test does not complete as expected.
     """
     with patch("torch.distributed.new_group", return_value=MagicMock()):
-        heliostat_group_rank, heliostat_group_world_size, _ = create_subgroups_for_nested_ddp(
-            rank=rank, 
-            groups_to_ranks_mapping=groups_to_ranks_mapping
+        heliostat_group_rank, heliostat_group_world_size, _ = (
+            create_subgroups_for_nested_ddp(
+                rank=rank, groups_to_ranks_mapping=groups_to_ranks_mapping
+            )
         )
         assert heliostat_group_rank == expected[0]
         assert heliostat_group_world_size == expected[1]
 
 
-
 @pytest.mark.parametrize(
     "world_size, number_of_heliostat_groups, expected_mapping, expected_is_nested",
     [
-        (1, 3,
-         {
-            0: [0, 1, 2]
-         },
-         False
-        ),
-        (3, 3,
-         {
-            0: [0], 1: [1], 2: [2]
-         },
-         False
-        ),
-        (5, 3,
-            {
-                0: [0], 1: [1], 2: [2], 3: [0], 4: [1]
-            },
-        True
-        ),
+        (1, 3, {0: [0, 1, 2]}, False),
+        (3, 3, {0: [0], 1: [1], 2: [2]}, False),
+        (5, 3, {0: [0], 1: [1], 2: [2], 3: [0], 4: [1]}, True),
     ],
 )
 def test_distribute_groups_among_ranks(
@@ -245,7 +166,9 @@ def test_distribute_groups_among_ranks(
     AssertionError
         If test does not complete as expected.
     """
-    mapping, is_nested = distribute_groups_among_ranks(world_size, number_of_heliostat_groups)
+    mapping, is_nested = distribute_groups_among_ranks(
+        world_size, number_of_heliostat_groups
+    )
     assert mapping == expected_mapping
     assert is_nested is expected_is_nested
 

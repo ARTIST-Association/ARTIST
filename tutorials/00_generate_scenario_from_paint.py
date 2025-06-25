@@ -35,42 +35,54 @@ heliostat_files_list = [
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"
+        ),
     ),
     (
         "AC43",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"
+        ),
     ),
     (
         "AA35",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/deflectometry.h5"
+        ),
     ),
     (
         "AA39",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"
+        ),
     ),
     (
         "AB38",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/deflectometry.h5"
+        ),
     ),
     (
         "AA28",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"
+        ),
     ),
 ]
 

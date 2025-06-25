@@ -79,8 +79,8 @@ def initialize_ddp_environment(
 def create_subgroups_for_nested_ddp(
     rank: int, groups_to_ranks_mapping: dict[int, list[int]]
 ) -> tuple[
-    Optional[int],
-    Optional[int],
+    int,
+    int,
     Optional[torch.distributed.ProcessGroup],
 ]:
     """
@@ -103,11 +103,13 @@ def create_subgroups_for_nested_ddp(
         The distributed process group.
     """
     ranks_to_groups_mapping = defaultdict(list)
-    [ranks_to_groups_mapping[group].append(rank) for rank, groups in groups_to_ranks_mapping.items() for group in groups]
+    for rank, groups in groups_to_ranks_mapping.items():
+        for group in groups:
+            ranks_to_groups_mapping[group].append(rank)
 
     group_handles = {}
-    heliostat_group_rank = None
-    heliostat_group_world_size = None
+    heliostat_group_rank = 0
+    heliostat_group_world_size = 1
     process_subgroup = None
 
     for group_index, group_ranks in ranks_to_groups_mapping.items():
@@ -136,7 +138,7 @@ def setup_distributed_environment(
         Optional[torch.distributed.ProcessGroup],
         dict[int, list[int]],
         int,
-        int
+        int,
     ],
     None,
     None,
@@ -177,8 +179,7 @@ def setup_distributed_environment(
     device, is_distributed, rank, world_size = initialize_ddp_environment(device=device)
 
     groups_to_ranks_mapping, is_nested = distribute_groups_among_ranks(
-        world_size=world_size,
-        number_of_heliostat_groups=number_of_heliostat_groups
+        world_size=world_size, number_of_heliostat_groups=number_of_heliostat_groups
     )
 
     if is_nested:
@@ -187,13 +188,13 @@ def setup_distributed_environment(
             heliostat_group_world_size,
             process_subgroup,
         ) = create_subgroups_for_nested_ddp(
-            rank=rank,
-            groups_to_ranks_mapping=groups_to_ranks_mapping)
+            rank=rank, groups_to_ranks_mapping=groups_to_ranks_mapping
+        )
     else:
         heliostat_group_rank = 0
         heliostat_group_world_size = 1
         process_subgroup = None
-    
+
     try:
         yield (
             device,
@@ -215,15 +216,16 @@ def setup_distributed_environment(
             )
             torch.distributed.destroy_process_group()
 
-def distribute_groups_among_ranks(world_size: int, 
-                                  number_of_heliostat_groups: int
+
+def distribute_groups_among_ranks(
+    world_size: int, number_of_heliostat_groups: int
 ) -> tuple[dict[int, list[int]], bool]:
     """
     Distribute groups among ranks in round-robin fashion.
-    
+
     If there are fewer ranks than groups, some ranks receive multiple groups.
     If there are more ranks than groups, some groups are handled by multiple ranks, enabling nested distribution.
-    
+
     Parameters
     ----------
     world_size : int
@@ -238,11 +240,11 @@ def distribute_groups_among_ranks(world_size: int,
     bool
         Indicates whether the distributed setup is nested or not.
     """
-    groups_to_ranks_mapping = {i: [] for i in range(world_size)}
+    groups_to_ranks_mapping: dict[int, list[int]] = {i: [] for i in range(world_size)}
     groups = list(range(number_of_heliostat_groups))
 
     is_nested = world_size > number_of_heliostat_groups
-    
+
     if is_nested:
         groups = list(islice(cycle(groups), world_size))
 
