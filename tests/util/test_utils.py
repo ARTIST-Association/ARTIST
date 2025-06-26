@@ -1,5 +1,4 @@
 import math
-from typing import Optional
 
 import pytest
 import torch
@@ -117,7 +116,7 @@ def test_translate_enu(
     ],
 )
 def test_3d_point_converter(
-    point: torch.Tensor, expected: Optional[torch.Tensor], device: torch.device
+    point: torch.Tensor, expected: torch.Tensor | None, device: torch.device
 ) -> None:
     """
     Test the 3d to 4d point converter.
@@ -126,7 +125,7 @@ def test_3d_point_converter(
     ----------
     point : torch.Tensor
         A 3d point.
-    expected : Optional[torch.Tensor]
+    expected : torch.Tensor | None
         A 4d point or ``None`` if an error is expected.
     device : torch.device
         The device on which to initialize tensors.
@@ -173,7 +172,7 @@ def test_3d_point_converter(
     ],
 )
 def test_3d_direction_converter(
-    direction: torch.Tensor, expected: Optional[torch.Tensor], device: torch.device
+    direction: torch.Tensor, expected: torch.Tensor | None, device: torch.device
 ) -> None:
     """
     Test the 3d to 4d point converter.
@@ -182,7 +181,7 @@ def test_3d_direction_converter(
     ----------
     direction : torch.Tensor
         A 3d direction.
-    expected : Optional[torch.Tensor]
+    expected : torch.Tensor | None
         A 4d direction or ``None`` if an error is expected.
     device : torch.device
         The device on which to initialize tensors.
