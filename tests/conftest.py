@@ -34,7 +34,7 @@ def device(request: pytest.FixtureRequest) -> torch.device:
         if os_name in {config_dictionary.linux, config_dictionary.windows}:
             return torch.device("cuda" if torch.cuda.is_available() else "cpu")
         elif os_name == config_dictionary.mac:
-            return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+            return torch.device("cpu")
         else:
             return torch.device("cpu")
 
