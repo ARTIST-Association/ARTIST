@@ -273,7 +273,7 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
     device : Optional[torch.device]
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS. MPS (for Mac) is not supported due to 
+        device (CUDA or CPU) based on availability and OS. MPS (for Mac) is not supported due to
         limitations in torch.
 
     Returns
@@ -282,7 +282,7 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
         The device.
     """
     os_name = platform.system()
-    
+
     if device is None and os_name != config_dictionary.mac:
         log.info(
             "No device type provided. The device will default to GPU based on availability and OS, otherwise to CPU."
@@ -297,11 +297,9 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
                 f"OS '{os_name}' not recognized. ARTIST is optimized for GPU computations but will run on CPU."
             )
             device = torch.device("cpu")
-    
+
     elif os_name == config_dictionary.mac or device.type == "mps":
         device = torch.device("cpu")
-        log.warning(
-            "Setting device to CPU. ARTIST only supports CPU for MacOS."
-        )
+        log.warning("Setting device to CPU. ARTIST only supports CPU for MacOS.")
 
     return device
