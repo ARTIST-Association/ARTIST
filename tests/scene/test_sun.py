@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import pytest
 import torch
@@ -8,25 +8,25 @@ from artist.util import config_dictionary
 
 
 def calculate_expected(
-    distribution_parameters: Dict[str, Any],
-    further_parameters: Dict[str, int],
+    distribution_parameters: dict[str, Any],
+    further_parameters: dict[str, int],
     device: torch.device,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate the expected distortions given the parameters from the test fixtures.
 
     Parameters
     ----------
-    distribution_parameters : Dict[str, Any]
+    distribution_parameters : dict[str, Any]
         The distribution parameters for the sun.
-    further_parameters : Dict[str, int]
+    further_parameters : dict[str, int]
         The further parameters for the test: number of heliostats, number of rays, number of points, and random seed.
     device : torch.device
         The device on which to initialize tensors.
 
     Returns
     -------
-    Tuple[torch.Tensor, torch.Tensor]
+    tuple[torch.Tensor, torch.Tensor]
         The expected distortions in the up and east direction.
     """
     mean = torch.tensor(
@@ -58,13 +58,13 @@ def calculate_expected(
 
 
 @pytest.fixture
-def distribution_parameters_1() -> Dict[str, Any]:
+def distribution_parameters_1() -> dict[str, Any]:
     """
     Fixture that returns distribution parameters for the sun.
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Distribution parameters for the sun.
     """
     return {
@@ -75,13 +75,13 @@ def distribution_parameters_1() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def distribution_parameters_2() -> Dict[str, Any]:
+def distribution_parameters_2() -> dict[str, Any]:
     """
     Fixture that returns distribution parameters for the sun.
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Distribution parameters for the sun.
     """
     return {
@@ -92,13 +92,13 @@ def distribution_parameters_2() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def distribution_parameters_3() -> Dict[str, Any]:
+def distribution_parameters_3() -> dict[str, Any]:
     """
     Fixture that returns distribution parameters for the sun.
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Distribution parameters for the sun.
     """
     return {
@@ -109,13 +109,13 @@ def distribution_parameters_3() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def distribution_parameters_4() -> Dict[str, Any]:
+def distribution_parameters_4() -> dict[str, Any]:
     """
     Fixture that returns distribution parameters for the sun.
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Distribution parameters for the sun.
     """
     return {
@@ -126,13 +126,13 @@ def distribution_parameters_4() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def further_parameters_1() -> Dict[str, int]:
+def further_parameters_1() -> dict[str, int]:
     """
     Fixture that returns further test parameters.
 
     Returns
     -------
-    Dict[str, int]
+    dict[str, int]
         Further test parameters.
     """
     return {
@@ -144,13 +144,13 @@ def further_parameters_1() -> Dict[str, int]:
 
 
 @pytest.fixture
-def further_parameters_2() -> Dict[str, int]:
+def further_parameters_2() -> dict[str, int]:
     """
     Fixture that returns further test parameters.
 
     Returns
     -------
-    Dict[str, int]
+    dict[str, int]
         Further test parameters.
     """
     return {
@@ -162,13 +162,13 @@ def further_parameters_2() -> Dict[str, int]:
 
 
 @pytest.fixture
-def further_parameters_3() -> Dict[str, int]:
+def further_parameters_3() -> dict[str, int]:
     """
     Fixture that returns further test parameters.
 
     Returns
     -------
-    Dict[str, int]
+    dict[str, int]
         Further test parameters.
     """
     return {

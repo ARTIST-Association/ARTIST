@@ -552,7 +552,7 @@ def azimuth_elevation_to_enu(
 def convert_wgs84_coordinates_to_local_enu(
     coordinates_to_transform: torch.Tensor,
     reference_point: torch.Tensor,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
@@ -568,7 +568,7 @@ def convert_wgs84_coordinates_to_local_enu(
         The coordinates in latitude, longitude, altitude that are to be transformed.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.

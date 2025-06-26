@@ -1,5 +1,3 @@
-from typing import Union
-
 import pytest
 import torch
 
@@ -173,7 +171,7 @@ def target_area_2(
 @pytest.fixture(params=[torch.tensor([0]), None])
 def target_area_mask(
     request: pytest.FixtureRequest, device: torch.device
-) -> Union[torch.Tensor, None]:
+) -> torch.Tensor | None:
     """
     Create a target area mask or None to use in the test.
 
@@ -186,7 +184,7 @@ def target_area_mask(
 
     Returns
     -------
-    Union[torch.Tensor, None]
+    torch.Tensor | None
         The target area mask.
     """
     mask = request.param
@@ -269,12 +267,12 @@ def target_area_mask(
 )
 def test_line_plane_intersection(
     request: pytest.FixtureRequest,
-    target_area_mask: Union[torch.Tensor, None],
+    target_area_mask: torch.Tensor | None,
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
-    expected_intersections: Union[torch.Tensor, None],
-    expected_absolute_intensities: Union[torch.Tensor, None],
+    expected_intersections: torch.Tensor | None,
+    expected_absolute_intensities: torch.Tensor | None,
     device: torch.device,
 ) -> None:
     """
@@ -284,7 +282,7 @@ def test_line_plane_intersection(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    target_area_mask : Union[torch.Tensor, None]
+    target_area_mask : torch.Tensor | None
         The target area mask.
     rays : Rays
         The rays with directions and magnitudes.
@@ -294,9 +292,9 @@ def test_line_plane_intersection(
         The center of the plane being considered for the intersection.
     points_at_ray_origin : torch.Tensor
         The surface points of the ray origin.
-    expected_intersections : Union[torch.Tensor, None]
+    expected_intersections : torch.Tensor | None
         The expected intersections between the rays and the plane, or ``None`` if no intersections are expected.
-    expected_absolute_intensities : Union[torch.Tensor, None]
+    expected_absolute_intensities : torch.Tensor | None
         The expected absolute intensities of the ray intersections, or ``None`` if no intersections are expected.
     device : torch.device
         The device on which to initialize tensors.
