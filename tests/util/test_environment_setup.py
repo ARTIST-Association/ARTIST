@@ -180,7 +180,7 @@ def test_distribute_groups_among_ranks(
         ("Linux", False, False, "cpu"),
         ("Windows", True, False, "cuda"),
         ("Windows", False, False, "cpu"),
-        ("Darwin", False, True, "mps"),
+        ("Darwin", False, True, "cpu"),
         ("Darwin", False, False, "cpu"),
         ("InvalidOS", False, False, "cpu"),
     ],
