@@ -295,3 +295,6 @@ windows = "Windows"
 """Key to access the Windows OS name."""
 mac = "Darwin"
 """Key to access the Mac OS name."""
+
+number_of_heliostat_groups = "number_of_heliostat_groups"
+"""Key to access the number of heliostat groups for distributed setup."""
