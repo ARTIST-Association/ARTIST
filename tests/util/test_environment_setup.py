@@ -1,9 +1,11 @@
 import os
+import platform
 from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
 
+from artist.util import config_dictionary
 from artist.util.environment_setup import (
     create_subgroups_for_nested_ddp,
     distribute_groups_among_ranks,
@@ -213,6 +215,8 @@ def test_get_device_logic(
     AssertionError
         If test does not complete as expected.
     """
+    if platform.system() == config_dictionary.mac and expected == "cuda":
+        pytest.skip("Skipping CUDA test on macOS, which does not support CUDA.")
     monkeypatch.setattr("platform.system", lambda: os_name)
     monkeypatch.setattr("torch.cuda.is_available", lambda: cuda_available)
     monkeypatch.setattr("torch.backends.mps.is_available", lambda: mps_available)
