@@ -1,6 +1,6 @@
 import logging
 import platform
-from typing import Generator, Optional
+from typing import Generator
 
 import torch
 
@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def setup_global_distributed_environment(
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> Generator[tuple[torch.device, bool, int, int], None, None]:
     """
     Set up the distributed environment and destroy it in the end.
@@ -24,7 +24,7 @@ def setup_global_distributed_environment(
 
     Parameters
     ----------
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.
@@ -79,13 +79,15 @@ def setup_global_distributed_environment(
             torch.distributed.destroy_process_group()
 
 
-def get_device(device: Optional[torch.device] = None) -> torch.device:
+def get_device(
+    device: torch.device | None = None,
+) -> torch.device:
     """
     Get the correct GPU device type for common operating systems, default to CPU if none is found.
 
     Parameters
     ----------
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.

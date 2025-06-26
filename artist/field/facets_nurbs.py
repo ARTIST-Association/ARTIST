@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.util.environment_setup import get_device
@@ -88,15 +86,13 @@ class NurbsFacet(torch.nn.Module):
         self.canting_e = canting_e
         self.canting_n = canting_n
 
-    def create_nurbs_surface(
-        self, device: Optional[torch.device] = None
-    ) -> NURBSSurface:
+    def create_nurbs_surface(self, device: torch.device | None = None) -> NURBSSurface:
         """
         Create a NURBS surface to model a facet.
 
         Parameters
         ----------
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
