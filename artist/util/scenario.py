@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from collections import defaultdict
 from typing import Optional
 
@@ -71,6 +72,27 @@ class Scenario:
         self.target_areas = target_areas
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
+
+    @staticmethod
+    def get_number_of_heliostat_groups_from_hdf5(scenario_path: pathlib.Path) -> int:
+        """
+        Get the number of heliostat groups to initiate distributed setup from the HDF5 scenario file.
+
+        Parameters
+        ----------
+        scenario_path : pathlib.Path
+            File path to the HDF5 scenario file.
+
+        Returns
+        -------
+        int
+            Number of heliostat groups to initiate distributed setup.
+        """
+        with h5py.File(scenario_path) as scenario_file:
+            number_of_groups = scenario_file[
+                config_dictionary.number_of_heliostat_groups
+            ][()]
+        return number_of_groups
 
     @classmethod
     def load_scenario_from_hdf5(
