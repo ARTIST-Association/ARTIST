@@ -215,9 +215,11 @@ class KinematicOptimizer:
             )
 
             # Retrieve the orientation of the heliostats for given motor positions.
-            orientations = self.heliostat_group.get_orientations_from_motor_positions(
-                motor_positions=motor_positions_calibration,
-                device=device,
+            orientations = (
+                self.heliostat_group.kinematic.motor_positions_to_orientations(
+                    motor_positions=motor_positions_calibration,
+                    device=device,
+                )
             )
 
             # Determine the preferred reflection directions for each heliostat.
