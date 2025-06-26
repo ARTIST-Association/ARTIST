@@ -69,7 +69,12 @@ class LightSourceArray(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        if torch.distributed.get_rank() == 0:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if rank == 0:
             log.info("Loading a light source array from an HDF5 file.")
 
         light_source_array = []

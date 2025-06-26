@@ -95,7 +95,12 @@ class Scenario:
         """
         device = get_device(device=device)
 
-        if torch.distributed.get_rank() == 0:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if rank == 0:
             log.info(
                 f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
             )

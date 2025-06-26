@@ -110,7 +110,12 @@ class TowerTargetAreas(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        if torch.distributed.get_rank() == 0:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if rank == 0:
             log.info("Loading the tower target areas from an HDF5 file.")
 
         number_of_target_areas = len(config_file[config_dictionary.target_area_key])
@@ -165,7 +170,7 @@ class TowerTargetAreas(torch.nn.Module):
                     ][()]
                 )
             else:
-                if torch.distributed.get_rank() == 0:
+                if rank == 0:
                     log.warning(
                         f"No curvature in the east direction set for the {target_area_name}!"
                     )
@@ -179,7 +184,7 @@ class TowerTargetAreas(torch.nn.Module):
                     ][()]
                 )
             else:
-                if torch.distributed.get_rank() == 0:
+                if rank == 0:
                     log.warning(
                         f"No curvature in the up direction set for the {target_area_name}!"
                     )
