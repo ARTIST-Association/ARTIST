@@ -253,7 +253,11 @@ def rigid_body_deviations(
         f"{config_dictionary.concentrator_tilt_u}"
     )
 
-    rank = torch.distributed.get_rank()
+    rank = (
+        torch.distributed.get_rank()
+        if torch.distributed.is_available() and torch.distributed.is_initialized()
+        else 0
+    )
 
     if first_joint_translation_e is None and rank == 0:
         log.warning(
@@ -596,7 +600,11 @@ def linear_actuators(
             f"{config_dictionary.actuator_initial_angle}"
         )
 
-        rank = torch.distributed.get_rank()
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
 
         if increment is None and rank == 0:
             log.warning(

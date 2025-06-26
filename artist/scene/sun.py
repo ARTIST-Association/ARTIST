@@ -73,6 +73,11 @@ class Sun(LightSource):
         super().__init__(number_of_rays=number_of_rays)
 
         device = get_device(device=device)
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
 
         self.distribution_parameters = distribution_parameters
         self.number_of_rays = number_of_rays
@@ -90,7 +95,7 @@ class Sun(LightSource):
             ]
             == config_dictionary.light_source_distribution_is_normal
         ):
-            if torch.distributed.get_rank() == 0:
+            if rank == 0:
                 log.info(
                     "Initializing a sun modeled with a multivariate normal distribution."
                 )
@@ -151,7 +156,12 @@ class Sun(LightSource):
         """
         device = get_device(device=device)
 
-        if light_source_name and torch.distributed.get_rank() == 0:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if light_source_name and rank == 0:
             log.info(f"Loading {light_source_name} from an HDF5 file.")
 
         number_of_rays = int(

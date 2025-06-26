@@ -97,7 +97,12 @@ class HeliostatField(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        if torch.distributed.get_rank() == 0:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if rank == 0:
             log.info("Loading a heliostat field from an HDF5 file.")
 
         grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
@@ -123,7 +128,7 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
                     )
-                if torch.distributed.get_rank() == 0:
+                if rank == 0:
                     log.info(
                         "Individual surface parameters not provided - loading a heliostat with the surface prototype."
                     )
@@ -159,7 +164,7 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
-                if torch.distributed.get_rank() == 0:
+                if rank == 0:
                     log.info(
                         "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                     )
@@ -202,7 +207,7 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
                     )
-                if torch.distributed.get_rank() == 0:
+                if rank == 0:
                     log.info(
                         "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                     )
@@ -300,7 +305,7 @@ class HeliostatField(torch.nn.Module):
                     device=device,
                 )
             )
-            if torch.distributed.get_rank() == 0:
+            if rank == 0:
                 log.info(
                     f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
                 )

@@ -99,7 +99,7 @@ def test_initialize_ddp_environment(
     "rank, groups_to_ranks_mapping, expected",
     [
         (0, {0: [0, 1, 2]}, (0, 1)),
-        (2, {0: [0, 1, 2]}, (None, None)),
+        (2, {0: [0, 1, 2]}, (0, 1)),
         (4, {0: [0], 1: [1], 2: [2], 3: [0], 4: [1]}, (1, 2)),
     ],
 )
