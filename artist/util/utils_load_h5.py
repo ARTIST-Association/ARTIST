@@ -252,92 +252,95 @@ def rigid_body_deviations(
         f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_tilt_u}"
     )
-    if first_joint_translation_e is None:
+
+    rank = torch.distributed.get_rank()
+
+    if first_joint_translation_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if first_joint_translation_n is None:
+    if first_joint_translation_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if first_joint_translation_u is None:
+    if first_joint_translation_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if first_joint_tilt_e is None:
+    if first_joint_tilt_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if first_joint_tilt_n is None:
+    if first_joint_tilt_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if first_joint_tilt_u is None:
+    if first_joint_tilt_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_translation_e is None:
+    if second_joint_translation_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_translation_n is None:
+    if second_joint_translation_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_translation_u is None:
+    if second_joint_translation_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_tilt_e is None:
+    if second_joint_tilt_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_tilt_n is None:
+    if second_joint_tilt_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_tilt_u is None:
+    if second_joint_tilt_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.second_joint_tilt_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_translation_e is None:
+    if concentrator_translation_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_translation_n is None:
+    if concentrator_translation_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_translation_u is None:
+    if concentrator_translation_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_tilt_e is None:
+    if concentrator_tilt_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_tilt_n is None:
+    if concentrator_tilt_n is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_tilt_u is None:
+    if concentrator_tilt_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_tilt_u} for {heliostat_name} set. "
             f"Using default values!"
@@ -592,27 +595,30 @@ def linear_actuators(
             f"{config_dictionary.actuator_parameters_key}/"
             f"{config_dictionary.actuator_initial_angle}"
         )
-        if increment is None:
+
+        rank = torch.distributed.get_rank()
+
+        if increment is None and rank == 0:
             log.warning(
                 f"No individual {config_dictionary.actuator_increment} set for {actuator}. Using default values!"
             )
-        if initial_stroke_length is None:
+        if initial_stroke_length is None and rank == 0:
             log.warning(
                 f"No individual {config_dictionary.actuator_initial_stroke_length} set for {actuator} on "
                 f"{heliostat_name}. "
                 f"Using default values!"
             )
-        if offset is None:
+        if offset is None and rank == 0:
             log.warning(
                 f"No individual {config_dictionary.actuator_offset} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
-        if pivot_radius is None:
+        if pivot_radius is None and rank == 0:
             log.warning(
                 f"No individual {config_dictionary.actuator_pivot_radius} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
-        if initial_angle is None:
+        if initial_angle is None and rank == 0:
             log.warning(
                 f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
