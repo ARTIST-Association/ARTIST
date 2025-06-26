@@ -21,7 +21,9 @@ device = get_device()
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
-number_of_heliostat_groups = 2
+number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
+    scenario_path=scenario_path
+)
 
 with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
