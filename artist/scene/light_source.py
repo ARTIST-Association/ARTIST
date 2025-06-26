@@ -1,5 +1,3 @@
-from typing import Optional
-
 import h5py
 import torch
 from typing_extensions import Self
@@ -48,8 +46,8 @@ class LightSource(torch.nn.Module):
     def from_hdf5(
         cls,
         config_file: h5py.File,
-        light_source_name: Optional[str] = None,
-        device: Optional[torch.device] = None,
+        light_source_name: str | None = None,
+        device: torch.device | None = None,
     ) -> Self:
         """
         Load the light source from an HDF5 file.
@@ -58,9 +56,9 @@ class LightSource(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the light sources.
-        light_source_name : str, optional
+        light_source_name : str | None
             The name of the light source - used for logging.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.

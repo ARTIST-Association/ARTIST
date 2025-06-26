@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import torch
 from torch.optim import Optimizer
@@ -67,12 +66,12 @@ class KinematicOptimizer:
         focal_spots_calibration: torch.Tensor,
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
-        target_area_mask_calibration: Optional[torch.Tensor] = None,
-        motor_positions_calibration: Optional[torch.Tensor] = None,
+        target_area_mask_calibration: torch.Tensor | None = None,
+        motor_positions_calibration: torch.Tensor | None = None,
         tolerance: float = 5e-5,
         max_epoch: int = 10000,
         num_log: int = 3,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Optimize the kinematic parameters.
@@ -85,9 +84,9 @@ class KinematicOptimizer:
             The incident ray directions specified in the calibrations.
         active_heliostats_mask : torch.Tensor
             A mask for the selected heliostats for calibration.
-        target_area_mask_calibration : Optional[torch.Tensor]
+        target_area_mask_calibration : torch.Tensor | None
             The indices of the target area for each calibration (default is None).
-        motor_positions_calibration : Optional[torch.Tensor]
+        motor_positions_calibration : torch.Tensor | None
             The motor positions specified in the calibration files (default is None).
         tolerance : float
             The optimizer tolerance.
@@ -95,7 +94,7 @@ class KinematicOptimizer:
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -139,7 +138,7 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Optimize the kinematic parameters using the motor positions.
@@ -164,7 +163,7 @@ class KinematicOptimizer:
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -237,7 +236,7 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Optimize the kinematic parameters using ray tracing.
@@ -254,15 +253,15 @@ class KinematicOptimizer:
         active_heliostats_mask : torch.Tensor
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
-        target_area_mask_calibration : Optional[torch.Tensor]
-            The indices of the target area for each calibration (default is None).
+        target_area_mask_calibration : torch.Tensor
+            The indices of the target area for each calibration.
         tolerance : float
             The optimizer tolerance.
         max_epoch : int
             The maximum number of optimization epochs.
         num_log : int
             Number of log messages during training (default is 3).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.

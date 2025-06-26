@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
@@ -55,14 +53,14 @@ class Surface(torch.nn.Module):
         ]
 
     def get_surface_points_and_normals(
-        self, device: Optional[torch.device] = None
+        self, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
         Parameters
         ----------
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.

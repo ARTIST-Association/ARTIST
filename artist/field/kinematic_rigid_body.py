@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.field.kinematic import Kinematic
@@ -60,7 +58,7 @@ class RigidBody(Kinematic):
         deviation_parameters: torch.Tensor,
         aim_points: torch.Tensor,
         actuator_parameters: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize a rigid body kinematic.
@@ -84,7 +82,7 @@ class RigidBody(Kinematic):
             The aim points of the heliostats.
         actuator_parameters : torch.Tensor
             The actuator parameters.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -124,7 +122,7 @@ class RigidBody(Kinematic):
         incident_ray_directions: torch.Tensor,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.
@@ -137,7 +135,7 @@ class RigidBody(Kinematic):
             Maximum number of iterations (default is 2).
         min_eps : float
             Convergence criterion (default is 0.0001).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -329,7 +327,7 @@ class RigidBody(Kinematic):
         incident_ray_directions: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Align given surface points and surface normals according to incident ray directions.
@@ -342,7 +340,7 @@ class RigidBody(Kinematic):
             The points on the surface of the heliostats that reflect the light.
         surface_normals : torch.Tensor
             The normals to the surface points.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -367,7 +365,7 @@ class RigidBody(Kinematic):
         return aligned_surface_points, aligned_surface_normals
 
     def motor_positions_to_orientations(
-        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
+        self, motor_positions: torch.Tensor, device: torch.device | None = None
     ) -> torch.Tensor:
         """
         Compute orientation matrices given the motor positions.
@@ -376,7 +374,7 @@ class RigidBody(Kinematic):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.

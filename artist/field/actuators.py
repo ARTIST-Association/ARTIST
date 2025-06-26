@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.util.environment_setup import get_device
@@ -27,7 +25,7 @@ class Actuators(torch.nn.Module):
     """
 
     def __init__(
-        self, actuator_parameters: torch.Tensor, device: Optional[torch.device] = None
+        self, actuator_parameters: torch.Tensor, device: torch.device | None = None
     ) -> None:
         """
         Initialize abstract actuators.
@@ -42,7 +40,7 @@ class Actuators(torch.nn.Module):
         ----------
         actuator_parameters : torch.Tensor
             The actuator parameters.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -58,7 +56,7 @@ class Actuators(torch.nn.Module):
         )
 
     def motor_positions_to_angles(
-        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
+        self, motor_positions: torch.Tensor, device: torch.device | None = None
     ) -> torch.Tensor:
         """
         Calculate the joint angles for given motor positions.
@@ -67,7 +65,7 @@ class Actuators(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
@@ -80,7 +78,7 @@ class Actuators(torch.nn.Module):
         raise NotImplementedError("Must be overridden!")
 
     def angles_to_motor_positions(
-        self, angles: torch.Tensor, device: Optional[torch.device] = None
+        self, angles: torch.Tensor, device: torch.device | None = None
     ) -> torch.Tensor:
         """
         Calculate the motor positions for given joint angles.
@@ -89,7 +87,7 @@ class Actuators(torch.nn.Module):
         ----------
         angles : torch.Tensor
             The joint angles.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.

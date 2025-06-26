@@ -1,7 +1,6 @@
 import json
 import pathlib
 from collections import Counter, defaultdict
-from typing import Optional
 
 import torch
 
@@ -32,7 +31,7 @@ def extract_paint_calibration_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Extract calibration data from ``PAINT`` calibration files.
@@ -47,7 +46,7 @@ def extract_paint_calibration_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.
@@ -156,7 +155,8 @@ def extract_paint_calibration_data(
 
 
 def extract_paint_tower_measurements(
-    tower_measurements_path: pathlib.Path, device: Optional[torch.device] = None
+    tower_measurements_path: pathlib.Path,
+    device: torch.device | None = None,
 ) -> tuple[PowerPlantConfig, TargetAreaListConfig]:
     """
     Extract tower data from a ``PAINT`` tower measurements file for scenario generation.
@@ -165,7 +165,7 @@ def extract_paint_tower_measurements(
     ----------
     tower_measurements_path : pathlib.Path
         The path to the tower measurement file.
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.
@@ -273,7 +273,7 @@ def extract_paint_heliostats(
     power_plant_position: torch.Tensor,
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
@@ -288,7 +288,7 @@ def extract_paint_heliostats(
         The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS (default is 400).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.
@@ -503,7 +503,7 @@ def azimuth_elevation_to_enu(
     elevation: torch.Tensor,
     slant_range: float = 1.0,
     degree: bool = True,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Transform coordinates from azimuth and elevation to east, north, up.
@@ -520,7 +520,7 @@ def azimuth_elevation_to_enu(
         Slant range in meters (default is 1.0).
     degree : bool
         Whether input is given in degrees (default is True).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
@@ -39,9 +37,9 @@ def line_plane_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreas,
-    target_area_mask: Optional[torch.Tensor] = None,
+    target_area_mask: torch.Tensor | None = None,
     epsilon: float = 1e-6,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute line-plane intersections of the rays and the (receiver) planes.
@@ -54,12 +52,12 @@ def line_plane_intersections(
         The surface points of the ray origins.
     target_areas : TowerTargetAreas
         All possible tower target areas with their properties.
-    target_area_mask : Optional[torch.Tensor]
+    target_area_mask : torch.Tensor | None
         The indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA, MPS, or CPU) based on availability and OS.
