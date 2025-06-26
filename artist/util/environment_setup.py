@@ -300,11 +300,9 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
                 f"OS '{os_name}' not recognized. ARTIST is optimized for GPU computations but will run on CPU."
             )
             device = torch.device("cpu")
-
-    else:
-        assert device is type(torch.device)
-        if device.type == "mps":
-            device = torch.device("cpu")
-            log.warning("Setting device to CPU. ARTIST only supports CPU for MacOS.")
+    elif device.type == "mps":
+        log.warning(
+            "You are forcing ARTIST to run with MPS - this is not supported and will fail!."
+        )
 
     return device
