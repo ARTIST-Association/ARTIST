@@ -177,11 +177,27 @@ class Scenario:
             ].keys()
         )
 
-        prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
-        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
-            "utf-8"
-        )
+        prototype_actuator_type_list = []
+        for key in prototype_actuator_keys:
+            prototype_actuator_type_list.append(
+                scenario_file[config_dictionary.prototype_key][
+                    config_dictionary.actuators_prototype_key
+                ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+            )
+
+        unique_prototype_actuators = {a for a in prototype_actuator_type_list}
+
+        if prototype_kinematic_type == config_dictionary.rigid_body_key:
+            if len(unique_prototype_actuators) > 1:
+                raise ValueError(
+                    "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
+                )
+            else:
+                prototype_actuator_type = prototype_actuator_type_list[0]
+        else:
+            raise ValueError(
+                f"There is an error in the prototype. ARTIST currently only supports the rigid body kinematic type and {prototype_kinematic_type} is not yet supported."
+            )
 
         prototype_actuator_parameters = utils_load_h5.actuator_parameters(
             prototype=True,
