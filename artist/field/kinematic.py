@@ -33,6 +33,7 @@ class Kinematic(torch.nn.Module):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
+        aim_points: torch.Tensor,
         device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
@@ -42,6 +43,8 @@ class Kinematic(torch.nn.Module):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
+        aim_points : torch.Tensor
+            The aim points for the active heliostats.
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate

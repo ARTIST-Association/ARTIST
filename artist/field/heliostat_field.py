@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Any
 
 import h5py
-import torch.nn
+import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_group import HeliostatGroup
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
 
 
-class HeliostatField(torch.nn.Module):
+class HeliostatField:
     """
     The heliostat field.
 
@@ -37,8 +37,6 @@ class HeliostatField(torch.nn.Module):
     -------
     from_hdf5()
         Load a heliostat field from an HDF5 file.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(
@@ -248,15 +246,6 @@ class HeliostatField(torch.nn.Module):
                 )
             )
             grouped_field_data[heliostat_group_key][
-                config_dictionary.aim_points
-            ].append(
-                torch.tensor(
-                    single_heliostat_config[config_dictionary.heliostat_aim_point][()],
-                    dtype=torch.float,
-                    device=device,
-                )
-            )
-            grouped_field_data[heliostat_group_key][
                 config_dictionary.surface_points
             ].append(
                 surface.get_surface_points_and_normals(device=device)[0].reshape(-1, 4)
@@ -297,9 +286,6 @@ class HeliostatField(torch.nn.Module):
                     positions=grouped_field_data[heliostat_group_name][
                         config_dictionary.positions
                     ],
-                    aim_points=grouped_field_data[heliostat_group_name][
-                        config_dictionary.aim_points
-                    ],
                     surface_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.surface_points
                     ],
@@ -326,14 +312,3 @@ class HeliostatField(torch.nn.Module):
         return cls(
             heliostat_groups=heliostat_groups,
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

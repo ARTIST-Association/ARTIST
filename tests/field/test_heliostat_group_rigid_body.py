@@ -29,10 +29,6 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
             [[1.0, 0.0, 0.0, 1.0], [2.0, 0.0, 0.0, 1.0], [3.0, 0.0, 0.0, 1.0]],
             device=device,
         ),
-        aim_points=torch.tensor(
-            [[0.0, -1.0, 0.0, 0.0], [0.0, -1.0, 0.0, 0.0], [0.0, -1.0, 0.0, 0.0]],
-            device=device,
-        ),
         surface_points=torch.rand((3, 100, 4), device=device),
         surface_normals=torch.rand((3, 100, 4), device=device),
         initial_orientations=torch.tensor(

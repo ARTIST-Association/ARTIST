@@ -5,7 +5,7 @@ from artist.util.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
 
 
-class Surface(torch.nn.Module):
+class Surface:
     """
     Implement the surface module which contains a list of facets.
 
@@ -18,8 +18,6 @@ class Surface(torch.nn.Module):
     -------
     get_surface_points_and_normals()
         Calculate all surface points and normals from all facets.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(self, surface_config: SurfaceConfig) -> None:
@@ -92,14 +90,3 @@ class Surface(torch.nn.Module):
             surface_points[i] = facet_points + facet.translation_vector
             surface_normals[i] = facet_normals
         return surface_points, surface_normals
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

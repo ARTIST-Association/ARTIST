@@ -4,7 +4,7 @@ from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
 
 
-class NurbsFacet(torch.nn.Module):
+class NurbsFacet:
     """
     Model a facet with a NURBS surface.
 
@@ -31,8 +31,6 @@ class NurbsFacet(torch.nn.Module):
     -------
     create_nurbs_surface()
         Create a NURBS surface to model a facet.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(
@@ -130,14 +128,3 @@ class NurbsFacet(torch.nn.Module):
             device,
         )
         return nurbs_surface
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

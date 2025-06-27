@@ -68,7 +68,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self,
         names: list[str],
         positions: torch.Tensor,
-        aim_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
@@ -85,8 +84,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The string names of each heliostat in the group in order.
         positions : torch.Tensor
             The positions of all heliostats in the group.
-        aim_points : torch.Tensor
-            The aim points of all heliostats in the group.
         surface_points : torch.Tensor
             The surface points of all heliostats in the group.
         surface_normals : torch.Tensor
@@ -105,7 +102,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         super().__init__(
             names=names,
             positions=positions,
-            aim_points=aim_points,
             surface_points=surface_points,
             surface_normals=surface_normals,
             initial_orientations=initial_orientations,
@@ -117,7 +113,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
-            aim_points=aim_points,
             actuator_parameters=self.actuator_parameters,
             initial_orientations=self.initial_orientations,
             deviation_parameters=self.kinematic_deviation_parameters,
@@ -156,14 +151,13 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = get_device(device=device)
 
-        self.kinematic.aim_points = aim_points
-
         self.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         orientations = self.kinematic.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
+            aim_points=aim_points,
             device=device,
         )
 
