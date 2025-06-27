@@ -103,6 +103,7 @@ def test_initialize_ddp_environment(
         (0, {0: [0, 1, 2]}, (0, 1)),
         (2, {0: [0, 1, 2]}, (0, 1)),
         (4, {0: [0], 1: [1], 2: [2], 3: [0], 4: [1]}, (1, 2)),
+        (5, {0: [0, 1, 2]}, (0, 1)),
     ],
 )
 def test_create_subgroups_for_nested_ddp(

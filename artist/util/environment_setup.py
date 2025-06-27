@@ -112,6 +112,7 @@ def create_subgroups_for_nested_ddp(
     heliostat_group_rank = 0
     heliostat_group_world_size = 1
     process_subgroup = None
+    found_rank_in_group = False
 
     for group_index, group_ranks in ranks_to_groups_mapping.items():
         process_group = torch.distributed.new_group(ranks=group_ranks)
@@ -121,12 +122,13 @@ def create_subgroups_for_nested_ddp(
             heliostat_group_rank = group_ranks.index(rank)
             heliostat_group_world_size = len(group_ranks)
             process_subgroup = process_group
-        else:
-            log.warning(
-                f"The rank {rank} is not in a heliostat group. Using default values of \n"
-                f"-Heliostat group rank: {heliostat_group_rank}\n"
-                f"-Heliostat group world size: {heliostat_group_world_size}"
-            )
+            found_rank_in_group = True
+    if not found_rank_in_group:
+        log.warning(
+            f"The rank {rank} is not in a heliostat group. Using default values of \n"
+            f"-Heliostat group rank: {heliostat_group_rank}\n"
+            f"-Heliostat group world size: {heliostat_group_world_size}"
+        )
 
     return heliostat_group_rank, heliostat_group_world_size, process_subgroup
 
