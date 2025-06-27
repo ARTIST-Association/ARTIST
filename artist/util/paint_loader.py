@@ -591,7 +591,7 @@ def convert_wgs84_coordinates_to_local_enu(
     # Convert latitude and longitude to radians.
     latitudes = torch.deg2rad(coordinates_to_transform[:, 0])
     longitudes = torch.deg2rad(coordinates_to_transform[:, 1])
-    latitude_refernce_point = torch.deg2rad(reference_point[0])
+    latitude_reference_point = torch.deg2rad(reference_point[0])
     longitude_reference_point = torch.deg2rad(reference_point[1])
 
     # Calculate meridional radius of curvature for the first latitude.
@@ -602,7 +602,7 @@ def convert_wgs84_coordinates_to_local_enu(
     rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
 
     # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = latitude_refernce_point - latitudes
+    dlat_rad = latitude_reference_point - latitudes
     dlon_rad = longitude_reference_point - longitudes
 
     # Calculate north and east offsets in meters.

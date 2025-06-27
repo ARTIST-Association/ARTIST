@@ -1,12 +1,69 @@
+import pathlib
 from unittest.mock import MagicMock
 
+import h5py
 import pytest
 import torch
 
+from artist import ARTIST_ROOT
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util.scenario import Scenario
+
+
+def test_get_number_of_heliostat_groups_from_hdf5() -> None:
+    """
+    Test the get number of heliostat groups method.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    scenario_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/scenarios/test_scenario_paint_single_heliostat.h5"
+    )
+    number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
+        scenario_path=scenario_path
+    )
+
+    assert number_of_heliostat_groups == 1
+
+
+def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
+    """
+    Test the get number of heliostat groups method.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    broken_actuator_prototype_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/scenarios/test_broken_scenario_actuator_prototype.h5"
+    )
+    with h5py.File(broken_actuator_prototype_path) as scenario_file:
+        with pytest.raises(ValueError) as exc_info:
+            Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+    assert (
+        "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
+        in str(exc_info.value)
+    )
+
+    broken_actuator_individual_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/scenarios/test_broken_scenario_actuator_individual.h5"
+    )
+    with h5py.File(broken_actuator_individual_path) as scenario_file:
+        with pytest.raises(ValueError) as exc_info:
+            Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+    assert (
+        "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
+        in str(exc_info.value)
+    )
 
 
 @pytest.mark.parametrize(
@@ -100,7 +157,7 @@ from artist.util.scenario import Scenario
         (
             [
                 (
-                    "invalid_heliostat_name_1",
+                    "AA39",
                     "receiver",
                     torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 ),
@@ -111,14 +168,14 @@ from artist.util.scenario import Scenario
                 ),
                 ("AA31", "multi_focus_tower", torch.tensor([1.0, 0.0, 1.0])),
                 (
-                    "invalid_heliostat_name_2",
+                    "AA31",
                     "invalid_target_name_2",
                     torch.tensor([1.0, 0.0, 1.0, 0.0]),
                 ),
             ],
             None,
             None,
-            "Invalid heliostat 'invalid_heliostat_name_1' (Found at index 0 of provided mapping) not found in this scenario. Invalid target 'invalid_target_name_1' (Found at index 1 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 2 of provided mapping). This must be a normalized 4D tensor with last element 0.0. Invalid heliostat 'invalid_heliostat_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid target 'invalid_target_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 3 of provided mapping). This must be a normalized 4D tensor with last element 0.0.",
+            "Invalid target 'invalid_target_name_1' (Found at index 1 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 2 of provided mapping). This must be a normalized 4D tensor with last element 0.0. Invalid target 'invalid_target_name_2' (Found at index 3 of provided mapping) not found in this scenario. Invalid incident ray direction (Found at index 3 of provided mapping). This must be a normalized 4D tensor with last element 0.0.",
         ),
         (
             None,

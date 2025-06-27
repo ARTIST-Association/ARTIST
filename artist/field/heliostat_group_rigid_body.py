@@ -56,8 +56,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     -------
     align_surfaces_with_incident_ray_directions()
         Align surface points and surface normals with incident ray directions.
-    get_orientations_from_motor_positions()
-        Compute the orientations of heliostats given some motor positions.
     forward()
         Specify the forward pass.
 
@@ -164,41 +162,16 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
-        (
-            self.active_surface_points,
-            self.active_surface_normals,
-        ) = self.kinematic.align_surfaces_with_incident_ray_directions(
+        orientations = self.kinematic.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
-            surface_points=self.active_surface_points,
-            surface_normals=self.active_surface_normals,
             device=device,
         )
 
-    def get_orientations_from_motor_positions(
-        self, motor_positions: torch.Tensor, device: torch.device | None = None
-    ) -> torch.Tensor:
-        """
-        Compute the orientations of heliostats given some motor positions.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The orientations of the heliostats for the given motor positions.
-        """
-        device = get_device(device=device)
-
-        return self.kinematic.motor_positions_to_orientations(
-            motor_positions=motor_positions,
-            device=device,
+        self.active_surface_points = (
+            self.active_surface_points @ orientations.transpose(1, 2)
+        )
+        self.active_surface_normals = (
+            self.active_surface_normals @ orientations.transpose(1, 2)
         )
 
     def forward(self) -> None:
