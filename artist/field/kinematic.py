@@ -45,7 +45,7 @@ class Kinematic(torch.nn.Module):
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------
@@ -67,7 +67,7 @@ class Kinematic(torch.nn.Module):
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------

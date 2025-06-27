@@ -4,7 +4,7 @@
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
-[![](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![codecov](https://codecov.io/gh/ARTIST-Association/ARTIST/graph/badge.svg?token=AEUYvTNXz1)](https://codecov.io/gh/ARTIST-Association/ARTIST)
@@ -38,7 +38,7 @@ smooth parametric descriptions of heliostats.
 
 
 ## Installation
-We heavily recommend installing the `ARTIST` package in a dedicated `Python3.8+` virtual environment. You can
+We heavily recommend installing the `ARTIST` package in a dedicated `Python3.10+` virtual environment. You can
 install ``ARTIST`` directly from the GitHub repository via:
 ```bash
 pip install git+https://github.com/ARTIST-Association/ARTIST
@@ -50,7 +50,6 @@ Alternatively, you can install ``ARTIST`` locally. To achieve this, there are tw
    ```
 2. Install the package from the main branch. There are multiple installation options available:
    - Install basic dependencies: ``pip install .``
-   - Install with ``mpi4py`` to enable distributed computing: ``pip install ."[mpi]"``
    - Install with optional dependencies to run the tutorials:  ``pip install ."[tutorials]"``
    - Install an editable version with developer dependencies: ``pip install -e ."[dev]"``
 

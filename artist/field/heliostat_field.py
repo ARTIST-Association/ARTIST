@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Any, Optional, Union
+from typing import Any
 
 import h5py
 import torch.nn
@@ -63,9 +63,9 @@ class HeliostatField(torch.nn.Module):
         cls,
         config_file: h5py.File,
         prototype_surface: SurfaceConfig,
-        prototype_kinematic: dict[str, Union[str, torch.Tensor]],
-        prototype_actuators: dict[str, Union[str, torch.Tensor]],
-        device: Optional[torch.device] = None,
+        prototype_kinematic: dict[str, str | torch.Tensor],
+        prototype_actuators: dict[str, str | torch.Tensor],
+        device: torch.device | None = None,
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
@@ -76,14 +76,14 @@ class HeliostatField(torch.nn.Module):
             The HDF5 file containing the configuration to be loaded.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if a heliostat has no individual surface.
-        prototype_kinematic : dict[str, Union[str, torch.Tensor]]
+        prototype_kinematic : dict[str, str | torch.Tensor]
             The prototype for the kinematic, including type, initial orientation and deviations.
-        prototype_actuators : dict[str, Union[str, torch.Tensor]]
+        prototype_actuators : dict[str, str | torch.Tensor]
             The prototype for the actuators, including type and parameters.
-        device : Optional[torch.device]
+        device : device: torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------

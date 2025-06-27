@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import torch
 
@@ -75,7 +74,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         initial_orientations: torch.Tensor,
         kinematic_deviation_parameters: torch.Tensor,
         actuator_parameters: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize a heliostat group with a rigid body kinematic and linear or ideal actuator type.
@@ -98,10 +97,10 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The kinematic deviation parameters of all heliostats in the group.
         actuator_parameters : torch.Tensor
             The actuator parameters of all actuators in the group.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
         """
         super().__init__(
             names=names,
@@ -129,8 +128,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self,
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_mask: Optional[torch.Tensor] = None,
-        device: Optional[torch.device] = None,
+        active_heliostats_mask: torch.Tensor | None = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Align surface points and surface normals with incident ray directions.
@@ -146,14 +145,14 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
             The incident ray directions.
-        active_heliostats_mask : Optional[torch.Tensor]
+        active_heliostats_mask : torch.Tensor | None
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
 

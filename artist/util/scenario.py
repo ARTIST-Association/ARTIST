@@ -1,7 +1,6 @@
 import logging
 import pathlib
 from collections import defaultdict
-from typing import Optional
 
 import h5py
 import torch
@@ -96,7 +95,9 @@ class Scenario:
 
     @classmethod
     def load_scenario_from_hdf5(
-        cls, scenario_file: h5py.File, device: Optional[torch.device] = None
+        cls,
+        scenario_file: h5py.File,
+        device: torch.device | None = None,
     ) -> Self:
         """
         Class method to load the scenario from an HDF5 file.
@@ -105,10 +106,10 @@ class Scenario:
         ----------
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -228,12 +229,12 @@ class Scenario:
     def index_mapping(
         self,
         heliostat_group: HeliostatGroup,
-        string_mapping: Optional[list[tuple[str, str, torch.Tensor]]] = None,
+        string_mapping: list[tuple[str, str, torch.Tensor]] | None = None,
         single_incident_ray_direction: torch.Tensor = torch.tensor(
             [0.0, 1.0, 0.0, 0.0]
         ),
         single_target_area_index: int = 0,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Create an index mapping from heliostat names, target area names and incident ray directions.
@@ -248,16 +249,16 @@ class Scenario:
         ----------
         heliostat_group : HeliostatGroup
             The current heliostat group.
-        string_mapping : Optional[list[tuple[str, str, torch.Tensor]]]
+        string_mapping : list[tuple[str, str, torch.Tensor]] | None
             Strings that map heliostats to target areas and incident ray direction tensors (default is None).
         single_incident_ray_direction : torch.Tensor
             The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
         single_target_area_index : int
             The default target area index (default is 0).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------

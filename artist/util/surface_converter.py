@@ -2,7 +2,6 @@ import json
 import logging
 import pathlib
 import struct
-from typing import Optional
 
 import h5py
 import numpy as np
@@ -130,7 +129,7 @@ class SurfaceConverter:
         tolerance: float = 1e-5,
         initial_learning_rate: float = 1e-1,
         max_epoch: int = 2500,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> NURBSSurface:
         """
         Fit the NURBS surface given the conversion method.
@@ -157,16 +156,16 @@ class SurfaceConverter:
             Degree of the NURBS in the east (first) direction (default: 2).
         degree_n : int
             Degree of the NURBS in the north (second) direction (default: 2).
-        tolerance : float, optional
+        tolerance : float
             Tolerance value for convergence criteria (default: 1e-5).
         initial_learning_rate : float
             Initial learning rate for the learning rate scheduler (default: 1e-1).
-        max_epoch : int, optional
+        max_epoch : int
             Maximum number of epochs for optimization (default: 2500).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -267,7 +266,7 @@ class SurfaceConverter:
         facet_translation_vectors: torch.Tensor,
         canting_e: torch.Tensor,
         canting_n: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a data source.
@@ -284,10 +283,10 @@ class SurfaceConverter:
             The canting vector per facet in east direction.
         canting_n : torch.Tensor
             The canting vector per facet in north direction.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -380,7 +379,9 @@ class SurfaceConverter:
         return facet_config_list
 
     def generate_surface_config_from_stral(
-        self, stral_file_path: pathlib.Path, device: Optional[torch.device] = None
+        self,
+        stral_file_path: pathlib.Path,
+        device: torch.device | None = None,
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``STRAL`` file.
@@ -389,10 +390,10 @@ class SurfaceConverter:
         ----------
         stral_file_path : pathlib.Path
             The file path to the ``STRAL`` data that will be converted.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -474,7 +475,7 @@ class SurfaceConverter:
         self,
         heliostat_file_path: pathlib.Path,
         deflectometry_file_path: pathlib.Path,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> list[FacetConfig]:
         """
         Generate a surface configuration from a ``PAINT`` dataset.
@@ -485,10 +486,10 @@ class SurfaceConverter:
             The file path to the ``PAINT`` deflectometry data that will be converted.
         heliostat_file_path : pathlib.Path
             The file path to the ``PAINT`` heliostat properties data that will be converted.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import h5py
 import torch
@@ -44,7 +44,7 @@ class Sun(LightSource):
         distribution_parameters: dict[str, Any] = dict(
             distribution_type="normal", mean=0.0, covariance=4.3681e-06
         ),
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the sun as a light source.
@@ -60,10 +60,10 @@ class Sun(LightSource):
             The number of sent-out rays sampled from the sun distribution.
         distribution_parameters
             Parameters of the distribution used to model the sun.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------
@@ -132,8 +132,8 @@ class Sun(LightSource):
     def from_hdf5(
         cls,
         config_file: h5py.File,
-        light_source_name: Optional[str] = None,
-        device: Optional[torch.device] = None,
+        light_source_name: str | None = None,
+        device: torch.device | None = None,
     ) -> Self:
         """
         Class method that initializes a sun from an HDF5 file.
@@ -142,12 +142,12 @@ class Sun(LightSource):
         ----------
         config_file : h5py.File
             The HDF5 file containing the information about the sun.
-        light_source_name : str, optional
+        light_source_name : str | None
             The name of the light source - used for logging.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------

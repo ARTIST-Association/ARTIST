@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from artist.util.environment_setup import get_device
@@ -47,7 +45,7 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points_e: torch.Tensor,
         evaluation_points_n: torch.Tensor,
         control_points: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize a NURBS surface.
@@ -69,10 +67,10 @@ class NURBSSurface(torch.nn.Module):
             The evaluation points in north direction.
         control_points : torch.Tensor
             The control points.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
         """
         super().__init__()
 
@@ -86,7 +84,8 @@ class NURBSSurface(torch.nn.Module):
         self.knot_vector_e, self.knot_vector_n = self.calculate_knots(device=device)
 
     def calculate_knots(
-        self, device: Optional[torch.device] = None
+        self,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the knot vectors in the east and north direction.
@@ -99,10 +98,10 @@ class NURBSSurface(torch.nn.Module):
 
         Parameters
         ----------
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -138,7 +137,7 @@ class NURBSSurface(torch.nn.Module):
         evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
         control_points: torch.Tensor,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Determine the knot span index for given evaluation points.
@@ -159,10 +158,10 @@ class NURBSSurface(torch.nn.Module):
             The knot vector for the NURBS surface in a single direction.
         control_points : torch.Tensor
             The control points.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -224,7 +223,7 @@ class NURBSSurface(torch.nn.Module):
         span: torch.Tensor,
         degree: int,
         nth_derivative: int = 1,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
@@ -243,10 +242,10 @@ class NURBSSurface(torch.nn.Module):
             The degree of the NURBS surface in one direction.
         nth_derivative : int
             Specifies how many derivatives are calculated (default is 1).
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -338,17 +337,18 @@ class NURBSSurface(torch.nn.Module):
         return derivatives
 
     def calculate_surface_points_and_normals(
-        self, device: Optional[torch.device] = None
+        self,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the surface points and normals of the NURBS surface.
 
         Parameters
         ----------
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------

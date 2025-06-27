@@ -1,4 +1,3 @@
-from typing import Union
 from unittest.mock import MagicMock
 
 import h5py
@@ -59,8 +58,8 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
 def test_heliostat_field_load_from_hdf5_errors(
     mocker: MockerFixture,
     prototype_surface: SurfaceConfig,
-    prototype_kinematic: dict[str, Union[str, torch.Tensor]],
-    prototype_actuators: dict[str, Union[str, torch.Tensor]],
+    prototype_kinematic: dict[str, str | torch.Tensor],
+    prototype_actuators: dict[str, str | torch.Tensor],
     error: str,
     device: torch.device,
 ) -> None:
@@ -73,9 +72,9 @@ def test_heliostat_field_load_from_hdf5_errors(
         A pytest-mocker fixture used to create mock objects.
     prototype_surface : SurfaceConfig
         The mock prototype surface.
-    prototype_kinematic : dict[str, Union[str, torch.Tensor]]
+    prototype_kinematic : dict[str, str | torch.Tensor]
         The mock prototype kinematic.
-    prototype_actuators : dict[str, Union[str, torch.Tensor]]
+    prototype_actuators : dict[str, str | torch.Tensor]
         The mock prototype actuator.
     error : str
         The expected error message.
