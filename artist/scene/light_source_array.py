@@ -12,9 +12,9 @@ log = logging.getLogger(__name__)
 """A logger for the light source array."""
 
 
-class LightSourceArray(torch.nn.Module):
+class LightSourceArray:
     """
-    Wrap the list of light sources as a ``torch.nn.Module`` to allow gradient calculation.
+    The light source array.
 
     Attributes
     ----------
@@ -25,8 +25,6 @@ class LightSourceArray(torch.nn.Module):
     -------
     from_hdf5()
         Load the list of light sources from an HDF5 file.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(self, light_source_list: list[LightSource]):
@@ -98,14 +96,3 @@ class LightSourceArray(torch.nn.Module):
                     f"Currently the selected light source: {mapping_key} is not supported."
                 )
         return cls(light_source_list=light_source_array)
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")
