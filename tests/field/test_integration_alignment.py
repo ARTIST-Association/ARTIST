@@ -21,7 +21,7 @@ from artist.util.scenario import Scenario
                 ("heliostat_1", "receiver", torch.tensor([1.0, 0.0, 0.0, 0.0])),
                 ("heliostat_1", "receiver", torch.tensor([0.0, 0.0, -1.0, 0.0])),
             ],
-            "test_scenario_stral_prototypes",
+            "test_scenario_stral_single_heliostat_prototype",
         ),
         (
             [

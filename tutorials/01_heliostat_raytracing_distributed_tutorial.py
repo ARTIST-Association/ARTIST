@@ -18,7 +18,9 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype.h5"
+)
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
