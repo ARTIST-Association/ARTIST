@@ -194,10 +194,6 @@ class Scenario:
                 )
             else:
                 prototype_actuator_type = prototype_actuator_type_list[0]
-        else:
-            raise ValueError(
-                f"There is an error in the prototype. ARTIST currently only supports the rigid body kinematic type and {prototype_kinematic_type} is not yet supported."
-            )
 
         prototype_actuator_parameters = utils_load_h5.actuator_parameters(
             prototype=True,
