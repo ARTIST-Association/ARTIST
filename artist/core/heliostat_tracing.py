@@ -5,10 +5,10 @@ import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
 from artist.field.heliostat_group import HeliostatGroup
+from artist.scenario.scenario import Scenario
 from artist.scene import LightSource
 from artist.util import utils
 from artist.util.environment_setup import get_device
-from artist.util.scenario import Scenario
 
 from . import raytracing_utils
 from .rays import Rays

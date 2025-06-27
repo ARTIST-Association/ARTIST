@@ -6,19 +6,20 @@ import h5py
 import torch
 from typing_extensions import Self
 
+from artist.data_loader import utils_load_h5
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
-from artist.util import config_dictionary, type_mappings, utils_load_h5
-from artist.util.configuration_classes import (
+from artist.scenario.configuration_classes import (
     SurfaceConfig,
 )
+from artist.util import config_dictionary, type_mappings
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
 
 
-class HeliostatField:
+class HeliostatField():
     """
     The heliostat field.
 

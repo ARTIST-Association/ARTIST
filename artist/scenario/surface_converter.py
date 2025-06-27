@@ -7,8 +7,8 @@ import h5py
 import numpy as np
 import torch
 
+from artist.scenario.configuration_classes import FacetConfig
 from artist.util import config_dictionary, utils
-from artist.util.configuration_classes import FacetConfig
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
 

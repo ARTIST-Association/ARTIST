@@ -1,7 +1,7 @@
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
-from artist.util.configuration_classes import SurfaceConfig
+from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
 
 
