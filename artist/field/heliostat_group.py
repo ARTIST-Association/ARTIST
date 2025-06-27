@@ -129,7 +129,7 @@ class HeliostatGroup(torch.nn.Module):
         self,
         aim_points: torch.Tensor,
         incident_ray_directions: torch.Tensor,
-        active_heliostats_mask: torch.Tensor | None,
+        active_heliostats_mask: torch.Tensor | None = None,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -183,7 +183,7 @@ class HeliostatGroup(torch.nn.Module):
 
     def activate_heliostats(
         self,
-        active_heliostats_mask: torch.Tensor | None,
+        active_heliostats_mask: torch.Tensor | None = None,
         device: torch.device | None = None,
     ) -> None:
         """
