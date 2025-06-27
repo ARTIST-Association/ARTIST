@@ -97,7 +97,13 @@ class HeliostatField(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        log.info("Loading a heliostat field from an HDF5 file.")
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
+        )
+        if rank == 0:
+            log.info("Loading a heliostat field from an HDF5 file.")
 
         grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
             lambda: defaultdict(list)
@@ -122,9 +128,10 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
                     )
-                log.info(
-                    "Individual surface parameters not provided - loading a heliostat with the surface prototype."
-                )
+                if rank == 0:
+                    log.info(
+                        "Individual surface parameters not provided - loading a heliostat with the surface prototype."
+                    )
                 surface_config = prototype_surface
 
             if (
@@ -157,10 +164,12 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
                     )
-                log.info(
-                    "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
-                )
+                if rank == 0:
+                    log.info(
+                        "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
+                    )
                 kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
+
                 initial_orientation = prototype_kinematic[
                     config_dictionary.kinematic_initial_orientation
                 ]
@@ -178,11 +187,23 @@ class HeliostatField(torch.nn.Module):
                     ].keys()
                 )
 
-                actuator_type = single_heliostat_config[
-                    config_dictionary.heliostat_actuator_key
-                ][actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
-                    "utf-8"
-                )
+                actuator_type_list = []
+                for key in actuator_keys:
+                    actuator_type_list.append(
+                        single_heliostat_config[
+                            config_dictionary.heliostat_actuator_key
+                        ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+                    )
+
+                unique_actuators = {a for a in actuator_type_list}
+
+                if kinematic_type == config_dictionary.rigid_body_key:
+                    if len(unique_actuators) > 1:
+                        raise ValueError(
+                            "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
+                        )
+                    else:
+                        actuator_type = actuator_type_list[0]
 
                 actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
@@ -199,9 +220,10 @@ class HeliostatField(torch.nn.Module):
                     raise ValueError(
                         "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
                     )
-                log.info(
-                    "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
-                )
+                if rank == 0:
+                    log.info(
+                        "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
+                    )
                 actuator_type = prototype_actuators[config_dictionary.actuator_type_key]
                 actuator_parameters = prototype_actuators[
                     config_dictionary.actuator_parameters_key
@@ -214,6 +236,10 @@ class HeliostatField(torch.nn.Module):
             grouped_field_data[heliostat_group_key][config_dictionary.names].append(
                 heliostat_name
             )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.heliostat_group_type
+            ] = [kinematic_type, actuator_type]
+
             grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
                 torch.tensor(
                     single_heliostat_config[config_dictionary.heliostat_position][()],
@@ -252,7 +278,11 @@ class HeliostatField(torch.nn.Module):
 
         for group in grouped_field_data:
             for key in grouped_field_data[group]:
-                if key != config_dictionary.names:
+                if key not in [
+                    config_dictionary.names,
+                    config_dictionary.kinematic_type,
+                    config_dictionary.actuator_type_key,
+                ]:
                     grouped_field_data[group][key] = torch.stack(
                         grouped_field_data[group][key]
                     )
@@ -288,9 +318,10 @@ class HeliostatField(torch.nn.Module):
                     device=device,
                 )
             )
-            log.info(
-                f"Added a heliostat group with kinematic type: {kinematic_type}, and actuator type: {actuator_type}, to the heliostat field."
-            )
+            if rank == 0:
+                log.info(
+                    f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
+                )
 
         return cls(
             heliostat_groups=heliostat_groups,

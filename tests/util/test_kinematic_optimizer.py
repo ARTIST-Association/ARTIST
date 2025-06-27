@@ -63,7 +63,7 @@ def test_kinematic_optimizer(
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/data/scenarios/test_scenario_paint_multiple_heliostats.h5"
+        / "tests/data/scenarios/test_scenario_paint_four_heliostats.h5"
     )
 
     heliostat_calibration_mapping = [
