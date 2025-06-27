@@ -2,13 +2,14 @@ import pathlib
 
 import torch
 
-from artist.util import config_dictionary, paint_loader, set_logger_config
-from artist.util.configuration_classes import (
+from artist.data import paint_loader
+from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
 )
+from artist.scenario.scenario_generator import ScenarioGenerator
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
-from artist.util.scenario_generator import ScenarioGenerator
 
 # Set up logger
 set_logger_config()

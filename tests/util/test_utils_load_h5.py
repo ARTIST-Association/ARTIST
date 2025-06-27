@@ -5,7 +5,8 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.util import config_dictionary, utils_load_h5
+from artist.data import utils_load_h5
+from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(

@@ -6,11 +6,12 @@ import h5py
 import torch
 from typing_extensions import Self
 
+from artist.data_loader import utils_load_h5
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.light_source_array import LightSourceArray
-from artist.util import config_dictionary, utils_load_h5
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)

@@ -3,10 +3,11 @@ import pathlib
 import h5py
 import torch
 
-from artist.util import paint_loader, set_logger_config
+from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.data import paint_loader
+from artist.scenario.scenario import Scenario
+from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
-from artist.util.kinematic_optimizer import KinematicOptimizer
-from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)

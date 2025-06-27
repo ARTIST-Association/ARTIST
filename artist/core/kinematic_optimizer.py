@@ -3,12 +3,12 @@ import logging
 import torch
 from torch.optim import Optimizer
 
+from artist.core import raytracing_utils
+from artist.core.heliostat_tracing import HeliostatRayTracer
 from artist.field.heliostat_group import HeliostatGroup
-from artist.raytracing import raytracing_utils
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import get_device
-from artist.util.scenario import Scenario
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""

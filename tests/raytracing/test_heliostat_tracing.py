@@ -3,10 +3,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
+from artist.core.heliostat_tracing import HeliostatRayTracer
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
-from artist.util.scenario import Scenario
+from artist.scenario.scenario import Scenario
 
 
 @pytest.fixture()

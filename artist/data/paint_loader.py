@@ -4,8 +4,7 @@ from collections import Counter, defaultdict
 
 import torch
 
-from artist.util import config_dictionary, utils
-from artist.util.configuration_classes import (
+from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorParameters,
@@ -22,8 +21,9 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.scenario.surface_converter import SurfaceConverter
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
-from artist.util.surface_converter import SurfaceConverter
 
 
 def extract_paint_calibration_data(

@@ -5,9 +5,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, paint_loader, set_logger_config
-from artist.util.kinematic_optimizer import KinematicOptimizer
-from artist.util.scenario import Scenario
+from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.data import paint_loader
+from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary, set_logger_config
 
 # Set up logger.
 set_logger_config()
