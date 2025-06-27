@@ -25,7 +25,7 @@ def surface_config(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -107,7 +107,7 @@ def kinematic_deviations(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -166,7 +166,7 @@ def rigid_body_deviations(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -476,7 +476,7 @@ def actuator_parameters(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -544,7 +544,7 @@ def linear_actuators(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -695,7 +695,7 @@ def ideal_actuators(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
