@@ -149,11 +149,6 @@ class HeliostatField(torch.nn.Module):
                     config_dictionary.heliostat_kinematic_key
                 ][config_dictionary.kinematic_type][()].decode("utf-8")
 
-                if kinematic_type != config_dictionary.rigid_body_key:
-                    raise ValueError(
-                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
-                    )
-
                 kinematic_deviations, number_of_actuators = (
                     utils_load_h5.kinematic_deviations(
                         prototype=False,
@@ -174,11 +169,6 @@ class HeliostatField(torch.nn.Module):
                         "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                     )
                 kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
-
-                if kinematic_type != config_dictionary.rigid_body_key:
-                    raise ValueError(
-                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
-                    )
 
                 initial_orientation = prototype_kinematic[
                     config_dictionary.kinematic_initial_orientation
@@ -214,10 +204,6 @@ class HeliostatField(torch.nn.Module):
                         )
                     else:
                         actuator_type = actuator_type_list[0]
-                else:
-                    raise ValueError(
-                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
-                    )
 
                 actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
