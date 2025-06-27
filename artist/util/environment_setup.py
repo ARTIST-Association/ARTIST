@@ -292,7 +292,7 @@ def get_device(device: Optional[torch.device] = None) -> torch.device:
             log.info(
                 f"OS: {os_name}, cuda available: {torch.cuda.is_available()}, selected device type: {device.type}"
             )
-        if os_name == config_dictionary.mac:
+        elif os_name == config_dictionary.mac:
             device = torch.device("cpu")
             log.warning("Setting device to CPU. ARTIST only supports CPU for MacOS.")
         else:
