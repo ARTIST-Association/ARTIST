@@ -149,6 +149,11 @@ class HeliostatField(torch.nn.Module):
                     config_dictionary.heliostat_kinematic_key
                 ][config_dictionary.kinematic_type][()].decode("utf-8")
 
+                if kinematic_type != config_dictionary.rigid_body_key:
+                    raise ValueError(
+                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
+                    )
+
                 kinematic_deviations, number_of_actuators = (
                     utils_load_h5.kinematic_deviations(
                         prototype=False,
@@ -169,6 +174,12 @@ class HeliostatField(torch.nn.Module):
                         "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
                     )
                 kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
+
+                if kinematic_type != config_dictionary.rigid_body_key:
+                    raise ValueError(
+                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
+                    )
+
                 initial_orientation = prototype_kinematic[
                     config_dictionary.kinematic_initial_orientation
                 ]
@@ -186,11 +197,27 @@ class HeliostatField(torch.nn.Module):
                     ].keys()
                 )
 
-                actuator_type = single_heliostat_config[
-                    config_dictionary.heliostat_actuator_key
-                ][actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
-                    "utf-8"
-                )
+                actuator_type_list = []
+                for key in actuator_keys:
+                    actuator_type_list.append(
+                        single_heliostat_config[
+                            config_dictionary.heliostat_actuator_key
+                        ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+                    )
+
+                unique_actuators = {a for a in actuator_type_list}
+
+                if kinematic_type == config_dictionary.rigid_body_key:
+                    if len(unique_actuators) > 1:
+                        raise ValueError(
+                            "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
+                        )
+                    else:
+                        actuator_type = actuator_type_list[0]
+                else:
+                    raise ValueError(
+                        f"ARTIST currently only supports the rigid body kinematic type and {kinematic_type} is not yet supported."
+                    )
 
                 actuator_parameters = utils_load_h5.actuator_parameters(
                     prototype=False,
