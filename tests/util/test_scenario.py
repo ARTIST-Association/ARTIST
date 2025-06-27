@@ -1,5 +1,4 @@
 import pathlib
-from typing import Optional, Union
 from unittest.mock import MagicMock
 
 import h5py
@@ -193,10 +192,10 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     ],
 )
 def test_index_mapping(
-    mapping: Optional[list[tuple[str, str, torch.Tensor]]],
+    mapping: list[tuple[str, str, torch.Tensor]] | None,
     single_incident_ray_direction: torch.Tensor,
     single_target_area_index: int,
-    expected: Union[tuple[torch.Tensor, torch.Tensor, torch.Tensor], str],
+    expected: tuple[torch.Tensor, torch.Tensor, torch.Tensor] | str,
     device: torch.device,
 ) -> None:
     """
@@ -204,13 +203,13 @@ def test_index_mapping(
 
     Parameters
     ----------
-    mapping : Optional[list[tuple[str, str, torch.Tensor]]]
+    mapping : list[tuple[str, str, torch.Tensor]] | None
         The mapping of heliostats, target areas and incident ray directions.
     single_incident_ray_direction : torch.Tensor
         The default incident ray direction.
     single_target_area_index : int
         The default target area index.
-    expected : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+    expected : tuple[torch.Tensor, torch.Tensor, torch.Tensor] | str
         The expected values.
     device : torch.device
         The device on which to initialize tensors.

@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import h5py
 import torch
@@ -10,7 +9,9 @@ from artist.util.environment_setup import get_device
 
 
 def surface_config(
-    prototype: bool, scenario_file: h5py.File, device: Optional[torch.device] = None
+    prototype: bool,
+    scenario_file: h5py.File,
+    device: torch.device | None = None,
 ) -> SurfaceConfig:
     """
     Load a surface configuration from an HDF5 scenario file.
@@ -21,10 +22,10 @@ def surface_config(
         Loading a prototype or an individual surface configuration.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -85,8 +86,8 @@ def kinematic_deviations(
     kinematic_type: str,
     scenario_file: h5py.File,
     log: logging.Logger,
-    heliostat_name: Optional[str] = None,
-    device: Optional[torch.device] = None,
+    heliostat_name: str | None = None,
+    device: torch.device | None = None,
 ) -> tuple[torch.Tensor, int]:
     """
     Load kinematic deviations from an HDF5 scenario file.
@@ -101,12 +102,12 @@ def kinematic_deviations(
         The opened scenario HDF5 file containing the information.
     log : logging.Logger
         The logger for the scenario loader.
-    heliostat_name : Optional[str]
+    heliostat_name : str | None
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -148,8 +149,8 @@ def kinematic_deviations(
 def rigid_body_deviations(
     kinematic_config: h5py.File,
     log: logging.Logger,
-    heliostat_name: Optional[str] = None,
-    device: Optional[torch.device] = None,
+    heliostat_name: str | None = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Load kinematic deviations for a rigid body kinematic from an HDF5 scenario file.
@@ -160,12 +161,12 @@ def rigid_body_deviations(
         The opened scenario HDF5 file containing the information.
     log : logging.Logger
         The logger for the scenario loader.
-    heliostat_name : Optional[str]
+    heliostat_name : str | None
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -450,8 +451,8 @@ def actuator_parameters(
     number_of_actuators: int,
     initial_orientation: torch.Tensor,
     log: logging.Logger,
-    heliostat_name: Optional[str] = None,
-    device: Optional[torch.device] = None,
+    heliostat_name: str | None = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters from an HDF5 scenario file.
@@ -470,12 +471,12 @@ def actuator_parameters(
         The initial orientation of the heliostat.
     log : logging.Logger
         The logger for the scenario loader.
-    heliostat_name : Optional[str]
+    heliostat_name : str | None
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -522,8 +523,8 @@ def linear_actuators(
     number_of_actuators: int,
     initial_orientation: torch.Tensor,
     log: logging.Logger,
-    heliostat_name: Optional[str] = None,
-    device: Optional[torch.device] = None,
+    heliostat_name: str | None = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters for linear actuators from an HDF5 scenario file.
@@ -538,12 +539,12 @@ def linear_actuators(
         The initial orientation of the heliostat.
     log : logging.Logger
         The logger for the scenario loader.
-    heliostat_name : Optional[str]
+    heliostat_name : str | None
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -680,7 +681,7 @@ def linear_actuators(
 def ideal_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Load actuator parameters for ideal actuators from an HDF5 scenario file.
@@ -691,10 +692,10 @@ def ideal_actuators(
         The opened scenario HDF5 file containing the information.
     number_of_actuators : int
         The number of actuators used for a specific kinematic.
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------

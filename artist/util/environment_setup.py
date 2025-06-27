@@ -3,7 +3,7 @@ import platform
 from collections import defaultdict
 from contextlib import contextmanager
 from itertools import cycle, islice
-from typing import Generator, Optional
+from typing import Generator
 
 import torch
 
@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def initialize_ddp_environment(
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> tuple[torch.device, bool, int, int]:
     """
     Set up the distributed environment.
@@ -27,10 +27,10 @@ def initialize_ddp_environment(
 
     Parameters
     ----------
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Yields
     ------
@@ -81,7 +81,7 @@ def create_subgroups_for_nested_ddp(
 ) -> tuple[
     int,
     int,
-    Optional[torch.distributed.ProcessGroup],
+    torch.distributed.ProcessGroup | None,
 ]:
     """
     Assign the current process (rank) to a subgroup based on a predefined group assignment map.
@@ -99,7 +99,7 @@ def create_subgroups_for_nested_ddp(
         The rank within the heliostat group.
     int
         The world size of the heliostat group.
-    Optional[torch.distributed.ProcessGroup]]
+    torch.distributed.ProcessGroup | None
         The distributed process group.
     """
     ranks_to_groups_mapping = defaultdict(list)
@@ -136,7 +136,7 @@ def create_subgroups_for_nested_ddp(
 @contextmanager
 def setup_distributed_environment(
     number_of_heliostat_groups: int,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
 ) -> Generator[
     tuple[
         torch.device,
@@ -144,7 +144,7 @@ def setup_distributed_environment(
         bool,
         int,
         int,
-        Optional[torch.distributed.ProcessGroup],
+        torch.distributed.ProcessGroup | None,
         dict[int, list[int]],
         int,
         int,
@@ -160,7 +160,7 @@ def setup_distributed_environment(
     device : Optional[torch.device]
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
     heliostat_group_assignments : Optional[dict[str, list[int]]]
         The mapping from rank to heliostat group.
 
@@ -266,13 +266,15 @@ def distribute_groups_among_ranks(
     return groups_to_ranks_mapping, is_nested
 
 
-def get_device(device: Optional[torch.device] = None) -> torch.device:
+def get_device(
+    device: torch.device | None = None,
+) -> torch.device:
     """
     Get the correct GPU device type for common operating systems, default to CPU if none is found.
 
     Parameters
     ----------
-    device : Optional[torch.device]
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS. MPS (for Mac) is not supported due to

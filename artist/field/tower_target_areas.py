@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import h5py
 import torch.nn
@@ -89,7 +88,7 @@ class TowerTargetAreas(torch.nn.Module):
 
     @classmethod
     def from_hdf5(
-        cls, config_file: h5py.File, device: Optional[torch.device] = None
+        cls, config_file: h5py.File, device: torch.device | None = None
     ) -> Self:
         """
         Load all target areas from an HDF5 file.
@@ -98,10 +97,10 @@ class TowerTargetAreas(torch.nn.Module):
         ----------
         config_file : h5py.File
             The HDF5 file containing the configuration to be loaded.
-        device : Optional[torch.device]
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
+            device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
