@@ -49,7 +49,7 @@ def extract_paint_calibration_data(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -168,7 +168,7 @@ def extract_paint_tower_measurements(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -291,7 +291,7 @@ def extract_paint_heliostats(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -523,7 +523,7 @@ def azimuth_elevation_to_enu(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -571,7 +571,7 @@ def convert_wgs84_coordinates_to_local_enu(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------

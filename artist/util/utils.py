@@ -26,7 +26,7 @@ def rotate_distortions(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -85,7 +85,7 @@ def rotate_e(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -125,7 +125,7 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -165,7 +165,7 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -213,7 +213,7 @@ def translate_enu(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -262,7 +262,7 @@ def convert_3d_point_to_4d_format(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -298,7 +298,7 @@ def convert_3d_direction_to_4d_format(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -361,7 +361,7 @@ def decompose_rotations(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -452,7 +452,7 @@ def transform_initial_angle(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -509,7 +509,7 @@ def get_center_of_mass(
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
-        device (CUDA, MPS, or CPU) based on availability and OS.
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
