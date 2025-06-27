@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from collections import defaultdict
 from typing import Optional
 
@@ -72,6 +73,27 @@ class Scenario:
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
 
+    @staticmethod
+    def get_number_of_heliostat_groups_from_hdf5(scenario_path: pathlib.Path) -> int:
+        """
+        Get the number of heliostat groups to initiate distributed setup from the HDF5 scenario file.
+
+        Parameters
+        ----------
+        scenario_path : pathlib.Path
+            File path to the HDF5 scenario file.
+
+        Returns
+        -------
+        int
+            Number of heliostat groups to initiate distributed setup.
+        """
+        with h5py.File(scenario_path) as scenario_file:
+            number_of_groups = scenario_file[
+                config_dictionary.number_of_heliostat_groups
+            ][()]
+        return number_of_groups
+
     @classmethod
     def load_scenario_from_hdf5(
         cls, scenario_file: h5py.File, device: Optional[torch.device] = None
@@ -95,9 +117,15 @@ class Scenario:
         """
         device = get_device(device=device)
 
-        log.info(
-            f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
         )
+        if rank == 0:
+            log.info(
+                f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+            )
 
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][
@@ -149,11 +177,23 @@ class Scenario:
             ].keys()
         )
 
-        prototype_actuator_type = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
-        ][prototype_actuator_keys[0]][config_dictionary.actuator_type_key][()].decode(
-            "utf-8"
-        )
+        prototype_actuator_type_list = []
+        for key in prototype_actuator_keys:
+            prototype_actuator_type_list.append(
+                scenario_file[config_dictionary.prototype_key][
+                    config_dictionary.actuators_prototype_key
+                ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+            )
+
+        unique_prototype_actuators = {a for a in prototype_actuator_type_list}
+
+        if prototype_kinematic_type == config_dictionary.rigid_body_key:
+            if len(unique_prototype_actuators) > 1:
+                raise ValueError(
+                    "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
+                )
+            else:
+                prototype_actuator_type = prototype_actuator_type_list[0]
 
         prototype_actuator_parameters = utils_load_h5.actuator_parameters(
             prototype=True,
@@ -255,18 +295,15 @@ class Scenario:
                 heliostat_group.number_of_heliostats, -1
             ).to(device)
         else:
+            filtered_mapping = [
+                mapping
+                for mapping in string_mapping
+                if mapping[0] in heliostat_group.names
+            ]
             errors = []
             for i, (heliostat_name, target_name, light_direction) in enumerate(
-                string_mapping
+                filtered_mapping
             ):
-                if heliostat_name not in [
-                    heliostat_name
-                    for heliostat_name in heliostat_group.names
-                    for heliostat_group in self.heliostat_field.heliostat_groups
-                ]:
-                    errors.append(
-                        f"Invalid heliostat '{heliostat_name}' (Found at index {i} of provided mapping) not found in this scenario."
-                    )
                 if target_name not in self.target_areas.names:
                     errors.append(
                         f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
@@ -290,10 +327,10 @@ class Scenario:
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
             target_area_mask = torch.empty(
-                len(string_mapping), dtype=torch.int32, device=device
+                len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
-                (len(string_mapping), 4), device=device
+                (len(filtered_mapping), 4), device=device
             )
             heliostat_name_to_index = {
                 heliostat_name: index
@@ -303,14 +340,14 @@ class Scenario:
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
             target_area_mask = torch.empty(
-                len(string_mapping), dtype=torch.int32, device=device
+                len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
-                (len(string_mapping), 4), device=device
+                (len(filtered_mapping), 4), device=device
             )
 
             for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
-                string_mapping
+                filtered_mapping
             ):
                 if heliostat_name in heliostat_group.names:
                     active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1

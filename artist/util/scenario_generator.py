@@ -8,7 +8,10 @@ import torch
 
 from artist.util import config_dictionary
 from artist.util.configuration_classes import (
+    ActuatorConfig,
+    ActuatorListConfig,
     HeliostatListConfig,
+    KinematicConfig,
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
@@ -94,6 +97,26 @@ class ScenarioGenerator:
         self.prototype_config = prototype_config
         self._check_facet_and_point_size()
         self.version = version
+
+    def _get_number_of_heliostat_groups(self) -> int:
+        """
+        Get the number of heliostat groups in the scenario.
+
+        Returns
+        -------
+        int
+            Number of heliostat groups in the scenario.
+        """
+        unique_groups = set()
+        for heliostat_config in self.heliostat_list_config.heliostat_list:
+            assert isinstance(heliostat_config.kinematic, KinematicConfig)
+            selected_kinematic_type = heliostat_config.kinematic.type
+            assert isinstance(heliostat_config.actuators, ActuatorListConfig)
+            for actuator_config in heliostat_config.actuators.actuator_list:
+                assert isinstance(actuator_config, ActuatorConfig)
+                selected_actuator_type = actuator_config.type
+                unique_groups.add((selected_kinematic_type, selected_actuator_type))
+        return len(unique_groups)
 
     def _check_facet_and_point_size(self):
         """
@@ -203,6 +226,11 @@ class ScenarioGenerator:
             # Set scenario version as attribute.
             log.info(f"Using scenario generator version {self.version}.")
             f.attrs["version"] = self.version
+
+            # Include number of heliostat groups in the top level
+            f[config_dictionary.number_of_heliostat_groups] = (
+                self._get_number_of_heliostat_groups()
+            )
 
             # Include parameters for the power plant.
             log.info("Including parameters for the power plant.")

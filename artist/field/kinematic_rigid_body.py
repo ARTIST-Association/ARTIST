@@ -40,8 +40,6 @@ class RigidBody(Kinematic):
     -------
     incident_ray_directions_to_orientations()
         Compute orientation matrices given incident ray directions.
-    align_surfaces_with_incident_ray_directions()
-        Align given surface points and surface normals according to incident ray directions.
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
     forward()
@@ -122,9 +120,9 @@ class RigidBody(Kinematic):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
+        device: Optional[torch.device] = None,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.
@@ -133,14 +131,14 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
-        max_num_iterations : int
-            Maximum number of iterations (default is 2).
-        min_eps : float
-            Convergence criterion (default is 0.0001).
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA, MPS, or CPU) based on availability and OS.
+        max_num_iterations : int
+            Maximum number of iterations (default is 2).
+        min_eps : float
+            Convergence criterion (default is 0.0001).
 
         Returns
         -------
@@ -323,48 +321,6 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
-
-    def align_surfaces_with_incident_ray_directions(
-        self,
-        incident_ray_directions: torch.Tensor,
-        surface_points: torch.Tensor,
-        surface_normals: torch.Tensor,
-        device: Optional[torch.device] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Align given surface points and surface normals according to incident ray directions.
-
-        Parameters
-        ----------
-        incident_ray_directions : torch.Tensor
-            The directions of the incident rays as seen from the heliostats.
-        surface_points : torch.Tensor
-            The points on the surface of the heliostats that reflect the light.
-        surface_normals : torch.Tensor
-            The normals to the surface points.
-        device : Optional[torch.device]
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The aligned surface points.
-        torch.Tensor
-            The aligned surface normals.
-        """
-        device = get_device(device=device)
-
-        orientations = self.incident_ray_directions_to_orientations(
-            incident_ray_directions=incident_ray_directions,
-            device=device,
-        )
-
-        aligned_surface_points = surface_points @ orientations.transpose(1, 2)
-        aligned_surface_normals = surface_normals @ orientations.transpose(1, 2)
-
-        return aligned_surface_points, aligned_surface_normals
 
     def motor_positions_to_orientations(
         self, motor_positions: torch.Tensor, device: Optional[torch.device] = None

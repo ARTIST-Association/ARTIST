@@ -194,6 +194,9 @@ kinematic_deviation_parameters = "kinematic_deviation_parameters"
 actuator_parameters = "actuator_parameters"
 """Key to access actuator parameters of heliostats."""
 
+heliostat_group_type = "type"
+"""Key to access the heliostat group type."""
+
 paint_target_area_geometry = "type"
 """Key to access the target area geometry in a ``PAINT`` tower.json file."""
 paint_calibration_target = "target_name"
@@ -292,3 +295,6 @@ windows = "Windows"
 """Key to access the Windows OS name."""
 mac = "Darwin"
 """Key to access the Mac OS name."""
+
+number_of_heliostat_groups = "number_of_heliostat_groups"
+"""Key to access the number of heliostat groups for distributed setup."""

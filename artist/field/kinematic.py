@@ -1,5 +1,7 @@
 """Kinematic modules in ARTIST."""
 
+from typing import Optional
+
 import torch
 
 
@@ -9,8 +11,10 @@ class Kinematic(torch.nn.Module):
 
     Methods
     -------
-    align()
-        Align given surface points and surface normals according to an input.
+    incident_ray_directions_to_orientations()
+        Compute orientation matrices given incident ray directions.
+    motor_positions_to_orientations()
+        Compute orientation matrices given the motor positions.
     forward()
         Specify the forward pass.
     """
@@ -21,16 +25,49 @@ class Kinematic(torch.nn.Module):
 
         The abstract kinematic implements a template for the construction of inheriting kinematics which currently
         can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostats
-        and their actuators. The abstract base class defines an align function that all kinematics need to overwrite
-        in order to align the heliostat surfaces.
+        and their actuators. The abstract base class defines two methods to determine orientation matrices, which all
+        kinematics need to overwrite.
         """
         super().__init__()
 
-    def align(
+    def incident_ray_directions_to_orientations(
         self,
-    ) -> None:
+        incident_ray_directions: torch.Tensor,
+        device: Optional[torch.device] = None,
+    ) -> torch.Tensor:
         """
-        Align given surface points and surface normals according to an input.
+        Compute orientation matrices given incident ray directions.
+
+        Parameters
+        ----------
+        incident_ray_directions : torch.Tensor
+            The directions of the incident rays as seen from the heliostats.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
+
+        Raises
+        ------
+        NotImplementedError
+            Whenever called (abstract base class method).
+        """
+        raise NotImplementedError("Must be overridden!")
+
+    def motor_positions_to_orientations(
+        self, motor_positions: torch.Tensor, device: Optional[torch.device] = None
+    ) -> torch.Tensor:
+        """
+        Compute orientation matrices given the motor positions.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
 
         Raises
         ------
