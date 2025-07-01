@@ -1,10 +1,11 @@
 import logging
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
-from artist.field.heliostat_group import HeliostatGroup
+if TYPE_CHECKING:
+    from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.scene import LightSource
 from artist.util import utils
@@ -215,7 +216,7 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: Scenario,
-        heliostat_group: HeliostatGroup,
+        heliostat_group: "HeliostatGroup",
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,

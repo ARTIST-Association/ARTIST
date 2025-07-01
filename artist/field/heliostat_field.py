@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import h5py
 import torch
@@ -10,9 +10,11 @@ from typing_extensions import Self
 from artist.data_loader import h5_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
-from artist.scenario.configuration_classes import (
-    SurfaceConfig,
-)
+
+if TYPE_CHECKING:
+    from artist.scenario.configuration_classes import (
+        SurfaceConfig,
+    )
 from artist.util import config_dictionary, type_mappings
 from artist.util.environment_setup import get_device
 
@@ -60,7 +62,7 @@ class HeliostatField:
     def from_hdf5(
         cls,
         config_file: h5py.File,
-        prototype_surface: SurfaceConfig,
+        prototype_surface: "SurfaceConfig",
         prototype_kinematic: dict[str, str | torch.Tensor],
         prototype_actuators: dict[str, str | torch.Tensor],
         device: torch.device | None = None,
