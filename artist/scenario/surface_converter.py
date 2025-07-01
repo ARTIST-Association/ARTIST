@@ -211,7 +211,9 @@ class SurfaceConverter:
             )
         )
 
-        control_points = origin_offsets.reshape(control_points.shape)
+        control_points = torch.nn.parameter.Parameter(
+            origin_offsets.reshape(control_points.shape)
+        )
 
         nurbs_surface = NURBSSurface(
             degree_e,
@@ -224,7 +226,7 @@ class SurfaceConverter:
 
         # Optimize the control points of the NURBS surface.
         optimizer = torch.optim.Adam(
-            nurbs_surface.parameters(), lr=initial_learning_rate
+            [nurbs_surface.control_points], lr=initial_learning_rate
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,

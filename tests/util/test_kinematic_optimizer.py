@@ -112,8 +112,8 @@ def test_kinematic_optimizer(
 
         # Select the kinematic parameters to be optimized and calibrated.
         optimizable_parameters = [
-            heliostat_group.kinematic_deviation_parameters.requires_grad_(),
-            heliostat_group.actuator_parameters.requires_grad_(),
+            heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+            heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
         ]
 
         optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
@@ -150,13 +150,13 @@ def test_kinematic_optimizer(
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(
-            heliostat_group.kinematic_deviation_parameters,
+            heliostat_group.kinematic.deviation_parameters,
             expected["kinematic_deviations"],
             atol=5e-2,
             rtol=5e-2,
         )
         torch.testing.assert_close(
-            heliostat_group.actuator_parameters,
+            heliostat_group.kinematic.actuators.actuator_parameters,
             expected["actuator_parameters"],
             atol=5e-2,
             rtol=5e-2,

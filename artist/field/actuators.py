@@ -99,13 +99,27 @@ class Actuators(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self) -> None:
+    def forward(
+        self, motor_positions: torch.Tensor, device: torch.device | None = None
+    ) -> torch.Tensor:
         """
         Specify the forward pass.
 
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions to be converted to joint angles.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The joint angles.
         """
-        raise NotImplementedError("Must be overridden!")
+        return self.motor_positions_to_angles(
+            motor_positions=motor_positions, 
+            device=device
+        )

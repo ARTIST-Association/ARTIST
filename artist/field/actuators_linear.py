@@ -21,8 +21,6 @@ class LinearActuators(Actuators):
         Calculate the joint angles for given motor positions.
     angles_to_motor_positions()
         Calculate the motor positions for given joint angles.
-    forward()
-        Specify the forward pass.
 
     See Also
     --------
@@ -187,14 +185,3 @@ class LinearActuators(Actuators):
             stroke_lengths - self.active_actuator_parameters[:, 3]
         ) * self.active_actuator_parameters[:, 2]
         return motor_positions
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")
