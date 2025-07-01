@@ -79,13 +79,33 @@ class Kinematic(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self) -> None:
+    def forward(
+        self,         
+        incident_ray_directions: torch.Tensor,
+        aim_points: torch.Tensor,
+        device: Optional[torch.device] = None,
+    ) -> torch.Tensor:
         """
         Specify the forward pass.
 
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
+        Parameters
+        ----------
+        incident_ray_directions : torch.Tensor
+            The directions of the incident rays as seen from the heliostats.
+        aim_points : torch.Tensor
+            The aim points for the active heliostats.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation matrices.
         """
-        raise NotImplementedError("Must be overridden!")
+        return self.incident_ray_directions_to_orientations(
+            incident_ray_directions=incident_ray_directions,
+            aim_points=aim_points,
+            device=device
+        )

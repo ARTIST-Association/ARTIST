@@ -1,14 +1,12 @@
 """Heliostat group in ARTIST."""
 
-from abc import ABC
-
 import torch
 
 from artist.field.kinematic import Kinematic
 from artist.util.environment_setup import get_device
 
 
-class HeliostatGroup(ABC):
+class HeliostatGroup():
     """
     Abstract base class for all heliostat groups.
 
@@ -31,10 +29,6 @@ class HeliostatGroup(ABC):
         The surface normals of all heliostats in the group.
     initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the group.
-    kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats in the group.
-    actuator_parameters : torch.Tensor
-        The actuator parameters of all actuators in the group.
     kinematic : Kinematic
         The kinematic of all heliostats in the group.
     number_of_active_heliostats : int
