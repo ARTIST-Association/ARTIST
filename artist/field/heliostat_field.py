@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
 
 
-class HeliostatField():
+class HeliostatField:
     """
     The heliostat field.
 

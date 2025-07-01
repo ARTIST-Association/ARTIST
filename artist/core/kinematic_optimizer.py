@@ -210,8 +210,7 @@ class KinematicOptimizer:
 
             # Activate heliostats
             self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask,
-                device=device
+                active_heliostats_mask=active_heliostats_mask, device=device
             )
 
             # Retrieve the orientation of the heliostats for given motor positions.
