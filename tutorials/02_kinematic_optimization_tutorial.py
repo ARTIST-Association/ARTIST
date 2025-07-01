@@ -20,23 +20,17 @@ device = get_device()
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_four_heliostats.h5"
 )
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
 heliostat_calibration_mapping = [
     (
-        "AA39",
+        "first_heliostat",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # pathlib.Path(
             #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
@@ -45,14 +39,14 @@ heliostat_calibration_mapping = [
         ],
     ),
     (
-        "AA31",
+        "second_heliostat",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
-            ),
+            # pathlib.Path(
+            #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            # ),
         ],
     ),
     # ...
@@ -86,12 +80,6 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    # Select the kinematic parameters to be optimized and calibrated.
-    optimizable_parameters = [
-        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
-        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
-    ]
-
     # Set up optimizer and scheduler.
     tolerance = 0.0005
     max_epoch = 1000
@@ -104,7 +92,9 @@ for heliostat_group_index, heliostat_group in enumerate(
         max_epoch = 1000
         initial_learning_rate = 0.0005
 
-    optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_learning_rate)
+    optimizer = torch.optim.Adam(
+        heliostat_group.kinematic.parameters(), lr=initial_learning_rate
+    )
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
