@@ -1,7 +1,7 @@
 import logging
 
 import h5py
-import torch.nn
+import torch
 from typing_extensions import Self
 
 from artist.scene.light_source import LightSource

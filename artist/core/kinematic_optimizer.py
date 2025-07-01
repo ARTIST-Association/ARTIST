@@ -4,7 +4,7 @@ import torch
 from torch.optim import Optimizer
 
 from artist.core import raytracing_utils
-from artist.core.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import utils
@@ -210,7 +210,8 @@ class KinematicOptimizer:
 
             # Activate heliostats
             self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask
+                active_heliostats_mask=active_heliostats_mask,
+                device=device
             )
 
             # Retrieve the orientation of the heliostats for given motor positions.
@@ -351,7 +352,7 @@ class KinematicOptimizer:
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1

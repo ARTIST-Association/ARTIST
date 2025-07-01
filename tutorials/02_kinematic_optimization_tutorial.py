@@ -4,7 +4,7 @@ import h5py
 import torch
 
 from artist.core.kinematic_optimizer import KinematicOptimizer
-from artist.data import paint_loader
+from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
@@ -19,16 +19,22 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
 heliostat_calibration_mapping = [
     (
-        "name1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
             ),
             # pathlib.Path(
             #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
@@ -37,10 +43,13 @@ heliostat_calibration_mapping = [
         ],
     ),
     (
-        "name2",
+        "AA31",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
             ),
         ],
     ),
@@ -77,8 +86,8 @@ for heliostat_group_index, heliostat_group in enumerate(
 
     # Select the kinematic parameters to be optimized and calibrated.
     optimizable_parameters = [
-        heliostat_group.kinematic_deviation_parameters.requires_grad_(),
-        heliostat_group.actuator_parameters.requires_grad_(),
+        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
     ]
 
     # Set up optimizer and scheduler.

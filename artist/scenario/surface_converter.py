@@ -183,12 +183,14 @@ class SurfaceConverter:
         # Initialize the NURBS surface.
         control_points_shape = (number_control_points_e, number_control_points_n)
         control_points = torch.zeros(control_points_shape + (3,), device=device)
+        
         width_of_nurbs = torch.max(evaluation_points[:, 0]) - torch.min(
             evaluation_points[:, 0]
         )
         height_of_nurbs = torch.max(evaluation_points[:, 1]) - torch.min(
             evaluation_points[:, 1]
         )
+        
         origin_offsets_e = torch.linspace(
             -width_of_nurbs / 2,
             width_of_nurbs / 2,
@@ -208,9 +210,9 @@ class SurfaceConverter:
                 torch.zeros((len(origin_offsets), 1), device=device),
             )
         )
-        control_points = torch.nn.parameter.Parameter(
-            origin_offsets.reshape(control_points.shape)
-        )
+        
+        control_points = origin_offsets.reshape(control_points.shape)
+
         nurbs_surface = NURBSSurface(
             degree_e,
             degree_n,
@@ -221,7 +223,7 @@ class SurfaceConverter:
         )
 
         # Optimize the control points of the NURBS surface.
-        optimizer = torch.optim.Adam([control_points], lr=initial_learning_rate)
+        optimizer = torch.optim.Adam(nurbs_surface.parameters(), lr=initial_learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",

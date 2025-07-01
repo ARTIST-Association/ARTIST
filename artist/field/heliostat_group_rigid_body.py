@@ -35,10 +35,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         The surface normals of all heliostats in the group.
     initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the group.
-    kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats in the group.
-    actuator_parameters : torch.Tensor
-        The actuator parameters of all actuators in the group.
     kinematic : RigidBody
         The kinematic (rigid body kinematic) of all heliostats in the group.
     number_of_active_heliostats : int
@@ -56,8 +52,6 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     -------
     align_surfaces_with_incident_ray_directions()
         Align surface points and surface normals with incident ray directions.
-    forward()
-        Specify the forward pass.
 
     See Also
     --------
@@ -105,17 +99,15 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             surface_points=surface_points,
             surface_normals=surface_normals,
             initial_orientations=initial_orientations,
-            kinematic_deviation_parameters=kinematic_deviation_parameters,
-            actuator_parameters=actuator_parameters,
             device=device,
         )
 
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
-            actuator_parameters=self.actuator_parameters,
+            actuator_parameters=actuator_parameters,
             initial_orientations=self.initial_orientations,
-            deviation_parameters=self.kinematic_deviation_parameters,
+            deviation_parameters=kinematic_deviation_parameters,
             device=device,
         )
 
@@ -167,14 +159,3 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.active_surface_normals = (
             self.active_surface_normals @ orientations.transpose(1, 2)
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")
