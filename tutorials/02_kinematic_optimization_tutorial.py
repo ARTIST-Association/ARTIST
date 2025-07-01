@@ -19,7 +19,9 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
