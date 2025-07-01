@@ -36,8 +36,6 @@ class LightSource:
         number_of_rays : int
             The number of sent-out rays sampled from the sun distribution.
         """
-        super().__init__()
-
         self.number_of_rays = number_of_rays
 
     @classmethod

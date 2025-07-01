@@ -6,7 +6,7 @@ from artist.field.kinematic import Kinematic
 from artist.util.environment_setup import get_device
 
 
-class HeliostatGroup():
+class HeliostatGroup:
     """
     Abstract base class for all heliostat groups.
 
@@ -79,8 +79,6 @@ class HeliostatGroup():
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        super().__init__()
-
         device = get_device(device=device)
 
         self.number_of_heliostats = len(names)

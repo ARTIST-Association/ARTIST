@@ -73,8 +73,6 @@ class NurbsFacet:
         canting_n : torch.Tensor
             The canting vector in the north direction of the facet.
         """
-        super().__init__()
-
         self.control_points = control_points
         self.degree_e = degree_e
         self.degree_n = degree_n

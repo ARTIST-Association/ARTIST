@@ -458,13 +458,24 @@ class NURBSSurface(torch.nn.Module):
 
         return derivatives[:, 0, 0], normals
 
-    def forward(self) -> None:
+    def forward(
+        self, device: torch.device | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Specify the forward pass.
 
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
+        Parameters
+        ----------
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The surface points.
+        torch.Tensor
+            The surface normals.
         """
-        raise NotImplementedError("Not Implemented!")
+        return self.calculate_surface_points_and_normals(device=device)
