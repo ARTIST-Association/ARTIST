@@ -34,8 +34,6 @@ class Surface:
         surface_config : SurfaceConfig
             The surface configuration parameters used to construct the surface.
         """
-        super().__init__()
-
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,

@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from collections.abc import Sequence
 from typing import Any
 
 import h5py
@@ -29,7 +30,7 @@ class HeliostatField:
 
     Attributes
     ----------
-    heliostat_groups : list[HeliostatGroup]
+    heliostat_groups : Sequence[HeliostatGroup]
         A list containing all heliostat groups.
     number_of_heliostat_groups : int
         The number of different heliostat groups in the heliostat field.
@@ -42,18 +43,16 @@ class HeliostatField:
 
     def __init__(
         self,
-        heliostat_groups: list[HeliostatGroup],
+        heliostat_groups: Sequence[HeliostatGroup],
     ) -> None:
         """
         Initialize the heliostat field with heliostat groups.
 
         Parameters
         ----------
-        heliostat_groups : list[HeliostatGroup]
+        heliostat_groups : Sequence[HeliostatGroup]
             A list containing all heliostat groups.
         """
-        super().__init__()
-
         self.heliostat_groups = heliostat_groups
         self.number_of_heliostat_groups = len(self.heliostat_groups)
 

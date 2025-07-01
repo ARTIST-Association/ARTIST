@@ -73,8 +73,6 @@ class TowerTargetAreas:
         curvatures : torch.Tensor
             The curvature of the target area (0.0 if not applicable).
         """
-        super().__init__()
-
         self.names = names
         self.geometries = geometries
         self.centers = centers

@@ -38,8 +38,6 @@ class RigidBody(Kinematic):
         Compute orientation matrices given incident ray directions.
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
-    forward()
-        Specify the forward pass.
 
     See Also
     --------
@@ -423,14 +421,3 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

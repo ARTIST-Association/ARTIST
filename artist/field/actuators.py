@@ -120,6 +120,5 @@ class Actuators(torch.nn.Module):
             The joint angles.
         """
         return self.motor_positions_to_angles(
-            motor_positions=motor_positions, 
-            device=device
+            motor_positions=motor_positions, device=device
         )

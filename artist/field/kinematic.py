@@ -80,7 +80,7 @@ class Kinematic(torch.nn.Module):
         raise NotImplementedError("Must be overridden!")
 
     def forward(
-        self,         
+        self,
         incident_ray_directions: torch.Tensor,
         aim_points: torch.Tensor,
         device: Optional[torch.device] = None,
@@ -107,5 +107,5 @@ class Kinematic(torch.nn.Module):
         return self.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
             aim_points=aim_points,
-            device=device
+            device=device,
         )

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 
 import h5py
 import torch
@@ -18,7 +19,7 @@ class LightSourceArray:
 
     Attributes
     ----------
-    light_source_list : list[LightSource]
+    light_source_list : Sequence[LightSource]
         A list of light sources included in the scenario.
 
     Methods
@@ -27,7 +28,7 @@ class LightSourceArray:
         Load the list of light sources from an HDF5 file.
     """
 
-    def __init__(self, light_source_list: list[LightSource]):
+    def __init__(self, light_source_list: Sequence[LightSource]):
         """
         Initialize the light sources included in the considered scenario.
 
@@ -37,10 +38,9 @@ class LightSourceArray:
 
         Parameters
         ----------
-        light_source_list : list[LightSource]
+        light_source_list : Sequence[LightSource]
             A list of light sources included in the scenario.
         """
-        super(LightSourceArray, self).__init__()
         self.light_source_list = light_source_list
 
     @classmethod
