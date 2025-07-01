@@ -6,7 +6,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_optimizer import KinematicOptimizer
-from artist.data import paint_loader
+from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 

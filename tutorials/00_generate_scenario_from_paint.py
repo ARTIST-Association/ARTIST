@@ -2,7 +2,7 @@ import pathlib
 
 import torch
 
-from artist.data import paint_loader
+from artist.data_loader import paint_loader
 from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,

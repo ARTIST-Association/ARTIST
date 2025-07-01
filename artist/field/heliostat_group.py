@@ -63,8 +63,6 @@ class HeliostatGroup(ABC):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
-        kinematic_deviation_parameters: torch.Tensor,
-        actuator_parameters: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -82,10 +80,6 @@ class HeliostatGroup(ABC):
             The surface normals of all heliostats in the group.
         initial_orientations : torch.Tensor
             The initial orientations of all heliostats in the group.
-        kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats in the group.
-        actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the group.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -101,8 +95,6 @@ class HeliostatGroup(ABC):
         self.surface_points = surface_points
         self.surface_normals = surface_normals
         self.initial_orientations = initial_orientations
-        self.kinematic_deviation_parameters = kinematic_deviation_parameters
-        self.actuator_parameters = actuator_parameters
 
         self.kinematic = Kinematic()
 

@@ -6,7 +6,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.data_loader import utils_load_h5
+from artist.data_loader import h5_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
 from artist.scenario.configuration_classes import (
@@ -117,7 +117,7 @@ class HeliostatField():
                 config_dictionary.heliostat_surface_key
                 in single_heliostat_config.keys()
             ):
-                surface_config = utils_load_h5.surface_config(
+                surface_config = h5_loader.surface_config(
                     prototype=False,
                     scenario_file=single_heliostat_config,
                     device=device,
@@ -149,7 +149,7 @@ class HeliostatField():
                 ][config_dictionary.kinematic_type][()].decode("utf-8")
 
                 kinematic_deviations, number_of_actuators = (
-                    utils_load_h5.kinematic_deviations(
+                    h5_loader.kinematic_deviations(
                         prototype=False,
                         kinematic_type=kinematic_type,
                         scenario_file=single_heliostat_config,
@@ -204,7 +204,7 @@ class HeliostatField():
                     else:
                         actuator_type = actuator_type_list[0]
 
-                actuator_parameters = utils_load_h5.actuator_parameters(
+                actuator_parameters = h5_loader.actuator_parameters(
                     prototype=False,
                     scenario_file=single_heliostat_config,
                     actuator_type=actuator_type,

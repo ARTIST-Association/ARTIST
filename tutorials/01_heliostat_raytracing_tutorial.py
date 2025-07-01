@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import torch
 from matplotlib.pyplot import tight_layout
 
-from artist.core.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device

@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data import paint_loader
+from artist.data_loader import paint_loader
 from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,

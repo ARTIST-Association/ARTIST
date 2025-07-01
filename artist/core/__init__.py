@@ -1,6 +1,6 @@
 """Bundle all classes responsible for raytracing in ARTIST."""
 
-from artist.core.heliostat_tracing import (
+from artist.core.heliostat_ray_tracer import (
     DistortionsDataset,
     HeliostatRayTracer,
     RestrictedDistributedSampler,

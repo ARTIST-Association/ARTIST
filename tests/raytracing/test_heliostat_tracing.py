@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from artist.core.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.scenario.scenario import Scenario
@@ -80,7 +80,7 @@ def test_trace_rays_unaligned_heliostats_error(
     mock_ray_tracer.bitmap_resolution_u = 50
 
     with patch(
-        "artist.raytracing.heliostat_tracing.HeliostatRayTracer.trace_rays",
+        "artist.core.heliostat_ray_tracer.HeliostatRayTracer.trace_rays",
         wraps=HeliostatRayTracer.trace_rays,
     ) as mock_method:
         with pytest.raises(AssertionError) as exc_info:

@@ -3,7 +3,7 @@ import pathlib
 import h5py
 import torch
 
-from artist.core.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
