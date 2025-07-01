@@ -1,10 +1,11 @@
-"""Bundle all classes responsible for raytracing in ARTIST."""
+"""Bundle all classes responsible for the core functions in ARTIST."""
 
 from artist.core.heliostat_ray_tracer import (
     DistortionsDataset,
     HeliostatRayTracer,
     RestrictedDistributedSampler,
 )
+from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.core.rays import Rays
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "RestrictedDistributedSampler",
     "Rays",
     "raytracing_utils",
+    "KinematicOptimizer",
 ]
