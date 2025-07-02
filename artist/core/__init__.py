@@ -6,13 +6,12 @@ from artist.core.heliostat_ray_tracer import (
     RestrictedDistributedSampler,
 )
 from artist.core.kinematic_optimizer import KinematicOptimizer
-from artist.core.rays import Rays
+from artist.scene.rays import Rays
 
 __all__ = [
     "HeliostatRayTracer",
     "DistortionsDataset",
     "RestrictedDistributedSampler",
     "Rays",
-    "raytracing_utils",
     "KinematicOptimizer",
 ]
