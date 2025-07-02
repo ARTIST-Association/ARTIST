@@ -35,7 +35,7 @@ class NURBSSurface(torch.nn.Module):
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surface.
     forward()
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. caluclate the surface points and normals.
     """
 
     def __init__(
@@ -462,7 +462,7 @@ class NURBSSurface(torch.nn.Module):
         self, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. caluclate the surface points and normals.
 
         Parameters
         ----------
