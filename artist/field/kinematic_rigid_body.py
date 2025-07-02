@@ -83,29 +83,21 @@ class RigidBody(Kinematic):
         device = get_device(device=device)
 
         self.number_of_heliostats = number_of_heliostats
-        self.register_buffer("heliostat_positions", heliostat_positions)
-        self.register_buffer("initial_orientations", initial_orientations)
+        self.heliostat_positions = heliostat_positions
+        self.initial_orientations = initial_orientations
 
         self.deviation_parameters = torch.nn.Parameter(deviation_parameters)
 
-        self.register_buffer(
-            "active_heliostat_positions",
-            torch.empty_like(heliostat_positions, device=device),
-        )
-        self.register_buffer(
-            "active_initial_orientations",
-            torch.empty_like(initial_orientations, device=device),
-        )
-        self.register_buffer(
-            "active_deviation_parameters",
-            torch.empty_like(deviation_parameters, device=device),
-        )
-
-        self.register_buffer(
-            "artist_standard_orientation",
-            torch.tensor([0.0, -1.0, 0.0, 0.0], device=device),
-        )
         self.number_of_active_heliostats = 0
+        self.active_heliostat_positions = torch.empty_like(
+            heliostat_positions, device=device
+        )
+        self.active_initial_orientations = torch.empty_like(
+            initial_orientations, device=device
+        )
+        self.active_deviation_parameters = torch.empty_like(
+            deviation_parameters, device=device
+        )
         self.artist_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )

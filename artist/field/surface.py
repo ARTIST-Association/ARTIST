@@ -54,6 +54,9 @@ class Surface:
         """
         Calculate all surface points and normals from all facets.
 
+        Note: This method should only be used once nurbs are no longer being optimized.
+        The returned surface points and normals are detached from the computational graph.
+
         Parameters
         ----------
         device : torch.device | None
@@ -64,9 +67,9 @@ class Surface:
         Returns
         -------
         torch.Tensor
-            The surface points.
+            The surface points, detached from the computational graph.
         torch.Tensor
-            The surface normals.
+            The surface normals, detached from the computational graph.
         """
         device = get_device(device=device)
 
@@ -85,6 +88,6 @@ class Surface:
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals(device=device)
-            surface_points[i] = facet_points + facet.translation_vector
-            surface_normals[i] = facet_normals
+            surface_points[i] = (facet_points + facet.translation_vector).detach()
+            surface_normals[i] = facet_normals.detach()
         return surface_points, surface_normals

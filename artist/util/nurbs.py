@@ -80,7 +80,7 @@ class NURBSSurface(torch.nn.Module):
         self.degree_n = degree_n
         self.evaluation_points_e = evaluation_points_e
         self.evaluation_points_n = evaluation_points_n
-        self.control_points = control_points
+        self.control_points = torch.nn.Parameter(control_points)
         self.knot_vector_e, self.knot_vector_n = self.calculate_knots(device=device)
 
     def calculate_knots(

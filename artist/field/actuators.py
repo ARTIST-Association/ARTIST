@@ -51,10 +51,8 @@ class Actuators(torch.nn.Module):
 
         self.actuator_parameters = torch.nn.Parameter(actuator_parameters)
 
-        # active_actuator_parameters is not a parameter to be optimized, so register as buffer
-        self.register_buffer(
-            "active_actuator_parameters",
-            torch.empty_like(self.actuator_parameters, device=device),
+        self.active_actuator_parameters = torch.empty_like(
+            self.actuator_parameters, device=device
         )
 
     def motor_positions_to_angles(

@@ -106,9 +106,7 @@ def test_nurbs(device: torch.device) -> None:
         )
     )
 
-    control_points = torch.nn.parameter.Parameter(
-        origin_offsets.reshape(control_points.shape)
-    )
+    control_points = origin_offsets.reshape(control_points.shape)
 
     nurbs = NURBSSurface(
         degree_e,
@@ -119,7 +117,7 @@ def test_nurbs(device: torch.device) -> None:
         device=device,
     )
 
-    optimizer = torch.optim.Adam([control_points], lr=5e-3)
+    optimizer = torch.optim.Adam(nurbs.parameters(), lr=5e-3)
 
     for epoch in range(100):
         points, normals = nurbs.calculate_surface_points_and_normals(device=device)
