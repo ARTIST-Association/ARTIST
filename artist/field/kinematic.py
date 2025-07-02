@@ -16,7 +16,7 @@ class Kinematic(torch.nn.Module):
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
     forward()
-        Specify the forward pass.
+        Specify the forward operation of the kinematic, i.e. calculate orientation matrices given the incident ray directions.
     """
 
     def __init__(self) -> None:
@@ -86,7 +86,7 @@ class Kinematic(torch.nn.Module):
         device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
-        Specify the forward pass.
+        Specify the forward operation of the kinematic, i.e. calculate orientation matrices given the incident ray directions.
 
         Parameters
         ----------
