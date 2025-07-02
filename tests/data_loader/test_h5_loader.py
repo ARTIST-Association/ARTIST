@@ -5,7 +5,8 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.util import config_dictionary, utils_load_h5
+from artist.data_loader import h5_loader
+from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
@@ -43,7 +44,7 @@ def test_load_kinematic_deviations(
     log = mocker.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
-        utils_load_h5.kinematic_deviations(
+        h5_loader.kinematic_deviations(
             prototype=False,
             kinematic_type=kinematic_type,
             scenario_file=scenario_file,
@@ -106,7 +107,7 @@ def test_load_actuator_parameters(
     log = mocker.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
-        utils_load_h5.actuator_parameters(
+        h5_loader.actuator_parameters(
             prototype=False,
             actuator_type=actuator_type,
             scenario_file=scenario_file,

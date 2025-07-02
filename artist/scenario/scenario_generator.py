@@ -6,8 +6,7 @@ from typing import Any, Generator
 import h5py
 import torch
 
-from artist.util import config_dictionary
-from artist.util.configuration_classes import (
+from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     HeliostatListConfig,
@@ -17,6 +16,7 @@ from artist.util.configuration_classes import (
     PrototypeConfig,
     TargetAreaListConfig,
 )
+from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
 """A logger for the scenario generator."""

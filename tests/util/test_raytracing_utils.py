@@ -2,8 +2,8 @@ import pytest
 import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
-from artist.raytracing import raytracing_utils
-from artist.raytracing.rays import Rays
+from artist.scene.rays import Rays
+from artist.util import raytracing_utils
 
 
 @pytest.mark.parametrize(

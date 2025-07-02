@@ -3,10 +3,10 @@ import pathlib
 import h5py
 import torch
 
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)

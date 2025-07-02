@@ -3,7 +3,7 @@ import torch
 from typing_extensions import Self
 
 
-class LightSource(torch.nn.Module):
+class LightSource:
     """
     Abstract base class for all light sources.
 
@@ -16,8 +16,6 @@ class LightSource(torch.nn.Module):
     -------
     get_distortions()
         Get distortions given the light source model.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(
@@ -38,8 +36,6 @@ class LightSource(torch.nn.Module):
         number_of_rays : int
             The number of sent-out rays sampled from the sun distribution.
         """
-        super().__init__()
-
         self.number_of_rays = number_of_rays
 
     @classmethod
@@ -97,16 +93,5 @@ class LightSource(torch.nn.Module):
         ------
         NotImplementedError
             Whenever called (abstract base class method).
-        """
-        raise NotImplementedError("Must be overridden!")
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
         """
         raise NotImplementedError("Must be overridden!")

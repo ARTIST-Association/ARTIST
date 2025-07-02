@@ -4,8 +4,8 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util.configuration_classes import FacetConfig
-from artist.util.surface_converter import SurfaceConverter
+from artist.scenario.configuration_classes import FacetConfig
+from artist.scenario.surface_converter import SurfaceConverter
 
 
 def test_surface_converter(device: torch.device) -> None:

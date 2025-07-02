@@ -3,10 +3,11 @@ import pathlib
 import h5py
 import torch
 
-from artist.util import paint_loader, set_logger_config
+from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.data_loader import paint_loader
+from artist.scenario.scenario import Scenario
+from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
-from artist.util.kinematic_optimizer import KinematicOptimizer
-from artist.util.scenario import Scenario
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -18,13 +19,15 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path(
+    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_four_heliostats.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
 heliostat_calibration_mapping = [
     (
-        "name1",
+        "first_heliostat",
         [
             pathlib.Path(
                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
@@ -36,11 +39,14 @@ heliostat_calibration_mapping = [
         ],
     ),
     (
-        "name2",
+        "second_heliostat",
         [
             pathlib.Path(
                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
+            # pathlib.Path(
+            #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            # ),
         ],
     ),
     # ...
@@ -74,12 +80,6 @@ for heliostat_group_index, heliostat_group in enumerate(
         device=device,
     )
 
-    # Select the kinematic parameters to be optimized and calibrated.
-    optimizable_parameters = [
-        heliostat_group.kinematic_deviation_parameters.requires_grad_(),
-        heliostat_group.actuator_parameters.requires_grad_(),
-    ]
-
     # Set up optimizer and scheduler.
     tolerance = 0.0005
     max_epoch = 1000
@@ -92,7 +92,9 @@ for heliostat_group_index, heliostat_group in enumerate(
         max_epoch = 1000
         initial_learning_rate = 0.0005
 
-    optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_learning_rate)
+    optimizer = torch.optim.Adam(
+        heliostat_group.kinematic.parameters(), lr=initial_learning_rate
+    )
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(

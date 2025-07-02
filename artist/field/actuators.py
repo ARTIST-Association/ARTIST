@@ -21,7 +21,7 @@ class Actuators(torch.nn.Module):
     angles_to_motor_positions()
         Calculate the motor positions for given joint angles.
     forward()
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
     """
 
     def __init__(
@@ -49,7 +49,7 @@ class Actuators(torch.nn.Module):
 
         device = get_device(device=device)
 
-        self.actuator_parameters = actuator_parameters
+        self.actuator_parameters = torch.nn.Parameter(actuator_parameters)
 
         self.active_actuator_parameters = torch.empty_like(
             self.actuator_parameters, device=device
@@ -99,13 +99,26 @@ class Actuators(torch.nn.Module):
         """
         raise NotImplementedError("Must be overridden!")
 
-    def forward(self) -> None:
+    def forward(
+        self, motor_positions: torch.Tensor, device: torch.device | None = None
+    ) -> torch.Tensor:
         """
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
 
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions to be converted to joint angles.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The joint angles.
         """
-        raise NotImplementedError("Must be overridden!")
+        return self.motor_positions_to_angles(
+            motor_positions=motor_positions, device=device
+        )

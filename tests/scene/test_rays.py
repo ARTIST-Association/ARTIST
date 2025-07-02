@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from artist.raytracing.rays import Rays
+from artist.scene.rays import Rays
 
 
 @pytest.mark.parametrize(

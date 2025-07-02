@@ -1,11 +1,11 @@
 import torch
 
 from artist.field.facets_nurbs import NurbsFacet
-from artist.util.configuration_classes import SurfaceConfig
+from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
 
 
-class Surface(torch.nn.Module):
+class Surface:
     """
     Implement the surface module which contains a list of facets.
 
@@ -18,8 +18,6 @@ class Surface(torch.nn.Module):
     -------
     get_surface_points_and_normals()
         Calculate all surface points and normals from all facets.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(self, surface_config: SurfaceConfig) -> None:
@@ -36,8 +34,6 @@ class Surface(torch.nn.Module):
         surface_config : SurfaceConfig
             The surface configuration parameters used to construct the surface.
         """
-        super().__init__()
-
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,
@@ -58,6 +54,9 @@ class Surface(torch.nn.Module):
         """
         Calculate all surface points and normals from all facets.
 
+        Note: This method should only be used once nurbs are no longer being optimized.
+        The returned surface points and normals are detached from the computational graph.
+
         Parameters
         ----------
         device : torch.device | None
@@ -68,9 +67,9 @@ class Surface(torch.nn.Module):
         Returns
         -------
         torch.Tensor
-            The surface points.
+            The surface points, detached from the computational graph.
         torch.Tensor
-            The surface normals.
+            The surface normals, detached from the computational graph.
         """
         device = get_device(device=device)
 
@@ -89,17 +88,6 @@ class Surface(torch.nn.Module):
                 facet_points,
                 facet_normals,
             ) = facet_surface.calculate_surface_points_and_normals(device=device)
-            surface_points[i] = facet_points + facet.translation_vector
-            surface_normals[i] = facet_normals
+            surface_points[i] = (facet_points + facet.translation_vector).detach()
+            surface_normals[i] = facet_normals.detach()
         return surface_points, surface_normals
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

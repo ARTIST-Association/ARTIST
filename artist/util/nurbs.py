@@ -35,7 +35,7 @@ class NURBSSurface(torch.nn.Module):
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surface.
     forward()
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. caluclate the surface points and normals.
     """
 
     def __init__(
@@ -80,7 +80,7 @@ class NURBSSurface(torch.nn.Module):
         self.degree_n = degree_n
         self.evaluation_points_e = evaluation_points_e
         self.evaluation_points_n = evaluation_points_n
-        self.control_points = control_points
+        self.control_points = torch.nn.Parameter(control_points)
         self.knot_vector_e, self.knot_vector_n = self.calculate_knots(device=device)
 
     def calculate_knots(
@@ -458,13 +458,24 @@ class NURBSSurface(torch.nn.Module):
 
         return derivatives[:, 0, 0], normals
 
-    def forward(self) -> None:
+    def forward(
+        self, device: torch.device | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Specify the forward pass.
+        Specify the forward operation of the actuator, i.e. caluclate the surface points and normals.
 
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
+        Parameters
+        ----------
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The surface points.
+        torch.Tensor
+            The surface normals.
         """
-        raise NotImplementedError("Not Implemented!")
+        return self.calculate_surface_points_and_normals(device=device)
