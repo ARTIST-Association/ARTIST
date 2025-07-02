@@ -20,10 +20,9 @@ smooth parametric descriptions of heliostats.
 
 **Our contributions include:**
 
-- **Neural-network driven heliostat calibration:** A two-layer hybrid model for most efficient heliostat calibration.
-  It comprises a robust geometric model for pre-alignment and a neural network disturbance model, which gradually adapts
-  its impact via regularization sweeps. On this way, high data requirements of data-centric methods are overcome while maintaining flexibility for modeling complex real-world systems.
-  Check out [this paper](https://doi.org/10.1016/j.solener.2023.111962) for more details.
+- **Efficient heliostat calibration:** We develop a parallelized geometric kinematic model that enables efficient
+    calibration via either ray tracing-based or motor position data. This offers a flexible and robust approach to
+    heliostat calibration.
 
 - **Surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
   `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants.
@@ -58,26 +57,25 @@ The ``ARTIST`` repository is structured as shown below:
 ```
 .
 ├── artist # Parent package
+│   ├── core # Core functionality of ARTIST, e.g. raytracing, optimizers etc.
+│   ├── data_loader # Deals with loading data into ARTIST from different sources.
 │   ├── field # Objects in the field, e.g. heliostats and target areas like receivers and calibration targets.
-│   ├── raytracing
+│   ├── scenario # Functionality to create and load scenarios in ARTIST.
 │   ├── scene # Light sources and factors influencing the surroundings.
-│   ├── util
-│   └── ...
-├── tests/
+│   └── util
+├── tests
 │   ├── data
 │   │   ├── field_data # Real measurements from the PAINT database and STRAL that can be used in ARTIST.
 │   │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
 │   │   └── ...
-│   ├── field
-│   ├── raytracing
-│   ├── scene
-│   ├── util
+│   ├── core
+│   ├── data_loader
 │   └── ...
 └── tutorials # Tutorials to help you get started with ARTIST.
     ├── data # Data accessed in the tutorials.
     │   ├── paint # Real measurements from the PAINT database.
     │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
-    │   └── stral # Real measurements from STRAL.
+    │   └── stral Real # Measurements from STRAL.
     └── ...
 ```
 
