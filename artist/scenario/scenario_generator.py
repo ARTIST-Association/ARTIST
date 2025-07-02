@@ -109,13 +109,22 @@ class ScenarioGenerator:
         """
         unique_groups = set()
         for heliostat_config in self.heliostat_list_config.heliostat_list:
-            assert isinstance(heliostat_config.kinematic, KinematicConfig)
-            selected_kinematic_type = heliostat_config.kinematic.type
-            assert isinstance(heliostat_config.actuators, ActuatorListConfig)
-            for actuator_config in heliostat_config.actuators.actuator_list:
-                assert isinstance(actuator_config, ActuatorConfig)
-                selected_actuator_type = actuator_config.type
-                unique_groups.add((selected_kinematic_type, selected_actuator_type))
+            if isinstance(heliostat_config.kinematic, KinematicConfig):
+                selected_kinematic_type = heliostat_config.kinematic.type
+            else:
+                selected_kinematic_type = self.prototype_config.kinematic_prototype.type
+            if isinstance(heliostat_config.actuators, ActuatorListConfig):
+                for actuator_config in heliostat_config.actuators.actuator_list:
+                    assert isinstance(actuator_config, ActuatorConfig)
+                    selected_actuator_type = actuator_config.type
+                    unique_groups.add((selected_kinematic_type, selected_actuator_type))
+            else:
+                for (
+                    actuator_config
+                ) in self.prototype_config.actuators_prototype.actuator_list:
+                    assert isinstance(actuator_config, ActuatorConfig)
+                    selected_actuator_type = actuator_config.type
+                    unique_groups.add((selected_kinematic_type, selected_actuator_type))
         return len(unique_groups)
 
     def _check_facet_and_point_size(self):
