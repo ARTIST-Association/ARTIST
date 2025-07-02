@@ -1,0 +1,151 @@
+import pytest
+import torch
+
+from artist.field.kinematic import Kinematic
+from artist.field.kinematic_rigid_body import RigidBody
+
+
+@pytest.mark.parametrize(
+    "expected",
+    [
+        torch.tensor(
+            [
+                [
+                    [0.9999, 0.0104, 0.0000, -0.0019],
+                    [-0.0074, 0.7107, 0.7035, -0.1892],
+                    [0.0073, -0.7035, 0.7107, 0.0613],
+                    [0.0000, 0.0000, 0.0000, 1.0000],
+                ]
+            ]
+        )
+    ],
+)
+def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None:
+    """
+    Test the forward method of the kinematic.
+
+    Parameters
+    ----------
+    expected : torch.Tensor
+        The expected test result.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    incident_ray_directions = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=device)
+    aim_points = torch.tensor([[0.0, -10.0, 0.0, 1.0]], device=device)
+
+    deviation_parameters = torch.tensor(
+        [
+            [
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.3150,
+                0.0000,
+                0.0000,
+                0.0000,
+                0.0000,
+                -0.1776,
+                -0.4045,
+                0.0000,
+                0.0000,
+                0.0000,
+            ]
+        ],
+        device=device,
+    )
+    actuator_parameters = torch.tensor(
+        [
+            [
+                [0.0000e00, 0.0000e00],
+                [0.0000e00, 1.0000e00],
+                [1.5417e05, 1.5417e05],
+                [7.5000e-02, 7.5000e-02],
+                [3.4061e-01, 3.4790e-01],
+                [3.2040e-01, 3.0900e-01],
+                [-1.5708e00, 9.5993e-01],
+            ]
+        ],
+        device=device,
+    )
+
+    kinematic = RigidBody(
+        number_of_heliostats=1,
+        heliostat_positions=torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),
+        initial_orientations=torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device),
+        deviation_parameters=deviation_parameters,
+        actuator_parameters=actuator_parameters,
+        device=device,
+    )
+
+    active_heliostats_mask = torch.ones(
+        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+    )
+
+    kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
+    kinematic.active_heliostat_positions = (
+        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_initial_orientations = (
+        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.active_deviation_parameters = (
+        kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematic.actuators.active_actuator_parameters = (
+        kinematic.actuators.actuator_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+
+    orientation_matrix = kinematic(
+        incident_ray_directions=incident_ray_directions.to(device),
+        aim_points=aim_points.to(device),
+        device=device,
+    )
+    torch.testing.assert_close(
+        orientation_matrix, expected.to(device), atol=5e-4, rtol=5e-4
+    )
+
+
+def test_abstract_kinematics(
+    device: torch.device,
+) -> None:
+    """
+    Test the abstract methods of the kinematic.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    abstract_kinematic = Kinematic()
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        abstract_kinematic.incident_ray_directions_to_orientations(
+            incident_ray_directions=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+            aim_points=torch.tensor([0.0, 0.0, 1.0, 1.0], device=device),
+            device=device,
+        )
+    assert "Must be overridden!" in str(exc_info.value)
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        abstract_kinematic.motor_positions_to_orientations(
+            motor_positions=torch.tensor([1.0, 1.0], device=device)
+        )
+    assert "Must be overridden!" in str(exc_info.value)

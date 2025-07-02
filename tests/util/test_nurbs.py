@@ -177,3 +177,85 @@ def test_find_span(device: torch.device):
     )
 
     torch.testing.assert_close(span, expected.to(device), atol=5e-4, rtol=5e-4)
+
+
+def test_nurbs_forward(device: torch.device) -> None:
+    """
+    Test the forward method of nurbs.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    evaluation_grid = torch.cartesian_prod(
+        torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
+        torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
+    )
+    control_points = torch.tensor(
+        [
+            [
+                [-5.0000, -5.0000, 0.0000],
+                [-5.0000, -1.6667, 0.0000],
+                [-5.0000, 1.6667, 0.0000],
+                [-5.0000, 5.0000, 0.0000],
+            ],
+            [
+                [-1.6667, -5.0000, 0.0000],
+                [-1.6667, -1.6667, 0.0000],
+                [-1.6667, 1.6667, 0.0000],
+                [-1.6667, 5.0000, 0.0000],
+            ],
+            [
+                [1.6667, -5.0000, 0.0000],
+                [1.6667, -1.6667, 0.0000],
+                [1.6667, 1.6667, 0.0000],
+                [1.6667, 5.0000, 0.0000],
+            ],
+            [
+                [5.0000, -5.0000, 0.0000],
+                [5.0000, -1.6667, 0.0000],
+                [5.0000, 1.6667, 0.0000],
+                [5.0000, 5.0000, 0.0000],
+            ],
+        ],
+        device=device,
+    )
+
+    nurbs = NURBSSurface(
+        degree_e=2,
+        degree_n=2,
+        evaluation_points_e=evaluation_grid[:, 0],
+        evaluation_points_n=evaluation_grid[:, 1],
+        control_points=control_points,
+        device=device,
+    )
+
+    surface_points, surface_normals = nurbs(device)
+
+    expected_points = torch.tensor(
+        [
+            [-4.999866008759, -4.999866008759, 0.000000000000, 0.999999880791],
+            [-4.999866485596, 4.999866008759, 0.000000000000, 0.999999940395],
+            [4.999866008759, -4.999866485596, 0.000000000000, 0.999999940395],
+            [4.999866485596, 4.999866485596, 0.000000000000, 1.000000000000],
+        ],
+        device=device,
+    )
+    expected_normals = torch.tensor(
+        [
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+        ],
+        device=device,
+    )
+
+    torch.testing.assert_close(surface_points, expected_points)
+    torch.testing.assert_close(surface_normals, expected_normals)
