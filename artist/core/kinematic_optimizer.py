@@ -3,11 +3,10 @@ import logging
 import torch
 from torch.optim import Optimizer
 
-from artist.core import raytracing_utils
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import raytracing_utils, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)

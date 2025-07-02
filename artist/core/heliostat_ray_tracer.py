@@ -8,11 +8,9 @@ if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.scene import LightSource
-from artist.util import utils
+from artist.scene.rays import Rays
+from artist.util import raytracing_utils, utils
 from artist.util.environment_setup import get_device
-
-from . import raytracing_utils
-from .rays import Rays
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat ray tracer."""
