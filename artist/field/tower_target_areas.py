@@ -1,7 +1,7 @@
 import logging
 
 import h5py
-import torch.nn
+import torch
 from typing_extensions import Self
 
 from artist.util import config_dictionary
@@ -11,9 +11,9 @@ log = logging.getLogger(__name__)
 """A logger for the tower target areas."""
 
 
-class TowerTargetAreas(torch.nn.Module):
+class TowerTargetAreas:
     """
-    Wrap the list of tower target areas as a ``torch.nn.Module`` to allow gradient calculation.
+    The tower target areas.
 
     Individual target areas are not saved as separate entities, instead separate tensors for each
     target area property exist. Each property tensor or list contains information about this property
@@ -40,8 +40,6 @@ class TowerTargetAreas(torch.nn.Module):
     -------
     from_hdf5()
         Load all target areas from an HDF5 file.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(
@@ -75,8 +73,6 @@ class TowerTargetAreas(torch.nn.Module):
         curvatures : torch.Tensor
             The curvature of the target area (0.0 if not applicable).
         """
-        super().__init__()
-
         self.names = names
         self.geometries = geometries
         self.centers = centers
@@ -196,14 +192,3 @@ class TowerTargetAreas(torch.nn.Module):
             dimensions=dimensions,
             curvatures=curvatures,
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

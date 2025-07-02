@@ -27,8 +27,6 @@ class RigidBody(Kinematic):
         The initial orientations of all active heliostats
     active_deviation_parameters : torch.Tensor
         The deviation parameters of all active heliostats.
-    aim_points : torch.Tensor
-        The aim points of the heliostats.
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematic.
     actuators : Actuators
@@ -40,8 +38,6 @@ class RigidBody(Kinematic):
         Compute orientation matrices given incident ray directions.
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
-    forward()
-        Specify the forward pass.
 
     See Also
     --------
@@ -54,7 +50,6 @@ class RigidBody(Kinematic):
         heliostat_positions: torch.Tensor,
         initial_orientations: torch.Tensor,
         deviation_parameters: torch.Tensor,
-        aim_points: torch.Tensor,
         actuator_parameters: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
@@ -76,8 +71,6 @@ class RigidBody(Kinematic):
             The initial orientation offsets of the heliostats.
         deviation_parameters : torch.Tensor
             The deviation parameters for the kinematic.
-        aim_points : torch.Tensor
-            The aim points of the heliostats.
         actuator_parameters : torch.Tensor
             The actuator parameters.
         device : torch.device | None
@@ -92,7 +85,8 @@ class RigidBody(Kinematic):
         self.number_of_heliostats = number_of_heliostats
         self.heliostat_positions = heliostat_positions
         self.initial_orientations = initial_orientations
-        self.deviation_parameters = deviation_parameters
+
+        self.deviation_parameters = torch.nn.Parameter(deviation_parameters)
 
         self.number_of_active_heliostats = 0
         self.active_heliostat_positions = torch.empty_like(
@@ -104,9 +98,6 @@ class RigidBody(Kinematic):
         self.active_deviation_parameters = torch.empty_like(
             deviation_parameters, device=device
         )
-
-        self.aim_points = aim_points
-
         self.artist_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )
@@ -118,6 +109,7 @@ class RigidBody(Kinematic):
     def incident_ray_directions_to_orientations(
         self,
         incident_ray_directions: torch.Tensor,
+        aim_points: torch.Tensor,
         device: torch.device | None = None,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
@@ -129,6 +121,8 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
+        aim_points : torch.Tensor
+            The aim points for the active heliostats.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -235,7 +229,7 @@ class RigidBody(Kinematic):
 
             # Compute desired normals.
             desired_reflection_directions = torch.nn.functional.normalize(
-                self.aim_points - concentrator_origins,
+                aim_points - concentrator_origins,
                 p=2,
                 dim=1,
             )
@@ -427,14 +421,3 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")

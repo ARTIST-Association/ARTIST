@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import torch
 from matplotlib.pyplot import tight_layout
 
-from artist.raytracing.heliostat_tracing import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
-from artist.util.scenario import Scenario
 
 # If you have already generated the tutorial scenario yourself, you can use that scenario,
 # create and use any custom scenario, or use one provided in the artist/tutorials/data/scenarios directory.

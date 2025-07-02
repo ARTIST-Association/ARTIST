@@ -6,7 +6,7 @@ from artist.field.kinematic import Kinematic
 from artist.util.environment_setup import get_device
 
 
-class HeliostatGroup(torch.nn.Module):
+class HeliostatGroup:
     """
     Abstract base class for all heliostat groups.
 
@@ -29,10 +29,6 @@ class HeliostatGroup(torch.nn.Module):
         The surface normals of all heliostats in the group.
     initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the group.
-    kinematic_deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats in the group.
-    actuator_parameters : torch.Tensor
-        The actuator parameters of all actuators in the group.
     kinematic : Kinematic
         The kinematic of all heliostats in the group.
     number_of_active_heliostats : int
@@ -50,24 +46,17 @@ class HeliostatGroup(torch.nn.Module):
     -------
     align_surfaces_with_incident_ray_directions()
         Align surface points and surface normals with incident ray directions.
-    get_orientations_from_motor_positions()
-        Compute the orientations of heliostats given some motor positions.
     activate_heliostats()
         Activate certain heliostats for alignment, raytracing or calibration.
-    forward()
-        Specify the forward pass.
     """
 
     def __init__(
         self,
         names: list[str],
         positions: torch.Tensor,
-        aim_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
-        kinematic_deviation_parameters: torch.Tensor,
-        actuator_parameters: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -79,25 +68,17 @@ class HeliostatGroup(torch.nn.Module):
             The string names of each heliostat in the group in order.
         positions : torch.Tensor
             The positions of all heliostats in the group.
-        aim_points : torch.Tensor
-            The aim points of all heliostats in the group.
         surface_points : torch.Tensor
             The surface points of all heliostats in the group.
         surface_normals : torch.Tensor
             The surface normals of all heliostats in the group.
         initial_orientations : torch.Tensor
             The initial orientations of all heliostats in the group.
-        kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats in the group.
-        actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the group.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        super().__init__()
-
         device = get_device(device=device)
 
         self.number_of_heliostats = len(names)
@@ -106,8 +87,6 @@ class HeliostatGroup(torch.nn.Module):
         self.surface_points = surface_points
         self.surface_normals = surface_normals
         self.initial_orientations = initial_orientations
-        self.kinematic_deviation_parameters = kinematic_deviation_parameters
-        self.actuator_parameters = actuator_parameters
 
         self.kinematic = Kinematic()
 
@@ -147,28 +126,6 @@ class HeliostatGroup(torch.nn.Module):
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called (abstract base class method).
-        """
-        raise NotImplementedError("Must be overridden!")
-
-    def get_orientations_from_motor_positions(
-        self, motor_positions: torch.Tensor, device: torch.device | None = None
-    ) -> torch.Tensor:
-        """
-        Compute the orientations of heliostats given some motor positions.
-
-        Parameters
-        ----------
-        motor_positions : torch.Tensor
-            The motor positions.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -240,14 +197,3 @@ class HeliostatGroup(torch.nn.Module):
                 active_heliostats_mask, dim=0
             )
         )
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Must be overridden!")

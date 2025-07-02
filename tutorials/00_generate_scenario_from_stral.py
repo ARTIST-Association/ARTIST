@@ -2,8 +2,7 @@ import pathlib
 
 import torch
 
-from artist.util import config_dictionary, set_logger_config
-from artist.util.configuration_classes import (
+from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorPrototypeConfig,
@@ -20,9 +19,10 @@ from artist.util.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.scenario.scenario_generator import ScenarioGenerator
+from artist.scenario.surface_converter import SurfaceConverter
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
-from artist.util.scenario_generator import ScenarioGenerator
-from artist.util.surface_converter import SurfaceConverter
 
 # Set up logger
 set_logger_config()

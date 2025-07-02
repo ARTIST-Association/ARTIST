@@ -1,17 +1,16 @@
 import logging
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
-from artist.field.heliostat_group import HeliostatGroup
+if TYPE_CHECKING:
+    from artist.field.heliostat_group import HeliostatGroup
+from artist.scenario.scenario import Scenario
 from artist.scene import LightSource
-from artist.util import utils
+from artist.scene.rays import Rays
+from artist.util import raytracing_utils, utils
 from artist.util.environment_setup import get_device
-from artist.util.scenario import Scenario
-
-from . import raytracing_utils
-from .rays import Rays
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat ray tracer."""
@@ -215,7 +214,7 @@ class HeliostatRayTracer:
     def __init__(
         self,
         scenario: Scenario,
-        heliostat_group: HeliostatGroup,
+        heliostat_group: "HeliostatGroup",
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 1,

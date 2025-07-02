@@ -6,8 +6,8 @@ import torch
 from pytest_mock import MockerFixture
 
 from artist.field.heliostat_field import HeliostatField
+from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util import config_dictionary
-from artist.util.configuration_classes import SurfaceConfig
 
 
 @pytest.fixture

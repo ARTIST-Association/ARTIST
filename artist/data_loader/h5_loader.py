@@ -3,8 +3,8 @@ import logging
 import h5py
 import torch
 
+from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.util import config_dictionary, utils
-from artist.util.configuration_classes import FacetConfig, SurfaceConfig
 from artist.util.environment_setup import get_device
 
 

@@ -1,7 +1,7 @@
 import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
-from artist.raytracing.rays import Rays
+from artist.scene.rays import Rays
 from artist.util.environment_setup import get_device
 
 

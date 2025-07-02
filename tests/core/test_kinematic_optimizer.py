@@ -5,9 +5,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.util import config_dictionary, paint_loader, set_logger_config
-from artist.util.kinematic_optimizer import KinematicOptimizer
-from artist.util.scenario import Scenario
+from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.data_loader import paint_loader
+from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary, set_logger_config
 
 # Set up logger.
 set_logger_config()
@@ -109,13 +110,9 @@ def test_kinematic_optimizer(
             device=device,
         )
 
-        # Select the kinematic parameters to be optimized and calibrated.
-        optimizable_parameters = [
-            heliostat_group.kinematic_deviation_parameters.requires_grad_(),
-            heliostat_group.actuator_parameters.requires_grad_(),
-        ]
-
-        optimizer = torch.optim.Adam(optimizable_parameters, lr=initial_lr)
+        optimizer = torch.optim.Adam(
+            heliostat_group.kinematic.parameters(), lr=initial_lr
+        )
 
         # Create the kinematic optimizer.
         kinematic_optimizer = KinematicOptimizer(
@@ -149,13 +146,13 @@ def test_kinematic_optimizer(
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(
-            heliostat_group.kinematic_deviation_parameters,
+            heliostat_group.kinematic.deviation_parameters,
             expected["kinematic_deviations"],
             atol=5e-2,
             rtol=5e-2,
         )
         torch.testing.assert_close(
-            heliostat_group.actuator_parameters,
+            heliostat_group.kinematic.actuators.actuator_parameters,
             expected["actuator_parameters"],
             atol=5e-2,
             rtol=5e-2,

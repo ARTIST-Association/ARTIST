@@ -20,8 +20,6 @@ class IdealActuators(Actuators):
         Calculate the joint angles for given motor positions.
     angles_to_motor_positions()
         Calculate the motor positions for given joint angles.
-    forward()
-        Specify the forward pass.
 
     See Also
     --------
@@ -88,14 +86,3 @@ class IdealActuators(Actuators):
             The motor steps.
         """
         return angles
-
-    def forward(self) -> None:
-        """
-        Specify the forward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            Whenever called.
-        """
-        raise NotImplementedError("Not Implemented!")
