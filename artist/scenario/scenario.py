@@ -312,8 +312,8 @@ class Scenario:
                     )
                 if (
                     light_direction.shape != torch.Size([4])
-                    or light_direction[3] != 0.0
-                    or torch.norm(light_direction) != 1.0
+                    or not torch.allclose(light_direction[3], torch.tensor(0.0, device=device), rtol=1e-2, atol=1e-2)
+                    or not torch.allclose(torch.norm(light_direction), torch.tensor(1.0, device=device), rtol=1e-4, atol=1e-4)
                 ):
                     errors.append(
                         f"Invalid incident ray direction (Found at index {i} of provided mapping). This must be a normalized 4D tensor with last element 0.0."
