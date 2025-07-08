@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from artist.field.facets_nurbs import NurbsFacet
 from artist.util.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
+from artist.util.flattening_utils import SurfaceFlattener
 
 
 class Surface(torch.nn.Module):
@@ -25,7 +26,7 @@ class Surface(torch.nn.Module):
         Specify the forward pass.
     """
 
-    def __init__(self, surface_config: SurfaceConfig) -> None:
+    def __init__(self, surface_config: SurfaceConfig, flattener: SurfaceFlattener) -> None:
         """
         Initialize the surface.
 
@@ -40,7 +41,7 @@ class Surface(torch.nn.Module):
             The surface configuration parameters used to construct the surface.
         """
         super().__init__()
-
+        self.flattner = flattener
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,
@@ -54,36 +55,6 @@ class Surface(torch.nn.Module):
             )
             for facet_config in surface_config.facet_list
         ]
-
-    def map_surface_to_xy_plane_projection(self):
-        for facet in self.facets:
-            # Step 1: Remove translation
-            facet.control_points[:, :3] -= facet.translation_vector[:3]
-
-            # Step 2: Build inverse rotation matrix (ENU to XY)
-            e = F.normalize(facet.canting_e[:3], dim=0)
-            n = F.normalize(facet.canting_n[:3], dim=0)
-            u = F.normalize(torch.cross(e, n), dim=0)
-
-            R = torch.stack([e, n, u], dim=1)  # (3, 3)
-            R_inv = R.T  # inverse for orthonormal matrix
-
-            # Step 3: Rotate in-place
-            facet.control_points[:, :3] = torch.matmul(facet.control_points[:, :3], R_inv)
-
-
-    def map_xy_plane_projection_to_surface(self):
-        for facet in self.facets:
-            # Step 1: Build rotation matrix (XY to ENU)
-            e = F.normalize(facet.canting_e[:3], dim=0)
-            n = F.normalize(facet.canting_n[:3], dim=0)
-            u = F.normalize(torch.cross(e, n), dim=0)
-
-            R = torch.stack([e, n, u], dim=1)  # (3, 3)
-
-            # Step 2: Rotate and translate
-            facet.control_points[:, :3] = torch.matmul(facet.control_points[:, :3], R)
-            facet.control_points[:, :3] += facet.translation_vector[:3]
 
 
     def get_surface_points_and_normals(
