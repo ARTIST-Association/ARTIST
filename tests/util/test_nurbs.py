@@ -85,35 +85,27 @@ def test_nurbs(device: torch.device) -> None:
     evaluation_points_e = torch.linspace(1e-5, 1 - 1e-5, 40, device=device)
     evaluation_points_n = torch.linspace(1e-5, 1 - 1e-5, 40, device=device)
     evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
-    evaluation_points_e = evaluation_points[:, 0]
-    evaluation_points_n = evaluation_points[:, 1]
 
     num_control_points_e = 20
     num_control_points_n = 20
 
-    degree_e = 2
-    degree_n = 2
+    degrees = torch.tensor([2, 2], device=device)
 
     control_points_shape = (num_control_points_e, num_control_points_n)
     control_points = torch.zeros(control_points_shape + (3,), device=device)
     origin_offsets_e = torch.linspace(-5, 5, num_control_points_e, device=device)
     origin_offsets_n = torch.linspace(-5, 5, num_control_points_n, device=device)
-    origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
-    origin_offsets = torch.hstack(
-        (
-            origin_offsets,
-            torch.zeros((len(origin_offsets), 1), device=device),
-        )
-    )
+    
+    control_points_e, control_points_n = torch.meshgrid(origin_offsets_e, origin_offsets_n, indexing='ij')
 
-    control_points = origin_offsets.reshape(control_points.shape)
+    control_points[:, :, 0] = control_points_e
+    control_points[:, :, 1] = control_points_n
+    control_points[:, :, 2] = 0
 
     nurbs = NURBSSurface(
-        degree_e,
-        degree_n,
-        evaluation_points_e,
-        evaluation_points_n,
-        control_points,
+        degrees=degrees,
+        evaluation_points=evaluation_points,
+        control_points=control_points,
         device=device,
     )
 
@@ -148,8 +140,12 @@ def test_find_span(device: torch.device):
     AssertionError
         If test does not complete as expected.
     """
-    degree = 3
-    evaluation_points = torch.linspace(1e-5, 1 - 1e-5, steps=20)
+    degrees = torch.tensor([3, 3], device=device)
+
+    evaluation_points = torch.ones((20, 4), device=device)
+    evaluation_points[:, 0] = torch.linspace(1e-5, 1 - 1e-5, steps=20, device=device)
+    evaluation_points[:, 1] = torch.linspace(1e-5, 1 - 1e-5, steps=20, device=device)
+    evaluation_points[:, 2] = 0
 
     x, y = torch.meshgrid(
         torch.linspace(1e-2, 1 - 1e-2, 6),
@@ -162,11 +158,16 @@ def test_find_span(device: torch.device):
         [0.0, 0.0, 0.0, 0.0, 0.1, 0.7, 1.0, 1.0, 1.0, 1.0], device=device
     )
 
-    span = NURBSSurface.find_span(
-        degree=degree,
+    nurbs_surface = NURBSSurface(
+        degrees=degrees,
         evaluation_points=evaluation_points,
-        knot_vector=knots,
         control_points=control_points,
+        device=device
+    )
+
+    span = nurbs_surface.find_span(
+        dimension=0,
+        knot_vector=knots,
         device=device,
     )
 
@@ -226,10 +227,8 @@ def test_nurbs_forward(device: torch.device) -> None:
     )
 
     nurbs = NURBSSurface(
-        degree_e=2,
-        degree_n=2,
-        evaluation_points_e=evaluation_grid[:, 0],
-        evaluation_points_n=evaluation_grid[:, 1],
+        degrees=torch.tensor([2, 2], device=device),
+        evaluation_points=evaluation_grid,
         control_points=control_points,
         device=device,
     )
