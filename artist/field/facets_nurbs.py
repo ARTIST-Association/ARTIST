@@ -36,13 +36,10 @@ class NurbsFacet:
     def __init__(
         self,
         control_points: torch.Tensor,
-        degree_e: int,
-        degree_n: int,
-        number_eval_points_e: int,
-        number_eval_points_n: int,
+        degrees: torch.Tensor,
+        number_eval_points: torch.Tensor,
         translation_vector: torch.Tensor,
-        canting_e: torch.Tensor,
-        canting_n: torch.Tensor,
+        cantings: torch.Tensor
     ) -> None:
         """
         Initialize a NURBS facet.
@@ -74,13 +71,10 @@ class NurbsFacet:
             The canting vector in the north direction of the facet.
         """
         self.control_points = control_points
-        self.degree_e = degree_e
-        self.degree_n = degree_n
-        self.number_eval_points_e = number_eval_points_e
-        self.number_eval_points_n = number_eval_points_n
+        self.degrees = degrees
+        self.number_eval_points = number_eval_points
         self.translation_vector = translation_vector
-        self.canting_e = canting_e
-        self.canting_n = canting_n
+        self.cantings = cantings
 
     def create_nurbs_surface(self, device: torch.device | None = None) -> NURBSSurface:
         """
@@ -103,26 +97,19 @@ class NurbsFacet:
         # Since NURBS are only defined between (0,1), a small offset is required to exclude the boundaries from the
         # defined evaluation points.
         evaluation_points_rows = torch.linspace(
-            0 + 1e-5, 1 - 1e-5, self.number_eval_points_e, device=device
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points[0], device=device
         )
         evaluation_points_cols = torch.linspace(
-            0 + 1e-5, 1 - 1e-5, self.number_eval_points_n, device=device
+            0 + 1e-5, 1 - 1e-5, self.number_eval_points[1], device=device
         )
         evaluation_points = torch.cartesian_prod(
             evaluation_points_rows, evaluation_points_cols
         )
 
-        evaluation_points = evaluation_points.to(device)
-
-        evaluation_points_e = evaluation_points[:, 0]
-        evaluation_points_n = evaluation_points[:, 1]
-
         nurbs_surface = NURBSSurface(
-            self.degree_e,
-            self.degree_n,
-            evaluation_points_e,
-            evaluation_points_n,
-            self.control_points,
-            device,
+            degrees=self.degrees,
+            evaluation_points=evaluation_points,
+            control_points=self.control_points,
+            device=device,
         )
         return nurbs_surface
