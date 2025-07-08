@@ -57,6 +57,9 @@ class HeliostatGroup:
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
+        control_points: torch.Tensor,
+        degrees: torch.Tensor,
+        evaluation_points: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -88,6 +91,10 @@ class HeliostatGroup:
         self.surface_normals = surface_normals
         self.initial_orientations = initial_orientations
 
+        self.control_points = control_points
+        self.degrees = degrees
+        self.evaluation_points = evaluation_points
+
         self.kinematic = Kinematic()
 
         self.number_of_active_heliostats = 0
@@ -103,6 +110,8 @@ class HeliostatGroup:
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
         )
+
+        
 
     def align_surfaces_with_incident_ray_directions(
         self,
