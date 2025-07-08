@@ -338,9 +338,8 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         The normalized points.
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
-        (points[:] - min(points[:])) + 2e-5
-    )
+    range = points - min(points)
+    points_normalized = (range + 1e-5) / max(range + 2e-5)
     return points_normalized
 
 
