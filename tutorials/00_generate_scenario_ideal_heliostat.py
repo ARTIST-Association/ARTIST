@@ -21,7 +21,7 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test")
+scenario_path = pathlib.Path("test_ideal")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -29,22 +29,18 @@ tower_file = pathlib.Path(
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
-# A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
+# A tuple of: (heliostat-name, heliostat-properties.json)
 heliostat_files_list = [
     (
         "AA39",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
     # (
     # "name2",
     # pathlib.Path(
     #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
-    # ),
-    # pathlib.Path(
-    #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
     # ),
     # ),
     # ... Include as many as you want, but at least one!
@@ -86,8 +82,8 @@ target_area = [
     if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
-heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
-    heliostat_and_deflectometry_paths=heliostat_files_list,
+heliostat_list_config, prototype_config = paint_loader.extract_ideal_heliostats(
+    heliostat_paths=heliostat_files_list,
     power_plant_position=power_plant_config.power_plant_position,
     aim_point=target_area[0].center,
     device=device,
