@@ -14,7 +14,6 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    SurfaceConfig,
     SurfacePrototypeConfig,
     TargetAreaConfig,
     TargetAreaListConfig,
@@ -91,11 +90,11 @@ surface_converter = SurfaceConverter(
     max_epoch=400,
 )
 
-facet_list = surface_converter.generate_surface_config_from_stral(
+surface_config = surface_converter.generate_surface_config_from_stral(
     stral_file_path=stral_file_path, device=device
 )
 
-surface_prototype_config = SurfacePrototypeConfig(facet_list=facet_list)
+surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
@@ -132,9 +131,6 @@ prototype_config = PrototypeConfig(
     actuators_prototype=actuator_prototype_config,
 )
 
-# Include the heliostat surface config. In this case, it is identical to the prototype.
-heliostat1_surface_config = SurfaceConfig(facet_list=facet_list)
-
 # Include kinematic configuration for the heliostat.
 heliostat1_kinematic_config = KinematicConfig(
     type=config_dictionary.rigid_body_key,
@@ -162,7 +158,7 @@ heliostat1 = HeliostatConfig(
     id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
     aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
-    surface=heliostat1_surface_config,
+    surface=surface_config,
     kinematic=heliostat1_kinematic_config,
     actuators=heliostat1_actuator_config,
 )
