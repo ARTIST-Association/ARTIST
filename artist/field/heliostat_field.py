@@ -280,6 +280,8 @@ class HeliostatField:
 
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
+            control_points_shape = (40, 40)
+            control_points = torch.zeros(control_points_shape + (3,), device=device)
             heliostat_groups.append(
                 type_mappings.heliostat_group_type_mapping[heliostat_group_name](
                     names=grouped_field_data[heliostat_group_name][
@@ -297,6 +299,13 @@ class HeliostatField:
                     initial_orientations=grouped_field_data[heliostat_group_name][
                         config_dictionary.initial_orientations
                     ],
+                    #TODO
+                    control_points=control_points,
+                    degrees=3, 
+                    evaluation_points=torch.cartesian_prod(
+                        torch.linspace(1e-5, 1 - 1e-5, 100, device=device),
+                        torch.linspace(1e-5, 1 - 1e-5, 100, device=device),
+                    ),
                     kinematic_deviation_parameters=grouped_field_data[
                         heliostat_group_name
                     ][config_dictionary.kinematic_deviation_parameters],
