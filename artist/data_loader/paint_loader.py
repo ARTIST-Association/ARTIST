@@ -16,7 +16,6 @@ from artist.scenario.configuration_classes import (
     KinematicPrototypeConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    SurfaceConfig,
     SurfacePrototypeConfig,
     TargetAreaConfig,
     TargetAreaListConfig,
@@ -302,7 +301,7 @@ def extract_paint_heliostats(
     """
     device = get_device(device=device)
 
-    prototype_facet_list = None
+    prototype_surface = None
     prototype_kinematic = None
     prototype_actuator_list = None
 
@@ -310,156 +309,156 @@ def extract_paint_heliostats(
     for id, file_tuple in enumerate(heliostat_and_deflectometry_paths):
         with open(file_tuple[1], "r") as file:
             heliostat_dict = json.load(file)
-            heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
-                torch.tensor(
-                    [heliostat_dict[config_dictionary.paint_heliostat_position]],
-                    dtype=torch.float64,
-                    device=device,
-                ),
-                power_plant_position,
+
+        heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
+            torch.tensor(
+                [heliostat_dict[config_dictionary.paint_heliostat_position]],
+                dtype=torch.float64,
                 device=device,
-            )
-            heliostat_position = utils.convert_3d_point_to_4d_format(
-                heliostat_position_3d[0], device=device
-            )
+            ),
+            power_plant_position,
+            device=device,
+        )
+        heliostat_position = utils.convert_3d_point_to_4d_format(
+            heliostat_position_3d[0], device=device
+        )
 
-            # Generate surface configuration from data.
-            surface_converter = SurfaceConverter(
-                step_size=100,
-                max_epoch=max_epochs_for_surface_training,
-            )
+        # Generate surface configuration from data.
+        surface_converter = SurfaceConverter(
+            step_size=100,
+            max_epoch=max_epochs_for_surface_training,
+        )
 
-            facet_list = surface_converter.generate_surface_config_from_paint(
-                deflectometry_file_path=file_tuple[2],
-                heliostat_file_path=file_tuple[1],
-                device=device,
-            )
+        surface_config = surface_converter.generate_surface_config_from_paint(
+            deflectometry_file_path=file_tuple[2],
+            heliostat_file_path=file_tuple[1],
+            device=device,
+        )
 
-            surface_config = SurfaceConfig(facet_list=facet_list)
-            prototype_facet_list = facet_list
+        prototype_surface = surface_config
 
-            kinematic_deviations = KinematicDeviations(
-                first_joint_translation_e=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_first_joint_translation_e
-                    ],
-                    device=device,
-                ),
-                first_joint_translation_n=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_first_joint_translation_n
-                    ],
-                    device=device,
-                ),
-                first_joint_translation_u=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_first_joint_translation_u
-                    ],
-                    device=device,
-                ),
-                first_joint_tilt_e=torch.tensor(0.0, device=device),
-                first_joint_tilt_n=torch.tensor(0.0, device=device),
-                first_joint_tilt_u=torch.tensor(0.0, device=device),
-                second_joint_translation_e=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_second_joint_translation_e
-                    ],
-                    device=device,
-                ),
-                second_joint_translation_n=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_second_joint_translation_n
-                    ],
-                    device=device,
-                ),
-                second_joint_translation_u=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_second_joint_translation_u
-                    ],
-                    device=device,
-                ),
-                second_joint_tilt_e=torch.tensor(0.0, device=device),
-                second_joint_tilt_n=torch.tensor(0.0, device=device),
-                second_joint_tilt_u=torch.tensor(0.0, device=device),
-                concentrator_translation_e=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_concentrator_translation_e
-                    ],
-                    device=device,
-                ),
-                concentrator_translation_n=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_concentrator_translation_n
-                    ],
-                    device=device,
-                ),
-                concentrator_translation_u=torch.tensor(
-                    heliostat_dict[config_dictionary.paint_kinematic][
-                        config_dictionary.paint_concentrator_translation_u
-                    ],
-                    device=device,
-                ),
-                concentrator_tilt_e=torch.tensor(0.0, device=device),
-                concentrator_tilt_n=torch.tensor(0.0, device=device),
-                concentrator_tilt_u=torch.tensor(0.0, device=device),
-            )
-
-            # Include the initial orientation for the kinematic.
-            initial_orientation = utils.convert_3d_direction_to_4d_format(
-                torch.tensor(
-                    heliostat_dict[config_dictionary.paint_initial_orientation],
-                    device=device,
-                ),
-                device=device,
-            )
-
-            # Include the kinematic prototype configuration.
-            kinematic_config = KinematicConfig(
-                type=config_dictionary.rigid_body_key,
-                initial_orientation=initial_orientation,
-                deviations=kinematic_deviations,
-            )
-            prototype_kinematic = kinematic_config
-
-            paint_actuators = list(
+        kinematic_deviations = KinematicDeviations(
+            first_joint_translation_e=torch.tensor(
                 heliostat_dict[config_dictionary.paint_kinematic][
-                    config_dictionary.paint_actuators
-                ]
-            )
-            actuator_list = []
+                    config_dictionary.paint_first_joint_translation_e
+                ],
+                device=device,
+            ),
+            first_joint_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_first_joint_translation_n
+                ],
+                device=device,
+            ),
+            first_joint_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_first_joint_translation_u
+                ],
+                device=device,
+            ),
+            first_joint_tilt_e=torch.tensor(0.0, device=device),
+            first_joint_tilt_n=torch.tensor(0.0, device=device),
+            first_joint_tilt_u=torch.tensor(0.0, device=device),
+            second_joint_translation_e=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_e
+                ],
+                device=device,
+            ),
+            second_joint_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_n
+                ],
+                device=device,
+            ),
+            second_joint_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_u
+                ],
+                device=device,
+            ),
+            second_joint_tilt_e=torch.tensor(0.0, device=device),
+            second_joint_tilt_n=torch.tensor(0.0, device=device),
+            second_joint_tilt_u=torch.tensor(0.0, device=device),
+            concentrator_translation_e=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_e
+                ],
+                device=device,
+            ),
+            concentrator_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_n
+                ],
+                device=device,
+            ),
+            concentrator_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_u
+                ],
+                device=device,
+            ),
+            concentrator_tilt_e=torch.tensor(0.0, device=device),
+            concentrator_tilt_n=torch.tensor(0.0, device=device),
+            concentrator_tilt_u=torch.tensor(0.0, device=device),
+        )
 
-            for i, paint_actuator in enumerate(paint_actuators):
-                parameters = ActuatorParameters(
-                    increment=torch.tensor(
-                        paint_actuator[config_dictionary.paint_increment], device=device
-                    ),
-                    initial_stroke_length=torch.tensor(
-                        paint_actuator[config_dictionary.paint_initial_stroke_length],
-                        device=device,
-                    ),
-                    offset=torch.tensor(
-                        paint_actuator[config_dictionary.paint_offset], device=device
-                    ),
-                    pivot_radius=torch.tensor(
-                        paint_actuator[config_dictionary.paint_pivot_radius],
-                        device=device,
-                    ),
-                    initial_angle=torch.tensor(
-                        paint_actuator[config_dictionary.paint_initial_angle],
-                        device=device,
-                    ),
-                )
-                actuator = ActuatorConfig(
-                    key=f"{config_dictionary.heliostat_actuator_key}_{i}",
-                    type=paint_actuator[config_dictionary.paint_actuator_type],
-                    clockwise_axis_movement=paint_actuator[
-                        config_dictionary.paint_clockwise_axis_movement
-                    ],
-                    parameters=parameters,
-                )
-                actuator_list.append(actuator)
-            prototype_actuator_list = actuator_list
-            actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
+        # Include the initial orientation for the kinematic.
+        initial_orientation = utils.convert_3d_direction_to_4d_format(
+            torch.tensor(
+                heliostat_dict[config_dictionary.paint_initial_orientation],
+                device=device,
+            ),
+            device=device,
+        )
+
+        # Include the kinematic prototype configuration.
+        kinematic_config = KinematicConfig(
+            type=config_dictionary.rigid_body_key,
+            initial_orientation=initial_orientation,
+            deviations=kinematic_deviations,
+        )
+        prototype_kinematic = kinematic_config
+
+        paint_actuators = list(
+            heliostat_dict[config_dictionary.paint_kinematic][
+                config_dictionary.paint_actuators
+            ]
+        )
+        actuator_list = []
+
+        for i, paint_actuator in enumerate(paint_actuators):
+            parameters = ActuatorParameters(
+                increment=torch.tensor(
+                    paint_actuator[config_dictionary.paint_increment], device=device
+                ),
+                initial_stroke_length=torch.tensor(
+                    paint_actuator[config_dictionary.paint_initial_stroke_length],
+                    device=device,
+                ),
+                offset=torch.tensor(
+                    paint_actuator[config_dictionary.paint_offset], device=device
+                ),
+                pivot_radius=torch.tensor(
+                    paint_actuator[config_dictionary.paint_pivot_radius],
+                    device=device,
+                ),
+                initial_angle=torch.tensor(
+                    paint_actuator[config_dictionary.paint_initial_angle],
+                    device=device,
+                ),
+            )
+            actuator = ActuatorConfig(
+                key=f"{config_dictionary.heliostat_actuator_key}_{i}",
+                type=paint_actuator[config_dictionary.paint_actuator_type],
+                clockwise_axis_movement=paint_actuator[
+                    config_dictionary.paint_clockwise_axis_movement
+                ],
+                parameters=parameters,
+            )
+            actuator_list.append(actuator)
+        prototype_actuator_list = actuator_list
+        actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
 
         heliostat_config = HeliostatConfig(
             name=file_tuple[0],
@@ -475,7 +474,235 @@ def extract_paint_heliostats(
 
         # Include the configuration for a prototype (Will be extracted from the first heliostat in the list).
         surface_prototype_config = SurfacePrototypeConfig(
-            facet_list=prototype_facet_list
+            facet_list=prototype_surface.facet_list
+        )
+        kinematic_prototype_config = KinematicPrototypeConfig(
+            type=prototype_kinematic.type,
+            initial_orientation=prototype_kinematic.initial_orientation,
+            deviations=prototype_kinematic.deviations,
+        )
+        actuator_prototype_config = ActuatorPrototypeConfig(
+            actuator_list=prototype_actuator_list
+        )
+
+    prototype_config = PrototypeConfig(
+        surface_prototype=surface_prototype_config,
+        kinematic_prototype=kinematic_prototype_config,
+        actuators_prototype=actuator_prototype_config,
+    )
+
+    # Create the configuration for all heliostats.
+    heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_config_list)
+
+    return heliostats_list_config, prototype_config
+
+
+def extract_ideal_heliostats(
+    heliostat_paths: list[tuple[str, pathlib.Path]],
+    power_plant_position: torch.Tensor,
+    aim_point: torch.Tensor,
+    max_epochs_for_surface_training: int = 400,
+    device: torch.device | None = None,
+) -> tuple[HeliostatListConfig, PrototypeConfig]:
+    """
+    Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
+
+    Parameters
+    ----------
+    heliostat_paths : tuple[str, pathlib.Path]
+        Name of the heliostats and the heliostat properties file paths.
+    power_plant_position : torch.Tensor
+        The position of the power plant in latitude, longitude and elevation.
+    aim_point : torch.Tensor
+        The default aim point for the heliostats (Should ideally be on a receiver).
+    max_epochs_for_surface_training : int
+        The maximum amount of epochs for fitting the NURBS (default is 400).
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    HeliostatListConfig
+        The configuration of all heliostats in the scenario.
+    PrototypeConfig
+        The configuration for a heliostat prototype.
+    """
+    device = get_device(device=device)
+
+    prototype_surface = None
+    prototype_kinematic = None
+    prototype_actuator_list = None
+
+    heliostat_config_list = []
+    for id, heliostat_properties_file in enumerate(heliostat_paths):
+        with open(heliostat_properties_file[1], "r") as file:
+            heliostat_dict = json.load(file)
+        heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
+            torch.tensor(
+                [heliostat_dict[config_dictionary.paint_heliostat_position]],
+                dtype=torch.float64,
+                device=device,
+            ),
+            power_plant_position,
+            device=device,
+        )
+        heliostat_position = utils.convert_3d_point_to_4d_format(
+            heliostat_position_3d[0], device=device
+        )
+
+        # Generate surface configuration from data.
+        surface_converter = SurfaceConverter(
+            step_size=100,
+            max_epoch=max_epochs_for_surface_training,
+        )
+
+        surface_config = surface_converter.generate_ideal_surface_config_from_paint(
+            heliostat_file_path=heliostat_properties_file,
+            device=device,
+        )
+
+        prototype_surface = surface_config
+
+        kinematic_deviations = KinematicDeviations(
+            first_joint_translation_e=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_first_joint_translation_e
+                ],
+                device=device,
+            ),
+            first_joint_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_first_joint_translation_n
+                ],
+                device=device,
+            ),
+            first_joint_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_first_joint_translation_u
+                ],
+                device=device,
+            ),
+            first_joint_tilt_e=torch.tensor(0.0, device=device),
+            first_joint_tilt_n=torch.tensor(0.0, device=device),
+            first_joint_tilt_u=torch.tensor(0.0, device=device),
+            second_joint_translation_e=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_e
+                ],
+                device=device,
+            ),
+            second_joint_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_n
+                ],
+                device=device,
+            ),
+            second_joint_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_second_joint_translation_u
+                ],
+                device=device,
+            ),
+            second_joint_tilt_e=torch.tensor(0.0, device=device),
+            second_joint_tilt_n=torch.tensor(0.0, device=device),
+            second_joint_tilt_u=torch.tensor(0.0, device=device),
+            concentrator_translation_e=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_e
+                ],
+                device=device,
+            ),
+            concentrator_translation_n=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_n
+                ],
+                device=device,
+            ),
+            concentrator_translation_u=torch.tensor(
+                heliostat_dict[config_dictionary.paint_kinematic][
+                    config_dictionary.paint_concentrator_translation_u
+                ],
+                device=device,
+            ),
+            concentrator_tilt_e=torch.tensor(0.0, device=device),
+            concentrator_tilt_n=torch.tensor(0.0, device=device),
+            concentrator_tilt_u=torch.tensor(0.0, device=device),
+        )
+
+        # Include the initial orientation for the kinematic.
+        initial_orientation = utils.convert_3d_direction_to_4d_format(
+            torch.tensor(
+                heliostat_dict[config_dictionary.paint_initial_orientation],
+                device=device,
+            ),
+            device=device,
+        )
+
+        # Include the kinematic prototype configuration.
+        kinematic_config = KinematicConfig(
+            type=config_dictionary.rigid_body_key,
+            initial_orientation=initial_orientation,
+            deviations=kinematic_deviations,
+        )
+        prototype_kinematic = kinematic_config
+
+        paint_actuators = list(
+            heliostat_dict[config_dictionary.paint_kinematic][
+                config_dictionary.paint_actuators
+            ]
+        )
+        actuator_list = []
+
+        for i, paint_actuator in enumerate(paint_actuators):
+            parameters = ActuatorParameters(
+                increment=torch.tensor(
+                    paint_actuator[config_dictionary.paint_increment], device=device
+                ),
+                initial_stroke_length=torch.tensor(
+                    paint_actuator[config_dictionary.paint_initial_stroke_length],
+                    device=device,
+                ),
+                offset=torch.tensor(
+                    paint_actuator[config_dictionary.paint_offset], device=device
+                ),
+                pivot_radius=torch.tensor(
+                    paint_actuator[config_dictionary.paint_pivot_radius],
+                    device=device,
+                ),
+                initial_angle=torch.tensor(
+                    paint_actuator[config_dictionary.paint_initial_angle],
+                    device=device,
+                ),
+            )
+            actuator = ActuatorConfig(
+                key=f"{config_dictionary.heliostat_actuator_key}_{i}",
+                type=paint_actuator[config_dictionary.paint_actuator_type],
+                clockwise_axis_movement=paint_actuator[
+                    config_dictionary.paint_clockwise_axis_movement
+                ],
+                parameters=parameters,
+            )
+            actuator_list.append(actuator)
+        prototype_actuator_list = actuator_list
+        actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
+
+        heliostat_config = HeliostatConfig(
+            name=id,
+            id=id,
+            position=heliostat_position,
+            aim_point=aim_point,
+            surface=surface_config,
+            kinematic=kinematic_config,
+            actuators=actuators_list_config,
+        )
+
+        heliostat_config_list.append(heliostat_config)
+
+        # Include the configuration for a prototype (Will be extracted from the first heliostat in the list).
+        surface_prototype_config = SurfacePrototypeConfig(
+            facet_list=prototype_surface.facet_list
         )
         kinematic_prototype_config = KinematicPrototypeConfig(
             type=prototype_kinematic.type,
