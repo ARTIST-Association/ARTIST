@@ -1,5 +1,6 @@
 import torch
 
+from artist.util import utils
 from artist.util.nurbs import NURBSSurface
 
 
@@ -82,9 +83,9 @@ def test_nurbs(device: torch.device) -> None:
     ones = torch.ones(surface_points.shape[0], 1, device=device)
     surface_points = torch.cat((surface_points, ones), dim=1)
 
-    evaluation_points_e = torch.linspace(1e-5, 1 - 1e-5, 40, device=device)
-    evaluation_points_n = torch.linspace(1e-5, 1 - 1e-5, 40, device=device)
-    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
+    evaluation_points = utils.create_nurbs_evaluation_grid(
+        number_of_evaluation_points=torch.tensor([40, 40], device=device)
+    )
 
     num_control_points_e = 20
     num_control_points_n = 20
@@ -95,8 +96,10 @@ def test_nurbs(device: torch.device) -> None:
     control_points = torch.zeros(control_points_shape + (3,), device=device)
     origin_offsets_e = torch.linspace(-5, 5, num_control_points_e, device=device)
     origin_offsets_n = torch.linspace(-5, 5, num_control_points_n, device=device)
-    
-    control_points_e, control_points_n = torch.meshgrid(origin_offsets_e, origin_offsets_n, indexing='ij')
+
+    control_points_e, control_points_n = torch.meshgrid(
+        origin_offsets_e, origin_offsets_n, indexing="ij"
+    )
 
     control_points[:, :, 0] = control_points_e
     control_points[:, :, 1] = control_points_n
@@ -104,7 +107,6 @@ def test_nurbs(device: torch.device) -> None:
 
     nurbs = NURBSSurface(
         degrees=degrees,
-        evaluation_points=evaluation_points,
         control_points=control_points,
         device=device,
     )
@@ -112,7 +114,9 @@ def test_nurbs(device: torch.device) -> None:
     optimizer = torch.optim.Adam(nurbs.parameters(), lr=5e-3)
 
     for epoch in range(100):
-        points, normals = nurbs.calculate_surface_points_and_normals(device=device)
+        points, normals = nurbs.calculate_surface_points_and_normals(
+            evaluation_points=evaluation_points, device=device
+        )
 
         optimizer.zero_grad()
 
@@ -160,13 +164,13 @@ def test_find_span(device: torch.device):
 
     nurbs_surface = NURBSSurface(
         degrees=degrees,
-        evaluation_points=evaluation_points,
         control_points=control_points,
-        device=device
+        device=device,
     )
 
     span = nurbs_surface.find_span(
         dimension=0,
+        evaluation_points=evaluation_points,
         knot_vector=knots,
         device=device,
     )
@@ -192,7 +196,7 @@ def test_nurbs_forward(device: torch.device) -> None:
     AssertionError
         If test does not complete as expected.
     """
-    evaluation_grid = torch.cartesian_prod(
+    evaluation_points = torch.cartesian_prod(
         torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
         torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
     )
@@ -228,12 +232,11 @@ def test_nurbs_forward(device: torch.device) -> None:
 
     nurbs = NURBSSurface(
         degrees=torch.tensor([2, 2], device=device),
-        evaluation_points=evaluation_grid,
         control_points=control_points,
         device=device,
     )
 
-    surface_points, surface_normals = nurbs(device)
+    surface_points, surface_normals = nurbs(evaluation_points, device)
 
     expected_points = torch.tensor(
         [

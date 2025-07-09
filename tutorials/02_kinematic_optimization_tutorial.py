@@ -40,8 +40,7 @@ with setup_distributed_environment(
     groups_to_ranks_mapping,
     heliostat_group_rank,
     heliostat_group_world_size,
-    ):
-
+):
     # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
     # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
     heliostat_calibration_mapping = [
@@ -156,14 +155,46 @@ with setup_distributed_environment(
             )
 
     heliostat_target_light_source_mapping = [
-        ("AA31", "solar_tower_juelich_upper", torch.tensor([ 0.6083,  0.2826, -0.7417,  0.0000], device=device)),
-        ("AA31", "solar_tower_juelich_lower", torch.tensor([-0.5491,  0.3197, -0.7722,  0.0000] ,device=device)),
-        ("AA31", "solar_tower_juelich_lower", torch.tensor([-0.6905,  0.2223, -0.6884,  0.0000], device=device)),
-        ("AA39", "multi_focus_tower", torch.tensor([-0.6568,  0.3541, -0.6658,  0.0000] ,device=device)),
-        ("AA39", "solar_tower_juelich_lower", torch.tensor([-0.0947,  0.4929, -0.8649,  0.0000] ,device=device)),
-        ("AA39", "multi_focus_tower", torch.tensor([ 0.0619,  0.4641, -0.8836,  0.0000] ,device=device)),
-        ("AA39", "solar_tower_juelich_lower", torch.tensor([-0.5211,  0.5949, -0.6121,  0.0000], device=device)),
-        ("AA39", "multi_focus_tower", torch.tensor([-0.2741,  0.4399, -0.8552,  0.0000] ,device=device)),
+        (
+            "AA31",
+            "solar_tower_juelich_upper",
+            torch.tensor([0.6083, 0.2826, -0.7417, 0.0000], device=device),
+        ),
+        (
+            "AA31",
+            "solar_tower_juelich_lower",
+            torch.tensor([-0.5491, 0.3197, -0.7722, 0.0000], device=device),
+        ),
+        (
+            "AA31",
+            "solar_tower_juelich_lower",
+            torch.tensor([-0.6905, 0.2223, -0.6884, 0.0000], device=device),
+        ),
+        (
+            "AA39",
+            "multi_focus_tower",
+            torch.tensor([-0.6568, 0.3541, -0.6658, 0.0000], device=device),
+        ),
+        (
+            "AA39",
+            "solar_tower_juelich_lower",
+            torch.tensor([-0.0947, 0.4929, -0.8649, 0.0000], device=device),
+        ),
+        (
+            "AA39",
+            "multi_focus_tower",
+            torch.tensor([0.0619, 0.4641, -0.8836, 0.0000], device=device),
+        ),
+        (
+            "AA39",
+            "solar_tower_juelich_lower",
+            torch.tensor([-0.5211, 0.5949, -0.6121, 0.0000], device=device),
+        ),
+        (
+            "AA39",
+            "multi_focus_tower",
+            torch.tensor([-0.2741, 0.4399, -0.8552, 0.0000], device=device),
+        ),
     ]
 
     bitmap_resolution_e = 256
@@ -223,16 +254,16 @@ with setup_distributed_environment(
         )
 
         import matplotlib.pyplot as plt
+
         for i in range(bitmaps_per_heliostat.shape[0]):
             fig, ax = plt.subplots()
             ax.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
-            ax.axis('off')
+            ax.axis("off")
             ax.margins(0)
             ax.set_position([0, 0, 1, 1])
-            plt.savefig(f"heliostat_{i}_artist.png", bbox_inches='tight', pad_inches=0)
-        
-        torch.save(bitmaps_per_heliostat.cpu().detach(), "heliostat_bitmaps.pt")
+            plt.savefig(f"heliostat_{i}_artist.png", bbox_inches="tight", pad_inches=0)
 
+        torch.save(bitmaps_per_heliostat.cpu().detach(), "heliostat_bitmaps.pt")
 
         bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
             bitmaps_per_heliostat=bitmaps_per_heliostat,
@@ -241,7 +272,6 @@ with setup_distributed_environment(
         )
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
-    
 
     if is_nested:
         torch.distributed.all_reduce(
@@ -254,5 +284,3 @@ with setup_distributed_environment(
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
-
-

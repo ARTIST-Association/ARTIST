@@ -347,20 +347,12 @@ class FacetConfig:
         The key used to identify the facet in the HDF5 file.
     control_points : torch.Tensor
         The NURBS control points.
-    degree_e : torch.Tensor
-        The NURBS degree in the east direction.
-    degree_n : torch.Tensor
-        The NURBS degree in the north direction.
-    number_eval_points_e : int
-        The number of evaluation points for the NURBS surface in the east direction.
-    number_eval_points_n : int
-        The number of evaluation points for the NURBS surface in the north direction.
+    degrees : torch.Tensor
+        The NURBS degree in the east and north direction.
     translation_vector : torch.Tensor
         The translation_vector of the facet.
-    canting_e : torch.Tensor
-        The canting vector in the east direction.
-    canting_n : torch.Tensor
-        The canting vector in the north direction.
+    canting: torch.Tensor
+        The canting vectors in the east and north direction.
 
     Methods
     -------
@@ -373,7 +365,6 @@ class FacetConfig:
         facet_key: str,
         control_points: torch.Tensor,
         degrees: torch.Tensor,
-        number_of_evaluation_points: torch.Tensor,
         translation_vector: torch.Tensor,
         canting: torch.Tensor,
     ) -> None:
@@ -386,19 +377,16 @@ class FacetConfig:
             The key used to identify the facet in the HDF5 file.
         control_points : torch.Tensor
             The NURBS control points.
-        degrees: torch.Tensor
-            The NURBS degrees in the east and north direction.
-        number_of_evaluation_points : torch.Tensor
-            The number of evaluation points for the NURBS surface in east and north direction.
+        degrees : torch.Tensor
+            The NURBS degree in the east and north direction.
         translation_vector : torch.Tensor
             The translation_vector of the facet.
-        canting : torch.Tensor
+        canting: torch.Tensor
             The canting vectors in the east and north direction.
         """
         self.facet_key = facet_key
         self.control_points = control_points
         self.degrees = degrees
-        self.number_of_evaluation_points = number_of_evaluation_points
         self.translation_vector = translation_vector
         self.canting = canting
 
@@ -414,7 +402,6 @@ class FacetConfig:
         return {
             config_dictionary.facet_control_points: self.control_points,
             config_dictionary.facet_degrees: self.degrees,
-            config_dictionary.facet_number_of_evaluation_points: self.number_of_evaluation_points,
             config_dictionary.facets_translation_vector: self.translation_vector,
             config_dictionary.facets_canting: self.canting,
         }

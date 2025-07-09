@@ -1,8 +1,9 @@
 import torch
 
-from artist.field.facets_nurbs import NurbsFacet
 from artist.scenario.configuration_classes import SurfaceConfig
+from artist.util import utils
 from artist.util.environment_setup import get_device
+from artist.util.nurbs import NURBSSurface
 
 
 class Surface:
@@ -11,8 +12,10 @@ class Surface:
 
     Attributes
     ----------
-    facets : List[Facet]
-        A list of facets that comprise the surface of a heliostat.
+    nurbs_facets : List[NURBSSurface]
+        A list of one nurbs surface for each facet.
+    facet_translation_vectors : torch.Tensor
+        The facet translation vectors for all facets.
 
     Methods
     -------
@@ -20,7 +23,9 @@ class Surface:
         Calculate all surface points and normals from all facets.
     """
 
-    def __init__(self, surface_config: SurfaceConfig) -> None:
+    def __init__(
+        self, surface_config: SurfaceConfig, device: torch.device | None = None
+    ) -> None:
         """
         Initialize the surface.
 
@@ -33,23 +38,33 @@ class Surface:
         ----------
         surface_config : SurfaceConfig
             The surface configuration parameters used to construct the surface.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
-        self.facets = [
-            NurbsFacet(
-                control_points=facet_config.control_points,
-                degree_e=facet_config.degree_e,
-                degree_n=facet_config.degree_n,
-                number_eval_points_e=facet_config.number_eval_points_e,
-                number_eval_points_n=facet_config.number_eval_points_n,
-                translation_vector=facet_config.translation_vector,
-                canting_e=facet_config.canting_e,
-                canting_n=facet_config.canting_n,
+        device = get_device(device=device)
+
+        self.nurbs_facets = []
+        self.facet_translation_vectors = torch.empty(
+            (len(surface_config.facet_list), 4), device=device
+        )
+        for facet_index, facet_config in enumerate(surface_config.facet_list):
+            self.nurbs_facets.append(
+                NURBSSurface(
+                    degrees=facet_config.degrees,
+                    control_points=facet_config.control_points,
+                    device=device,
+                )
             )
-            for facet_config in surface_config.facet_list
-        ]
+            self.facet_translation_vectors[facet_index] = (
+                facet_config.translation_vector
+            )
 
     def get_surface_points_and_normals(
-        self, device: torch.device | None = None
+        self,
+        number_of_points_per_facet: torch.Tensor,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
@@ -59,6 +74,8 @@ class Surface:
 
         Parameters
         ----------
+        number_of_points_per_facet : torch.Tensor
+            The number of surface points per facet.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -73,21 +90,25 @@ class Surface:
         """
         device = get_device(device=device)
 
-        eval_point_per_facet = (
-            self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
+        evaluation_points = utils.create_nurbs_evaluation_grid(
+            number_of_evaluation_points=number_of_points_per_facet, device=device
         )
+
         surface_points = torch.empty(
-            len(self.facets), eval_point_per_facet, 4, device=device
+            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
         )
         surface_normals = torch.empty(
-            len(self.facets), eval_point_per_facet, 4, device=device
+            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
         )
-        for i, facet in enumerate(self.facets):
-            facet_surface = facet.create_nurbs_surface(device=device)
+        for i, nurbs_facet in enumerate(self.nurbs_facets):
             (
                 facet_points,
                 facet_normals,
-            ) = facet_surface.calculate_surface_points_and_normals(device=device)
-            surface_points[i] = (facet_points + facet.translation_vector).detach()
+            ) = nurbs_facet.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points, device=device
+            )
+            surface_points[i] = (
+                facet_points + self.facet_translation_vectors[i]
+            ).detach()
             surface_normals[i] = facet_normals.detach()
         return surface_points, surface_normals
