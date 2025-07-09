@@ -65,6 +65,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
+        nurbs_control_points: torch.Tensor,
+        nurbs_degrees: torch.Tensor,
         kinematic_deviation_parameters: torch.Tensor,
         actuator_parameters: torch.Tensor,
         device: torch.device | None = None,
@@ -99,6 +101,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             surface_points=surface_points,
             surface_normals=surface_normals,
             initial_orientations=initial_orientations,
+            nurbs_control_points=nurbs_control_points,
+            nurbs_degrees=nurbs_degrees,
             device=device,
         )
 

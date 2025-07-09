@@ -51,26 +51,16 @@ def surface_config(
                 dtype=torch.float,
                 device=device,
             ),
-            degree_e=int(facet_config[facet][config_dictionary.facet_degree_e][()]),
-            degree_n=int(facet_config[facet][config_dictionary.facet_degree_n][()]),
-            number_eval_points_e=int(
-                facet_config[facet][config_dictionary.facet_number_eval_e][()]
-            ),
-            number_eval_points_n=int(
-                facet_config[facet][config_dictionary.facet_number_eval_n][()]
+            degrees=torch.tensor(
+                facet_config[facet][config_dictionary.facet_degrees][()]
             ),
             translation_vector=torch.tensor(
                 facet_config[facet][config_dictionary.facets_translation_vector][()],
                 dtype=torch.float,
                 device=device,
             ),
-            canting_e=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_e][()],
-                dtype=torch.float,
-                device=device,
-            ),
-            canting_n=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_n][()],
+            canting=torch.tensor(
+                facet_config[facet][config_dictionary.facets_canting][()],
                 dtype=torch.float,
                 device=device,
             ),

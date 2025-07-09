@@ -11,8 +11,6 @@ class NURBSSurface(torch.nn.Module):
     ----------
     degrees : torch.Tensor
         The spline degrees.
-    evaluation_points : torch.Tensor
-        The evaluation points.
     control_points : torch.Tensor
         The control points.
     knot_vector_e : torch.Tensor
@@ -37,7 +35,6 @@ class NURBSSurface(torch.nn.Module):
     def __init__(
         self,
         degrees: torch.Tensor,
-        evaluation_points: torch.Tensor,
         control_points: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
@@ -53,8 +50,6 @@ class NURBSSurface(torch.nn.Module):
         ----------
         degrees : torch.tensor
             The spline degrees in east and north directions.
-        evaluation_points : torch.Tensor
-            The evaluation points in east and north direction.
         control_points : torch.Tensor
             The control points.
         device : torch.device | None
@@ -67,7 +62,6 @@ class NURBSSurface(torch.nn.Module):
         device = get_device(device=device)
 
         self.degrees = degrees
-        self.evaluation_points = evaluation_points
         self.control_points = torch.nn.Parameter(control_points)
         self.knot_vector_e = self.calculate_knot_vector(dimension=0, device=device)
         self.knot_vector_n = self.calculate_knot_vector(dimension=1, device=device)
@@ -76,7 +70,7 @@ class NURBSSurface(torch.nn.Module):
         self,
         dimension: int,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         """
         Calculate the knot vector in one dimension.
 
@@ -102,10 +96,17 @@ class NURBSSurface(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        knot_vector = torch.zeros(self.control_points.shape[dimension] + self.degrees[dimension] + 1, device=device)
-        number_of_knot_values = len(knot_vector[self.degrees[dimension] : -self.degrees[dimension]])
+        knot_vector = torch.zeros(
+            self.control_points.shape[dimension] + self.degrees[dimension] + 1,
+            device=device,
+        )
+        number_of_knot_values = len(
+            knot_vector[self.degrees[dimension] : -self.degrees[dimension]]
+        )
         knot_vector[: self.degrees[dimension]] = 0
-        knot_vector[self.degrees[dimension] : -self.degrees[dimension]] = torch.linspace(0, 1, number_of_knot_values, device=device)
+        knot_vector[self.degrees[dimension] : -self.degrees[dimension]] = (
+            torch.linspace(0, 1, number_of_knot_values, device=device)
+        )
         knot_vector[-self.degrees[dimension] :] = 1
 
         return knot_vector
@@ -113,6 +114,7 @@ class NURBSSurface(torch.nn.Module):
     def find_span(
         self,
         dimension: int,
+        evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
         device: torch.device | None = None,
     ) -> torch.Tensor:
@@ -129,6 +131,8 @@ class NURBSSurface(torch.nn.Module):
         ----------
         dimension : int
             The NURBS dimension.
+        evaluation_points : torch.Tensor
+            The evaluation points.
         knot_vector : torch.Tensor
             The knot vector for the NURBS surface in a single direction.
         device : torch.device | None
@@ -145,8 +149,12 @@ class NURBSSurface(torch.nn.Module):
 
         knot_vector_is_uniform = torch.all(
             (
-                torch.diff(knot_vector[self.degrees[dimension]:-self.degrees[dimension]])
-                - torch.diff(knot_vector[self.degrees[dimension]:-self.degrees[dimension]])[0]
+                torch.diff(
+                    knot_vector[self.degrees[dimension] : -self.degrees[dimension]]
+                )
+                - torch.diff(
+                    knot_vector[self.degrees[dimension] : -self.degrees[dimension]]
+                )[0]
             )
             < 1e-5
         )
@@ -156,18 +164,23 @@ class NURBSSurface(torch.nn.Module):
             min_value = unique_knots[0]
             max_value = unique_knots[-1]
 
-            scaled_points = (self.evaluation_points[:, dimension] - min_value) / (max_value - min_value)
+            scaled_points = (evaluation_points[:, dimension] - min_value) / (
+                max_value - min_value
+            )
 
             span_indices = (
-                torch.floor(scaled_points * (len(unique_knots) - 1)).long() + self.degrees[dimension]
+                torch.floor(scaled_points * (len(unique_knots) - 1)).long()
+                + self.degrees[dimension]
             )
 
         else:
             n = self.control_points.shape[1] - 1
             span_indices = torch.zeros(
-                len(self.evaluation_points[:, dimension]), dtype=torch.int64, device=device
+                len(evaluation_points[:, dimension]),
+                dtype=torch.int64,
+                device=device,
             )
-            for i, evaluation_point in enumerate(self.evaluation_points[:, dimension]):
+            for i, evaluation_point in enumerate(evaluation_points[:, dimension]):
                 if torch.isclose(
                     evaluation_point, knot_vector[n], atol=1e-5, rtol=1e-5
                 ):
@@ -192,6 +205,7 @@ class NURBSSurface(torch.nn.Module):
     def basis_function_and_derivatives(
         self,
         dimension: int,
+        evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
         span: torch.Tensor,
         nth_derivative: int = 1,
@@ -206,6 +220,8 @@ class NURBSSurface(torch.nn.Module):
         ----------
         dimension : int
             The NURBS dimension.
+        evaluation_points : torch.Tensor
+            The evaluation points.
         knot_vector : torch.Tensor
             Contains all the knots of the NURBS model.
         span : torch.Tensor
@@ -224,7 +240,7 @@ class NURBSSurface(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        num_evaluation_points = len(self.evaluation_points[:, dimension])
+        num_evaluation_points = len(evaluation_points[:, dimension])
 
         # Introduce `ndu` to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
         ndu = [
@@ -236,14 +252,16 @@ class NURBSSurface(torch.nn.Module):
         ]
         ndu[0][0] = torch.ones_like(ndu[0][0], device=device)
         left = [
-            torch.zeros(num_evaluation_points, device=device) for _ in range(self.degrees[dimension] + 1)
+            torch.zeros(num_evaluation_points, device=device)
+            for _ in range(self.degrees[dimension] + 1)
         ]
         right = [
-            torch.zeros(num_evaluation_points, device=device) for _ in range(self.degrees[dimension] + 1)
+            torch.zeros(num_evaluation_points, device=device)
+            for _ in range(self.degrees[dimension] + 1)
         ]
         for j in range(1, self.degrees[dimension] + 1):
-            left[j] = self.evaluation_points[:, dimension] - knot_vector[span + 1 - j]
-            right[j] = knot_vector[span + j] - self.evaluation_points[:, dimension]
+            left[j] = evaluation_points[:, dimension] - knot_vector[span + 1 - j]
+            right[j] = knot_vector[span + j] - evaluation_points[:, dimension]
             saved = torch.zeros(num_evaluation_points, device=device)
             for r in range(j):
                 ndu[j][r] = right[r + 1] + left[j - r]
@@ -308,6 +326,7 @@ class NURBSSurface(torch.nn.Module):
 
     def calculate_surface_points_and_normals(
         self,
+        evaluation_points: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -315,6 +334,8 @@ class NURBSSurface(torch.nn.Module):
 
         Parameters
         ----------
+        evaluation_points : torch.Tensor
+            The evaluation points.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -334,6 +355,7 @@ class NURBSSurface(torch.nn.Module):
         # Find span indices e direction (based on A2.1, p. 68).
         span_indices_e = self.find_span(
             dimension=0,
+            evaluation_points=evaluation_points,
             knot_vector=self.knot_vector_e,
             device=device,
         )
@@ -341,6 +363,7 @@ class NURBSSurface(torch.nn.Module):
         # Find span indices n direction (based on A2.1, p. 68).
         span_indices_n = self.find_span(
             dimension=1,
+            evaluation_points=evaluation_points,
             knot_vector=self.knot_vector_n,
             device=device,
         )
@@ -352,7 +375,7 @@ class NURBSSurface(torch.nn.Module):
         control_points = torch.cat([self.control_points, control_point_weights], dim=-1)
 
         derivatives = torch.zeros(
-            len(self.evaluation_points[:, 0]),
+            len(evaluation_points[:, 0]),
             nth_derivative + 1,
             nth_derivative + 1,
             control_points.shape[-1],
@@ -373,6 +396,7 @@ class NURBSSurface(torch.nn.Module):
         # Find derivatives of basis functions (based on A2.3, p. 72).
         basis_values_derivatives_e = self.basis_function_and_derivatives(
             dimension=0,
+            evaluation_points=evaluation_points,
             knot_vector=self.knot_vector_e,
             span=span_indices_e,
             nth_derivative=de,
@@ -380,6 +404,7 @@ class NURBSSurface(torch.nn.Module):
         )
         basis_values_derivatives_n = self.basis_function_and_derivatives(
             dimension=1,
+            evaluation_points=evaluation_points,
             knot_vector=self.knot_vector_n,
             span=span_indices_n,
             nth_derivative=dn,
@@ -390,7 +415,8 @@ class NURBSSurface(torch.nn.Module):
         # `temp` stores the vector/matrix product of the basis value derivatives and the control points.
         temp = [
             torch.zeros(
-                (len(self.evaluation_points[:, 0]), control_points.shape[-1]), device=device
+                (len(evaluation_points[:, 0]), control_points.shape[-1]),
+                device=device,
             )
             for _ in range(self.degrees[1] + 1)
         ]
@@ -423,13 +449,15 @@ class NURBSSurface(torch.nn.Module):
         return derivatives[:, 0, 0], normals
 
     def forward(
-        self, device: torch.device | None = None
+        self, evaluation_points: torch.Tensor, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Specify the forward operation of the actuator, i.e. caluclate the surface points and normals.
 
         Parameters
         ----------
+        evaluation_points : torch.Tensor
+            The evaluation points.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -442,4 +470,6 @@ class NURBSSurface(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
-        return self.calculate_surface_points_and_normals(device=device)
+        return self.calculate_surface_points_and_normals(
+            evaluation_points=evaluation_points, device=device
+        )

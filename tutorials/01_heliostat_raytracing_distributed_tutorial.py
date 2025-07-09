@@ -15,11 +15,11 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set device type.
-device = get_device()
+device = get_device(torch.device("cuda:1"))
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_multiple_heliostat_groups.h5"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
 )
 
 # Set the number of heliostat groups, this is needed for process group assignment.
@@ -44,7 +44,9 @@ with setup_distributed_environment(
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            device=device,
         )
 
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)

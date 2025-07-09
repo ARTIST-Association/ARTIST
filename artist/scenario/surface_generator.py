@@ -8,21 +8,17 @@ from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
 
 log = logging.getLogger(__name__)
-"""A logger for the surface converter."""
+"""A logger for the surface generator."""
 
 
-class SurfaceConverter:
+class SurfaceGenerator:
     """
-    Implement a converter that converts surface data from various sources to HDF5 format.
-
-    Currently the surface converter can be used for ``STRAL`` or ``PAINT`` data.
+    A surface generator for fitted and ideal surfaces.
 
     Attributes
     ----------
-    number_of_evaluation_points : torch.Tensor
-        The number of evaluation points in the east and north direction used to generate a discrete surface from NURBS.
-    number_control_points : torch.Tensor
-        Number of NURBS control points in the east an north direction.
+    number_of_control_points : torch.Tensor
+        Number of NURBS control points per facet in the east an north direction.
     degrees : torch.Tensor
         Degree of the NURBS in the east and north direction.
     step_size : int
@@ -40,16 +36,15 @@ class SurfaceConverter:
     -------
     fit_nurbs_surface()
         Fit the NURBS surface given the conversion method.
-    generate_surface_config_from_stral()
-        Generate a surface configuration from a ``STRAL`` file.
-    generate_surface_config_from_paint()
-        Generate a surface configuration from a ``PAINT`` dataset.
+    generate_fitted_surface_config()
+        Generate a fitted surface configuration.
+    generate_ideal_surface_config()
+        Generate an ideal surface configuration.
     """
 
     def __init__(
         self,
-        number_of_evaluation_points: torch.Tensor = torch.tensor([50, 50]),
-        number_control_points: torch.Tensor = torch.tensor([10, 10]),
+        number_of_control_points: torch.Tensor = torch.tensor([10, 10]),
         degrees: torch.Tensor = torch.tensor([2, 2]),
         step_size: int = 100,
         conversion_method: str = config_dictionary.convert_nurbs_from_normals,
@@ -59,7 +54,7 @@ class SurfaceConverter:
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize the converter.
+        Initialize the surface generator.
 
         Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
         exported to a binary file or downloaded from ```PAINT``. The data formats are different depending on their source.
@@ -69,10 +64,8 @@ class SurfaceConverter:
 
         Parameters
         ----------
-        number_of_evaluation_points : torch.Tensor
-            The number of evaluation points in the east and north direction used to generate a discrete surface from NURBS (default is torch.tensor([50, 50])).
-        number_control_points : torch.Tensor
-            Number of NURBS control points in the east an north direction (default is torch.tensor([10, 10])).
+        number_of_control_points : torch.Tensor
+            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([10, 10])).
         degrees : torch.Tensor
             Degree of the NURBS in the east and north direction (default is torch.tensor([2, 2])).
         step_size : int
@@ -98,8 +91,7 @@ class SurfaceConverter:
             raise NotImplementedError(
                 f"The conversion method '{conversion_method}' is not yet supported in ARTIST."
             )
-        self.number_of_evaluation_points = number_of_evaluation_points.to(device)
-        self.number_control_points = number_control_points.to(device)
+        self.number_of_control_points = number_of_control_points.to(device)
         self.degrees = degrees.to(device)
         self.step_size = step_size
 
@@ -108,7 +100,7 @@ class SurfaceConverter:
         self.initial_learning_rate = initial_learning_rate
         self.max_epoch = max_epoch
 
-    def fit_nurbs_surface(
+    def fit_nurbs(
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
@@ -149,7 +141,7 @@ class SurfaceConverter:
 
         # Initialize the NURBS surface.
         control_points = torch.zeros(
-            (self.number_control_points[0], self.number_control_points[1], 3),
+            (self.number_of_control_points[0], self.number_of_control_points[1], 3),
             device=device,
         )
 
@@ -163,13 +155,13 @@ class SurfaceConverter:
         origin_offsets_e = torch.linspace(
             -width_of_nurbs / 2,
             width_of_nurbs / 2,
-            self.number_control_points[0],
+            self.number_of_control_points[0],
             device=device,
         )
         origin_offsets_n = torch.linspace(
             -height_of_nurbs / 2,
             height_of_nurbs / 2,
-            self.number_control_points[1],
+            self.number_of_control_points[1],
             device=device,
         )
 
@@ -183,7 +175,6 @@ class SurfaceConverter:
 
         nurbs_surface = NURBSSurface(
             degrees=self.degrees,
-            evaluation_points=evaluation_points,
             control_points=control_points,
             device=device,
         )
@@ -204,6 +195,7 @@ class SurfaceConverter:
         epoch = 0
         while loss > self.tolerance and epoch <= self.max_epoch:
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points,
                 device=device
             )
 
@@ -226,8 +218,9 @@ class SurfaceConverter:
 
         return nurbs_surface
 
-    def generate_surface_config(
+    def generate_fitted_surface_config(
         self,
+        heliostat_name: str,
         facet_translation_vectors: torch.Tensor,
         canting: torch.Tensor,
         surface_points_with_facets_list: list[torch.Tensor],
@@ -235,18 +228,20 @@ class SurfaceConverter:
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
-        Generate a surface configuration from a data source.
+        Generate a fitted surface configuration.
 
         Parameters
         ----------
-        surface_points_with_facets_list : list[torch.Tensor]
-            A list of facetted surface points. Points per facet may vary.
-        surface_normals_with_facets_list : list[torch.Tensor]
-            A list of facetted surface normals. Normals per facet may vary.
+        heliostat_name : str
+            The heliostat name, used for logging.
         facet_translation_vectors : torch.Tensor
             Translation vector for each facet from heliostat origin to relative position.
         canting : torch.Tensor
             The canting vector per facet in east and north direction.
+        surface_points_with_facets_list : list[torch.Tensor]
+            A list of facetted surface points. Points per facet may vary.
+        surface_normals_with_facets_list : list[torch.Tensor]
+            A list of facetted surface normals. Normals per facet may vary.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -259,7 +254,7 @@ class SurfaceConverter:
         """
         device = get_device(device=device)
 
-        log.info("Beginning generation of the surface configuration based on data.")
+        log.info("Beginning generation of the fitted surface configuration.")
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
@@ -305,14 +300,15 @@ class SurfaceConverter:
             surface_normals_with_facets, device=device
         )
 
-        # Convert to NURBS surface.
-        log.info("Converting to NURBS surface.")
+        # Generate NURBS surface from multiple facets.
+        # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+        log.info(f"Generating NURBS surface for heliostat: {heliostat_name}.")
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
             log.info(
-                f"Converting facet {i + 1} of {surface_points_with_facets.shape[0]}."
+                f"Generating facet {i + 1} of {surface_points_with_facets.shape[0]}."
             )
-            nurbs_surface = self.fit_nurbs_surface(
+            nurbs = self.fit_nurbs(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
                 device=device,
@@ -320,18 +316,16 @@ class SurfaceConverter:
             facet_config_list.append(
                 FacetConfig(
                     facet_key=f"facet_{i + 1}",
-                    control_points=nurbs_surface.control_points.detach(),
-                    degrees=nurbs_surface.degrees,
-                    number_of_evaluation_points=self.number_of_evaluation_points,
+                    control_points=nurbs.control_points.detach(),
+                    degrees=nurbs.degrees,
                     translation_vector=facet_translation_vectors[i],
                     canting=canting[i],
                 )
             )
 
         surface_config = SurfaceConfig(facet_list=facet_config_list)
-        log.info("Surface configuration based on data complete!")
+        log.info("Surface configuration based on fit complete!")
         return surface_config
-
 
     def generate_ideal_surface_config(
         self,
@@ -340,12 +334,14 @@ class SurfaceConverter:
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
-        Generate a surface configuration from a ``PAINT`` dataset.
+        Generate an ideal surface configuration.
 
         Parameters
         ----------
-        heliostat_file_path : pathlib.Path
-            The file path to the ``PAINT`` heliostat properties data that will be converted.
+        facet_translation_vectors : torch.Tensor
+            Translation vector for each facet from heliostat origin to relative position.
+        canting : torch.Tensor
+            The canting vector per facet in east and north direction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -358,13 +354,17 @@ class SurfaceConverter:
         """
         device = get_device(device=device)
 
-        log.info(
-            "Initializing ideal heliostat surface."
-        )
+        log.info("Beginning generation of the ideal surface configuration.")
         facet_config_list = []
 
+        # Convert to 4D format.
+        facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
+            facet_translation_vectors, device=device
+        )
+        canting = utils.convert_3d_direction_to_4d_format(canting, device=device)
+
         control_points = torch.zeros(
-            (self.number_control_points[0], self.number_control_points[1], 3),
+            (self.number_of_control_points[0], self.number_of_control_points[1], 3),
             device=device,
         )
         origin_offsets_e = torch.linspace(
@@ -393,13 +393,13 @@ class SurfaceConverter:
                 facet_key=f"facet_{facet_index + 1}",
                 control_points=control_points,
                 degrees=self.degrees,
-                number_evaluation_points=self.number_of_evaluation_points,
                 translation_vector=facet_translation_vectors[facet_index],
                 canting=canting[facet_index],
             )
             facet_config_list.append(facet_config)
 
         surface_config = SurfaceConfig(facet_list=facet_config_list)
+        
         log.info("Surface configuration based on ideal heliostat complete!")
 
         return surface_config
