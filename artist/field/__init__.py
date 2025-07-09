@@ -3,7 +3,6 @@
 from artist.field.actuators import Actuators
 from artist.field.actuators_ideal import IdealActuators
 from artist.field.actuators_linear import LinearActuators
-from artist.field.facets_nurbs import NurbsFacet
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
@@ -17,7 +16,6 @@ __all__ = [
     "IdealActuators",
     "LinearActuators",
     "Surface",
-    "NurbsFacet",
     "HeliostatField",
     "HeliostatGroup",
     "HeliostatGroupRigidBody",

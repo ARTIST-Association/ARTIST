@@ -562,3 +562,37 @@ def get_center_of_mass(
     )
 
     return center_coordinates
+
+
+def create_nurbs_evaluation_grid(
+    number_of_evaluation_points: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a grid of evaluation points for a nurbs surface.
+
+    Parameters
+    ----------
+    number_of_evaluation_points : torch.Tensor
+        The number of nurbs evaluation points in east and north direction.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The evaluation points.
+    """
+    device = get_device(device=device)
+
+    evaluation_points_e = torch.linspace(
+        1e-5, 1 - 1e-5, number_of_evaluation_points[0], device=device
+    )
+    evaluation_points_n = torch.linspace(
+        1e-5, 1 - 1e-5, number_of_evaluation_points[1], device=device
+    )
+    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
+
+    return evaluation_points

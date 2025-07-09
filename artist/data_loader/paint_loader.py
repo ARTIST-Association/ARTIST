@@ -4,7 +4,6 @@ import pathlib
 from collections import Counter, defaultdict
 
 import h5py
-import numpy as np
 import torch
 
 from artist.scenario.configuration_classes import (
@@ -23,12 +22,13 @@ from artist.scenario.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
-from artist.scenario.surface_converter import SurfaceConverter
+from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the paint data loader."""
+
 
 def extract_paint_calibration_data(
     heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
@@ -69,6 +69,8 @@ def extract_paint_calibration_data(
         The target area mapping for the heliostats.
     """
     device = get_device(device=device)
+
+    log.info("Beginning extraction of calibration data from ```PAINT``` file.")
 
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
@@ -149,6 +151,8 @@ def extract_paint_calibration_data(
         torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
     )
 
+    log.info("Loading calibration data complete.")
+
     return (
         focal_spots,
         incident_ray_directions,
@@ -182,6 +186,8 @@ def extract_paint_tower_measurements(
         The configuration of the tower target areas.
     """
     device = get_device(device=device)
+
+    log.info("Beginning extraction of tower data from ```PAINT``` file.")
 
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
@@ -269,6 +275,8 @@ def extract_paint_tower_measurements(
     # Create the tower area configurations.
     target_area_list_config = TargetAreaListConfig(target_area_config_list)
 
+    log.info("Loading tower data` data complete.")
+
     return power_plant_config, target_area_list_config
 
 
@@ -276,11 +284,50 @@ def extract_paint_heliostat_properties(
     heliostat_properties_path: pathlib.Path,
     power_plant_position: torch.Tensor,
     device: torch.device | None = None,
-):
+) -> tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    KinematicDeviations,
+    torch.Tensor,
+    list[tuple[str, bool, ActuatorParameters]],
+]:
+    """
+    Extract heliostat properties from paint.
+
+    Parameters
+    ----------
+    heliostat_properties_path : pathlib.Path
+        The path to the heliostat properties file.
+    power_plant_position : torch.Tensor
+        The power plant position.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The heliostat position.
+    torch.Tensor
+        The facet translation vectors.
+    torch.Tensor
+        The facet canting vectors.
+    KinematicDeviations
+        The kinematic deviation parameters.
+    torch.Tensor
+        The initial orientation.
+    list[tuple[str, bool, ActuatorParameters]]
+        The actuator parameter list.
+    """
+    device = get_device(device=device)
+
     with open(heliostat_properties_path, "r") as file:
         heliostat_dict = json.load(file)
-    
-    log.info("Beginning extraction of data from ```PAINT``` file.")
+
+    log.info("Beginning extraction of heliostat properties data from ```PAINT``` file.")
+
     heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
         torch.tensor(
             [heliostat_dict[config_dictionary.paint_heliostat_position]],
@@ -424,25 +471,55 @@ def extract_paint_heliostat_properties(
                 device=device,
             ),
         )
-        actuator_type=paint_actuator[config_dictionary.paint_actuator_type]
-        clockwise_axis_movement=paint_actuator[
+        actuator_type = paint_actuator[config_dictionary.paint_actuator_type]
+        clockwise_axis_movement = paint_actuator[
             config_dictionary.paint_clockwise_axis_movement
         ]
-        actuator_parameters_list.append((actuator_type, clockwise_axis_movement, parameters))
+        actuator_parameters_list.append(
+            (actuator_type, clockwise_axis_movement, parameters)
+        )
+    log.info("Loading heliostat properties data complete.")
 
-    return heliostat_position, facet_translation_vectors, canting, kinematic_deviations, initial_orientation, actuator_parameters_list
+    return (
+        heliostat_position,
+        facet_translation_vectors,
+        canting,
+        kinematic_deviations,
+        initial_orientation,
+        actuator_parameters_list,
+    )
 
-def extract_paint_deflectometry_data(    
+
+def extract_paint_deflectometry_data(
     heliostat_deflectometry_path: pathlib.Path,
     number_of_facets: int,
     device: torch.device | None = None,
-):
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Extract paint deflectometry data.
+
+    Parameters
+    ----------
+    heliostat_deflectometry_path : pathlib.Path
+        The heliostat deflectometry file path.
+    number_of_facets : int
+        The number of facets.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The surface points per facet.
+    torch.Tensor
+        The surface normals per facet.
+    """
     device = get_device(device=device)
 
-    # Reading ``PAINT`` deflectometry hdf5 file.
-    log.info(
-        f"Reading PAINT deflectometry file located at: {heliostat_deflectometry_path}."
-    )
+    log.info("Beginning extraction of deflectometry data from ```PAINT``` file.")
+
     with h5py.File(heliostat_deflectometry_path, "r") as file:
         surface_points_with_facets_list = []
         surface_normals_with_facets_list = []
@@ -466,11 +543,9 @@ def extract_paint_deflectometry_data(
                 device=device,
             )
             normals_data = torch.tensor(
-                np.array(
-                    file[f"{config_dictionary.paint_facet}{f + 1}"][
-                        config_dictionary.paint_surface_normals
-                    ]
-                ),
+                file[f"{config_dictionary.paint_facet}{f + 1}"][
+                    config_dictionary.paint_surface_normals
+                ][()],
                 device=device,
             )
 
@@ -481,11 +556,14 @@ def extract_paint_deflectometry_data(
             surface_points_with_facets_list.append(single_facet_surface_points)
             surface_normals_with_facets_list.append(single_facet_surface_normals)
 
+    log.info("Loading deflectometry data complete.")
+
     return surface_points_with_facets_list, surface_normals_with_facets_list
 
-    
+
 def extract_paint_heliostats(
-    heliostat_and_deflectometry_paths: list[tuple[str, pathlib.Path, pathlib.Path] | tuple[str, pathlib.Path]],
+    paths: list[tuple[str, pathlib.Path]]
+    | list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
     aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
@@ -493,12 +571,12 @@ def extract_paint_heliostats(
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
-    
+
     Note: Currently in PAINT all heliostats use a rigid body kinematic. This is why this type is hard coded.
 
     Parameters
     ----------
-    heliostat_and_deflectometry_paths : tuple[str, pathlib.Path, pathlib.Path]
+    paths : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
@@ -525,51 +603,50 @@ def extract_paint_heliostats(
     prototype_actuator_list = None
 
     heliostat_config_list = []
-    for heliostat_index, file_tuple in enumerate(heliostat_and_deflectometry_paths):
-
+    for heliostat_index, file_tuple in enumerate(paths):
         # Generate surface configuration from data.
-        surface_converter = SurfaceConverter(
+        surface_generator = SurfaceGenerator(
             step_size=100,
             max_epoch=max_epochs_for_surface_training,
         )
 
         (
-            heliostat_position, 
-            facet_translation_vectors, 
-            canting, 
-            kinematic_deviations, 
+            heliostat_position,
+            facet_translation_vectors,
+            canting,
+            kinematic_deviations,
             initial_orientation,
-            actuator_parameters_list
+            actuator_parameters_list,
         ) = extract_paint_heliostat_properties(
             heliostat_properties_path=file_tuple[1],
             power_plant_position=power_plant_position,
-            device=device
+            device=device,
         )
 
         # If there is a deflectometry file, generate a deflectometry surface. Else, load an ideal surface.
         if len(file_tuple) == 3:
-            (
-                surface_points_with_facets_list, 
-                surface_normals_with_facets_list
-            ) = extract_paint_deflectometry_data(
-                heliostat_deflectometry_path=file_tuple[2],
-                number_of_facets=facet_translation_vectors.shape[0],
-                device=device
+            (surface_points_with_facets_list, surface_normals_with_facets_list) = (
+                extract_paint_deflectometry_data(
+                    heliostat_deflectometry_path=file_tuple[2],
+                    number_of_facets=facet_translation_vectors.shape[0],
+                    device=device,
+                )
             )
-        
+
             # Include the surface configuration.
-            surface_config = surface_converter.generate_surface_config(
-                facet_translation_vector=facet_translation_vectors,
+            surface_config = surface_generator.generate_fitted_surface_config(
+                heliostat_name=file_tuple[0],
+                facet_translation_vectors=facet_translation_vectors,
                 canting=canting,
                 surface_points_with_facets_list=surface_points_with_facets_list,
                 surface_normals_with_facets_list=surface_normals_with_facets_list,
                 device=device,
             )
-        
+
         else:
             # Include the surface configuration.
-            surface_config = surface_converter.generate_ideal_surface_config(
-                facet_translation_vector=facet_translation_vectors,
+            surface_config = surface_generator.generate_ideal_surface_config(
+                facet_translation_vectors=facet_translation_vectors,
                 canting=canting,
                 device=device,
             )
@@ -587,7 +664,9 @@ def extract_paint_heliostats(
 
         # Include the actuator configuration.
         actuator_list = []
-        for actuator_index, actuator_parameters_tuple in enumerate(actuator_parameters_list):
+        for actuator_index, actuator_parameters_tuple in enumerate(
+            actuator_parameters_list
+        ):
             actuator = ActuatorConfig(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
                 type=actuator_parameters_tuple[0],
@@ -597,7 +676,7 @@ def extract_paint_heliostats(
             actuator_list.append(actuator)
 
         actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
-        
+
         prototype_actuator_list = actuator_list
 
         # Include the heliostat configuration.

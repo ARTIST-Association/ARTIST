@@ -20,7 +20,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaListConfig,
 )
 from artist.scenario.scenario_generator import ScenarioGenerator
-from artist.scenario.surface_converter import SurfaceConverter
+from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
@@ -34,11 +34,13 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype"
+)
 
 # Specify the path to your stral_data.binp file.
 stral_file_path = pathlib.Path(
-    "please/insert/the/path/to/the/stral/data/here/test_stral_data.binp"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/stral/test_stral_data.binp"
 )
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
@@ -89,24 +91,24 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
     facet_translation_vectors,
     canting,
     surface_points_with_facets_list,
-    surface_normals_with_facets_list
+    surface_normals_with_facets_list,
 ) = stral_loader.extract_stral_deflectometry_data(
-    stral_file_path=stral_file_path,
-    device=device
+    stral_file_path=stral_file_path, device=device
 )
 
 # Generate surface configuration from STRAL data.
-surface_converter = SurfaceConverter(
+surface_generator = SurfaceGenerator(
     step_size=100,
     max_epoch=400,
 )
 
-surface_config = surface_converter.generate_surface_config(
+surface_config = surface_generator.generate_fitted_surface_config(
+    heliostat_name="heliostat_1",
     facet_translation_vectors=facet_translation_vectors,
     canting=canting,
     surface_points_with_facets_list=surface_points_with_facets_list,
     surface_normals_with_facets_list=surface_normals_with_facets_list,
-    device=device
+    device=device,
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)

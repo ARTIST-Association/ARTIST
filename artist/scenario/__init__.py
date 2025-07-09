@@ -23,7 +23,7 @@ from artist.scenario.configuration_classes import (
 )
 from artist.scenario.scenario import Scenario
 from artist.scenario.scenario_generator import ScenarioGenerator
-from artist.scenario.surface_converter import SurfaceConverter
+from artist.scenario.surface_generator import SurfaceGenerator
 
 __all__ = [
     "PowerPlantConfig",
@@ -47,5 +47,5 @@ __all__ = [
     "HeliostatListConfig",
     "Scenario",
     "ScenarioGenerator",
-    "SurfaceConverter",
+    "SurfaceGenerator",
 ]
