@@ -1,10 +1,5 @@
-import json
 import logging
-import pathlib
-import struct
 
-import h5py
-import numpy as np
 import torch
 
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
@@ -221,12 +216,12 @@ class SurfaceConverter:
 
         return nurbs_surface
 
-    def _generate_surface_config(
+    def generate_surface_config(
         self,
-        surface_points_with_facets_list: list[torch.Tensor],
-        surface_normals_with_facets_list: list[torch.Tensor],
         facet_translation_vectors: torch.Tensor,
         canting: torch.Tensor,
+        surface_points_with_facets_list: list[torch.Tensor],
+        surface_normals_with_facets_list: list[torch.Tensor],
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
@@ -327,215 +322,11 @@ class SurfaceConverter:
         log.info("Surface configuration based on data complete!")
         return surface_config
 
-    def generate_surface_config_from_stral(
+
+    def generate_ideal_surface_config(
         self,
-        stral_file_path: pathlib.Path,
-        device: torch.device | None = None,
-    ) -> SurfaceConfig:
-        """
-        Generate a surface configuration from a ``STRAL`` file.
-
-        Parameters
-        ----------
-        stral_file_path : pathlib.Path
-            The file path to the ``STRAL`` data that will be converted.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        SurfaceConfig
-            A surface configuration.
-        """
-        device = get_device(device=device)
-
-        log.info("Beginning extraction of data from ```STRAL``` file.")
-
-        # Create structures for reading ``STRAL`` file.
-        surface_header_struct = struct.Struct("=5f2I2f")
-        facet_header_struct = struct.Struct("=i9fI")
-        points_on_facet_struct = struct.Struct("=7f")
-        log.info(f"Reading STRAL file located at: {stral_file_path}")
-        with open(f"{stral_file_path}", "rb") as file:
-            surface_header_data = surface_header_struct.unpack_from(
-                file.read(surface_header_struct.size)
-            )
-
-            # Calculate the number of facets.
-            n_xy = surface_header_data[5:7]
-            number_of_facets = n_xy[0] * n_xy[1]
-
-            # Create empty tensors for storing data.
-            facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
-            canting = torch.empty(number_of_facets, 2, 3, device=device)
-            surface_points_with_facets_list = []
-            surface_normals_with_facets_list = []
-            for facet in range(number_of_facets):
-                facet_header_data = facet_header_struct.unpack_from(
-                    file.read(facet_header_struct.size)
-                )
-                facet_translation_vectors[facet] = torch.tensor(
-                    facet_header_data[1:4], dtype=torch.float, device=device
-                )
-                canting[facet, 0] = torch.tensor(
-                    facet_header_data[4:7], dtype=torch.float, device=device
-                )
-                canting[facet, 1] = torch.tensor(
-                    facet_header_data[7:10], dtype=torch.float, device=device
-                )
-                number_of_points = facet_header_data[10]
-                single_facet_surface_points = torch.empty(
-                    number_of_points, 3, device=device
-                )
-                single_facet_surface_normals = torch.empty(
-                    number_of_points, 3, device=device
-                )
-
-                points_data = points_on_facet_struct.iter_unpack(
-                    file.read(points_on_facet_struct.size * number_of_points)
-                )
-                for i, point_data in enumerate(points_data):
-                    single_facet_surface_points[i, :] = torch.tensor(
-                        point_data[:3], dtype=torch.float, device=device
-                    )
-                    single_facet_surface_normals[i, :] = torch.tensor(
-                        point_data[3:6], dtype=torch.float, device=device
-                    )
-                surface_points_with_facets_list.append(single_facet_surface_points)
-                surface_normals_with_facets_list.append(single_facet_surface_normals)
-
-        log.info("Loading ``STRAL`` data complete.")
-
-        surface_config = self._generate_surface_config(
-            surface_points_with_facets_list=surface_points_with_facets_list,
-            surface_normals_with_facets_list=surface_normals_with_facets_list,
-            facet_translation_vectors=facet_translation_vectors,
-            canting=canting,
-            device=device,
-        )
-
-        return surface_config
-
-    def generate_surface_config_from_paint(
-        self,
-        heliostat_file_path: pathlib.Path,
-        deflectometry_file_path: pathlib.Path,
-        device: torch.device | None = None,
-    ) -> SurfaceConfig:
-        """
-        Generate a surface configuration from a ``PAINT`` dataset.
-
-        Parameters
-        ----------
-        deflectometry_file_path : pathlib.Path
-            The file path to the ``PAINT`` deflectometry data that will be converted.
-        heliostat_file_path : pathlib.Path
-            The file path to the ``PAINT`` heliostat properties data that will be converted.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        SurfaceConfig
-            A surface configuration.
-        """
-        device = get_device(device=device)
-
-        log.info("Beginning extraction of data from ```PAINT``` file.")
-        # Reading ``PAINT`` heliostat json file.
-        with open(heliostat_file_path, "r") as file:
-            heliostat_dict = json.load(file)
-            number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
-                config_dictionary.paint_number_of_facets
-            ]
-
-            facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
-            canting = torch.empty(number_of_facets, 2, 3, device=device)
-
-            for facet in range(number_of_facets):
-                facet_translation_vectors[facet, :] = torch.tensor(
-                    heliostat_dict[config_dictionary.paint_facet_properties][
-                        config_dictionary.paint_facets
-                    ][facet][config_dictionary.paint_translation_vector],
-                    device=device,
-                )
-                canting[facet, 0] = torch.tensor(
-                    heliostat_dict[config_dictionary.paint_facet_properties][
-                        config_dictionary.paint_facets
-                    ][facet][config_dictionary.paint_canting_e],
-                    device=device,
-                )
-                canting[facet, 1] = torch.tensor(
-                    heliostat_dict[config_dictionary.paint_facet_properties][
-                        config_dictionary.paint_facets
-                    ][facet][config_dictionary.paint_canting_n],
-                    device=device,
-                )
-
-        # Reading ``PAINT`` deflectometry hdf5 file.
-        log.info(
-            f"Reading PAINT deflectometry file located at: {deflectometry_file_path}."
-        )
-        with h5py.File(deflectometry_file_path, "r") as file:
-            surface_points_with_facets_list = []
-            surface_normals_with_facets_list = []
-            for f in range(number_of_facets):
-                number_of_points = len(
-                    file[f"{config_dictionary.paint_facet}{f + 1}"][
-                        config_dictionary.paint_surface_points
-                    ]
-                )
-                single_facet_surface_points = torch.empty(
-                    number_of_points, 3, device=device
-                )
-                single_facet_surface_normals = torch.empty(
-                    number_of_points, 3, device=device
-                )
-
-                points_data = torch.tensor(
-                    np.array(
-                        file[f"{config_dictionary.paint_facet}{f + 1}"][
-                            config_dictionary.paint_surface_points
-                        ]
-                    ),
-                    device=device,
-                )
-                normals_data = torch.tensor(
-                    np.array(
-                        file[f"{config_dictionary.paint_facet}{f + 1}"][
-                            config_dictionary.paint_surface_normals
-                        ]
-                    ),
-                    device=device,
-                )
-
-                for i, point_data in enumerate(points_data):
-                    single_facet_surface_points[i, :] = point_data
-                for i, normal_data in enumerate(normals_data):
-                    single_facet_surface_normals[i, :] = normal_data
-                surface_points_with_facets_list.append(single_facet_surface_points)
-                surface_normals_with_facets_list.append(single_facet_surface_normals)
-
-        log.info("Loading ``PAINT`` data complete.")
-
-        surface_config = self._generate_surface_config(
-            surface_points_with_facets_list=surface_points_with_facets_list,
-            surface_normals_with_facets_list=surface_normals_with_facets_list,
-            facet_translation_vectors=facet_translation_vectors,
-            canting=canting,
-            device=device,
-        )
-
-        return surface_config
-
-
-    def generate_ideal_surface_config_from_paint(
-        self,
-        heliostat_file_path: pathlib.Path,
+        facet_translation_vectors: torch.Tensor,
+        canting: torch.Tensor,
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
@@ -556,38 +347,6 @@ class SurfaceConverter:
             A surface configuration.
         """
         device = get_device(device=device)
-
-        log.info("Beginning extraction of data from ```PAINT``` file.")
-        # Reading ``PAINT`` heliostat json file.
-        with open(heliostat_file_path, "r") as file:
-            heliostat_dict = json.load(file)
-        
-        number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
-            config_dictionary.paint_number_of_facets
-        ]
-
-        facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
-        canting = torch.empty(number_of_facets, 2, 3, device=device)
-
-        for facet in range(number_of_facets):
-            facet_translation_vectors[facet, :] = torch.tensor(
-                heliostat_dict[config_dictionary.paint_facet_properties][
-                    config_dictionary.paint_facets
-                ][facet][config_dictionary.paint_translation_vector],
-                device=device,
-            )
-            canting[facet, 0, :] = torch.tensor(
-                heliostat_dict[config_dictionary.paint_facet_properties][
-                    config_dictionary.paint_facets
-                ][facet][config_dictionary.paint_canting_e],
-                device=device,
-            )
-            canting[facet, 1, :] = torch.tensor(
-                heliostat_dict[config_dictionary.paint_facet_properties][
-                    config_dictionary.paint_facets
-                ][facet][config_dictionary.paint_canting_n],
-                device=device,
-            )
 
         log.info(
             "Initializing ideal heliostat surface."
@@ -612,7 +371,7 @@ class SurfaceConverter:
         control_points[:, :, 1] = control_points_n
         control_points[:, :, 2] = 0
 
-        for facet_index in range(number_of_facets):
+        for facet_index in range(facet_translation_vectors.shape[0]):
             facet_config = FacetConfig(
                 facet_key=f"facet_{facet_index + 1}",
                 control_points=control_points,
