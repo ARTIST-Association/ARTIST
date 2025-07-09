@@ -18,10 +18,12 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 # Set the device.
-device = get_device()
+device = get_device(torch.device("cuda:1"))
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups"
+)
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -32,11 +34,58 @@ tower_file = pathlib.Path(
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
+        "AA31",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"
+        ),
+    ),
+    (
+        "AA35",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/deflectometry.h5"
+        ),
+    ),
+    (
         "AA39",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"
+        ),
+    ),
+    (
+        "AB38",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/deflectometry.h5"
+        ),
+    ),
+    (
+        "AA28",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"
+        ),
+    ),
+    (
+        "AC43",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"
+        ),
     ),
     # (
     # "name2",
@@ -87,7 +136,7 @@ target_area = [
 ]
 
 heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
-    heliostat_and_deflectometry_paths=heliostat_files_list,
+    paths=heliostat_files_list,
     power_plant_position=power_plant_config.power_plant_position,
     aim_point=target_area[0].center,
     device=device,
