@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.scenario.configuration_classes import FacetConfig
+from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.scenario.surface_converter import SurfaceConverter
 
 
@@ -35,21 +35,17 @@ def test_surface_converter(device: torch.device) -> None:
 
     surface_converter_normals = SurfaceConverter(
         step_size=5000,
-        number_eval_points_e=10,
-        number_eval_points_n=10,
+        number_of_evaluation_points=torch.tensor([10, 10]),
         conversion_method="deflectometry",
-        number_control_points_e=5,
-        number_control_points_n=5,
+        number_control_points=torch.tensor([5, 5]),
         max_epoch=1,
     )
 
     surface_converter_points = SurfaceConverter(
         step_size=5000,
-        number_eval_points_e=10,
-        number_eval_points_n=10,
+        number_of_evaluation_points=torch.tensor([10, 10]),
         conversion_method="point_cloud",
-        number_control_points_e=5,
-        number_control_points_n=5,
+        number_control_points=torch.tensor([5, 5]),
         max_epoch=1,
     )
 
@@ -71,12 +67,14 @@ def test_surface_converter(device: torch.device) -> None:
         )
     )
 
-    assert isinstance(surface_config_paint, list)
-    assert isinstance(surface_config_stral, list)
-    assert isinstance(surface_config_stral_points, list)
-    assert all(isinstance(obj, FacetConfig) for obj in surface_config_paint)
-    assert all(isinstance(obj, FacetConfig) for obj in surface_config_stral)
-    assert all(isinstance(obj, FacetConfig) for obj in surface_config_stral_points)
+    assert isinstance(surface_config_paint, SurfaceConfig)
+    assert isinstance(surface_config_stral, SurfaceConfig)
+    assert isinstance(surface_config_stral_points, SurfaceConfig)
+    assert all(isinstance(obj, FacetConfig) for obj in surface_config_paint.facet_list)
+    assert all(isinstance(obj, FacetConfig) for obj in surface_config_stral.facet_list)
+    assert all(
+        isinstance(obj, FacetConfig) for obj in surface_config_stral_points.facet_list
+    )
 
 
 def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
@@ -93,23 +91,16 @@ def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
     AssertionError
         If test does not complete as expected.
     """
-    surface_converter = SurfaceConverter(
-        step_size=5000,
-        number_eval_points_e=10,
-        number_eval_points_n=10,
-        number_control_points_e=5,
-        number_control_points_n=5,
-        max_epoch=1,
-    )
-
+    invalid_method = "invalid-conversion-method"
     with pytest.raises(NotImplementedError) as exc_info:
-        surface_converter.fit_nurbs_surface(
-            surface_points=torch.rand(10, 4, device=device),
-            surface_normals=torch.rand(10, 4, device=device),
-            conversion_method="invalid_method",
+        SurfaceConverter(
+            step_size=5000,
+            number_of_evaluation_points=torch.tensor([10, 10]),
+            number_control_points=torch.tensor([5, 5]),
+            conversion_method=invalid_method,
             max_epoch=1,
-            device=device,
         )
-    assert "Conversion method invalid_method not yet implemented!" in str(
-        exc_info.value
+    assert (
+        f"The conversion method '{invalid_method}' is not yet supported in ARTIST"
+        in str(exc_info.value)
     )
