@@ -98,6 +98,7 @@ class Scenario:
     def load_scenario_from_hdf5(
         cls,
         scenario_file: h5py.File,
+        number_of_points_per_facet: torch.Tensor = torch.tensor([50, 50]),
         device: torch.device | None = None,
     ) -> Self:
         """
@@ -107,6 +108,8 @@ class Scenario:
         ----------
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
+        number_of_points_per_facet : torch.Tensor
+            The number of surface points per facet (default is torch.tensor([50, 50])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -217,6 +220,7 @@ class Scenario:
             prototype_surface=prototype_surface,
             prototype_kinematic=prototype_kinematic,
             prototype_actuators=prototype_actuators,
+            number_of_points_per_facet=number_of_points_per_facet.to(device),
             device=device,
         )
 
@@ -312,8 +316,18 @@ class Scenario:
                     )
                 if (
                     light_direction.shape != torch.Size([4])
-                    or not torch.allclose(light_direction[3], torch.tensor(0.0, device=device), rtol=1e-2, atol=1e-2)
-                    or not torch.allclose(torch.norm(light_direction), torch.tensor(1.0, device=device), rtol=1e-4, atol=1e-4)
+                    or not torch.allclose(
+                        light_direction[3],
+                        torch.tensor(0.0, device=device),
+                        rtol=1e-2,
+                        atol=1e-2,
+                    )
+                    or not torch.allclose(
+                        torch.norm(light_direction),
+                        torch.tensor(1.0, device=device),
+                        rtol=1e-4,
+                        atol=1e-4,
+                    )
                 ):
                     errors.append(
                         f"Invalid incident ray direction (Found at index {i} of provided mapping). This must be a normalized 4D tensor with last element 0.0."

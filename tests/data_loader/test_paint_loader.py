@@ -241,10 +241,65 @@ def test_extract_paint_tower_measurements(
                 torch.tensor(154166.671875000000),
                 torch.tensor([0, 0, 1, 0]),
                 torch.tensor(
-                    [0.802484571934, 0.000000000000, -0.004984567873, 0.000000000000]
+                    [
+                        [
+                            8.024845719337e-01,
+                            0.000000000000e00,
+                            -4.984567873180e-03,
+                            0.000000000000e00,
+                        ],
+                        [
+                            1.956921187229e-05,
+                            6.374921798706e-01,
+                            3.150522708893e-03,
+                            0.000000000000e00,
+                        ],
+                    ]
                 ),
+                torch.tensor([-0.499823451042, -0.166845142841, 0.002066427376]),
             ],
-        )
+        ),
+        (
+            [
+                (
+                    "heliostat_1",
+                    pathlib.Path(ARTIST_ROOT)
+                    / "tests/data/field_data/AA39-heliostat-properties.json",
+                )
+            ],
+            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            torch.tensor(
+                [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
+            ),
+            2,
+            [HeliostatListConfig, PrototypeConfig],
+            [
+                torch.tensor(
+                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                ),
+                2,
+                "linear",
+                torch.tensor(154166.671875000000),
+                torch.tensor([0, 0, 1, 0]),
+                torch.tensor(
+                    [
+                        [
+                            8.024845719337e-01,
+                            0.000000000000e00,
+                            -4.984567873180e-03,
+                            0.000000000000e00,
+                        ],
+                        [
+                            1.956921187229e-05,
+                            6.374921798706e-01,
+                            3.150522708893e-03,
+                            0.000000000000e00,
+                        ],
+                    ]
+                ),
+                torch.tensor([-0.500000000000, -0.166666656733, 0.000000000000]),
+            ],
+        ),
     ],
 )
 def test_extract_paint_heliostats(
@@ -257,7 +312,7 @@ def test_extract_paint_heliostats(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat properties loader for ``PAINT`` data.
+    Test the heliostat extraction for ``PAINT`` data.
 
     Parameters
     ----------
@@ -283,7 +338,7 @@ def test_extract_paint_heliostats(
     """
     extracted_list = list(
         paint_loader.extract_paint_heliostats(
-            heliostat_and_deflectometry_paths=heliostat_and_deflectometry_paths,
+            paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
             aim_point=aim_point.to(device),
             max_epochs_for_surface_training=max_epochs_for_surface_training,
@@ -321,8 +376,12 @@ def test_extract_paint_heliostats(
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].surface.facet_list[0].canting_e,
+        extracted_list[0].heliostat_list[0].surface.facet_list[0].canting,
         expected_heliostat[5].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 3],
+        expected_heliostat[6].to(device),
     )
 
 

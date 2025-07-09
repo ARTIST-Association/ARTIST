@@ -4,18 +4,18 @@ import struct
 
 import torch
 
-from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the stral data loader."""
 
+
 def extract_stral_deflectometry_data(
     stral_file_path: pathlib.Path,
     device: torch.device | None = None,
-) -> SurfaceConfig:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Generate a surface configuration from a ``STRAL`` file.
+    Extract deflectometry data from a ```STRAL`` file.
 
     Parameters
     ----------
@@ -28,8 +28,14 @@ def extract_stral_deflectometry_data(
 
     Returns
     -------
-    SurfaceConfig
-        A surface configuration.
+    torch.Tensor
+        The facet translation vectors.
+    torch.Tensor
+        The facet canting vectors.
+    torch.Tensor
+        The surface points per facet.
+    torch.Tensor
+        The surface normals per facet.
     """
     device = get_device(device=device)
 
@@ -90,4 +96,9 @@ def extract_stral_deflectometry_data(
 
     log.info("Loading ``STRAL`` data complete.")
 
-    return facet_translation_vectors, canting, surface_points_with_facets_list, surface_normals_with_facets_list
+    return (
+        facet_translation_vectors,
+        canting,
+        surface_points_with_facets_list,
+        surface_normals_with_facets_list,
+    )
