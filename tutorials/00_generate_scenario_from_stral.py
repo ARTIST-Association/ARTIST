@@ -2,6 +2,7 @@ import pathlib
 
 import torch
 
+from artist.data_loader import stral_loader
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -84,14 +85,28 @@ light_source_list = [light_source1_config]
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
+(
+    facet_translation_vectors,
+    canting,
+    surface_points_with_facets_list,
+    surface_normals_with_facets_list
+) = stral_loader.extract_stral_deflectometry_data(
+    stral_file_path=stral_file_path,
+    device=device
+)
+
 # Generate surface configuration from STRAL data.
 surface_converter = SurfaceConverter(
     step_size=100,
     max_epoch=400,
 )
 
-surface_config = surface_converter.generate_surface_config_from_stral(
-    stral_file_path=stral_file_path, device=device
+surface_config = surface_converter.generate_surface_config(
+    facet_translation_vectors=facet_translation_vectors,
+    canting=canting,
+    surface_points_with_facets_list=surface_points_with_facets_list,
+    surface_normals_with_facets_list=surface_normals_with_facets_list,
+    device=device
 )
 
 surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
