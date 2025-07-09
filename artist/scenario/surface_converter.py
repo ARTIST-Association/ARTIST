@@ -29,7 +29,7 @@ class SurfaceConverter:
     number_control_points : torch.Tensor
         Number of NURBS control points in the east an north direction.
     degrees : torch.Tensor
-        Degree of the NURBS in the east and north direction. 
+        Degree of the NURBS in the east and north direction.
     step_size : int
         The size of the step used to reduce the number of evaluation points for compute efficiency.
     conversion_method : str
@@ -40,7 +40,7 @@ class SurfaceConverter:
         Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces.
     max_epoch : int
         Maximum number of epochs to use when fitting NURBS surfaces.
-    
+
     Methods
     -------
     fit_nurbs_surface()
@@ -79,7 +79,7 @@ class SurfaceConverter:
         number_control_points : torch.Tensor
             Number of NURBS control points in the east an north direction (default is torch.tensor([10, 10])).
         degrees : torch.Tensor
-            Degree of the NURBS in the east and north direction (default is torch.tensor([2, 2])). 
+            Degree of the NURBS in the east and north direction (default is torch.tensor([2, 2])).
         step_size : int
             The size of the step used to reduce the number of evaluation points for compute efficiency (default is 100).
         conversion_method : str
@@ -95,10 +95,19 @@ class SurfaceConverter:
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
+        accepted_conversion_methods = [
+            config_dictionary.convert_nurbs_from_points,
+            config_dictionary.convert_nurbs_from_normals,
+        ]
+        if conversion_method not in accepted_conversion_methods:
+            raise NotImplementedError(
+                f"The conversion method '{conversion_method}' is not yet supported in ARTIST."
+            )
         self.number_of_evaluation_points = number_of_evaluation_points.to(device)
         self.number_control_points = number_control_points.to(device)
         self.degrees = degrees.to(device)
         self.step_size = step_size
+
         self.conversion_method = conversion_method
         self.tolerance = tolerance
         self.initial_learning_rate = initial_learning_rate
@@ -144,9 +153,11 @@ class SurfaceConverter:
         evaluation_points[:, 2] = 0
 
         # Initialize the NURBS surface.
-        control_points = torch.zeros((self.number_control_points[0], self.number_control_points[1], 3), device=device)
+        control_points = torch.zeros(
+            (self.number_control_points[0], self.number_control_points[1], 3),
+            device=device,
+        )
 
-        #TODO: width and height always 1.0
         width_of_nurbs = torch.max(evaluation_points[:, 0]) - torch.min(
             evaluation_points[:, 0]
         )
@@ -167,7 +178,9 @@ class SurfaceConverter:
             device=device,
         )
 
-        control_points_e, control_points_n = torch.meshgrid(origin_offsets_e, origin_offsets_n, indexing='ij')
+        control_points_e, control_points_n = torch.meshgrid(
+            origin_offsets_e, origin_offsets_n, indexing="ij"
+        )
 
         control_points[:, :, 0] = control_points_e
         control_points[:, :, 1] = control_points_n
@@ -205,10 +218,7 @@ class SurfaceConverter:
                 loss = (points - surface_points).abs().mean()
             elif self.conversion_method == config_dictionary.convert_nurbs_from_normals:
                 loss = (normals - surface_normals).abs().mean()
-            else:
-                raise NotImplementedError(
-                    f"Conversion method {self.conversion_method} not yet implemented!"
-                )
+
             loss.backward()
 
             optimizer.step()
@@ -322,7 +332,7 @@ class SurfaceConverter:
                     canting=canting[i],
                 )
             )
-        
+
         surface_config = SurfaceConfig(facet_list=facet_config_list)
         log.info("Surface configuration based on data complete!")
         return surface_config
@@ -532,7 +542,6 @@ class SurfaceConverter:
 
         return surface_config
 
-
     def generate_ideal_surface_config_from_paint(
         self,
         heliostat_file_path: pathlib.Path,
@@ -561,7 +570,7 @@ class SurfaceConverter:
         # Reading ``PAINT`` heliostat json file.
         with open(heliostat_file_path, "r") as file:
             heliostat_dict = json.load(file)
-        
+
         number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
             config_dictionary.paint_number_of_facets
         ]
@@ -589,24 +598,29 @@ class SurfaceConverter:
                 device=device,
             )
 
-        log.info(
-            "Initializing ideal heliostat surface."
-        )
+        log.info("Initializing ideal heliostat surface.")
         facet_config_list = []
 
-        control_points = torch.zeros((self.number_control_points[0], self.number_control_points[1], 3), device=device)
+        control_points = torch.zeros(
+            (self.number_control_points[0], self.number_control_points[1], 3),
+            device=device,
+        )
         origin_offsets_e = torch.linspace(
-            -0.5, 0.5,
+            -0.5,
+            0.5,
             control_points.shape[0],
             device=device,
         )
         origin_offsets_n = torch.linspace(
-            -0.5, 0.5,
+            -0.5,
+            0.5,
             control_points.shape[1],
             device=device,
         )
-        
-        control_points_e, control_points_n = torch.meshgrid(origin_offsets_e, origin_offsets_n, indexing='ij')
+
+        control_points_e, control_points_n = torch.meshgrid(
+            origin_offsets_e, origin_offsets_n, indexing="ij"
+        )
 
         control_points[:, :, 0] = control_points_e
         control_points[:, :, 1] = control_points_n
@@ -622,8 +636,8 @@ class SurfaceConverter:
                 canting=canting[facet_index],
             )
             facet_config_list.append(facet_config)
-        
+
         surface_config = SurfaceConfig(facet_list=facet_config_list)
         log.info("Surface configuration based on ideal heliostat complete!")
-        
+
         return surface_config
