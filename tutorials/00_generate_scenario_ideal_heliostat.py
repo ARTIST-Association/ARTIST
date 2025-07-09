@@ -82,8 +82,8 @@ target_area = [
     if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
-heliostat_list_config, prototype_config = paint_loader.extract_ideal_heliostats(
-    heliostat_paths=heliostat_files_list,
+heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
+    paths=heliostat_files_list,
     power_plant_position=power_plant_config.power_plant_position,
     aim_point=target_area[0].center,
     device=device,

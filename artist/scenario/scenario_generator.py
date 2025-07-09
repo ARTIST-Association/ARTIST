@@ -143,13 +143,21 @@ class ScenarioGenerator:
         )
         # Define accepted number of points based on the prototype.
         accepted_number_of_points = (
-            self.prototype_config.surface_prototype.facet_list[0].number_eval_points_e
-            * self.prototype_config.surface_prototype.facet_list[0].number_eval_points_n
+            self.prototype_config.surface_prototype.facet_list[
+                0
+            ].number_of_evaluation_points[0]
+            * self.prototype_config.surface_prototype.facet_list[
+                0
+            ].number_of_evaluation_points[1]
         )
         # Check that every facet in the prototype has the same number of evaluation points.
         if not all(
-            self.prototype_config.surface_prototype.facet_list[i].number_eval_points_e
-            * self.prototype_config.surface_prototype.facet_list[i].number_eval_points_n
+            self.prototype_config.surface_prototype.facet_list[
+                i
+            ].number_of_evaluation_points[0]
+            * self.prototype_config.surface_prototype.facet_list[
+                i
+            ].number_of_evaluation_points[1]
             == accepted_number_of_points
             for i in range(accepted_number_of_facets)
         ):
@@ -165,8 +173,8 @@ class ScenarioGenerator:
                         "Individual heliostats must all have the same number of facets!"
                     )
                 if not all(
-                    heliostat.surface.facet_list[i].number_eval_points_e
-                    * heliostat.surface.facet_list[i].number_eval_points_n
+                    heliostat.surface.facet_list[i].number_of_evaluation_points[0]
+                    * heliostat.surface.facet_list[i].number_of_evaluation_points[1]
                     == accepted_number_of_points
                     for i in range(accepted_number_of_facets)
                 ):
