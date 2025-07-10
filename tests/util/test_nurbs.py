@@ -84,7 +84,7 @@ def test_nurbs(device: torch.device) -> None:
     surface_points = torch.cat((surface_points, ones), dim=1)
 
     evaluation_points = utils.create_nurbs_evaluation_grid(
-        number_of_evaluation_points=torch.tensor([40, 40], device=device)
+        number_of_evaluation_points=torch.tensor([40, 40], device=device), device=device
     )
 
     num_control_points_e = 20

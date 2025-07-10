@@ -204,7 +204,7 @@ class NURBSSurface(torch.nn.Module):
 
     def basis_function_and_derivatives(
         self,
-        dimension: int,
+        degree: int,
         evaluation_points: torch.Tensor,
         knot_vector: torch.Tensor,
         span: torch.Tensor,
@@ -218,8 +218,8 @@ class NURBSSurface(torch.nn.Module):
 
         Parameters
         ----------
-        dimension : int
-            The NURBS dimension.
+        degree : int
+            The NURBS degree.
         evaluation_points : torch.Tensor
             The evaluation points.
         knot_vector : torch.Tensor
@@ -240,28 +240,26 @@ class NURBSSurface(torch.nn.Module):
         """
         device = get_device(device=device)
 
-        num_evaluation_points = len(evaluation_points[:, dimension])
+        num_evaluation_points = len(evaluation_points)
 
         # Introduce `ndu` to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
         ndu = [
             [
                 torch.zeros(num_evaluation_points, device=device)
-                for _ in range(self.degrees[dimension] + 1)
+                for _ in range(degree + 1)
             ]
-            for _ in range(self.degrees[dimension] + 1)
+            for _ in range(degree + 1)
         ]
         ndu[0][0] = torch.ones_like(ndu[0][0], device=device)
         left = [
-            torch.zeros(num_evaluation_points, device=device)
-            for _ in range(self.degrees[dimension] + 1)
+            torch.zeros(num_evaluation_points, device=device) for _ in range(degree + 1)
         ]
         right = [
-            torch.zeros(num_evaluation_points, device=device)
-            for _ in range(self.degrees[dimension] + 1)
+            torch.zeros(num_evaluation_points, device=device) for _ in range(degree + 1)
         ]
-        for j in range(1, self.degrees[dimension] + 1):
-            left[j] = evaluation_points[:, dimension] - knot_vector[span + 1 - j]
-            right[j] = knot_vector[span + j] - evaluation_points[:, dimension]
+        for j in range(1, degree + 1):
+            left[j] = evaluation_points - knot_vector[span + 1 - j]
+            right[j] = knot_vector[span + j] - evaluation_points
             saved = torch.zeros(num_evaluation_points, device=device)
             for r in range(j):
                 ndu[j][r] = right[r + 1] + left[j - r]
@@ -273,28 +271,28 @@ class NURBSSurface(torch.nn.Module):
         derivatives = [
             [
                 torch.zeros(num_evaluation_points, device=device)
-                for _ in range(self.degrees[dimension] + 1)
+                for _ in range(degree + 1)
             ]
             for _ in range(nth_derivative + 1)
         ]
-        for j in range(self.degrees[dimension] + 1):
-            derivatives[0][j] = ndu[j][self.degrees[dimension]]
+        for j in range(degree + 1):
+            derivatives[0][j] = ndu[j][degree]
         # `a` stores (in alternating fashion) the two most recently computed rows a_k,j and a_k-1,j.
         a = [
             [
                 torch.zeros(num_evaluation_points, device=device)
-                for _ in range(self.degrees[dimension] + 1)
+                for _ in range(degree + 1)
             ]
             for _ in range(2)
         ]
-        for r in range(self.degrees[dimension] + 1):
+        for r in range(degree + 1):
             s1 = 0
             s2 = 1
             a[0][0] = torch.ones_like(a[0][0], device=device)
             for k in range(1, nth_derivative + 1):
                 d = torch.zeros(num_evaluation_points, device=device)
                 rk = r - k
-                pk = self.degrees[dimension] - k
+                pk = degree - k
                 if r >= k:
                     a[s2][0] = a[s1][0] / ndu[pk + 1][rk]
                     d = a[s2][0] * ndu[rk][pk]
@@ -305,7 +303,7 @@ class NURBSSurface(torch.nn.Module):
                 if r - 1 <= pk:
                     j2 = k - 1
                 else:
-                    j2 = self.degrees[dimension] - r
+                    j2 = degree - r
                 for j in range(j1, j2 + 1):
                     a[s2][j] = (a[s1][j] - a[s1][j - 1]) / ndu[pk + 1][rk + j]
                     d += a[s2][j] * ndu[rk + j][pk]
@@ -317,11 +315,11 @@ class NURBSSurface(torch.nn.Module):
                 s1 = s2
                 s2 = j
 
-        r = self.degrees[dimension]
+        r = degree
         for k in range(1, nth_derivative + 1):
-            for j in range(self.degrees[dimension] + 1):
+            for j in range(degree + 1):
                 derivatives[k][j] *= r
-            r *= self.degrees[dimension] - k
+            r *= degree - k
         return derivatives
 
     def calculate_surface_points_and_normals(
@@ -395,16 +393,16 @@ class NURBSSurface(torch.nn.Module):
 
         # Find derivatives of basis functions (based on A2.3, p. 72).
         basis_values_derivatives_e = self.basis_function_and_derivatives(
-            dimension=0,
-            evaluation_points=evaluation_points,
+            degree=self.degrees[0].item(),
+            evaluation_points=evaluation_points[:, 0],
             knot_vector=self.knot_vector_e,
             span=span_indices_e,
             nth_derivative=de,
             device=device,
         )
         basis_values_derivatives_n = self.basis_function_and_derivatives(
-            dimension=1,
-            evaluation_points=evaluation_points,
+            degree=self.degrees[1].item(),
+            evaluation_points=evaluation_points[:, 1],
             knot_vector=self.knot_vector_n,
             span=span_indices_n,
             nth_derivative=dn,
