@@ -44,8 +44,8 @@ class SurfaceGenerator:
 
     def __init__(
         self,
-        number_of_control_points: torch.Tensor = torch.tensor([10, 10]),
-        degrees: torch.Tensor = torch.tensor([2, 2]),
+        number_of_control_points: torch.Tensor = torch.tensor([20, 20]),
+        degrees: torch.Tensor = torch.tensor([3, 3]),
         step_size: int = 100,
         conversion_method: str = config_dictionary.convert_nurbs_from_normals,
         tolerance: float = 3e-5,
@@ -65,9 +65,9 @@ class SurfaceGenerator:
         Parameters
         ----------
         number_of_control_points : torch.Tensor
-            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([10, 10])).
+            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20, 20])).
         degrees : torch.Tensor
-            Degree of the NURBS in the east and north direction (default is torch.tensor([2, 2])).
+            Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
         step_size : int
             The size of the step used to reduce the number of evaluation points for compute efficiency (default is 100).
         conversion_method : str
@@ -165,13 +165,23 @@ class SurfaceGenerator:
             device=device,
         )
 
-        control_points_e, control_points_n = torch.meshgrid(
-            origin_offsets_e, origin_offsets_n, indexing="ij"
+        # control_points_e, control_points_n = torch.meshgrid(
+        #     origin_offsets_e, origin_offsets_n, indexing="ij"
+        # )
+
+        # control_points[:, :, 0] = control_points_e
+        # control_points[:, :, 1] = control_points_n
+        # control_points[:, :, 2] = 0
+
+        origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
+        origin_offsets = torch.hstack(
+            (
+                origin_offsets,
+                torch.zeros((len(origin_offsets), 1), device=device),
+            )
         )
 
-        control_points[:, :, 0] = control_points_e
-        control_points[:, :, 1] = control_points_n
-        control_points[:, :, 2] = 0
+        control_points = origin_offsets.reshape(control_points.shape)
 
         nurbs_surface = NURBSSurface(
             degrees=self.degrees,
@@ -195,8 +205,7 @@ class SurfaceGenerator:
         epoch = 0
         while loss > self.tolerance and epoch <= self.max_epoch:
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points,
-                device=device
+                evaluation_points=evaluation_points, device=device
             )
 
             optimizer.zero_grad()
@@ -399,7 +408,7 @@ class SurfaceGenerator:
             facet_config_list.append(facet_config)
 
         surface_config = SurfaceConfig(facet_list=facet_config_list)
-        
+
         log.info("Surface configuration based on ideal heliostat complete!")
 
         return surface_config

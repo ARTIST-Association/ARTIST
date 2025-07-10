@@ -95,7 +95,7 @@ class ScenarioGenerator:
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
-        self._check_facet_and_point_size()
+        self._ceck_equal_facet_numbers()
         self.version = version
 
     def _get_number_of_heliostat_groups(self) -> int:
@@ -127,7 +127,7 @@ class ScenarioGenerator:
                     unique_groups.add((selected_kinematic_type, selected_actuator_type))
         return len(unique_groups)
 
-    def _check_facet_and_point_size(self):
+    def _ceck_equal_facet_numbers(self):
         """
         Check that each heliostat has the same number of facets and each facet the same number of evaluation points.
 
@@ -141,29 +141,6 @@ class ScenarioGenerator:
         accepted_number_of_facets = len(
             self.prototype_config.surface_prototype.facet_list
         )
-        # Define accepted number of points based on the prototype.
-        accepted_number_of_points = (
-            self.prototype_config.surface_prototype.facet_list[
-                0
-            ].number_of_evaluation_points[0]
-            * self.prototype_config.surface_prototype.facet_list[
-                0
-            ].number_of_evaluation_points[1]
-        )
-        # Check that every facet in the prototype has the same number of evaluation points.
-        if not all(
-            self.prototype_config.surface_prototype.facet_list[
-                i
-            ].number_of_evaluation_points[0]
-            * self.prototype_config.surface_prototype.facet_list[
-                i
-            ].number_of_evaluation_points[1]
-            == accepted_number_of_points
-            for i in range(accepted_number_of_facets)
-        ):
-            raise ValueError(
-                "The number of evaluation points for each facet is different in the surface prototype!"
-            )
 
         # Check that every heliostat has the same number of facets and evaluation points.
         for heliostat in self.heliostat_list_config.heliostat_list:
@@ -171,15 +148,6 @@ class ScenarioGenerator:
                 if len(heliostat.surface.facet_list) != accepted_number_of_facets:
                     raise ValueError(
                         "Individual heliostats must all have the same number of facets!"
-                    )
-                if not all(
-                    heliostat.surface.facet_list[i].number_of_evaluation_points[0]
-                    * heliostat.surface.facet_list[i].number_of_evaluation_points[1]
-                    == accepted_number_of_points
-                    for i in range(accepted_number_of_facets)
-                ):
-                    raise ValueError(
-                        "The number of evaluation points for each facet is different in the individual heliostat!"
                     )
 
     def _flatten_dict(
