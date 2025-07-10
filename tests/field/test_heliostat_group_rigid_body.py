@@ -35,6 +35,8 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
             [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
             device=device,
         ),
+        nurbs_control_points=torch.empty(1, device=device),
+        nurbs_degrees=torch.tensor([2, 2], device=device),
         kinematic_deviation_parameters=torch.rand((3, 18), device=device),
         actuator_parameters=actuator_parameters,
         device=device,
