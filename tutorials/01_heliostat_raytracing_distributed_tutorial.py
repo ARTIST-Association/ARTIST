@@ -15,7 +15,7 @@ torch.cuda.manual_seed(7)
 set_logger_config()
 
 # Set device type.
-device = get_device(torch.device("cuda:1"))
+device = get_device(torch.device("cuda"))
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(

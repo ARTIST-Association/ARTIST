@@ -87,7 +87,9 @@ def test_integration_alignment(
         "r",
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=config_h5, device=device
+            scenario_file=config_h5,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            device=device,
         )
 
     bitmap_resolution_e, bitmap_resolution_u = 256, 256
@@ -151,4 +153,5 @@ def test_integration_alignment(
     )
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+
     torch.testing.assert_close(flux_distributions, expected, atol=5e-4, rtol=5e-4)

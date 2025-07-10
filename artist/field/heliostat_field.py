@@ -308,6 +308,9 @@ class HeliostatField:
 
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
+            number_of_heliostats_in_group = len(
+                grouped_field_data[heliostat_group_name][config_dictionary.names]
+            )
             heliostat_groups.append(
                 type_mappings.heliostat_group_type_mapping[heliostat_group_name](
                     names=grouped_field_data[heliostat_group_name][
@@ -318,10 +321,10 @@ class HeliostatField:
                     ],
                     surface_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.surface_points
-                    ],
+                    ].reshape(number_of_heliostats_in_group, -1, 4),
                     surface_normals=grouped_field_data[heliostat_group_name][
                         config_dictionary.surface_normals
-                    ],
+                    ].reshape(number_of_heliostats_in_group, -1, 4),
                     nurbs_degrees=grouped_field_data[heliostat_group_name][
                         config_dictionary.facet_degrees
                     ],

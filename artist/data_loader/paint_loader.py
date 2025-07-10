@@ -566,7 +566,7 @@ def extract_paint_heliostats(
     | list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
     aim_point: torch.Tensor,
-    max_epochs_for_surface_training: int = 400,
+    max_epochs_for_surface_training: int = 10000,
     device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
