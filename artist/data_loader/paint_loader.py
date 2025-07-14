@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 """A logger for the paint data loader."""
 
 
-def extract_paint_calibration_data(
+def extract_paint_calibration_properties_data(
     heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
@@ -70,7 +70,7 @@ def extract_paint_calibration_data(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of calibration data from ```PAINT``` file.")
+    log.info("Beginning extraction of calibration properties data from ```PAINT``` file.")
 
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
@@ -151,7 +151,7 @@ def extract_paint_calibration_data(
         torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
     )
 
-    log.info("Loading calibration data complete.")
+    log.info("Loading calibration properties data complete.")
 
     return (
         focal_spots,

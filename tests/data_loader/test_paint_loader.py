@@ -100,7 +100,7 @@ def test_extract_paint_calibration_data(
         If test does not complete as expected.
     """
     extracted_list = list(
-        paint_loader.extract_paint_calibration_data(
+        paint_loader.extract_paint_calibration_properties_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             power_plant_position=power_plant_position.to(device),
             heliostat_names=["AA31", "AA39"],
