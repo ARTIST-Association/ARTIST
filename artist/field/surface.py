@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from artist.field.facets_nurbs import NurbsFacet
 from artist.util.configuration_classes import SurfaceConfig
 from artist.util.environment_setup import get_device
-from artist.util.flattening_utils import SurfaceFlattener
 
 
 class Surface(torch.nn.Module):
@@ -26,7 +25,7 @@ class Surface(torch.nn.Module):
         Specify the forward pass.
     """
 
-    def __init__(self, surface_config: SurfaceConfig, flattener: SurfaceFlattener) -> None:
+    def __init__(self, surface_config: SurfaceConfig, device) -> None:
         """
         Initialize the surface.
 
@@ -41,7 +40,6 @@ class Surface(torch.nn.Module):
             The surface configuration parameters used to construct the surface.
         """
         super().__init__()
-        self.flattner = flattener
         self.facets = [
             NurbsFacet(
                 control_points=facet_config.control_points,
@@ -55,6 +53,7 @@ class Surface(torch.nn.Module):
             )
             for facet_config in surface_config.facet_list
         ]
+        self.device= get_device(device)
 
 
     def get_surface_points_and_normals(
@@ -77,7 +76,7 @@ class Surface(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
-        device = get_device(device=device)
+        #device = get_device(device=device)
 
         eval_point_per_facet = (
             self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
@@ -88,6 +87,7 @@ class Surface(torch.nn.Module):
         surface_normals = torch.empty(
             len(self.facets), eval_point_per_facet, 4, device=device
         )
+        
         for i, facet in enumerate(self.facets):
             facet_surface = facet.create_nurbs_surface(device=device)
             (
