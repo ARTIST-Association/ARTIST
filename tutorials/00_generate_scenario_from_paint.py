@@ -22,7 +22,7 @@ device = get_device(torch.device("cuda"))
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups"
 )
 
 # Specify the path to your tower-measurements.json file.
@@ -33,24 +33,24 @@ tower_file = pathlib.Path(
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
-    # (
-    #     "AA31",
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"
-    #     ),
-    # ),
-    # (
-    #     "AA35",
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/deflectometry.h5"
-    #     ),
-    # ),
+    (
+        "AA31",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"
+        ),
+    ),
+    (
+        "AA35",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA35/deflectometry.h5"
+        ),
+    ),
     (
         "AA39",
         pathlib.Path(
@@ -60,33 +60,33 @@ heliostat_files_list = [
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"
         ),
     ),
-    # (
-    #     "AB38",
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/deflectometry.h5"
-    #     ),
-    # ),
-    # (
-    #     "AA28",
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"
-    #     ),
-    # ),
-    # (
-    #     "AC43",
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path(
-    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"
-    #     ),
-    # ),
+    (
+        "AB38",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AB38/deflectometry.h5"
+        ),
+    ),
+    (
+        "AA28",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"
+        ),
+    ),
+    (
+        "AC43",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
+        ),
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"
+        ),
+    ),
     # (
     # "name2",
     # pathlib.Path(
