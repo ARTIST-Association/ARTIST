@@ -52,7 +52,10 @@ def surface_config(
                 device=device,
             ),
             degrees=torch.tensor(
-                facet_config[facet][config_dictionary.facet_degrees][()]
+                [facet_config[facet][config_dictionary.facet_degrees][()][0],
+                 facet_config[facet][config_dictionary.facet_degrees][()][1]],
+                dtype=torch.float,
+                device=device
             ),
             translation_vector=torch.tensor(
                 facet_config[facet][config_dictionary.facets_translation_vector][()],

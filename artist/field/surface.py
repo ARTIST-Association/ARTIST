@@ -3,7 +3,7 @@ import torch
 from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util import utils
 from artist.util.environment_setup import get_device
-from artist.util.nurbs import NURBSSurface
+from artist.util.nurbs import NURBSSurfaces
 
 
 class Surface:
@@ -45,15 +45,17 @@ class Surface:
         """
         device = get_device(device=device)
 
+        number_of_facets = len(surface_config.facet_list)
+
         self.nurbs_facets = []
         self.facet_translation_vectors = torch.empty(
-            (len(surface_config.facet_list), 4), device=device
+            (number_of_facets, 4), device=device
         )
         for facet_index, facet_config in enumerate(surface_config.facet_list):
             self.nurbs_facets.append(
-                NURBSSurface(
-                    degrees=facet_config.degrees,
-                    control_points=facet_config.control_points,
+                NURBSSurfaces(
+                    degrees=facet_config.degrees.unsqueeze(0).unsqueeze(0).expand(1, number_of_facets, -1),
+                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(0).expand(1, number_of_facets, -1, -1, -1),
                     device=device,
                 )
             )
