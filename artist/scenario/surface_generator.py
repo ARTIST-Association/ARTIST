@@ -133,10 +133,7 @@ class SurfaceGenerator:
         """
         device = get_device(device=device)
 
-        # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
         evaluation_points = surface_points.clone()
-        evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
-        evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
         evaluation_points[:, 2] = 0
 
         # Initialize the NURBS surface.
@@ -165,23 +162,17 @@ class SurfaceGenerator:
             device=device,
         )
 
-        # control_points_e, control_points_n = torch.meshgrid(
-        #     origin_offsets_e, origin_offsets_n, indexing="ij"
-        # )
-
-        # control_points[:, :, 0] = control_points_e
-        # control_points[:, :, 1] = control_points_n
-        # control_points[:, :, 2] = 0
-
-        origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
-        origin_offsets = torch.hstack(
-            (
-                origin_offsets,
-                torch.zeros((len(origin_offsets), 1), device=device),
-            )
+        control_points_e, control_points_n = torch.meshgrid(
+            origin_offsets_e, origin_offsets_n, indexing="ij"
         )
 
-        control_points = origin_offsets.reshape(control_points.shape)
+        control_points[:, :, 0] = control_points_e
+        control_points[:, :, 1] = control_points_n
+        control_points[:, :, 2] = 0
+
+        # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
+        evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
+        evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
 
         nurbs_surface = NURBSSurface(
             degrees=self.degrees,
