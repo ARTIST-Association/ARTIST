@@ -18,3 +18,8 @@ actuator_type_mapping = {
 
 light_source_type_mapping = {config_dictionary.sun_key: Sun}
 """A type mapping dictionary that allows ``ARTIST`` to automatically infer the correct light source type."""
+
+nurbs_dimension_mapping = {
+    config_dictionary.nurbs_u_dimension: 0,
+    config_dictionary.nurbs_v_dimension: 1,
+}
