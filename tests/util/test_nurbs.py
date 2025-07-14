@@ -1,7 +1,7 @@
 import torch
 
 from artist.util import utils
-from artist.util.nurbs import NURBSSurface
+from artist.util.nurbs import NURBSSurfaces
 
 
 def random_surface(
@@ -105,7 +105,7 @@ def test_nurbs(device: torch.device) -> None:
     control_points[:, :, 1] = control_points_n
     control_points[:, :, 2] = 0
 
-    nurbs = NURBSSurface(
+    nurbs = NURBSSurfaces(
         degrees=degrees,
         control_points=control_points,
         device=device,
@@ -162,13 +162,13 @@ def test_find_span(device: torch.device):
         [0.0, 0.0, 0.0, 0.0, 0.1, 0.7, 1.0, 1.0, 1.0, 1.0], device=device
     )
 
-    nurbs_surface = NURBSSurface(
+    nurbs_surface = NURBSSurfaces(
         degrees=degrees,
         control_points=control_points,
         device=device,
     )
 
-    span = nurbs_surface.find_span(
+    span = nurbs_surface.find_spans(
         dimension=0,
         evaluation_points=evaluation_points,
         knot_vector=knots,
@@ -230,7 +230,7 @@ def test_nurbs_forward(device: torch.device) -> None:
         device=device,
     )
 
-    nurbs = NURBSSurface(
+    nurbs = NURBSSurfaces(
         degrees=torch.tensor([2, 2], device=device),
         control_points=control_points,
         device=device,

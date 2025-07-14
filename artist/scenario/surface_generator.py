@@ -5,7 +5,7 @@ import torch
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
-from artist.util.nurbs import NURBSSurface
+from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
 """A logger for the surface generator."""
@@ -105,7 +105,7 @@ class SurfaceGenerator:
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
-    ) -> NURBSSurface:
+    ) -> NURBSSurfaces:
         """
         Fit the NURBS surface given the conversion method.
 
@@ -174,7 +174,7 @@ class SurfaceGenerator:
         evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
         evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
 
-        nurbs_surface = NURBSSurface(
+        nurbs_surface = NURBSSurfaces(
             degrees=self.degrees,
             control_points=control_points,
             device=device,

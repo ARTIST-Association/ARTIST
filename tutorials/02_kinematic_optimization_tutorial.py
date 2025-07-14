@@ -43,7 +43,7 @@ with setup_distributed_environment(
 ):
     # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
     # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
-    heliostat_calibration_mapping = [
+    heliostat_data_mapping = [
         (
             "AA39",
             [
@@ -61,6 +61,20 @@ with setup_distributed_environment(
                 ),
                 pathlib.Path(
                     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+                ),
+            ],
+            [
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-flux-centered.png"
+                ),
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-flux-centered.png"
+                ),
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
+                ),
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
                 ),
                 # pathlib.Path(
                 #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
@@ -80,6 +94,17 @@ with setup_distributed_environment(
                 pathlib.Path(
                     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
                 ),
+            ],
+            [
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
+                ),
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
+                ),
+                pathlib.Path(
+                    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-flux-centered.png"
+                ),
                 # pathlib.Path(
                 #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
                 # ),
@@ -94,8 +119,6 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
-    scenario.light_sources.light_source_list[0].number_of_rays = 100
-
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
@@ -106,10 +129,10 @@ with setup_distributed_environment(
             motor_positions_calibration,
             heliostats_mask_calibration,
             target_area_mask_calibration,
-        ) = paint_loader.extract_paint_calibration_data(
+        ) = paint_loader.extract_paint_calibration_properties_data(
             heliostat_calibration_mapping=[
-                (heliostat_name, paths)
-                for heliostat_name, paths in heliostat_calibration_mapping
+                (heliostat_name, calibration_properties_paths)
+                for heliostat_name, calibration_properties_paths, _ in heliostat_data_mapping
                 if heliostat_name in heliostat_group.names
             ],
             heliostat_names=heliostat_group.names,
