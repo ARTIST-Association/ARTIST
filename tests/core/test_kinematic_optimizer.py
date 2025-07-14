@@ -98,7 +98,7 @@ def test_kinematic_optimizer(
             motor_positions_calibration,
             heliostats_mask_calibration,
             target_area_mask_calibration,
-        ) = paint_loader.extract_paint_calibration_data(
+        ) = paint_loader.extract_paint_calibration_properties_data(
             heliostat_calibration_mapping=[
                 (heliostat_name, paths)
                 for heliostat_name, paths in heliostat_calibration_mapping

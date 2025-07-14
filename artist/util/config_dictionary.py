@@ -292,3 +292,7 @@ mac = "Darwin"
 
 number_of_heliostat_groups = "number_of_heliostat_groups"
 """Key to access the number of heliostat groups for distributed setup."""
+nurbs_u_dimension = "u"
+"""Key to access the nurbs u dimension."""
+nurbs_v_dimension = "v"
+"""Key to access the nurbs v dimension."""
