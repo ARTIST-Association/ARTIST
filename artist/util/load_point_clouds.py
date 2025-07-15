@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt #TODO Remove Later
 import torch
 import torch.nn.functional as F
 
+import artist.util as utils
 from artist.util.loading_files_utils import load_heliostat_properties_file
 from artist.util import config_dictionary, loading_files_utils, utils
 from artist.util.configuration_classes import FacetConfig
@@ -249,13 +250,14 @@ def generate_ideal_juelich_heliostat_pointcloud_from_paint_heliostat_properties(
             for i in range(canting_u_spatial.shape[0])
         ]
 
+
         analytical_cfg = AnalyticalConfig(
-            facet_translation_vectors=facet_translation_vectors,
-            canting_e=cantings_e,
-            canting_n=cantings_n,
+            flatten_mode="flat",
+            facet_translation_vectors=utils.convert_3d_direction_to_4d_format(facet_translation_vectors, device),
+            canting_e=utils.convert_3d_direction_to_4d_format(cantings_e, device),
+            canting_n=utils.convert_3d_direction_to_4d_format(cantings_n, device),
             facet_width=facet_width,
             facet_height=facet_height,
-            device=device
 )
 
         return surface_points_with_facets_list, surface_normals_with_facets_list, analytical_cfg
