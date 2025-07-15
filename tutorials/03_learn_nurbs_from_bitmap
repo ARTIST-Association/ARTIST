@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
 
-device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
+device =torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 heliostat_fp     = pathlib.Path("tutorials/data/paint/AA39/heliostat-properties.json")
 deflectometry_fp = pathlib.Path("tutorials/data/paint/AA39/deflectometry.h5")   # measured cloud
 ideal_fp         = None
@@ -87,8 +87,7 @@ if nurbs_ideal_fp.exists():
     with open(nurbs_ideal_fp, 'rb') as f:
         nurbs_facets_ideal = pickle.load(f)
 else:
-    nurbs_surface_ideal_obj = surface_converter_ideal.set_nurbs_surface_analyticaly()
-    nurbs_facets_ideal = nurbs_surface_ideal_obj.to_surface_config().facet_list
+    nurbs_facets_ideal = surface_converter_ideal.set_nurbs_surface_analyticaly()
     with open(nurbs_ideal_fp, 'wb') as f:
         pickle.dump(nurbs_facets_ideal, f)
 
@@ -98,56 +97,72 @@ else:
 # ------------------------------------------------------------------
 # 4.  Generate surface
 # ------------------------------------------------------------------
-flattener = SurfaceFlattener(flattening_mode="flat")
+flattener = SurfaceFlattener(analytical_cfg)
 # Wrap facet configs in SurfaceConfig and initialize Surface
 
 
-nurbs_surface_measured = Surface(SurfaceConfig(nurbs_facets_measured), flattner=flattener)
-nurbs_surface_ideal = Surface(SurfaceConfig(nurbs_facets_ideal), flattner=flattener)
+nurbs_surface_measured = Surface(SurfaceConfig(nurbs_facets_measured), device=device)
+nurbs_surface_ideal = Surface(SurfaceConfig(nurbs_facets_ideal), device=device)
 
+# Define a plotting functio
 
+def plot_surfaces(surface_measured, surface_ideal, device):
+    # 1) grab points [n_facets, n_eval, 4]
+    pts_meas, _ = surface_measured.get_surface_points_and_normals(device=device)
+    pts_ideal, _ = surface_ideal.get_surface_points_and_normals(device=device)
 
+    # 2) flatten facets into one long vector and drop the 4th (homogeneous) coord
+    #    result: shape [1, n_facets * n_eval, 3]
+    original_surface_points = pts_meas.reshape(1, -1, 4)[..., :3]
+    aligned_surface_points  = pts_ideal.reshape(1, -1, 4)[..., :3]
 
-#Heliostat = generate_heliostat(Surface, Kinematic)
-#Env = generate_ENV(...)
+    colors = ["r", "g", "b", "y"]
 
-#for epoch in max_epoch:
-#   image = raytrace(Heliostat,Env)
-#   calc loss
-#   loss.backward
-
-# Define a plotting function
-def plot_surfaces(measured_surface, ideal_surface):
     fig = plt.figure(figsize=(14, 6))
+    gs  = fig.add_gridspec(1, 2, width_ratios=[1, 1], wspace=0.3)
 
-    # Plot measured surface
-    ax1 = fig.add_subplot(121, projection='3d')
-    for facet in measured_surface.facets:
-        nurbs_surface = facet.create_nurbs_surface()
-        points, _ = nurbs_surface.calculate_surface_points_and_normals()
-        points_3d = points[:, :3].detach().cpu().numpy()
-        ax1.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], s=1)
-    ax1.set_title("Measured Surface")
-    ax1.set_xlabel("X")
-    ax1.set_ylabel("Y")
-    ax1.set_zlabel("Z")
+    ax1 = fig.add_subplot(gs[0], projection="3d")
+    ax2 = fig.add_subplot(gs[1], projection="3d")
 
-    # Plot ideal surface
-    ax2 = fig.add_subplot(122, projection='3d')
-    for facet in ideal_surface.facets:
-        nurbs_surface = facet.create_nurbs_surface()
-        points, _ = nurbs_surface.calculate_surface_points_and_normals()
-        points_3d = points[:, :3].detach().cpu().numpy()
-        ax2.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], s=1)
-    ax2.set_title("Ideal Surface")
-    ax2.set_xlabel("X")
-    ax2.set_ylabel("Y")
-    ax2.set_zlabel("Z")
+    number_of_facets = pts_meas.shape[0]
+    total_pts       = original_surface_points.shape[1]
+    batch_size      = total_pts // number_of_facets
+
+    for i in range(number_of_facets):
+        start = i * batch_size
+        end   = start + batch_size
+
+        e0 = original_surface_points[0, start:end, 0].detach().cpu().numpy()
+        n0 = original_surface_points[0, start:end, 1].detach().cpu().numpy()
+        u0 = original_surface_points[0, start:end, 2].detach().cpu().numpy()
+
+        e1 = aligned_surface_points[0, start:end, 0].detach().cpu().numpy()
+        n1 = aligned_surface_points[0, start:end, 1].detach().cpu().numpy()
+        u1 = aligned_surface_points[0, start:end, 2].detach().cpu().numpy()
+
+        ax1.scatter(e0, n0, u0, color=colors[i], label=f"Facet {i+1}")
+        ax2.scatter(e1, n1, u1, color=colors[i], label=f"Facet {i+1}")
+
+    # labels, limits, titles
+    for ax in (ax1, ax2):
+        ax.set_xlabel("E"); ax.set_ylabel("N"); ax.set_zlabel("U")
+        ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+
+    # ax1.set_title("Original surface")
+    # ax1.set_zlim(-0.5, 0.5)
+
+    # ax2.set_title("Aligned surface")
+    # ax2.set_ylim(4.5, 5.5)
+
+    # one legend for both
+    handles, labels = ax1.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncols=number_of_facets)
 
     plt.tight_layout()
     plt.show()
+    fig.savefig("tut_3.png")
 
 # Call the plotting function
-plot_surfaces(nurbs_surface_measured, nurbs_surface_ideal)
+plot_surfaces(nurbs_surface_measured, nurbs_surface_ideal, device)
 
 
