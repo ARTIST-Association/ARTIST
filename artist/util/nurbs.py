@@ -76,7 +76,7 @@ class NURBSSurface(torch.nn.Module):
         """
         super().__init__()
 
-        device = get_device(device=device)
+        self.device = get_device(device=device)
 
         self.degree_e = degree_e
         self.degree_n = degree_n
@@ -112,18 +112,17 @@ class NURBSSurface(torch.nn.Module):
             The knots in north direction.
         """
         device = get_device(device=device)
-
         num_control_points_e = self.control_points.shape[0]
         num_control_points_n = self.control_points.shape[1]
 
-        knots_e = torch.zeros(num_control_points_e + self.degree_e + 1, device=device)
+        knots_e = torch.zeros(num_control_points_e + self.degree_e + 1, device=self.device)
         num_knot_vals = len(knots_e[self.degree_e : -self.degree_e])
-        knot_vals = torch.linspace(0, 1, num_knot_vals, device=device)
+        knot_vals = torch.linspace(0, 1, num_knot_vals, device=self.device)
         knots_e[: self.degree_e] = 0
         knots_e[self.degree_e : -self.degree_e] = knot_vals
         knots_e[-self.degree_e :] = 1
 
-        knots_n = torch.zeros(num_control_points_n + self.degree_n + 1, device=device)
+        knots_n = torch.zeros(num_control_points_n + self.degree_n + 1, device=self.device)
         num_knot_vals = len(knots_n[self.degree_n : -self.degree_n])
         knot_vals = torch.linspace(0, 1, num_knot_vals, device=device)
         knots_n[: self.degree_n] = 0
@@ -169,7 +168,6 @@ class NURBSSurface(torch.nn.Module):
         torch.Tensor
             The knot span index.
         """
-        device = get_device(device=device)
 
         knot_vector_is_uniform = torch.all(
             (
@@ -193,7 +191,7 @@ class NURBSSurface(torch.nn.Module):
         else:
             n = control_points.shape[1] - 1
             span_indices = torch.zeros(
-                len(evaluation_points), dtype=torch.int64, device=device
+                len(evaluation_points), dtype=torch.int64, device=self.device
             )
             for i, evaluation_point in enumerate(evaluation_points):
                 if torch.isclose(
