@@ -86,7 +86,8 @@ class RigidBody(Kinematic):
         self.heliostat_positions = heliostat_positions
         self.initial_orientations = initial_orientations
 
-        self.deviation_parameters = torch.nn.Parameter(deviation_parameters)
+        #self.deviation_parameters = torch.nn.Parameter(deviation_parameters)
+        self.deviation_parameters = deviation_parameters
 
         self.number_of_active_heliostats = 0
         self.active_heliostat_positions = torch.empty_like(

@@ -146,10 +146,9 @@ def test_find_span(device: torch.device):
     """
     degrees = torch.tensor([3, 3], device=device)
 
-    evaluation_points = torch.ones((20, 4), device=device)
-    evaluation_points[:, 0] = torch.linspace(1e-5, 1 - 1e-5, steps=20, device=device)
-    evaluation_points[:, 1] = torch.linspace(1e-5, 1 - 1e-5, steps=20, device=device)
-    evaluation_points[:, 2] = 0
+    evaluation_points = utils.create_nurbs_evaluation_grid(torch.tensor([4, 5], device=device), device=device)
+    evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
+    evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
 
     x, y = torch.meshgrid(
         torch.linspace(1e-2, 1 - 1e-2, 6),
@@ -164,20 +163,18 @@ def test_find_span(device: torch.device):
 
     nurbs_surface = NURBSSurfaces(
         degrees=degrees,
-        control_points=control_points,
+        control_points=control_points.unsqueeze(0).unsqueeze(0),
         device=device,
     )
 
     span = nurbs_surface.find_spans(
-        dimension=0,
-        evaluation_points=evaluation_points,
-        knot_vector=knots,
+        dimension="u",
+        evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
+        knot_vectors=knots.unsqueeze(0).unsqueeze(0),
         device=device,
     )
 
-    expected = torch.tensor(
-        [3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5], device=device
-    )
+    expected = torch.tensor([[[3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5]]], device=device)
 
     torch.testing.assert_close(span, expected.to(device), atol=5e-4, rtol=5e-4)
 
