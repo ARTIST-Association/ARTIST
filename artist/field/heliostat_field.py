@@ -234,7 +234,7 @@ class HeliostatField:
 
             surface = Surface(surface_config, device=device)
             number_of_facets = len(surface_config.facet_list)
-            degrees = torch.empty((number_of_facets, 2, 1), device=device)
+            degrees = torch.empty(2, dtype=torch.int32, device=device)
             # Each facet automatically has the same control points dimensions. This is required in ARTIST.
             control_points = torch.empty(
                 (
@@ -246,7 +246,7 @@ class HeliostatField:
                 device=device,
             )
             for i in range(number_of_facets):
-                degrees[i] = surface_config.facet_list[i].degrees
+                degrees = surface_config.facet_list[i].degrees
                 control_points[i] = surface_config.facet_list[i].control_points
 
             heliostat_group_key = f"{kinematic_type}_{actuator_type}"
@@ -279,9 +279,9 @@ class HeliostatField:
                     number_of_points_per_facet=number_of_points_per_facet, device=device
                 )[1]
             )
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.facet_degrees
-            ].append(degrees)
+            # grouped_field_data[heliostat_group_key][
+            #     config_dictionary.facet_degrees
+            # ].append(degrees)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.facet_control_points
             ].append(control_points)
@@ -325,9 +325,10 @@ class HeliostatField:
                     surface_normals=grouped_field_data[heliostat_group_name][
                         config_dictionary.surface_normals
                     ].reshape(number_of_heliostats_in_group, -1, 4),
-                    nurbs_degrees=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facet_degrees
-                    ],
+                    # nurbs_degrees=grouped_field_data[heliostat_group_name][
+                    #     config_dictionary.facet_degrees
+                    # ],
+                    nurbs_degrees=degrees,
                     nurbs_control_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.facet_control_points
                     ],
