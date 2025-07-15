@@ -14,9 +14,7 @@ from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
-from artist.util.configuration_classes import FacetConfig, SurfaceConfig
-from artist.field.facets_nurbs import NurbsFacet
-from artist.field.surface import Surface
+from artist.util.configuration_classes import FacetConfig
 from artist.util.flattening_utils import SurfaceFlattener
 
 log = logging.getLogger(__name__)
@@ -74,12 +72,12 @@ class FitConfig:
 
 @dataclass
 class AnalyticalConfig:
+    flatten_mode: str
     facet_translation_vectors: torch.Tensor
     canting_e: torch.Tensor
     canting_n: torch.Tensor
     facet_width: float
     facet_height: float
-    device: Optional[torch.device] = None
 
 
 
@@ -100,9 +98,11 @@ class SurfaceConverter:
         self,
         nurbs_config: NurbsConfig,
         surface_generation_config: Optional[Union[FitConfig, AnalyticalConfig]] = None,
+        device: str = None
     ) -> None:
         self.nurbs_config = nurbs_config
         self.surface_generation_config = surface_generation_config
+        self.device = get_device(device)
 
     @classmethod
     def from_fitting(
@@ -125,6 +125,8 @@ class SurfaceConverter:
             nurbs_config = nurbs_cfg,
             surface_generation_config = analytical_cfg,
         )
+    
+
 
 
     def create_nurbs_surface(self, surface_points: torch.Tensor, device: torch.device):
@@ -171,12 +173,12 @@ class SurfaceConverter:
         nurbs_config: NurbsConfig = self.nurbs_config
         ana: AnalyticalConfig = self.surface_generation_config
 
-        device = get_device(device=ana.device)
+
 
         # ------------------------------------------------------------
         # 3) Prepare the flattener
         # ------------------------------------------------------------
-        flattener = SurfaceFlattener(flattening_mode="flat")
+        flattener = SurfaceFlattener(ana)
 
         # ------------------------------------------------------------
         # 4) Build flat FacetConfig list
@@ -187,22 +189,22 @@ class SurfaceConverter:
                 -ana.facet_width / 2,
                 ana.facet_width / 2,
                 nurbs_config.number_control_points_e,
-                device=device,
+                device=self.device,
             )
             origin_n = torch.linspace(
                 -ana.facet_height / 2,
                 ana.facet_height / 2,
                 nurbs_config.number_control_points_n,
-                device=device,
+                device=self.device,
             )
             grid2 = torch.cartesian_prod(origin_e, origin_n)
             grid3 = torch.cat(
-                [grid2, torch.zeros(len(grid2), 1, device=device)], dim=1
+                [grid2, torch.zeros(len(grid2), 1, device=self.device)], dim=1
             )
             cp = torch.nn.Parameter(
                 grid3.view(nurbs_config.number_control_points_e, nurbs_config.number_control_points_n, 3)
             )
-
+            cp = flattener.unflatten(cp, facet_idx= i)
             facet_configs.append(
                 FacetConfig(
                     facet_key=f"facet_{i + 1}",
@@ -216,25 +218,11 @@ class SurfaceConverter:
                     canting_n=ana.canting_n[i],
                 )
             )
+        
 
-        # ------------------------------------------------------------
-        # 5) Create Surface and unflatten to ENU space
-        # ------------------------------------------------------------
-        surface_cfg = SurfaceConfig(facet_list=facet_configs)
-        surface = Surface(surface_cfg, flattener=flattener)
-        flattener.unflatten(surface)
+        
 
-        # ------------------------------------------------------------
-        # 6) Freeze the control points
-        # ------------------------------------------------------------
-        for facet in surface.facets:
-            facet.control_points = torch.nn.Parameter(facet.control_points.detach())
-
-        # ------------------------------------------------------------
-        # 7) Convert to NURBSSurface
-        # ------------------------------------------------------------
-        nurbs_surface = NURBSSurface.from_surface(surface)
-        return nurbs_surface
+        return facet_configs
 
 
 
@@ -534,7 +522,7 @@ class SurfaceConverter:
         list[FacetConfig]
             A list of facet configurations used to generate a surface.
         """
-        device = get_device(device=device)
+        #device = get_device(device=device)
 
         log.info("Beginning extraction of data from ```PAINT``` file.")
         # Reading ``PAINT`` heliostat json file.
