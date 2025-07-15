@@ -108,9 +108,6 @@ class HeliostatGroup:
         self.active_nurbs_control_points = torch.empty_like(
             self.nurbs_control_points, device=device
         )
-        self.active_nurbs_degrees = torch.empty_like(
-            self.nurbs_degrees, device=device
-        )
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
         )
@@ -188,9 +185,6 @@ class HeliostatGroup:
             active_heliostats_mask, dim=0
         )
         self.active_nurbs_control_points = self.nurbs_control_points.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-        self.active_nurbs_degrees = self.nurbs_degrees.repeat_interleave(
             active_heliostats_mask, dim=0
         )
         self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()

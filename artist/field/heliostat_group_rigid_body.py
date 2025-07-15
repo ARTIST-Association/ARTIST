@@ -147,9 +147,9 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = get_device(device=device)
 
-        self.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
+        # self.activate_heliostats(
+        #     active_heliostats_mask=active_heliostats_mask, device=device
+        # )
 
         orientations = self.kinematic.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,

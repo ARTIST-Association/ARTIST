@@ -115,7 +115,7 @@ class SurfaceReconstructor:
         self.heliostat_group.activate_heliostats(active_heliostats_mask=active_heliostats_mask, device=device)
 
         nurbs_surfaces = NURBSSurfaces(
-            degrees=self.heliostat_group.active_nurbs_degrees,
+            degrees=self.heliostat_group.nurbs_degrees,
             control_points=self.heliostat_group.active_nurbs_control_points,
             device=device
         )
@@ -128,6 +128,7 @@ class SurfaceReconstructor:
         optimizer = torch.optim.Adam(
             nurbs_surfaces.parameters(), lr=initial_learning_rate
         )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
         
         # Start the optimization.
         log_step = max_epoch // num_log
@@ -135,12 +136,15 @@ class SurfaceReconstructor:
             optimizer.zero_grad()
 
             (
-                self.heliostat_group.surface_points, 
-                self.heliostat_group.surface_normals
+                self.heliostat_group.active_surface_points, 
+                self.heliostat_group.active_surface_normals
             ) = nurbs_surfaces.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points, 
                 device=device
             )
+
+            self.heliostat_group.active_surface_points = self.heliostat_group.active_surface_points.reshape(self.heliostat_group.active_surface_points.shape[0], -1, 4)
+            self.heliostat_group.active_surface_normals = self.heliostat_group.active_surface_normals.reshape(self.heliostat_group.active_surface_normals.shape[0], -1, 4)
 
             # Align heliostats.
             self.heliostat_group.align_surfaces_with_incident_ray_directions(
@@ -169,8 +173,14 @@ class SurfaceReconstructor:
 
             loss = (flux_distributions - flux_distributions_measured).abs().mean()
             loss.backward()
+            total_grad = sum(p.grad.abs().sum() for p in nurbs_surfaces.parameters() if p.grad is not None)
+            print(f"Total grad sum: {total_grad.item()}")
+            for name, param in nurbs_surfaces.named_parameters():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"{name} has NaNs or Infs!")
 
             optimizer.step()
+            scheduler.step()
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
