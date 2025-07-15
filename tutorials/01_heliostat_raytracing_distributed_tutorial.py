@@ -19,7 +19,7 @@ device = get_device(torch.device("cuda"))
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_four_heliostats.h5"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat.h5"
 )
 
 # Set the number of heliostat groups, this is needed for process group assignment.
@@ -85,6 +85,11 @@ with setup_distributed_environment(
             heliostat_group=heliostat_group,
             string_mapping=heliostat_target_light_source_mapping,
             device=device,
+        )
+
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device
         )
 
         # Align heliostats.
