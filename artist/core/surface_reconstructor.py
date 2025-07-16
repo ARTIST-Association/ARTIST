@@ -108,8 +108,14 @@ class SurfaceReconstructor:
         if rank == 0:
             log.info("Start the surface reconstruction.")
 
-        loss = torch.inf
-        epoch = 0
+        measured_target_dimension = torch.tensor([6, 6, 6, 6], device=device)
+        
+        normalized_measured_flux_distributions = utils.normalize_bitmap(
+            flux_distributions=flux_distributions_measured,
+            target_area_widths=measured_target_dimension,
+            target_area_heights=measured_target_dimension,
+            number_of_rays=flux_distributions_measured.sum(dim=[1, 2])
+        )
 
         # Activate heliostats.
         self.heliostat_group.activate_heliostats(active_heliostats_mask=active_heliostats_mask, device=device)
@@ -128,9 +134,11 @@ class SurfaceReconstructor:
         optimizer = torch.optim.Adam(
             nurbs_surfaces.parameters(), lr=initial_learning_rate
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
         
         # Start the optimization.
+        loss = torch.inf
+        epoch = 0
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             optimizer.zero_grad()
@@ -171,17 +179,21 @@ class SurfaceReconstructor:
                 device=device,
             )
 
-            loss = (flux_distributions - flux_distributions_measured).abs().mean()
+            normalized_flux_distributions = utils.normalize_bitmap(
+                flux_distributions=flux_distributions,
+                target_area_widths=ray_tracer.scenario.target_areas.dimensions[target_area_mask][:, 0],
+                target_area_heights=ray_tracer.scenario.target_areas.dimensions[target_area_mask][:, 1],
+                number_of_rays=ray_tracer.light_source.number_of_rays
+            )
+
+            loss_function = torch.nn.MSELoss()
+            loss = loss_function(normalized_flux_distributions, normalized_measured_flux_distributions)
+            
             loss.backward()
-            total_grad = sum(p.grad.abs().sum() for p in nurbs_surfaces.parameters() if p.grad is not None)
-            print(f"Total grad sum: {total_grad.item()}")
-            for name, param in nurbs_surfaces.named_parameters():
-                if torch.isnan(param).any() or torch.isinf(param).any():
-                    print(f"{name} has NaNs or Infs!")
-
+        
             optimizer.step()
-            scheduler.step()
-
+            #scheduler.step()
+            
             if epoch % log_step == 0 and rank == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
