@@ -61,35 +61,35 @@ heliostat_data_mapping = [
             # ....
         ],
     ),
-    (
-        "AA31",
-        [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
-            ),
-        ],
-        [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-flux-centered.png"
-            ),
-            # pathlib.Path(
-            #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            # ),
-        ],
-    ),
-    # ...
+    # (
+    #     "AA31",
+    #     [
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
+    #         ),
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+    #         ),
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
+    #         ),
+    #     ],
+    #     [
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
+    #         ),
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
+    #         ),
+    #         pathlib.Path(
+    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-flux-centered.png"
+    #         ),
+    #         # pathlib.Path(
+    #         #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+    #         # ),
+    #     ],
+    # ),
+    # # ...
 ]
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -150,8 +150,8 @@ with setup_distributed_environment(
 
         if heliostats_mask_reconstruction.sum() > 0:
             tolerance = 0.0005
-            max_epoch = 10000
-            initial_learning_rate = 1e-3
+            max_epoch = 150000
+            initial_learning_rate = 1e-5
 
             # Create the surface reconstructor.
             surface_reconstructor = SurfaceReconstructor(

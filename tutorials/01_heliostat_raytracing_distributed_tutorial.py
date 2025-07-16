@@ -19,7 +19,7 @@ device = get_device()
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype_ideal.h5"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat.h5"
 )
 
 # Set the number of heliostat groups, this is needed for process group assignment.

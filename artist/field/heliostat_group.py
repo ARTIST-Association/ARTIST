@@ -59,6 +59,8 @@ class HeliostatGroup:
         initial_orientations: torch.Tensor,
         nurbs_control_points: torch.Tensor,
         nurbs_degrees: torch.Tensor,
+        facet_translations: torch.Tensor,
+        cantings: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -92,6 +94,8 @@ class HeliostatGroup:
 
         self.nurbs_control_points = nurbs_control_points
         self.nurbs_degrees = nurbs_degrees
+        self.facet_translations = facet_translations
+        self.cantings = cantings
 
         self.kinematic = Kinematic()
 
@@ -107,6 +111,12 @@ class HeliostatGroup:
         )
         self.active_nurbs_control_points = torch.empty_like(
             self.nurbs_control_points, device=device
+        )
+        self.active_facet_translations = torch.empty_like(
+            self.facet_translations, device=device
+        )
+        self.active_cantings = torch.empty_like(
+            self.cantings, device=device
         )
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
@@ -185,6 +195,12 @@ class HeliostatGroup:
             active_heliostats_mask, dim=0
         )
         self.active_nurbs_control_points = self.nurbs_control_points.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_facet_translations = self.facet_translations.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_cantings = self.cantings.repeat_interleave(
             active_heliostats_mask, dim=0
         )
         self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
