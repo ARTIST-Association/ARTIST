@@ -113,6 +113,11 @@ def test_integration_alignment(
             device=device,
         )
 
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device
+        )
+
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
