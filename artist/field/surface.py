@@ -110,7 +110,7 @@ class Surface:
                 evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), device=device
             )
             surface_points[i] = (
-                facet_points + self.facet_translation_vectors[i]
+                facet_points
             ).detach()
             surface_normals[i] = facet_normals.detach()
         return surface_points, surface_normals

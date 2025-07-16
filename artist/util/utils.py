@@ -251,6 +251,7 @@ def convert_3d_point_to_4d_format(
     point: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
+    TODO adapt docstring to batches
     Append ones to the last dimension of a 3D point vector.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
@@ -596,3 +597,37 @@ def create_nurbs_evaluation_grid(
     evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
 
     return evaluation_points
+
+
+def normalize_bitmap(
+    flux_distributions: torch.Tensor,
+    target_area_widths: torch.Tensor,
+    target_area_heights: torch.Tensor,
+    number_of_rays: torch.Tensor
+) -> torch.Tensor:
+    """
+    Normalize a bitmap.
+
+    Parameters
+    ----------
+    flux_distributions : torch.Tensor
+        The flux distributions to be normalized.
+    target_area_widths : troch.Tensor
+        The target area widths.
+    target_area_heights : troch.Tensor
+        The target area heights.
+    number_of_rays : troch.Tensor
+        The number of rays used to generate the flux.
+
+    Returns
+    -------
+    torch.Tensor
+        The normalized flux density distributions.
+    """
+    plane_areas = target_area_widths * target_area_heights
+    num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
+    plane_area_per_pixel = plane_areas / num_pixels
+
+    return flux_distributions / (
+        number_of_rays * plane_area_per_pixel
+    ).unsqueeze(-1).unsqueeze(-1)
