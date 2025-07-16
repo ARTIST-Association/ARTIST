@@ -329,7 +329,7 @@ def extract_paint_heliostats(
                 max_epoch=max_epochs_for_surface_training,
             )
 
-            facet_list = surface_converter.generate_surface_config_from_paint(
+            facet_list = surface_converter.fit_surface_config_from_paint(
                 deflectometry_file_path=file_tuple[2],
                 heliostat_file_path=file_tuple[1],
                 device=device,

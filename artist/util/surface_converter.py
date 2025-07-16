@@ -2,22 +2,25 @@ import json
 import logging
 import pathlib
 import struct
-from typing import Optional
+from typing import Optional, Union
 
 import h5py
 import numpy as np
 import torch
+from dataclasses import dataclass
 
 from artist.util import config_dictionary, utils
 from artist.util.configuration_classes import FacetConfig
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurface
+from artist.util.surface_flattener import SurfaceFlattener
 
 log = logging.getLogger(__name__)
 """A logger for the surface converter."""
 
 
-class SurfaceConverter:
+@dataclass
+class NurbsConfig:
     """
     Implement a converter that converts surface data from various sources to HDF5 format.
 
@@ -31,8 +34,6 @@ class SurfaceConverter:
         The number of evaluation points in the east direction used to generate a discrete surface from NURBS.
     number_eval_points_n : int
         The number of evaluation points in the north direction used to generate a discrete surface from NURBS.
-    conversion_method : str
-        The conversion method used to learn the NURBS.
     number_control_points_e : int
         Number of NURBS control points in the east direction.
     number_control_points_n : int
@@ -41,13 +42,45 @@ class SurfaceConverter:
         Degree of the NURBS in the east (first) direction.
     degree_n : int
         Degree of the NURBS in the north (second) direction.
+    """
+    step_size: int = 100
+    number_eval_points_e: int = 50
+    number_eval_points_n: int = 50
+    number_control_points_e: int = 20
+    number_control_points_n: int = 20
+    degree_e: int = 3
+    degree_n: int = 3
+
+@dataclass
+class FitConfig:
+    """
+    conversion_method : str
+        The conversion method used to learn the NURBS.
     tolerance : float, optional
         Tolerance value used for fitting NURBS surfaces.
     initial_learning_rate : float
         Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces.
     max_epoch : int
         Maximum number of epochs to use when fitting NURBS surfaces.
+    """
+    conversion_method: str = config_dictionary.convert_nurbs_from_normals
+    tolerance: float = 3e-5
+    initial_learning_rate: float = 1e-3
+    max_epoch: int = 10_000
+    step_size: int=1
 
+@dataclass
+class AnalyticalConfig:
+    flatten_mode: str
+    facet_translation_vectors: torch.Tensor
+    canting_e: torch.Tensor
+    canting_n: torch.Tensor
+    facet_width: float
+    facet_height: float
+
+
+class SurfaceConverter:
+    """
     Methods
     -------
     fit_nurbs_surface()
@@ -60,77 +93,257 @@ class SurfaceConverter:
 
     def __init__(
         self,
-        step_size: int = 100,
-        number_eval_points_e: int = 50,
-        number_eval_points_n: int = 50,
-        conversion_method: str = config_dictionary.convert_nurbs_from_normals,
-        number_control_points_e: int = 20,
-        number_control_points_n: int = 20,
-        degree_e: int = 3,
-        degree_n: int = 3,
-        tolerance: float = 3e-5,
-        initial_learning_rate: float = 1e-3,
-        max_epoch: int = 10000,
+        nurbs_config: NurbsConfig,
+        surface_generation_config: Optional[Union[FitConfig, AnalyticalConfig]] = None,
+        device: str = None
     ) -> None:
-        """
-        Initialize the converter.
+        self.nurbs_config = nurbs_config
+        self.surface_generation_config = surface_generation_config
+        self.device = get_device(device)
 
-        Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
-        exported to a binary file or downloaded from ```PAINT``. The data formats are different depending on their source.
-        To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the
-        data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
-        be used directly in an ``ARTIST`` scenario.
+    @classmethod
+    def from_fitting(
+        cls,
+        nurbs_cfg: NurbsConfig = NurbsConfig(),
+        fit_cfg: FitConfig = FitConfig(),
+    ):
+        return cls(
+            nurbs_config = nurbs_cfg,
+            surface_generation_config = fit_cfg,
+        )
 
-        Parameters
-        ----------
-        step_size : int
-            The size of the step used to reduce the number of considered points for compute efficiency (default is 100).
-        number_eval_points_e : int
-            The number of evaluation points in the east direction used to generate a discrete surface from NURBS.
-        number_eval_points_n : int
-            The number of evaluation points in the north direction used to generate a discrete surface from NURBS.
-        conversion_method : str
-            The conversion method used to learn the NURBS.
-        number_control_points_e : int
-            Number of NURBS control points in the east direction (default: 10).
-        number_control_points_n : int
-            Number of NURBS control points in the north direction (default: 10).
-        degree_e : int
-            Degree of the NURBS in the east (first) direction (default: 2).
-        degree_n : int
-            Degree of the NURBS in the north (second) direction (default: 2).
-        tolerance : float, optional
-            Tolerance value used for fitting NURBS surfaces (default: 1e-5).
-        initial_learning_rate : float
-            Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default: 1e-1).
-        max_epoch : int
-            Maximum number of epochs to use when fitting NURBS surfaces (default: 10000).
-        """
-        self.step_size = step_size
-        self.number_eval_points_e = number_eval_points_e
-        self.number_eval_points_n = number_eval_points_n
-        self.conversion_method = conversion_method
-        self.number_control_points_e = number_control_points_e
-        self.number_control_points_n = number_control_points_n
-        self.degree_e = degree_e
-        self.degree_n = degree_n
-        self.tolerance = tolerance
-        self.initial_learning_rate = initial_learning_rate
-        self.max_epoch = max_epoch
+    @classmethod
+    def from_analytic(
+        cls,
+        nurbs_cfg: NurbsConfig = NurbsConfig(),
+        analytical_cfg: AnalyticalConfig = None,            # be sure to spell it consistently
+    ):
+        return cls(
+            nurbs_config = nurbs_cfg,
+            surface_generation_config = analytical_cfg,
+        )
 
-    def fit_nurbs_surface(
+
+    # ──────────────────────────────────────────────────────────────
+    # helpers
+    # ──────────────────────────────────────────────────────────────
+
+    def _create_nurbs_surface(self, surface_points: torch.Tensor, device: torch.device):
+        evaluation_points = surface_points.clone()
+        evaluation_points[:, 2] = 0
+        evaluation_points_e = utils.normalize_points(evaluation_points[:, 0])
+        evaluation_points_n = utils.normalize_points(evaluation_points[:, 1])
+
+        cp_shape = (self.nurbs_config.number_control_points_e, self.nurbs_config.number_control_points_n, 3)
+        width = evaluation_points[:, 0].max() - evaluation_points[:, 0].min()
+        height = evaluation_points[:, 1].max() - evaluation_points[:, 1].min()
+
+        origin_e = torch.linspace(-width / 2, width / 2, self.nurbs_config.number_control_points_e, device=device)
+        origin_n = torch.linspace(-height / 2, height / 2, self.nurbs_config.number_control_points_n, device=device)
+        origins = torch.cartesian_prod(origin_e, origin_n)
+        origins = torch.hstack((origins, torch.zeros((len(origins), 1), device=device)))
+        control_points = torch.nn.parameter.Parameter(origins.view(cp_shape))
+
+        nurbs_surface = NURBSSurface(
+            self.nurbs_config.degree_e,
+            self.nurbs_config.degree_n,
+            evaluation_points_e,
+            evaluation_points_n,
+            control_points,
+            device=device,
+        )
+        return nurbs_surface
+    def _fitting_from_points_or_normals(
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
-        conversion_method: str,
-        number_control_points_e: int = 10,
-        number_control_points_n: int = 10,
-        degree_e: int = 2,
-        degree_n: int = 2,
-        tolerance: float = 1e-5,
-        initial_learning_rate: float = 1e-1,
-        max_epoch: int = 2500,
         device: Optional[torch.device] = None,
+    ) -> NURBSSurface:
+        # ------------------------------------------------------------
+        # 1) Guard: analytic‐only instances can’t fit
+        # ------------------------------------------------------------
+        if isinstance(self.surface_generation_config, AnalyticalConfig):
+            raise RuntimeError(
+                "Cannot set analytical: converter was created in fitting mode (no AnalyticalConfig)."
+            )
+
+        # ------------------------------------------------------------
+        # 2) Pull parameters from the two configs
+        # ------------------------------------------------------------
+        cfg  = self.nurbs_config
+        fit  = self.surface_generation_config
+
+        device = get_device(device=device)
+
+        # normalize & drop Z for knot/parameter domain
+        # Replacement of the original $SELECTION_PLACEHOLDER$ code:
+        nurbs_surface = self._create_nurbs_surface(surface_points, device)
+
+        # ------------------------------------------------------------
+        # 3) Optimize
+        # ------------------------------------------------------------
+        optimizer = torch.optim.Adam(
+            [nurbs_surface.control_points],
+            lr=fit.initial_learning_rate
+        )
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.2,
+            patience=50,
+            threshold=1e-7,
+            threshold_mode="abs",
+        )
+
+        loss = torch.inf
+        epoch = 0
+        while loss > fit.tolerance and epoch <= fit.max_epoch:
+            points, normals = nurbs_surface.calculate_surface_points_and_normals(
+                device=device
+            )
+
+            optimizer.zero_grad()
+            if fit.conversion_method == config_dictionary.convert_nurbs_from_points:
+                loss = (points - surface_points).abs().mean()
+            elif fit.conversion_method == config_dictionary.convert_nurbs_from_normals:
+                loss = (normals - surface_normals).abs().mean()
+            else:
+                raise NotImplementedError(
+                    f"Conversion method {cfg.conversion_method!r} not supported."
+                )
+            loss.backward()
+            optimizer.step()
+            scheduler.step(loss)
+            if epoch % 100 == 0:
+                lr = optimizer.param_groups[0]["lr"]
+                log.info(f"Epoch {epoch:5d} | Loss {loss.item():.3e} | LR {lr:.1e}")
+            epoch += 1
+
+        return nurbs_surface
+
+    def _create_list_of_facet_configs_from_fitting(
+        self,
+        surface_points_with_facets_list: list[torch.Tensor],
+        surface_normals_with_facets_list: list[torch.Tensor],
+        facet_translation_vectors: torch.Tensor,
+        canting_e: torch.Tensor,
+        canting_n: torch.Tensor,
+        device: Optional[torch.device] = None,
+    ) -> list[FacetConfig]:
+        """
+        Generate a surface configuration from a data source.
+
+        Parameters
+        ----------
+        surface_points_with_facets_list : list[torch.Tensor]
+            A list of facetted surface points. Points per facet may vary.
+        surface_normals_with_facets_list : list[torch.Tensor]
+            A list of facetted surface normals. Normals per facet may vary.
+        facet_translation_vectors : torch.Tensor
+            Translation vector for each facet from heliostat origin to relative position.
+        canting_e : torch.Tensor
+            The canting vector per facet in east direction.
+        canting_n : torch.Tensor
+            The canting vector per facet in north direction.
+        device : Optional[torch.device]
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA, MPS, or CPU) based on availability and OS.
+
+        Returns
+        -------
+        list[FacetConfig]
+            A list of facet configurations used to generate a surface.
+        """
+        device = get_device(device=device)
+
+        log.info("Beginning generation of the surface configuration based on data.")
+
+        if not isinstance(self.surface_generation_config, FitConfig):
+            raise TypeError("surface_generation_config must be an instance of FitConfig to fit a NURBS surface.")
+
+        # All single_facet_surface_points and single_facet_surface_normals must have the same
+        # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
+        min_x = min(
+            single_facet_surface_points.shape[0]
+            for single_facet_surface_points in surface_points_with_facets_list
+        )
+        reduced_single_facet_surface_points = [
+            single_facet_surface_points[:min_x]
+            for single_facet_surface_points in surface_points_with_facets_list
+        ]
+        surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
+
+        min_x = min(
+            single_facet_surface_normals.shape[0]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        )
+        reduced_single_facet_surface_normals = [
+            single_facet_surface_normals[:min_x]
+            for single_facet_surface_normals in surface_normals_with_facets_list
+        ]
+        surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
+
+        # Select only selected number of points to reduce compute.
+        surface_points_with_facets = surface_points_with_facets[:, :: self.surface_generation_config.step_size]
+        surface_normals_with_facets = surface_normals_with_facets[:, :: self.surface_generation_config.step_size]
+
+        # Convert to 4D format.
+        facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
+            facet_translation_vectors, device=device
+        )
+        # If we are using a point cloud to learn the points, we do not need to translate the facets.
+        if self.surface_generation_config.conversion_method == config_dictionary.convert_nurbs_from_points:
+            facet_translation_vectors = torch.zeros(
+                facet_translation_vectors.shape, device=device
+            )
+        # Convert to 4D format.
+        canting_n = utils.convert_3d_direction_to_4d_format(canting_n, device=device)
+        canting_e = utils.convert_3d_direction_to_4d_format(canting_e, device=device)
+        surface_points_with_facets = utils.convert_3d_point_to_4d_format(
+            surface_points_with_facets, device=device
+        )
+        surface_normals_with_facets = utils.convert_3d_direction_to_4d_format(
+            surface_normals_with_facets, device=device
+        )
+
+        # Convert to NURBS surface.
+        log.info("Converting to NURBS surface.")
+        facet_config_list = []
+        for i in range(surface_points_with_facets.shape[0]):
+            log.info(
+                f"Converting facet {i + 1} of {surface_points_with_facets.shape[0]}."
+            )
+            nurbs_surface = self._fitting_from_points_or_normals(
+                surface_points=surface_points_with_facets[i],
+                surface_normals=surface_normals_with_facets[i],
+                device=device,
+            )
+            facet_config_list.append(
+                FacetConfig(
+                    facet_key=f"facet_{i + 1}",
+                    control_points=nurbs_surface.control_points.detach(),
+                    degree_e=nurbs_surface.degree_e,
+                    degree_n=nurbs_surface.degree_n,
+                    number_eval_points_e=self.nurbs_config.number_eval_points_e,
+                    number_eval_points_n=self.nurbs_config.number_eval_points_n,
+                    translation_vector=facet_translation_vectors[i],
+                    canting_e=canting_e[i],
+                    canting_n=canting_n[i],
+                )
+            )
+        log.info("Surface configuration based on data complete!")
+        return facet_config_list
+
+    
+    # ──────────────────────────────────────────────────────────────
+    # public methods
+    # ──────────────────────────────────────────────────────────────
+
+    def fit_nurbs_surface_from_points( # @MarleneBusch should this function also use _generate_surface_config?
+        self,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
     ) -> NURBSSurface:
         """
         Fit the NURBS surface given the conversion method.
@@ -173,6 +386,9 @@ class SurfaceConverter:
         NURBSSurface
             A NURBS surface.
         """
+        if not isinstance(self.surface_generation_config, FitConfig):
+            raise TypeError("surface_generation_config must be an instance of FitConfig to fit a NURBS surface.")
+
         device = get_device(device=device)
 
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
@@ -182,7 +398,7 @@ class SurfaceConverter:
         evaluation_points_n = utils.normalize_points(evaluation_points[:, 1])
 
         # Initialize the NURBS surface.
-        control_points_shape = (number_control_points_e, number_control_points_n)
+        control_points_shape = (self.nurbs_config.number_control_points_e, self.nurbs_config.number_control_points_n)
         control_points = torch.zeros(control_points_shape + (3,), device=device)
         width_of_nurbs = torch.max(evaluation_points[:, 0]) - torch.min(
             evaluation_points[:, 0]
@@ -193,13 +409,13 @@ class SurfaceConverter:
         origin_offsets_e = torch.linspace(
             -width_of_nurbs / 2,
             width_of_nurbs / 2,
-            number_control_points_e,
+            self.nurbs_config.number_control_points_e,
             device=device,
         )
         origin_offsets_n = torch.linspace(
             -height_of_nurbs / 2,
             height_of_nurbs / 2,
-            number_control_points_n,
+            self.nurbs_config.number_control_points_n,
             device=device,
         )
         origin_offsets = torch.cartesian_prod(origin_offsets_e, origin_offsets_n)
@@ -213,16 +429,17 @@ class SurfaceConverter:
             origin_offsets.reshape(control_points.shape)
         )
         nurbs_surface = NURBSSurface(
-            degree_e,
-            degree_n,
+            self.nurbs_config.degree_e,
+            self.nurbs_config.degree_n,
             evaluation_points_e,
             evaluation_points_n,
             control_points,
             device=device,
         )
 
+
         # Optimize the control points of the NURBS surface.
-        optimizer = torch.optim.Adam([control_points], lr=initial_learning_rate)
+        optimizer = torch.optim.Adam([control_points], lr=self.surface_generation_config.initial_learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -233,20 +450,20 @@ class SurfaceConverter:
         )
         loss = torch.inf
         epoch = 0
-        while loss > tolerance and epoch <= max_epoch:
+        while loss > self.surface_generation_config.tolerance and epoch <= self.surface_generation_config.max_epoch:
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
                 device=device
             )
 
             optimizer.zero_grad()
 
-            if conversion_method == config_dictionary.convert_nurbs_from_points:
+            if self.surface_generation_config.conversion_method == config_dictionary.convert_nurbs_from_points:
                 loss = (points - surface_points).abs().mean()
-            elif conversion_method == config_dictionary.convert_nurbs_from_normals:
+            elif self.surface_generation_config.conversion_method == config_dictionary.convert_nurbs_from_normals:
                 loss = (normals - surface_normals).abs().mean()
             else:
                 raise NotImplementedError(
-                    f"Conversion method {conversion_method} not yet implemented!"
+                    f"Conversion method {self.surface_generation_config.conversion_method} not yet implemented!"
                 )
             loss.backward()
 
@@ -260,126 +477,7 @@ class SurfaceConverter:
 
         return nurbs_surface
 
-    def _generate_surface_config(
-        self,
-        surface_points_with_facets_list: list[torch.Tensor],
-        surface_normals_with_facets_list: list[torch.Tensor],
-        facet_translation_vectors: torch.Tensor,
-        canting_e: torch.Tensor,
-        canting_n: torch.Tensor,
-        device: Optional[torch.device] = None,
-    ) -> list[FacetConfig]:
-        """
-        Generate a surface configuration from a data source.
-
-        Parameters
-        ----------
-        surface_points_with_facets_list : list[torch.Tensor]
-            A list of facetted surface points. Points per facet may vary.
-        surface_normals_with_facets_list : list[torch.Tensor]
-            A list of facetted surface normals. Normals per facet may vary.
-        facet_translation_vectors : torch.Tensor
-            Translation vector for each facet from heliostat origin to relative position.
-        canting_e : torch.Tensor
-            The canting vector per facet in east direction.
-        canting_n : torch.Tensor
-            The canting vector per facet in north direction.
-        device : Optional[torch.device]
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA, MPS, or CPU) based on availability and OS.
-
-        Returns
-        -------
-        list[FacetConfig]
-            A list of facet configurations used to generate a surface.
-        """
-        device = get_device(device=device)
-
-        log.info("Beginning generation of the surface configuration based on data.")
-
-        # All single_facet_surface_points and single_facet_surface_normals must have the same
-        # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
-        min_x = min(
-            single_facet_surface_points.shape[0]
-            for single_facet_surface_points in surface_points_with_facets_list
-        )
-        reduced_single_facet_surface_points = [
-            single_facet_surface_points[:min_x]
-            for single_facet_surface_points in surface_points_with_facets_list
-        ]
-        surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
-
-        min_x = min(
-            single_facet_surface_normals.shape[0]
-            for single_facet_surface_normals in surface_normals_with_facets_list
-        )
-        reduced_single_facet_surface_normals = [
-            single_facet_surface_normals[:min_x]
-            for single_facet_surface_normals in surface_normals_with_facets_list
-        ]
-        surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
-
-        # Select only selected number of points to reduce compute.
-        surface_points_with_facets = surface_points_with_facets[:, :: self.step_size]
-        surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
-
-        # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
-            facet_translation_vectors, device=device
-        )
-        # If we are using a point cloud to learn the points, we do not need to translate the facets.
-        if self.conversion_method == config_dictionary.convert_nurbs_from_points:
-            facet_translation_vectors = torch.zeros(
-                facet_translation_vectors.shape, device=device
-            )
-        # Convert to 4D format.
-        canting_n = utils.convert_3d_direction_to_4d_format(canting_n, device=device)
-        canting_e = utils.convert_3d_direction_to_4d_format(canting_e, device=device)
-        surface_points_with_facets = utils.convert_3d_point_to_4d_format(
-            surface_points_with_facets, device=device
-        )
-        surface_normals_with_facets = utils.convert_3d_direction_to_4d_format(
-            surface_normals_with_facets, device=device
-        )
-
-        # Convert to NURBS surface.
-        log.info("Converting to NURBS surface.")
-        facet_config_list = []
-        for i in range(surface_points_with_facets.shape[0]):
-            log.info(
-                f"Converting facet {i + 1} of {surface_points_with_facets.shape[0]}."
-            )
-            nurbs_surface = self.fit_nurbs_surface(
-                surface_points=surface_points_with_facets[i],
-                surface_normals=surface_normals_with_facets[i],
-                conversion_method=self.conversion_method,
-                number_control_points_e=self.number_control_points_e,
-                number_control_points_n=self.number_control_points_n,
-                degree_e=self.degree_e,
-                degree_n=self.degree_n,
-                tolerance=self.tolerance,
-                initial_learning_rate=self.initial_learning_rate,
-                max_epoch=self.max_epoch,
-                device=device,
-            )
-            facet_config_list.append(
-                FacetConfig(
-                    facet_key=f"facet_{i + 1}",
-                    control_points=nurbs_surface.control_points.detach(),
-                    degree_e=nurbs_surface.degree_e,
-                    degree_n=nurbs_surface.degree_n,
-                    number_eval_points_e=self.number_eval_points_e,
-                    number_eval_points_n=self.number_eval_points_n,
-                    translation_vector=facet_translation_vectors[i],
-                    canting_e=canting_e[i],
-                    canting_n=canting_n[i],
-                )
-            )
-        log.info("Surface configuration based on data complete!")
-        return facet_config_list
-
-    def generate_surface_config_from_stral(
+    def fit_surface_config_from_stral(
         self, stral_file_path: pathlib.Path, device: Optional[torch.device] = None
     ) -> list[FacetConfig]:
         """
@@ -459,7 +557,7 @@ class SurfaceConverter:
 
         log.info("Loading ``STRAL`` data complete.")
 
-        surface_config = self._generate_surface_config(
+        surface_config = self._create_list_of_facet_configs_from_fitting(
             surface_points_with_facets_list=surface_points_with_facets_list,
             surface_normals_with_facets_list=surface_normals_with_facets_list,
             facet_translation_vectors=facet_translation_vectors,
@@ -470,7 +568,7 @@ class SurfaceConverter:
 
         return surface_config
 
-    def generate_surface_config_from_paint(
+    def fit_surface_config_from_paint(
         self,
         heliostat_file_path: pathlib.Path,
         deflectometry_file_path: pathlib.Path,
@@ -575,7 +673,7 @@ class SurfaceConverter:
 
         log.info("Loading ``PAINT`` data complete.")
 
-        surface_config = self._generate_surface_config(
+        surface_config = self._create_list_of_facet_configs_from_fitting(
             surface_points_with_facets_list=surface_points_with_facets_list,
             surface_normals_with_facets_list=surface_normals_with_facets_list,
             facet_translation_vectors=facet_translation_vectors,
@@ -585,3 +683,70 @@ class SurfaceConverter:
         )
 
         return surface_config
+
+
+    def generate_nurbs_surface_analyticaly(self) -> NURBSSurface:
+            # ------------------------------------------------------------
+            # 1) Guard: analytic-only instances can’t fit
+            # ------------------------------------------------------------
+            if not isinstance(self.surface_generation_config, AnalyticalConfig):
+                raise RuntimeError(
+                    "Cannot fit: converter was not created in analytic mode."
+                )
+
+            # ------------------------------------------------------------
+            # 2) Pull parameters from the two configs
+            # ------------------------------------------------------------
+            nurbs_config: NurbsConfig = self.nurbs_config
+            ana: AnalyticalConfig = self.surface_generation_config
+
+
+
+            # ------------------------------------------------------------
+            # 3) Prepare the flattener
+            # ------------------------------------------------------------
+            flattener = SurfaceFlattener(ana)
+
+            # ------------------------------------------------------------
+            # 4) Build flat FacetConfig list
+            # ------------------------------------------------------------
+            facet_configs: list[FacetConfig] = []
+            for i in range(ana.facet_translation_vectors.shape[0]):
+                origin_e = torch.linspace(
+                    -ana.facet_width / 2,
+                    ana.facet_width / 2,
+                    nurbs_config.number_control_points_e,
+                    device=self.device,
+                )
+                origin_n = torch.linspace(
+                    -ana.facet_height / 2,
+                    ana.facet_height / 2,
+                    nurbs_config.number_control_points_n,
+                    device=self.device,
+                )
+                grid2 = torch.cartesian_prod(origin_e, origin_n)
+                grid3 = torch.cat(
+                    [grid2, torch.zeros(len(grid2), 1, device=self.device)], dim=1
+                )
+                cp = torch.nn.Parameter(
+                    grid3.view(nurbs_config.number_control_points_e, nurbs_config.number_control_points_n, 3)
+                )
+                cp = flattener.unflatten(cp, facet_idx= i)
+                facet_configs.append(
+                    FacetConfig(
+                        facet_key=f"facet_{i + 1}",
+                        control_points=cp,
+                        degree_e=nurbs_config.degree_e,
+                        degree_n=nurbs_config.degree_n,
+                        number_eval_points_e=nurbs_config.number_eval_points_e,
+                        number_eval_points_n=nurbs_config.number_eval_points_n,
+                        translation_vector=ana.facet_translation_vectors[i],
+                        canting_e=ana.canting_e[i],
+                        canting_n=ana.canting_n[i],
+                    )
+                )
+            
+
+            
+
+            return facet_configs

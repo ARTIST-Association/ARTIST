@@ -53,19 +53,19 @@ def test_surface_converter(device: torch.device) -> None:
         max_epoch=1,
     )
 
-    surface_config_paint = surface_converter_normals.generate_surface_config_from_paint(
+    surface_config_paint = surface_converter_normals.fit_surface_config_from_paint(
         heliostat_file_path=heliostat_file_path,
         deflectometry_file_path=deflectometry_file_path,
         device=device,
     )
 
-    surface_config_stral = surface_converter_normals.generate_surface_config_from_stral(
+    surface_config_stral = surface_converter_normals.fit_surface_config_from_stral(
         stral_file_path=stral_file_path,
         device=device,
     )
 
     surface_config_stral_points = (
-        surface_converter_points.generate_surface_config_from_stral(
+        surface_converter_points.fit_surface_config_from_stral(
             stral_file_path=stral_file_path,
             device=device,
         )
