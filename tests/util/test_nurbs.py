@@ -2,6 +2,7 @@ import torch
 
 from artist.util import utils
 from artist.util.nurbs import NURBSSurfaces
+from artist.util.old_nurbs import NURBSSurfaceOld
 
 
 def random_surface(
@@ -81,29 +82,25 @@ def test_nurbs(device: torch.device) -> None:
     surface = random_surface(e=e, n=n, u=u, factor=factor, device=device)
     surface_points = torch.stack((e.flatten(), n.flatten(), surface.flatten()), dim=-1)
     ones = torch.ones(surface_points.shape[0], 1, device=device)
-    surface_points = torch.cat((surface_points, ones), dim=1)
+    surface_points = torch.cat((surface_points, ones), dim=1).unsqueeze(0).unsqueeze(0)
 
     evaluation_points = utils.create_nurbs_evaluation_grid(
         number_of_evaluation_points=torch.tensor([40, 40], device=device), device=device
     )
 
-    num_control_points_e = 20
-    num_control_points_n = 20
-
     degrees = torch.tensor([2, 2], device=device)
 
-    control_points_shape = (num_control_points_e, num_control_points_n)
-    control_points = torch.zeros(control_points_shape + (3,), device=device)
-    origin_offsets_e = torch.linspace(-5, 5, num_control_points_e, device=device)
-    origin_offsets_n = torch.linspace(-5, 5, num_control_points_n, device=device)
+    control_points = torch.zeros((1, 1, 20, 20, 3), device=device)
+    origin_offsets_e = torch.linspace(-5, 5, control_points.shape[2], device=device)
+    origin_offsets_n = torch.linspace(-5, 5, control_points.shape[3], device=device)
 
     control_points_e, control_points_n = torch.meshgrid(
         origin_offsets_e, origin_offsets_n, indexing="ij"
     )
 
-    control_points[:, :, 0] = control_points_e
-    control_points[:, :, 1] = control_points_n
-    control_points[:, :, 2] = 0
+    control_points[:, :, :, :, 0] = control_points_e
+    control_points[:, :, :, :, 1] = control_points_n
+    control_points[:, :, :, :, 2] = 0
 
     nurbs = NURBSSurfaces(
         degrees=degrees,
@@ -115,7 +112,8 @@ def test_nurbs(device: torch.device) -> None:
 
     for epoch in range(100):
         points, normals = nurbs.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points, device=device
+            evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), 
+            device=device
         )
 
         optimizer.zero_grad()
@@ -196,9 +194,9 @@ def test_nurbs_forward(device: torch.device) -> None:
     evaluation_points = torch.cartesian_prod(
         torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
         torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
-    )
+    ).unsqueeze(0).unsqueeze(0)
     control_points = torch.tensor(
-        [
+        [[[
             [
                 [-5.0000, -5.0000, 0.0000],
                 [-5.0000, -1.6667, 0.0000],
@@ -223,7 +221,7 @@ def test_nurbs_forward(device: torch.device) -> None:
                 [5.0000, 1.6667, 0.0000],
                 [5.0000, 5.0000, 0.0000],
             ],
-        ],
+        ]]],
         device=device,
     )
 
@@ -236,21 +234,21 @@ def test_nurbs_forward(device: torch.device) -> None:
     surface_points, surface_normals = nurbs(evaluation_points, device)
 
     expected_points = torch.tensor(
-        [
+        [[[
             [-4.999866008759, -4.999866008759, 0.000000000000, 0.999999880791],
             [-4.999866485596, 4.999866008759, 0.000000000000, 0.999999940395],
             [4.999866008759, -4.999866485596, 0.000000000000, 0.999999940395],
             [4.999866485596, 4.999866485596, 0.000000000000, 1.000000000000],
-        ],
+        ]]],
         device=device,
     )
     expected_normals = torch.tensor(
-        [
+        [[[
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
-        ],
+        ]]],
         device=device,
     )
 

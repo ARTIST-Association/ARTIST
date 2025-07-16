@@ -13,6 +13,8 @@ from artist.scenario.configuration_classes import (
     TargetAreaListConfig,
 )
 
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
 
 @pytest.mark.parametrize(
     "heliostat_calibration_mapping, power_plant_position, expected_list",
@@ -256,7 +258,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-7.990407943726e-01, -4.297661781311e-01, -1.374030543957e-04])
+                torch.tensor([-7.991603016853e-01, -4.298234879971e-01,  1.271595247090e-04])
             ],
         ),
         (

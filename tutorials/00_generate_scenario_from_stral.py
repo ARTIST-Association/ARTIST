@@ -35,7 +35,7 @@ device = get_device()
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype_ideal"
 )
 
 # Specify the path to your stral_data.binp file.
@@ -102,12 +102,18 @@ surface_generator = SurfaceGenerator(
     max_epoch=400,
 )
 
-surface_config = surface_generator.generate_fitted_surface_config(
-    heliostat_name="heliostat_1",
+# surface_config = surface_generator.generate_fitted_surface_config(
+#     heliostat_name="heliostat_1",
+#     facet_translation_vectors=facet_translation_vectors,
+#     canting=canting,
+#     surface_points_with_facets_list=surface_points_with_facets_list,
+#     surface_normals_with_facets_list=surface_normals_with_facets_list,
+#     device=device,
+# )
+
+surface_config = surface_generator.generate_ideal_surface_config(
     facet_translation_vectors=facet_translation_vectors,
     canting=canting,
-    surface_points_with_facets_list=surface_points_with_facets_list,
-    surface_normals_with_facets_list=surface_normals_with_facets_list,
     device=device,
 )
 
