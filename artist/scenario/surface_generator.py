@@ -314,10 +314,19 @@ class SurfaceGenerator:
                 surface_normals=surface_normals_with_facets[i],
                 device=device,
             )
+
+            # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
+            canted_control_points = self.perform_canting_and_translation(
+                points = nurbs.control_points.detach(),
+                translation=facet_translation_vectors[i],
+                canting=torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device),
+                device=device
+            )
+
             facet_config_list.append(
                 FacetConfig(
                     facet_key=f"facet_{i + 1}",
-                    control_points=nurbs.control_points.detach(),
+                    control_points=canted_control_points,
                     degrees=nurbs.degrees,
                     translation_vector=facet_translation_vectors[i],
                     canting=canting[i],
@@ -390,9 +399,17 @@ class SurfaceGenerator:
         control_points[:, :, 2] = 0
 
         for facet_index in range(facet_translation_vectors.shape[0]):
+
+            canted_control_points = self.perform_canting_and_translation(
+                points=control_points,
+                canting=canting[facet_index],
+                translation=facet_translation_vectors[facet_index],
+                device=device
+            )
+
             facet_config = FacetConfig(
                 facet_key=f"facet_{facet_index + 1}",
-                control_points=control_points,
+                control_points=canted_control_points,
                 degrees=self.degrees,
                 translation_vector=facet_translation_vectors[facet_index],
                 canting=canting[facet_index],
@@ -404,3 +421,104 @@ class SurfaceGenerator:
         log.info("Surface configuration based on ideal heliostat complete!")
 
         return surface_config
+
+
+    def perform_canting_and_translation(
+        self,
+        points: torch.Tensor,
+        translation: torch.Tensor,
+        canting: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Perform the canting rotation and facet translation.
+
+        Parameters
+        ----------
+        points : torch.Tensor
+            The points to be canted and translated.
+        translation : torch.Tensor
+            The facet translation vector.
+        canting : torch.Tensor
+            The canting vectors in east and north direction.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+        
+        Returns
+        -------
+        torch.Tensor
+            The canted and translated points.
+        """
+        device = get_device(device=device)
+
+        combined_matrix = torch.zeros((4, 4), device=device)
+
+        combined_matrix[:, 0] = torch.nn.functional.normalize(canting[0], dim=0)
+        combined_matrix[:, 1] = torch.nn.functional.normalize(canting[1], dim=0)
+        combined_matrix[:3, 2] = torch.nn.functional.normalize(torch.linalg.cross(combined_matrix[:3, 0], combined_matrix[:3, 1]), dim=0)
+        combined_matrix[:, 3] = translation
+        combined_matrix[3, 3] = 1.0
+
+        canted_points = (utils.convert_3d_point_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[0], 4)
+
+        return canted_points[:, :, :3]
+ 
+
+    def plot_surfaces(self, surface_measured, surface_ideal, device):
+        import matplotlib.pyplot as plt
+        # 1) grab points [n_facets, n_eval, 4]
+        pts_meas, _ = surface_measured.get_surface_points_and_normals(torch.tensor([50, 50], device=device), device=device)
+        pts_ideal, _ = surface_ideal.get_surface_points_and_normals(torch.tensor([50, 50], device=device), device=device)
+
+        # 2) flatten facets into one long vector and drop the 4th (homogeneous) coord
+        #    result: shape [1, n_facets * n_eval, 3]
+        original_surface_points = pts_meas.reshape(1, -1, 4)[..., :3]
+        aligned_surface_points  = pts_ideal.reshape(1, -1, 4)[..., :3]
+
+        colors = ["r", "g", "b", "y"]
+
+        fig = plt.figure(figsize=(14, 6))
+        gs  = fig.add_gridspec(1, 2, width_ratios=[1, 1], wspace=0.3)
+
+        ax1 = fig.add_subplot(gs[0], projection="3d")
+        ax2 = fig.add_subplot(gs[1], projection="3d")
+
+        number_of_facets = pts_meas.shape[0]
+        total_pts       = original_surface_points.shape[1]
+        batch_size      = total_pts // number_of_facets
+
+        for i in range(number_of_facets):
+            start = i * batch_size
+            end   = start + batch_size
+
+            e0 = original_surface_points[0, start:end, 0].detach().cpu().numpy()
+            n0 = original_surface_points[0, start:end, 1].detach().cpu().numpy()
+            u0 = original_surface_points[0, start:end, 2].detach().cpu().numpy()
+
+            e1 = aligned_surface_points[0, start:end, 0].detach().cpu().numpy()
+            n1 = aligned_surface_points[0, start:end, 1].detach().cpu().numpy()
+            u1 = aligned_surface_points[0, start:end, 2].detach().cpu().numpy()
+
+            ax1.scatter(e0, n0, u0, color=colors[i], label=f"Facet {i+1}", s=0.05)
+            ax2.scatter(e1, n1, u1, color=colors[i], label=f"Facet {i+1}")
+
+        # labels, limits, titles
+        for ax in (ax1, ax2):
+            ax.set_xlabel("E"); ax.set_ylabel("N"); ax.set_zlabel("U")
+            ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+
+        # ax1.set_title("Original surface")
+        # ax1.set_zlim(-0.5, 0.5)
+
+        # ax2.set_title("Aligned surface")
+        # ax2.set_ylim(4.5, 5.5)
+
+        # one legend for both
+        handles, labels = ax1.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="upper center", ncols=number_of_facets)
+
+        plt.tight_layout()
+        plt.show()
+        fig.savefig("tut_3.png")
