@@ -18,7 +18,7 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 # Set the device.
-device = get_device(torch.device("cuda"))
+device = get_device()
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path(

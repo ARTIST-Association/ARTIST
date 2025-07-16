@@ -365,19 +365,19 @@ class SurfaceGenerator:
         canting = utils.convert_3d_direction_to_4d_format(canting, device=device)
 
         control_points = torch.zeros(
-            (1, 1, self.number_of_control_points[0], self.number_of_control_points[1], 3),
+            (self.number_of_control_points[0], self.number_of_control_points[1], 3),
             device=device,
         )
         origin_offsets_e = torch.linspace(
             -0.5,
             0.5,
-            control_points.shape[2],
+            control_points.shape[0],
             device=device,
         )
         origin_offsets_n = torch.linspace(
             -0.5,
             0.5,
-            control_points.shape[3],
+            control_points.shape[1],
             device=device,
         )
 
@@ -385,9 +385,9 @@ class SurfaceGenerator:
             origin_offsets_e, origin_offsets_n, indexing="ij"
         )
 
-        control_points[:, :, :, :, 0] = control_points_e
-        control_points[:, :, :, :, 1] = control_points_n
-        control_points[:, :, :, :, 2] = 0
+        control_points[:, :, 0] = control_points_e
+        control_points[:, :, 1] = control_points_n
+        control_points[:, :, 2] = 0
 
         for facet_index in range(facet_translation_vectors.shape[0]):
             facet_config = FacetConfig(
