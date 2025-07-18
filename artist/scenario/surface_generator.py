@@ -422,7 +422,7 @@ class SurfaceGenerator:
 
         return surface_config
 
-
+    @staticmethod
     def perform_canting_and_translation(
         self,
         points: torch.Tensor,
@@ -461,10 +461,70 @@ class SurfaceGenerator:
         combined_matrix[:, 3] = translation
         combined_matrix[3, 3] = 1.0
 
-        canted_points = (utils.convert_3d_point_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[0], 4)
+        canted_points = (utils.convert_3d_point_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[-2], points.shape[-3], 4)
 
         return canted_points[:, :, :3]
  
+    @staticmethod
+    def perform_inverse_canting_and_translation(
+        canted_points: torch.Tensor,   # shape (F, N, 4)
+        translation: torch.Tensor,     # shape (F, 4)
+        canting: torch.Tensor,         # shape (F, 2, 4)
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Invert the cant+translate on a batch of facets.
+
+        Parameters
+        ----------
+        canted_points : torch.Tensor
+            Homogeneous points after forward transform, shape (F, N, 4).
+        translation : torch.Tensor
+            Batch of facet translations, shape (F, 4).
+        canting : torch.Tensor
+            Batch of canting vectors (east, north), shape (F, 2, 4).
+        device : torch.device | None
+            Computation device.
+
+        Returns
+        -------
+        torch.Tensor
+            Original 3D points, shape (F, N, 3).
+        """
+        device = get_device(device=device)
+        F_batch, N, _ = canted_points.shape
+
+        # Rebuild forward‐transform for each facet
+        forward = torch.zeros((F_batch, 4, 4), device=device)
+        forward[:, :, 0] = torch.nn.functional.normalize(canting[:, 0, :], dim=1)
+        forward[:, :, 1] = torch.nn.functional.normalize(canting[:, 1, :], dim=1)
+        # third axis = cross(east, north)
+        east = forward[:, :3, 0]    # (F, 3)
+        north = forward[:, :3, 1]   # (F, 3)
+        cross = torch.linalg.cross(east, north, dim=1)  # (F, 3)
+        forward[:, :3, 2] = torch.nn.functional.normalize(cross, dim=1)
+        forward[:, :, 3] = translation
+        forward[:, 3, 3] = 1.0
+
+        # Extract rotation & translation
+        R = forward[:, :3, :3]      # (F, 3, 3)
+        t = forward[:, :3, 3]       # (F, 3)
+
+        # Build inverse matrices
+        R_inv = R.transpose(1, 2)   # (F, 3, 3)
+        t_inv = -torch.bmm(R_inv, t.unsqueeze(-1)).squeeze(-1)  # (F, 3)
+
+        inv = torch.zeros((F_batch, 4, 4), device=device)
+        inv[:, :3, :3] = R_inv
+        inv[:, :3, 3] = t_inv
+        inv[:, 3, 3] = 1.0
+
+        # Apply batch‐inverse to each point
+        # canted_points @ inv^T -> (F, N, 4)
+        restored = torch.bmm(canted_points, inv.transpose(1, 2))
+
+        # Drop homogeneous coordinate
+        return restored[..., :3]
 
     def plot_surfaces(self, surface_measured, surface_ideal, device):
         import matplotlib.pyplot as plt
