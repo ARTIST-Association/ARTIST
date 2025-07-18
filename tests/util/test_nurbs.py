@@ -2,7 +2,6 @@ import torch
 
 from artist.util import utils
 from artist.util.nurbs import NURBSSurfaces
-from artist.util.old_nurbs import NURBSSurfaceOld
 
 
 def random_surface(
@@ -108,7 +107,7 @@ def test_nurbs(device: torch.device) -> None:
         device=device,
     )
 
-    optimizer = torch.optim.Adam(nurbs.parameters(), lr=5e-3)
+    optimizer = torch.optim.Adam([nurbs.control_points.requires_grad_()], lr=5e-3)
 
     for epoch in range(100):
         points, normals = nurbs.calculate_surface_points_and_normals(
@@ -166,7 +165,7 @@ def test_find_span(device: torch.device):
     )
 
     span = nurbs_surface.find_spans(
-        dimension="u",
+        direction=0,
         evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
         knot_vectors=knots.unsqueeze(0).unsqueeze(0),
         device=device,

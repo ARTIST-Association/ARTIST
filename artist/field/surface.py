@@ -47,7 +47,7 @@ class Surface:
 
         self.nurbs_facets = []
 
-        for facet_config in enumerate(surface_config.facet_list):
+        for facet_config in surface_config.facet_list:
             self.nurbs_facets.append(
                 NURBSSurfaces(
                     degrees=facet_config.degrees,

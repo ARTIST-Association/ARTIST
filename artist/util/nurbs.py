@@ -73,8 +73,8 @@ class NURBSSurfaces(torch.nn.Module):
         self.uniform = uniform
         self.number_of_surfaces = self.control_points.shape[0]
         self.number_of_facets_per_surface = self.control_points.shape[1]
-        self.knot_vectors_u = self.calculate_uniform_knot_vectors(direction="u", uniform=self.uniform, device=device)
-        self.knot_vectors_v = self.calculate_uniform_knot_vectors(direction="v", uniform=self.uniform, device=device)
+        self.knot_vectors_u = self.calculate_uniform_knot_vectors(direction=config_dictionary.nurbs_u_direction, device=device)
+        self.knot_vectors_v = self.calculate_uniform_knot_vectors(direction=config_dictionary.nurbs_v_direction, device=device)
 
     def calculate_uniform_knot_vectors(
         self,

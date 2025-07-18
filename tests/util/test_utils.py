@@ -139,16 +139,16 @@ def test_3d_point_converter(
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
             utils.convert_3d_points_to_4d_format(
-                point=point.to(device),
+                points=point.to(device),
                 device=device,
             )
-        assert f"Expected a 3D point but got a point of shape {point.shape}!" in str(
+        assert f"Expected 3D points but got points of shape {point.shape}!" in str(
             exc_info.value
         )
     else:
         # Check if the 4d point is correct.
         point_4d = utils.convert_3d_points_to_4d_format(
-            point=point.to(device),
+            points=point.to(device),
             device=device,
         )
         torch.testing.assert_close(point_4d, expected.to(device), rtol=1e-4, atol=1e-4)
@@ -195,17 +195,17 @@ def test_3d_direction_converter(
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
             utils.convert_3d_directions_to_4d_format(
-                direction=direction.to(device),
+                directions=direction.to(device),
                 device=device,
             )
         assert (
-            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
+            f"Expected 3D directions but got directions of shape {direction.shape}!"
             in str(exc_info.value)
         )
     else:
         # Check if the 4d point is correct.
         direction_4d = utils.convert_3d_directions_to_4d_format(
-            direction=direction.to(device),
+            directions=direction.to(device),
             device=device,
         )
         torch.testing.assert_close(
