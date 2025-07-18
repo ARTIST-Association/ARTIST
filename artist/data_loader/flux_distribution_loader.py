@@ -41,7 +41,7 @@ def load_flux_from_png(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of flux distributions from png files.")
+    log.info("Beginning extraction of flux distributions from .png files.")
 
     flux_data_per_heliostat = defaultdict(torch.Tensor)
     
@@ -62,10 +62,10 @@ def load_flux_from_png(
 
     total_number_of_measurements = sum(len(path_list) for _, path_list in heliostat_flux_path_mapping)
     
+    measured_fluxes = torch.empty((total_number_of_measurements, resolution[0], resolution[1]), device=device)
+        
     if total_number_of_measurements > 0:
 
-        measured_fluxes = torch.empty((total_number_of_measurements, resolution[0], resolution[1]), device=device)
-        
         index = 0
         for name in heliostat_names:
             for flux_data in flux_data_per_heliostat.get(name, []):
@@ -73,10 +73,11 @@ def load_flux_from_png(
                 index += 1
 
         log.info("Loading measured flux density distributions complete.")
-        return measured_fluxes
 
     else:
-        return None
+        log.info("No measured flux density distributions were provided for this group.")
+        
+    return measured_fluxes
 
     
     

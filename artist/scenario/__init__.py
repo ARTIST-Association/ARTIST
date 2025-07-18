@@ -21,8 +21,8 @@ from artist.scenario.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
-from artist.scenario.scenario_generator import ScenarioGenerator
 from artist.scenario.surface_generator import SurfaceGenerator
 
 __all__ = [
@@ -46,6 +46,6 @@ __all__ = [
     "HeliostatConfig",
     "HeliostatListConfig",
     "Scenario",
-    "ScenarioGenerator",
+    "H5ScenarioGenerator",
     "SurfaceGenerator",
 ]

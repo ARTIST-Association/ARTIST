@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 """A logger for the scenario generator."""
 
 
-class ScenarioGenerator:
+class H5ScenarioGenerator:
     """
     Generate an ``ARTIST`` scenario, saving it as an HDF5 file.
 

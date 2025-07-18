@@ -12,7 +12,7 @@ class Surface:
 
     Attributes
     ----------
-    nurbs_facets : List[NURBSSurface]
+    nurbs_facets : list[NURBSSurface]
         A list of one nurbs surface for each facet.
     facet_translation_vectors : torch.Tensor
         The facet translation vectors for all facets.
@@ -45,22 +45,15 @@ class Surface:
         """
         device = get_device(device=device)
 
-        number_of_facets = len(surface_config.facet_list)
-
         self.nurbs_facets = []
-        self.facet_translation_vectors = torch.empty(
-            (number_of_facets, 4), device=device
-        )
-        for facet_index, facet_config in enumerate(surface_config.facet_list):
+
+        for facet_config in enumerate(surface_config.facet_list):
             self.nurbs_facets.append(
                 NURBSSurfaces(
                     degrees=facet_config.degrees,
                     control_points=facet_config.control_points.unsqueeze(0).unsqueeze(0).expand(1, 1, -1, -1, -1),
                     device=device,
                 )
-            )
-            self.facet_translation_vectors[facet_index] = (
-                facet_config.translation_vector
             )
 
     def get_surface_points_and_normals(
@@ -104,13 +97,9 @@ class Surface:
         )
         for i, nurbs_facet in enumerate(self.nurbs_facets):
             (
-                facet_points,
-                facet_normals,
+                surface_points[i],
+                surface_normals[i],
             ) = nurbs_facet.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), device=device
             )
-            surface_points[i] = (
-                facet_points
-            ).detach()
-            surface_normals[i] = facet_normals.detach()
         return surface_points, surface_normals

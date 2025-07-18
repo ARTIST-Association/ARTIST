@@ -19,7 +19,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
-from artist.scenario.scenario_generator import ScenarioGenerator
+from artist.scenario.h5_scenario_generator import ScenarioGenerator
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device

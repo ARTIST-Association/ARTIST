@@ -245,13 +245,9 @@ class HeliostatField:
                 ),
                 device=device,
             )
-            translations = torch.empty((number_of_facets, 4), device=device)
-            cantings = torch.empty((number_of_facets, 2, 4), device=device)
             for i in range(number_of_facets):
                 degrees = surface_config.facet_list[i].degrees
                 control_points[i] = surface_config.facet_list[i].control_points
-                translations[i] = surface_config.facet_list[i].translation_vector
-                cantings[i] = surface_config.facet_list[i].canting
 
             heliostat_group_key = f"{kinematic_type}_{actuator_type}"
 
@@ -286,12 +282,6 @@ class HeliostatField:
             grouped_field_data[heliostat_group_key][
                 config_dictionary.facet_control_points
             ].append(control_points)
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.facets_translation_vector
-            ].append(translations)
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.facets_canting
-            ].append(cantings)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.initial_orientations
             ].append(initial_orientation)
@@ -338,12 +328,6 @@ class HeliostatField:
                     nurbs_degrees=degrees,
                     initial_orientations=grouped_field_data[heliostat_group_name][
                         config_dictionary.initial_orientations
-                    ],
-                    facet_translations=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facets_translation_vector
-                    ],
-                    cantings=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facets_canting
                     ],
                     kinematic_deviation_parameters=grouped_field_data[
                         heliostat_group_name
