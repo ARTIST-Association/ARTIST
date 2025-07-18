@@ -15,7 +15,7 @@ from artist.util.environment_setup import get_device
 # If you have already generated the tutorial scenario yourself, you can use that scenario,
 # create and use any custom scenario, or use one provided in the artist/tutorials/data/scenarios directory.
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat.h5")
 
 # Set up logger.
 set_logger_config()
@@ -39,9 +39,9 @@ print(
 print(
     f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is located at: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
 )
-print(
-    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
-)
+# print(
+#     f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
+# ) #TODO: AImpoints are not found
 
 # Let's say we only want to consider one Heliostat for the beginning.
 # We will choose the first Heliostat, with index 0 by activating it.
