@@ -183,7 +183,7 @@ class SurfaceGenerator:
 
         # Optimize the control points of the NURBS surface.
         optimizer = torch.optim.Adam(
-            nurbs_surface.parameters(), lr=self.initial_learning_rate
+            [nurbs_surface.control_points.requires_grad_()], lr=self.initial_learning_rate
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
@@ -317,11 +317,11 @@ class SurfaceGenerator:
 
             # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
             canted_control_points = self.perform_canting_and_translation(
-                points = nurbs.control_points.detach(),
+                points = nurbs.control_points[0, 0],
                 translation=facet_translation_vectors[i],
                 canting=torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device),
                 device=device
-            )
+            ).unsqueeze(0).unsqueeze(0)
 
             facet_config_list.append(
                 FacetConfig(
@@ -461,7 +461,7 @@ class SurfaceGenerator:
         combined_matrix[:, 3] = translation
         combined_matrix[3, 3] = 1.0
 
-        canted_points = (utils.convert_3d_points_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[0], 4)
+        canted_points = (utils.convert_3d_points_to_4d_format(points=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[1], 4)
 
         return canted_points[:, :, :3]
  

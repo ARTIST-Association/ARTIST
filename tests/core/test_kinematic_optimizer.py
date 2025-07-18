@@ -111,7 +111,9 @@ def test_kinematic_optimizer(
         )
 
         optimizer = torch.optim.Adam(
-            heliostat_group.kinematic.parameters(), lr=initial_lr
+            [heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+             heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_()
+            ], lr=initial_lr
         )
 
         # Create the kinematic optimizer.

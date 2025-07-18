@@ -316,7 +316,7 @@ def convert_3d_directions_to_4d_format(
 
     if directions.size(dim=-1) != 3:
         raise ValueError(
-            f"Expected a 3D direction but got a direction of shape {directions.shape}!"
+            f"Expected 3D directions but got directions of shape {directions.shape}!"
         )
 
     zeros_tensor = torch.zeros(
