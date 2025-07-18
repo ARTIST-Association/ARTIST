@@ -1,7 +1,6 @@
 import logging
 
 import torch
-from torch.optim import Optimizer
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.field.heliostat_group import HeliostatGroup
