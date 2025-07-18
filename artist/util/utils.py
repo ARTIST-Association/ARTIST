@@ -247,19 +247,19 @@ def translate_enu(
     return matrix
 
 
-def convert_3d_point_to_4d_format(
-    point: torch.Tensor, device: torch.device | None = None
+def convert_3d_points_to_4d_format(
+    points: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    TODO adapt docstring to batches
-    Append ones to the last dimension of a 3D point vector.
+    Append ones to the last dimension of a 3D point vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    point : torch.Tensor
-        Input point in a 3D format.
+    points : torch.Tensor
+        Input points in a 3D format.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -277,24 +277,25 @@ def convert_3d_point_to_4d_format(
     """
     device = get_device(device=device)
 
-    if point.size(dim=-1) != 3:
-        raise ValueError(f"Expected a 3D point but got a point of shape {point.shape}!")
+    if points.size(dim=-1) != 3:
+        raise ValueError(f"Expected 3D points but got points of shape {points.shape}!")
 
-    ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
-    return torch.cat((point, ones_tensor), dim=-1)
+    ones_tensor = torch.ones(points.shape[:-1] + (1,), dtype=points.dtype, device=device)
+    return torch.cat((points, ones_tensor), dim=-1)
 
 
-def convert_3d_direction_to_4d_format(
-    direction: torch.Tensor, device: torch.device | None = None
+def convert_3d_directions_to_4d_format(
+    directions: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append zeros to the last dimension of a 3D direction vector.
+    Append zeros to the last dimension of 3D direction vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    direction : torch.Tensor
+    directions : torch.Tensor
         Input direction in a 3D format.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -309,19 +310,19 @@ def convert_3d_direction_to_4d_format(
     Returns
     -------
     torch.Tensor
-        Direction vector with ones appended at the last dimension.
+        Direction vectors with ones appended at the last dimension.
     """
     device = get_device(device=device)
 
-    if direction.size(dim=-1) != 3:
+    if directions.size(dim=-1) != 3:
         raise ValueError(
-            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
+            f"Expected a 3D direction but got a direction of shape {directions.shape}!"
         )
 
     zeros_tensor = torch.zeros(
-        direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
+        directions.shape[:-1] + (1,), dtype=directions.dtype, device=device
     )
-    return torch.cat((direction, zeros_tensor), dim=-1)
+    return torch.cat((directions, zeros_tensor), dim=-1)
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:

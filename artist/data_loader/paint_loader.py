@@ -139,12 +139,12 @@ def extract_paint_calibration_properties_data(
     focal_spots_enu = convert_wgs84_coordinates_to_local_enu(
         focal_spots_global, power_plant_position, device=device
     )
-    focal_spots = utils.convert_3d_point_to_4d_format(focal_spots_enu, device=device)
+    focal_spots = utils.convert_3d_points_to_4d_format(focal_spots_enu, device=device)
 
     light_source_positions_enu = azimuth_elevation_to_enu(
         azimuths, elevations, degree=True, device=device
     )
-    light_source_positions = utils.convert_3d_point_to_4d_format(
+    light_source_positions = utils.convert_3d_points_to_4d_format(
         light_source_positions_enu, device=device
     )
     incident_ray_directions = (
@@ -246,9 +246,9 @@ def extract_paint_tower_measurements(
         center_enu = convert_wgs84_coordinates_to_local_enu(
             center_lat_lon, power_plant_position, device=device
         )
-        center = utils.convert_3d_point_to_4d_format(center_enu[0], device=device)
+        center = utils.convert_3d_points_to_4d_format(center_enu[0], device=device)
 
-        normal_vector = utils.convert_3d_direction_to_4d_format(
+        normal_vector = utils.convert_3d_directions_to_4d_format(
             torch.tensor(
                 [tower_dict[target_area][config_dictionary.paint_normal_vector]],
                 device=device,
@@ -337,7 +337,7 @@ def extract_paint_heliostat_properties(
         power_plant_position,
         device=device,
     )
-    heliostat_position = utils.convert_3d_point_to_4d_format(
+    heliostat_position = utils.convert_3d_points_to_4d_format(
         heliostat_position_3d[0], device=device
     )
 
@@ -435,7 +435,7 @@ def extract_paint_heliostat_properties(
     )
 
     # Include the initial orientation for the kinematic.
-    initial_orientation = utils.convert_3d_direction_to_4d_format(
+    initial_orientation = utils.convert_3d_directions_to_4d_format(
         torch.tensor(
             heliostat_dict[config_dictionary.paint_initial_orientation],
             device=device,

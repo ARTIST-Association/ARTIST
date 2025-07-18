@@ -138,7 +138,7 @@ def test_3d_point_converter(
     # Check if the ValueError is thrown as expected.
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
-            utils.convert_3d_point_to_4d_format(
+            utils.convert_3d_points_to_4d_format(
                 point=point.to(device),
                 device=device,
             )
@@ -147,7 +147,7 @@ def test_3d_point_converter(
         )
     else:
         # Check if the 4d point is correct.
-        point_4d = utils.convert_3d_point_to_4d_format(
+        point_4d = utils.convert_3d_points_to_4d_format(
             point=point.to(device),
             device=device,
         )
@@ -194,7 +194,7 @@ def test_3d_direction_converter(
     # Check if the ValueError is thrown as expected.
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
-            utils.convert_3d_direction_to_4d_format(
+            utils.convert_3d_directions_to_4d_format(
                 direction=direction.to(device),
                 device=device,
             )
@@ -204,7 +204,7 @@ def test_3d_direction_converter(
         )
     else:
         # Check if the 4d point is correct.
-        direction_4d = utils.convert_3d_direction_to_4d_format(
+        direction_4d = utils.convert_3d_directions_to_4d_format(
             direction=direction.to(device),
             device=device,
         )

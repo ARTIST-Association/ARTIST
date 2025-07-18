@@ -284,7 +284,7 @@ class SurfaceGenerator:
         surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
 
         # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
+        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
             facet_translation_vectors, device=device
         )
         # If we are using a point cloud to learn the points, we do not need to translate the facets.
@@ -293,11 +293,11 @@ class SurfaceGenerator:
                 facet_translation_vectors.shape, device=device
             )
         # Convert to 4D format.
-        canting = utils.convert_3d_direction_to_4d_format(canting, device=device)
-        surface_points_with_facets = utils.convert_3d_point_to_4d_format(
+        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
+        surface_points_with_facets = utils.convert_3d_points_to_4d_format(
             surface_points_with_facets, device=device
         )
-        surface_normals_with_facets = utils.convert_3d_direction_to_4d_format(
+        surface_normals_with_facets = utils.convert_3d_directions_to_4d_format(
             surface_normals_with_facets, device=device
         )
 
@@ -368,10 +368,10 @@ class SurfaceGenerator:
         facet_config_list = []
 
         # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_direction_to_4d_format(
+        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
             facet_translation_vectors, device=device
         )
-        canting = utils.convert_3d_direction_to_4d_format(canting, device=device)
+        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
         control_points = torch.zeros(
             (self.number_of_control_points[0], self.number_of_control_points[1], 3),
@@ -461,7 +461,7 @@ class SurfaceGenerator:
         combined_matrix[:, 3] = translation
         combined_matrix[3, 3] = 1.0
 
-        canted_points = (utils.convert_3d_point_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[0], 4)
+        canted_points = (utils.convert_3d_points_to_4d_format(point=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[0], 4)
 
         return canted_points[:, :, :3]
  
