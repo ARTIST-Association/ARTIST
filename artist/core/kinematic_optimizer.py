@@ -203,14 +203,14 @@ class KinematicOptimizer:
             dim=1,
         )
 
+        # Activate heliostats
+        self.heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
+        )
+
         log_step = max_epoch // num_log
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
-
-            # Activate heliostats
-            self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask, device=device
-            )
 
             # Retrieve the orientation of the heliostats for given motor positions.
             orientations = (
@@ -297,6 +297,11 @@ class KinematicOptimizer:
 
         loss = torch.inf
         epoch = 0
+
+        self.heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device
+        )
 
         # Start the optimization.
         log_step = max_epoch // num_log

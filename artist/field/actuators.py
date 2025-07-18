@@ -49,7 +49,6 @@ class Actuators(torch.nn.Module):
 
         device = get_device(device=device)
 
-        #self.actuator_parameters = torch.nn.Parameter(actuator_parameters)
         self.actuator_parameters = actuator_parameters
 
         self.active_actuator_parameters = torch.empty_like(
