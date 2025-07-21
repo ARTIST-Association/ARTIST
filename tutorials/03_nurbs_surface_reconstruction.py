@@ -4,7 +4,6 @@ import h5py
 import torch
 
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -120,54 +119,24 @@ with setup_distributed_environment(
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
-        # Load the measured flux density distribution data.
-        measured_flux_density_distributions = flux_distribution_loader.load_flux_from_png(
-            heliostat_flux_path_mapping=[
-                (heliostat_name, png_paths)
-                for heliostat_name, _, png_paths in heliostat_data_mapping
-                if heliostat_name in heliostat_group.names
-            ],
-        heliostat_names=heliostat_group.names,
-        device=device
-        )
-        (
-            _,
-            incident_ray_directions_reconstruction,
-            _,
-            heliostats_mask_reconstruction,
-            target_area_mask_reconstruction,
-        ) = paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=[
-                (heliostat_name, calibration_properties_paths)
-                for heliostat_name, calibration_properties_paths, _ in heliostat_data_mapping
-                if heliostat_name in heliostat_group.names
-            ],
-            heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
-            power_plant_position=scenario.power_plant_position,
-            device=device,
+        # Set optimizer parameters.
+        tolerance = 0.0005
+        max_epoch = 150000
+        initial_learning_rate = 1e-5
+
+        # Create the surface reconstructor.
+        surface_reconstructor = SurfaceReconstructor(
+            scenario=scenario,
+            heliostat_group=heliostat_group,
+            heliostat_data_mapping=heliostat_data_mapping,
+            initial_learning_rate=initial_learning_rate,
+            tolerance=tolerance,
+            max_epoch=max_epoch,
+            num_log=max_epoch,
+            device=device
         )
 
-        if heliostats_mask_reconstruction.sum() > 0:
-            tolerance = 0.0005
-            max_epoch = 150000
-            initial_learning_rate = 1e-5
-
-            # Create the surface reconstructor.
-            surface_reconstructor = SurfaceReconstructor(
-                scenario=scenario,
-                heliostat_group=heliostat_group,
-            )
-
-            surface_reconstructor.reconstruct_surfaces(
-                flux_distributions_measured=measured_flux_density_distributions,
-                number_of_evaluation_points=torch.tensor([50, 50], device=device),
-                incident_ray_directions=incident_ray_directions_reconstruction,
-                active_heliostats_mask=heliostats_mask_reconstruction,
-                target_area_mask=target_area_mask_reconstruction,
-                initial_learning_rate=initial_learning_rate,
-                tolerance=tolerance,
-                max_epoch=max_epoch,
-                num_log=max_epoch,
-                device=device
-            )
+        surface_reconstructor.reconstruct_surfaces(
+            number_of_evaluation_points=torch.tensor([50, 50], device=device),
+            device=device
+        )

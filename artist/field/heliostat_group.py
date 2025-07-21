@@ -94,6 +94,7 @@ class HeliostatGroup:
         device = get_device(device=device)
 
         self.number_of_heliostats = len(names)
+        self.number_of_facets_per_heliostat = nurbs_control_points.shape[1]
         self.names = names
         self.positions = positions
         self.surface_points = surface_points
