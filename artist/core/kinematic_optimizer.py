@@ -62,7 +62,9 @@ class KinematicOptimizer:
         self,
         scenario: Scenario,
         heliostat_group: HeliostatGroup,
-        heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        heliostat_data_mapping: list[
+            tuple[str, list[pathlib.Path], list[pathlib.Path]]
+        ],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
         initial_learning_rate: float = 0.0004,
         tolerance: float = 0.035,
@@ -105,7 +107,7 @@ class KinematicOptimizer:
         )
         if rank == 0:
             log.info("Create a kinematic optimizer.")
-        
+
         self.scenario = scenario
         self.heliostat_group = heliostat_group
         self.calibration_method = calibration_method
@@ -131,7 +133,10 @@ class KinematicOptimizer:
             device=device,
         )
 
-        if self.calibration_method == config_dictionary.kinematic_calibration_raytracing:
+        if (
+            self.calibration_method
+            == config_dictionary.kinematic_calibration_raytracing
+        ):
             self.motor_positions = None
 
         self.num_log = num_log
@@ -140,9 +145,13 @@ class KinematicOptimizer:
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
         self.max_epoch = max_epoch
-        
+
         self.optimizer = torch.optim.Adam(
-            [self.heliostat_group.kinematic.deviation_parameters.requires_grad_(), self.heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_()], lr=self.initial_learning_rate
+            [
+                self.heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+                self.heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
+            ],
+            lr=self.initial_learning_rate,
         )
 
     def optimize(
@@ -170,16 +179,22 @@ class KinematicOptimizer:
             log.info("Start the kinematic calibration.")
 
         if self.heliostats_mask.sum() > 0:
-            if self.calibration_method == config_dictionary.kinematic_calibration_motor_positions:
+            if (
+                self.calibration_method
+                == config_dictionary.kinematic_calibration_motor_positions
+            ):
                 self._optimize_kinematic_parameters_with_motor_positions(
                     device=device,
                 )
 
-            if self.calibration_method == config_dictionary.kinematic_calibration_raytracing:
+            if (
+                self.calibration_method
+                == config_dictionary.kinematic_calibration_raytracing
+            ):
                 self._optimize_kinematic_parameters_with_raytracing(
                     device=device,
-            )
-        
+                )
+
         if rank == 0:
             log.info("Kinematic parameters optimized.")
 
@@ -293,7 +308,6 @@ class KinematicOptimizer:
         if rank == 0:
             log.info("Kinematic optimization with ray tracing.")
 
-
         loss = torch.inf
         epoch = 0
 
@@ -303,15 +317,12 @@ class KinematicOptimizer:
             self.optimizer.zero_grad()
 
             self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=self.heliostats_mask,
-                device=device
+                active_heliostats_mask=self.heliostats_mask, device=device
             )
 
             # Align heliostats.
             self.heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[
-                    self.target_area_mask
-                ],
+                aim_points=self.scenario.target_areas.centers[self.target_area_mask],
                 incident_ray_directions=self.incident_ray_directions,
                 active_heliostats_mask=self.heliostats_mask,
                 device=device,

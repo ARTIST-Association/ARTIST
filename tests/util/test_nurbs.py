@@ -111,8 +111,7 @@ def test_nurbs(device: torch.device) -> None:
 
     for epoch in range(100):
         points, normals = nurbs.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), 
-            device=device
+            evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), device=device
         )
 
         optimizer.zero_grad()
@@ -143,7 +142,9 @@ def test_find_span(device: torch.device):
     """
     degrees = torch.tensor([3, 3], device=device)
 
-    evaluation_points = utils.create_nurbs_evaluation_grid(torch.tensor([4, 5], device=device), device=device)
+    evaluation_points = utils.create_nurbs_evaluation_grid(
+        torch.tensor([4, 5], device=device), device=device
+    )
     evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
     evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
 
@@ -171,7 +172,9 @@ def test_find_span(device: torch.device):
         device=device,
     )
 
-    expected = torch.tensor([[[3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5]]], device=device)
+    expected = torch.tensor(
+        [[[3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5]]], device=device
+    )
 
     torch.testing.assert_close(span, expected.to(device), atol=5e-4, rtol=5e-4)
 
@@ -190,37 +193,45 @@ def test_nurbs_forward(device: torch.device) -> None:
     AssertionError
         If test does not complete as expected.
     """
-    evaluation_points = torch.cartesian_prod(
-        torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
-        torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
-    ).unsqueeze(0).unsqueeze(0)
+    evaluation_points = (
+        torch.cartesian_prod(
+            torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
+            torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
+        )
+        .unsqueeze(0)
+        .unsqueeze(0)
+    )
     control_points = torch.tensor(
-        [[[
+        [
             [
-                [-5.0000, -5.0000, 0.0000],
-                [-5.0000, -1.6667, 0.0000],
-                [-5.0000, 1.6667, 0.0000],
-                [-5.0000, 5.0000, 0.0000],
-            ],
-            [
-                [-1.6667, -5.0000, 0.0000],
-                [-1.6667, -1.6667, 0.0000],
-                [-1.6667, 1.6667, 0.0000],
-                [-1.6667, 5.0000, 0.0000],
-            ],
-            [
-                [1.6667, -5.0000, 0.0000],
-                [1.6667, -1.6667, 0.0000],
-                [1.6667, 1.6667, 0.0000],
-                [1.6667, 5.0000, 0.0000],
-            ],
-            [
-                [5.0000, -5.0000, 0.0000],
-                [5.0000, -1.6667, 0.0000],
-                [5.0000, 1.6667, 0.0000],
-                [5.0000, 5.0000, 0.0000],
-            ],
-        ]]],
+                [
+                    [
+                        [-5.0000, -5.0000, 0.0000],
+                        [-5.0000, -1.6667, 0.0000],
+                        [-5.0000, 1.6667, 0.0000],
+                        [-5.0000, 5.0000, 0.0000],
+                    ],
+                    [
+                        [-1.6667, -5.0000, 0.0000],
+                        [-1.6667, -1.6667, 0.0000],
+                        [-1.6667, 1.6667, 0.0000],
+                        [-1.6667, 5.0000, 0.0000],
+                    ],
+                    [
+                        [1.6667, -5.0000, 0.0000],
+                        [1.6667, -1.6667, 0.0000],
+                        [1.6667, 1.6667, 0.0000],
+                        [1.6667, 5.0000, 0.0000],
+                    ],
+                    [
+                        [5.0000, -5.0000, 0.0000],
+                        [5.0000, -1.6667, 0.0000],
+                        [5.0000, 1.6667, 0.0000],
+                        [5.0000, 5.0000, 0.0000],
+                    ],
+                ]
+            ]
+        ],
         device=device,
     )
 
@@ -233,21 +244,29 @@ def test_nurbs_forward(device: torch.device) -> None:
     surface_points, surface_normals = nurbs(evaluation_points, device)
 
     expected_points = torch.tensor(
-        [[[
-            [-4.999866008759, -4.999866008759, 0.000000000000, 0.999999880791],
-            [-4.999866485596, 4.999866008759, 0.000000000000, 0.999999940395],
-            [4.999866008759, -4.999866485596, 0.000000000000, 0.999999940395],
-            [4.999866485596, 4.999866485596, 0.000000000000, 1.000000000000],
-        ]]],
+        [
+            [
+                [
+                    [-4.999866008759, -4.999866008759, 0.000000000000, 0.999999880791],
+                    [-4.999866485596, 4.999866008759, 0.000000000000, 0.999999940395],
+                    [4.999866008759, -4.999866485596, 0.000000000000, 0.999999940395],
+                    [4.999866485596, 4.999866485596, 0.000000000000, 1.000000000000],
+                ]
+            ]
+        ],
         device=device,
     )
     expected_normals = torch.tensor(
-        [[[
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-        ]]],
+        [
+            [
+                [
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                ]
+            ]
+        ],
         device=device,
     )
 

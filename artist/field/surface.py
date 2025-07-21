@@ -51,7 +51,9 @@ class Surface:
             self.nurbs_facets.append(
                 NURBSSurfaces(
                     degrees=facet_config.degrees,
-                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(0).expand(1, 1, -1, -1, -1),
+                    control_points=facet_config.control_points.unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand(1, 1, -1, -1, -1),
                     device=device,
                 )
             )
@@ -100,6 +102,7 @@ class Surface:
                 surface_points[i],
                 surface_normals[i],
             ) = nurbs_facet.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), device=device
+                evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
+                device=device,
             )
         return surface_points, surface_normals

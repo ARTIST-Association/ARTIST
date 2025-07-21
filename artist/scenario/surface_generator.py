@@ -138,7 +138,13 @@ class SurfaceGenerator:
 
         # Initialize the NURBS surface.
         control_points = torch.zeros(
-            (1, 1, self.number_of_control_points[0], self.number_of_control_points[1], 3),
+            (
+                1,
+                1,
+                self.number_of_control_points[0],
+                self.number_of_control_points[1],
+                3,
+            ),
             device=device,
         )
 
@@ -183,7 +189,8 @@ class SurfaceGenerator:
 
         # Optimize the control points of the NURBS surface.
         optimizer = torch.optim.Adam(
-            [nurbs_surface.control_points.requires_grad_()], lr=self.initial_learning_rate
+            [nurbs_surface.control_points.requires_grad_()],
+            lr=self.initial_learning_rate,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
@@ -317,10 +324,12 @@ class SurfaceGenerator:
 
             # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
             canted_control_points = self.perform_canting_and_translation(
-                points = nurbs.control_points[0, 0].detach(),
+                points=nurbs.control_points[0, 0].detach(),
                 translation=facet_translation_vectors[i],
-                canting=torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device),
-                device=device
+                canting=torch.tensor(
+                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device
+                ),
+                device=device,
             )
 
             facet_config_list.append(
@@ -399,12 +408,11 @@ class SurfaceGenerator:
         control_points[:, :, 2] = 0
 
         for facet_index in range(facet_translation_vectors.shape[0]):
-
             canted_control_points = self.perform_canting_and_translation(
                 points=control_points,
                 canting=canting[facet_index],
                 translation=facet_translation_vectors[facet_index],
-                device=device
+                device=device,
             )
 
             facet_config = FacetConfig(
@@ -421,7 +429,6 @@ class SurfaceGenerator:
         log.info("Surface configuration based on ideal heliostat complete!")
 
         return surface_config
-
 
     def perform_canting_and_translation(
         self,
@@ -445,7 +452,7 @@ class SurfaceGenerator:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        
+
         Returns
         -------
         torch.Tensor
@@ -457,11 +464,17 @@ class SurfaceGenerator:
 
         combined_matrix[:, 0] = torch.nn.functional.normalize(canting[0], dim=0)
         combined_matrix[:, 1] = torch.nn.functional.normalize(canting[1], dim=0)
-        combined_matrix[:3, 2] = torch.nn.functional.normalize(torch.linalg.cross(combined_matrix[:3, 0], combined_matrix[:3, 1]), dim=0)
+        combined_matrix[:3, 2] = torch.nn.functional.normalize(
+            torch.linalg.cross(combined_matrix[:3, 0], combined_matrix[:3, 1]), dim=0
+        )
         combined_matrix[:, 3] = translation
         combined_matrix[3, 3] = 1.0
 
-        canted_points = (utils.convert_3d_points_to_4d_format(points=points, device=device).reshape(-1, 4) @ combined_matrix.T).reshape(points.shape[0], points.shape[1], 4)
+        canted_points = (
+            utils.convert_3d_points_to_4d_format(points=points, device=device).reshape(
+                -1, 4
+            )
+            @ combined_matrix.T
+        ).reshape(points.shape[0], points.shape[1], 4)
 
         return canted_points[:, :, :3]
- 

@@ -34,7 +34,7 @@ class HeliostatGroup:
     nurbs_control_points : torch.Tensor
         The control points for NURBS surfaces for all heliostats in the group.
     nurbs_degrees : torch.Tensor
-        The degrees for NURBS surfaces for all heliostats in the group.    
+        The degrees for NURBS surfaces for all heliostats in the group.
     kinematic : Kinematic
         The kinematic of all heliostats in the group.
     number_of_active_heliostats : int

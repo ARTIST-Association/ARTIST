@@ -39,7 +39,7 @@ heliostat_data_mapping = [
             ),
             pathlib.Path(
                 "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
-            )
+            ),
         ],
         [
             pathlib.Path(
@@ -109,15 +109,16 @@ with setup_distributed_environment(
     heliostat_group_rank,
     heliostat_group_world_size,
 ):
-    
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-    
+
     for heliostat_group_index in groups_to_ranks_mapping[rank]:
-        heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+        heliostat_group = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
 
         # Set optimizer parameters.
         tolerance = 0.0005
@@ -133,9 +134,7 @@ with setup_distributed_environment(
             tolerance=tolerance,
             max_epoch=max_epoch,
             num_log=max_epoch,
-            device=device
+            device=device,
         )
 
-        surface_reconstructor.reconstruct_surfaces(
-            device=device
-        )
+        surface_reconstructor.reconstruct_surfaces(device=device)

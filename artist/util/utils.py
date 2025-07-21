@@ -280,7 +280,9 @@ def convert_3d_points_to_4d_format(
     if points.size(dim=-1) != 3:
         raise ValueError(f"Expected 3D points but got points of shape {points.shape}!")
 
-    ones_tensor = torch.ones(points.shape[:-1] + (1,), dtype=points.dtype, device=device)
+    ones_tensor = torch.ones(
+        points.shape[:-1] + (1,), dtype=points.dtype, device=device
+    )
     return torch.cat((points, ones_tensor), dim=-1)
 
 
@@ -604,7 +606,7 @@ def normalize_bitmap(
     flux_distributions: torch.Tensor,
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,
-    number_of_rays: torch.Tensor
+    number_of_rays: torch.Tensor,
 ) -> torch.Tensor:
     """
     Normalize a bitmap.
@@ -629,6 +631,6 @@ def normalize_bitmap(
     num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
     plane_area_per_pixel = plane_areas / num_pixels
 
-    return flux_distributions / (
-        number_of_rays * plane_area_per_pixel
-    ).unsqueeze(-1).unsqueeze(-1)
+    return flux_distributions / (number_of_rays * plane_area_per_pixel).unsqueeze(
+        -1
+    ).unsqueeze(-1)

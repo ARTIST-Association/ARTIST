@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import h5py
 import torch
@@ -108,9 +108,9 @@ class HeliostatField:
         if rank == 0:
             log.info("Loading a heliostat field from an HDF5 file.")
 
-        grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
+        grouped_field_data: defaultdict[
+            str, defaultdict[str, list[str | torch.Tensor]]
+        ] = defaultdict(lambda: defaultdict(list))
 
         for heliostat_name in config_file[config_dictionary.heliostat_key].keys():
             single_heliostat_config = config_file[config_dictionary.heliostat_key][

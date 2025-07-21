@@ -114,8 +114,7 @@ def test_integration_alignment(
         )
 
         heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask,
-            device=device
+            active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.

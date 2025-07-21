@@ -40,7 +40,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     nurbs_control_points : torch.Tensor
         The control points for NURBS surfaces for all heliostats in the group.
     nurbs_degrees : torch.Tensor
-        The degrees for NURBS surfaces for all heliostats in the group.  
+        The degrees for NURBS surfaces for all heliostats in the group.
     kinematic : RigidBody
         The kinematic (rigid body kinematic) of all heliostats in the group.
     number_of_active_heliostats : int
@@ -97,7 +97,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         nurbs_control_points : torch.Tensor
             The control points for NURBS surfaces for all heliostats in the group.
         nurbs_degrees : torch.Tensor
-            The degrees for NURBS surfaces for all heliostats in the group.    
+            The degrees for NURBS surfaces for all heliostats in the group.
         kinematic_deviation_parameters : torch.Tensor
             The kinematic deviation parameters of all heliostats in the group.
         actuator_parameters : torch.Tensor
@@ -163,9 +163,9 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         """
         device = get_device(device=device)
 
-        assert torch.equal(
-            self.active_heliostats_mask, active_heliostats_mask
-        ), "Some heliostats were not activated and cannot be aligned."
+        assert torch.equal(self.active_heliostats_mask, active_heliostats_mask), (
+            "Some heliostats were not activated and cannot be aligned."
+        )
 
         orientations = self.kinematic.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
