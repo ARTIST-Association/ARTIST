@@ -19,7 +19,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaConfig,
     TargetAreaListConfig,
 )
-from artist.scenario.h5_scenario_generator import ScenarioGenerator
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
@@ -35,7 +35,7 @@ device = get_device()
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype_ideal"
+    "/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_stral_single_heliostat_individual_measurements"
 )
 
 # Specify the path to your stral_data.binp file.
@@ -102,20 +102,22 @@ surface_generator = SurfaceGenerator(
     max_epoch=400,
 )
 
-# surface_config = surface_generator.generate_fitted_surface_config(
-#     heliostat_name="heliostat_1",
-#     facet_translation_vectors=facet_translation_vectors,
-#     canting=canting,
-#     surface_points_with_facets_list=surface_points_with_facets_list,
-#     surface_normals_with_facets_list=surface_normals_with_facets_list,
-#     device=device,
-# )
-
-surface_config = surface_generator.generate_ideal_surface_config(
+# Use this surface config for fitted deflectometry surfaces.
+surface_config = surface_generator.generate_fitted_surface_config(
+    heliostat_name="heliostat_1",
     facet_translation_vectors=facet_translation_vectors,
     canting=canting,
+    surface_points_with_facets_list=surface_points_with_facets_list,
+    surface_normals_with_facets_list=surface_normals_with_facets_list,
     device=device,
 )
+
+# Use this surface configuration for ideal surfaces.
+# surface_config = surface_generator.generate_ideal_surface_config(
+#     facet_translation_vectors=facet_translation_vectors,
+#     canting=canting,
+#     device=device,
+# )
 
 surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
@@ -194,7 +196,7 @@ heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-    scenario_generator = ScenarioGenerator(
+    scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
         target_area_list_config=target_area_list_config,

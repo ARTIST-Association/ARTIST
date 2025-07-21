@@ -7,7 +7,7 @@ from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.scenario.h5_scenario_generator import ScenarioGenerator
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
@@ -145,7 +145,7 @@ heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-    scenario_generator = ScenarioGenerator(
+    scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
         target_area_list_config=target_area_list_config,

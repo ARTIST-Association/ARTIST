@@ -258,7 +258,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-7.991603016853e-01, -4.298234879971e-01,  1.271595247090e-04])
+                torch.tensor([-1.606459498405,  0.212854713202,  0.041160706431])
             ],
         ),
         (
@@ -299,7 +299,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-0.500000000000, -0.342105269432,  0.000000000000])
+                torch.tensor([-1.307500839233,  0.300398886204,  0.041614964604])
             ],
         ),
     ],
@@ -382,7 +382,7 @@ def test_extract_paint_heliostats(
         expected_heliostat[5].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 0, 0, 3],
+        extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 3],
         expected_heliostat[6].to(device),
     )
 

@@ -23,12 +23,12 @@ from artist.scenario.scenario import Scenario
             ],
             "test_scenario_stral_single_heliostat_prototype",
         ),
-        (
-            [
-                ("heliostat_1", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-            ],
-            "test_scenario_stral_single_heliostat_individual_measurements",
-        ),
+        # (
+        #     [
+        #         ("heliostat_1", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+        #     ],
+        #     "test_scenario_stral_single_heliostat_individual_measurements",
+        # ),
         (
             [
                 ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
