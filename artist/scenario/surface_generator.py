@@ -317,11 +317,11 @@ class SurfaceGenerator:
 
             # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
             canted_control_points = self.perform_canting_and_translation(
-                points = nurbs.control_points[0, 0],
+                points = nurbs.control_points[0, 0].detach(),
                 translation=facet_translation_vectors[i],
                 canting=torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device),
                 device=device
-            ).unsqueeze(0).unsqueeze(0)
+            )
 
             facet_config_list.append(
                 FacetConfig(
