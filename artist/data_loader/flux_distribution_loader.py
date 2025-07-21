@@ -1,6 +1,7 @@
 import logging
 import pathlib
 from collections import defaultdict
+from typing import DefaultDict
 
 import torch
 import torchvision.transforms as transforms
@@ -43,13 +44,12 @@ def load_flux_from_png(
 
     log.info("Beginning extraction of flux distributions from .png files.")
 
-    flux_data_per_heliostat = defaultdict(torch.Tensor)
-    
+    flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(torch.Tensor)
+
     resolution = tuple(resolution.to(device).tolist())
-    transform = transforms.Compose([
-        transforms.Resize(resolution),
-        transforms.ToTensor()
-    ])
+    transform = transforms.Compose(
+        [transforms.Resize(resolution), transforms.ToTensor()]
+    )
 
     for heliostat_name, paths in heliostat_flux_path_mapping:
         bitmaps = torch.empty((len(paths), resolution[0], resolution[1]), device=device)
@@ -60,26 +60,24 @@ def load_flux_from_png(
             bitmaps[bitmap_index] = bitmap
         flux_data_per_heliostat[heliostat_name] = bitmaps
 
-    total_number_of_measurements = sum(len(path_list) for _, path_list in heliostat_flux_path_mapping)
-    
-    measured_fluxes = torch.empty((total_number_of_measurements, resolution[0], resolution[1]), device=device)
-        
-    if total_number_of_measurements > 0:
+    total_number_of_measurements = sum(
+        len(path_list) for _, path_list in heliostat_flux_path_mapping
+    )
 
+    measured_fluxes = torch.empty(
+        (total_number_of_measurements, resolution[0], resolution[1]), device=device
+    )
+
+    if total_number_of_measurements > 0:
         index = 0
         for name in heliostat_names:
             for flux_data in flux_data_per_heliostat.get(name, []):
-                measured_fluxes[index: index + flux_data.shape[0]] = flux_data
+                measured_fluxes[index : index + flux_data.shape[0]] = flux_data
                 index += 1
 
         log.info("Loading measured flux density distributions complete.")
 
     else:
         log.info("No measured flux density distributions were provided for this group.")
-        
+
     return measured_fluxes
-
-    
-    
-
-        

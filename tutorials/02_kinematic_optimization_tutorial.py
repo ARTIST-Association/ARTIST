@@ -119,18 +119,28 @@ with setup_distributed_environment(
         )
 
     for heliostat_group_index in groups_to_ranks_mapping[rank]:
-        heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+        heliostat_group = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
 
         # Choose calibration method:
-        kinematic_calibration_method = config_dictionary.kinematic_calibration_motor_positions
+        kinematic_calibration_method = (
+            config_dictionary.kinematic_calibration_motor_positions
+        )
 
         # Set optimizer parameters.
-        if kinematic_calibration_method == config_dictionary.kinematic_calibration_motor_positions:
+        if (
+            kinematic_calibration_method
+            == config_dictionary.kinematic_calibration_motor_positions
+        ):
             tolerance = 0.0005
             max_epoch = 1000
             initial_learning_rate = 0.0001
 
-        if kinematic_calibration_method == config_dictionary.kinematic_calibration_raytracing:
+        if (
+            kinematic_calibration_method
+            == config_dictionary.kinematic_calibration_raytracing
+        ):
             tolerance = 0.035
             max_epoch = 600
             initial_learning_rate = 0.0004

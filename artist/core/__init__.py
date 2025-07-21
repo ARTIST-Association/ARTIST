@@ -15,5 +15,5 @@ __all__ = [
     "RestrictedDistributedSampler",
     "Rays",
     "KinematicOptimizer",
-    "SurfaceReconstructor"
+    "SurfaceReconstructor",
 ]

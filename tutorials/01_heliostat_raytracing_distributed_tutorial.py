@@ -88,8 +88,7 @@ with setup_distributed_environment(
         )
 
         heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask,
-            device=device
+            active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.

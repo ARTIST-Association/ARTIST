@@ -76,9 +76,11 @@ def test_kinematic_optimizer(
                 / "tests/data/field_data/AA39-calibration-properties_2.json",
             ],
             [
-                None,
-                None
-            ]
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux_centered_1.png",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux-centered_2.png",
+            ],
         ),
         (
             "AA31",
@@ -86,7 +88,10 @@ def test_kinematic_optimizer(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json"
             ],
-            [None]
+            [
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-flux-centered_1.png"
+            ],
         ),
     ]
 
@@ -96,7 +101,6 @@ def test_kinematic_optimizer(
         )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-
         # Create the kinematic optimizer.
         kinematic_optimizer = KinematicOptimizer(
             scenario=scenario,

@@ -67,7 +67,6 @@ def test_surface_reconstructor(
         )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-
         surface_reconstructor = SurfaceReconstructor(
             scenario=scenario,
             heliostat_group=heliostat_group,
@@ -77,7 +76,7 @@ def test_surface_reconstructor(
             device=device,
         )
 
-        surface_reconstructor.reconstruct_surfaces(torch.tensor([50, 50], device=device), device=device)
+        surface_reconstructor.reconstruct_surfaces(device=device)
 
         expected_path = (
             pathlib.Path(ARTIST_ROOT)

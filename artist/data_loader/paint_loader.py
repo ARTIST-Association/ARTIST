@@ -70,7 +70,9 @@ def extract_paint_calibration_properties_data(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of calibration properties data from ```PAINT``` file.")
+    log.info(
+        "Beginning extraction of calibration properties data from ```PAINT``` file."
+    )
 
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 

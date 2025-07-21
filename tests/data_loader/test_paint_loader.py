@@ -16,6 +16,7 @@ from artist.scenario.configuration_classes import (
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
+
 @pytest.mark.parametrize(
     "heliostat_calibration_mapping, power_plant_position, expected_list",
     [
@@ -228,9 +229,7 @@ def test_extract_paint_tower_measurements(
                     / "tests/data/field_data/AA39-deflectometry.h5",
                 )
             ],
-            torch.tensor(
-                [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
-            ),
+            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             2,
             [HeliostatListConfig, PrototypeConfig],
             [
@@ -257,7 +256,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.606459498405,  0.212854713202,  0.041160706431])
+                torch.tensor([-1.606459498405, 0.212854713202, 0.041160706431]),
             ],
         ),
         (
@@ -268,9 +267,7 @@ def test_extract_paint_tower_measurements(
                     / "tests/data/field_data/AA39-heliostat-properties.json",
                 )
             ],
-            torch.tensor(
-                [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
-            ),
+            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             2,
             [HeliostatListConfig, PrototypeConfig],
             [
@@ -297,7 +294,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.307500839233,  0.300398886204,  0.041614964604])
+                torch.tensor([-1.307500839233, 0.300398886204, 0.041614964604]),
             ],
         ),
     ],
