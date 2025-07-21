@@ -1,11 +1,13 @@
 import logging
+import pathlib
 
 import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -15,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class SurfaceReconstructor:
     """
-    An optimizer used to reconstruct surfaces using NURBS.
+    An optimizer used to reconstruct surfaces using NURBS and measured flux distributions.
 
     The surface reconstructor learns a surface representation from measured flux density 
     distributions. The optimizable parameters for this optimization process are the
@@ -27,7 +29,23 @@ class SurfaceReconstructor:
         The scenario.
     heliostat_group : HeliostatGroup
         The heliostat group to be calibrated.
-
+    measured_flux_density_distributions  : torch.Tensor
+        The measured flux density distributions.
+    incident_ray_directions : torch.Tensor
+        The incident ray directions of the measured fluxes..
+    heliostats_mask : torch.Tensor
+        A mask for the selected heliostats for reconstruction.
+    target_area_mask : torch.Tensor
+        The indices of the target area for each reconstruction.
+    num_log : int
+        The number of log statements during optimization.
+    initial_learning_rate : float
+        The initial learning rate for the optimizer (default is 0.0004).
+    tolerance : float
+        The optimizer tolerance.
+    max_epoch : int
+        The maximum number of optimization epochs.
+    
     Methods
     -------
     reconstruct_surfaces()
@@ -38,6 +56,12 @@ class SurfaceReconstructor:
         self,
         scenario: Scenario,
         heliostat_group: HeliostatGroup,
+        heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        initial_learning_rate: float = 1e-5,
+        tolerance: float = 0.0005,
+        max_epoch: int = 1000,
+        num_log: int = 3,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the surface reconstructor.
@@ -48,6 +72,20 @@ class SurfaceReconstructor:
             The scenario.
         heliostat_group : HeliostatGroup
             The heliostat group to be reconstructed.
+        heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
+            The mapping of heliostat and reconstruction data.
+        initial_learning_rate : float
+            The initial learning rate for the optimizer (default is 1e-5).
+        tolerance : float
+            The tolerance during optimization (default is 0.0005).
+        max_epoch : int
+            The maximum optimization epoch (default is 1000).
+        num_log : int
+            The number of log statements during optimization (default is 3).
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
         rank = (
             torch.distributed.get_rank()
@@ -56,20 +94,55 @@ class SurfaceReconstructor:
         )
         if rank == 0:
             log.info("Create a kinematic optimizer.")
+        
         self.scenario = scenario
         self.heliostat_group = heliostat_group
 
+        # Extract measured fluxes.
+        heliostat_flux_path_mapping = [
+            (heliostat_name, png_paths)
+            for heliostat_name, _, png_paths in heliostat_data_mapping
+            if heliostat_name in self.heliostat_group.names
+        ]
+
+        self.measured_flux_density_distributions = flux_distribution_loader.load_flux_from_png(
+            heliostat_flux_path_mapping=heliostat_flux_path_mapping,
+        heliostat_names=heliostat_group.names,
+        device=device
+        )
+    	
+        # Extract environmental data for measured fluxes.
+        heliostat_calibration_mapping = [
+            (heliostat_name, calibration_properties_paths)
+            for heliostat_name, calibration_properties_paths, _ in heliostat_data_mapping
+            if heliostat_name in self.heliostat_group.names
+        ]
+        (
+            _,
+            self.incident_ray_directions,
+            _,
+            self.heliostats_mask,
+            self.target_area_mask,
+        ) = paint_loader.extract_paint_calibration_properties_data(
+            heliostat_calibration_mapping=heliostat_calibration_mapping,
+            heliostat_names=heliostat_group.names,
+            target_area_names=scenario.target_areas.names,
+            power_plant_position=scenario.power_plant_position,
+            device=device,
+        )
+
+        self.num_log = num_log
+
+        # Create the optimizer.
+        self.initial_learning_rate = initial_learning_rate
+        self.tolerance = tolerance
+        self.max_epoch = max_epoch
+
+        self.number_of_surface_points = torch.full((2,), torch.sqrt(torch.tensor((heliostat_group.surface_points.shape[1] / heliostat_group.number_of_facets_per_heliostat), device=device)))
+
+
     def reconstruct_surfaces(
         self,
-        flux_distributions_measured: torch.Tensor,
-        number_of_evaluation_points: torch.Tensor,
-        incident_ray_directions: torch.Tensor,
-        active_heliostats_mask: torch.Tensor,
-        target_area_mask: torch.Tensor,
-        initial_learning_rate: float,
-        tolerance: float = 5e-5,
-        max_epoch: int = 10000,
-        num_log: int = 3,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -77,21 +150,6 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        flux_distributions_measured : torch.Tensor
-            The measured flux density distributions per heliostat.
-        incident_ray_directions : torch.Tensor
-            The incident ray directions specified in the calibration data.
-        active_heliostats_mask : torch.Tensor
-            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
-            An integer greater than 1 indicates that this heliostat is regarded multiple times.
-        target_area_mask : torch.Tensor
-            The indices of the target area for each calibration. 
-        tolerance : float
-            The optimizer tolerance.
-        max_epoch : int
-            The maximum number of optimization epochs.
-        num_log : int
-            Number of log messages during training (default is 3).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -107,99 +165,97 @@ class SurfaceReconstructor:
         if rank == 0:
             log.info("Start the surface reconstruction.")
 
-        measured_target_dimension = torch.tensor([6, 6, 6, 6], device=device)
-        
-        normalized_measured_flux_distributions = utils.normalize_bitmap(
-            flux_distributions=flux_distributions_measured,
-            target_area_widths=measured_target_dimension,
-            target_area_heights=measured_target_dimension,
-            number_of_rays=flux_distributions_measured.sum(dim=[1, 2])
-        )
+        if self.heliostats_mask.sum() > 0:
+            
+            normalized_measured_flux_distributions = utils.normalize_bitmap(
+                flux_distributions=self.measured_flux_density_distributions,
+                target_area_widths=torch.full((self.measured_flux_density_distributions.shape[0],), config_dictionary.utis_target_width, device=device),
+                target_area_heights=torch.full((self.measured_flux_density_distributions.shape[0],), config_dictionary.utis_target_height, device=device),
+                number_of_rays=self.measured_flux_density_distributions.sum(dim=[1, 2])
+            )
 
-        # Activate heliostats.
-        self.heliostat_group.activate_heliostats(active_heliostats_mask=active_heliostats_mask, device=device)
+            # Activate heliostats.
+            self.heliostat_group.activate_heliostats(active_heliostats_mask=self.heliostats_mask, device=device)
 
-        nurbs_surfaces = NURBSSurfaces(
-            degrees=self.heliostat_group.nurbs_degrees,
-            control_points=self.heliostat_group.active_nurbs_control_points,
-            device=device
-        )
-
-        evaluation_points = utils.create_nurbs_evaluation_grid(
-            number_of_evaluation_points=number_of_evaluation_points,
-            device=device
-        ).unsqueeze(0).unsqueeze(0).expand(self.heliostat_group.number_of_active_heliostats, 4, -1, -1)
-        
-        optimizer = torch.optim.Adam(
-            nurbs_surfaces.parameters(), lr=initial_learning_rate
-        )
-        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-        
-        # Start the optimization.
-        loss = torch.inf
-        epoch = 0
-        log_step = max_epoch // num_log
-        while loss > tolerance and epoch <= max_epoch:
-            optimizer.zero_grad()
-
-            (
-                self.heliostat_group.active_surface_points, 
-                self.heliostat_group.active_surface_normals
-            ) = nurbs_surfaces.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points, 
+            nurbs_surfaces = NURBSSurfaces(
+                degrees=self.heliostat_group.nurbs_degrees,
+                control_points=self.heliostat_group.active_nurbs_control_points,
                 device=device
             )
 
-            self.heliostat_group.active_surface_points = self.heliostat_group.active_surface_points.reshape(self.heliostat_group.active_surface_points.shape[0], -1, 4)
-            self.heliostat_group.active_surface_normals = self.heliostat_group.active_surface_normals.reshape(self.heliostat_group.active_surface_normals.shape[0], -1, 4)
-
-            # Align heliostats.
-            self.heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[
-                    target_area_mask
-                ],
-                incident_ray_directions=incident_ray_directions,
-                active_heliostats_mask=active_heliostats_mask,
-                device=device,
-            )
-
-            # Create a ray tracer.
-            ray_tracer = HeliostatRayTracer(
-                scenario=self.scenario,
-                heliostat_group=self.heliostat_group,
-                batch_size=self.heliostat_group.number_of_active_heliostats,
-            )
-
-            # Perform heliostat-based ray tracing.
-            flux_distributions = ray_tracer.trace_rays(
-                incident_ray_directions=incident_ray_directions,
-                active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=target_area_mask,
-                device=device,
-            )
-
-            normalized_flux_distributions = utils.normalize_bitmap(
-                flux_distributions=flux_distributions,
-                target_area_widths=ray_tracer.scenario.target_areas.dimensions[target_area_mask][:, 0],
-                target_area_heights=ray_tracer.scenario.target_areas.dimensions[target_area_mask][:, 1],
-                number_of_rays=ray_tracer.light_source.number_of_rays
-            )
-
-            loss_function = torch.nn.MSELoss()
-            loss = loss_function(normalized_flux_distributions, normalized_measured_flux_distributions)
+            evaluation_points = utils.create_nurbs_evaluation_grid(
+                number_of_evaluation_points=self.number_of_surface_points,
+                device=device
+            ).unsqueeze(0).unsqueeze(0).expand(self.heliostat_group.number_of_active_heliostats, self.heliostat_group.number_of_facets_per_heliostat, -1, -1)
             
-            loss.backward()
-        
-            optimizer.step()
-            #scheduler.step()
+            optimizer = torch.optim.Adam(
+                [nurbs_surfaces.control_points.requires_grad_()], lr=self.initial_learning_rate
+            )
             
-            if epoch % log_step == 0 and rank == 0:
-                log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+            # Start the optimization.
+            loss = torch.inf
+            epoch = 0
+            log_step = self.max_epoch // self.num_log
+            while loss > self.tolerance and epoch <= self.max_epoch:
+                optimizer.zero_grad()
+
+                (
+                    self.heliostat_group.active_surface_points, 
+                    self.heliostat_group.active_surface_normals
+                ) = nurbs_surfaces.calculate_surface_points_and_normals(
+                    evaluation_points=evaluation_points, 
+                    device=device
                 )
 
-            epoch += 1
+                self.heliostat_group.active_surface_points = self.heliostat_group.active_surface_points.reshape(self.heliostat_group.active_surface_points.shape[0], -1, 4)
+                self.heliostat_group.active_surface_normals = self.heliostat_group.active_surface_normals.reshape(self.heliostat_group.active_surface_normals.shape[0], -1, 4)
 
-        if rank == 0:
-            log.info("Surfaces reconstructed.")
-        
+                # Align heliostats.
+                self.heliostat_group.align_surfaces_with_incident_ray_directions(
+                    aim_points=self.scenario.target_areas.centers[
+                        self.target_area_mask
+                    ],
+                    incident_ray_directions=self.incident_ray_directions,
+                    active_heliostats_mask=self.heliostats_mask,
+                    device=device,
+                )
+
+                # Create a ray tracer.
+                ray_tracer = HeliostatRayTracer(
+                    scenario=self.scenario,
+                    heliostat_group=self.heliostat_group,
+                    batch_size=self.heliostat_group.number_of_active_heliostats,
+                )
+
+                # Perform heliostat-based ray tracing.
+                flux_distributions = ray_tracer.trace_rays(
+                    incident_ray_directions=self.incident_ray_directions,
+                    active_heliostats_mask=self.heliostats_mask,
+                    target_area_mask=self.target_area_mask,
+                    device=device,
+                )
+
+                normalized_flux_distributions = utils.normalize_bitmap(
+                    flux_distributions=flux_distributions,
+                    target_area_widths=ray_tracer.scenario.target_areas.dimensions[self.target_area_mask][:, 0],
+                    target_area_heights=ray_tracer.scenario.target_areas.dimensions[self.target_area_mask][:, 1],
+                    number_of_rays=ray_tracer.light_source.number_of_rays
+                )
+
+                loss_function = torch.nn.MSELoss()
+                loss = loss_function(normalized_flux_distributions, normalized_measured_flux_distributions)
+                
+                loss.backward()
+            
+                optimizer.step()
+
+                if epoch % log_step == 0 and rank == 0:
+                    log.info(
+                        f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                    )
+
+                epoch += 1
+
+            if rank == 0:
+                log.info("Surfaces reconstructed.")
+            

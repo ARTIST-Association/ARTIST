@@ -166,10 +166,10 @@ convert_nurbs_from_points = "point_cloud"
 convert_nurbs_from_normals = "deflectometry"
 """Defines that the NURBS should be learnt using deflectometry data."""
 
-optimizer_use_raytracing = "use_raytracing"
-"""Defines that the alignment optimizer uses ray tracing."""
-optimizer_use_motor_positions = "use_motor_positions"
-"""Defines that the alignment optimizer uses motor positions."""
+kinematic_calibration_raytracing = "raytracing"
+"""Defines that the kinematic optimizer uses ray tracing."""
+kinematic_calibration_motor_positions = "motor_positions"
+"""Defines that the kinematic optimizer uses motor positions."""
 
 names = "names"
 """Key to access heliostat names."""
@@ -296,3 +296,8 @@ nurbs_u_direction = 0
 """Key to access the nurbs u direction."""
 nurbs_v_direction = 1
 """Key to access the nurbs v direction."""
+
+utis_target_width = 6
+"""Key to access the width of the utis target."""
+utis_target_height = 6
+"""Key to access the height of the utis target."""

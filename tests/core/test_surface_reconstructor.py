@@ -1,55 +1,21 @@
 import pathlib
 
 import h5py
-import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
-
-# Set up logger.
-set_logger_config()
 
 
-@pytest.mark.parametrize(
-    "optimizer_method, tolerance, max_epoch, initial_lr",
-    [
-        (
-            config_dictionary.kinematic_calibration_motor_positions,
-            0.0005,
-            15,
-            0.001,
-        ),
-        (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0005,
-            15,
-            0.0001,
-        ),
-    ],
-)
-def test_kinematic_optimizer(
-    optimizer_method: str,
-    tolerance: float,
-    max_epoch: int,
-    initial_lr: float,
+def test_surface_reconstructor(
     device: torch.device,
 ) -> None:
     """
-    Test the kinematic optimization methods.
+    Test the surface reconstructor.
 
     Parameters
     ----------
-    optimizer_method : str
-        The name of the optimizer method.
-    tolerance : float
-        Tolerance for the optimizer.
-    max_epoch : int
-        The maximum amount of epochs for the optimization loop.
-    initial_lr : float
-        The initial learning rate.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -76,9 +42,11 @@ def test_kinematic_optimizer(
                 / "tests/data/field_data/AA39-calibration-properties_2.json",
             ],
             [
-                None,
-                None
-            ]
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux_centered_1.png",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux-centered_2.png",
+            ],
         ),
         (
             "AA31",
@@ -86,7 +54,10 @@ def test_kinematic_optimizer(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json"
             ],
-            [None]
+            [
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-flux-centered_1.png"
+            ],
         ),
     ]
 
@@ -97,39 +68,34 @@ def test_kinematic_optimizer(
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
 
-        # Create the kinematic optimizer.
-        kinematic_optimizer = KinematicOptimizer(
+        surface_reconstructor = SurfaceReconstructor(
             scenario=scenario,
             heliostat_group=heliostat_group,
             heliostat_data_mapping=heliostat_data_mapping,
-            calibration_method=optimizer_method,
-            initial_learning_rate=initial_lr,
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            num_log=max_epoch,
+            max_epoch=2,
+            num_log=1,
             device=device,
         )
 
-        # Calibrate the kinematic.
-        kinematic_optimizer.optimize(device=device)
+        surface_reconstructor.reconstruct_surfaces(torch.tensor([50, 50], device=device), device=device)
 
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_optimized_kinematic_parameters"
-            / f"{optimizer_method}_group_{index}_{device.type}.pt"
+            / "tests/data/expected_reconstructed_surfaces"
+            / f"group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(
-            heliostat_group.kinematic.deviation_parameters,
-            expected["kinematic_deviations"],
+            heliostat_group.active_surface_points,
+            expected["active_surface_points"],
             atol=5e-2,
             rtol=5e-2,
         )
         torch.testing.assert_close(
-            heliostat_group.kinematic.actuators.actuator_parameters,
-            expected["actuator_parameters"],
+            heliostat_group.active_surface_normals,
+            expected["active_surface_normals"],
             atol=5e-2,
             rtol=5e-2,
         )
