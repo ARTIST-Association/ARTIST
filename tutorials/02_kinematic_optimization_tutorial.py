@@ -118,9 +118,9 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
-    for heliostat_group_index, heliostat_group in enumerate(
-        scenario.heliostat_field.heliostat_groups
-    ):
+    for heliostat_group_index in groups_to_ranks_mapping[rank]:
+        heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+
         # Choose calibration method:
         kinematic_calibration_method = config_dictionary.kinematic_calibration_motor_positions
 

@@ -35,7 +35,7 @@ device = get_device()
 
 # Specify the path to your scenario file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_stral_single_heliostat_individual_measurements"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype"
 )
 
 # Specify the path to your stral_data.binp file.
@@ -182,7 +182,6 @@ heliostat1 = HeliostatConfig(
     name="heliostat_1",
     id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
-    aim_point=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     surface=surface_config,
     kinematic=heliostat1_kinematic_config,
     actuators=heliostat1_actuator_config,

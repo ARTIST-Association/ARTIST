@@ -116,9 +116,9 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
     
-    for heliostat_group_index, heliostat_group in enumerate(
-        scenario.heliostat_field.heliostat_groups
-    ):
+    for heliostat_group_index in groups_to_ranks_mapping[rank]:
+        heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+
         # Set optimizer parameters.
         tolerance = 0.0005
         max_epoch = 150000
@@ -137,6 +137,5 @@ with setup_distributed_environment(
         )
 
         surface_reconstructor.reconstruct_surfaces(
-            number_of_evaluation_points=torch.tensor([50, 50], device=device),
             device=device
         )

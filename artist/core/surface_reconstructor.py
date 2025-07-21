@@ -138,7 +138,7 @@ class SurfaceReconstructor:
         self.tolerance = tolerance
         self.max_epoch = max_epoch
 
-        self.number_of_surface_points = torch.full((2,), torch.sqrt(torch.tensor((heliostat_group.surface_points.shape[1] / heliostat_group.number_of_facets_per_heliostat), device=device)))
+        self.number_of_surface_points = torch.full((2,), int(torch.sqrt(torch.tensor((heliostat_group.surface_points.shape[1] / heliostat_group.number_of_facets_per_heliostat), device=device))))
 
 
     def reconstruct_surfaces(

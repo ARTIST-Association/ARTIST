@@ -216,7 +216,7 @@ def test_extract_paint_tower_measurements(
 
 
 @pytest.mark.parametrize(
-    "heliostat_and_deflectometry_paths, power_plant_position, aim_point, max_epochs_for_surface_training, expected_types, expected_heliostat",
+    "heliostat_and_deflectometry_paths, power_plant_position, max_epochs_for_surface_training, expected_types, expected_heliostat",
     [
         (
             [
@@ -228,7 +228,6 @@ def test_extract_paint_tower_measurements(
                     / "tests/data/field_data/AA39-deflectometry.h5",
                 )
             ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             torch.tensor(
                 [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
             ),
@@ -269,7 +268,6 @@ def test_extract_paint_tower_measurements(
                     / "tests/data/field_data/AA39-heliostat-properties.json",
                 )
             ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
             torch.tensor(
                 [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
             ),
@@ -307,7 +305,6 @@ def test_extract_paint_tower_measurements(
 def test_extract_paint_heliostats(
     heliostat_and_deflectometry_paths: list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
-    aim_point: torch.Tensor,
     max_epochs_for_surface_training: int,
     expected_types: list[Any],
     expected_heliostat: list[Any],
@@ -322,8 +319,6 @@ def test_extract_paint_heliostats(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-    aim_point : torch.Tensor
-        The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS.
     expected_types : list[Any]
@@ -342,7 +337,6 @@ def test_extract_paint_heliostats(
         paint_loader.extract_paint_heliostats(
             paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
-            aim_point=aim_point.to(device),
             max_epochs_for_surface_training=max_epochs_for_surface_training,
             device=device,
         )

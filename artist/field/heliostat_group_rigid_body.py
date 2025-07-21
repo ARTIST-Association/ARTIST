@@ -25,6 +25,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     ----------
     number_of_heliostats : int
         The number of heliostats in the group.
+    number_of_facets_per_heliostat
+        The number of facets per heliostat in the group.
     names : list[str]
         The string names of each heliostat in the group in order.
     positions : torch.Tensor
