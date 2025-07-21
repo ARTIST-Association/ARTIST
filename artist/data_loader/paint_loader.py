@@ -565,7 +565,6 @@ def extract_paint_heliostats(
     paths: list[tuple[str, pathlib.Path]]
     | list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
-    aim_point: torch.Tensor,
     max_epochs_for_surface_training: int = 400,
     device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
@@ -580,8 +579,6 @@ def extract_paint_heliostats(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-    aim_point : torch.Tensor
-        The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS (default is 400).
     device : torch.device | None
@@ -684,7 +681,6 @@ def extract_paint_heliostats(
             name=file_tuple[0],
             id=heliostat_index,
             position=heliostat_position,
-            aim_point=aim_point,
             surface=surface_config,
             kinematic=kinematic_config,
             actuators=actuators_list_config,

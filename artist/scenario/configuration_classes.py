@@ -1133,8 +1133,6 @@ class HeliostatConfig:
         The numerical ID of the heliostat.
     position : torch.Tensor
         The position of the heliostat.
-    aim_point : torch.Tensor
-        The position of the heliostat aim point.
     surface : SurfaceConfig | None
         An optional individual surface config for the heliostat.
     kinematic : KinematicConfig | None
@@ -1153,7 +1151,6 @@ class HeliostatConfig:
         name: str,
         id: int,
         position: torch.Tensor,
-        aim_point: torch.Tensor,
         surface: SurfaceConfig | None = None,
         kinematic: KinematicConfig | None = None,
         actuators: ActuatorListConfig | None = None,
@@ -1169,8 +1166,6 @@ class HeliostatConfig:
             The numerical ID of the heliostat.
         position : torch.Tensor
             The position of the heliostat.
-        aim_point : torch.Tensor
-            The position of the heliostat aim point.
         surface : SurfaceConfig | None
             An optional individual surface config for the heliostat.
         kinematic : KinematicConfig | None
@@ -1181,7 +1176,6 @@ class HeliostatConfig:
         self.name = name
         self.id = id
         self.position = position
-        self.aim_point = aim_point
         self.surface = surface
         self.kinematic = kinematic
         self.actuators = actuators
@@ -1198,7 +1192,6 @@ class HeliostatConfig:
         heliostat_dict = {
             config_dictionary.heliostat_id: self.id,
             config_dictionary.heliostat_position: self.position,
-            config_dictionary.heliostat_aim_point: self.aim_point,
         }
         if self.surface is not None:
             heliostat_dict.update(
