@@ -4,7 +4,6 @@ from collections import defaultdict
 from typing import DefaultDict
 
 import torch
-import torchvision.transforms as transforms
 from PIL import Image
 
 from artist.util import config_dictionary, utils
@@ -48,15 +47,15 @@ def load_flux_from_png(
     flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(torch.Tensor)
 
     resolution = tuple(resolution.to(device).tolist())
-    transform = transforms.Compose(
-        [transforms.Resize(resolution), transforms.ToTensor()]
-    )
 
     for heliostat_name, paths in heliostat_flux_path_mapping:
         bitmaps = torch.empty((len(paths), resolution[0], resolution[1]), device=device)
         for bitmap_index, path in enumerate(paths):
-            bitmap_data = Image.open(path).convert("L")
-            bitmap_tensor = transform(bitmap_data)
+            bitmap_data = (
+                Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
+            )
+            bitmap_tensor = torch.tensor(bitmap_data.getdata(), device=device)
+            bitmap_tensor = bitmap_tensor.view(resolution[0], resolution[1]) / 255.0
             bitmap = bitmap_tensor.squeeze(0)
             bitmaps[bitmap_index] = bitmap
         flux_data_per_heliostat[heliostat_name] = bitmaps
