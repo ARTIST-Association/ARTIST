@@ -18,79 +18,43 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_ideal.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your measured flux density distributions.
 # Please follow the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "AA39",
+        "heliostat_name_1",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
-            ),
+            #....
         ],
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-flux-centered.png"
+                "please/insert/the/path/to/the/paint/data/here/flux.png"
             ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-flux-centered.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
-            ),
-            # pathlib.Path(
-            #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            # ),
             # ....
         ],
     ),
-    # (
-    #     "AA31",
-    #     [
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-calibration-properties.json"
-    #         ),
-    #     ],
-    #     [
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/219988-flux-centered.png"
-    #         ),
-    #         # pathlib.Path(
-    #         #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-    #         # ),
-    #     ],
-    # ),
-    # # ...
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/flux.png"
+            ),
+            # ....
+        ],
+    ),
+    # ...
 ]
-
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
 )
