@@ -29,12 +29,10 @@ heliostat_data_mapping = [
             pathlib.Path(
                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            #....
+            # ....
         ],
         [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/flux.png"
-            ),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
@@ -47,9 +45,7 @@ heliostat_data_mapping = [
             # ....
         ],
         [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/flux.png"
-            ),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
