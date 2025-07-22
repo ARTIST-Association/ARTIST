@@ -7,6 +7,7 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -74,6 +75,21 @@ def load_flux_from_png(
             for flux_data in flux_data_per_heliostat.get(name, []):
                 measured_fluxes[index : index + flux_data.shape[0]] = flux_data
                 index += 1
+
+        measured_fluxes = utils.normalize_bitmaps(
+            flux_distributions=measured_fluxes,
+            target_area_widths=torch.full(
+                (measured_fluxes.shape[0],),
+                config_dictionary.utis_target_width,
+                device=device,
+            ),
+            target_area_heights=torch.full(
+                (measured_fluxes.shape[0],),
+                config_dictionary.utis_target_height,
+                device=device,
+            ),
+            number_of_rays=measured_fluxes.sum(dim=[1, 2]),
+        )
 
         log.info("Loading measured flux density distributions complete.")
 

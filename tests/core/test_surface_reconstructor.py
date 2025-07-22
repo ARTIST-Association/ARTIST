@@ -43,7 +43,7 @@ def test_surface_reconstructor(
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-flux_centered_1.png",
+                / "tests/data/field_data/AA39-flux-centered_1.png",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_2.png",
             ],
