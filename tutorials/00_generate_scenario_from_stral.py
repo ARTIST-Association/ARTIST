@@ -34,13 +34,11 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_stral_single_heliostat_prototype"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your stral_data.binp file.
 stral_file_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/stral/test_stral_data.binp"
+    "please/insert/the/path/to/the/stral/data/here/test_stral_data.binp"
 )
 
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
