@@ -602,7 +602,7 @@ def create_nurbs_evaluation_grid(
     return evaluation_points
 
 
-def normalize_bitmap(
+def normalize_bitmaps(
     flux_distributions: torch.Tensor,
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,

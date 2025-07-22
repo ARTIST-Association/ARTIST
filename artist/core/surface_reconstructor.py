@@ -7,7 +7,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
+from artist.util import utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -107,7 +107,7 @@ class SurfaceReconstructor:
             if heliostat_name in self.heliostat_group.names
         ]
 
-        self.measured_flux_density_distributions = (
+        self.normalized_measured_flux_density_distributions = (
             flux_distribution_loader.load_flux_from_png(
                 heliostat_flux_path_mapping=heliostat_flux_path_mapping,
                 heliostat_names=heliostat_group.names,
@@ -182,20 +182,6 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         if self.heliostats_mask.sum() > 0:
-            normalized_measured_flux_distributions = utils.normalize_bitmap(
-                flux_distributions=self.measured_flux_density_distributions,
-                target_area_widths=torch.full(
-                    (self.measured_flux_density_distributions.shape[0],),
-                    config_dictionary.utis_target_width,
-                    device=device,
-                ),
-                target_area_heights=torch.full(
-                    (self.measured_flux_density_distributions.shape[0],),
-                    config_dictionary.utis_target_height,
-                    device=device,
-                ),
-                number_of_rays=self.measured_flux_density_distributions.sum(dim=[1, 2]),
-            )
 
             # Activate heliostats.
             self.heliostat_group.activate_heliostats(
@@ -278,7 +264,7 @@ class SurfaceReconstructor:
                     device=device,
                 )
 
-                normalized_flux_distributions = utils.normalize_bitmap(
+                normalized_flux_distributions = utils.normalize_bitmaps(
                     flux_distributions=flux_distributions,
                     target_area_widths=ray_tracer.scenario.target_areas.dimensions[
                         self.target_area_mask
@@ -292,7 +278,7 @@ class SurfaceReconstructor:
                 loss_function = torch.nn.MSELoss()
                 loss = loss_function(
                     normalized_flux_distributions,
-                    normalized_measured_flux_distributions,
+                    self.normalized_measured_flux_density_distributions,
                 )
 
                 loss.backward()

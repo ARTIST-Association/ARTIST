@@ -26,13 +26,10 @@ torch.cuda.manual_seed(7)
                     "AA39",
                     [
                         pathlib.Path(ARTIST_ROOT)
-                        / pathlib.Path(
-                            "tests/data/field_data/AA39-calibration-properties_1.json"
-                        ),
+                        / "tests/data/field_data/AA39-calibration-properties_1.json",
+
                         pathlib.Path(ARTIST_ROOT)
-                        / pathlib.Path(
-                            "tests/data/field_data/AA39-calibration-properties_2.json"
-                        ),
+                        / "tests/data/field_data/AA39-calibration-properties_2.json",
                     ],
                 )
             ],
