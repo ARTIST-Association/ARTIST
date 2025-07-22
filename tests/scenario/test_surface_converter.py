@@ -110,7 +110,7 @@ def test_surface_generator(device: torch.device) -> None:
     surface_config_ideal = surface_generator_normals.generate_ideal_surface_config(
         facet_translation_vectors=facet_translation_vectors,
         canting=canting,
-        device=device
+        device=device,
     )
 
     assert isinstance(surface_config_paint, SurfaceConfig)
@@ -126,22 +126,20 @@ def test_surface_generator(device: torch.device) -> None:
 
     torch.testing.assert_close(
         surface_config_paint.facet_list[1].control_points[0, 3],
-        torch.tensor([0.015742599964, 0.942005157471, 0.039063606411], device=device)
+        torch.tensor([0.015742599964, 0.942005157471, 0.039063606411], device=device),
     )
     torch.testing.assert_close(
         surface_config_stral.facet_list[0].control_points[4, 2],
-        torch.tensor([-0.015606701374,  0.643332123756,  0.038245413452], device=device)
+        torch.tensor([-0.015606701374, 0.643332123756, 0.038245413452], device=device),
     )
     torch.testing.assert_close(
         surface_config_stral_points.facet_list[3].control_points[0, 0],
-        torch.tensor([-0.790499985218, -0.601999938488,  0.001999998232], device=device)
+        torch.tensor([-0.790499985218, -0.601999938488, 0.001999998232], device=device),
     )
     torch.testing.assert_close(
         surface_config_ideal.facet_list[2].control_points[3, 2],
-        torch.tensor([-0.557504832745, -0.642499983311,  0.038645550609], device=device)
+        torch.tensor([-0.557504832745, -0.642499983311, 0.038645550609], device=device),
     )
-
-
 
 
 def test_fit_nurbs_conversion_method_error() -> None:

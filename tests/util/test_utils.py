@@ -528,6 +528,7 @@ def test_distortion_rotations(
 
         torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))
 
+
 def test_normalize_bitmaps(device: torch.device) -> None:
     """
     Test the normalization for bitmaps.
@@ -536,7 +537,7 @@ def test_normalize_bitmaps(device: torch.device) -> None:
     ----------
     device : torch.device
         The device on which to initialize tensors.
-    
+
     Raises
     ------
     AssertionError
@@ -550,18 +551,18 @@ def test_normalize_bitmaps(device: torch.device) -> None:
     bitmaps = torch.load(bitmaps_path, map_location=device, weights_only=True)
 
     normalized_bitmaps = utils.normalize_bitmaps(
-            flux_distributions=bitmaps,
-            target_area_widths=torch.full(
-                (bitmaps.shape[0],),
-                config_dictionary.utis_target_width,
-                device=device,
-            ),
-            target_area_heights=torch.full(
-                (bitmaps.shape[0],),
-                config_dictionary.utis_target_height,
-                device=device,
-            ),
-            number_of_rays=bitmaps.sum(dim=[1, 2]),
+        flux_distributions=bitmaps,
+        target_area_widths=torch.full(
+            (bitmaps.shape[0],),
+            config_dictionary.utis_target_width,
+            device=device,
+        ),
+        target_area_heights=torch.full(
+            (bitmaps.shape[0],),
+            config_dictionary.utis_target_height,
+            device=device,
+        ),
+        number_of_rays=bitmaps.sum(dim=[1, 2]),
     )
 
     expected_path = (

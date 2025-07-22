@@ -182,7 +182,6 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         if self.heliostats_mask.sum() > 0:
-
             # Activate heliostats.
             self.heliostat_group.activate_heliostats(
                 active_heliostats_mask=self.heliostats_mask, device=device
