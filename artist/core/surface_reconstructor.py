@@ -95,7 +95,7 @@ class SurfaceReconstructor:
             else 0
         )
         if rank == 0:
-            log.info("Create a kinematic optimizer.")
+            log.info("Create a surface reconstructor.")
 
         self.scenario = scenario
         self.heliostat_group = heliostat_group
