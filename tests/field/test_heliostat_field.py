@@ -99,6 +99,7 @@ def test_heliostat_field_load_from_hdf5_errors(
             prototype_surface=prototype_surface,
             prototype_kinematic=prototype_kinematic,
             prototype_actuators=prototype_actuators,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
             device=device,
         )
     assert error in str(exc_info.value)

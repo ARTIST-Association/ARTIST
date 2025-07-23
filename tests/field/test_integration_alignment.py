@@ -25,12 +25,6 @@ from artist.scenario.scenario import Scenario
         ),
         (
             [
-                ("heliostat_1", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-            ],
-            "test_scenario_stral_single_heliostat_individual_measurements",
-        ),
-        (
-            [
                 ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([-1.0, 0.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([1.0, 0.0, 0.0, 0.0])),
@@ -48,6 +42,15 @@ from artist.scenario.scenario import Scenario
                 ),
             ],
             "test_scenario_paint_single_heliostat",
+        ),
+        (
+            [
+                ("AA31", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AA35", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AB38", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+            ],
+            "test_scenario_paint_mix_ideal_prototype_deflectometry",
         ),
     ],
 )
@@ -87,7 +90,9 @@ def test_integration_alignment(
         "r",
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=config_h5, device=device
+            scenario_file=config_h5,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            device=device,
         )
 
     bitmap_resolution_e, bitmap_resolution_u = 256, 256
@@ -109,6 +114,10 @@ def test_integration_alignment(
             heliostat_group=heliostat_group,
             string_mapping=mapping,
             device=device,
+        )
+
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.
@@ -151,4 +160,5 @@ def test_integration_alignment(
     )
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+
     torch.testing.assert_close(flux_distributions, expected, atol=5e-4, rtol=5e-4)

@@ -18,9 +18,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_multiple_heliostat_groups.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -44,7 +42,9 @@ with setup_distributed_environment(
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            device=device,
         )
 
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
@@ -83,6 +83,10 @@ with setup_distributed_environment(
             heliostat_group=heliostat_group,
             string_mapping=heliostat_target_light_source_mapping,
             device=device,
+        )
+
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.

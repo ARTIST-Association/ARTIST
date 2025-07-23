@@ -1,9 +1,11 @@
 import math
+import pathlib
 
 import pytest
 import torch
 
-from artist.util import utils
+from artist import ARTIST_ROOT
+from artist.util import config_dictionary, utils
 
 
 @pytest.mark.parametrize(
@@ -138,17 +140,17 @@ def test_3d_point_converter(
     # Check if the ValueError is thrown as expected.
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
-            utils.convert_3d_point_to_4d_format(
-                point=point.to(device),
+            utils.convert_3d_points_to_4d_format(
+                points=point.to(device),
                 device=device,
             )
-        assert f"Expected a 3D point but got a point of shape {point.shape}!" in str(
+        assert f"Expected 3D points but got points of shape {point.shape}!" in str(
             exc_info.value
         )
     else:
         # Check if the 4d point is correct.
-        point_4d = utils.convert_3d_point_to_4d_format(
-            point=point.to(device),
+        point_4d = utils.convert_3d_points_to_4d_format(
+            points=point.to(device),
             device=device,
         )
         torch.testing.assert_close(point_4d, expected.to(device), rtol=1e-4, atol=1e-4)
@@ -194,18 +196,18 @@ def test_3d_direction_converter(
     # Check if the ValueError is thrown as expected.
     if expected is None:
         with pytest.raises(ValueError) as exc_info:
-            utils.convert_3d_direction_to_4d_format(
-                direction=direction.to(device),
+            utils.convert_3d_directions_to_4d_format(
+                directions=direction.to(device),
                 device=device,
             )
         assert (
-            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
+            f"Expected 3D directions but got directions of shape {direction.shape}!"
             in str(exc_info.value)
         )
     else:
         # Check if the 4d point is correct.
-        direction_4d = utils.convert_3d_direction_to_4d_format(
-            direction=direction.to(device),
+        direction_4d = utils.convert_3d_directions_to_4d_format(
+            directions=direction.to(device),
             device=device,
         )
         torch.testing.assert_close(
@@ -525,3 +527,50 @@ def test_distortion_rotations(
         ).squeeze(-1)
 
         torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))
+
+
+def test_normalize_bitmaps(device: torch.device) -> None:
+    """
+    Test the normalization for bitmaps.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    bitmaps_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / f"tests/data/expected_bitmaps_integration/test_scenario_paint_single_heliostat_{device.type}.pt"
+    )
+
+    bitmaps = torch.load(bitmaps_path, map_location=device, weights_only=True)
+
+    normalized_bitmaps = utils.normalize_bitmaps(
+        flux_distributions=bitmaps,
+        target_area_widths=torch.full(
+            (bitmaps.shape[0],),
+            config_dictionary.utis_target_width,
+            device=device,
+        ),
+        target_area_heights=torch.full(
+            (bitmaps.shape[0],),
+            config_dictionary.utis_target_height,
+            device=device,
+        ),
+        number_of_rays=bitmaps.sum(dim=[1, 2]),
+    )
+
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_normalized_bitmaps"
+        / f"bitmaps_{device.type}.pt"
+    )
+
+    expected = torch.load(expected_path, map_location=device, weights_only=True)
+
+    torch.testing.assert_close(normalized_bitmaps, expected, atol=5e-4, rtol=5e-4)

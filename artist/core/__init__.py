@@ -6,6 +6,7 @@ from artist.core.heliostat_ray_tracer import (
     RestrictedDistributedSampler,
 )
 from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scene.rays import Rays
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "RestrictedDistributedSampler",
     "Rays",
     "KinematicOptimizer",
+    "SurfaceReconstructor",
 ]

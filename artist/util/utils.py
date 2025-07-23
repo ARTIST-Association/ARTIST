@@ -247,18 +247,19 @@ def translate_enu(
     return matrix
 
 
-def convert_3d_point_to_4d_format(
-    point: torch.Tensor, device: torch.device | None = None
+def convert_3d_points_to_4d_format(
+    points: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append ones to the last dimension of a 3D point vector.
+    Append ones to the last dimension of a 3D point vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    point : torch.Tensor
-        Input point in a 3D format.
+    points : torch.Tensor
+        Input points in a 3D format.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -276,24 +277,27 @@ def convert_3d_point_to_4d_format(
     """
     device = get_device(device=device)
 
-    if point.size(dim=-1) != 3:
-        raise ValueError(f"Expected a 3D point but got a point of shape {point.shape}!")
+    if points.size(dim=-1) != 3:
+        raise ValueError(f"Expected 3D points but got points of shape {points.shape}!")
 
-    ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
-    return torch.cat((point, ones_tensor), dim=-1)
+    ones_tensor = torch.ones(
+        points.shape[:-1] + (1,), dtype=points.dtype, device=device
+    )
+    return torch.cat((points, ones_tensor), dim=-1)
 
 
-def convert_3d_direction_to_4d_format(
-    direction: torch.Tensor, device: torch.device | None = None
+def convert_3d_directions_to_4d_format(
+    directions: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append zeros to the last dimension of a 3D direction vector.
+    Append zeros to the last dimension of 3D direction vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    direction : torch.Tensor
+    directions : torch.Tensor
         Input direction in a 3D format.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -308,19 +312,19 @@ def convert_3d_direction_to_4d_format(
     Returns
     -------
     torch.Tensor
-        Direction vector with ones appended at the last dimension.
+        Direction vectors with ones appended at the last dimension.
     """
     device = get_device(device=device)
 
-    if direction.size(dim=-1) != 3:
+    if directions.size(dim=-1) != 3:
         raise ValueError(
-            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
+            f"Expected 3D directions but got directions of shape {directions.shape}!"
         )
 
     zeros_tensor = torch.zeros(
-        direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
+        directions.shape[:-1] + (1,), dtype=directions.dtype, device=device
     )
-    return torch.cat((direction, zeros_tensor), dim=-1)
+    return torch.cat((directions, zeros_tensor), dim=-1)
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
@@ -338,9 +342,8 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         The normalized points.
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
-        (points[:] - min(points[:])) + 2e-5
-    )
+    range = points - min(points)
+    points_normalized = (range + 1e-5) / max(range + 2e-5)
     return points_normalized
 
 
@@ -563,3 +566,71 @@ def get_center_of_mass(
     )
 
     return center_coordinates
+
+
+def create_nurbs_evaluation_grid(
+    number_of_evaluation_points: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a grid of evaluation points for a nurbs surface.
+
+    Parameters
+    ----------
+    number_of_evaluation_points : torch.Tensor
+        The number of nurbs evaluation points in east and north direction.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The evaluation points.
+    """
+    device = get_device(device=device)
+
+    evaluation_points_e = torch.linspace(
+        1e-5, 1 - 1e-5, number_of_evaluation_points[0], device=device
+    )
+    evaluation_points_n = torch.linspace(
+        1e-5, 1 - 1e-5, number_of_evaluation_points[1], device=device
+    )
+    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
+
+    return evaluation_points
+
+
+def normalize_bitmaps(
+    flux_distributions: torch.Tensor,
+    target_area_widths: torch.Tensor,
+    target_area_heights: torch.Tensor,
+    number_of_rays: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Normalize a bitmap.
+
+    Parameters
+    ----------
+    flux_distributions : torch.Tensor
+        The flux distributions to be normalized.
+    target_area_widths : troch.Tensor
+        The target area widths.
+    target_area_heights : troch.Tensor
+        The target area heights.
+    number_of_rays : troch.Tensor
+        The number of rays used to generate the flux.
+
+    Returns
+    -------
+    torch.Tensor
+        The normalized flux density distributions.
+    """
+    plane_areas = target_area_widths * target_area_heights
+    num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
+    plane_area_per_pixel = plane_areas / num_pixels
+
+    return flux_distributions / (number_of_rays * plane_area_per_pixel).unsqueeze(
+        -1
+    ).unsqueeze(-1)

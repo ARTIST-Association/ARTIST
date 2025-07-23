@@ -19,6 +19,8 @@ class HeliostatGroup:
     ----------
     number_of_heliostats : int
         The number of heliostats in the group.
+    number_of_facets_per_heliostat
+        The number of facets per heliostat in the group.
     names : list[str]
         The string names of each heliostat in the group in order.
     positions : torch.Tensor
@@ -29,6 +31,10 @@ class HeliostatGroup:
         The surface normals of all heliostats in the group.
     initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the group.
+    nurbs_control_points : torch.Tensor
+        The control points for NURBS surfaces for all heliostats in the group.
+    nurbs_degrees : torch.Tensor
+        The degrees for NURBS surfaces for all heliostats in the group.
     kinematic : Kinematic
         The kinematic of all heliostats in the group.
     number_of_active_heliostats : int
@@ -39,6 +45,8 @@ class HeliostatGroup:
         The surface points of all active heliostats in the group, these can be aligned.
     active_surface_normals : torch.Tensor
         The surface normals of all active heliostats in the group, these can be aligned.
+    active_nurbs_control_points : torch.Tensor
+        The NURBS control points of all active heliostats in the group, these can be learned.
     preferred_reflection_directions : torch.Tensor
         The preferred reflection directions of all heliostats in the group.
 
@@ -57,6 +65,8 @@ class HeliostatGroup:
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         initial_orientations: torch.Tensor,
+        nurbs_control_points: torch.Tensor,
+        nurbs_degrees: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -74,6 +84,10 @@ class HeliostatGroup:
             The surface normals of all heliostats in the group.
         initial_orientations : torch.Tensor
             The initial orientations of all heliostats in the group.
+        nurbs_control_points : torch.Tensor
+            The control points for NURBS surfaces for all heliostats in the group.
+        nurbs_degrees : torch.Tensor
+            The degrees for NURBS surfaces for all heliostats in the group.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -82,11 +96,15 @@ class HeliostatGroup:
         device = get_device(device=device)
 
         self.number_of_heliostats = len(names)
+        self.number_of_facets_per_heliostat = nurbs_control_points.shape[1]
         self.names = names
         self.positions = positions
         self.surface_points = surface_points
         self.surface_normals = surface_normals
         self.initial_orientations = initial_orientations
+
+        self.nurbs_control_points = nurbs_control_points
+        self.nurbs_degrees = nurbs_degrees
 
         self.kinematic = Kinematic()
 
@@ -99,6 +117,9 @@ class HeliostatGroup:
         )
         self.active_surface_normals = torch.empty_like(
             self.surface_normals, device=device
+        )
+        self.active_nurbs_control_points = torch.empty_like(
+            self.nurbs_control_points, device=device
         )
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
@@ -122,10 +143,6 @@ class HeliostatGroup:
             The aim points for all active heliostats.
         incident_ray_directions : torch.Tensor
             The incident ray directions.
-        active_heliostats_mask : torch.Tensor | None
-            A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
-            An integer greater than 1 indicates that this heliostat is regarded multiple times.
-            If no mask is provided, all heliostats in the scenario will be activated once.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -174,6 +191,9 @@ class HeliostatGroup:
             active_heliostats_mask, dim=0
         )
         self.active_surface_normals = self.surface_normals.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_nurbs_control_points = self.nurbs_control_points.repeat_interleave(
             active_heliostats_mask, dim=0
         )
         self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
