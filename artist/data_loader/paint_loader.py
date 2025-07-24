@@ -35,6 +35,7 @@ def extract_paint_calibration_properties_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
+    centroid_extrected_by: str = config_dictionary.paint_utis,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -92,7 +93,7 @@ def extract_paint_calibration_properties_data(
                         ]
                     ],
                     calibration_data_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
+                        centroid_extrected_by
                     ],
                     calibration_data_dict[config_dictionary.paint_light_source_azimuth],
                     calibration_data_dict[
