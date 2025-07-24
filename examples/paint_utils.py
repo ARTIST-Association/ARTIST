@@ -47,7 +47,6 @@ def generate_paint_scenario(paint_dir, scenario_path, tower_file, heliostat_name
                 )
                 for name in heliostat_names
             ]
-
     
     # Include the power plant configuration.
     power_plant_config, target_area_list_config = (
