@@ -21,7 +21,7 @@ def find_latest_deflectometry_file(name, paint_dir):
         raise FileNotFoundError(f"No deflectometry file found for {name} in {search_path}")
     return files[-1]
 
-def generate_paint_scenario(paint_dir, scenario_path, tower_file, heliostat_names, device="cpu"):
+def generate_paint_scenario(paint_dir, scenario_path, tower_file, heliostat_names, device="cpu", use_deflectometry=True):
 
     if not pathlib.Path(scenario_path).parent.is_dir():
         raise FileNotFoundError(
@@ -30,14 +30,24 @@ def generate_paint_scenario(paint_dir, scenario_path, tower_file, heliostat_name
         )
 
         # Prepare heliostat files
-    heliostat_files_list = [
-        (
-            name,
-            pathlib.Path(f"{paint_dir}/{name}/Properties/{name}-heliostat-properties.json"),
-            find_latest_deflectometry_file(name, paint_dir)
-            )
-            for name in heliostat_names
-        ]
+    if use_deflectometry:
+        heliostat_files_list = [
+            (
+                name,
+                pathlib.Path(f"{paint_dir}/{name}/Properties/{name}-heliostat-properties.json"),
+                find_latest_deflectometry_file(name, paint_dir)
+                )
+                for name in heliostat_names
+            ]
+    else:
+        heliostat_files_list = [
+            (
+                name,
+                pathlib.Path(f"{paint_dir}/{name}/Properties/{name}-heliostat-properties.json"),
+                )
+                for name in heliostat_names
+            ]
+
     
     # Include the power plant configuration.
     power_plant_config, target_area_list_config = (
