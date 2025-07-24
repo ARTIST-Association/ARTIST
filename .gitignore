@@ -166,3 +166,4 @@ cython_debug/
 .pdf 
 .json
 .csv
+.vscode
