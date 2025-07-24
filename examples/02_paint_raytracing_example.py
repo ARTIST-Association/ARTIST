@@ -34,7 +34,6 @@ helmholtz_colors = {
     "hgfmatter": "#F0781E",
 }
 
-
 # Set up logger
 set_logger_config()
 
@@ -506,4 +505,3 @@ main() #TODO hier morgen weiter machen
 print(f"Calibration results saved to {results_path}")
 plot_mrad_vs_distance(results_dict, save_path=save_plot_path )
 plot_mrad_error_distributions(results_dict, save_path=save_plot_path)
-
