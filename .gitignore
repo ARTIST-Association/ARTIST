@@ -164,3 +164,5 @@ cython_debug/
 .png 
 .jpg 
 .pdf 
+.json
+.csv
