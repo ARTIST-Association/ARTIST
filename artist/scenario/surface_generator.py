@@ -424,7 +424,6 @@ class SurfaceGenerator:
 
     @staticmethod
     def perform_canting_and_translation(
-        self,
         points: torch.Tensor,
         translation: torch.Tensor,
         canting: torch.Tensor,
