@@ -388,6 +388,7 @@ class RigidBody(Kinematic):
             @ utils.rotate_u(u=joint_angles[:, 1], device=device)
         )
 
+
         orientations = (
             initial_orientations
             @ joint_rotations[:, 0]
