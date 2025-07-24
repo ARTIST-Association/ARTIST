@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 import torch
 from torch.optim import Optimizer
@@ -11,6 +12,44 @@ from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class AngleLoss(nn.Module):
+    def __init__(self, reduction='mean'):
+        super(AngleLoss, self).__init__()
+        if reduction not in ('none', 'mean', 'sum'):
+            raise ValueError(f"Invalid reduction mode: {reduction}")
+        self.reduction = reduction
+
+    def forward(self, input, target):
+
+        input = input[:,:3]
+        target = target[:,:3]
+        # Ensure input and target have the same shape
+        if input.shape != target.shape:
+            raise ValueError("Input and target must have the same shape")
+
+        # Normalize the input and target to unit vectors
+        input_norm = F.normalize(input, p=2, dim=-1)
+        target_norm = F.normalize(target, p=2, dim=-1)
+
+        # Compute cosine similarity
+        cos_sim = (input_norm * target_norm).sum(dim=-1).clamp(-1.0, 1.0)  # clamp for numerical stability
+
+        # Compute angle in radians
+        angle = torch.acos(cos_sim)
+
+        if self.reduction == 'none':
+            return angle
+        elif self.reduction == 'mean':
+            return angle.mean()
+        elif self.reduction == 'sum':
+            return angle.sum()
+
+
 
 
 class KinematicOptimizer:
@@ -76,6 +115,9 @@ class KinematicOptimizer:
         tolerance: float = 5e-5,
         max_epoch: int = 10000,
         num_log: int = 3,
+        loss_type: str = "l1",
+        loss_reduction: str = "mean",
+        loss_return_value: str = "mean",
         device: torch.device | None = None,
     ) -> None:
         """
@@ -115,7 +157,7 @@ class KinematicOptimizer:
             log.info("Start the kinematic calibration.")
 
         if motor_positions_calibration is not None:
-            self._optimize_kinematic_parameters_with_motor_positions(
+            losses = self._optimize_kinematic_parameters_with_motor_positions(
                 focal_spots_calibration=focal_spots_calibration,
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -123,11 +165,14 @@ class KinematicOptimizer:
                 tolerance=tolerance,
                 max_epoch=max_epoch,
                 num_log=num_log,
+                loss_type = loss_type,
+                loss_reduction = loss_reduction,
+                loss_return_value = loss_return_value,
                 device=device,
             )
 
         else:
-            self._optimize_kinematic_parameters_with_raytracing(
+            losses = self._optimize_kinematic_parameters_with_raytracing(
                 focal_spots_calibration=focal_spots_calibration,
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -135,10 +180,14 @@ class KinematicOptimizer:
                 tolerance=tolerance,
                 max_epoch=max_epoch,
                 num_log=num_log,
+                loss_type = loss_type,
+                reduction = loss_reduction,
                 device=device,
             )
         if rank == 0:
             log.info("Kinematic parameters optimized.")
+        return losses
+        
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
@@ -149,8 +198,11 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
+        loss_type: Literal["l1", "l2", "angular"] = "l1",
+        loss_reduction: Literal["mean", "sum", "none"] = "mean",
+        loss_return_value: Literal["l1", "l2", "angular"] = "l1",
         device: torch.device | None = None,
-    ) -> None:
+    ) -> torch.Tensor:
         """
         Optimize the kinematic parameters using the motor positions.
 
@@ -204,47 +256,80 @@ class KinematicOptimizer:
         )
 
         log_step = max_epoch // num_log
-        while loss > tolerance and epoch <= max_epoch:
+
+        loss_fns = {
+            "l1": torch.nn.L1Loss(reduction="none"),
+            "l2": torch.nn.MSELoss(reduction="none"),
+            "angular": AngleLoss(reduction="none"),
+        }
+
+        if loss_type not in loss_fns or loss_return_value not in loss_fns:
+            raise ValueError(f"Unsupported loss_type or loss_return_value")
+
+        loss_fn = loss_fns[loss_type]
+        return_loss_fn = loss_fns[loss_return_value]
+
+        last_valid_state = {}  # To hold tensors right before NaN happens
+        previous_loss_value = None
+        torch.autograd.set_detect_anomaly(False)
+        while loss > tolerance and epoch <= max_epoch: #TODO Loss überschreiben
             self.optimizer.zero_grad()
 
-            # Activate heliostats
             self.heliostat_group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_mask, device=device
             )
 
-            # Retrieve the orientation of the heliostats for given motor positions.
-            orientations = (
-                self.heliostat_group.kinematic.motor_positions_to_orientations(
-                    motor_positions=motor_positions_calibration,
-                    device=device,
-                )
+            orientations = self.heliostat_group.kinematic.motor_positions_to_orientations(
+                motor_positions=motor_positions_calibration,
+                device=device,
             )
 
-            # Determine the preferred reflection directions for each heliostat.
             preferred_reflection_directions = raytracing_utils.reflect(
                 incident_ray_directions=incident_ray_directions,
                 reflection_surface_normals=orientations[:, 0:4, 2],
             )
 
-            loss = (
-                (
-                    preferred_reflection_directions
-                    - preferred_reflection_directions_calibration
-                )
-                .abs()
-                .mean()
+            unreduced_loss = loss_fn(
+                preferred_reflection_directions,
+                preferred_reflection_directions_calibration
             )
 
-            loss.backward()
+            # Reduce loss
+            if loss_reduction == "mean":
+                loss_value = unreduced_loss.mean()
+            elif loss_reduction == "sum":
+                loss_value = unreduced_loss.sum()
+            elif loss_reduction == "none":
+                loss_value = unreduced_loss.mean()
+            else:
+                raise ValueError(f"Unsupported reduction: {loss_reduction}")
 
+            last_valid_state = {
+                "epoch": epoch,
+                "loss_value": loss_value.detach().cpu(),
+                "orientations": orientations.detach().cpu(),
+                "preferred_reflection_directions": preferred_reflection_directions.detach().cpu(),
+            }
+            previous_loss_value = loss_value.item()
+
+            loss_value.backward()
             self.optimizer.step()
+
+
+            return_loss_unreduced = return_loss_fn(
+            preferred_reflection_directions,
+            preferred_reflection_directions_calibration)
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss_value.item()}, Loss(rad): {return_loss_unreduced.mean().item()}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
-
             epoch += 1
+
+
+
+
+        return return_loss_unreduced
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -255,6 +340,8 @@ class KinematicOptimizer:
         tolerance: float,
         max_epoch: int,
         num_log: int = 3,
+        loss_type: Literal["l1", "l2"] = "l1",
+        reduction: Literal["mean", "sum", "none"] = "mean",
         device: torch.device | None = None,
     ) -> None:
         """
@@ -300,6 +387,16 @@ class KinematicOptimizer:
 
         # Start the optimization.
         log_step = max_epoch // num_log
+
+        if loss_type == "l1":
+            loss_fn = torch.nn.L1Loss(reduction="none")
+        elif loss_type == "l2":
+            loss_fn = torch.nn.MSELoss(reduction="none")
+        else:
+            raise ValueError(f"Unsupported loss_type: {loss_type}")
+
+        final_loss_tensor = None  # for returning after optimization
+
         while loss > tolerance and epoch <= max_epoch:
             self.optimizer.zero_grad()
 
@@ -343,14 +440,28 @@ class KinematicOptimizer:
                 device=device,
             )
 
-            loss = (focal_spots - focal_spots_calibration).abs().mean()
-            loss.backward()
+            unreduced_loss = loss_fn(
+                        focal_spots,
+                        focal_spots_calibration)
+
+             # Calculate scalar loss for backward pass
+            if reduction == "mean":
+                loss_value = unreduced_loss.mean()
+            elif reduction == "sum":
+                loss_value = unreduced_loss.sum()
+            elif reduction == "none":
+                loss_value = unreduced_loss.mean()
+            else:
+                raise ValueError(f"Unsupported reduction: {reduction}")
+            loss_value.backward()
 
             self.optimizer.step()
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss_value}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
-
             epoch += 1
+
+        final_loss_tensor = unreduced_loss if reduction == "none" else loss_value
+        return final_loss_tensor
