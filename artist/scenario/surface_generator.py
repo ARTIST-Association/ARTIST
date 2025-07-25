@@ -382,32 +382,32 @@ class SurfaceGenerator:
         )
         canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
-        control_points = torch.zeros(
-            (self.number_of_control_points[0], self.number_of_control_points[1], 3),
-            device=device,
-        )
-        origin_offsets_e = torch.linspace(
-            -0.5,
-            0.5,
-            control_points.shape[0],
-            device=device,
-        )
-        origin_offsets_n = torch.linspace(
-            -0.5,
-            0.5,
-            control_points.shape[1],
-            device=device,
-        )
-
-        control_points_e, control_points_n = torch.meshgrid(
-            origin_offsets_e, origin_offsets_n, indexing="ij"
-        )
-
-        control_points[:, :, 0] = control_points_e
-        control_points[:, :, 1] = control_points_n
-        control_points[:, :, 2] = 0
-
         for facet_index in range(facet_translation_vectors.shape[0]):
+            control_points = torch.zeros(
+                (self.number_of_control_points[0], self.number_of_control_points[1], 3),
+                device=device,
+            )
+            origin_offsets_e = torch.linspace(
+                -torch.norm(canting[facet_index], dim=-1)[0],
+                torch.norm(canting[facet_index], dim=-1)[0],
+                control_points.shape[0],
+                device=device,
+            )
+            origin_offsets_n = torch.linspace(
+                -torch.norm(canting[facet_index], dim=-1)[1],
+                torch.norm(canting[facet_index], dim=-1)[1],
+                control_points.shape[1],
+                device=device,
+            )
+
+            control_points_e, control_points_n = torch.meshgrid(
+                origin_offsets_e, origin_offsets_n, indexing="ij"
+            )
+
+            control_points[:, :, 0] = control_points_e
+            control_points[:, :, 1] = control_points_n
+            control_points[:, :, 2] = 0
+
             canted_control_points = self.perform_canting_and_translation(
                 points=control_points,
                 canting=canting[facet_index],
@@ -467,7 +467,7 @@ class SurfaceGenerator:
         combined_matrix[:3, 2] = torch.nn.functional.normalize(
             torch.linalg.cross(combined_matrix[:3, 0], combined_matrix[:3, 1]), dim=0
         )
-        combined_matrix[:, 3] = translation
+
         combined_matrix[3, 3] = 1.0
 
         canted_points = (
@@ -477,4 +477,6 @@ class SurfaceGenerator:
             @ combined_matrix.T
         ).reshape(points.shape[0], points.shape[1], 4)
 
-        return canted_points[:, :, :3]
+        canted_with_translation = canted_points + translation
+
+        return canted_with_translation[:, :, :3]
