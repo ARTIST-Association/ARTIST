@@ -496,7 +496,7 @@ def extract_paint_deflectometry_data(
     heliostat_deflectometry_path: pathlib.Path,
     number_of_facets: int,
     device: torch.device | None = None,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Extract paint deflectometry data.
 
@@ -513,9 +513,9 @@ def extract_paint_deflectometry_data(
 
     Returns
     -------
-    torch.Tensor
+    list[torch.Tensor]
         The surface points per facet.
-    torch.Tensor
+    list[torch.Tensor]
         The surface normals per facet.
     """
     device = get_device(device=device)
@@ -567,6 +567,7 @@ def extract_paint_heliostats(
     paths: list[tuple[str, pathlib.Path]]
     | list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
+    number_of_nurbs_control_points: torch.Tensor = torch.tensor([20, 20]),
     max_epochs_for_surface_training: int = 400,
     device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
@@ -605,6 +606,7 @@ def extract_paint_heliostats(
     for heliostat_index, file_tuple in enumerate(paths):
         # Generate surface configuration from data.
         surface_generator = SurfaceGenerator(
+            number_of_control_points=number_of_nurbs_control_points.to(device),
             step_size=100,
             max_epoch=max_epochs_for_surface_training,
         )
