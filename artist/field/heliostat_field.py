@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import h5py
 import torch
@@ -316,12 +316,18 @@ class HeliostatField:
                     positions=grouped_field_data[heliostat_group_name][
                         config_dictionary.positions
                     ],
-                    surface_points=grouped_field_data[heliostat_group_name][
-                        config_dictionary.surface_points
-                    ].reshape(number_of_heliostats_in_group, -1, 4),
-                    surface_normals=grouped_field_data[heliostat_group_name][
-                        config_dictionary.surface_normals
-                    ].reshape(number_of_heliostats_in_group, -1, 4),
+                    surface_points=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            config_dictionary.surface_points
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
+                    surface_normals=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            config_dictionary.surface_normals
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
                     nurbs_control_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.facet_control_points
                     ],

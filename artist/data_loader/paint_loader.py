@@ -564,8 +564,9 @@ def extract_paint_deflectometry_data(
 
 
 def extract_paint_heliostats(
-    paths: list[tuple[str, pathlib.Path]]
-    | list[tuple[str, pathlib.Path, pathlib.Path]],
+    paths: (
+        list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
+    ),
     power_plant_position: torch.Tensor,
     number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
     deflectometry_step_size: int = 100,
@@ -632,7 +633,7 @@ def extract_paint_heliostats(
             initial_orientation,
             actuator_parameters_list,
         ) = extract_paint_heliostat_properties(
-            heliostat_properties_path=file_tuple[1],
+            heliostat_properties_path=pathlib.Path(file_tuple[1]),
             power_plant_position=power_plant_position,
             device=device,
         )
@@ -641,7 +642,7 @@ def extract_paint_heliostats(
         if len(file_tuple) == 3:
             (surface_points_with_facets_list, surface_normals_with_facets_list) = (
                 extract_paint_deflectometry_data(
-                    heliostat_deflectometry_path=file_tuple[2],
+                    heliostat_deflectometry_path=pathlib.Path(file_tuple[2]),
                     number_of_facets=facet_translation_vectors.shape[0],
                     device=device,
                 )
@@ -649,7 +650,7 @@ def extract_paint_heliostats(
 
             # Include the surface configuration.
             surface_config = surface_generator.generate_fitted_surface_config(
-                heliostat_name=file_tuple[0],
+                heliostat_name=str(file_tuple[0]),
                 facet_translation_vectors=facet_translation_vectors,
                 canting=canting,
                 surface_points_with_facets_list=surface_points_with_facets_list,
@@ -700,7 +701,7 @@ def extract_paint_heliostats(
 
         # Include the heliostat configuration.
         heliostat_config = HeliostatConfig(
-            name=file_tuple[0],
+            name=str(file_tuple[0]),
             id=heliostat_index,
             position=heliostat_position,
             surface=surface_config,
