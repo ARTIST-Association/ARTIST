@@ -10,6 +10,7 @@ from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
+from tutorials import helper
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
@@ -59,6 +60,8 @@ class SurfaceReconstructor:
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
         ],
+        number_of_surface_points: torch.Tensor,
+        resolution: torch.Tensor,
         initial_learning_rate: float = 1e-5,
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
@@ -107,10 +110,11 @@ class SurfaceReconstructor:
             if heliostat_name in self.heliostat_group.names
         ]
 
-        self.normalized_measured_flux_density_distributions = (
+        self.normalized_measured_flux_distributions = (
             flux_distribution_loader.load_flux_from_png(
                 heliostat_flux_path_mapping=heliostat_flux_path_mapping,
                 heliostat_names=heliostat_group.names,
+                resolution=resolution,
                 device=device,
             )
         )
@@ -135,6 +139,8 @@ class SurfaceReconstructor:
             device=device,
         )
 
+        self.number_of_surface_points = number_of_surface_points
+        self.resolution = resolution
         self.num_log = num_log
 
         # Create the optimizer.
@@ -142,23 +148,10 @@ class SurfaceReconstructor:
         self.tolerance = tolerance
         self.max_epoch = max_epoch
 
-        self.number_of_surface_points = torch.full(
-            (2,),
-            int(
-                torch.sqrt(
-                    torch.tensor(
-                        (
-                            heliostat_group.surface_points.shape[1]
-                            / heliostat_group.number_of_facets_per_heliostat
-                        ),
-                        device=device,
-                    )
-                )
-            ),
-        )
 
     def reconstruct_surfaces(
         self,
+        heliostat_group_index,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -182,16 +175,6 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         if self.heliostats_mask.sum() > 0:
-            # Activate heliostats.
-            self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=self.heliostats_mask, device=device
-            )
-
-            nurbs_surfaces = NURBSSurfaces(
-                degrees=self.heliostat_group.nurbs_degrees,
-                control_points=self.heliostat_group.active_nurbs_control_points,
-                device=device,
-            )
 
             evaluation_points = (
                 utils.create_nurbs_evaluation_grid(
@@ -201,15 +184,20 @@ class SurfaceReconstructor:
                 .unsqueeze(0)
                 .unsqueeze(0)
                 .expand(
-                    self.heliostat_group.number_of_active_heliostats,
+                    self.heliostats_mask.sum(),
                     self.heliostat_group.number_of_facets_per_heliostat,
                     -1,
                     -1,
                 )
             )
 
+            # Activate heliostats.
+            self.heliostat_group.activate_heliostats(
+                active_heliostats_mask=self.heliostats_mask, device=device
+            )
+
             optimizer = torch.optim.Adam(
-                [nurbs_surfaces.control_points.requires_grad_()],
+                [self.heliostat_group.nurbs_control_points.requires_grad_()],
                 lr=self.initial_learning_rate,
             )
 
@@ -219,6 +207,17 @@ class SurfaceReconstructor:
             log_step = self.max_epoch // self.num_log
             while loss > self.tolerance and epoch <= self.max_epoch:
                 optimizer.zero_grad()
+
+                # Activate heliostats.
+                self.heliostat_group.activate_heliostats(
+                    active_heliostats_mask=self.heliostats_mask, device=device
+                )
+
+                nurbs_surfaces = NURBSSurfaces(
+                    degrees=self.heliostat_group.nurbs_degrees,
+                    control_points=self.heliostat_group.active_nurbs_control_points,
+                    device=device,
+                )
 
                 (
                     self.heliostat_group.active_surface_points,
@@ -253,6 +252,7 @@ class SurfaceReconstructor:
                     scenario=self.scenario,
                     heliostat_group=self.heliostat_group,
                     batch_size=self.heliostat_group.number_of_active_heliostats,
+                    bitmap_resolution=self.resolution,
                 )
 
                 # Perform heliostat-based ray tracing.
@@ -274,10 +274,28 @@ class SurfaceReconstructor:
                     number_of_rays=ray_tracer.light_source.number_of_rays,
                 )
 
+                # TODO delete this if later
+                if epoch in [10, 20, 30, 50, 100, 200, 500, 999, 1999, 2999, 3999, 4999, 5999, 6999]:
+                    name =  f"group_{heliostat_group_index}_cp_{self.heliostat_group.active_nurbs_control_points.shape[2]}_{epoch}"
+                    helper.plot_multiple_fluxes(normalized_flux_distributions, self.normalized_measured_flux_distributions, name)
+
+                    # adapt index of nurbs_control_points[]
+                    temp_nurbs = NURBSSurfaces(
+                        degrees=self.heliostat_group.nurbs_degrees,
+                        control_points=self.heliostat_group.nurbs_control_points[0].unsqueeze(0),
+                        device=device
+                    )
+                    temp_points, temp_normals = temp_nurbs.calculate_surface_points_and_normals(
+                        evaluation_points=evaluation_points[0].unsqueeze(0),
+                        device=device
+                    )
+
+                    helper.plot_normal_angle_map(temp_points[0], temp_normals[0], torch.tensor([0.0, 0.0, 1.0, 0.0], device=device), name)
+
                 loss_function = torch.nn.MSELoss()
                 loss = loss_function(
                     normalized_flux_distributions,
-                    self.normalized_measured_flux_density_distributions,
+                    self.normalized_measured_flux_distributions,
                 )
 
                 loss.backward()
