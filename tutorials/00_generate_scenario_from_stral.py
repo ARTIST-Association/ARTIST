@@ -96,8 +96,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 
 # Generate surface configuration from STRAL data.
 surface_generator = SurfaceGenerator(
-    step_size=100,
-    max_epoch=400,
+    device=device
 )
 
 # Use this surface config for fitted deflectometry surfaces.
