@@ -45,8 +45,7 @@ def test_surface_generator(device: torch.device) -> None:
     )
 
     surface_generator = SurfaceGenerator(
-        number_of_control_points=torch.tensor([5, 5], device=device),
-        device=device
+        number_of_control_points=torch.tensor([5, 5], device=device), device=device
     )
 
     _, facet_translation_vectors, canting, _, _, _ = (
@@ -97,18 +96,16 @@ def test_surface_generator(device: torch.device) -> None:
         max_epoch=1,
         device=device,
     )
-    surface_config_stral_fit_points = (
-        surface_generator.generate_fitted_surface_config(
-            heliostat_name="test",
-            facet_translation_vectors=facet_translation_vectors,
-            canting=canting,
-            surface_points_with_facets_list=surface_points_with_facets_list,
-            surface_normals_with_facets_list=surface_normals_with_facets_list,
-            deflectometry_step_size=5000,
-            fit_method=config_dictionary.fit_nurbs_from_points,
-            max_epoch=1,
-            device=device,
-        )
+    surface_config_stral_fit_points = surface_generator.generate_fitted_surface_config(
+        heliostat_name="test",
+        facet_translation_vectors=facet_translation_vectors,
+        canting=canting,
+        surface_points_with_facets_list=surface_points_with_facets_list,
+        surface_normals_with_facets_list=surface_normals_with_facets_list,
+        deflectometry_step_size=5000,
+        fit_method=config_dictionary.fit_nurbs_from_points,
+        max_epoch=1,
+        device=device,
     )
 
     surface_config_ideal = surface_generator.generate_ideal_surface_config(
@@ -121,28 +118,35 @@ def test_surface_generator(device: torch.device) -> None:
     assert isinstance(surface_config_stral_fit_normals, SurfaceConfig)
     assert isinstance(surface_config_stral_fit_points, SurfaceConfig)
     assert isinstance(surface_config_ideal, SurfaceConfig)
-    assert all(isinstance(obj, FacetConfig) for obj in surface_config_paint_fit_normals.facet_list)
-    assert all(isinstance(obj, FacetConfig) for obj in surface_config_stral_fit_normals.facet_list)
     assert all(
-        isinstance(obj, FacetConfig) for obj in surface_config_stral_fit_points.facet_list
+        isinstance(obj, FacetConfig)
+        for obj in surface_config_paint_fit_normals.facet_list
+    )
+    assert all(
+        isinstance(obj, FacetConfig)
+        for obj in surface_config_stral_fit_normals.facet_list
+    )
+    assert all(
+        isinstance(obj, FacetConfig)
+        for obj in surface_config_stral_fit_points.facet_list
     )
     assert all(isinstance(obj, FacetConfig) for obj in surface_config_ideal.facet_list)
 
     torch.testing.assert_close(
         surface_config_paint_fit_normals.facet_list[1].control_points[0, 3],
-        torch.tensor([0.015000045300, 0.942499995232, 0.039200015366], device=device)
+        torch.tensor([0.015000045300, 0.942499995232, 0.039200015366], device=device),
     )
     torch.testing.assert_close(
         surface_config_stral_fit_normals.facet_list[0].control_points[4, 2],
-        torch.tensor([-0.015000045300,  0.642499983311,  0.039198391140], device=device)
+        torch.tensor([-0.015000045300, 0.642499983311, 0.039198391140], device=device),
     )
     torch.testing.assert_close(
         surface_config_stral_fit_points.facet_list[3].control_points[0, 0],
-        torch.tensor([-0.790499985218, -0.601999938488,  0.001999197528], device=device)
+        torch.tensor([-0.790499985218, -0.601999938488, 0.001999197528], device=device),
     )
     torch.testing.assert_close(
         surface_config_ideal.facet_list[2].control_points[3, 2],
-        torch.tensor([-0.406257748604, -0.642499983311,  0.037706092000], device=device)
+        torch.tensor([-0.406257748604, -0.642499983311, 0.037706092000], device=device),
     )
 
 
@@ -166,7 +170,7 @@ def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
             surface_points_with_facets_list=[torch.empty((1, 3), device=device)],
             surface_normals_with_facets_list=[torch.empty((1, 3), device=device)],
             fit_method=invalid_method,
-            device=device
+            device=device,
         )
 
     assert (

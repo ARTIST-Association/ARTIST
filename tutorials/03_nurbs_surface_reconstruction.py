@@ -131,7 +131,7 @@ with setup_distributed_environment(
 
     for heliostat_group_index in groups_to_ranks_mapping[rank]:
         # If there are more ranks than heliostat groups, some ranks will be left idle.
-        if rank < scenario.heliostat_field.number_of_heliostat_groups: 
+        if rank < scenario.heliostat_field.number_of_heliostat_groups:
             heliostat_group = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -158,25 +158,55 @@ with setup_distributed_environment(
                 device=device,
             )
 
-            surface_reconstructor.reconstruct_surfaces(heliostat_group_index, device=device)
+            surface_reconstructor.reconstruct_surfaces(
+                heliostat_group_index, device=device
+            )
 
             #### TODO delete everything from here on
             if heliostat_group_index == 1:
                 paths = [
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/86520-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/151375-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"),
-                    pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/86520-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/151375-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+                    ),
+                    pathlib.Path(
+                        "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+                    ),
                 ]
 
-                incident_ray_directions, targets = helper.calibration_path_to_sun_and_tower(paths=paths, target_area_names=scenario.target_areas.names, device=device)
+                incident_ray_directions, targets = (
+                    helper.calibration_path_to_sun_and_tower(
+                        paths=paths,
+                        target_area_names=scenario.target_areas.names,
+                        device=device,
+                    )
+                )
 
                 # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
                 heliostat_target_light_source_mapping = [
@@ -191,7 +221,11 @@ with setup_distributed_environment(
                     ("AA39", targets[8], incident_ray_directions[8]),
                     ("AA39", targets[9], incident_ray_directions[9]),
                     ("AA39", targets[10], incident_ray_directions[10]),
-                    ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device))
+                    (
+                        "AA39",
+                        "receiver",
+                        torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
+                    ),
                 ]
 
                 (
@@ -212,7 +246,7 @@ with setup_distributed_environment(
                     degrees=heliostat_group.nurbs_degrees,
                     control_points=heliostat_group.active_nurbs_control_points,
                     uniform=True,
-                    device=device
+                    device=device,
                 )
 
                 evaluation_points = (
@@ -229,14 +263,17 @@ with setup_distributed_environment(
                         -1,
                     )
                 )
-                
+
                 calc_points, calc_normals = nurbs.calculate_surface_points_and_normals(
-                    evaluation_points=evaluation_points,
-                    device=device
+                    evaluation_points=evaluation_points, device=device
                 )
 
-                heliostat_group.active_surface_points = calc_points.reshape(len(heliostat_target_light_source_mapping), -1, 4)
-                heliostat_group.active_surface_normals = calc_normals.reshape(len(heliostat_target_light_source_mapping), -1, 4)
+                heliostat_group.active_surface_points = calc_points.reshape(
+                    len(heliostat_target_light_source_mapping), -1, 4
+                )
+                heliostat_group.active_surface_normals = calc_normals.reshape(
+                    len(heliostat_target_light_source_mapping), -1, 4
+                )
 
                 # Align heliostats.
                 heliostat_group.align_surfaces_with_incident_ray_directions(
@@ -266,6 +303,11 @@ with setup_distributed_environment(
                 )
 
                 import matplotlib.pyplot as plt
+
                 plt.clf()
-                name =  f"group_{heliostat_group_index}_cp_{heliostat_group.active_nurbs_control_points.shape[2]}_{max_epoch}"
-                helper.plot_multiple_fluxes(bitmaps_per_heliostat, torch.zeros_like(bitmaps_per_heliostat), name=name)
+                name = f"group_{heliostat_group_index}_cp_{heliostat_group.active_nurbs_control_points.shape[2]}_{max_epoch}"
+                helper.plot_multiple_fluxes(
+                    bitmaps_per_heliostat,
+                    torch.zeros_like(bitmaps_per_heliostat),
+                    name=name,
+                )

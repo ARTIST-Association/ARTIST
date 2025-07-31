@@ -277,9 +277,8 @@ class KinematicOptimizer:
                 )
 
             epoch += 1
-        
-        log.info(f"Kinematic parameters of group {rank} optimized.")        
 
+        log.info(f"Kinematic parameters of group {rank} optimized.")
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
