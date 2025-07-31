@@ -166,3 +166,6 @@ cython_debug/
 .pdf 
 .json
 .csv
+.vscode/settings.json
+examples/data/heliostat_files.json
+examples/data/scenarios/heliostat_calibration_paint.h5
