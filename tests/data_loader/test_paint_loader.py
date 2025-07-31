@@ -252,7 +252,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.606459498405, 0.212854713202, 0.041160706431]),
+                torch.tensor([-1.605000019073,  0.211447358131,  0.041199788451]),
             ],
         ),
         (
@@ -290,7 +290,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.307500839233, 0.300398886204, 0.041614964604]),
+                torch.tensor([-1.609997987747,  0.206321120262,  0.043028946966])
             ],
         ),
     ],
@@ -326,11 +326,15 @@ def test_extract_paint_heliostats(
     AssertionError
         If test does not complete as expected.
     """
+    torch.manual_seed(7)
+    torch.cuda.manual_seed(7)
+
     extracted_list = list(
         paint_loader.extract_paint_heliostats(
             paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
-            max_epochs_for_surface_training=max_epochs_for_surface_training,
+            number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
+            nurbs_fit_max_epoch=max_epochs_for_surface_training,
             device=device,
         )
     )

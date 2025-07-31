@@ -95,12 +95,12 @@ def test_integration_alignment(
             device=device,
         )
 
-    bitmap_resolution_e, bitmap_resolution_u = 256, 256
+    bitmap_resolution = torch.tensor([256, 256], device=device)
     flux_distributions = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution_e,
-            bitmap_resolution_u,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
         ),
         device=device,
     )
@@ -132,8 +132,7 @@ def test_integration_alignment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u,
+            bitmap_resolution = bitmap_resolution,
             batch_size=10,
         )
 
