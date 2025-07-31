@@ -148,7 +148,6 @@ class SurfaceReconstructor:
         self.tolerance = tolerance
         self.max_epoch = max_epoch
 
-
     def reconstruct_surfaces(
         self,
         heliostat_group_index,
@@ -175,7 +174,6 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         if self.heliostats_mask.sum() > 0:
-
             evaluation_points = (
                 utils.create_nurbs_evaluation_grid(
                     number_of_evaluation_points=self.number_of_surface_points,
@@ -275,22 +273,50 @@ class SurfaceReconstructor:
                 )
 
                 # TODO delete this if later
-                if epoch in [10, 20, 30, 50, 100, 200, 500, 999, 1999, 2999, 3999, 4999, 5999, 6999]:
-                    name =  f"group_{heliostat_group_index}_cp_{self.heliostat_group.active_nurbs_control_points.shape[2]}_{epoch}"
-                    helper.plot_multiple_fluxes(normalized_flux_distributions, self.normalized_measured_flux_distributions, name)
+                if epoch in [
+                    10,
+                    20,
+                    30,
+                    50,
+                    100,
+                    200,
+                    500,
+                    999,
+                    1999,
+                    2999,
+                    3999,
+                    4999,
+                    5999,
+                    6999,
+                ]:
+                    name = f"group_{heliostat_group_index}_cp_{self.heliostat_group.active_nurbs_control_points.shape[2]}_{epoch}"
+                    helper.plot_multiple_fluxes(
+                        normalized_flux_distributions,
+                        self.normalized_measured_flux_distributions,
+                        name,
+                    )
 
                     # adapt index of nurbs_control_points[]
                     temp_nurbs = NURBSSurfaces(
                         degrees=self.heliostat_group.nurbs_degrees,
-                        control_points=self.heliostat_group.nurbs_control_points[0].unsqueeze(0),
-                        device=device
+                        control_points=self.heliostat_group.nurbs_control_points[
+                            0
+                        ].unsqueeze(0),
+                        device=device,
                     )
-                    temp_points, temp_normals = temp_nurbs.calculate_surface_points_and_normals(
-                        evaluation_points=evaluation_points[0].unsqueeze(0),
-                        device=device
+                    temp_points, temp_normals = (
+                        temp_nurbs.calculate_surface_points_and_normals(
+                            evaluation_points=evaluation_points[0].unsqueeze(0),
+                            device=device,
+                        )
                     )
 
-                    helper.plot_normal_angle_map(temp_points[0], temp_normals[0], torch.tensor([0.0, 0.0, 1.0, 0.0], device=device), name)
+                    helper.plot_normal_angle_map(
+                        temp_points[0],
+                        temp_normals[0],
+                        torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+                        name,
+                    )
 
                 loss_function = torch.nn.MSELoss()
                 loss = loss_function(

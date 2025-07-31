@@ -622,7 +622,7 @@ def extract_paint_heliostats(
         # Generate surface configuration from data.
         surface_generator = SurfaceGenerator(
             number_of_control_points=number_of_nurbs_control_points.to(device),
-            device=device
+            device=device,
         )
 
         (

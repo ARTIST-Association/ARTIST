@@ -22,7 +22,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_paths =[
+scenario_paths = [
     # pathlib.Path(
     #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_ideal_5_cp.h5"
     # ),
@@ -146,23 +146,32 @@ with setup_distributed_environment(
     # - epochs [1000, 2500, 5000]
 
     number_of_rays = [200]
-    evaluation_points = [torch.tensor([80, 80], device=device)] #[torch.tensor([50, 50], device=device), torch.tensor([100, 100], device=device)]
-    resolution = [torch.tensor([256, 256], device=device)]#[torch.tensor([64, 64], device=device), torch.tensor([128, 128], device=device), torch.tensor([256, 256], device=device)]
+    evaluation_points = [
+        torch.tensor([80, 80], device=device)
+    ]  # [torch.tensor([50, 50], device=device), torch.tensor([100, 100], device=device)]
+    resolution = [
+        torch.tensor([256, 256], device=device)
+    ]  # [torch.tensor([64, 64], device=device), torch.tensor([128, 128], device=device), torch.tensor([256, 256], device=device)]
 
-    parameter_combinations = list(itertools.product(number_of_rays, evaluation_points, resolution, scenario_paths))
+    parameter_combinations = list(
+        itertools.product(number_of_rays, evaluation_points, resolution, scenario_paths)
+    )
 
-    keys = ['number_of_rays', 'evaluation_points', 'resolution', 'path']
-    parameter_combinations_dicts = [dict(zip(keys, values)) for values in parameter_combinations]
+    keys = ["number_of_rays", "evaluation_points", "resolution", "path"]
+    parameter_combinations_dicts = [
+        dict(zip(keys, values)) for values in parameter_combinations
+    ]
 
     for parameter_combination in parameter_combinations_dicts:
-        
         # Load the scenario.
         with h5py.File(parameter_combination["path"], "r") as scenario_file:
             scenario = Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file, device=device
             )
 
-        scenario.light_sources.light_source_list[0].number_of_rays = parameter_combination["number_of_rays"]
+        scenario.light_sources.light_source_list[
+            0
+        ].number_of_rays = parameter_combination["number_of_rays"]
 
         heliostat_group = scenario.heliostat_field.heliostat_groups[1]
 
@@ -172,7 +181,7 @@ with setup_distributed_environment(
         initial_learning_rate = 1e-4
         number_of_surface_points = parameter_combination["evaluation_points"]
         resolution = parameter_combination["resolution"]
-        
+
         # Create the surface reconstructor.
         surface_reconstructor = SurfaceReconstructor(
             scenario=scenario,
@@ -190,20 +199,44 @@ with setup_distributed_environment(
         surface_reconstructor.reconstruct_surfaces(device=device)
 
         paths = [
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/86520-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/151375-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/86520-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/151375-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+            ),
         ]
 
-        incident_ray_directions, targets = helper.calibration_path_to_sun_and_tower(paths=paths, target_area_names=scenario.target_areas.names, device=device)
+        incident_ray_directions, targets = helper.calibration_path_to_sun_and_tower(
+            paths=paths, target_area_names=scenario.target_areas.names, device=device
+        )
 
         # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
         heliostat_target_light_source_mapping = [
@@ -218,7 +251,7 @@ with setup_distributed_environment(
             ("AA39", targets[8], incident_ray_directions[8]),
             ("AA39", targets[9], incident_ray_directions[9]),
             ("AA39", targets[10], incident_ray_directions[10]),
-            ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device))
+            ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
         ]
 
         (
@@ -239,7 +272,7 @@ with setup_distributed_environment(
             degrees=heliostat_group.nurbs_degrees,
             control_points=heliostat_group.active_nurbs_control_points,
             uniform=True,
-            device=device
+            device=device,
         )
 
         evaluation_points = (
@@ -256,14 +289,17 @@ with setup_distributed_environment(
                 -1,
             )
         )
-        
+
         calc_points, calc_normals = nurbs.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points,
-            device=device
+            evaluation_points=evaluation_points, device=device
         )
 
-        heliostat_group.active_surface_points = calc_points.reshape(len(heliostat_target_light_source_mapping), -1, 4)
-        heliostat_group.active_surface_normals = calc_normals.reshape(len(heliostat_target_light_source_mapping), -1, 4)
+        heliostat_group.active_surface_points = calc_points.reshape(
+            len(heliostat_target_light_source_mapping), -1, 4
+        )
+        heliostat_group.active_surface_normals = calc_normals.reshape(
+            len(heliostat_target_light_source_mapping), -1, 4
+        )
 
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
@@ -293,6 +329,9 @@ with setup_distributed_environment(
         )
 
         import matplotlib.pyplot as plt
+
         plt.clf()
-        name =  f"cp_{heliostat_group.active_nurbs_control_points.shape[2]}_res_{parameter_combination['resolution']}_sp_{parameter_combination['evaluation_points']}_rays_{parameter_combination['number_of_rays']}_heliostat_9"
-        helper.plot_multiple_fluxes(bitmaps_per_heliostat, torch.zeros_like(bitmaps_per_heliostat), name=name)
+        name = f"cp_{heliostat_group.active_nurbs_control_points.shape[2]}_res_{parameter_combination['resolution']}_sp_{parameter_combination['evaluation_points']}_rays_{parameter_combination['number_of_rays']}_heliostat_9"
+        helper.plot_multiple_fluxes(
+            bitmaps_per_heliostat, torch.zeros_like(bitmaps_per_heliostat), name=name
+        )
