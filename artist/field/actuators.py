@@ -119,6 +119,8 @@ class Actuators(torch.nn.Module):
         torch.Tensor
             The joint angles.
         """
+        device = get_device(device=device)
+
         return self.motor_positions_to_angles(
             motor_positions=motor_positions, device=device
         )

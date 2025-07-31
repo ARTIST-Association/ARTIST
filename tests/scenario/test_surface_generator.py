@@ -154,6 +154,11 @@ def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
     """
     Test fitting nurbs method for errors.
 
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
     Raises
     ------
     AssertionError

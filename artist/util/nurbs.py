@@ -592,6 +592,8 @@ class NURBSSurfaces(torch.nn.Module):
         torch.Tensor
             The surface normals.
         """
+        device = get_device(device=device)
+
         return self.calculate_surface_points_and_normals(
             evaluation_points=evaluation_points, device=device
         )

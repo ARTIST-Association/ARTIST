@@ -105,6 +105,4 @@ with setup_distributed_environment(
                 device=device,
             )
 
-            surface_reconstructor.reconstruct_surfaces(
-                heliostat_group_index, device=device
-            )
+            surface_reconstructor.reconstruct_surfaces(device=device)

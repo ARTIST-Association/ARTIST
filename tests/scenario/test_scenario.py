@@ -36,6 +36,11 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     """
     Test the get number of heliostat groups method.
 
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
     Raises
     ------
     AssertionError
