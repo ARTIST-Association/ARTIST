@@ -1,23 +1,23 @@
 import pathlib
-import argparse
-import torch
+from typing import Optional, Union
 import h5py
-import json
-
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 import numpy as np
+import torch
 
-from artist.data_loader import paint_loader
-from artist.util import config_dictionary, set_logger_config
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.data_loader import paint_loader
+from artist.scenario.configuration_classes import LightSourceConfig, LightSourceListConfig
 from artist.scenario.scenario import Scenario
+from artist.scenario.scenario_generator import ScenarioGenerator
+from artist.util import config_dictionary
+from artist.util import set_logger_config
+from artist.util.environment_setup import get_device, setup_distributed_environment
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent))
-import paint_utils
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
 
-# Plot Parameters
 FIGSIZE = (6,4)
 LEGEND_FONTSIZE = 8
 
@@ -35,106 +35,129 @@ helmholtz_colors = {
 }
 
 
-def extract_and_filter_calibration_data(
-    scenario,
-    heliostat_name: str,
-    paint_dir: pathlib.Path,
-    device,
-    max_length: int = 100,
-):
-    calibration_dir = paint_dir / heliostat_name / "Calibration"
-    calibration_properties_paths = list(calibration_dir.glob("*calibration-properties*.json"))
+# Set up logger
+set_logger_config()
 
-    if len(calibration_properties_paths) > max_length:
-        calibration_properties_paths = calibration_properties_paths[-max_length:]
-        
-    if not calibration_properties_paths:
+
+
+#---------------
+#helper functions
+#---------------
+
+import json
+import pathlib
+from typing import List, Tuple
+
+
+def _generate_paint_scenario(scenario_path, tower_file, heliostat_files_list, device="cpu"):
+
+    if not pathlib.Path(scenario_path).parent.is_dir():
         raise FileNotFoundError(
-            f"No calibration-properties found for {heliostat_name} in {calibration_dir}"
+            f"The folder ``{pathlib.Path(scenario_path).parent}`` selected to save the scenario does not exist. "
+            "Please create the folder or adjust the file path before running again!"
         )
 
-    # Filter: only keep paths where both 'HeliOS' and 'UTIS' are present under 'focal_spot'
-    valid_paths = []
-    for path in calibration_properties_paths:
-        with open(path, "r") as file:
-            try:
-                calibration_dict = json.load(file)
-                focal_data = calibration_dict.get(config_dictionary.paint_focal_spot, {})
-                if (
-                    config_dictionary.paint_helios in focal_data
-                    and config_dictionary.paint_utis in focal_data
-                ):
-                    valid_paths.append(path)
-            except Exception as e:
-                print(f"Warning: Skipping {path.name} due to error: {e}")
-
-    if not valid_paths:
-        raise ValueError(f"No valid calibration files with both Helios and UTIS for {heliostat_name}")
-
-    heliostat_data_mapping = [(heliostat_name, valid_paths)]
-    # Proceed with loading calibration data
-    return paint_loader.extract_paint_calibration_properties_data(
-                heliostat_calibration_mapping=[
-                    (heliostat_name, calibration_properties_paths)
-                    for heliostat_name, calibration_properties_paths in heliostat_data_mapping
-                    if heliostat_name in scenario.heliostat_field.heliostat_groups[0].names
-                ],
-                heliostat_names=scenario.heliostat_field.heliostat_groups[0].names,
-                target_area_names=scenario.target_areas.names,
-                power_plant_position=scenario.power_plant_position,
-                device=device,
-            )
-    
-def configure_optimizer(parameters, initial_lr=0.01):
-    optimizer = torch.optim.Adam(parameters, lr=initial_lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.1,
-        patience=20,
-        threshold=0.1,
-        threshold_mode="abs",
+    # Include the power plant configuration.
+    power_plant_config, target_area_list_config = (
+        paint_loader.extract_paint_tower_measurements(
+            tower_measurements_path=tower_file, device=device
+        )
     )
-    return optimizer, scheduler
+
+    # Include the light source configuration.
+    light_source1_config = LightSourceConfig(
+        light_source_key="sun_1",
+        light_source_type=config_dictionary.sun_key,
+        number_of_rays=10,
+        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        mean=0.0,
+        covariance=4.3681e-06,
+    )
+
+    # Create a list of light source configs - in this case only one.
+    light_source_list = [light_source1_config]
+
+    # Include the configuration for the list of light sources.
+    light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
+
+    target_area = [
+        target_area
+        for target_area in target_area_list_config.target_area_list
+        if target_area.target_area_key == config_dictionary.target_area_receiver
+    ]
+
+    heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
+        paths=heliostat_files_list,
+        power_plant_position=power_plant_config.power_plant_position,
+        aim_point=target_area[0].center,
+        device=device,
+    )
+    """Generate the scenario given the defined parameters."""
+    scenario_generator = ScenarioGenerator(
+        file_path=scenario_path,
+        power_plant_config=power_plant_config,
+        target_area_list_config=target_area_list_config,
+        light_source_list_config=light_source_list_config,
+        prototype_config=prototype_config,
+        heliostat_list_config=heliostat_list_config,
+    )
+    scenario_generator.generate_scenario()
+
+def _load_heliostat_data(
+    paint_repo: Union[str, pathlib.Path],
+    input_path: Union[str, pathlib.Path]
+) -> Tuple[
+    List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]],
+    List[Tuple[str, pathlib.Path]]
+]:
+    """
+    Load heliostat data from JSON and generate properties paths using paint_repo.
+
+    Parameters
+    ----------
+    paint_repo : str or Path
+        Base directory of the PAINT repo (e.g., /workVERLEIHNIX/share/PAINT)
+    input_path : str or Path
+        Path to the JSON file.
+
+    Returns
+    -------
+    Tuple of:
+    - List of (name, [calibrations], [flux_images])
+    - List of (name, heliostat-properties.json path), only if the file exists
+    """
+    input_path = pathlib.Path(input_path).resolve()
+    paint_repo = pathlib.Path(paint_repo).resolve()
+
+    with open(input_path, "r") as f:
+        raw_data = json.load(f)
+
+    heliostat_data_mapping = []
+    heliostat_properties_list = []
+
+    for item in raw_data:
+        name = item["name"]
+        calibrations = [pathlib.Path(p) for p in item["calibrations"]]
+        flux_images = [pathlib.Path(p) for p in item["flux_images"]]
+
+        heliostat_data_mapping.append((name, calibrations, flux_images))
+
+        # Construct and check for the properties file
+        properties_path = pathlib.Path(f"{paint_repo}/{name}/Properties/{name}-heliostat-properties.json")
+        if properties_path.exists():
+            heliostat_properties_list.append((name, properties_path))
+        else:
+            print(f"Warning: Missing properties file for {name} at {properties_path}")
+
+    return heliostat_data_mapping, heliostat_properties_list
 
 
-def optimize_kinematics(scenario_path: str, paint_dir: str, results_path: str, device: str = "cuda:0"):
 
-    device = torch.device(device)
 
-    scenario_path = pathlib.Path(scenario_path)
-    paint_dir = pathlib.Path(paint_dir)
 
-    # Load scenario
-    with h5py.File(scenario_path, "r") as scenario_file:
-        scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
-
-    heliostat_names = scenario.heliostat_field.heliostat_groups[0].names
-
-    results_dict = {}
-
-    for index, name in enumerate(heliostat_names):
-        results_dict[name] = {}
-
-        for aim_point_identifier in ["HeliOS", "UTIS"]:
-            losses_mrad = calibrate_single_heliostat(
-                scenario=scenario,
-                heliostat_index=index,
-                heliostat_name=name,
-                paint_dir=paint_dir,
-                aim_point_identifier=aim_point_identifier,
-                device=device,
-            )
-
-            results_dict[name][f"mrad_losses_{aim_point_identifier.lower()}"] = (
-                losses_mrad.clone().detach().cpu().tolist()
-            )
-
-        # Add heliostat position
-        position = scenario.heliostat_field.all_heliostat_positions[index]
-        results_dict[name]["position"] = position.clone().detach().cpu().tolist()
-
-    torch.save(results_dict,results_path)
+#----------------------
+#public apis
+#------------------
 
 def plot_mrad_error_distributions(results_dict, save_path=None):
     """
@@ -160,8 +183,8 @@ def plot_mrad_error_distributions(results_dict, save_path=None):
     utis_losses = []
 
     for data in results_dict.values():
-        helios_losses.extend(data["mrad_losses_helios"])
-        utis_losses.extend(data["mrad_losses_utis"])
+        helios_losses.extend(data[config_dictionary.paint_helios]*1000) # multiplication because results are calculated in rad but plotted in mrad
+        utis_losses.extend(data[config_dictionary.paint_utis]*1000)
         
     x_vals = np.linspace(0, 10, 100)
 
@@ -197,11 +220,13 @@ def plot_mrad_error_distributions(results_dict, save_path=None):
     ax.grid(True)
 
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+        filename = save_path+"_mrad_distribution.pdf"
+        fig.savefig(filename, dpi=300, bbox_inches="tight")
         print(f"Saved error distribution plot to {save_path}")
 
     plt.close(fig)
     return fig
+
 
 def plot_mrad_vs_distance(results_dict, save_path=None):
     """
@@ -232,12 +257,13 @@ def plot_mrad_vs_distance(results_dict, save_path=None):
 
     fig, ax = plt.subplots(figsize=FIGSIZE)
     
+
     for idx, (name, data) in enumerate(results_dict.items()):
         pos = np.array(data["position"])
         distance = np.linalg.norm(pos[:2])
 
-        helios_mean = np.nanmean(data["mrad_losses_helios"])
-        utis_mean = np.nanmean(data["mrad_losses_utis"])
+        helios_mean = np.mean(data[config_dictionary.paint_helios])*1000 # results are calculated in rad but plotted in mrad
+        utis_mean = np.mean(data[config_dictionary.paint_utis])*1000 # results are calculated in rad but plotted in mrad
 
         distances.append(distance)
         helios_means.append(helios_mean)
@@ -279,118 +305,227 @@ def plot_mrad_vs_distance(results_dict, save_path=None):
     ax.set_ylabel("Mean Pointing Error / mrad")
     ax.grid(True)
     ax.legend(fontsize=8, loc="best", ncol=2)
-    ax.set_ylim([0,16])
+    #ax.set_ylim([0,16])
     
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches="tight")
-        print(f"Saved distance vs. error plot to {save_path}")
+        filename = save_path+"_mrad_vs_distance.pdf"
+        fig.savefig(filename, dpi=300, bbox_inches="tight")
+        print(f"Saved distance vs. error plot to {filename}")
 
     plt.close(fig)
     return fig
 
- 
 
-def plot_results(results_path, save_path=None):
-            
-    # Load results (losses, etc.)
-    results_dict = torch.load(results_path)
-    save_path = pathlib.Path(save_path)
-    
-    plot_mrad_error_distributions(results_dict,  save_path / "01a_angular_error_distribution.pdf")
-    plot_mrad_vs_distance(results_dict,  save_path / "01b_error_vs_distance.pdf")
-                                  
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate and calibrate a PAINT scenario."
-    )
-    parser.add_argument(
-        "--paint_dir",
-        type=str,
-        default="/workVERLEIHNIX/share/PAINT",
-        help="Base directory for PAINT data",
-    )
-    parser.add_argument(
-        "--scenario_path",
-        type=str,
-        default="examples/data/paint_scenario_50heliostats",
-        help="Path to save the generated scenario",
-    )
-    parser.add_argument(
-        "--tower_file",
-        type=str,
-        default="examples/data/tower-measurements.json",
-        help="Path to tower-measurements.json",
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="cpu",
-        help="Device for tensor operations",
-    )
-    parser.add_argument(
-        "--result_file",
-        type=str,
-        default="examples/data/results_mrad_losses.pt",
-        help="Path to result file",
-    )
-    parser.add_argument(
-        "--plot_save_path",
-        type=str,
-        default="examples/plots",
-        help="Path to save plots",
-    )
-    args = parser.parse_args()
-    
-    with open("examples/data/heliostat_list.json", "r") as f:
-        heliostat_names = json.load(f)
-    # Set logger
-    set_logger_config()
-      
-    # Set seed
-    torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    #
+def main(
+    paint_repo: Union[str, pathlib.Path],
+    heliostat_list_file: Union[str, pathlib.Path],
+    scenario_path: Union[str, pathlib.Path],
+    tower_file: Union[str, pathlib.Path],
+    device: Optional[torch.device] = None,
+    results_path: Union[str, pathlib.Path] = "calibration_results.pt"
+) -> dict:
 
-    device = torch.device(args.device)
-    scenario_path = pathlib.Path(args.scenario_path+'.h5')
-    paint_dir = pathlib.Path(args.paint_dir)
-    result_file = pathlib.Path(args.result_file)
 
-    
-    plt.rcParams["font.family"] = "sans-serif"
-    
+    #Step 0: load heliostat list from pregenerated file
+    heliostat_data_mapping, heliostat_properties_list = _load_heliostat_data(paint_repo,heliostat_list_file)
+
+
     # Step 1: Generate scenario only if it doesn't exist
-    scenario_file = args.scenario_path + '.h5'
+    scenario_file = scenario_path
     if not pathlib.Path(scenario_file).exists():
-        print(f"Scenario file not found at {args.scenario_path}. Generating scenario...")
-        paint_utils.generate_paint_scenario(
-            paint_dir=paint_dir,
+        print(f"Scenario file not found at {scenario_path}. Generating scenario...")
+        _generate_paint_scenario(
             scenario_path=scenario_path,
-            tower_file=args.tower_file,
-            heliostat_names=heliostat_names,
-            use_deflectometry=False,
+            tower_file=tower_file,
+            heliostat_files_list=heliostat_properties_list,
             device=device
         )
     else:
-        print(f"Scenario already exists at {args.scenario_path}. Skipping generation.")
+        print(f"Scenario already exists at {scenario_path}. Skipping generation.")
 
-    # Step 2: Optimize kinematics only if results file doesn't exist
-    if not pathlib.Path(args.result_file).exists():
-        print(f"Result file not found at {args.result_file}. Running kinematic optimization...")
-        optimize_kinematics(
-            scenario_path=scenario_path,
-            paint_dir=paint_dir,
-            results_path=result_file,
+
+    # Load the scenario.
+
+    if scenario_path.suffix != '.h5':
+        scenario_path = scenario_path.with_suffix('.h5')
+
+    with h5py.File(scenario_path) as scenario_file:
+        scenario = Scenario.load_scenario_from_hdf5(
+            scenario_file=scenario_file,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
             device=device,
         )
-    else:
-        print(f"Results already exist at {args.result_file}. Skipping optimization.")
 
-    # Step 3: Plot results (always run)
-    print("Plotting results...")
-    plot_results(
-        results_path=result_file,
-        save_path=args.plot_save_path
+
+    number_of_heliostat_groups = scenario.get_number_of_heliostat_groups_from_hdf5(
+        scenario_path=scenario_path
     )
 
+    with setup_distributed_environment(
+        number_of_heliostat_groups=number_of_heliostat_groups,
+        device=device,
+    ) as (
+        device,
+        is_distributed,
+        is_nested,
+        rank,
+        world_size,
+        process_subgroup,
+        groups_to_ranks_mapping,
+        heliostat_group_rank,
+        heliostat_group_world_size,
+    ):
+        # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
+        # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
+        
+
+        # Filtered those files which havoutput list
+        valid_heliostat_data_mapping =[]
+
+        for heliostat_name, valid_calibrations, flux_paths in heliostat_data_mapping:
+            # Include only the flux paths that match a valid calibration stem
+            valid_stems = {p.stem.replace("-calibration-properties", "") for p in valid_calibrations}
+            valid_flux_paths = [
+                f for f in flux_paths
+                if f.stem.replace("-flux", "") in valid_stems
+            ]
+            valid_heliostat_data_mapping.append((heliostat_name, valid_calibrations, valid_flux_paths))
+
+        print("\nFiltered Heliostat Data Mapping:")
+        for name, calibs, fluxes in valid_heliostat_data_mapping:
+            print(f"- {name}: {len(calibs)} valid calibrations, {len(fluxes)} matching flux images")
+
+        centroids_extracted_by = [ config_dictionary.paint_utis, config_dictionary.paint_helios]
+
+        results_dict = {}
+        for centroid in centroids_extracted_by:
+            for heliostat_group_index, heliostat_group in enumerate(
+                scenario.heliostat_field.heliostat_groups
+            ):
+                # Load the calibration data.
+                (
+                    focal_spots_calibration,
+                    incident_ray_directions_calibration,
+                    motor_positions_calibration,
+                    heliostats_mask_calibration,
+                    target_area_mask_calibration,
+                ) = paint_loader.extract_paint_calibration_properties_data(
+                    heliostat_calibration_mapping=[
+                        (heliostat_name, calibration_properties_paths)
+                        for heliostat_name, calibration_properties_paths, _ in valid_heliostat_data_mapping
+                        if heliostat_name in heliostat_group.names
+                    ],
+                    heliostat_names=heliostat_group.names,
+                    target_area_names=scenario.target_areas.names,
+                    power_plant_position=scenario.power_plant_position,
+                    centroid_extrected_by=centroid,
+                    device=device,
+                )
+                if heliostats_mask_calibration.sum() > 0:
+                    # Set up optimizer and scheduler.
+                    tolerance = 0.0005
+                    max_epoch = 10000
+                    initial_learning_rate = 0.00005
+
+                    use_ray_tracing = False
+                    if use_ray_tracing:
+                        motor_positions_calibration = None
+                        tolerance = 0.035
+                        max_epoch = 600
+                        initial_learning_rate = 0.0004
+
+                    optimizer = torch.optim.Adam(
+                        [heliostat_group.kinematic.deviation_parameters.requires_grad_()], lr=initial_learning_rate #heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_()
+                    )
+
+                    # Create the kinematic optimizer.
+                    kinematic_optimizer = KinematicOptimizer(
+                        scenario=scenario,
+                        heliostat_group=heliostat_group,
+                        optimizer=optimizer,
+                    )
+
+                    # Calibrate the kinematic.
+                    
+                    losses = kinematic_optimizer.optimize(
+                        focal_spots_calibration=focal_spots_calibration,
+                        incident_ray_directions=incident_ray_directions_calibration,
+                        active_heliostats_mask=heliostats_mask_calibration,
+                        target_area_mask_calibration=target_area_mask_calibration,
+                        motor_positions_calibration=motor_positions_calibration,
+                        tolerance=tolerance,
+                        max_epoch=max_epoch,
+                        num_log=max_epoch,
+                        loss_type = "l1",
+                        loss_reduction= "none",
+                        loss_return_value="angular",
+                        device=device
+                    )
+
+                    losses_per_heliostat = []
+
+                    for index, name in enumerate(scenario.heliostat_field.heliostat_groups[0].names):
+                        start = heliostats_mask_calibration[:index].sum()
+                        end = heliostats_mask_calibration[:index + 1].sum()
+                        losses_per_heliostat.append(losses[start:end].detach().cpu().numpy())
+                        
+                        if name not in results_dict:
+                                results_dict[name] = {}  # Create entry if it doesn't exist
+
+                            # Initialize the results dictionary
+                        results_dict[name][centroid] = losses_per_heliostat[index]
+
+
+
+    # Define the results output path
+
+
+    heliostat_names = scenario.heliostat_field.heliostat_groups[0].names
+    heliostat_positions = scenario.heliostat_field.heliostat_groups[0].positions
+
+    for name, position in zip(heliostat_names, heliostat_positions):
+        if name not in results_dict:
+            results_dict[name] = {}
+
+        results_dict[name]["position"] = position.clone().detach().cpu().tolist()
+
+
+    # Save to disk
+    torch.save(results_dict, results_path)
+    print(f"Calibration results saved to {results_path}")
+
+    return results_dict
+
+
 if __name__ == "__main__":
-    main()
+    # Inputs
+    paint_repo = "/workVERLEIHNIX/share/PAINT"
+    heliostat_list_file = "examples/data/heliostat_files.json"
+    scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/examples/data/scenarios/heliostat_calibration_paint")
+    tower_file = pathlib.Path("/workVERLEIHNIX/share/PAINT/WRI1030197-tower-measurements.json")
+    results_path = pathlib.Path("calibration_results.pt")
+    save_plot_path = "/workVERLEIHNIX/mp/ARTIST/examples/plots/01_paint_raytracing_example_plot"
+    
+    # Get device
+    device = get_device()
+
+    # Run calibration
+    if results_path.exists():
+        print(f"Found existing results at {results_path}. Skipping main().")
+        results_dict = torch.load(results_path)
+    else:
+        results_dict = main(
+            paint_repo=paint_repo,
+            heliostat_list_file=heliostat_list_file,
+            scenario_path=scenario_path,
+            tower_file=tower_file,
+            device=device,
+            results_path=results_path,
+        )
+
+    # Create plots
+    plot_mrad_vs_distance(results_dict, save_path=save_plot_path)
+    plot_mrad_error_distributions(results_dict, save_path=save_plot_path)
+
+
