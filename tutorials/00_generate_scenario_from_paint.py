@@ -30,8 +30,8 @@ tower_file = pathlib.Path(
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
-# or
-# A tuple of: (heliostat-name, heliostat-properties.json), this creates ideal helisotat surface configurations.
+# or to create ideal helisotat surfaces, skip the deflectometry files and specify
+# a tuple of: (heliostat-name, heliostat-properties.json)
 
 heliostat_files_list = [
     (
@@ -87,9 +87,21 @@ target_area = [
     if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
+number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
+nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
+nurbs_deflectometry_step_size = 100
+nurbs_deflectometry_tolerance = 1e-10
+nurbs_deflectometry_initial_learning_rate = 1e-3
+nurbs_deflectometry_max_epoch = 400
+
 heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
     paths=heliostat_files_list,
     power_plant_position=power_plant_config.power_plant_position,
+    number_of_nurbs_control_points=number_of_nurbs_control_points,
+    nurbs_fit_method=nurbs_fit_method,
+    deflectometry_step_size=nurbs_deflectometry_step_size,
+    nurbs_fit_tolerance=nurbs_deflectometry_tolerance,
+    nurbs_fit_initial_learning_rate=nurbs_deflectometry_initial_learning_rate,
     device=device,
 )
 
