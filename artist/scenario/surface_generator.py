@@ -107,7 +107,7 @@ class SurfaceGenerator:
         ------
         NotImplementedError
             If the NURBS fit method is unknown.
-
+            
         Returns
         -------
         NURBSSurface
