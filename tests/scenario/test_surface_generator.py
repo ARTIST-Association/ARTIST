@@ -138,7 +138,7 @@ def test_surface_generator(device: torch.device) -> None:
     )
     torch.testing.assert_close(
         surface_config_stral_fit_normals.facet_list[0].control_points[4, 2],
-        torch.tensor([-0.015720605850,  0.643227100372,  0.038244392723], device=device)
+        torch.tensor([-0.015720605850, 0.643227100372, 0.038244392723], device=device),
     )
     torch.testing.assert_close(
         surface_config_stral_fit_points.facet_list[3].control_points[0, 0],

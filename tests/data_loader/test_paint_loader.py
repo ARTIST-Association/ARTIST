@@ -252,7 +252,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.606200933456,  0.212735980749,  0.040915220976])
+                torch.tensor([-1.606200933456, 0.212735980749, 0.040915220976]),
             ],
         ),
         (
