@@ -28,15 +28,19 @@ class SurfaceReconstructor:
     scenario : Scenario
         The scenario.
     heliostat_group : HeliostatGroup
-        The heliostat group to be calibrated.
-    measured_flux_density_distributions  : torch.Tensor
-        The measured flux density distributions.
+        The heliostat group to be reconstructed.
+    normalized_measured_flux_distributions : torch.Tensor
+        The measured, normalized flux density distributions.
     incident_ray_directions : torch.Tensor
-        The incident ray directions of the measured fluxes..
+        The incident ray directions of the measured fluxes.
     heliostats_mask : torch.Tensor
         A mask for the selected heliostats for reconstruction.
     target_area_mask : torch.Tensor
         The indices of the target area for each reconstruction.
+    number_of_surface_points : torch.Tensor
+        The number of surface points of the reconstructed surfaces.
+    resolution : torch.Tensor
+        The resolution of all bitmaps during reconstruction.
     num_log : int
         The number of log statements during optimization.
     initial_learning_rate : float
@@ -59,8 +63,8 @@ class SurfaceReconstructor:
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
         ],
-        number_of_surface_points: torch.Tensor,
-        resolution: torch.Tensor,
+        number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
+        resolution: torch.Tensor = torch.tensor([256, 256]),
         initial_learning_rate: float = 1e-5,
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
@@ -78,6 +82,10 @@ class SurfaceReconstructor:
             The heliostat group to be reconstructed.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
             The mapping of heliostat and reconstruction data.
+        number_of_surface_points : torch.Tensor
+            The number of surface points of the reconstructed surfaces.
+        resolution : torch.Tensor
+            The resolution of all bitmaps during reconstruction.
         initial_learning_rate : float
             The initial learning rate for the optimizer (default is 1e-5).
         tolerance : float
@@ -91,6 +99,8 @@ class SurfaceReconstructor:
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
+        device = get_device(device=device)
+
         rank = (
             torch.distributed.get_rank()
             if torch.distributed.is_available() and torch.distributed.is_initialized()
@@ -138,8 +148,8 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        self.number_of_surface_points = number_of_surface_points
-        self.resolution = resolution
+        self.number_of_surface_points = number_of_surface_points.to(device)
+        self.resolution = resolution.to(device)
         self.num_log = num_log
 
         # Create the optimizer.
@@ -149,7 +159,6 @@ class SurfaceReconstructor:
 
     def reconstruct_surfaces(
         self,
-        heliostat_group_index,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -210,12 +219,14 @@ class SurfaceReconstructor:
                     active_heliostats_mask=self.heliostats_mask, device=device
                 )
 
+                # Create NURBS
                 nurbs_surfaces = NURBSSurfaces(
                     degrees=self.heliostat_group.nurbs_degrees,
                     control_points=self.heliostat_group.active_nurbs_control_points,
                     device=device,
                 )
 
+                # Calculate surface points and normals
                 (
                     self.heliostat_group.active_surface_points,
                     self.heliostat_group.active_surface_normals,
@@ -288,5 +299,4 @@ class SurfaceReconstructor:
 
                 epoch += 1
 
-            if rank == 0:
-                log.info("Surfaces reconstructed.")
+            log.info("Surfaces reconstructed.")

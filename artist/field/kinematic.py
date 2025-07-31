@@ -4,6 +4,8 @@ from typing import Optional
 
 import torch
 
+from artist.util.environment_setup import get_device
+
 
 class Kinematic(torch.nn.Module):
     """
@@ -104,6 +106,8 @@ class Kinematic(torch.nn.Module):
         torch.Tensor
             The orientation matrices.
         """
+        device = get_device(device=device)
+
         return self.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
             aim_points=aim_points,
