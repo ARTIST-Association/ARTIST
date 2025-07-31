@@ -161,9 +161,9 @@ light_source_key = "lightsources"
 heliostat_key = "heliostats"
 """Key to access the heliostats."""
 
-convert_nurbs_from_points = "point_cloud"
+fit_nurbs_from_points = "point_cloud"
 """Defines that the NURBS should be learnt using a point cloud."""
-convert_nurbs_from_normals = "deflectometry"
+fit_nurbs_from_normals = "deflectometry"
 """Defines that the NURBS should be learnt using deflectometry data."""
 
 kinematic_calibration_raytracing = "raytracing"
