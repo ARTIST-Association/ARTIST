@@ -570,6 +570,7 @@ def get_center_of_mass(
 
 def create_nurbs_evaluation_grid(
     number_of_evaluation_points: torch.Tensor,
+    epsilon: float = 1e-7,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -579,6 +580,10 @@ def create_nurbs_evaluation_grid(
     ----------
     number_of_evaluation_points : torch.Tensor
         The number of nurbs evaluation points in east and north direction.
+    epsilon : float
+        Offset for the nurbs evaluation points (default is 1e-7).
+        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
+        therefore the evaluation points need a small offset from the endpoints.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -592,10 +597,10 @@ def create_nurbs_evaluation_grid(
     device = get_device(device=device)
 
     evaluation_points_e = torch.linspace(
-        1e-5, 1 - 1e-5, number_of_evaluation_points[0], device=device
+        epsilon, 1 - epsilon, number_of_evaluation_points[0], device=device
     )
     evaluation_points_n = torch.linspace(
-        1e-5, 1 - 1e-5, number_of_evaluation_points[1], device=device
+        epsilon, 1 - epsilon, number_of_evaluation_points[1], device=device
     )
     evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
 
