@@ -195,9 +195,6 @@ class KinematicOptimizer:
                     device=device,
                 )
 
-        if rank == 0:
-            log.info("Kinematic parameters optimized.")
-
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
         device: torch.device | None = None,
@@ -274,12 +271,15 @@ class KinematicOptimizer:
 
             self.optimizer.step()
 
-            if epoch % log_step == 0 and rank == 0:
+            if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
+        
+        log.info(f"Kinematic parameters of group {rank} optimized.")        
+
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -363,9 +363,11 @@ class KinematicOptimizer:
 
             self.optimizer.step()
 
-            if epoch % log_step == 0 and rank == 0:
+            if epoch % log_step == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+                    f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
 
             epoch += 1
+
+        log.info(f"Kinematic parameters of group {rank} optimized.")
