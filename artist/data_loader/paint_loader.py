@@ -567,14 +567,18 @@ def extract_paint_heliostats(
     paths: list[tuple[str, pathlib.Path]]
     | list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
-    number_of_nurbs_control_points: torch.Tensor = torch.tensor([20, 20]),
-    max_epochs_for_surface_training: int = 400,
+    number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
+    deflectometry_step_size: int = 100,
+    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
+    nurbs_fit_tolerance: float = 3e-5,
+    nurbs_fit_initial_learning_rate: float = 1e-3,
+    nurbs_fit_max_epoch: int = 400,
     device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
 
-    Note: Currently in PAINT all heliostats use a rigid body kinematic. This is why this type is hard coded.
+    Note: Currently in PAINT all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
 
     Parameters
     ----------
@@ -582,8 +586,18 @@ def extract_paint_heliostats(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-    max_epochs_for_surface_training : int
-        The maximum amount of epochs for fitting the NURBS (default is 400).
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points in both dimensions (default is torch.tensor([10, 10])).
+    deflectometry_step_size : torch.Tensor
+        The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
+    nurbs_fit_method : str
+        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+    nurbs_fit_tolerance : float
+        The tolerance value used for fitting NURBS surfaces to deflectometry (default is 3e-5).
+    nurbs_fit_initial_learning_rate : float
+        The initial learning rate for the NURBS fit (default is 1e-3).
+    nurbs_fit_max_epoch : int
+        The maximum number of epochs for the NURBS fit (default is 400).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -607,8 +621,7 @@ def extract_paint_heliostats(
         # Generate surface configuration from data.
         surface_generator = SurfaceGenerator(
             number_of_control_points=number_of_nurbs_control_points.to(device),
-            step_size=100,
-            max_epoch=max_epochs_for_surface_training,
+            device=device
         )
 
         (
@@ -641,6 +654,11 @@ def extract_paint_heliostats(
                 canting=canting,
                 surface_points_with_facets_list=surface_points_with_facets_list,
                 surface_normals_with_facets_list=surface_normals_with_facets_list,
+                fit_method=nurbs_fit_method,
+                deflectometry_step_size=deflectometry_step_size,
+                tolerance=nurbs_fit_tolerance,
+                initial_learning_rate=nurbs_fit_initial_learning_rate,
+                max_epoch=nurbs_fit_max_epoch,
                 device=device,
             )
 
