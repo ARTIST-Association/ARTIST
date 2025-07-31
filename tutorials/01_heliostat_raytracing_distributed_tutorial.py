@@ -43,27 +43,24 @@ with setup_distributed_environment(
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
-            number_of_points_per_facet=torch.tensor([50, 50], device=device),
             device=device,
         )
 
-    incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
-
     heliostat_target_light_source_mapping = None
-
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
     # heliostat_target_light_source_mapping = [
-    #     ("AA39", "receiver", incident_ray_direction),
-    #     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
+    #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+    #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+    #     (...)
     # ]
 
-    bitmap_resolution_e = 256
-    bitmap_resolution_u = 256
+    bitmap_resolution = torch.tensor([256, 256])
+
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution_e,
-            bitmap_resolution_u,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
         ),
         device=device,
     )
@@ -103,10 +100,9 @@ with setup_distributed_environment(
             heliostat_group=heliostat_group,
             world_size=heliostat_group_world_size,
             rank=heliostat_group_rank,
-            batch_size=4,
+            batch_size=100,
             random_seed=heliostat_group_rank,
-            bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u,
+            bitmap_resolution=bitmap_resolution
         )
 
         # Perform heliostat-based ray tracing.
