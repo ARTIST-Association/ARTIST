@@ -6,7 +6,6 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_optimizer import KinematicOptimizer
-from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 
@@ -18,13 +17,13 @@ set_logger_config()
     "optimizer_method, tolerance, max_epoch, initial_lr",
     [
         (
-            "use_motor_positions",
+            config_dictionary.kinematic_calibration_motor_positions,
             0.0005,
             15,
             0.001,
         ),
         (
-            "use_raytracing",
+            config_dictionary.kinematic_calibration_raytracing,
             0.0005,
             15,
             0.0001,
@@ -67,7 +66,7 @@ def test_kinematic_optimizer(
         / "tests/data/scenarios/test_scenario_paint_four_heliostats.h5"
     )
 
-    heliostat_calibration_mapping = [
+    heliostat_data_mapping = [
         (
             "AA39",
             [
@@ -76,12 +75,22 @@ def test_kinematic_optimizer(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-calibration-properties_2.json",
             ],
+            [
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux_centered_1.png",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-flux-centered_2.png",
+            ],
         ),
         (
             "AA31",
             [
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json"
+            ],
+            [
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-flux-centered_1.png"
             ],
         ),
     ]
@@ -92,55 +101,26 @@ def test_kinematic_optimizer(
         )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        (
-            focal_spots_calibration,
-            incident_ray_directions_calibration,
-            motor_positions_calibration,
-            heliostats_mask_calibration,
-            target_area_mask_calibration,
-        ) = paint_loader.extract_paint_calibration_data(
-            heliostat_calibration_mapping=[
-                (heliostat_name, paths)
-                for heliostat_name, paths in heliostat_calibration_mapping
-                if heliostat_name in heliostat_group.names
-            ],
-            heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
-            power_plant_position=scenario.power_plant_position,
-            device=device,
-        )
-
-        optimizer = torch.optim.Adam(
-            heliostat_group.kinematic.parameters(), lr=initial_lr
-        )
-
         # Create the kinematic optimizer.
         kinematic_optimizer = KinematicOptimizer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            optimizer=optimizer,
-        )
-
-        if optimizer_method == config_dictionary.optimizer_use_raytracing:
-            motor_positions_calibration = None
-
-        # Calibrate the kinematic.
-        kinematic_optimizer.optimize(
-            focal_spots_calibration=focal_spots_calibration,
-            incident_ray_directions=incident_ray_directions_calibration,
-            active_heliostats_mask=heliostats_mask_calibration,
-            target_area_mask_calibration=target_area_mask_calibration,
-            motor_positions_calibration=motor_positions_calibration,
+            heliostat_data_mapping=heliostat_data_mapping,
+            calibration_method=optimizer_method,
+            initial_learning_rate=initial_lr,
             tolerance=tolerance,
             max_epoch=max_epoch,
             num_log=max_epoch,
             device=device,
         )
 
+        # Calibrate the kinematic.
+        kinematic_optimizer.optimize(device=device)
+
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_kinematic_parameters"
-            / f"{optimizer_method}_group{index}_{device.type}.pt"
+            / f"{optimizer_method}_group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)

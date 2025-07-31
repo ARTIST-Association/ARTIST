@@ -36,6 +36,11 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     """
     Test the get number of heliostat groups method.
 
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
     Raises
     ------
     AssertionError
@@ -47,7 +52,11 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     )
     with h5py.File(broken_actuator_prototype_path) as scenario_file:
         with pytest.raises(ValueError) as exc_info:
-            Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+            Scenario.load_scenario_from_hdf5(
+                scenario_file=scenario_file,
+                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                device=device,
+            )
     assert (
         "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
         in str(exc_info.value)
@@ -59,7 +68,11 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     )
     with h5py.File(broken_actuator_individual_path) as scenario_file:
         with pytest.raises(ValueError) as exc_info:
-            Scenario.load_scenario_from_hdf5(scenario_file=scenario_file, device=device)
+            Scenario.load_scenario_from_hdf5(
+                scenario_file=scenario_file,
+                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                device=device,
+            )
     assert (
         "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
         in str(exc_info.value)

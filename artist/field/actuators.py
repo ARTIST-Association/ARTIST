@@ -49,7 +49,7 @@ class Actuators(torch.nn.Module):
 
         device = get_device(device=device)
 
-        self.actuator_parameters = torch.nn.Parameter(actuator_parameters)
+        self.actuator_parameters = actuator_parameters
 
         self.active_actuator_parameters = torch.empty_like(
             self.actuator_parameters, device=device
@@ -119,6 +119,8 @@ class Actuators(torch.nn.Module):
         torch.Tensor
             The joint angles.
         """
+        device = get_device(device=device)
+
         return self.motor_positions_to_angles(
             motor_positions=motor_positions, device=device
         )

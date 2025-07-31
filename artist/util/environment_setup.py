@@ -218,14 +218,11 @@ def setup_distributed_environment(
         )
     finally:
         if is_distributed:
-            torch.distributed.barrier(
-                device_ids=(
-                    [torch.cuda.current_device()]
-                    if torch.distributed.get_backend() == "nccl"
-                    else None
-                )
-            )
-            torch.distributed.destroy_process_group()
+            try:
+                if torch.distributed.is_initialized():
+                    torch.distributed.destroy_process_group()
+            except Exception as e:
+                print(f"Distributed cleanup failed: {e}")
 
 
 def distribute_groups_among_ranks(

@@ -25,12 +25,6 @@ from artist.scenario.scenario import Scenario
         ),
         (
             [
-                ("heliostat_1", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-            ],
-            "test_scenario_stral_single_heliostat_individual_measurements",
-        ),
-        (
-            [
                 ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([-1.0, 0.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([1.0, 0.0, 0.0, 0.0])),
@@ -48,6 +42,15 @@ from artist.scenario.scenario import Scenario
                 ),
             ],
             "test_scenario_paint_single_heliostat",
+        ),
+        (
+            [
+                ("AA31", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AA35", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AB38", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+            ],
+            "test_scenario_paint_mix_ideal_prototype_deflectometry",
         ),
     ],
 )
@@ -87,15 +90,17 @@ def test_integration_alignment(
         "r",
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=config_h5, device=device
+            scenario_file=config_h5,
+            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            device=device,
         )
 
-    bitmap_resolution_e, bitmap_resolution_u = 256, 256
+    bitmap_resolution = torch.tensor([256, 256], device=device)
     flux_distributions = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution_e,
-            bitmap_resolution_u,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
         ),
         device=device,
     )
@@ -111,6 +116,10 @@ def test_integration_alignment(
             device=device,
         )
 
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
+        )
+
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
@@ -123,8 +132,7 @@ def test_integration_alignment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u,
+            bitmap_resolution=bitmap_resolution,
             batch_size=10,
         )
 
@@ -151,4 +159,5 @@ def test_integration_alignment(
     )
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+
     torch.testing.assert_close(flux_distributions, expected, atol=5e-4, rtol=5e-4)
