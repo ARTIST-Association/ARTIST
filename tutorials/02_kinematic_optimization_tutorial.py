@@ -75,7 +75,7 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-        
+
     for heliostat_group_index in groups_to_ranks_mapping[rank]:
         # If there are more ranks than heliostat groups, some ranks will be left idle.
         if rank < scenario.heliostat_field.number_of_heliostat_groups:

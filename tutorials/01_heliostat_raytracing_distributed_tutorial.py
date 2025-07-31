@@ -102,7 +102,7 @@ with setup_distributed_environment(
             rank=heliostat_group_rank,
             batch_size=heliostat_group.number_of_active_heliostats,
             random_seed=heliostat_group_rank,
-            bitmap_resolution=bitmap_resolution
+            bitmap_resolution=bitmap_resolution,
         )
 
         # Perform heliostat-based ray tracing.
