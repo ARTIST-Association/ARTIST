@@ -75,46 +75,36 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-
+        
     for heliostat_group_index in groups_to_ranks_mapping[rank]:
-        heliostat_group = scenario.heliostat_field.heliostat_groups[
-            heliostat_group_index
-        ]
+        # If there are more ranks than heliostat groups, some ranks will be left idle.
+        if rank < scenario.heliostat_field.number_of_heliostat_groups:
+            heliostat_group = scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
 
-        # Choose calibration method:
-        kinematic_calibration_method = (
-            config_dictionary.kinematic_calibration_motor_positions
-        )
+            # Choose calibration method.
+            kinematic_calibration_method = (
+                config_dictionary.kinematic_calibration_motor_positions
+            )
 
-        # Set optimizer parameters.
-        if (
-            kinematic_calibration_method
-            == config_dictionary.kinematic_calibration_motor_positions
-        ):
+            # Set optimizer parameters.
             tolerance = 0.0005
             max_epoch = 1000
-            initial_learning_rate = 0.0001
+            initial_learning_rate = 0.0005
 
-        if (
-            kinematic_calibration_method
-            == config_dictionary.kinematic_calibration_raytracing
-        ):
-            tolerance = 0.035
-            max_epoch = 600
-            initial_learning_rate = 0.0004
+            # Create the kinematic optimizer.
+            kinematic_optimizer = KinematicOptimizer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                heliostat_data_mapping=heliostat_data_mapping,
+                calibration_method=kinematic_calibration_method,
+                initial_learning_rate=initial_learning_rate,
+                tolerance=tolerance,
+                max_epoch=max_epoch,
+                num_log=10,
+                device=device,
+            )
 
-        # Create the kinematic optimizer.
-        kinematic_optimizer = KinematicOptimizer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            heliostat_data_mapping=heliostat_data_mapping,
-            calibration_method=kinematic_calibration_method,
-            initial_learning_rate=initial_learning_rate,
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            num_log=max_epoch,
-            device=device,
-        )
-
-        # Calibrate the kinematic.
-        kinematic_optimizer.optimize(device=device)
+            # Calibrate the kinematic.
+            kinematic_optimizer.optimize(device=device)
