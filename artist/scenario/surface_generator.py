@@ -204,11 +204,8 @@ class SurfaceGenerator:
 
             if fit_method == config_dictionary.fit_nurbs_from_points:
                 loss = loss_function(points, surface_points.unsqueeze(0).unsqueeze(0))
-                # TODO
-                # loss = (points - surface_points).abs().mean()
             else:
                 loss = loss_function(normals, surface_normals.unsqueeze(0).unsqueeze(0))
-                # loss = (normals - surface_normals).abs().mean()
 
             loss.backward()
 
