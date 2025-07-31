@@ -70,6 +70,8 @@ def initialize_ddp_environment(
     # mps is currently (2025) single-device only and cpu handles the distribution automatically.
     if device.type == "cuda" and is_distributed:
         device_id = rank % torch.cuda.device_count()
+        if device_id ==1:
+            device_id = 3
         device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device)
 

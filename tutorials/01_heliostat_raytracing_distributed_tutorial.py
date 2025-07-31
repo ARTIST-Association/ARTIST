@@ -100,7 +100,7 @@ with setup_distributed_environment(
             heliostat_group=heliostat_group,
             world_size=heliostat_group_world_size,
             rank=heliostat_group_rank,
-            batch_size=100,
+            batch_size=heliostat_group.number_of_active_heliostats,
             random_seed=heliostat_group_rank,
             bitmap_resolution=bitmap_resolution
         )
