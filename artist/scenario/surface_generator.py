@@ -21,16 +21,6 @@ class SurfaceGenerator:
         Number of NURBS control points per facet in the east an north direction.
     degrees : torch.Tensor
         Degree of the NURBS in the east and north direction.
-    step_size : int
-        The size of the step used to reduce the number of evaluation points for compute efficiency.
-    conversion_method : str
-        The conversion method used to learn the NURBS.
-    tolerance : float
-        Tolerance value used for fitting NURBS surfaces.
-    initial_learning_rate : float
-        Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces.
-    max_epoch : int
-        Maximum number of epochs to use when fitting NURBS surfaces.
 
     Methods
     -------
@@ -40,17 +30,14 @@ class SurfaceGenerator:
         Generate a fitted surface configuration.
     generate_ideal_surface_config()
         Generate an ideal surface configuration.
+    perform_canting_and_translation()
+        Perform the canting rotation and facet translation.
     """
 
     def __init__(
         self,
-        number_of_control_points: torch.Tensor = torch.tensor([20, 20]),
+        number_of_control_points: torch.Tensor = torch.tensor([10, 10]),
         degrees: torch.Tensor = torch.tensor([3, 3]),
-        step_size: int = 100,
-        conversion_method: str = config_dictionary.convert_nurbs_from_normals,
-        tolerance: float = 3e-5,
-        initial_learning_rate: float = 1e-3,
-        max_epoch: int = 10000,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -68,42 +55,24 @@ class SurfaceGenerator:
             Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20, 20])).
         degrees : torch.Tensor
             Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
-        step_size : int
-            The size of the step used to reduce the number of evaluation points for compute efficiency (default is 100).
-        conversion_method : str
-            The conversion method used to learn the NURBS.
-        tolerance : float
-            Tolerance value used for fitting NURBS surfaces (default is 3e-5).
-        initial_learning_rate : float
-            Initial learning rate for the learning rate scheduler used when fitting NURBS surfaces (default is 1e-3).
-        max_epoch : int
-            Maximum number of epochs to use when fitting NURBS surfaces (default is 10000).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        accepted_conversion_methods = [
-            config_dictionary.convert_nurbs_from_points,
-            config_dictionary.convert_nurbs_from_normals,
-        ]
-        if conversion_method not in accepted_conversion_methods:
-            raise NotImplementedError(
-                f"The conversion method '{conversion_method}' is not yet supported in ARTIST."
-            )
+        device = get_device(device=device)
+
         self.number_of_control_points = number_of_control_points.to(device)
         self.degrees = degrees.to(device)
-        self.step_size = step_size
-
-        self.conversion_method = conversion_method
-        self.tolerance = tolerance
-        self.initial_learning_rate = initial_learning_rate
-        self.max_epoch = max_epoch
 
     def fit_nurbs(
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        fit_method: str = config_dictionary.fit_nurbs_from_normals,
+        tolerance: float = 3e-5,
+        initial_learning_rate: float = 1e-3,
+        max_epoch: int = 400,
         device: torch.device | None = None,
     ) -> NURBSSurfaces:
         """
@@ -121,16 +90,38 @@ class SurfaceGenerator:
             The surface points given as an (N, 4) tensor.
         surface_normals : torch.Tensor
             The surface normals given as an (N, 4) tensor.
+        fit_method : str
+            The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+        tolerance : float
+            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 3e-5).
+        initial_learning_rate : float
+            The initial learning rate for the NURBS fit (default is 1e-3).
+        max_epoch : int
+            The maximum number of epochs for the NURBS fit (default is 400).                        
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
+        Raises
+        ------
+        NotImplementedError
+            If the NURBS fit method is unknown.
+            
         Returns
         -------
         NURBSSurface
             A NURBS surface.
         """
+        accepted_conversion_methods = [
+            config_dictionary.fit_nurbs_from_points,
+            config_dictionary.fit_nurbs_from_normals,
+        ]
+        if fit_method not in accepted_conversion_methods:
+            raise NotImplementedError(
+                f"The conversion method '{fit_method}' is not yet supported in ARTIST."
+            )
+
         device = get_device(device=device)
 
         evaluation_points = surface_points.clone()
@@ -190,7 +181,7 @@ class SurfaceGenerator:
         # Optimize the control points of the NURBS surface.
         optimizer = torch.optim.Adam(
             [nurbs_surface.control_points.requires_grad_()],
-            lr=self.initial_learning_rate,
+            lr=initial_learning_rate,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
@@ -202,17 +193,28 @@ class SurfaceGenerator:
         )
         loss = torch.inf
         epoch = 0
-        while loss > self.tolerance and epoch <= self.max_epoch:
+        while loss > tolerance and epoch <= max_epoch:
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points, device=device
             )
 
             optimizer.zero_grad()
 
-            if self.conversion_method == config_dictionary.convert_nurbs_from_points:
-                loss = (points - surface_points).abs().mean()
-            elif self.conversion_method == config_dictionary.convert_nurbs_from_normals:
-                loss = (normals - surface_normals).abs().mean()
+            loss_function = torch.nn.MSELoss()
+
+            if fit_method == config_dictionary.fit_nurbs_from_points:
+                loss = loss_function(
+                    points,
+                    surface_points.unsqueeze(0).unsqueeze(0)
+                )
+                #TODO
+                #loss = (points - surface_points).abs().mean()
+            else:
+                loss = loss_function(
+                    normals,
+                    surface_normals.unsqueeze(0).unsqueeze(0)
+                )
+                #loss = (normals - surface_normals).abs().mean()
 
             loss.backward()
 
@@ -233,6 +235,11 @@ class SurfaceGenerator:
         canting: torch.Tensor,
         surface_points_with_facets_list: list[torch.Tensor],
         surface_normals_with_facets_list: list[torch.Tensor],
+        deflectometry_step_size: int = 100,
+        fit_method: str = config_dictionary.fit_nurbs_from_normals,
+        tolerance: float = 3e-5,
+        initial_learning_rate: float = 1e-3,
+        max_epoch: int = 400,
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
@@ -250,6 +257,16 @@ class SurfaceGenerator:
             A list of facetted surface points. Points per facet may vary.
         surface_normals_with_facets_list : list[torch.Tensor]
             A list of facetted surface normals. Normals per facet may vary.
+        deflectometry_step_size : torch.Tensor
+            The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
+        fit_method : str
+            The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+        tolerance : float
+            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 3e-5).
+        initial_learning_rate : float
+            The initial learning rate for the NURBS fit (default is 1e-3).
+        max_epoch : int
+            The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -287,15 +304,15 @@ class SurfaceGenerator:
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
 
         # Select only selected number of points to reduce compute.
-        surface_points_with_facets = surface_points_with_facets[:, :: self.step_size]
-        surface_normals_with_facets = surface_normals_with_facets[:, :: self.step_size]
+        surface_points_with_facets = surface_points_with_facets[:, :: deflectometry_step_size]
+        surface_normals_with_facets = surface_normals_with_facets[:, :: deflectometry_step_size]
 
         # Convert to 4D format.
         facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
             facet_translation_vectors, device=device
         )
         # If we are using a point cloud to learn the points, we do not need to translate the facets.
-        if self.conversion_method == config_dictionary.convert_nurbs_from_points:
+        if fit_method == config_dictionary.fit_nurbs_from_points:
             facet_translation_vectors = torch.zeros(
                 facet_translation_vectors.shape, device=device
             )
@@ -319,6 +336,10 @@ class SurfaceGenerator:
             nurbs = self.fit_nurbs(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
+                fit_method=fit_method,
+                tolerance=tolerance,
+                initial_learning_rate=initial_learning_rate,
+                max_epoch=max_epoch,
                 device=device,
             )
 
@@ -460,21 +481,21 @@ class SurfaceGenerator:
         """
         device = get_device(device=device)
 
-        combined_matrix = torch.zeros((4, 4), device=device)
+        rotation_matrix = torch.zeros((4, 4), device=device)
 
-        combined_matrix[:, 0] = torch.nn.functional.normalize(canting[0], dim=0)
-        combined_matrix[:, 1] = torch.nn.functional.normalize(canting[1], dim=0)
-        combined_matrix[:3, 2] = torch.nn.functional.normalize(
-            torch.linalg.cross(combined_matrix[:3, 0], combined_matrix[:3, 1]), dim=0
+        rotation_matrix[:, 0] = torch.nn.functional.normalize(canting[0], dim=0)
+        rotation_matrix[:, 1] = torch.nn.functional.normalize(canting[1], dim=0)
+        rotation_matrix[:3, 2] = torch.nn.functional.normalize(
+            torch.linalg.cross(rotation_matrix[:3, 0], rotation_matrix[:3, 1]), dim=0
         )
 
-        combined_matrix[3, 3] = 1.0
+        rotation_matrix[3, 3] = 1.0
 
         canted_points = (
             utils.convert_3d_points_to_4d_format(points=points, device=device).reshape(
                 -1, 4
             )
-            @ combined_matrix.T
+            @ rotation_matrix.T
         ).reshape(points.shape[0], points.shape[1], 4)
 
         canted_with_translation = canted_points + translation
