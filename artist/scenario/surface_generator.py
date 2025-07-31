@@ -70,7 +70,7 @@ class SurfaceGenerator:
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         fit_method: str = config_dictionary.fit_nurbs_from_normals,
-        tolerance: float = 3e-5,
+        tolerance: float = 1e-10,
         initial_learning_rate: float = 1e-3,
         max_epoch: int = 400,
         device: torch.device | None = None,
@@ -93,7 +93,7 @@ class SurfaceGenerator:
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 3e-5).
+            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
         initial_learning_rate : float
             The initial learning rate for the NURBS fit (default is 1e-3).
         max_epoch : int
@@ -237,7 +237,7 @@ class SurfaceGenerator:
         surface_normals_with_facets_list: list[torch.Tensor],
         deflectometry_step_size: int = 100,
         fit_method: str = config_dictionary.fit_nurbs_from_normals,
-        tolerance: float = 3e-5,
+        tolerance: float = 1e-10,
         initial_learning_rate: float = 1e-3,
         max_epoch: int = 400,
         device: torch.device | None = None,
@@ -262,7 +262,7 @@ class SurfaceGenerator:
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 3e-5).
+            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
         initial_learning_rate : float
             The initial learning rate for the NURBS fit (default is 1e-3).
         max_epoch : int
