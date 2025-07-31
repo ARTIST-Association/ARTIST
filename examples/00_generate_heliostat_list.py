@@ -123,7 +123,7 @@ if __name__ == "__main__":
     paint_dir = "/workVERLEIHNIX/share/PAINT"
     output_json = "examples/data/heliostat_files.json"
     min_calibrations = 80
-    max_heliostats = 100
+    max_heliostats = 800
     exclude = {"AA39"}
     flux_suffix = "flux" 
 
