@@ -97,7 +97,7 @@ class SurfaceGenerator:
         initial_learning_rate : float
             The initial learning rate for the NURBS fit (default is 1e-3).
         max_epoch : int
-            The maximum number of epochs for the NURBS fit (default is 400).                        
+            The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -107,7 +107,7 @@ class SurfaceGenerator:
         ------
         NotImplementedError
             If the NURBS fit method is unknown.
-            
+
         Returns
         -------
         NURBSSurface
@@ -203,18 +203,12 @@ class SurfaceGenerator:
             loss_function = torch.nn.MSELoss()
 
             if fit_method == config_dictionary.fit_nurbs_from_points:
-                loss = loss_function(
-                    points,
-                    surface_points.unsqueeze(0).unsqueeze(0)
-                )
-                #TODO
-                #loss = (points - surface_points).abs().mean()
+                loss = loss_function(points, surface_points.unsqueeze(0).unsqueeze(0))
+                # TODO
+                # loss = (points - surface_points).abs().mean()
             else:
-                loss = loss_function(
-                    normals,
-                    surface_normals.unsqueeze(0).unsqueeze(0)
-                )
-                #loss = (normals - surface_normals).abs().mean()
+                loss = loss_function(normals, surface_normals.unsqueeze(0).unsqueeze(0))
+                # loss = (normals - surface_normals).abs().mean()
 
             loss.backward()
 
@@ -304,8 +298,12 @@ class SurfaceGenerator:
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
 
         # Select only selected number of points to reduce compute.
-        surface_points_with_facets = surface_points_with_facets[:, :: deflectometry_step_size]
-        surface_normals_with_facets = surface_normals_with_facets[:, :: deflectometry_step_size]
+        surface_points_with_facets = surface_points_with_facets[
+            :, ::deflectometry_step_size
+        ]
+        surface_normals_with_facets = surface_normals_with_facets[
+            :, ::deflectometry_step_size
+        ]
 
         # Convert to 4D format.
         facet_translation_vectors = utils.convert_3d_directions_to_4d_format(

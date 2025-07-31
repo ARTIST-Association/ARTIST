@@ -631,10 +631,12 @@ def normalize_bitmaps(
     num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
     plane_area_per_pixel = plane_areas / num_pixels
 
-    normalized_fluxes = flux_distributions / (number_of_rays * plane_area_per_pixel).unsqueeze(
-        -1
-    ).unsqueeze(-1)
-    
-    scaled_fluxes = ((normalized_fluxes - torch.mean(normalized_fluxes, dim=(1,2), keepdim=True)) / torch.std(normalized_fluxes, dim=(1,2), keepdim=True))
+    normalized_fluxes = flux_distributions / (
+        number_of_rays * plane_area_per_pixel
+    ).unsqueeze(-1).unsqueeze(-1)
+
+    scaled_fluxes = (
+        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
+    ) / torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
 
     return scaled_fluxes
