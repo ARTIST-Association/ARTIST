@@ -1,5 +1,5 @@
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as functional
 
 from artist.util.environment_setup import get_device
 
@@ -647,8 +647,8 @@ def crop_image_region(
     images: torch.Tensor,
     crop_width_m: float,
     crop_height_m: float,
-    target_plane_x_m: torch.Tensor,
-    target_plane_y_m: torch.Tensor,
+    target_plane_widths_m: torch.Tensor,
+    target_plane_heights_m: torch.Tensor,
 ) -> torch.Tensor:
     """
     Crop a centered rectangular region from grayscale intensity images based on physical dimensions.
@@ -665,48 +665,51 @@ def crop_image_region(
         Desired width of the cropped region in meters.
     crop_height_m : float
         Desired height of the cropped region in meters.
-    target_plane_x_m : torch.Tensor
-        Physical width in meters of each image in the batch with shape (B,).
-    target_plane_y_m : torch.Tensor
-        Physical height in meters of each image in the batch with shape (B,).
+    target_plane_widths_m : torch.Tensor
+        Physical widths in meters of each image in the batch with shape (B,).
+    target_plane_heights_m : torch.Tensor
+        Physical heights in meters of each image in the batch with shape (B,).
 
     Returns
     -------
     torch.Tensor
         The cropped image regions of shape (B, H, W).
     """
-    B, H, W = images.shape
+    batch_size, image_height, image_width = images.shape
     device = images.device
 
     # 1. Compute center of mass
-    mass_map = images / (images.sum(dim=(1, 2), keepdim=True) + 1e-8)
+    normalized_mass_map = images / (images.sum(dim=(1, 2), keepdim=True) + 1e-8)
 
-    y_coords = torch.linspace(-1, 1, H, device=device)
-    x_coords = torch.linspace(-1, 1, W, device=device)
-    Y, X = torch.meshgrid(y_coords, x_coords, indexing='ij')
-    X = X.expand(B, -1, -1)
-    Y = Y.expand(B, -1, -1)
+    y_coordinates = torch.linspace(-1, 1, image_height, device=device)
+    x_coordinates = torch.linspace(-1, 1, image_width, device=device)
+    y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
+    x_grid = x_grid.expand(batch_size, -1, -1)
+    y_grid = y_grid.expand(batch_size, -1, -1)
 
-    x_center = (X * mass_map).sum(dim=(1, 2))  # (B,)
-    y_center = (Y * mass_map).sum(dim=(1, 2))  # (B,)
+    x_center_of_mass = (x_grid * normalized_mass_map).sum(dim=(1, 2))  # (batch_size,)
+    y_center_of_mass = (y_grid * normalized_mass_map).sum(dim=(1, 2))  # (batch_size,)
 
     # 2. Compute scale to match desired crop size in meters
-    scale_x = crop_width_m / target_plane_x_m   # (B,)
-    scale_y = crop_height_m / target_plane_y_m  # (B,)
+    scale_x = crop_width_m / target_plane_widths_m  # (batch_size,)
+    scale_y = crop_height_m / target_plane_heights_m  # (batch_size,)
 
     # 3. Build affine transform matrices (scale and center)
-    theta = torch.zeros(B, 2, 3, device=device)
-    theta[:, 0, 0] = scale_x
-    theta[:, 1, 1] = scale_y
-    theta[:, 0, 2] = x_center
-    theta[:, 1, 2] = y_center
+    affine_matrices = torch.zeros(batch_size, 2, 3, device=device)
+    affine_matrices[:, 0, 0] = scale_x
+    affine_matrices[:, 1, 1] = scale_y
+    affine_matrices[:, 0, 2] = x_center_of_mass
+    affine_matrices[:, 1, 2] = y_center_of_mass
 
     # 4. Apply affine transform
-    images_exp = images[:, None, :, :]  # (B, 1, H, W)
-    grid = F.affine_grid(theta, size=images_exp.shape, align_corners=False)
-    cropped = F.grid_sample(images_exp, grid, align_corners=False, padding_mode='zeros')
+    images_expanded = images[
+        :, None, :, :
+    ]  # (batch_size, 1, image_height, image_width)
+    sampling_grid = functional.affine_grid(
+        affine_matrices, size=images_expanded.shape, align_corners=False
+    )
+    cropped_images = functional.grid_sample(
+        images_expanded, sampling_grid, align_corners=False, padding_mode="zeros"
+    )
 
-    return cropped[:, 0, :, :]  # (B, H, W)
-
-
-
+    return cropped_images[:, 0, :, :]  # (batch_size, image_height, image_width)
