@@ -144,6 +144,10 @@ class HeliostatGroup:
             (self.number_of_heliostats, 4), device=device
         )
 
+        self.active_motor_positions = torch.empty(
+            (self.number_of_active_heliostats, self.kinematic.actuators.shape[1]), device=device
+        )
+
     def align_surfaces_with_incident_ray_directions(
         self,
         aim_points: torch.Tensor,
