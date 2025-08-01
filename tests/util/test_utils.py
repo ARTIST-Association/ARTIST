@@ -575,27 +575,22 @@ def test_normalize_bitmaps(device: torch.device) -> None:
 
     torch.testing.assert_close(normalized_bitmaps, expected, atol=5e-4, rtol=5e-4)
 
+
 @pytest.mark.parametrize(
     "image, crop_w, crop_h, target_w, target_h, expected_shape",
     [
         (
-            torch.tensor(
-                [[[0.0, 0.0, 0.0],
-                  [0.0, 1.0, 0.0],
-                  [0.0, 0.0, 0.0]]]
-            ),
-            1.0, 1.0,
+            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
+            1.0,
+            1.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
             (1, 3, 3),
         ),
         (
-            torch.tensor(
-                [[[1.0, 2.0, 3.0],
-                  [4.0, 5.0, 6.0],
-                  [7.0, 8.0, 9.0]]]
-            ),
-            2.0, 2.0,
+            torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]),
+            2.0,
+            2.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
             (1, 3, 3),

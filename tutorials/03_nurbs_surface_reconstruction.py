@@ -18,7 +18,9 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstruct_surfaces.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstruct_surfaces.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -53,19 +55,9 @@ scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstru
 # ]
 
 import pathlib
-import re
-from typing import List, Tuple
-
-import pathlib
-from typing import List, Tuple
-
-import pathlib
 import random
 from typing import List, Tuple
 
-import pathlib
-import random
-from typing import List, Tuple
 
 def build_heliostat_data_mapping(
     base_path: str,
@@ -73,7 +65,7 @@ def build_heliostat_data_mapping(
     num_measurements: int,
     image_variant: str,  # "flux", "flux-centered", "cropped", or "raw"
     randomize: bool = True,
-    seed: int = 42
+    seed: int = 42,
 ) -> List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]]:
     base = pathlib.Path(base_path)
     heliostat_map = []
@@ -105,7 +97,9 @@ def build_heliostat_data_mapping(
                     break
 
         if len(props) < num_measurements:
-            print(f"Warning: {name} has only {len(props)} valid measurements (needed {num_measurements}).")
+            print(
+                f"Warning: {name} has only {len(props)} valid measurements (needed {num_measurements})."
+            )
 
         if props and imgs:
             heliostat_map.append((name, props, imgs))
@@ -113,14 +107,12 @@ def build_heliostat_data_mapping(
     return heliostat_map
 
 
-
-
-heliostat_data_mapping = build_heliostat_data_mapping(base_path="/workVERLEIHNIX/share/PAINT/",
-                                                      heliostat_names=["AA39"],
-                                                      num_measurements=4,
-                                                      image_variant="flux-centered")
-
-
+heliostat_data_mapping = build_heliostat_data_mapping(
+    base_path="/workVERLEIHNIX/share/PAINT/",
+    heliostat_names=["AA39"],
+    num_measurements=4,
+    image_variant="flux-centered",
+)
 
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
