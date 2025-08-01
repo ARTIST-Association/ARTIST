@@ -7,12 +7,66 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
+
+import matplotlib.pyplot as plt
+import torch
+
+import matplotlib.pyplot as plt
+import torch
+import os
+
+def save_flux_distribution_plot(
+    predicted: torch.Tensor,
+    measured: torch.Tensor,
+    index: int = 0,
+    cmap: str = "inferno",
+    save_path: str = "flux_comparison.png"
+) -> None:
+    """
+    Save a side-by-side plot of predicted and measured flux distributions.
+
+    Parameters
+    ----------
+    predicted : torch.Tensor
+        Predicted flux distribution tensor. Shape: [B, H, W] or [B, 1, H, W].
+    measured : torch.Tensor
+        Measured flux distribution tensor. Same shape as predicted.
+    index : int
+        Batch index to visualize.
+    cmap : str
+        Colormap used in imshow.
+    save_path : str
+        File path to save the image (e.g., "debug/flux_epoch_10.png").
+    """
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    # Prepare tensors
+    predicted_np = predicted[index].detach().cpu().squeeze().numpy()
+    measured_np = measured[index].detach().cpu().squeeze().numpy()
+
+    # Plot side-by-side images
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+
+    axs[0].imshow(predicted_np, cmap=cmap)
+    axs[0].set_title("Predicted Flux")
+    axs[0].axis("off")
+
+    axs[1].imshow(measured_np, cmap=cmap)
+    axs[1].set_title("Measured Flux")
+    axs[1].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)  # Free memory
+
+
 
 
 class SurfaceReconstructor:
@@ -69,6 +123,7 @@ class SurfaceReconstructor:
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
         num_log: int = 3,
+        use_centered_flux_maps: bool = False,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -157,6 +212,8 @@ class SurfaceReconstructor:
         self.tolerance = tolerance
         self.max_epoch = max_epoch
 
+        self.use_centered_flux_maps = use_centered_flux_maps
+
     def reconstruct_surfaces(
         self,
         device: torch.device | None = None,
@@ -211,6 +268,7 @@ class SurfaceReconstructor:
             loss = torch.inf
             epoch = 0
             log_step = self.max_epoch // self.num_log
+            loss_function = torch.nn.MSELoss()
             while loss > self.tolerance and epoch <= self.max_epoch:
                 optimizer.zero_grad()
 
@@ -271,6 +329,15 @@ class SurfaceReconstructor:
                     device=device,
                 )
 
+                if self.use_centered_flux_maps:
+                    flux_distributions_cropped = utils.crop_image_region(
+                                        images = flux_distributions,                
+                                        crop_width_m = config_dictionary.utis_target_width,          
+                                        crop_height_m = config_dictionary.utis_target_width,          
+                                        target_plane_x_m = self.scenario.target_areas.dimensions[self.target_area_mask][:,0],           
+                                        target_plane_y_m = self.scenario.target_areas.dimensions[self.target_area_mask][:,1]
+                    )
+
                 normalized_flux_distributions = utils.normalize_bitmaps(
                     flux_distributions=flux_distributions,
                     target_area_widths=ray_tracer.scenario.target_areas.dimensions[
@@ -282,7 +349,8 @@ class SurfaceReconstructor:
                     number_of_rays=ray_tracer.light_source.number_of_rays,
                 )
 
-                loss_function = torch.nn.MSELoss()
+                
+
                 loss = loss_function(
                     normalized_flux_distributions,
                     self.normalized_measured_flux_distributions,
