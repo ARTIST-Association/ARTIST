@@ -1,4 +1,3 @@
-import os
 import pathlib
 import random
 from typing import List, Tuple
@@ -21,13 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    os.getenv("SCENARIO_PATH", "./data/reconstruct_surfaces.h5")
-)
-
-scenario_path = pathlib.Path(
-    os.getenv("SCENARIO_PATH", "./data/reconstruct_surfaces.h5")
-)
+scenario_path = pathlib.Path("/path/to/scenario/file.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -142,7 +135,7 @@ def build_heliostat_data_mapping(
 
 
 heliostat_data_mapping = build_heliostat_data_mapping(
-    base_path=os.getenv("PAINT_BASE_PATH", "./share/PAINT/"),
+    base_path="/base/path/to/PAINT",
     heliostat_names=["AA39"],
     num_measurements=4,
     image_variant="flux-centered",
