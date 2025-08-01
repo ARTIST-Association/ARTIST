@@ -277,11 +277,15 @@ class SurfaceReconstructor:
 
                 if self.use_centered_flux_maps:
                     flux_distributions_cropped = utils.crop_image_region(
-                                        images = flux_distributions,                
-                                        crop_width_m = config_dictionary.utis_target_width,          
-                                        crop_height_m = config_dictionary.utis_target_width,          
-                                        target_plane_x_m = self.scenario.target_areas.dimensions[self.target_area_mask][:,0],           
-                                        target_plane_y_m = self.scenario.target_areas.dimensions[self.target_area_mask][:,1]
+                        images=flux_distributions,
+                        crop_width_m=config_dictionary.utis_target_width,
+                        crop_height_m=config_dictionary.utis_target_width,
+                        target_plane_x_m=self.scenario.target_areas.dimensions[
+                            self.target_area_mask
+                        ][:, 0],
+                        target_plane_y_m=self.scenario.target_areas.dimensions[
+                            self.target_area_mask
+                        ][:, 1],
                     )
 
                 normalized_flux_distributions = utils.normalize_bitmaps(
@@ -294,8 +298,6 @@ class SurfaceReconstructor:
                     ][:, 1],
                     number_of_rays=ray_tracer.light_source.number_of_rays,
                 )
-
-                
 
                 loss = loss_function(
                     normalized_flux_distributions,

@@ -683,7 +683,7 @@ def crop_image_region(
 
     y_coords = torch.linspace(-1, 1, H, device=device)
     x_coords = torch.linspace(-1, 1, W, device=device)
-    Y, X = torch.meshgrid(y_coords, x_coords, indexing='ij')
+    Y, X = torch.meshgrid(y_coords, x_coords, indexing="ij")
     X = X.expand(B, -1, -1)
     Y = Y.expand(B, -1, -1)
 
@@ -691,7 +691,7 @@ def crop_image_region(
     y_center = (Y * mass_map).sum(dim=(1, 2))  # (B,)
 
     # 2. Compute scale to match desired crop size in meters
-    scale_x = crop_width_m / target_plane_x_m   # (B,)
+    scale_x = crop_width_m / target_plane_x_m  # (B,)
     scale_y = crop_height_m / target_plane_y_m  # (B,)
 
     # 3. Build affine transform matrices (scale and center)
@@ -704,9 +704,6 @@ def crop_image_region(
     # 4. Apply affine transform
     images_exp = images[:, None, :, :]  # (B, 1, H, W)
     grid = F.affine_grid(theta, size=images_exp.shape, align_corners=False)
-    cropped = F.grid_sample(images_exp, grid, align_corners=False, padding_mode='zeros')
+    cropped = F.grid_sample(images_exp, grid, align_corners=False, padding_mode="zeros")
 
     return cropped[:, 0, :, :]  # (B, H, W)
-
-
-
