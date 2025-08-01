@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 from artist.util.environment_setup import get_device
 
@@ -640,3 +641,72 @@ def normalize_bitmaps(
     ) / torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
 
     return scaled_fluxes
+
+
+def crop_image_region(
+    images: torch.Tensor,
+    crop_width_m: float,
+    crop_height_m: float,
+    target_plane_x_m: torch.Tensor,
+    target_plane_y_m: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Crop a centered rectangular region from grayscale intensity images based on physical dimensions.
+
+    This function identifies the center of mass in each image and then crops a region centered at this point
+    with the specified physical width and height (in meters). The cropping is applied via affine transformation,
+    which accounts for the desired crop size relative to the target's physical plane dimensions.
+
+    Parameters
+    ----------
+    images : torch.Tensor
+        Grayscale intensity images with shape (B, H, W), where B is the batch size.
+    crop_width_m : float
+        Desired width of the cropped region in meters.
+    crop_height_m : float
+        Desired height of the cropped region in meters.
+    target_plane_x_m : torch.Tensor
+        Physical width in meters of each image in the batch with shape (B,).
+    target_plane_y_m : torch.Tensor
+        Physical height in meters of each image in the batch with shape (B,).
+
+    Returns
+    -------
+    torch.Tensor
+        The cropped image regions of shape (B, H, W).
+    """
+    B, H, W = images.shape
+    device = images.device
+
+    # 1. Compute center of mass
+    mass_map = images / (images.sum(dim=(1, 2), keepdim=True) + 1e-8)
+
+    y_coords = torch.linspace(-1, 1, H, device=device)
+    x_coords = torch.linspace(-1, 1, W, device=device)
+    Y, X = torch.meshgrid(y_coords, x_coords, indexing='ij')
+    X = X.expand(B, -1, -1)
+    Y = Y.expand(B, -1, -1)
+
+    x_center = (X * mass_map).sum(dim=(1, 2))  # (B,)
+    y_center = (Y * mass_map).sum(dim=(1, 2))  # (B,)
+
+    # 2. Compute scale to match desired crop size in meters
+    scale_x = crop_width_m / target_plane_x_m   # (B,)
+    scale_y = crop_height_m / target_plane_y_m  # (B,)
+
+    # 3. Build affine transform matrices (scale and center)
+    theta = torch.zeros(B, 2, 3, device=device)
+    theta[:, 0, 0] = scale_x
+    theta[:, 1, 1] = scale_y
+    theta[:, 0, 2] = x_center
+    theta[:, 1, 2] = y_center
+
+    # 4. Apply affine transform
+    images_exp = images[:, None, :, :]  # (B, 1, H, W)
+    grid = F.affine_grid(theta, size=images_exp.shape, align_corners=False)
+    cropped = F.grid_sample(images_exp, grid, align_corners=False, padding_mode='zeros')
+
+    return cropped[:, 0, :, :]  # (B, H, W)
+
+
+

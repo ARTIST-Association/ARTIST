@@ -14,60 +14,6 @@ from artist.util.nurbs import NURBSSurfaces
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
 
-import matplotlib.pyplot as plt
-import torch
-
-import matplotlib.pyplot as plt
-import torch
-import os
-
-def save_flux_distribution_plot(
-    predicted: torch.Tensor,
-    measured: torch.Tensor,
-    index: int = 0,
-    cmap: str = "inferno",
-    save_path: str = "flux_comparison.png"
-) -> None:
-    """
-    Save a side-by-side plot of predicted and measured flux distributions.
-
-    Parameters
-    ----------
-    predicted : torch.Tensor
-        Predicted flux distribution tensor. Shape: [B, H, W] or [B, 1, H, W].
-    measured : torch.Tensor
-        Measured flux distribution tensor. Same shape as predicted.
-    index : int
-        Batch index to visualize.
-    cmap : str
-        Colormap used in imshow.
-    save_path : str
-        File path to save the image (e.g., "debug/flux_epoch_10.png").
-    """
-    # Ensure the output directory exists
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-    # Prepare tensors
-    predicted_np = predicted[index].detach().cpu().squeeze().numpy()
-    measured_np = measured[index].detach().cpu().squeeze().numpy()
-
-    # Plot side-by-side images
-    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-
-    axs[0].imshow(predicted_np, cmap=cmap)
-    axs[0].set_title("Predicted Flux")
-    axs[0].axis("off")
-
-    axs[1].imshow(measured_np, cmap=cmap)
-    axs[1].set_title("Measured Flux")
-    axs[1].axis("off")
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)  # Free memory
-
-
-
 
 class SurfaceReconstructor:
     """
