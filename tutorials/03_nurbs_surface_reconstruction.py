@@ -18,39 +18,110 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstruct_surfaces.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-heliostat_data_mapping = [
-    (
-        "heliostat_name_1",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    (
-        "heliostat_name_2",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    # ...
-]
+# heliostat_data_mapping = [
+#     (
+#         "heliostat_name_1",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+#     (
+#         "heliostat_name_2",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+#     # ...
+# ]
+
+import pathlib
+import re
+from typing import List, Tuple
+
+import pathlib
+from typing import List, Tuple
+
+import pathlib
+import random
+from typing import List, Tuple
+
+import pathlib
+import random
+from typing import List, Tuple
+
+def build_heliostat_data_mapping(
+    base_path: str,
+    heliostat_names: List[str],
+    num_measurements: int,
+    image_variant: str,  # "flux", "flux-centered", "cropped", or "raw"
+    randomize: bool = True,
+    seed: int = 42
+) -> List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]]:
+    base = pathlib.Path(base_path)
+    heliostat_map = []
+
+    for name in heliostat_names:
+        calibration_dir = base / name / "Calibration"
+        if not calibration_dir.exists():
+            print(f"Warning: Calibration directory for {name} not found.")
+            continue
+
+        property_files = list(calibration_dir.glob("*-calibration-properties.json"))
+
+        if randomize:
+            random.Random(seed).shuffle(property_files)
+        else:
+            property_files.sort()
+
+        props, imgs = [], []
+
+        for prop_file in property_files:
+            id_str = prop_file.stem.split("-")[0]
+            image_file = calibration_dir / f"{id_str}-{image_variant}.png"
+
+            if image_file.exists():
+                props.append(prop_file)
+                imgs.append(image_file)
+
+                if len(props) == num_measurements:
+                    break
+
+        if len(props) < num_measurements:
+            print(f"Warning: {name} has only {len(props)} valid measurements (needed {num_measurements}).")
+
+        if props and imgs:
+            heliostat_map.append((name, props, imgs))
+
+    return heliostat_map
+
+
+
+
+heliostat_data_mapping = build_heliostat_data_mapping(base_path="/workVERLEIHNIX/share/PAINT/",
+                                                      heliostat_names=["AA39"],
+                                                      num_measurements=4,
+                                                      image_variant="flux-centered")
+
+
+
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -102,6 +173,7 @@ with setup_distributed_environment(
                 tolerance=tolerance,
                 max_epoch=max_epoch,
                 num_log=max_epoch,
+                use_centered_flux_maps=True,
                 device=device,
             )
 
