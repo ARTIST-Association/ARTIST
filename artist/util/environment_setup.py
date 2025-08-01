@@ -138,17 +138,7 @@ def setup_distributed_environment(
     number_of_heliostat_groups: int,
     device: torch.device | None = None,
 ) -> Generator[
-    tuple[
-        torch.device,
-        bool,
-        bool,
-        int,
-        int,
-        torch.distributed.ProcessGroup | None,
-        dict[int, list[int]],
-        int,
-        int,
-    ],
+    dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
     None,
     None,
 ]:
@@ -205,17 +195,17 @@ def setup_distributed_environment(
         process_subgroup = None
 
     try:
-        yield (
-            device,
-            is_distributed,
-            is_nested,
-            rank,
-            world_size,
-            process_subgroup,
-            groups_to_ranks_mapping,
-            heliostat_group_rank,
-            heliostat_group_world_size,
-        )
+        yield {
+            "device": device,
+            "is_distributed": is_distributed,
+            "is_nested": is_nested,
+            "rank": rank,
+            "world_size": world_size,
+            "process_subgroup": process_subgroup,
+            "groups_to_ranks_mapping": groups_to_ranks_mapping,
+            "heliostat_group_rank": heliostat_group_rank,
+            "heliostat_group_world_size": heliostat_group_world_size,
+        }
     finally:
         if is_distributed:
             try:
