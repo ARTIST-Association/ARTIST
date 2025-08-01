@@ -1,4 +1,7 @@
+import os
 import pathlib
+import random
+from typing import List, Tuple
 
 import h5py
 import torch
@@ -18,7 +21,13 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstruct_surfaces.h5")
+scenario_path = pathlib.Path(
+    os.getenv("SCENARIO_PATH", "./data/reconstruct_surfaces.h5")
+)
+
+scenario_path = pathlib.Path(
+    os.getenv("SCENARIO_PATH", "./data/reconstruct_surfaces.h5")
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -52,20 +61,6 @@ scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/reconstru
 #     # ...
 # ]
 
-import pathlib
-import re
-from typing import List, Tuple
-
-import pathlib
-from typing import List, Tuple
-
-import pathlib
-import random
-from typing import List, Tuple
-
-import pathlib
-import random
-from typing import List, Tuple
 
 def build_heliostat_data_mapping(
     base_path: str,
@@ -73,8 +68,39 @@ def build_heliostat_data_mapping(
     num_measurements: int,
     image_variant: str,  # "flux", "flux-centered", "cropped", or "raw"
     randomize: bool = True,
-    seed: int = 42
+    seed: int = 42,
 ) -> List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]]:
+    """
+    Build a mapping of heliostat names to their calibration property and image files.
+
+    This function searches for calibration data for each heliostat, retrieves corresponding
+    property and image files from the specified variant, and returns a structured mapping.
+    If fewer measurements are available than requested, a warning is printed and the available
+    subset is used. Optionally, the selection can be randomized using a fixed seed.
+
+    Parameters
+    ----------
+    base_path : str
+        Path to the root directory containing heliostat calibration data.
+    heliostat_names : List[str]
+        List of heliostat names to include in the mapping.
+    num_measurements : int
+        Number of valid calibration samples to retrieve per heliostat.
+    image_variant : str
+        Image variant to use. Must match the expected filename suffix (e.g., "flux", "cropped").
+    randomize : bool, optional
+        Whether to shuffle the measurement files before selection (default is True).
+    seed : int, optional
+        Random seed for reproducibility if randomize is True (default is 42).
+
+    Returns
+    -------
+    List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]]
+        A list of tuples for each heliostat, where each tuple contains:
+        - the heliostat name,
+        - a list of selected property file paths,
+        - a list of corresponding image file paths.
+    """
     base = pathlib.Path(base_path)
     heliostat_map = []
 
@@ -105,7 +131,9 @@ def build_heliostat_data_mapping(
                     break
 
         if len(props) < num_measurements:
-            print(f"Warning: {name} has only {len(props)} valid measurements (needed {num_measurements}).")
+            print(
+                f"Warning: {name} has only {len(props)} valid measurements (needed {num_measurements})."
+            )
 
         if props and imgs:
             heliostat_map.append((name, props, imgs))
@@ -113,14 +141,12 @@ def build_heliostat_data_mapping(
     return heliostat_map
 
 
-
-
-heliostat_data_mapping = build_heliostat_data_mapping(base_path="/workVERLEIHNIX/share/PAINT/",
-                                                      heliostat_names=["AA39"],
-                                                      num_measurements=4,
-                                                      image_variant="flux-centered")
-
-
+heliostat_data_mapping = build_heliostat_data_mapping(
+    base_path=os.getenv("PAINT_BASE_PATH", "./share/PAINT/"),
+    heliostat_names=["AA39"],
+    num_measurements=4,
+    image_variant="flux-centered",
+)
 
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
