@@ -236,6 +236,11 @@ class SurfaceGenerator:
         """
         Generate a fitted surface configuration.
 
+        The fitted surface configuration is composed of separate facets. Each facet is defined by fitted control points,
+        meaning the control points are fitted to measured point cloud or surface normals data. Initializing a surface 
+        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting on real-world
+        conditions. The surface can be fitted to deflectometry data or any other provided point cloud data.
+
         Parameters
         ----------
         heliostat_name : str
@@ -338,7 +343,7 @@ class SurfaceGenerator:
                 device=device,
             )
 
-            # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
+            # Only a translation is necessary, the canting is learned, therefore the canting vectors are unit vectors.
             canted_control_points = self.perform_canting_and_translation(
                 points=nurbs.control_points[0, 0].detach(),
                 translation=facet_translation_vectors[i],
@@ -370,6 +375,12 @@ class SurfaceGenerator:
     ) -> SurfaceConfig:
         """
         Generate an ideal surface configuration.
+
+        The ideal surface configuration is composed of separate facets. Each facet is defined by ideal control points,
+        meaning the control points start as 3D points on a flat, equidistant grid around the origin. These control points 
+        are then canted (rotated) and translated to the facet positions. Initializing a surface from this configuration 
+        results in an ideal heliostat surface without dents or bulges. This ideal heliostat surface can be used as a starting 
+        point for a surface reconstruction based on measured flux distributions.
 
         Parameters
         ----------
