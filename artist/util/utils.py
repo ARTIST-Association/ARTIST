@@ -620,11 +620,11 @@ def normalize_bitmaps(
     ----------
     flux_distributions : torch.Tensor
         The flux distributions to be normalized.
-    target_area_widths : troch.Tensor
+    target_area_widths : torch.Tensor
         The target area widths.
-    target_area_heights : troch.Tensor
+    target_area_heights : torch.Tensor
         The target area heights.
-    number_of_rays : troch.Tensor
+    number_of_rays : torch.Tensor
         The number of rays used to generate the flux.
 
     Returns

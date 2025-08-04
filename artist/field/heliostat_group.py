@@ -164,7 +164,7 @@ class HeliostatGroup:
         Activate certain heliostats for alignment, raytracing or calibration.
 
         Select and repeat indices of all active heliostat and kinematic parameters once according
-        to the mask. Doing this once instead of slicing everytime when accessing one
+        to the mask. Doing this once instead of slicing every time when accessing one
         of those parameter tensors saves memory.
 
         Parameters

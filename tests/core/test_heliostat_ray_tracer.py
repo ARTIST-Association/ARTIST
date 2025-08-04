@@ -50,7 +50,7 @@ def test_trace_rays_unaligned_heliostats_error(
     device: torch.device,
 ) -> None:
     """
-    Test that unanligned heliostats raise ValueError while raytracing.
+    Test that unaligned heliostats raise ValueError while raytracing.
 
     Parameters
     ----------
