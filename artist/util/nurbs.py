@@ -8,7 +8,7 @@ class NURBSSurfaces(torch.nn.Module):
     """
     Implement differentiable NURBS for surface representations.
 
-    This implementation can be used to create multiple seperate NURBS surfaces at the same time
+    This implementation can be used to create multiple separate NURBS surfaces at the same time
     and they are handled in parallel.
 
     Attributes
@@ -17,6 +17,12 @@ class NURBSSurfaces(torch.nn.Module):
         The spline degrees.
     control_points : torch.Tensor
         The control points.
+    uniform : bool
+        Indicates wether the NURBS are uniform or not.
+    number_of_surfaces : int
+        The number of NURBS surfaces processed in parallel.
+    number_of_facets_per_surface : int
+        The number of facets per single NURBS surface.
     knot_vectors_u : torch.Tensor
         The knot vectors in the u direction.
     knot_vectors_v : torch.Tensor
@@ -33,7 +39,7 @@ class NURBSSurfaces(torch.nn.Module):
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surfaces.
     forward()
-        Specify the forward operation of the NURBS, i.e. caluclate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
     """
 
     def __init__(
@@ -574,7 +580,7 @@ class NURBSSurfaces(torch.nn.Module):
         self, evaluation_points: torch.Tensor, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Specify the forward operation of the NURBS, i.e. caluclate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
 
         Parameters
         ----------
