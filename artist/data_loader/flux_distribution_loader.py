@@ -29,7 +29,7 @@ def load_flux_from_png(
     heliostat_names : list[str]
         All possible heliostat names.
     resolution : torch.Tensor
-        The resolution of the loaded png files (default is torch.tensor([256, 256])).
+        The resolution of the loaded png files (default is torch.tensor([256,256])).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate

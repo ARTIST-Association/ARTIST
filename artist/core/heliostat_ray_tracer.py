@@ -243,7 +243,7 @@ class HeliostatRayTracer:
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution : torch.Tensor
-            The resolution of the bitmap (default is torch.tensor([256, 256])).
+            The resolution of the bitmap (default is torch.tensor([256,256])).
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group

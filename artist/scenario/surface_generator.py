@@ -50,9 +50,9 @@ class SurfaceGenerator:
         Parameters
         ----------
         number_of_control_points : torch.Tensor
-            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20, 20])).
+            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20,20])).
         degrees : torch.Tensor
-            Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
+            Degree of the NURBS in the east and north direction (default is torch.tensor([3,3])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate

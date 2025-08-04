@@ -589,7 +589,7 @@ def extract_paint_heliostats(
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
     number_of_nurbs_control_points : torch.Tensor
-        The number of NURBS control points in both dimensions (default is torch.tensor([10, 10])).
+        The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
     deflectometry_step_size : torch.Tensor
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
