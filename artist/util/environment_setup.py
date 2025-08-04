@@ -108,7 +108,7 @@ def create_subgroups_for_nested_ddp(
             ranks_to_groups_mapping[group].append(single_rank)
 
     group_handles = {}
-    # Set default values for when the current proces (rank) is not in a heliostat group.
+    # Set default values for when the current process (rank) is not in a heliostat group.
     heliostat_group_rank = 0
     heliostat_group_world_size = 1
     process_subgroup = None

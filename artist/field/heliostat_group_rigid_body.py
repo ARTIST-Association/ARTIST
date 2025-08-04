@@ -138,7 +138,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         Align surface points and surface normals with incident ray directions.
 
         This method uses incident ray directions to align the heliostats. It is possible to
-        have different incident ray directions for different helisotats, for example during
+        have different incident ray directions for different heliostats, for example during
         calibration tasks. Heliostats can be selected and deselected if only a subset should
         be aligned with the active heliostat indices parameter.
 

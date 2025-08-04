@@ -290,7 +290,7 @@ class HeliostatRayTracer:
         Perform heliostat ray tracing.
 
         Scatter the rays according to the distortions, calculate the intersections with the target planes,
-        and sample the resulting bitmaps on the target areas. The bitmaps are generated seperatly for each
+        and sample the resulting bitmaps on the target areas. The bitmaps are generated separately for each
         active heliostat and can be accessed individually or they can be combined to get the total flux
         density distribution for all heliostats on all target areas.
 

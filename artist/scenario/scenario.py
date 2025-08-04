@@ -246,7 +246,7 @@ class Scenario:
 
         If no mapping is provided, a default mapping for all heliostats within this group will be created.
         The default mapping will map all heliostats to the default ``single_incident_ray_direction``, which
-        simualtes a light source positioned in the south and the default ``single_target_area_index``, which
+        simulates a light source positioned in the south and the default ``single_target_area_index``, which
         is 0. To overwrite these defaults, please provide a ``single_incident_ray_direction`` or a
         ``single_target_area_index``.
 
@@ -257,7 +257,7 @@ class Scenario:
         string_mapping : list[tuple[str, str, torch.Tensor]] | None
             Strings that map heliostats to target areas and incident ray direction tensors (default is None).
         single_incident_ray_direction : torch.Tensor
-            The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+            The default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
         single_target_area_index : int
             The default target area index (default is 0).
         device : torch.device | None
