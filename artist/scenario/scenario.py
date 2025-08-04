@@ -109,7 +109,7 @@ class Scenario:
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet (default is torch.tensor([50, 50])).
+            The number of surface points per facet (default is torch.tensor([50,50])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
