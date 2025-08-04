@@ -55,7 +55,8 @@ def load_flux_from_png(
                 Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
             )
             bitmap_tensor = torch.tensor(bitmap_data.getdata(), device=device)
-            bitmap_tensor = bitmap_tensor.view(resolution[0], resolution[1]) / 255.0
+            # Normalize pixel values from [0, 255] to [0.0, 1.0] (grayscale pixel values are in the range [0, 255]).
+            bitmap_tensor = bitmap_tensor.view(resolution[1], resolution[0]) / 255.0
             bitmap = bitmap_tensor.squeeze(0)
             bitmaps[bitmap_index] = bitmap
         flux_data_per_heliostat[heliostat_name] = bitmaps
