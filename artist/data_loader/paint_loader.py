@@ -572,8 +572,9 @@ def extract_paint_heliostats(
     deflectometry_step_size: int = 100,
     nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
     nurbs_fit_tolerance: float = 1e-10,
-    nurbs_fit_initial_learning_rate: float = 1e-3,
     nurbs_fit_max_epoch: int = 400,
+    nurbs_fit_optimizer: torch.optim.Optimizer | None = None,
+    nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     device: torch.device | None = None,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
     """
@@ -595,10 +596,12 @@ def extract_paint_heliostats(
         The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
     nurbs_fit_tolerance : float
         The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-    nurbs_fit_initial_learning_rate : float
-        The initial learning rate for the NURBS fit (default is 1e-3).
     nurbs_fit_max_epoch : int
         The maximum number of epochs for the NURBS fit (default is 400).
+    nurbs_fit_optimizer : torch.optim.Optimizer | None
+        The NURBS fit optimizer (default is None).
+    nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler | None
+        The NURBS fit learning rate scheduler (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -648,6 +651,11 @@ def extract_paint_heliostats(
                 )
             )
 
+            if nurbs_fit_optimizer is None:
+                raise ValueError(
+                    "When providing deflectometry data to generate surfaces with a NURBS fit, an optimizer needs to be provided!"
+                )
+
             # Include the surface configuration.
             surface_config = surface_generator.generate_fitted_surface_config(
                 heliostat_name=str(file_tuple[0]),
@@ -655,10 +663,11 @@ def extract_paint_heliostats(
                 canting=canting,
                 surface_points_with_facets_list=surface_points_with_facets_list,
                 surface_normals_with_facets_list=surface_normals_with_facets_list,
-                fit_method=nurbs_fit_method,
+                optimizer=nurbs_fit_optimizer,
+                scheduler=nurbs_fit_scheduler,
                 deflectometry_step_size=deflectometry_step_size,
+                fit_method=nurbs_fit_method,
                 tolerance=nurbs_fit_tolerance,
-                initial_learning_rate=nurbs_fit_initial_learning_rate,
                 max_epoch=nurbs_fit_max_epoch,
                 device=device,
             )
