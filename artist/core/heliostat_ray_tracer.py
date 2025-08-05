@@ -195,7 +195,8 @@ class HeliostatRayTracer:
     distortions_loader : DataLoader
         The dataloader that loads the distortions.
     bitmap_resolution : int
-        The resolution of the bitmap.
+        The resolution of the bitmap in both directions.
+        Tensor of shape [2].
 
     Methods
     -------
@@ -243,7 +244,8 @@ class HeliostatRayTracer:
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution : torch.Tensor
-            The resolution of the bitmap (default is torch.tensor([256,256])).
+            The resolution of the bitmap in both directions. (default is torch.tensor([256,256])).
+            Tensor of shape [2].
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group
@@ -298,11 +300,14 @@ class HeliostatRayTracer:
         ----------
         incident_ray_directions : torch.Tensor
             The direction of the incident rays as seen from the heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         active_heliostats_mask : torch.Tensor
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
+            Tensor of shape [number_of_heliostats].
         target_area_mask : torch.Tensor
             The indices of the target areas for each active heliostat.
+            Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -317,6 +322,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             The resulting bitmaps per heliostat.
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
         """
         device = get_device(device=device)
 
@@ -399,10 +405,13 @@ class HeliostatRayTracer:
         ----------
         distortion_u : torch.Tensor
             The distortions in up direction (angles for scattering).
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
         original_ray_direction : torch.Tensor
             The ray direction around which to scatter.
+            Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -445,12 +454,16 @@ class HeliostatRayTracer:
         ----------
         intersections : torch.Tensor
             The intersections of rays on the target area planes for each heliostat.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets, 4].
         absolute_intensities : torch.Tensor
             The absolute intensities of the rays hitting the target planes for each heliostat.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
         active_heliostats_mask : torch.Tensor
             Used to map bitmaps per heliostat to correct index.
+            Tensor of shape [number_of_heliostats].
         target_area_mask : torch.Tensor
             The indices of target areas on which each heliostat should be raytraced.
+            Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -460,6 +473,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             The flux density distributions of the reflected rays on the target areas for each active heliostat.
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
         """
         device = get_device(device=device)
 
@@ -663,8 +677,10 @@ class HeliostatRayTracer:
         ----------
         bitmaps_per_heliostat : torch.Tensor
             Bitmaps per heliostat.
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
         target_area_mask : torch.Tensor
             The mapping from heliostat to target area.
+            Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -674,6 +690,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             Bitmaps per target area.
+            Tensor of shape [number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u].
         """
         device = get_device(device=device)
 

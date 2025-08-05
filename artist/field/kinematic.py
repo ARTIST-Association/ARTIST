@@ -45,8 +45,10 @@ class Kinematic(torch.nn.Module):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         aim_points : torch.Tensor
             The aim points for the active heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -69,6 +71,7 @@ class Kinematic(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+            Tensor of shape [number_of_active_heliostats, 2].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -94,8 +97,10 @@ class Kinematic(torch.nn.Module):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         aim_points : torch.Tensor
             The aim points for the active heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -105,6 +110,7 @@ class Kinematic(torch.nn.Module):
         -------
         torch.Tensor
             The orientation matrices.
+            Tensor of shape [number_of_active_heliostats, 4, 4].
         """
         device = get_device(device=device)
 

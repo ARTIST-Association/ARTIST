@@ -268,11 +268,14 @@ class Scenario:
         Returns
         -------
         torch.Tensor
-            All incident ray directions for the heliostats in this scenario.
+            The mask specifying which heliostat is selected and how many times.
+            Tensor of shape [number_of_heliostats_in_group].
         torch.Tensor
-            The indices of all active heliostats in order.
+            The indices of target areas for all selected heliostats in order.
+            Tensor of shape [number_of_active_heliostats_in_group].
         torch.Tensor
-            The indices of target areas for all heliostats in order.
+            The incident ray directions for the selected heliostats in order.
+            Tensor of shape [number_of_active_heliostats_in_group, 4].
         """
         device = get_device(device=device)
 
