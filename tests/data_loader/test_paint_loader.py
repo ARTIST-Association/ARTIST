@@ -329,12 +329,24 @@ def test_extract_paint_heliostats(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
+    optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.2,
+        patience=50,
+        threshold=1e-7,
+        threshold_mode="abs",
+    )
+
     extracted_list = list(
         paint_loader.extract_paint_heliostats(
             paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
             number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
             nurbs_fit_max_epoch=max_epochs_for_surface_training,
+            nurbs_fit_optimizer=optimizer,
+            nurbs_fit_scheduler=scheduler,
             device=device,
         )
     )
@@ -376,6 +388,44 @@ def test_extract_paint_heliostats(
         extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 3],
         expected_heliostat[6].to(device),
     )
+
+
+def test_extract_paint_heliostat_no_optimizer(device: torch.device) -> None:
+    """
+    Test the heliostat extraction errors for ``PAINT`` data.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    heliostat_and_deflectometry_paths = [
+        (
+            "heliostat_1",
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/field_data/AA39-heliostat-properties.json",
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/field_data/AA39-deflectometry.h5",
+        )
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        paint_loader.extract_paint_heliostats(
+            paths=heliostat_and_deflectometry_paths,
+            power_plant_position=torch.tensor([50.91342112259258, 6.387824755874856, 87.0], device=device),
+            number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
+            nurbs_fit_max_epoch=2,
+            device=device,
+        )
+
+        assert (
+            "When providing deflectometry data to generate surfaces with a NURBS fit, an optimizer needs to be provided!"
+            in str(exc_info.value)
+        )
 
 
 @pytest.mark.parametrize(

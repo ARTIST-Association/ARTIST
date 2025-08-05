@@ -260,6 +260,7 @@ def convert_3d_points_to_4d_format(
     ----------
     points : torch.Tensor
         Input points in a 3D format.
+        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -274,6 +275,7 @@ def convert_3d_points_to_4d_format(
     -------
     torch.Tensor
         Point vector with ones appended at the last dimension.
+        Tensor of shape [..., 4].
     """
     device = get_device(device=device)
 
@@ -299,6 +301,7 @@ def convert_3d_directions_to_4d_format(
     ----------
     directions : torch.Tensor
         Input direction in a 3D format.
+        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -313,6 +316,7 @@ def convert_3d_directions_to_4d_format(
     -------
     torch.Tensor
         Direction vectors with ones appended at the last dimension.
+        Tensor of shape [..., 4].
     """
     device = get_device(device=device)
 
@@ -329,22 +333,27 @@ def convert_3d_directions_to_4d_format(
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
-    Normalize points in a tensor to the open interval of (0,1).
+    Normalize each column of a 2D tensor to the open interval (0, 1).
 
     Parameters
     ----------
     points : torch.Tensor
         A tensor containing points to be normalized.
+        Tensor of shape [number_of_points, 2].
 
     Returns
     -------
     torch.Tensor
         The normalized points.
+        Tensor of shape [number_of_points, 2].
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    range = points - min(points)
-    points_normalized = (range + 1e-5) / max(range + 2e-5)
-    return points_normalized
+    min_vals = torch.min(points, dim=0).values
+    point_range = points - min_vals
+    max_vals = torch.max(point_range + 2e-5, dim=0).values
+    normalized = (point_range + 1e-5) / max_vals
+    
+    return normalized
 
 
 def decompose_rotations(
@@ -501,12 +510,16 @@ def get_center_of_mass(
     ----------
     bitmaps : torch.Tensor
         The flux densities in form of bitmaps.
+        Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     target_centers : torch.Tensor
         The positions of the centers of the targets.
+        Tensor of shape [number_of_active_heliostats, 4].
     target_widths : float
         The widths of the target surfaces.
+        Tensor of shape [number_of_active_heliostats].
     target_heights : float
         The heights of the target surfaces.
+        Tensor of shape [number_of_active_heliostats].
     threshold : float
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : torch.device | None
@@ -518,6 +531,7 @@ def get_center_of_mass(
     -------
     torch.Tensor
         The coordinates of the flux density centers of mass.
+        Tensor of shape [number_of_active_heliostats, 4].
     """
     device = get_device(device=device)
 
@@ -580,6 +594,7 @@ def create_nurbs_evaluation_grid(
     ----------
     number_of_evaluation_points : torch.Tensor
         The number of nurbs evaluation points in east and north direction.
+        Tensor of shape [2].
     epsilon : float
         Offset for the nurbs evaluation points (default is 1e-7).
         NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
@@ -593,6 +608,7 @@ def create_nurbs_evaluation_grid(
     -------
     torch.Tensor
         The evaluation points.
+        Tensor of shape [number_of_evaluation_points_e * number_of_evaluation_points_e, 2].
     """
     device = get_device(device=device)
 
@@ -620,17 +636,22 @@ def normalize_bitmaps(
     ----------
     flux_distributions : torch.Tensor
         The flux distributions to be normalized.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     target_area_widths : torch.Tensor
         The target area widths.
+        Tensor of shape [number_of_bitmaps].
     target_area_heights : torch.Tensor
         The target area heights.
+        Tensor of shape [number_of_bitmaps].
     number_of_rays : torch.Tensor
         The number of rays used to generate the flux.
+        Tensor of shape [number_of_bitmaps].
 
     Returns
     -------
     torch.Tensor
         The normalized and scaled flux density distributions.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     """
     plane_areas = target_area_widths * target_area_heights
     num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]

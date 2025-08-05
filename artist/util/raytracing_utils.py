@@ -15,13 +15,17 @@ def reflect(
     ----------
     incident_ray_directions : torch.Tensor
         The direction of the incident ray as seen from the heliostats.
+        Tensor of shape [number_of_active_heliostats, 1, 4].
     reflection_surface_normals : torch.Tensor
         The normals of the reflective surfaces.
+        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]
 
     Returns
     -------
     torch.Tensor
         The reflected rays.
+        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]
+
     """
     return (
         incident_ray_directions
@@ -50,11 +54,13 @@ def line_plane_intersections(
         The rays.
     points_at_ray_origins : torch.Tensor
         The surface points of the ray origins.
+        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
     target_areas : TowerTargetAreas
         All possible tower target areas with their properties.
     target_area_mask : torch.Tensor | None
         The indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
+        Tensor of shape [number_of_active_heliostats].
     epsilon : float
         A small value corresponding to the upper limit (default: 1e-6).
     device : torch.device | None
@@ -71,8 +77,10 @@ def line_plane_intersections(
     -------
     torch.Tensor
         The intersections of the lines and planes.
+        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets, 4].
     torch.Tensor
         The absolute intensities of the rays hitting the target planes.
+        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
     """
     device = get_device(device=device)
 

@@ -33,14 +33,19 @@ class KinematicOptimizer:
         The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
     focal_spots_measured : torch.Tensor
         The center coordinates of the calibration flux densities.
+        Tensor of shape [number_of_calibration_data_points, 4].
     incident_ray_directions : torch.Tensor
         The incident ray directions specified in the calibrations.
+        Tensor of shape [number_of_calibration_data_points, 4].
     motor_positions : torch.Tensor
         The motor positions specified in the calibration files.
+        Tensor of shape [number_of_calibration_data_points, 2].
     heliostats_mask : torch.Tensor
         A mask for the selected heliostats for calibration.
+        Tensor of shape [number_of_heliostats].
     target_area_mask : torch.Tensor
         The indices of the target area for each calibration.
+        Tensor of shape [number_of_active_heliostats].
     num_log : int
         The number of log statements during optimization.
     initial_learning_rate : float

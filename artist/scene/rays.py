@@ -8,9 +8,11 @@ class Rays:
     Attributes
     ----------
     ray_directions : torch.Tensor
-        The direction of the rays, with each ray saved as a 4D vector.
+        The direction of the rays.
+        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
     ray_magnitudes : torch.Tensor
         The magnitudes of the rays.
+        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
     """
 
     def __init__(
@@ -27,10 +29,12 @@ class Rays:
         Parameters
         ----------
         ray_directions : torch.Tensor
-            The direction of the rays, with each ray saved as a 4D vector.
+            The direction of the rays.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
         ray_magnitudes : torch.Tensor
             The magnitudes of the rays.
-
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+        
         Raises
         ------
         ValueError

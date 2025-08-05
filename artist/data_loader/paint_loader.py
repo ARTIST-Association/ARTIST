@@ -46,6 +46,7 @@ def extract_paint_calibration_properties_data(
         The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
         The power plant position.
+        Tensor of shape [3].
     heliostat_names : list[str]
         All possible heliostat names.
     target_area_names : list[str]
@@ -59,14 +60,19 @@ def extract_paint_calibration_properties_data(
     -------
     torch.Tensor
         The calibration focal spots.
+        Tensor of shape [number_of_calibration_data_points, 4].
     torch.Tensor
-        The light source positions.
+        The incident ray directions.
+        Tensor of shape [number_of_calibration_data_points, 4].
     torch.Tensor
         The motor positions.
+        Tensor of shape [number_of_calibration_data_points, 2].
     torch.Tensor
         A mask with active heliostats and their replications.
+        Tensor of shape [number_of_heliostats].
     torch.Tensor
         The target area mapping for the heliostats.
+        Tensor of shape [number_of_active_heliostats].
     """
     device = get_device(device=device)
 
@@ -302,6 +308,7 @@ def extract_paint_heliostat_properties(
     heliostat_properties_path : pathlib.Path
         The path to the heliostat properties file.
     power_plant_position : torch.Tensor
+        Tensor of shape [3].
         The power plant position.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -312,14 +319,18 @@ def extract_paint_heliostat_properties(
     -------
     torch.Tensor
         The heliostat position.
+        Tensor of shape [4].
     torch.Tensor
         The facet translation vectors.
+        Tensor of shape [number_of_facets, 4].
     torch.Tensor
-        The facet canting vectors.
+        The facet canting vectors in east and north direction.
+        Tensor of shape [number_of_facets, 2, 4].
     KinematicDeviations
         The kinematic deviation parameters.
     torch.Tensor
         The initial orientation.
+        Tensor of shape [4].
     list[tuple[str, bool, ActuatorParameters]]
         The actuator parameter list.
     """
@@ -369,6 +380,13 @@ def extract_paint_heliostat_properties(
             ][facet][config_dictionary.paint_canting_n],
             device=device,
         )
+    
+    # Convert to 4D format.
+    facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
+        facet_translation_vectors, device=device
+    )
+    canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
+
 
     kinematic_deviations = KinematicDeviations(
         first_joint_translation_e=torch.tensor(
@@ -588,9 +606,11 @@ def extract_paint_heliostats(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
+        Tensor of shape [3].
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
-    deflectometry_step_size : torch.Tensor
+        Tensor of shape [2].
+    deflectometry_step_size : int
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
         The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
@@ -813,8 +833,10 @@ def convert_wgs84_coordinates_to_local_enu(
     ----------
     coordinates_to_transform : torch.Tensor
         The coordinates in latitude, longitude, altitude that are to be transformed.
+        Tensor of shape [number_of_coordinates, 3].
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
+        Tensor of shape [3].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -824,6 +846,7 @@ def convert_wgs84_coordinates_to_local_enu(
     -------
     torch.Tensor
         The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
+        Tensor of shape [number_of_coordinates, 3].
     """
     device = get_device(device=device)
 
@@ -873,12 +896,16 @@ def corner_points_to_plane(
     ----------
     upper_left : torch.Tensor
         The upper left corner coordinate.
+        Tensor of shape [3].
     upper_right : torch.Tensor
         The upper right corner coordinate.
+        Tensor of shape [3].
     lower_left : torch.Tensor
         The lower left corner coordinate.
+        Tensor of shape [3].
     lower_right : torch.Tensor
         The lower right corner coordinate.
+        Tensor of shape [3].
 
     Returns
     -------

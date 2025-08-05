@@ -4,6 +4,7 @@ import struct
 
 import torch
 
+from artist.util import utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ log = logging.getLogger(__name__)
 def extract_stral_deflectometry_data(
     stral_file_path: pathlib.Path,
     device: torch.device | None = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
     """
     Extract deflectometry data from a ```STRAL`` file.
 
@@ -30,11 +31,13 @@ def extract_stral_deflectometry_data(
     -------
     torch.Tensor
         The facet translation vectors.
+        Tensor of shape [number_of_facets, 4].
     torch.Tensor
         The facet canting vectors.
-    torch.Tensor
+        Tensor of shape [number_of_facets, 2, 4].
+    list[torch.Tensor]
         The surface points per facet.
-    torch.Tensor
+    list[torch.Tensor]
         The surface normals per facet.
     """
     device = get_device(device=device)
@@ -93,6 +96,13 @@ def extract_stral_deflectometry_data(
                 )
             surface_points_with_facets_list.append(single_facet_surface_points)
             surface_normals_with_facets_list.append(single_facet_surface_normals)
+
+        # Convert to 4D format.
+        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
+            facet_translation_vectors, device=device
+        )
+        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
+
 
     log.info("Loading ``STRAL`` data complete.")
 

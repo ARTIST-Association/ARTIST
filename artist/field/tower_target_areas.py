@@ -26,13 +26,17 @@ class TowerTargetAreas:
     geometries : list[str]
         THe type of geometry of each target area.
     centers : torch.Tensor
-        The center coordinate of each target area.
+        The center point coordinate of each target area.
+        Tensor of shape [number_of_target_areas, 4].
     normal_vectors : torch.Tensor
         The normal vector of each target area.
+        Tensor of shape [number_of_target_areas, 4].
     dimensions : torch.Tensor
-        The dimensions of each target area (width and height).
+        The dimensions of each target area (width, then height).
+        Tensor of shape [number_of_target_areas, 2].
     curvatures : torch.Tensor
-        The curvature of the target area (0.0 if not applicable).
+        The curvature of the target area in 2 dimensions (0.0 if not applicable).
+        Tensor of shape [number_of_target_areas, 2].
     number_of_target_areas : int
         The total number of target areas on all towers in the scenario.
 
@@ -63,15 +67,19 @@ class TowerTargetAreas:
         names : list[str]
             The names of each target area.
         geometries : list[str]
-            THe type of geometry of each target area.
+            The type of geometry of each target area.
         centers : torch.Tensor
-            The center coordinate of each target area.
+            The center point coordinate of each target area.
+            Tensor of shape [number_of_target_areas, 4].
         normal_vectors : torch.Tensor
             The normal vector of each target area.
+            Tensor of shape [number_of_target_areas, 4].
         dimensions : torch.Tensor
-            The dimensions of each target area (width and height).
+            The dimensions of each target area (width, then height).
+            Tensor of shape [number_of_target_areas, 2].
         curvatures : torch.Tensor
-            The curvature of the target area (0.0 if not applicable).
+            The curvature of the target area in 2 dimensions (0.0 if not applicable).
+            Tensor of shape [number_of_target_areas, 2].
         """
         self.names = names
         self.geometries = geometries
