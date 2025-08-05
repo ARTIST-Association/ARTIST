@@ -4,10 +4,9 @@ import h5py
 import torch
 
 from artist.core.kinematic_optimizer import KinematicOptimizer
-from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util import config_dictionary, set_logger_config
+from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -19,99 +18,93 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_four_heliostats.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
-# Please follow the following style: list[tuple[str, list[pathlib.Path]]]
-heliostat_calibration_mapping = [
+# Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+heliostat_data_mapping = [
     (
-        "first_heliostat",
+        "heliostat_name_1",
         [
             pathlib.Path(
                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            # pathlib.Path(
-            #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            # ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
     (
-        "second_heliostat",
+        "heliostat_name_2",
         [
             pathlib.Path(
                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
-            # pathlib.Path(
-            #      "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            # ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
         ],
     ),
     # ...
 ]
 
-# Load the scenario.
-with h5py.File(scenario_path, "r") as scenario_file:
-    scenario = Scenario.load_scenario_from_hdf5(
-        scenario_file=scenario_file, device=device
-    )
+number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
+    scenario_path=scenario_path
+)
 
-for heliostat_group_index, heliostat_group in enumerate(
-    scenario.heliostat_field.heliostat_groups
+with setup_distributed_environment(
+    number_of_heliostat_groups=number_of_heliostat_groups,
+    device=device,
+) as (
+    device,
+    is_distributed,
+    is_nested,
+    rank,
+    world_size,
+    process_subgroup,
+    groups_to_ranks_mapping,
+    heliostat_group_rank,
+    heliostat_group_world_size,
 ):
-    # Load the calibration data.
-    (
-        focal_spots_calibration,
-        incident_ray_directions_calibration,
-        motor_positions_calibration,
-        heliostats_mask_calibration,
-        target_area_mask_calibration,
-    ) = paint_loader.extract_paint_calibration_data(
-        heliostat_calibration_mapping=[
-            (heliostat_name, paths)
-            for heliostat_name, paths in heliostat_calibration_mapping
-            if heliostat_name in heliostat_group.names
-        ],
-        heliostat_names=heliostat_group.names,
-        target_area_names=scenario.target_areas.names,
-        power_plant_position=scenario.power_plant_position,
-        device=device,
-    )
+    # Load the scenario.
+    with h5py.File(scenario_path, "r") as scenario_file:
+        scenario = Scenario.load_scenario_from_hdf5(
+            scenario_file=scenario_file, device=device
+        )
 
-    # Set up optimizer and scheduler.
-    tolerance = 0.0005
-    max_epoch = 1000
-    initial_learning_rate = 0.0001
+    for heliostat_group_index in groups_to_ranks_mapping[rank]:
+        # If there are more ranks than heliostat groups, some ranks will be left idle.
+        if rank < scenario.heliostat_field.number_of_heliostat_groups:
+            heliostat_group = scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
 
-    use_ray_tracing = False
-    if use_ray_tracing:
-        motor_positions_calibration = None
-        tolerance = 0.035
-        max_epoch = 1000
-        initial_learning_rate = 0.0005
+            # Choose calibration method.
+            kinematic_calibration_method = (
+                config_dictionary.kinematic_calibration_raytracing
+            )
 
-    optimizer = torch.optim.Adam(
-        heliostat_group.kinematic.parameters(), lr=initial_learning_rate
-    )
+            # Set optimizer parameters.
+            tolerance = 0.0005
+            max_epoch = 1000
+            initial_learning_rate = 0.0005
 
-    # Create the kinematic optimizer.
-    kinematic_optimizer = KinematicOptimizer(
-        scenario=scenario,
-        heliostat_group=heliostat_group,
-        optimizer=optimizer,
-    )
+            # Create the kinematic optimizer.
+            kinematic_optimizer = KinematicOptimizer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                heliostat_data_mapping=heliostat_data_mapping,
+                calibration_method=kinematic_calibration_method,
+                initial_learning_rate=initial_learning_rate,
+                tolerance=tolerance,
+                max_epoch=max_epoch,
+                num_log=10,
+                device=device,
+            )
 
-    # Calibrate the kinematic.
-    kinematic_optimizer.optimize(
-        focal_spots_calibration=focal_spots_calibration,
-        incident_ray_directions=incident_ray_directions_calibration,
-        active_heliostats_mask=heliostats_mask_calibration,
-        target_area_mask_calibration=target_area_mask_calibration,
-        motor_positions_calibration=motor_positions_calibration,
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        num_log=max_epoch,
-        device=device,
-    )
+            # Calibrate the kinematic.
+            kinematic_optimizer.optimize(device=device)

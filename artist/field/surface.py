@@ -1,8 +1,9 @@
 import torch
 
-from artist.field.facets_nurbs import NurbsFacet
 from artist.scenario.configuration_classes import SurfaceConfig
+from artist.util import utils
 from artist.util.environment_setup import get_device
+from artist.util.nurbs import NURBSSurfaces
 
 
 class Surface:
@@ -11,8 +12,10 @@ class Surface:
 
     Attributes
     ----------
-    facets : List[Facet]
-        A list of facets that comprise the surface of a heliostat.
+    nurbs_facets : list[NURBSSurface]
+        A list of one nurbs surface for each facet.
+    facet_translation_vectors : torch.Tensor
+        The facet translation vectors for all facets.
 
     Methods
     -------
@@ -20,9 +23,11 @@ class Surface:
         Calculate all surface points and normals from all facets.
     """
 
-    def __init__(self, surface_config: SurfaceConfig) -> None:
+    def __init__(
+        self, surface_config: SurfaceConfig, device: torch.device | None = None
+    ) -> None:
         """
-        Initialize the surface.
+        Initialize the surface of one heliostat.
 
         The heliostat surface consists of one or more facets. The surface only describes the mirrors
         on the heliostat, not the whole heliostat. The surface can be aligned through the kinematic and
@@ -33,32 +38,39 @@ class Surface:
         ----------
         surface_config : SurfaceConfig
             The surface configuration parameters used to construct the surface.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
-        self.facets = [
-            NurbsFacet(
-                control_points=facet_config.control_points,
-                degree_e=facet_config.degree_e,
-                degree_n=facet_config.degree_n,
-                number_eval_points_e=facet_config.number_eval_points_e,
-                number_eval_points_n=facet_config.number_eval_points_n,
-                translation_vector=facet_config.translation_vector,
-                canting_e=facet_config.canting_e,
-                canting_n=facet_config.canting_n,
+        device = get_device(device=device)
+
+        self.nurbs_facets = []
+
+        for facet_config in surface_config.facet_list:
+            self.nurbs_facets.append(
+                NURBSSurfaces(
+                    degrees=facet_config.degrees,
+                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(
+                        0
+                    ),
+                    device=device,
+                )
             )
-            for facet_config in surface_config.facet_list
-        ]
 
     def get_surface_points_and_normals(
-        self, device: torch.device | None = None
+        self,
+        number_of_points_per_facet: torch.Tensor,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate all surface points and normals from all facets.
 
-        Note: This method should only be used once nurbs are no longer being optimized.
-        The returned surface points and normals are detached from the computational graph.
-
         Parameters
         ----------
+        number_of_points_per_facet : torch.Tensor
+            The number of surface points per facet in east and then in north direction.
+            Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -67,27 +79,31 @@ class Surface:
         Returns
         -------
         torch.Tensor
-            The surface points, detached from the computational graph.
+            The surface points for one heliostat, tensor of shape [number_of_facets, number_of_surface_points_per_facet, 4].
         torch.Tensor
-            The surface normals, detached from the computational graph.
+            The surface normals for one heliostat, tensor of shape [number_of_facets, number_of_surface_normals_per_facet, 4].
         """
         device = get_device(device=device)
 
-        eval_point_per_facet = (
-            self.facets[0].number_eval_points_n * self.facets[0].number_eval_points_e
+        evaluation_points = utils.create_nurbs_evaluation_grid(
+            number_of_evaluation_points=number_of_points_per_facet, device=device
         )
+
+        # The surface points and surface normals will be returned as tensors of shape:
+        # [number_of_facets, number_of_surface_points_per_facet, 4] and
+        # [number_of_facets, number_of_surface_normals_per_facet, 4].
         surface_points = torch.empty(
-            len(self.facets), eval_point_per_facet, 4, device=device
+            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
         )
         surface_normals = torch.empty(
-            len(self.facets), eval_point_per_facet, 4, device=device
+            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
         )
-        for i, facet in enumerate(self.facets):
-            facet_surface = facet.create_nurbs_surface(device=device)
+        for i, nurbs_facet in enumerate(self.nurbs_facets):
             (
-                facet_points,
-                facet_normals,
-            ) = facet_surface.calculate_surface_points_and_normals(device=device)
-            surface_points[i] = (facet_points + facet.translation_vector).detach()
-            surface_normals[i] = facet_normals.detach()
+                surface_points[i],
+                surface_normals[i],
+            ) = nurbs_facet.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
+                device=device,
+            )
         return surface_points, surface_normals

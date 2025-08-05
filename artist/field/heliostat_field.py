@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, cast
 
 import h5py
 import torch
@@ -65,6 +65,7 @@ class HeliostatField:
         prototype_surface: "SurfaceConfig",
         prototype_kinematic: dict[str, str | torch.Tensor],
         prototype_actuators: dict[str, str | torch.Tensor],
+        number_of_points_per_facet: torch.Tensor,
         device: torch.device | None = None,
     ) -> Self:
         """
@@ -80,6 +81,9 @@ class HeliostatField:
             The prototype for the kinematic, including type, initial orientation and deviations.
         prototype_actuators : dict[str, str | torch.Tensor]
             The prototype for the actuators, including type and parameters.
+        number_of_points_per_facet : torch.Tensor
+            The number of surface points per facet in east and then in north direction.
+            Tensor of shape [2].
         device : device: torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -105,9 +109,9 @@ class HeliostatField:
         if rank == 0:
             log.info("Loading a heliostat field from an HDF5 file.")
 
-        grouped_field_data: defaultdict[str, defaultdict[str, list[Any]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
+        grouped_field_data: defaultdict[
+            str, defaultdict[str, list[str | torch.Tensor]]
+        ] = defaultdict(lambda: defaultdict(list))
 
         for heliostat_name in config_file[config_dictionary.heliostat_key].keys():
             single_heliostat_config = config_file[config_dictionary.heliostat_key][
@@ -229,7 +233,24 @@ class HeliostatField:
                     config_dictionary.actuator_parameters_key
                 ]
 
-            surface = Surface(surface_config)
+            surface = Surface(surface_config, device=device)
+
+            number_of_facets = len(surface_config.facet_list)
+            degrees = torch.empty(2, dtype=torch.int32, device=device)
+            # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+            # control_points: Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            control_points = torch.empty(
+                (
+                    number_of_facets,
+                    surface_config.facet_list[0].control_points.shape[0],
+                    surface_config.facet_list[0].control_points.shape[1],
+                    3,
+                ),
+                device=device,
+            )
+            for i in range(number_of_facets):
+                degrees = surface_config.facet_list[i].degrees
+                control_points[i] = surface_config.facet_list[i].control_points
 
             heliostat_group_key = f"{kinematic_type}_{actuator_type}"
 
@@ -250,13 +271,20 @@ class HeliostatField:
             grouped_field_data[heliostat_group_key][
                 config_dictionary.surface_points
             ].append(
-                surface.get_surface_points_and_normals(device=device)[0].reshape(-1, 4)
+                surface.get_surface_points_and_normals(
+                    number_of_points_per_facet=number_of_points_per_facet, device=device
+                )[0]
             )
             grouped_field_data[heliostat_group_key][
                 config_dictionary.surface_normals
             ].append(
-                surface.get_surface_points_and_normals(device=device)[1].reshape(-1, 4)
+                surface.get_surface_points_and_normals(
+                    number_of_points_per_facet=number_of_points_per_facet, device=device
+                )[1]
             )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.facet_control_points
+            ].append(control_points)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.initial_orientations
             ].append(initial_orientation)
@@ -280,6 +308,9 @@ class HeliostatField:
 
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
+            number_of_heliostats_in_group = len(
+                grouped_field_data[heliostat_group_name][config_dictionary.names]
+            )
             heliostat_groups.append(
                 type_mappings.heliostat_group_type_mapping[heliostat_group_name](
                     names=grouped_field_data[heliostat_group_name][
@@ -288,12 +319,22 @@ class HeliostatField:
                     positions=grouped_field_data[heliostat_group_name][
                         config_dictionary.positions
                     ],
-                    surface_points=grouped_field_data[heliostat_group_name][
-                        config_dictionary.surface_points
+                    surface_points=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            config_dictionary.surface_points
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
+                    surface_normals=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            config_dictionary.surface_normals
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
+                    nurbs_control_points=grouped_field_data[heliostat_group_name][
+                        config_dictionary.facet_control_points
                     ],
-                    surface_normals=grouped_field_data[heliostat_group_name][
-                        config_dictionary.surface_normals
-                    ],
+                    nurbs_degrees=degrees,
                     initial_orientations=grouped_field_data[heliostat_group_name][
                         config_dictionary.initial_orientations
                     ],

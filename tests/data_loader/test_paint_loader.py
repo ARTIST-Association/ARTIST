@@ -13,6 +13,9 @@ from artist.scenario.configuration_classes import (
     TargetAreaListConfig,
 )
 
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
+
 
 @pytest.mark.parametrize(
     "heliostat_calibration_mapping, power_plant_position, expected_list",
@@ -23,13 +26,9 @@ from artist.scenario.configuration_classes import (
                     "AA39",
                     [
                         pathlib.Path(ARTIST_ROOT)
-                        / pathlib.Path(
-                            "tests/data/field_data/AA39-calibration-properties_1.json"
-                        ),
+                        / "tests/data/field_data/AA39-calibration-properties_1.json",
                         pathlib.Path(ARTIST_ROOT)
-                        / pathlib.Path(
-                            "tests/data/field_data/AA39-calibration-properties_2.json"
-                        ),
+                        / "tests/data/field_data/AA39-calibration-properties_2.json",
                     ],
                 )
             ],
@@ -100,7 +99,7 @@ def test_extract_paint_calibration_data(
         If test does not complete as expected.
     """
     extracted_list = list(
-        paint_loader.extract_paint_calibration_data(
+        paint_loader.extract_paint_calibration_properties_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             power_plant_position=power_plant_position.to(device),
             heliostat_names=["AA31", "AA39"],
@@ -214,7 +213,7 @@ def test_extract_paint_tower_measurements(
 
 
 @pytest.mark.parametrize(
-    "heliostat_and_deflectometry_paths, power_plant_position, aim_point, max_epochs_for_surface_training, expected_types, expected_heliostat",
+    "heliostat_and_deflectometry_paths, power_plant_position, max_epochs_for_surface_training, expected_types, expected_heliostat",
     [
         (
             [
@@ -227,9 +226,6 @@ def test_extract_paint_tower_measurements(
                 )
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
-            torch.tensor(
-                [3.860326111317e-02, -5.029551386833e-01, 5.522674942017e01, 1.0]
-            ),
             2,
             [HeliostatListConfig, PrototypeConfig],
             [
@@ -241,23 +237,74 @@ def test_extract_paint_tower_measurements(
                 torch.tensor(154166.671875000000),
                 torch.tensor([0, 0, 1, 0]),
                 torch.tensor(
-                    [0.802484571934, 0.000000000000, -0.004984567873, 0.000000000000]
+                    [
+                        [
+                            8.024845719337e-01,
+                            0.000000000000e00,
+                            -4.984567873180e-03,
+                            0.000000000000e00,
+                        ],
+                        [
+                            1.956921187229e-05,
+                            6.374921798706e-01,
+                            3.150522708893e-03,
+                            0.000000000000e00,
+                        ],
+                    ]
                 ),
+                torch.tensor([-1.606200933456, 0.212735980749, 0.040915220976]),
             ],
-        )
+        ),
+        (
+            [
+                (
+                    "heliostat_1",
+                    pathlib.Path(ARTIST_ROOT)
+                    / "tests/data/field_data/AA39-heliostat-properties.json",
+                )
+            ],
+            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            2,
+            [HeliostatListConfig, PrototypeConfig],
+            [
+                torch.tensor(
+                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                ),
+                2,
+                "linear",
+                torch.tensor(154166.671875000000),
+                torch.tensor([0, 0, 1, 0]),
+                torch.tensor(
+                    [
+                        [
+                            8.024845719337e-01,
+                            0.000000000000e00,
+                            -4.984567873180e-03,
+                            0.000000000000e00,
+                        ],
+                        [
+                            1.956921187229e-05,
+                            6.374921798706e-01,
+                            3.150522708893e-03,
+                            0.000000000000e00,
+                        ],
+                    ]
+                ),
+                torch.tensor([-1.609997987747, 0.206321120262, 0.043028946966]),
+            ],
+        ),
     ],
 )
 def test_extract_paint_heliostats(
     heliostat_and_deflectometry_paths: list[tuple[str, pathlib.Path, pathlib.Path]],
     power_plant_position: torch.Tensor,
-    aim_point: torch.Tensor,
     max_epochs_for_surface_training: int,
     expected_types: list[Any],
     expected_heliostat: list[Any],
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat properties loader for ``PAINT`` data.
+    Test the heliostat extraction for ``PAINT`` data.
 
     Parameters
     ----------
@@ -265,8 +312,6 @@ def test_extract_paint_heliostats(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-    aim_point : torch.Tensor
-        The default aim point for the heliostats (Should ideally be on a receiver).
     max_epochs_for_surface_training : int
         The maximum amount of epochs for fitting the NURBS.
     expected_types : list[Any]
@@ -281,12 +326,27 @@ def test_extract_paint_heliostats(
     AssertionError
         If test does not complete as expected.
     """
+    torch.manual_seed(7)
+    torch.cuda.manual_seed(7)
+
+    optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.2,
+        patience=50,
+        threshold=1e-7,
+        threshold_mode="abs",
+    )
+
     extracted_list = list(
         paint_loader.extract_paint_heliostats(
-            heliostat_and_deflectometry_paths=heliostat_and_deflectometry_paths,
+            paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
-            aim_point=aim_point.to(device),
-            max_epochs_for_surface_training=max_epochs_for_surface_training,
+            number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
+            nurbs_fit_max_epoch=max_epochs_for_surface_training,
+            nurbs_fit_optimizer=optimizer,
+            nurbs_fit_scheduler=scheduler,
             device=device,
         )
     )
@@ -321,9 +381,52 @@ def test_extract_paint_heliostats(
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].surface.facet_list[0].canting_e,
+        extracted_list[0].heliostat_list[0].surface.facet_list[0].canting,
         expected_heliostat[5].to(device),
     )
+    torch.testing.assert_close(
+        extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 3],
+        expected_heliostat[6].to(device),
+    )
+
+
+def test_extract_paint_heliostat_no_optimizer(device: torch.device) -> None:
+    """
+    Test the heliostat extraction errors for ``PAINT`` data.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    heliostat_and_deflectometry_paths = [
+        (
+            "heliostat_1",
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/field_data/AA39-heliostat-properties.json",
+            pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA39-deflectometry.h5",
+        )
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        paint_loader.extract_paint_heliostats(
+            paths=heliostat_and_deflectometry_paths,
+            power_plant_position=torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0], device=device
+            ),
+            number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
+            nurbs_fit_max_epoch=2,
+            device=device,
+        )
+
+        assert (
+            "When providing deflectometry data to generate surfaces with a NURBS fit, an optimizer needs to be provided!"
+            in str(exc_info.value)
+        )
 
 
 @pytest.mark.parametrize(

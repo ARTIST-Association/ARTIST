@@ -7,7 +7,7 @@ from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.scenario.scenario_generator import ScenarioGenerator
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
@@ -30,6 +30,9 @@ tower_file = pathlib.Path(
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
+# or to create ideal heliostat surfaces, skip the deflectometry files and specify
+# a tuple of: (heliostat-name, heliostat-properties.json)
+
 heliostat_files_list = [
     (
         "name",
@@ -38,15 +41,13 @@ heliostat_files_list = [
         ),
         pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
-    # (
-    # "name2",
-    # pathlib.Path(
-    #     "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
-    # ),
-    # pathlib.Path(
-    #     "please/insert/the/path/to/the/paint/data/here/deflectometry.h5"
-    # ),
-    # ),
+    (
+        "name2",
+        pathlib.Path(
+            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+        ),
+        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
+    ),
     # ... Include as many as you want, but at least one!
 ]
 
@@ -86,17 +87,39 @@ target_area = [
     if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
+number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
+nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
+nurbs_deflectometry_step_size = 100
+nurbs_fit_tolerance = 1e-10
+nurbs_fit_max_epoch = 400
+
+# Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    nurbs_fit_optimizer,
+    mode="min",
+    factor=0.2,
+    patience=50,
+    threshold=1e-7,
+    threshold_mode="abs",
+)
+
 heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
-    heliostat_and_deflectometry_paths=heliostat_files_list,
+    paths=heliostat_files_list,
     power_plant_position=power_plant_config.power_plant_position,
-    aim_point=target_area[0].center,
+    number_of_nurbs_control_points=number_of_nurbs_control_points,
+    deflectometry_step_size=nurbs_deflectometry_step_size,
+    nurbs_fit_method=nurbs_fit_method,
+    nurbs_fit_tolerance=nurbs_fit_tolerance,
+    nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+    nurbs_fit_optimizer=nurbs_fit_optimizer,
+    nurbs_fit_scheduler=nurbs_fit_scheduler,
     device=device,
 )
 
-
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
-    scenario_generator = ScenarioGenerator(
+    scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
         target_area_list_config=target_area_list_config,

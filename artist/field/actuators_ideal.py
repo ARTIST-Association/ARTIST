@@ -11,8 +11,11 @@ class IdealActuators(Actuators):
     ----------
     actuator_parameters : torch.Tensor
         The actuator parameters.
+        Tensor of shape [number_of_heliostats, 2, 2].
     active_actuator_parameters : torch.Tensor
         The active actuator parameters.
+        Tensor of shape [number_of_active_heliostats, 2, 2].
+
 
     Methods
     -------
@@ -36,6 +39,7 @@ class IdealActuators(Actuators):
         ----------
         actuator_parameters : torch.Tensor
             The two actuator parameters.
+            Tensor of shape [number_of_heliostats, 2, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -53,6 +57,7 @@ class IdealActuators(Actuators):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+            Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -75,6 +80,7 @@ class IdealActuators(Actuators):
         ----------
         angles : torch.Tensor
             The joint angles.
+            Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -84,5 +90,6 @@ class IdealActuators(Actuators):
         -------
         torch.Tensor
             The motor steps.
+            Tensor of shape [number_of_active_heliostats, 2].
         """
         return angles

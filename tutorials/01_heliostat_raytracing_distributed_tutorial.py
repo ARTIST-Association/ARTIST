@@ -18,9 +18,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_multiple_heliostat_groups.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -44,26 +42,25 @@ with setup_distributed_environment(
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            device=device,
         )
 
-    incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
-
     heliostat_target_light_source_mapping = None
-
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
     # heliostat_target_light_source_mapping = [
-    #     ("AA39", "receiver", incident_ray_direction),
-    #     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
+    #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+    #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+    #     (...)
     # ]
 
-    bitmap_resolution_e = 256
-    bitmap_resolution_u = 256
+    bitmap_resolution = torch.tensor([256, 256])
+
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution_e,
-            bitmap_resolution_u,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
         ),
         device=device,
     )
@@ -85,6 +82,14 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # The active_heliostats_mask is a tensor that shows the selection of active heliostats.
+        # For each index 0 indicates a deactivated heliostat and 1 an activated one.
+        # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
+        # It is a tensor of shape [number_of_heliostats_in_group].
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
+        )
+
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
@@ -99,10 +104,9 @@ with setup_distributed_environment(
             heliostat_group=heliostat_group,
             world_size=heliostat_group_world_size,
             rank=heliostat_group_rank,
-            batch_size=4,
+            batch_size=heliostat_group.number_of_active_heliostats,
             random_seed=heliostat_group_rank,
-            bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u,
+            bitmap_resolution=bitmap_resolution,
         )
 
         # Perform heliostat-based ray tracing.
