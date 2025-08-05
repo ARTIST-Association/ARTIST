@@ -409,14 +409,15 @@ def test_extract_paint_heliostat_no_optimizer(device: torch.device) -> None:
             "heliostat_1",
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/field_data/AA39-heliostat-properties.json",
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-deflectometry.h5",
+            pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA39-deflectometry.h5",
         )
     ]
     with pytest.raises(ValueError) as exc_info:
         paint_loader.extract_paint_heliostats(
             paths=heliostat_and_deflectometry_paths,
-            power_plant_position=torch.tensor([50.91342112259258, 6.387824755874856, 87.0], device=device),
+            power_plant_position=torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0], device=device
+            ),
             number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
             nurbs_fit_max_epoch=2,
             device=device,

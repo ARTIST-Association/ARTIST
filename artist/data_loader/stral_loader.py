@@ -103,7 +103,6 @@ def extract_stral_deflectometry_data(
         )
         canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
-
     log.info("Loading ``STRAL`` data complete.")
 
     return (

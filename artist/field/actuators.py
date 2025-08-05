@@ -125,7 +125,7 @@ class Actuators(torch.nn.Module):
         torch.Tensor
             The joint angles.
             Tensor of shape [number_of_active_heliostats, 2].
-            
+
         """
         device = get_device(device=device)
 

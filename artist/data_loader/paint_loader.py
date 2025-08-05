@@ -380,13 +380,12 @@ def extract_paint_heliostat_properties(
             ][facet][config_dictionary.paint_canting_n],
             device=device,
         )
-    
+
     # Convert to 4D format.
     facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
         facet_translation_vectors, device=device
     )
     canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
-
 
     kinematic_deviations = KinematicDeviations(
         first_joint_translation_e=torch.tensor(

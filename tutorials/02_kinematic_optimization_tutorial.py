@@ -85,7 +85,7 @@ with setup_distributed_environment(
 
             # Choose calibration method.
             kinematic_calibration_method = (
-                config_dictionary.kinematic_calibration_motor_positions
+                config_dictionary.kinematic_calibration_raytracing
             )
 
             # Set optimizer parameters.

@@ -121,9 +121,9 @@ class RigidBody(Kinematic):
         self,
         incident_ray_directions: torch.Tensor,
         aim_points: torch.Tensor,
+        device: torch.device | None = None,
         max_num_iterations: int = 2,
         min_eps: float = 0.0001,
-        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.

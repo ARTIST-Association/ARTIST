@@ -51,7 +51,9 @@ class Surface:
             self.nurbs_facets.append(
                 NURBSSurfaces(
                     degrees=facet_config.degrees,
-                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(0),
+                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(
+                        0
+                    ),
                     device=device,
                 )
             )
