@@ -108,7 +108,7 @@ def create_subgroups_for_nested_ddp(
             ranks_to_groups_mapping[group].append(single_rank)
 
     group_handles = {}
-    # Set default values for when the current proces (rank) is not in a heliostat group.
+    # Set default values for when the current process (rank) is not in a heliostat group.
     heliostat_group_rank = 0
     heliostat_group_world_size = 1
     process_subgroup = None
@@ -218,14 +218,11 @@ def setup_distributed_environment(
         )
     finally:
         if is_distributed:
-            torch.distributed.barrier(
-                device_ids=(
-                    [torch.cuda.current_device()]
-                    if torch.distributed.get_backend() == "nccl"
-                    else None
-                )
-            )
-            torch.distributed.destroy_process_group()
+            try:
+                if torch.distributed.is_initialized():
+                    torch.distributed.destroy_process_group()
+            except Exception as e:
+                print(f"Distributed cleanup failed: {e}")
 
 
 def distribute_groups_among_ranks(
