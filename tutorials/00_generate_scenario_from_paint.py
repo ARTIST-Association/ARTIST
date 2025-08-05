@@ -94,7 +94,7 @@ nurbs_fit_tolerance = 1e-10
 nurbs_fit_max_epoch = 400
 
 # Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
-nurbs_fit_optimizer = torch.optim.Adam([], lr=1e-3)
+nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
 nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     nurbs_fit_optimizer,
     mode="min",

@@ -13,7 +13,7 @@ class HeliostatGroup:
     The abstract heliostat group implements a template for the construction of inheriting heliostat groups, each
     with a specific kinematic type and specific actuator type. All heliostat groups together form the overall heliostat
     field. The abstract base class defines an align function that all heliostat groups need to overwrite
-    in order to align the heliostats within this group. The heliostat groups will be initialized with no active 
+    in order to align the heliostats within this group. The heliostat groups will be initialized with no active
     heliostats. The heliostats have to be selected and activated before alignment, raytracing or optimization can begin.
     The size of the first dimension of all ``active_...``-attributes varies depending on how many heliostats have been
     activated.

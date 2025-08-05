@@ -34,7 +34,7 @@ class Rays:
         ray_magnitudes : torch.Tensor
             The magnitudes of the rays.
             Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
-        
+
         Raises
         ------
         ValueError

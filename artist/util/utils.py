@@ -352,7 +352,7 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
     point_range = points - min_vals
     max_vals = torch.max(point_range + 2e-5, dim=0).values
     normalized = (point_range + 1e-5) / max_vals
-    
+
     return normalized
 
 

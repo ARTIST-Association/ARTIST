@@ -66,7 +66,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     preferred_reflection_directions : torch.Tensor
         The preferred reflection directions of all heliostats in the group.
         Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
-        
+
     Methods
     -------
     align_surfaces_with_incident_ray_directions()
