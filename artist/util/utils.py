@@ -660,28 +660,23 @@ def normalize_bitmaps(
     """
     device = get_device(device=device)
 
-    result = torch.zeros_like(flux_distributions, device=device)
-
-    valid_mask = flux_distributions.sum(dim=(1, 2)) != 0
-    valid_indices = valid_mask.nonzero(as_tuple=True)[0]
-
-    if valid_indices.numel() == 0:
-        return result
-
-    valid_flux = flux_distributions[valid_indices]
-
-    plane_areas = target_area_widths[valid_indices] * target_area_heights[valid_indices]
-    num_pixels = valid_flux.shape[1] * valid_flux.shape[2]
+    plane_areas = target_area_widths * target_area_heights
+    num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
     plane_area_per_pixel = plane_areas / num_pixels
 
-    normalized_fluxes = valid_flux / (
-        number_of_rays[valid_indices] * plane_area_per_pixel
+    normalized_fluxes = flux_distributions / (
+        number_of_rays * plane_area_per_pixel
     ).unsqueeze(-1).unsqueeze(-1)
 
-    scaled_fluxes = (
-        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
-    ) / torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
+    std = torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
+    std = std + 1e-6
 
-    result[valid_indices] = scaled_fluxes
+    standardized = (
+        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
+    ) / std
+    
+    valid_mask = (flux_distributions.sum(dim=(1, 2), keepdim=True) != 0).float()
+    
+    result = standardized * valid_mask  
     
     return result

@@ -130,7 +130,7 @@ def create_subgroups_for_nested_ddp(
             f"-Heliostat group world size: {heliostat_group_world_size}"
         )
 
-    return heliostat_group_rank, heliostat_group_world_size, process_subgroup
+    return heliostat_group_rank, heliostat_group_world_size, process_subgroup, ranks_to_groups_mapping
 
 
 @contextmanager
@@ -186,6 +186,7 @@ def setup_distributed_environment(
             heliostat_group_rank,
             heliostat_group_world_size,
             process_subgroup,
+            ranks_to_groups_mapping
         ) = create_subgroups_for_nested_ddp(
             rank=rank, groups_to_ranks_mapping=groups_to_ranks_mapping
         )
@@ -193,6 +194,7 @@ def setup_distributed_environment(
         heliostat_group_rank = 0
         heliostat_group_world_size = 1
         process_subgroup = None
+        ranks_to_groups_mapping = None
 
     try:
         yield {
@@ -205,6 +207,7 @@ def setup_distributed_environment(
             "groups_to_ranks_mapping": groups_to_ranks_mapping,
             "heliostat_group_rank": heliostat_group_rank,
             "heliostat_group_world_size": heliostat_group_world_size,
+            "ranks_to_groups_mapping": ranks_to_groups_mapping
         }
     finally:
         if is_distributed:
