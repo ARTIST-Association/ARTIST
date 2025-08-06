@@ -43,8 +43,12 @@ def load_flux_from_png(
         Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     """
     device = get_device(device=device)
-
-    log.info("Beginning extraction of flux distributions from .png files.")
+    rank = (
+        torch.distributed.get_rank()
+        if torch.distributed.is_available() and torch.distributed.is_initialized()
+        else 0
+    )
+    log.info(f"Rank {rank}: Beginning extraction of flux distributions from .png files.")
 
     flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(torch.Tensor)
 
@@ -91,11 +95,12 @@ def load_flux_from_png(
                 device=device,
             ),
             number_of_rays=measured_fluxes.sum(dim=[1, 2]),
+            device=device
         )
 
-        log.info("Loading measured flux density distributions complete.")
+        log.info(f"Rank {rank}: Loading measured flux density distributions complete.")
 
     else:
-        log.info("No measured flux density distributions were provided for this group.")
+        log.info(f"Rank {rank}: No measured flux density distributions were provided for this group.")
 
     return measured_fluxes

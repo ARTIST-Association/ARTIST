@@ -288,6 +288,7 @@ class SurfaceReconstructor:
                         self.target_area_mask
                     ][:, 1],
                     number_of_rays=ray_tracer.light_source.number_of_rays,
+                    device=device
                 )
 
                 loss_function = torch.nn.MSELoss()
