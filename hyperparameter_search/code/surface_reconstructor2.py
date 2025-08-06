@@ -183,8 +183,11 @@ class SurfaceReconstructor2:
                 device=device,
             )
 
+            idle = False
+            if rank >= heliostats_mask.sum():
+                idle = True
+            
             if heliostats_mask.sum() > 0:
-
                 evaluation_points = (
                     utils.create_nurbs_evaluation_grid(
                         number_of_evaluation_points=self.number_of_surface_points,
@@ -290,19 +293,42 @@ class SurfaceReconstructor2:
                     )
 
                     if ddp_setup["is_nested"]:
+                        #is_active = torch.tensor([1 if not idle else 0], device=device)
                         normalized_flux_distributions = torch.distributed.nn.functional.all_reduce(
                             normalized_flux_distributions,
                             group=ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
                         )
 
-                    loss_function = torch.nn.MSELoss()
-                    loss = loss_function(
-                        normalized_flux_distributions,
-                        normalized_measured_flux_distributions,
-                    )
+                    # loss_function = torch.nn.MSELoss()
+                    # loss = loss_function(
+                    #     normalized_flux_distributions,
+                    #     normalized_measured_flux_distributions,
+                    # )
+                    # loss.backward()
+
+                    if not idle:
+                        loss_function = torch.nn.MSELoss()
+                        loss = loss_function(
+                            normalized_flux_distributions,
+                            normalized_measured_flux_distributions,
+                        )
+                        try:
+                            loss.backward()
+                        except Exception as e:
+                            print(f"Rank {rank} crashed during backward: {e}")
                     
-                    loss.backward()
+                    else:
+                        # Idle rank: do safe dummy backward
+                        dummy = torch.tensor(0.0, requires_grad=True, device=device)
+                        dummy_out = dummy * 1.0  # force a grad_fn
+                        dummy_out.backward()
+
+                    # if rank in ddp_setup["ranks_to_groups_mapping"][heliostat_group_index]:
+                    #     print(f"rank {rank}, {ddp_setup['ranks_to_groups_mapping']}")
+                    #     torch.distributed.barrier(group=ddp_setup["process_subgroup"])
+                    
+                    print(f"rank {rank}")
                     if ddp_setup["is_nested"]:
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -315,7 +341,7 @@ class SurfaceReconstructor2:
                                     param.grad /= torch.distributed.get_world_size(ddp_setup["process_subgroup"])
                         
                     optimizer.step()
-
+                    print(f"hi rank {rank}")
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
