@@ -43,13 +43,13 @@ heliostat_files_list = [
         ),
         #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
-    (
-        "AC43",
-        pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
-        ),
-        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"),
-    ),
+    # (
+    #     "AC43",
+    #     pathlib.Path(
+    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
+    #     ),
+    #     pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"),
+    # ),
     # ... Include as many as you want, but at least one!
 ]
 # This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
