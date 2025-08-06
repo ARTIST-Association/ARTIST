@@ -628,6 +628,7 @@ def normalize_bitmaps(
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,
     number_of_rays: torch.Tensor,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Normalize a bitmap.
@@ -646,6 +647,10 @@ def normalize_bitmaps(
     number_of_rays : torch.Tensor
         The number of rays used to generate the flux.
         Tensor of shape [number_of_bitmaps].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -653,16 +658,30 @@ def normalize_bitmaps(
         The normalized and scaled flux density distributions.
         Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     """
-    plane_areas = target_area_widths * target_area_heights
-    num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
+    device = get_device(device=device)
+
+    result = torch.zeros_like(flux_distributions, device=device)
+
+    valid_mask = flux_distributions.sum(dim=(1, 2)) != 0
+    valid_indices = valid_mask.nonzero(as_tuple=True)[0]
+
+    if valid_indices.numel() == 0:
+        return result
+
+    valid_flux = flux_distributions[valid_indices]
+
+    plane_areas = target_area_widths[valid_indices] * target_area_heights[valid_indices]
+    num_pixels = valid_flux.shape[1] * valid_flux.shape[2]
     plane_area_per_pixel = plane_areas / num_pixels
 
-    normalized_fluxes = flux_distributions / (
-        number_of_rays * plane_area_per_pixel
+    normalized_fluxes = valid_flux / (
+        number_of_rays[valid_indices] * plane_area_per_pixel
     ).unsqueeze(-1).unsqueeze(-1)
 
     scaled_fluxes = (
         normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
     ) / torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
 
-    return scaled_fluxes
+    result[valid_indices] = scaled_fluxes
+    
+    return result
