@@ -17,6 +17,7 @@ def load_flux_from_png(
     heliostat_flux_path_mapping: list[tuple[str, list[pathlib.Path]]],
     heliostat_names: list[str],
     resolution: torch.Tensor = torch.tensor([256, 256]),
+    number_of_measurements: int = 4,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -54,9 +55,11 @@ def load_flux_from_png(
 
     resolution = tuple(resolution.to(device).tolist())
 
+    total_number_of_measurements = number_of_measurements * len(heliostat_flux_path_mapping)
+
     for heliostat_name, paths in heliostat_flux_path_mapping:
-        bitmaps = torch.empty((len(paths), resolution[0], resolution[1]), device=device)
-        for bitmap_index, path in enumerate(paths):
+        bitmaps = torch.empty((number_of_measurements, resolution[0], resolution[1]), device=device)
+        for bitmap_index, path in enumerate(paths[:number_of_measurements]):
             bitmap_data = (
                 Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
             )
@@ -66,10 +69,6 @@ def load_flux_from_png(
             bitmap = bitmap_tensor.squeeze(0)
             bitmaps[bitmap_index] = bitmap
         flux_data_per_heliostat[heliostat_name] = bitmaps
-
-    total_number_of_measurements = sum(
-        len(path_list) for _, path_list in heliostat_flux_path_mapping
-    )
 
     measured_fluxes = torch.empty(
         (total_number_of_measurements, resolution[0], resolution[1]), device=device

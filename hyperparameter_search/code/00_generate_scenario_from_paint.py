@@ -21,9 +21,10 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 control_points = 100
+number_of_heliostats = 2
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path(f"/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_{control_points}")
+scenario_path = pathlib.Path(f"/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_{number_of_heliostats}_cp_{control_points}")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -37,12 +38,33 @@ tower_file = pathlib.Path(
 
 heliostat_files_list = [
     (
+        "AA31",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+        ),
+        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+    ),
+    (
         "AA39",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
         #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
+    # (
+    #     "AD37",
+    #     pathlib.Path(
+    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/heliostat-properties.json"
+    #     ),
+    #     #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+    # ),
+    # (
+    #     "AU46",
+    #     pathlib.Path(
+    #         "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/heliostat-properties.json"
+    #     ),
+    #     #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+    # ),
     # (
     #     "AC43",
     #     pathlib.Path(

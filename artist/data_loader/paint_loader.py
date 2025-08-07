@@ -35,6 +35,7 @@ def extract_paint_calibration_properties_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
+    number_of_measurements: int = 4,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -87,7 +88,7 @@ def extract_paint_calibration_properties_data(
     calibration_data_per_heliostat = defaultdict(list)
 
     for heliostat_name, paths in heliostat_calibration_mapping:
-        for path in paths:
+        for path in paths[:number_of_measurements]:
             with open(path, "r") as f:
                 calibration_data_dict = json.load(f)
             replication_counter[heliostat_name] += 1

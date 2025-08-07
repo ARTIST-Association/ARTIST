@@ -1,0 +1,21 @@
+{
+    "motor_position": {
+        "axis_1_motor_position": 43520,
+        "axis_2_motor_position": 59847
+    },
+    "target_name": "multi_focus_tower",
+    "focal_spot": {
+        "HeliOS": [
+            50.91339561830127,
+            6.387575320413119,
+            138.92680921300868
+        ],
+        "UTIS": [
+            50.913395620694814,
+            6.387575740761786,
+            138.8368911743164
+        ]
+    },
+    "sun_elevation": 20.071033266763322,
+    "sun_azimuth": -34.09041259874373
+}
