@@ -23,25 +23,43 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_paths = [
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_5.h5"
-    ),
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_6.h5"
-    ),
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_10.h5"
-    ),
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_20.h5"
-    ),
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_50.h5"
-    ),
-    pathlib.Path(
-        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_cp_100.h5"
-    ),
+scenario_paths_and_measurements = [
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_5.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_6.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_10.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_20.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_50.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_100.h5"
+    ), 4),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_5.h5"
+    ), 2),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_6.h5"
+    ), 2),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_10.h5"
+    ), 2),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_20.h5"
+    ), 2),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_50.h5"
+    ), 2),
+    (pathlib.Path(
+        "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_4_cp_100.h5"
+    ), 2),
 ]
 
 # Also specify the heliostats to be calibrated and the paths to your measured flux density distributions.
@@ -59,15 +77,21 @@ heliostat_data_mapping = [
             pathlib.Path(
                 "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
             ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
-            # ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"
+            ),
         ],
         [
             pathlib.Path(
@@ -79,21 +103,162 @@ heliostat_data_mapping = [
             pathlib.Path(
                 "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
             ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-flux-centered.png"
-            # ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-flux-centered.png"
+            ),
+        ],
+    ),
+    (
+        "AA31",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/244609-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/203703-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/189889-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/180915-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/156971-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
+            ),
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/244609-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/203703-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/189889-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/180915-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/156971-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
+            ),
+        ],
+    ),
+    (
+        "AD37",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/227143-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/197119-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/184597-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/167866-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/150665-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/140441-calibration-properties.json"
+            ),
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/227143-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/197119-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/184597-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/167866-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/150665-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AD37/140441-flux-centered.png"
+            ),
+        ],
+    ),
+    (
+        "AU46",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/276277-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/267164-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/266071-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265937-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265797-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265726-calibration-properties.json"
+            ),
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/276277-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/267164-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/266071-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265937-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265797-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AU46/265726-flux-centered.png"
+            ),
         ],
     ),
 ]
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
-    scenario_path=scenario_paths[0]
+    scenario_path=scenario_paths_and_measurements[0][0]
 )
 
 with setup_distributed_environment(
@@ -114,22 +279,20 @@ with setup_distributed_environment(
         torch.tensor([256, 256], device=device)
     ]
 
-    number_of_measurements = [2, 4, 6]
-
     learning_rates = [1e-4, 1e-5, 1e-6]
 
     parameter_combinations = list(
-        itertools.product(points_and_rays, resolution, scenario_paths, number_of_measurements, learning_rates)
+        itertools.product(points_and_rays, resolution, scenario_paths_and_measurements, learning_rates)
     )
 
-    keys = ["points_and_rays", "resolution", "scenario_paths", "number_of_measurements", "learning_rates"]
+    keys = ["points_and_rays", "resolution", "scenario_paths_and_measurements", "learning_rates"]
     parameter_combinations_dicts = [
         dict(zip(keys, values)) for values in parameter_combinations
     ]
 
     for parameter_combination in parameter_combinations_dicts:
         # Load the scenario.
-        with h5py.File(parameter_combination["scenario_paths"], "r") as scenario_file:
+        with h5py.File(parameter_combination["scenario_paths_and_measurements"][0], "r") as scenario_file:
             scenario = Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file, device=device,
             )
@@ -156,10 +319,14 @@ with setup_distributed_environment(
             tolerance=tolerance,
             max_epoch=max_epoch,
             num_log=max_epoch,
+            number_of_measurements=parameter_combination["scenario_paths_and_measurements"][1],
             device=device,
         )
 
-        surface_reconstructor.reconstruct_surfaces(ddp_setup=ddp_setup, device=device)
+        surface_reconstructor.reconstruct_surfaces(ddp_setup=ddp_setup, parameter_combination=parameter_combination, device=device)
         
         end_reconstruction = time.perf_counter()
-        elapsed_ms = (end_reconstruction - start_reconstruction) * 1000 
+        elapsed_ms = (end_reconstruction - start_reconstruction) * 1000
+
+        with open("times.txt", "a") as f:
+            f.write(f"parameters: {parameter_combination}, time in ms: {elapsed_ms}\n \n \n \n")

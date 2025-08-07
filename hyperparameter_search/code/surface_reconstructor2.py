@@ -67,6 +67,7 @@ class SurfaceReconstructor2:
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
         num_log: int = 3,
+        number_of_measurements: int = 4,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -108,6 +109,7 @@ class SurfaceReconstructor2:
         self.scenario = scenario
 
         self.heliostat_data_mapping = heliostat_data_mapping
+        self.number_of_measurements = number_of_measurements
 
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.resolution = resolution.to(device)
@@ -121,6 +123,7 @@ class SurfaceReconstructor2:
     def reconstruct_surfaces(
         self,
         ddp_setup,
+        parameter_combination,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -159,6 +162,7 @@ class SurfaceReconstructor2:
                     heliostat_flux_path_mapping=heliostat_flux_path_mapping,
                     heliostat_names=heliostat_group.names,
                     resolution=self.resolution,
+                    number_of_measurements=self.number_of_measurements,
                     device=device,
                 )
             )
@@ -180,12 +184,9 @@ class SurfaceReconstructor2:
                 heliostat_names=heliostat_group.names,
                 target_area_names=self.scenario.target_areas.names,
                 power_plant_position=self.scenario.power_plant_position,
+                number_of_measurements=self.number_of_measurements,
                 device=device,
             )
-
-            idle = False
-            if rank >= heliostats_mask.sum():
-                idle = True
             
             if heliostats_mask.sum() > 0:
                 evaluation_points = (
@@ -293,42 +294,19 @@ class SurfaceReconstructor2:
                     )
 
                     if ddp_setup["is_nested"]:
-                        #is_active = torch.tensor([1 if not idle else 0], device=device)
                         normalized_flux_distributions = torch.distributed.nn.functional.all_reduce(
                             normalized_flux_distributions,
                             group=ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
                         )
 
-                    # loss_function = torch.nn.MSELoss()
-                    # loss = loss_function(
-                    #     normalized_flux_distributions,
-                    #     normalized_measured_flux_distributions,
-                    # )
-                    # loss.backward()
+                    loss_function = torch.nn.MSELoss()
+                    loss = loss_function(
+                        normalized_flux_distributions,
+                        normalized_measured_flux_distributions,
+                    )
+                    loss.backward()
 
-                    if not idle:
-                        loss_function = torch.nn.MSELoss()
-                        loss = loss_function(
-                            normalized_flux_distributions,
-                            normalized_measured_flux_distributions,
-                        )
-                        try:
-                            loss.backward()
-                        except Exception as e:
-                            print(f"Rank {rank} crashed during backward: {e}")
-                    
-                    else:
-                        # Idle rank: do safe dummy backward
-                        dummy = torch.tensor(0.0, requires_grad=True, device=device)
-                        dummy_out = dummy * 1.0  # force a grad_fn
-                        dummy_out.backward()
-
-                    # if rank in ddp_setup["ranks_to_groups_mapping"][heliostat_group_index]:
-                    #     print(f"rank {rank}, {ddp_setup['ranks_to_groups_mapping']}")
-                    #     torch.distributed.barrier(group=ddp_setup["process_subgroup"])
-                    
-                    print(f"rank {rank}")
                     if ddp_setup["is_nested"]:
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -341,36 +319,50 @@ class SurfaceReconstructor2:
                                     param.grad /= torch.distributed.get_world_size(ddp_setup["process_subgroup"])
                         
                     optimizer.step()
-                    print(f"hi rank {rank}")
+
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
 
-                    if epoch in [0, 1, 10, 50, 100, 300, 500, 1000, 2000, 3000]:
+                    if epoch in [0, 10, 50, 100, 300, 500, 1000, 2000, 3000]:
+
+                        sp = parameter_combination["points_and_rays"][0][0].item()
+                        cp = heliostat_group.nurbs_control_points.shape[2]
+                        rays = parameter_combination["points_and_rays"][1]
+                        lr = parameter_combination["learning_rates"]
+                        h = parameter_combination["scenario_paths_and_measurements"][1]
+
+                        folder_name = f'sp_{sp}_rays_{rays}_cp_{cp}_lr{lr}_h_{h}'
                         
-                        name1 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / f"points_and_normals_epoch_{epoch+1}_cp_{heliostat_group.nurbs_control_points.shape[2]}_rank_{rank}"
-                        name2 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / f"fluxes_epoch_{epoch+1}_cp_{heliostat_group.nurbs_control_points.shape[2]}_rank_{rank}"
-                        
+                        if rank == 0:
+                            with open((pathlib.Path(f"{folder_name}") / "loss.txt" ), "a") as f:
+                                f.write(f"epoch: \t {epoch}, \t loss: \t {loss} \n")
+
                         with torch.no_grad():
                             
-                            temp_nurbs = NURBSSurfaces(
-                                degrees=heliostat_group.nurbs_degrees,
-                                control_points=heliostat_group.nurbs_control_points[0].unsqueeze(0),
-                                device=device,
-                            )
-                            
-                            temp_points, temp_normals = temp_nurbs.calculate_surface_points_and_normals(
-                                evaluation_points=evaluation_points[0].unsqueeze(0),
-                                device=device,
-                            )
+                            for i in range (heliostat_group.number_of_heliostats):
+                                temp_nurbs = NURBSSurfaces(
+                                    degrees=heliostat_group.nurbs_degrees,
+                                    control_points=heliostat_group.nurbs_control_points[i].unsqueeze(0),
+                                    device=device,
+                                )
+                                
+                                temp_points, temp_normals = temp_nurbs.calculate_surface_points_and_normals(
+                                    evaluation_points=evaluation_points[0].unsqueeze(0),
+                                    device=device,
+                                )
+                                
+                                name1 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"points_and_normals_h_{i}_epoch_{epoch}_rank_{rank}"
 
-                            helper.plot_normal_angle_map(
-                                surface_points=temp_points[0],
-                                surface_normals=temp_normals[0],
-                                reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
-                                name=name1
-                            )
+                                helper.plot_normal_angle_map(
+                                    surface_points=temp_points[0],
+                                    surface_normals=temp_normals[0],
+                                    reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+                                    name=name1
+                                )
+
+                            name2 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"points_and_normals_epoch_{epoch}_rank_{rank}"
 
                             helper.plot_multiple_fluxes(
                                 reconstructed=normalized_flux_distributions,
@@ -379,74 +371,10 @@ class SurfaceReconstructor2:
                             )
 
                             # validation
-                            validation_heliostat_data_mapping = [
-                                (
-                                    "AA39",
-                                    [
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-calibration-properties.json"
-                                        ),
-                                    ],
-                                    [
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-flux-centered.png"
-                                        ),
-                                        pathlib.Path(
-                                            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/202558-flux-centered.png"
-                                        ),
-                                    ],
-                                ),
-                            ]
-
                             # Extract measured fluxes.
                             validation_heliostat_flux_path_mapping = [
                                 (heliostat_name, png_paths)
-                                for heliostat_name, _, png_paths in validation_heliostat_data_mapping
+                                for heliostat_name, _, png_paths in self.heliostat_data_mapping
                                 if heliostat_name in heliostat_group.names
                             ]
 
@@ -455,6 +383,7 @@ class SurfaceReconstructor2:
                                     heliostat_flux_path_mapping=validation_heliostat_flux_path_mapping,
                                     heliostat_names=heliostat_group.names,
                                     resolution=self.resolution,
+                                    number_of_measurements=6,
                                     device=device,
                                 )
                             )
@@ -462,36 +391,46 @@ class SurfaceReconstructor2:
                             # Extract environmental data for measured fluxes.
                             validation_heliostat_calibration_mapping = [
                                 (heliostat_name, calibration_properties_paths)
-                                for heliostat_name, calibration_properties_paths, _ in validation_heliostat_data_mapping
+                                for heliostat_name, calibration_properties_paths, _ in self.heliostat_data_mapping
                                 if heliostat_name in heliostat_group.names
                             ]
-
-                            validation_incident_ray_directions, validation_targets = helper.calibration_path_to_sun_and_tower(
-                                paths=validation_heliostat_calibration_mapping[0][1], target_area_names=self.scenario.target_areas.names, device=device
-                            )
-
-                            validation_heliostat_target_light_source_mapping = [
-                                ("AA39", validation_targets[0], validation_incident_ray_directions[0]),
-                                ("AA39", validation_targets[1], validation_incident_ray_directions[1]),
-                                ("AA39", validation_targets[2], validation_incident_ray_directions[2]),
-                                ("AA39", validation_targets[3], validation_incident_ray_directions[3]),
-                                ("AA39", validation_targets[4], validation_incident_ray_directions[4]),
-                                ("AA39", validation_targets[5], validation_incident_ray_directions[5]),
-                                ("AA39", validation_targets[6], validation_incident_ray_directions[6]),
-                                ("AA39", validation_targets[7], validation_incident_ray_directions[7]),
-                                ("AA39", validation_targets[8], validation_incident_ray_directions[8]),
-                                ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-                            ]
-
                             (
+                                _,
+                                validation_incident_ray_directions,
+                                _,
                                 validation_active_heliostats_mask,
                                 validation_target_area_mask,
-                                validation_incident_ray_directions,
-                            ) = self.scenario.index_mapping(
-                                heliostat_group=heliostat_group,
-                                string_mapping=validation_heliostat_target_light_source_mapping,
+                            ) = paint_loader.extract_paint_calibration_properties_data(
+                                heliostat_calibration_mapping=validation_heliostat_calibration_mapping,
+                                heliostat_names=heliostat_group.names,
+                                target_area_names=self.scenario.target_areas.names,
+                                power_plant_position=self.scenario.power_plant_position,
+                                number_of_measurements=6,
                                 device=device,
                             )
+
+                            # validation_heliostat_target_light_source_mapping = [
+                            #     ("AA39", validation_targets[0], validation_incident_ray_directions[0]),
+                            #     ("AA39", validation_targets[1], validation_incident_ray_directions[1]),
+                            #     ("AA39", validation_targets[2], validation_incident_ray_directions[2]),
+                            #     ("AA39", validation_targets[3], validation_incident_ray_directions[3]),
+                            #     ("AA39", validation_targets[4], validation_incident_ray_directions[4]),
+                            #     ("AA39", validation_targets[5], validation_incident_ray_directions[5]),
+                            #     ("AA39", validation_targets[6], validation_incident_ray_directions[6]),
+                            #     ("AA39", validation_targets[7], validation_incident_ray_directions[7]),
+                            #     ("AA39", validation_targets[8], validation_incident_ray_directions[8]),
+                            #     ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+                            # ]
+
+                            # (
+                            #     validation_active_heliostats_mask,
+                            #     validation_target_area_mask,
+                            #     validation_incident_ray_directions,
+                            # ) = self.scenario.index_mapping(
+                            #     heliostat_group=heliostat_group,
+                            #     string_mapping=validation_heliostat_target_light_source_mapping,
+                            #     device=device,
+                            # )
 
                             heliostat_group.activate_heliostats(
                                 active_heliostats_mask=validation_active_heliostats_mask, device=device
@@ -512,7 +451,7 @@ class SurfaceReconstructor2:
                                 .unsqueeze(0)
                                 .unsqueeze(0)
                                 .expand(
-                                    len(validation_heliostat_target_light_source_mapping),
+                                    validation_active_heliostats_mask.sum(),
                                     4,
                                     -1,
                                     -1,
@@ -524,10 +463,10 @@ class SurfaceReconstructor2:
                             )
 
                             heliostat_group.active_surface_points = validation_calc_points.reshape(
-                                len(validation_heliostat_target_light_source_mapping), -1, 4
+                                validation_active_heliostats_mask.sum(), -1, 4
                             )
                             heliostat_group.active_surface_normals = validation_calc_normals.reshape(
-                                len(validation_heliostat_target_light_source_mapping), -1, 4
+                                validation_active_heliostats_mask.sum(), -1, 4
                             )
 
                             # Align heliostats.
@@ -568,9 +507,9 @@ class SurfaceReconstructor2:
                             references[:validation_normalized_measured_flux_distributions.shape[0]] = validation_normalized_measured_flux_distributions
 
                             plt.clf()
-                            name = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test") / f"reconstructed_epoch_{epoch}_cp_{heliostat_group.nurbs_control_points.shape[2]}_rank_{rank}"
+                            name3 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"reconstructed_epoch_{epoch}_rank_{rank}"
                             helper.plot_multiple_fluxes(
-                                validation_bitmaps_per_heliostat, references, name=name
+                                validation_bitmaps_per_heliostat, references, name=name3
                             )
 
                     epoch += 1
