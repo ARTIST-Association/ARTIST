@@ -125,13 +125,14 @@ def test_create_subgroups_for_nested_ddp(
         If test does not complete as expected.
     """
     with patch("torch.distributed.new_group", return_value=MagicMock()):
-        heliostat_group_rank, heliostat_group_world_size, _ = (
+        heliostat_group_rank, heliostat_group_world_size, _, _ = (
             create_subgroups_for_nested_ddp(
                 rank=rank, groups_to_ranks_mapping=groups_to_ranks_mapping
             )
         )
         assert heliostat_group_rank == expected[0]
         assert heliostat_group_world_size == expected[1]
+        
 
 
 @pytest.mark.parametrize(

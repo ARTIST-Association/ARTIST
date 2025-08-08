@@ -35,6 +35,7 @@ def test_kinematic_optimizer(
     tolerance: float,
     max_epoch: int,
     initial_lr: float,
+    ddp_setup_for_testing: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
     device: torch.device,
 ) -> None:
     """
@@ -50,6 +51,8 @@ def test_kinematic_optimizer(
         The maximum amount of epochs for the optimization loop.
     initial_lr : float
         The initial learning rate.
+    ddp_setup_for_testing : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.  
     device : torch.device
         The device on which to initialize tensors.
 
@@ -100,40 +103,42 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        # Create the kinematic optimizer.
-        kinematic_optimizer = KinematicOptimizer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            heliostat_data_mapping=heliostat_data_mapping,
-            calibration_method=optimizer_method,
-            initial_learning_rate=initial_lr,
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            num_log=max_epoch,
-            device=device,
-        )
+    ddp_setup_for_testing["device"] = device
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0]}
 
-        # Calibrate the kinematic.
-        kinematic_optimizer.optimize(device=device)
+    # Create the kinematic optimizer.
+    kinematic_optimizer = KinematicOptimizer(
+        ddp_setup=ddp_setup_for_testing,
+        scenario=scenario,
+        heliostat_data_mapping=heliostat_data_mapping,
+        calibration_method=optimizer_method,
+        initial_learning_rate=initial_lr,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
+        num_log=max_epoch,
+        device=device,
+    )
 
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_optimized_kinematic_parameters"
-            / f"{optimizer_method}_group_{index}_{device.type}.pt"
-        )
+    # Calibrate the kinematic.
+    kinematic_optimizer.optimize(device=device)
 
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_optimized_kinematic_parameters"
+        / f"{optimizer_method}_group_0_{device.type}.pt"
+    )
 
-        torch.testing.assert_close(
-            heliostat_group.kinematic.deviation_parameters,
-            expected["kinematic_deviations"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
-        torch.testing.assert_close(
-            heliostat_group.kinematic.actuators.actuator_parameters,
-            expected["actuator_parameters"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
+    expected = torch.load(expected_path, map_location=device, weights_only=True)
+
+    torch.testing.assert_close(
+        scenario.heliostat_field.heliostat_groups[0].kinematic.deviation_parameters,
+        expected["kinematic_deviations"],
+        atol=5e-2,
+        rtol=5e-2,
+    )
+    torch.testing.assert_close(
+        scenario.heliostat_field.heliostat_groups[0].kinematic.actuators.actuator_parameters,
+        expected["actuator_parameters"],
+        atol=5e-2,
+        rtol=5e-2,
+    )

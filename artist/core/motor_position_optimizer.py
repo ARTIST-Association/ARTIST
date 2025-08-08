@@ -15,6 +15,8 @@ class MotorPositionsOptimizer:
 
     Attributes
     ----------
+    ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
     scenario : Scenario
         The scenario.
     num_log : int
@@ -36,6 +38,7 @@ class MotorPositionsOptimizer:
     
     def __init__(
         self,
+        ddp_setup: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
         scenario: Scenario,
         initial_learning_rate: float = 0.0004,
         tolerance: float = 0.035,
@@ -47,6 +50,8 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
+        ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
+            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
         initial_learning_rate : float
@@ -58,45 +63,43 @@ class MotorPositionsOptimizer:
         num_log : int
             The number of log statements during optimization (default is 3).
         """
-        rank = (
-            torch.distributed.get_rank()
-            if torch.distributed.is_available() and torch.distributed.is_initialized()
-            else 0
-        )
+        rank = ddp_setup["rank"]
+        
         if rank == 0:
             log.info("Create a motor positions optimizer.")
 
-
+        self.ddp_setup = ddp_setup
         self.scenario=scenario
-        
-        self.num_log = num_log
-
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
         self.max_epoch = max_epoch
+        self.num_log = num_log
 
-
-    def optimze(
+    def optimize(
         self,
-        ddp_setup: tuple[torch.device, bool, bool, int, int, torch.distributed.ProcessGroup | None, dict[int, list[int]], int, int],
+        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Optimize the motor positions.
 
         Parameters
         ----------
-        ddp_set_up : tuple[torch.device, bool, bool, int, int, torch.distributed.ProcessGroup | None, dict[int, list[int]], int, int],
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
-        device = get_device(device=ddp_setup["device"])
+        device = get_device(device)
 
-        rank = ddp_setup["rank"]
+        rank = self.ddp_setup["rank"]
+        
         if rank == 0:
             log.info("Start the motor positions optimization.")
 
-
         # get motor positions or can they be zero in the beginning?
+        # if any alignment has already happend, they are not zero.
         
-        optimizable_parameters = [group.active_motor_positions for group in self.scenario.heliostat_field.heliostat_groups]
+        optimizable_parameters = [group.kinematic.active_motor_positions for group in self.scenario.heliostat_field.heliostat_groups]
 
         self.optimizer = torch.optim.Adam(
             optimizable_parameters,
@@ -120,74 +123,74 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            for group_index in ddp_setup["groups_to_ranks_mapping"][rank]:
-                heliostat_group = self.scenario.heliostat_field.heliostat_groups[group_index]
+                for group_index in ddp_setup["groups_to_ranks_mapping"][rank]:
+                    heliostat_group = self.scenario.heliostat_field.heliostat_groups[group_index]
 
-                # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
-                # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
-                # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
-                # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
-                (
-                    active_heliostats_mask,
-                    target_area_mask,
-                    incident_ray_directions,
-                ) = self.scenario.index_mapping(
-                    heliostat_group=heliostat_group,
-                    single_incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), #TODO
-                    single_target_area_index=1, #TODO == receiver
-                    device=device,
-                )
+                    # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
+                    # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
+                    # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
+                    # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
+                    (
+                        active_heliostats_mask,
+                        target_area_mask,
+                        incident_ray_directions,
+                    ) = self.scenario.index_mapping(
+                        heliostat_group=heliostat_group,
+                        single_incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), #TODO
+                        single_target_area_index=1, #TODO == receiver
+                        device=device,
+                    )
 
-                heliostat_group.activate_heliostats(
-                    active_heliostats_mask=active_heliostats_mask, device=device
-                )
+                    heliostat_group.activate_heliostats(
+                        active_heliostats_mask=active_heliostats_mask, device=device
+                    )
 
-                # TODO align with motor positions
-                # Align heliostats.
-                heliostat_group.align_surfaces_with_incident_ray_directions(
-                    aim_points=self.scenario.target_areas.centers[target_area_mask],
-                    incident_ray_directions=incident_ray_directions,
-                    active_heliostats_mask=active_heliostats_mask,
-                    device=device,
-                )
+                    # TODO align with motor positions
+                    # Align heliostats.
+                    heliostat_group.align_surfaces_with_incident_ray_directions(
+                        aim_points=self.scenario.target_areas.centers[target_area_mask],
+                        incident_ray_directions=incident_ray_directions,
+                        active_heliostats_mask=active_heliostats_mask,
+                        device=device,
+                    )
 
-                # Create a ray tracer.
-                ray_tracer = HeliostatRayTracer(
-                    scenario=self.scenario,
-                    heliostat_group=heliostat_group,
-                    world_size=ddp_setup["heliostat_group_world_size"],
-                    rank=ddp_setup["heliostat_group_rank"],
-                    batch_size=heliostat_group.number_of_active_heliostats,
-                    random_seed=ddp_setup["heliostat_group_rank"],
-                    bitmap_resolution=bitmap_resolution,
-                )
+                    # Create a ray tracer.
+                    ray_tracer = HeliostatRayTracer(
+                        scenario=self.scenario,
+                        heliostat_group=heliostat_group,
+                        world_size=ddp_setup["heliostat_group_world_size"],
+                        rank=ddp_setup["heliostat_group_rank"],
+                        batch_size=heliostat_group.number_of_active_heliostats,
+                        random_seed=ddp_setup["heliostat_group_rank"],
+                        bitmap_resolution=bitmap_resolution,
+                    )
 
-                # Perform heliostat-based ray tracing.
-                bitmaps_per_heliostat = ray_tracer.trace_rays(
-                    incident_ray_directions=incident_ray_directions,
-                    active_heliostats_mask=active_heliostats_mask,
-                    target_area_mask=target_area_mask,
-                    device=device,
-                )
+                    # Perform heliostat-based ray tracing.
+                    bitmaps_per_heliostat = ray_tracer.trace_rays(
+                        incident_ray_directions=incident_ray_directions,
+                        active_heliostats_mask=active_heliostats_mask,
+                        target_area_mask=target_area_mask,
+                        device=device,
+                    )
 
-                bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-                    bitmaps_per_heliostat=bitmaps_per_heliostat,
-                    target_area_mask=target_area_mask,
-                    device=device,
-                )
+                    bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+                        bitmaps_per_heliostat=bitmaps_per_heliostat,
+                        target_area_mask=target_area_mask,
+                        device=device,
+                    )
 
-                combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
+                    combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-            if ddp_setup["is_nested"]:
-                torch.distributed.all_reduce(
-                    combined_bitmaps_per_target,
-                    op=torch.distributed.ReduceOp.SUM,
-                    group=ddp_setup["process_subgroup"],
-                )
+                if ddp_setup["is_nested"]:
+                    torch.distributed.all_reduce(
+                        combined_bitmaps_per_target,
+                        op=torch.distributed.ReduceOp.SUM,
+                        group=ddp_setup["process_subgroup"],
+                    )
 
-            if ddp_setup["is_distributed"]:
-                torch.distributed.all_reduce(
-                    combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
-                )
+                if ddp_setup["is_distributed"]:
+                    torch.distributed.all_reduce(
+                        combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
+                    )
 
 
