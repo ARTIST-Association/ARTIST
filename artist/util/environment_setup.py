@@ -82,6 +82,7 @@ def create_subgroups_for_nested_ddp(
     int,
     int,
     torch.distributed.ProcessGroup | None,
+    dict[int, list[int]]
 ]:
     """
     Assign the current process (rank) to a subgroup based on a predefined group assignment map.
@@ -101,6 +102,8 @@ def create_subgroups_for_nested_ddp(
         The world size of the heliostat group.
     torch.distributed.ProcessGroup | None
         The distributed process group.
+    dict[int, list[int]]
+        The mapping from ranks to heliostat groups.
     """
     ranks_to_groups_mapping = defaultdict(list)
     for single_rank, groups in groups_to_ranks_mapping.items():
@@ -108,6 +111,7 @@ def create_subgroups_for_nested_ddp(
             ranks_to_groups_mapping[group].append(single_rank)
 
     group_handles = {}
+
     # Set default values for when the current process (rank) is not in a heliostat group.
     heliostat_group_rank = 0
     heliostat_group_world_size = 1
@@ -130,7 +134,7 @@ def create_subgroups_for_nested_ddp(
             f"-Heliostat group world size: {heliostat_group_world_size}"
         )
 
-    return heliostat_group_rank, heliostat_group_world_size, process_subgroup
+    return heliostat_group_rank, heliostat_group_world_size, process_subgroup, ranks_to_groups_mapping
 
 
 @contextmanager
@@ -156,24 +160,12 @@ def setup_distributed_environment(
 
     Yields
     ------
-    device : torch.device
-        The torch device assigned to this rank.
-    is_distributed : bool
-        Whether the environment is running in distributed mode.
-    is_nested : bool
-        Indicates whether the distributed setup is nested or not.
-    rank : int
-        The global rank of the current process.
-    world_size : int
-        Total number of processes in the global process group.
-    process_subgroup : Optional[torch.distributed.ProcessGroup]
-        The ProcessGroup object representing the subgroup.
-    groups_to_ranks_mapping : dict[int, list[int]]
-        The mapping from rank to heliostat group.
-    heliostat_group_rank : int
-        The rank of the current process within its assigned subgroup.
-    heliostat_group_world_size : int
-        Number of processes in the current process subgroup.
+    dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
+        The distributed setup including the torch device assigned to this rank, whether the environment 
+        is running in distributed and or nested mode, the global rank of the current process, the total 
+        number of processes in the global process group, the ProcessGroup object representing the subgroup,
+        the mapping from rank to heliostat group, the rank of the current process within its assigned 
+        subgroup and the number of processes in the current process subgroup.
     """
     device, is_distributed, rank, world_size = initialize_ddp_environment(device=device)
 
@@ -186,6 +178,7 @@ def setup_distributed_environment(
             heliostat_group_rank,
             heliostat_group_world_size,
             process_subgroup,
+            ranks_to_groups_mapping
         ) = create_subgroups_for_nested_ddp(
             rank=rank, groups_to_ranks_mapping=groups_to_ranks_mapping
         )
@@ -193,6 +186,7 @@ def setup_distributed_environment(
         heliostat_group_rank = 0
         heliostat_group_world_size = 1
         process_subgroup = None
+        ranks_to_groups_mapping = None
 
     try:
         yield {
@@ -205,6 +199,7 @@ def setup_distributed_environment(
             "groups_to_ranks_mapping": groups_to_ranks_mapping,
             "heliostat_group_rank": heliostat_group_rank,
             "heliostat_group_world_size": heliostat_group_world_size,
+            "ranks_to_groups_mapping": ranks_to_groups_mapping
         }
     finally:
         if is_distributed:

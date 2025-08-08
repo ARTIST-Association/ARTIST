@@ -29,22 +29,21 @@ with setup_distributed_environment(
     device=device,
 ) as ddp_setup:
     
-    device = ddp_setup[0]
+    device = ddp_setup["device"]
     
-    pass
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device,
         )
     
-    #ddp_setup = [is_distributed, is_nested, rank, world_size, process_subgroup, groups_to_ranks_mapping, heliostat_group_rank, heliostat_group_world_size]
-
+    # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
+        ddp_setup=ddp_setup,
         scenario=scenario,
-        ddp_setup=ddp_setup
     )
 
-    motor_positions_optimizer.optimize_motor_positions(
+    # Optimize the motor positions.
+    motor_positions_optimizer.optimize(
         device=device
     )

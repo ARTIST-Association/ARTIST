@@ -127,6 +127,7 @@ class HeliostatGroup:
         self.nurbs_degrees = nurbs_degrees
 
         self.kinematic = Kinematic()
+        
         self.number_of_active_heliostats = 0
         self.active_heliostats_mask = torch.empty(
             self.number_of_heliostats, device=device
@@ -142,10 +143,6 @@ class HeliostatGroup:
         )
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
-        )
-
-        self.active_motor_positions = torch.empty(
-            (self.number_of_active_heliostats, self.kinematic.actuators.shape[1]), device=device
         )
 
     def align_surfaces_with_incident_ray_directions(
