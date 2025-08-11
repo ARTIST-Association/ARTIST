@@ -24,7 +24,9 @@ control_points = 100
 number_of_heliostats = 2
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path(f"/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_{number_of_heliostats}_cp_{control_points}")
+scenario_path = pathlib.Path(
+    f"/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_{number_of_heliostats}_cp_{control_points}"
+)
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -42,14 +44,14 @@ heliostat_files_list = [
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
         ),
-        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+        # pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
     (
         "AA39",
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+        # pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
     # (
     #     "AD37",
@@ -110,7 +112,9 @@ target_area = [
     if target_area.target_area_key == config_dictionary.target_area_receiver
 ]
 
-number_of_nurbs_control_points = torch.tensor([control_points, control_points], device=device)
+number_of_nurbs_control_points = torch.tensor(
+    [control_points, control_points], device=device
+)
 nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
 nurbs_deflectometry_step_size = 100
 nurbs_fit_tolerance = 1e-10

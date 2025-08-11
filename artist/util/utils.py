@@ -628,7 +628,6 @@ def normalize_bitmaps(
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,
     number_of_rays: torch.Tensor,
-    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Normalize a bitmap.
@@ -647,10 +646,6 @@ def normalize_bitmaps(
     number_of_rays : torch.Tensor
         The number of rays used to generate the flux.
         Tensor of shape [number_of_bitmaps].
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -658,8 +653,6 @@ def normalize_bitmaps(
         The normalized and scaled flux density distributions.
         Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     """
-    device = get_device(device=device)
-
     plane_areas = target_area_widths * target_area_heights
     num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
     plane_area_per_pixel = plane_areas / num_pixels
@@ -674,9 +667,9 @@ def normalize_bitmaps(
     standardized = (
         normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
     ) / std
-    
+
     valid_mask = (flux_distributions.sum(dim=(1, 2), keepdim=True) != 0).float()
-    
-    result = standardized * valid_mask  
-    
+
+    result = standardized * valid_mask
+
     return result

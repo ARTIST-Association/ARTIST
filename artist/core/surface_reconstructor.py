@@ -6,9 +6,10 @@ import torch
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 from artist.util.nurbs import NURBSSurfaces
+from hyperparameter_search.code import helper
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
@@ -124,6 +125,9 @@ class SurfaceReconstructor:
         self.tolerance = tolerance
         self.max_epoch = max_epoch
         self.num_log = num_log
+
+        # TODO maybe this schould be saved inside the hf scenario files.
+        self.facet_shape = config_dictionary.rectangular_facet
 
     def reconstruct_surfaces(
         self,
@@ -318,6 +322,14 @@ class SurfaceReconstructor:
                                         group=self.ddp_setup["process_subgroup"],
                                     )
 
+                    if self.facet_shape == "hi":
+                        optimizer.param_groups[0]["params"][
+                            0
+                        ].grad = self.fixiate_control_points_on_outer_edges(
+                            gradients=optimizer.param_groups[0]["params"][0].grad,
+                            device=device,
+                        )
+
                     optimizer.step()
 
                     if epoch % log_step == 0 and rank == 0:
@@ -325,6 +337,65 @@ class SurfaceReconstructor:
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
 
+                    if epoch in [100, 200, 300]:
+                        with torch.no_grad():
+                            for i in range(heliostat_group.number_of_heliostats):
+                                temp_nurbs = NURBSSurfaces(
+                                    degrees=heliostat_group.nurbs_degrees,
+                                    control_points=heliostat_group.nurbs_control_points[
+                                        i
+                                    ].unsqueeze(0),
+                                    device=device,
+                                )
+
+                                temp_points, temp_normals = (
+                                    temp_nurbs.calculate_surface_points_and_normals(
+                                        evaluation_points=evaluation_points[
+                                            0
+                                        ].unsqueeze(0),
+                                        device=device,
+                                    )
+                                )
+
+                                helper.plot_normal_angle_map(
+                                    surface_points=temp_points[0],
+                                    surface_normals=temp_normals[0],
+                                    reference_direction=torch.tensor(
+                                        [0.0, 0.0, 1.0, 0.0], device=device
+                                    ),
+                                    name=f"test_no_fix_{i}_{epoch}",
+                                )
+
                     epoch += 1
 
                 log.info("Surfaces reconstructed.")
+
+    def fixiate_control_points_on_outer_edges(
+        self,
+        gradients: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        with torch.no_grad():
+            device = get_device(device=device)
+
+            fixed_gradients = torch.zeros_like(gradients, device=device)
+
+            height = gradients.shape[2]
+            width = gradients.shape[3]
+
+            rows = (
+                torch.arange(height, device=device).unsqueeze(1).expand(height, width)
+            )
+            cols = torch.arange(width, device=device).unsqueeze(0).expand(height, width)
+
+            edge_mask = (
+                (rows == 0) | (rows == height - 1) | (cols == 0) | (cols == width - 1)
+            )
+
+            fixed_gradients[..., :2] = torch.where(
+                edge_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1),
+                torch.tensor(0.0, device=device),
+                gradients[..., :2],
+            )
+
+            return fixed_gradients

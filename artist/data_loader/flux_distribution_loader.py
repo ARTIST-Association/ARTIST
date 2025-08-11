@@ -49,16 +49,22 @@ def load_flux_from_png(
         if torch.distributed.is_available() and torch.distributed.is_initialized()
         else 0
     )
-    log.info(f"Rank {rank}: Beginning extraction of flux distributions from .png files.")
+    log.info(
+        f"Rank {rank}: Beginning extraction of flux distributions from .png files."
+    )
 
     flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(torch.Tensor)
 
     resolution = tuple(resolution.to(device).tolist())
 
-    total_number_of_measurements = number_of_measurements * len(heliostat_flux_path_mapping)
+    total_number_of_measurements = number_of_measurements * len(
+        heliostat_flux_path_mapping
+    )
 
     for heliostat_name, paths in heliostat_flux_path_mapping:
-        bitmaps = torch.empty((number_of_measurements, resolution[0], resolution[1]), device=device)
+        bitmaps = torch.empty(
+            (number_of_measurements, resolution[0], resolution[1]), device=device
+        )
         for bitmap_index, path in enumerate(paths[:number_of_measurements]):
             bitmap_data = (
                 Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
@@ -94,12 +100,13 @@ def load_flux_from_png(
                 device=device,
             ),
             number_of_rays=measured_fluxes.sum(dim=[1, 2]),
-            device=device
         )
 
         log.info(f"Rank {rank}: Loading measured flux density distributions complete.")
 
     else:
-        log.info(f"Rank {rank}: No measured flux density distributions were provided for this group.")
+        log.info(
+            f"Rank {rank}: No measured flux density distributions were provided for this group."
+        )
 
     return measured_fluxes

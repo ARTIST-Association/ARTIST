@@ -18,35 +18,66 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/ideal_h_2_cp_6.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "heliostat_name_1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
             ),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-calibration-properties.json"
+            ),
         ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    (
-        "heliostat_name_2",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-flux-centered.png"
             ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/246955-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/218385-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/223788-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/209075-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/205363-flux-centered.png"
+            ),
         ],
     ),
     # ...
@@ -72,7 +103,7 @@ with setup_distributed_environment(
     scenario.light_sources.light_source_list[0].number_of_rays = 200
     tolerance = 0.00005
     max_epoch = 4000
-    initial_learning_rate = 1e-6
+    initial_learning_rate = 1e-4
     number_of_surface_points = torch.tensor([80, 80], device=device)
     resolution = torch.tensor([256, 256], device=device)
 
@@ -86,7 +117,7 @@ with setup_distributed_environment(
         initial_learning_rate=initial_learning_rate,
         tolerance=tolerance,
         max_epoch=max_epoch,
-        num_log=10,
+        num_log=max_epoch,
         device=device,
     )
 
