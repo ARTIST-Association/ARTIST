@@ -5,12 +5,9 @@ import time
 import h5py
 import torch
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config, utils
+from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from artist.util.nurbs import NURBSSurfaces
-from hyperparameter_search.code import helper
 from hyperparameter_search.code.surface_reconstructor2 import SurfaceReconstructor2
 
 torch.manual_seed(7)
@@ -24,42 +21,60 @@ device = get_device()
 
 # Specify the path to your scenario.h5 file.
 scenario_paths_and_measurements = [
-    #(pathlib.Path(
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_5.h5"
-    #), 4),
-    #(pathlib.Path(
+    # ), 4),
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_6.h5"
-    #), 4),
-    #(pathlib.Path(
+    # ), 4),
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_10.h5"
-    #), 4),
-    #(pathlib.Path(
+    # ), 4),
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_20.h5"
-    #), 4),
-    #(pathlib.Path(
+    # ), 4),
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_50.h5"
-    #), 4),
-    #(pathlib.Path(
+    # ), 4),
+    # (pathlib.Path(
     #    "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_2_cp_100.h5"
-    #), 4),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_5.h5"
-    ), 2),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_6.h5"
-    ), 2),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_10.h5"
-    ), 2),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_20.h5"
-    ), 2),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_50.h5"
-    ), 2),
-    (pathlib.Path(
-        "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_100.h5"
-    ), 2),
+    # ), 4),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_5.h5"
+        ),
+        2,
+    ),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_6.h5"
+        ),
+        2,
+    ),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_10.h5"
+        ),
+        2,
+    ),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_20.h5"
+        ),
+        2,
+    ),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_50.h5"
+        ),
+        2,
+    ),
+    (
+        pathlib.Path(
+            "/hkfs/home/haicore/hgf_dlr/hgf_zas3427/ARTIST/hyperparameter_search/ideal_h_4_cp_100.h5"
+        ),
+        2,
+    ),
 ]
 
 # Also specify the heliostats to be calibrated and the paths to your measured flux density distributions.
@@ -265,36 +280,44 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    
     device = ddp_setup["device"]
 
-    points_and_rays = [#(torch.tensor([50, 50], device=device), 220),
-                       (torch.tensor([120, 120], device=device), 50),
-                       #(torch.tensor([90, 90], device=device), 100),
-                       #(torch.tensor([140, 140], device=device), 20),
-                       (torch.tensor([80, 80], device=device), 200),
-                       (torch.tensor([150, 150], device=device), 57)]
-
-    resolution = [
-        torch.tensor([256, 256], device=device)
+    points_and_rays = [  # (torch.tensor([50, 50], device=device), 220),
+        (torch.tensor([120, 120], device=device), 50),
+        # (torch.tensor([90, 90], device=device), 100),
+        # (torch.tensor([140, 140], device=device), 20),
+        (torch.tensor([80, 80], device=device), 200),
+        (torch.tensor([150, 150], device=device), 57),
     ]
+
+    resolution = [torch.tensor([256, 256], device=device)]
 
     learning_rates = [1e-4, 1e-5, 1e-6]
 
     parameter_combinations = list(
-        itertools.product(points_and_rays, resolution, scenario_paths_and_measurements, learning_rates)
+        itertools.product(
+            points_and_rays, resolution, scenario_paths_and_measurements, learning_rates
+        )
     )
 
-    keys = ["points_and_rays", "resolution", "scenario_paths_and_measurements", "learning_rates"]
+    keys = [
+        "points_and_rays",
+        "resolution",
+        "scenario_paths_and_measurements",
+        "learning_rates",
+    ]
     parameter_combinations_dicts = [
         dict(zip(keys, values)) for values in parameter_combinations
     ]
 
     for parameter_combination in parameter_combinations_dicts:
         # Load the scenario.
-        with h5py.File(parameter_combination["scenario_paths_and_measurements"][0], "r") as scenario_file:
+        with h5py.File(
+            parameter_combination["scenario_paths_and_measurements"][0], "r"
+        ) as scenario_file:
             scenario = Scenario.load_scenario_from_hdf5(
-                scenario_file=scenario_file, device=device,
+                scenario_file=scenario_file,
+                device=device,
             )
 
         scenario.light_sources.light_source_list[
@@ -319,14 +342,22 @@ with setup_distributed_environment(
             tolerance=tolerance,
             max_epoch=max_epoch,
             num_log=max_epoch,
-            number_of_measurements=parameter_combination["scenario_paths_and_measurements"][1],
+            number_of_measurements=parameter_combination[
+                "scenario_paths_and_measurements"
+            ][1],
             device=device,
         )
 
-        surface_reconstructor.reconstruct_surfaces(ddp_setup=ddp_setup, parameter_combination=parameter_combination, device=device)
-        
+        surface_reconstructor.reconstruct_surfaces(
+            ddp_setup=ddp_setup,
+            parameter_combination=parameter_combination,
+            device=device,
+        )
+
         end_reconstruction = time.perf_counter()
         elapsed_ms = (end_reconstruction - start_reconstruction) * 1000
 
         with open("/home/hgf_dlr/hgf_zas3427/artist-data/times.txt", "a") as f:
-            f.write(f"parameters: {parameter_combination}, time in ms: {elapsed_ms}\n \n \n \n")
+            f.write(
+                f"parameters: {parameter_combination}, time in ms: {elapsed_ms}\n \n \n \n"
+            )

@@ -2,7 +2,6 @@ import json
 
 import matplotlib.pyplot as plt
 import torch
-import os
 
 from artist.data_loader import paint_loader
 from artist.util import config_dictionary, utils
@@ -94,7 +93,7 @@ def plot_normal_angle_map(surface_points, surface_normals, reference_direction, 
 
         sc1 = axes[1].scatter(x, y, c=angles, cmap="plasma", s=7)
         axes[1].set_title("Angle map normals")
-    
+
     plt.tight_layout()
     # plt.axis('equal')
     plt.savefig(f"{name}.png")
@@ -112,7 +111,7 @@ def plot_multiple_fluxes(reconstructed, references, name):
         axes1[i, 1].imshow(references[i].cpu().detach(), cmap="gray")
         axes1[i, 1].set_title(f"Reference {i}")
         axes1[i, 1].axis("off")
-    
+
     plt.tight_layout()
     plt.savefig(f"{name}.png")
     plt.clf()
