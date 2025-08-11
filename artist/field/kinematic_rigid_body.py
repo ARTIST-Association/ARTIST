@@ -196,7 +196,7 @@ class RigidBody(Kinematic):
             @ utils.rotate_u(u=joint_angles[:, 1], device=device)
         )
 
-        return (
+        orientations = (
             initial_orientations
             @ joint_rotations[:, 0]
             @ joint_rotations[:, 1]
@@ -207,6 +207,8 @@ class RigidBody(Kinematic):
                 device=device,
             )
         )
+
+        return orientations
 
     def _apply_initial_orientation_offsets(
         self, orientations: torch.Tensor, device: torch.device | None = None
@@ -236,12 +238,14 @@ class RigidBody(Kinematic):
             device=device,
         )
 
-        return (
+        orientations_with_initial_orientation_offsets = (
             orientations
             @ utils.rotate_e(e=east_angles, device=device)
             @ utils.rotate_n(n=north_angles, device=device)
             @ utils.rotate_u(u=up_angles, device=device)
         )
+
+        return orientations_with_initial_orientation_offsets
 
     def incident_ray_directions_to_orientations(
         self,
@@ -321,27 +325,23 @@ class RigidBody(Kinematic):
             last_iteration_loss = loss
 
             # Analytical solution for joint angles.
-            joint_angles = torch.zeros_like(motor_positions, device=device)
-
-            # Compute joint 2 angles.
-            joint_angles[:, 1] = -torch.arcsin(
+            joint_angles_1 = -torch.arcsin(
                 -desired_concentrator_normals[:, 0]
                 / torch.cos(self.active_deviation_parameters[:, 7])
             )
 
-            # Compute joint 1 angles.
             a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(
-                joint_angles[:, 1]
+                joint_angles_1
             ) + torch.sin(self.active_deviation_parameters[:, 6]) * torch.sin(
                 self.active_deviation_parameters[:, 7]
-            ) * torch.sin(joint_angles[:, 1])
+            ) * torch.sin(joint_angles_1)
             b = -torch.sin(self.active_deviation_parameters[:, 6]) * torch.cos(
-                joint_angles[:, 1]
+                joint_angles_1
             ) - torch.cos(self.active_deviation_parameters[:, 6]) * torch.sin(
                 self.active_deviation_parameters[:, 7]
-            ) * torch.sin(joint_angles[:, 1])
+            ) * torch.sin(joint_angles_1)
 
-            joint_angles[:, 0] = (
+            joint_angles_0 = (
                 torch.arctan2(
                     a * -desired_concentrator_normals[:, 2]
                     - b * -desired_concentrator_normals[:, 1],
@@ -349,6 +349,14 @@ class RigidBody(Kinematic):
                     + b * -desired_concentrator_normals[:, 2],
                 )
                 - torch.pi
+            )
+
+            joint_angles = torch.stack(
+                [
+                    joint_angles_0,
+                    joint_angles_1,
+                ],
+                dim=1,
             )
 
             motor_positions = self.actuators.angles_to_motor_positions(

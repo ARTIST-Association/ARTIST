@@ -148,7 +148,7 @@ class HeliostatGroup:
         )
 
         self.active_motor_positions = torch.empty(
-            (self.number_of_active_heliostats, self.kinematic.actuators.shape[1]),
+            (self.number_of_active_heliostats, 2),
             device=device,
         )
 
