@@ -3,6 +3,7 @@ import pathlib
 
 import matplotlib.pyplot as plt
 import torch
+import os
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
@@ -331,13 +332,14 @@ class SurfaceReconstructor2:
                         cp = heliostat_group.nurbs_control_points.shape[2]
                         rays = parameter_combination["points_and_rays"][1]
                         lr = parameter_combination["learning_rates"]
-                        h = parameter_combination["scenario_paths_and_measurements"][1]
+                        m = parameter_combination["scenario_paths_and_measurements"][1]
 
-                        folder_name = f'sp_{sp}_rays_{rays}_cp_{cp}_lr{lr}_h_{h}'
+                        folder_name = f'sp_{sp}_rays_{rays}_cp_{cp}_lr_{lr}_m_{m}'
                         
-                        if rank == 0:
-                            with open((pathlib.Path(f"{folder_name}") / "loss.txt" ), "a") as f:
-                                f.write(f"epoch: \t {epoch}, \t loss: \t {loss} \n")
+                        os.makedirs((pathlib.Path("/home/hgf_dlr/hgf_zas3427/artist-data") / folder_name), exist_ok=True)
+                        
+                        with open((pathlib.Path(f"/home/hgf_dlr/hgf_zas3427/artist-data/{folder_name}") / "loss.txt" ), "a") as f:
+                            f.write(f"epoch: \t {epoch}, \t loss: \t {loss} \n")
 
                         with torch.no_grad():
                             
@@ -353,7 +355,7 @@ class SurfaceReconstructor2:
                                     device=device,
                                 )
                                 
-                                name1 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"points_and_normals_h_{i}_epoch_{epoch}_rank_{rank}"
+                                name1 = pathlib.Path("/home/hgf_dlr/hgf_zas3427/artist-data") / folder_name / f"points_and_normals_h_{i}_epoch_{epoch}"
 
                                 helper.plot_normal_angle_map(
                                     surface_points=temp_points[0],
@@ -362,7 +364,7 @@ class SurfaceReconstructor2:
                                     name=name1
                                 )
 
-                            name2 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"points_and_normals_epoch_{epoch}_rank_{rank}"
+                            name2 = pathlib.Path("/home/hgf_dlr/hgf_zas3427/artist-data") / folder_name / f"fluxes_epoch_{epoch}"
 
                             helper.plot_multiple_fluxes(
                                 reconstructed=normalized_flux_distributions,
@@ -507,7 +509,7 @@ class SurfaceReconstructor2:
                             references[:validation_normalized_measured_flux_distributions.shape[0]] = validation_normalized_measured_flux_distributions
 
                             plt.clf()
-                            name3 = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/hyperparameter_search/test/") / folder_name / f"reconstructed_epoch_{epoch}_rank_{rank}"
+                            name3 = pathlib.Path("/home/hgf_dlr/hgf_zas3427/artist-data") / folder_name / f"reconstructed_epoch_{epoch}"
                             helper.plot_multiple_fluxes(
                                 validation_bitmaps_per_heliostat, references, name=name3
                             )

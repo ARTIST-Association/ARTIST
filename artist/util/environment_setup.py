@@ -180,7 +180,6 @@ def setup_distributed_environment(
     groups_to_ranks_mapping, is_nested = distribute_groups_among_ranks(
         world_size=world_size, number_of_heliostat_groups=number_of_heliostat_groups
     )
-
     if is_nested:
         (
             heliostat_group_rank,
