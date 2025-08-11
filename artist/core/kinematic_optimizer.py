@@ -5,10 +5,9 @@ import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import paint_loader
-from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, raytracing_utils, utils
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""
@@ -25,37 +24,22 @@ class KinematicOptimizer:
 
     Attributes
     ----------
+    ddp_setup : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    heliostat_group : HeliostatGroup
-        The heliostat group to be calibrated.
+    heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
+        The mapping of heliostat and reconstruction data.
     calibration_method : str
         The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
-    focal_spots_measured : torch.Tensor
-        The center coordinates of the calibration flux densities.
-        Tensor of shape [number_of_calibration_data_points, 4].
-    incident_ray_directions : torch.Tensor
-        The incident ray directions specified in the calibrations.
-        Tensor of shape [number_of_calibration_data_points, 4].
-    motor_positions : torch.Tensor
-        The motor positions specified in the calibration files.
-        Tensor of shape [number_of_calibration_data_points, 2].
-    heliostats_mask : torch.Tensor
-        A mask for the selected heliostats for calibration.
-        Tensor of shape [number_of_heliostats].
-    target_area_mask : torch.Tensor
-        The indices of the target area for each calibration.
-        Tensor of shape [number_of_active_heliostats].
-    num_log : int
-        The number of log statements during optimization.
     initial_learning_rate : float
         The initial learning rate for the optimizer (default is 0.0004).
     tolerance : float
         The optimizer tolerance.
     max_epoch : int
         The maximum number of optimization epochs.
-    optimizer : Optimizer
-        The optimizer.
+    num_log : int
+        The number of log statements during optimization.
 
     Methods
     -------
@@ -65,8 +49,8 @@ class KinematicOptimizer:
 
     def __init__(
         self,
+        ddp_setup: DistributedEnvironmentTypedDict,
         scenario: Scenario,
-        heliostat_group: HeliostatGroup,
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
         ],
@@ -82,10 +66,10 @@ class KinematicOptimizer:
 
         Parameters
         ----------
+        ddp_setup : DistributedEnvironmentTypedDict
+            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        heliostat_group : HeliostatGroup
-            The heliostat group to be calibrated.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
             The mapping of heliostat and calibration data.
         calibration_method : str
@@ -105,59 +89,18 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        rank = (
-            torch.distributed.get_rank()
-            if torch.distributed.is_available() and torch.distributed.is_initialized()
-            else 0
-        )
+        rank = ddp_setup["rank"]
         if rank == 0:
             log.info("Create a kinematic optimizer.")
 
+        self.ddp_setup = ddp_setup
         self.scenario = scenario
-        self.heliostat_group = heliostat_group
+        self.heliostat_data_mapping = heliostat_data_mapping
         self.calibration_method = calibration_method
-
-        heliostat_calibration_mapping = [
-            (heliostat_name, calibration_properties_paths)
-            for heliostat_name, calibration_properties_paths, _ in heliostat_data_mapping
-            if heliostat_name in self.heliostat_group.names
-        ]
-
-        # Load the calibration data.
-        (
-            self.focal_spots_measured,
-            self.incident_ray_directions,
-            self.motor_positions,
-            self.heliostats_mask,
-            self.target_area_mask,
-        ) = paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=heliostat_calibration_mapping,
-            heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
-            power_plant_position=scenario.power_plant_position,
-            device=device,
-        )
-
-        if (
-            self.calibration_method
-            == config_dictionary.kinematic_calibration_raytracing
-        ):
-            self.motor_positions = None
-
-        self.num_log = num_log
-
-        # Create the optimizer.
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
         self.max_epoch = max_epoch
-
-        self.optimizer = torch.optim.Adam(
-            [
-                self.heliostat_group.kinematic.deviation_parameters.requires_grad_(),
-                self.heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
-            ],
-            lr=self.initial_learning_rate,
-        )
+        self.num_log = num_log
 
     def optimize(
         self,
@@ -175,30 +118,26 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        rank = (
-            torch.distributed.get_rank()
-            if torch.distributed.is_available() and torch.distributed.is_initialized()
-            else 0
-        )
+        rank = self.ddp_setup["rank"]
+
         if rank == 0:
             log.info("Start the kinematic calibration.")
 
-        if self.heliostats_mask.sum() > 0:
-            if (
-                self.calibration_method
-                == config_dictionary.kinematic_calibration_motor_positions
-            ):
-                self._optimize_kinematic_parameters_with_motor_positions(
-                    device=device,
-                )
+        if (
+            self.calibration_method
+            == config_dictionary.kinematic_calibration_motor_positions
+        ):
+            self._optimize_kinematic_parameters_with_motor_positions(
+                device=device,
+            )
 
-            if (
-                self.calibration_method
-                == config_dictionary.kinematic_calibration_raytracing
-            ):
-                self._optimize_kinematic_parameters_with_raytracing(
-                    device=device,
-                )
+        if (
+            self.calibration_method
+            == config_dictionary.kinematic_calibration_raytracing
+        ):
+            self._optimize_kinematic_parameters_with_raytracing(
+                device=device,
+            )
 
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
@@ -219,71 +158,108 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        rank = (
-            torch.distributed.get_rank()
-            if torch.distributed.is_available() and torch.distributed.is_initialized()
-            else 0
-        )
+        rank = self.ddp_setup["rank"]
+
         if rank == 0:
             log.info("Kinematic calibration with motor positions.")
 
-        preferred_reflection_directions_measured = torch.nn.functional.normalize(
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            heliostat_group = self.scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
+
+            # Load the calibration data.
+            heliostat_calibration_mapping = []
+
+            for heliostat, path_properties, _ in self.heliostat_data_mapping:
+                if heliostat in heliostat_group.names:
+                    heliostat_calibration_mapping.append((heliostat, path_properties))
+
             (
-                self.focal_spots_measured
-                - self.heliostat_group.positions.repeat_interleave(
-                    self.heliostats_mask, dim=0
-                )
-            ),
-            p=2,
-            dim=1,
-        )
-
-        loss = torch.inf
-        epoch = 0
-        log_step = self.max_epoch // self.num_log
-        while loss > self.tolerance and epoch <= self.max_epoch:
-            self.optimizer.zero_grad()
-
-            # Activate heliostats
-            self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=self.heliostats_mask, device=device
+                focal_spots_measured,
+                incident_ray_directions,
+                motor_positions,
+                active_heliostats_mask,
+                _,
+            ) = paint_loader.extract_paint_calibration_properties_data(
+                heliostat_calibration_mapping=heliostat_calibration_mapping,
+                heliostat_names=heliostat_group.names,
+                target_area_names=self.scenario.target_areas.names,
+                power_plant_position=self.scenario.power_plant_position,
+                device=device,
             )
 
-            # Retrieve the orientation of the heliostats for given motor positions.
-            orientations = (
-                self.heliostat_group.kinematic.motor_positions_to_orientations(
-                    motor_positions=self.motor_positions,
-                    device=device,
-                )
-            )
-
-            # Determine the preferred reflection directions for each heliostat.
-            preferred_reflection_directions = raytracing_utils.reflect(
-                incident_ray_directions=self.incident_ray_directions,
-                reflection_surface_normals=orientations[:, 0:4, 2],
-            )
-
-            loss = (
-                (
-                    preferred_reflection_directions
-                    - preferred_reflection_directions_measured
-                )
-                .abs()
-                .mean()
-            )
-
-            loss.backward()
-
-            self.optimizer.step()
-
-            if epoch % log_step == 0:
-                log.info(
-                    f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+            if active_heliostats_mask.sum() > 0:
+                # Calculate the reflection directions of the measured calibration data.
+                preferred_reflection_directions_measured = (
+                    torch.nn.functional.normalize(
+                        (
+                            focal_spots_measured
+                            - heliostat_group.positions.repeat_interleave(
+                                active_heliostats_mask, dim=0
+                            )
+                        ),
+                        p=2,
+                        dim=1,
+                    )
                 )
 
-            epoch += 1
+                # Create the optimizer.
+                optimizer = torch.optim.Adam(
+                    [
+                        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+                        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
+                    ],
+                    lr=self.initial_learning_rate,
+                )
 
-        log.info(f"Kinematic parameters of group {rank} optimized.")
+                # Start the optimization.
+                loss = torch.inf
+                epoch = 0
+                log_step = self.max_epoch // self.num_log
+                while loss > self.tolerance and epoch <= self.max_epoch:
+                    optimizer.zero_grad()
+
+                    # Activate heliostats.
+                    heliostat_group.activate_heliostats(
+                        active_heliostats_mask=active_heliostats_mask, device=device
+                    )
+
+                    # Retrieve the orientation of the heliostats for given motor positions.
+                    orientations = (
+                        heliostat_group.kinematic.motor_positions_to_orientations(
+                            motor_positions=motor_positions,
+                            device=device,
+                        )
+                    )
+
+                    # Determine the preferred reflection directions for each heliostat.
+                    preferred_reflection_directions = raytracing_utils.reflect(
+                        incident_ray_directions=incident_ray_directions,
+                        reflection_surface_normals=orientations[:, 0:4, 2],
+                    )
+
+                    loss = (
+                        (
+                            preferred_reflection_directions
+                            - preferred_reflection_directions_measured
+                        )
+                        .abs()
+                        .mean()
+                    )
+
+                    loss.backward()
+
+                    optimizer.step()
+
+                    if epoch % log_step == 0:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                        )
+
+                    epoch += 1
+
+                log.info(f"Kinematic parameters of group {rank} optimized.")
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -304,74 +280,128 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        rank = (
-            torch.distributed.get_rank()
-            if torch.distributed.is_available() and torch.distributed.is_initialized()
-            else 0
-        )
+        rank = self.ddp_setup["rank"]
+
         if rank == 0:
             log.info("Kinematic optimization with ray tracing.")
 
-        loss = torch.inf
-        epoch = 0
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            heliostat_group = self.scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
 
-        # Start the optimization.
-        log_step = self.max_epoch // self.num_log
-        while loss > self.tolerance and epoch <= self.max_epoch:
-            self.optimizer.zero_grad()
+            # Load the calibration data.
+            heliostat_calibration_mapping = []
 
-            self.heliostat_group.activate_heliostats(
-                active_heliostats_mask=self.heliostats_mask, device=device
-            )
+            for heliostat, path_properties, _ in self.heliostat_data_mapping:
+                if heliostat in heliostat_group.names:
+                    heliostat_calibration_mapping.append((heliostat, path_properties))
 
-            # Align heliostats.
-            self.heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[self.target_area_mask],
-                incident_ray_directions=self.incident_ray_directions,
-                active_heliostats_mask=self.heliostats_mask,
+            (
+                focal_spots_measured,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = paint_loader.extract_paint_calibration_properties_data(
+                heliostat_calibration_mapping=heliostat_calibration_mapping,
+                heliostat_names=heliostat_group.names,
+                target_area_names=self.scenario.target_areas.names,
+                power_plant_position=self.scenario.power_plant_position,
                 device=device,
             )
 
-            # Create a ray tracer.
-            ray_tracer = HeliostatRayTracer(
-                scenario=self.scenario,
-                heliostat_group=self.heliostat_group,
-                batch_size=self.heliostat_group.number_of_active_heliostats,
-            )
-
-            # Perform heliostat-based ray tracing.
-            flux_distributions = ray_tracer.trace_rays(
-                incident_ray_directions=self.incident_ray_directions,
-                active_heliostats_mask=self.heliostats_mask,
-                target_area_mask=self.target_area_mask,
-                device=device,
-            )
-
-            # Determine the focal spots of all flux density distributions
-            focal_spots = utils.get_center_of_mass(
-                bitmaps=flux_distributions,
-                target_centers=self.scenario.target_areas.centers[
-                    self.target_area_mask
-                ],
-                target_widths=self.scenario.target_areas.dimensions[
-                    self.target_area_mask
-                ][:, 0],
-                target_heights=self.scenario.target_areas.dimensions[
-                    self.target_area_mask
-                ][:, 1],
-                device=device,
-            )
-
-            loss = (focal_spots - self.focal_spots_measured).abs().mean()
-            loss.backward()
-
-            self.optimizer.step()
-
-            if epoch % log_step == 0:
-                log.info(
-                    f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
+            if active_heliostats_mask.sum() > 0:
+                # Create the optimizer.
+                optimizer = torch.optim.Adam(
+                    [
+                        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
+                        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
+                    ],
+                    lr=self.initial_learning_rate,
                 )
 
-            epoch += 1
+                # Start the optimization.
+                loss = torch.inf
+                epoch = 0
+                log_step = self.max_epoch // self.num_log
+                while loss > self.tolerance and epoch <= self.max_epoch:
+                    optimizer.zero_grad()
 
-        log.info(f"Kinematic parameters of group {rank} optimized.")
+                    # Activate heliostats.
+                    heliostat_group.activate_heliostats(
+                        active_heliostats_mask=active_heliostats_mask, device=device
+                    )
+
+                    # Align heliostats.
+                    heliostat_group.align_surfaces_with_incident_ray_directions(
+                        aim_points=self.scenario.target_areas.centers[target_area_mask],
+                        incident_ray_directions=incident_ray_directions,
+                        active_heliostats_mask=active_heliostats_mask,
+                        device=device,
+                    )
+
+                    # Create a parallelized ray tracer.
+                    ray_tracer = HeliostatRayTracer(
+                        scenario=self.scenario,
+                        heliostat_group=heliostat_group,
+                        world_size=self.ddp_setup["heliostat_group_world_size"],
+                        rank=self.ddp_setup["heliostat_group_rank"],
+                        batch_size=heliostat_group.number_of_active_heliostats,
+                        random_seed=self.ddp_setup["heliostat_group_rank"],
+                    )
+
+                    # Perform heliostat-based ray tracing.
+                    flux_distributions = ray_tracer.trace_rays(
+                        incident_ray_directions=incident_ray_directions,
+                        active_heliostats_mask=active_heliostats_mask,
+                        target_area_mask=target_area_mask,
+                        device=device,
+                    )
+
+                    # Determine the focal spots of all flux density distributions
+                    focal_spots = utils.get_center_of_mass(
+                        bitmaps=flux_distributions,
+                        target_centers=self.scenario.target_areas.centers[
+                            target_area_mask
+                        ],
+                        target_widths=self.scenario.target_areas.dimensions[
+                            target_area_mask
+                        ][:, 0],
+                        target_heights=self.scenario.target_areas.dimensions[
+                            target_area_mask
+                        ][:, 1],
+                        device=device,
+                    )
+
+                    if self.ddp_setup["is_nested"]:
+                        focal_spots = torch.distributed.nn.functional.all_reduce(
+                            focal_spots,
+                            group=self.ddp_setup["process_subgroup"],
+                            op=torch.distributed.ReduceOp.SUM,
+                        )
+
+                    loss = (focal_spots - focal_spots_measured).abs().mean()
+                    loss.backward()
+
+                    if self.ddp_setup["is_nested"]:
+                        # Reduce gradients within each heliostat group.
+                        for param_group in optimizer.param_groups:
+                            for param in param_group["params"]:
+                                if param.grad is not None:
+                                    torch.distributed.all_reduce(
+                                        param.grad,
+                                        op=torch.distributed.ReduceOp.SUM,
+                                        group=self.ddp_setup["process_subgroup"],
+                                    )
+
+                    optimizer.step()
+
+                    if epoch % log_step == 0:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                        )
+
+                    epoch += 1
+
+                log.info(f"Kinematic parameters of group {rank} optimized.")
