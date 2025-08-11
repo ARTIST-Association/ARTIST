@@ -308,6 +308,7 @@ class SurfaceReconstructor:
                     loss.backward()
 
                     if self.ddp_setup["is_nested"]:
+                        # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
                                 if param.grad is not None:
@@ -316,9 +317,6 @@ class SurfaceReconstructor:
                                         op=torch.distributed.ReduceOp.SUM,
                                         group=self.ddp_setup["process_subgroup"],
                                     )
-                                    param.grad /= self.ddp_setup[
-                                        "heliostat_group_world_size"
-                                    ]
 
                     optimizer.step()
 
