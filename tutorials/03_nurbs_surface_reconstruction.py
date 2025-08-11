@@ -59,50 +59,36 @@ number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
 with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
-) as (
-    device,
-    is_distributed,
-    is_nested,
-    rank,
-    world_size,
-    process_subgroup,
-    groups_to_ranks_mapping,
-    heliostat_group_rank,
-    heliostat_group_world_size,
-):
+) as ddp_setup:
+    device = ddp_setup["device"]
+
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
 
-    for heliostat_group_index in groups_to_ranks_mapping[rank]:
-        # If there are more ranks than heliostat groups, some ranks will be left idle.
-        if rank < scenario.heliostat_field.number_of_heliostat_groups:
-            heliostat_group = scenario.heliostat_field.heliostat_groups[
-                heliostat_group_index
-            ]
+    # Set optimizer parameters.
+    scenario.light_sources.light_source_list[0].number_of_rays = 200
+    tolerance = 0.00005
+    max_epoch = 4000
+    initial_learning_rate = 1e-6
+    number_of_surface_points = torch.tensor([80, 80], device=device)
+    resolution = torch.tensor([256, 256], device=device)
 
-            # Set parameters.
-            scenario.light_sources.light_source_list[0].number_of_rays = 200
-            tolerance = 0.00005
-            max_epoch = 4000
-            initial_learning_rate = 1e-6
-            number_of_surface_points = torch.tensor([80, 80], device=device)
-            resolution = torch.tensor([256, 256], device=device)
+    # Create the surface reconstructor.
+    surface_reconstructor = SurfaceReconstructor(
+        ddp_setup=ddp_setup,
+        scenario=scenario,
+        heliostat_data_mapping=heliostat_data_mapping,
+        number_of_surface_points=number_of_surface_points,
+        resolution=resolution,
+        initial_learning_rate=initial_learning_rate,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
+        num_log=10,
+        device=device,
+    )
 
-            # Create the surface reconstructor.
-            surface_reconstructor = SurfaceReconstructor(
-                scenario=scenario,
-                heliostat_group=heliostat_group,
-                heliostat_data_mapping=heliostat_data_mapping,
-                number_of_surface_points=number_of_surface_points,
-                resolution=resolution,
-                initial_learning_rate=initial_learning_rate,
-                tolerance=tolerance,
-                max_epoch=max_epoch,
-                num_log=max_epoch,
-                device=device,
-            )
-
-            surface_reconstructor.reconstruct_surfaces(device=device)
+    # Reconstruct surfaces.
+    surface_reconstructor.reconstruct_surfaces(device=device)

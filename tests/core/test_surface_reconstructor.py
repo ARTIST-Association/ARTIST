@@ -6,9 +6,11 @@ import torch
 from artist import ARTIST_ROOT
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
+from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
 def test_surface_reconstructor(
+    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
     """
@@ -16,6 +18,8 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
+    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -66,35 +70,38 @@ def test_surface_reconstructor(
             scenario_file=scenario_file, device=device
         )
 
-    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        surface_reconstructor = SurfaceReconstructor(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            heliostat_data_mapping=heliostat_data_mapping,
-            max_epoch=2,
-            num_log=1,
-            device=device,
-        )
+    ddp_setup_for_testing["device"] = device
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0]}
 
-        surface_reconstructor.reconstruct_surfaces(device=device)
+    # Create the surface reconstructor.
+    surface_reconstructor = SurfaceReconstructor(
+        ddp_setup=ddp_setup_for_testing,
+        scenario=scenario,
+        heliostat_data_mapping=heliostat_data_mapping,
+        max_epoch=2,
+        num_log=1,
+        device=device,
+    )
 
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_reconstructed_surfaces"
-            / f"group_{index}_{device.type}.pt"
-        )
+    surface_reconstructor.reconstruct_surfaces(device=device)
 
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_reconstructed_surfaces"
+        / f"group_0_{device.type}.pt"
+    )
 
-        torch.testing.assert_close(
-            heliostat_group.active_surface_points,
-            expected["active_surface_points"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
-        torch.testing.assert_close(
-            heliostat_group.active_surface_normals,
-            expected["active_surface_normals"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
+    expected = torch.load(expected_path, map_location=device, weights_only=True)
+
+    torch.testing.assert_close(
+        scenario.heliostat_field.heliostat_groups[0].active_surface_points,
+        expected["active_surface_points"],
+        atol=5e-2,
+        rtol=5e-2,
+    )
+    torch.testing.assert_close(
+        scenario.heliostat_field.heliostat_groups[0].active_surface_normals,
+        expected["active_surface_normals"],
+        atol=5e-2,
+        rtol=5e-2,
+    )
