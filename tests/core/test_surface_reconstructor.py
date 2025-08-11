@@ -6,10 +6,11 @@ import torch
 from artist import ARTIST_ROOT
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
+from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
 def test_surface_reconstructor(
-    ddp_setup_for_testing: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
     """
@@ -17,8 +18,8 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
-    ddp_setup_for_testing : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 

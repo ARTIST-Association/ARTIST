@@ -132,7 +132,6 @@ def test_create_subgroups_for_nested_ddp(
         )
         assert heliostat_group_rank == expected[0]
         assert heliostat_group_world_size == expected[1]
-        
 
 
 @pytest.mark.parametrize(

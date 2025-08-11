@@ -124,7 +124,11 @@ class RigidBody(Kinematic):
             actuator_parameters[0, 0, 0].item()
         ](actuator_parameters=actuator_parameters, device=device)
 
-    def _compute_orientations_from_motor_positions(self, motor_positions: torch.Tensor, device: torch.device | None = None,) -> torch.Tensor:
+    def _compute_orientations_from_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
         """
         Compute orientation matrices from given motor positions without initial orientation offsets.
 
@@ -204,10 +208,12 @@ class RigidBody(Kinematic):
             )
         )
 
-    def _apply_initial_orientation_offsets(self, orientations: torch.Tensor, device: torch.device | None = None) -> torch.Tensor:
+    def _apply_initial_orientation_offsets(
+        self, orientations: torch.Tensor, device: torch.device | None = None
+    ) -> torch.Tensor:
         """
         Apply the initial orientation offsets to the given orientation matrices.
-        
+
         Parameters
         ----------
         orientations : torch.Tensor
@@ -217,7 +223,7 @@ class RigidBody(Kinematic):
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        
+
         Returns
         -------
         torch.Tensor
@@ -284,8 +290,7 @@ class RigidBody(Kinematic):
 
         for _ in range(max_num_iterations):
             orientations = self._compute_orientations_from_motor_positions(
-                motor_positions=motor_positions,
-                device=device
+                motor_positions=motor_positions, device=device
             )
 
             concentrator_normals = orientations @ torch.tensor(
@@ -304,7 +309,9 @@ class RigidBody(Kinematic):
             )
 
             # Compute loss.
-            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(dim=0)
+            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
+                dim=0
+            )
 
             # Stop if converged.
             if isinstance(last_iteration_loss, torch.Tensor):
@@ -323,26 +330,35 @@ class RigidBody(Kinematic):
             )
 
             # Compute joint 1 angles.
-            a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(joint_angles[:, 1]) \
-                + torch.sin(self.active_deviation_parameters[:, 6]) * torch.sin(self.active_deviation_parameters[:, 7]) * torch.sin(joint_angles[:, 1])
-            b = -torch.sin(self.active_deviation_parameters[:, 6]) * torch.cos(joint_angles[:, 1]) \
-                - torch.cos(self.active_deviation_parameters[:, 6]) * torch.sin(self.active_deviation_parameters[:, 7]) * torch.sin(joint_angles[:, 1])
+            a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(
+                joint_angles[:, 1]
+            ) + torch.sin(self.active_deviation_parameters[:, 6]) * torch.sin(
+                self.active_deviation_parameters[:, 7]
+            ) * torch.sin(joint_angles[:, 1])
+            b = -torch.sin(self.active_deviation_parameters[:, 6]) * torch.cos(
+                joint_angles[:, 1]
+            ) - torch.cos(self.active_deviation_parameters[:, 6]) * torch.sin(
+                self.active_deviation_parameters[:, 7]
+            ) * torch.sin(joint_angles[:, 1])
 
             joint_angles[:, 0] = (
                 torch.arctan2(
-                    a * -desired_concentrator_normals[:, 2] - b * -desired_concentrator_normals[:, 1],
-                    a * -desired_concentrator_normals[:, 1] + b * -desired_concentrator_normals[:, 2],
-                ) - torch.pi
+                    a * -desired_concentrator_normals[:, 2]
+                    - b * -desired_concentrator_normals[:, 1],
+                    a * -desired_concentrator_normals[:, 1]
+                    + b * -desired_concentrator_normals[:, 2],
+                )
+                - torch.pi
             )
 
             motor_positions = self.actuators.angles_to_motor_positions(
-                joint_angles=joint_angles, 
-                device=device
+                angles=joint_angles, device=device
             )
 
-        orientations_with_initial_orientation_offsets = self._apply_initial_orientation_offsets(
-            orientations=orientations, 
-            device=device
+        orientations_with_initial_orientation_offsets = (
+            self._apply_initial_orientation_offsets(
+                orientations=orientations, device=device
+            )
         )
 
         self.active_motor_positions = motor_positions
@@ -372,15 +388,15 @@ class RigidBody(Kinematic):
             Tensor of shape [number_of_active_heliostats, 4, 4].
         """
         device = get_device(device=device)
-        
+
         orientations = self._compute_orientations_from_motor_positions(
-            motor_positions=motor_positions, 
-            device=device
+            motor_positions=motor_positions, device=device
         )
-        
-        orientations_with_initial_orientation_offsets = self._apply_initial_orientation_offsets(
-            orientations=orientations, 
-            device=device
+
+        orientations_with_initial_orientation_offsets = (
+            self._apply_initial_orientation_offsets(
+                orientations=orientations, device=device
+            )
         )
-        
+
         return orientations_with_initial_orientation_offsets

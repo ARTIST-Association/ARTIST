@@ -71,6 +71,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     -------
     align_surfaces_with_incident_ray_directions()
         Align surface points and surface normals with incident ray directions.
+    align_surfaces_with_motor_positions()
+        Align surface points and surface normals with motor positions.
     activate_heliostats()
         Activate certain heliostats for alignment, raytracing or calibration.
 
@@ -158,8 +160,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
 
         This method uses incident ray directions to align the heliostats. It is possible to
         have different incident ray directions for different heliostats, for example during
-        calibration tasks. Heliostats can be selected and deselected if only a subset should
-        be aligned with the active heliostat indices parameter.
+        calibration tasks. Only active heliostats can be aligned.
 
         Parameters
         ----------
@@ -192,6 +193,54 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         orientations = self.kinematic.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
             aim_points=aim_points,
+            device=device,
+        )
+
+        self.active_surface_points = (
+            self.active_surface_points @ orientations.transpose(1, 2)
+        )
+        self.active_surface_normals = (
+            self.active_surface_normals @ orientations.transpose(1, 2)
+        )
+
+    def align_surfaces_with_motor_positions(
+        self,
+        motor_positions: torch.Tensor,
+        active_heliostats_mask: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> None:
+        """
+        Align surface points and surface normals with motor positions.
+
+        Only active heliostats can be aligned.
+
+        Parameters
+        ----------
+        motor_positions : torch.Tensor
+            The motor positions for all active heliostats.
+            Tensor of shape [number_of_active_heliostats, 2].
+        active_heliostats_mask : torch.Tensor
+            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
+            An integer greater than 1 indicates that this heliostat is regarded multiple times.
+            Tensor of shape [number_of_heliostats].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Raises
+        ------
+        ValueError
+            If not all heliostats trying to be aligned have been activated.
+        """
+        device = get_device(device=device)
+
+        assert torch.equal(self.active_heliostats_mask, active_heliostats_mask), (
+            "Some heliostats were not activated and cannot be aligned."
+        )
+
+        orientations = self.kinematic.motor_positions_to_orientations(
+            motor_positions=motor_positions,
             device=device,
         )
 
