@@ -8,6 +8,7 @@ from artist import ARTIST_ROOT
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
+from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 # Set up logger.
 set_logger_config()
@@ -35,7 +36,7 @@ def test_kinematic_optimizer(
     tolerance: float,
     max_epoch: int,
     initial_lr: float,
-    ddp_setup_for_testing: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
     """
@@ -51,8 +52,8 @@ def test_kinematic_optimizer(
         The maximum amount of epochs for the optimization loop.
     initial_lr : float
         The initial learning rate.
-    ddp_setup_for_testing : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.  
+    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -137,7 +138,9 @@ def test_kinematic_optimizer(
         rtol=5e-2,
     )
     torch.testing.assert_close(
-        scenario.heliostat_field.heliostat_groups[0].kinematic.actuators.actuator_parameters,
+        scenario.heliostat_field.heliostat_groups[
+            0
+        ].kinematic.actuators.actuator_parameters,
         expected["actuator_parameters"],
         atol=5e-2,
         rtol=5e-2,

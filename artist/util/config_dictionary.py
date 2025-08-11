@@ -301,3 +301,8 @@ utis_target_width = 6
 """Key to access the width of the utis target."""
 utis_target_height = 6
 """Key to access the height of the utis target."""
+
+optimization_to_focal_spot = "focal_spot"
+"""Key to select the motor position optimization to a focal spot."""
+optimization_to_distribution = "distribution"
+"""Key to select the motor position optimization to a given distribution."""

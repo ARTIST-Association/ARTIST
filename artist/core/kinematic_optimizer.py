@@ -7,7 +7,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, raytracing_utils, utils
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""
@@ -24,8 +24,8 @@ class KinematicOptimizer:
 
     Attributes
     ----------
-    ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+    ddp_setup : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
@@ -49,7 +49,7 @@ class KinematicOptimizer:
 
     def __init__(
         self,
-        ddp_setup: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+        ddp_setup: DistributedEnvironmentTypedDict,
         scenario: Scenario,
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
@@ -66,8 +66,8 @@ class KinematicOptimizer:
 
         Parameters
         ----------
-        ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+        ddp_setup : DistributedEnvironmentTypedDict
+            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
@@ -164,7 +164,6 @@ class KinematicOptimizer:
             log.info("Kinematic calibration with motor positions.")
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-        
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -175,7 +174,7 @@ class KinematicOptimizer:
             for heliostat, path_properties, _ in self.heliostat_data_mapping:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
-            
+
             (
                 focal_spots_measured,
                 incident_ray_directions,
@@ -191,17 +190,18 @@ class KinematicOptimizer:
             )
 
             if active_heliostats_mask.sum() > 0:
-                
                 # Calculate the reflection directions of the measured calibration data.
-                preferred_reflection_directions_measured = torch.nn.functional.normalize(
-                    (
-                        focal_spots_measured
-                        - heliostat_group.positions.repeat_interleave(
-                            active_heliostats_mask, dim=0
-                        )
-                    ),
-                    p=2,
-                    dim=1,
+                preferred_reflection_directions_measured = (
+                    torch.nn.functional.normalize(
+                        (
+                            focal_spots_measured
+                            - heliostat_group.positions.repeat_interleave(
+                                active_heliostats_mask, dim=0
+                            )
+                        ),
+                        p=2,
+                        dim=1,
+                    )
                 )
 
                 # Create the optimizer.
@@ -218,7 +218,6 @@ class KinematicOptimizer:
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
                 while loss > self.tolerance and epoch <= self.max_epoch:
-                    
                     optimizer.zero_grad()
 
                     # Activate heliostats.
@@ -287,7 +286,6 @@ class KinematicOptimizer:
             log.info("Kinematic optimization with ray tracing.")
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-        
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -298,7 +296,7 @@ class KinematicOptimizer:
             for heliostat, path_properties, _ in self.heliostat_data_mapping:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
-            
+
             (
                 focal_spots_measured,
                 incident_ray_directions,
@@ -312,9 +310,8 @@ class KinematicOptimizer:
                 power_plant_position=self.scenario.power_plant_position,
                 device=device,
             )
-            
+
             if active_heliostats_mask.sum() > 0:
-                
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
                     [
@@ -322,7 +319,7 @@ class KinematicOptimizer:
                         heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
                     ],
                     lr=self.initial_learning_rate,
-                )      
+                )
 
                 # Start the optimization.
                 loss = torch.inf
@@ -394,10 +391,12 @@ class KinematicOptimizer:
                                     torch.distributed.all_reduce(
                                         param.grad,
                                         op=torch.distributed.ReduceOp.SUM,
-                                        group=self.ddp_setup["process_subgroup"]
+                                        group=self.ddp_setup["process_subgroup"],
                                     )
-                                    param.grad /= torch.distributed.get_world_size(self.ddp_setup["process_subgroup"])
-                        
+                                    param.grad /= torch.distributed.get_world_size(
+                                        self.ddp_setup["process_subgroup"]
+                                    )
+
                     optimizer.step()
 
                     if epoch % log_step == 0:

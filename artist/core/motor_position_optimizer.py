@@ -4,10 +4,12 @@ import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util.environment_setup import get_device
+from artist.util import config_dictionary, utils
+from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
+
 
 class MotorPositionsOptimizer:
     """
@@ -15,31 +17,43 @@ class MotorPositionsOptimizer:
 
     Attributes
     ----------
-    ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+    ddp_setup : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    num_log : int
-        The number of log statements during optimization.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction during the optimization.
+        Tensor of shape [4].
+    target_area_index : int
+        The index of the target used for the optimization.
+    method : str
+        The method used for optimization. The motor positions can be optimized to aim at a
+        specific coordinate or to match a specific distribution.
+    optimization_goal : torch.Tensor
+        The desired focal spot or distribution.
     initial_learning_rate : float
         The initial learning rate for the optimizer (default is 0.0004).
     tolerance : float
         The optimizer tolerance.
     max_epoch : int
         The maximum number of optimization epochs.
-    optimizer : Optimizer
-        The optimizer.
+    num_log : int
+        The number of log statements during optimization.
 
     Methods
     -------
     optimize()
         Optimize the motor positions.
     """
-    
+
     def __init__(
         self,
-        ddp_setup: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+        ddp_setup: DistributedEnvironmentTypedDict,
         scenario: Scenario,
+        incident_ray_direction: torch.Tensor,
+        target_area_index: int,
+        method: str,
+        optimization_goal: torch.Tensor,
         initial_learning_rate: float = 0.0004,
         tolerance: float = 0.035,
         max_epoch: int = 600,
@@ -50,10 +64,20 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
+        ddp_setup : DistributedEnvironmentTypedDict
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
+        incident_ray_direction : torch.Tensor
+            The incident ray direction during the optimization.
+            Tensor of shape [4].
+        target_area_index : int
+            The index of the target used for the optimization.
+        method : str
+            The method used for optimization. The motor positions can be optimized to aim at a
+            specific coordinate or to match a specific distribution.
+        optimization_goal : torch.Tensor
+            The desired focal spot or distribution.
         initial_learning_rate : float
             The initial learning rate for the optimizer (default is 0.0004).
         tolerance : float
@@ -64,12 +88,16 @@ class MotorPositionsOptimizer:
             The number of log statements during optimization (default is 3).
         """
         rank = ddp_setup["rank"]
-        
+
         if rank == 0:
             log.info("Create a motor positions optimizer.")
 
         self.ddp_setup = ddp_setup
-        self.scenario=scenario
+        self.scenario = scenario
+        self.incident_ray_direction = incident_ray_direction
+        self.target_area_index = target_area_index
+        self.method = method
+        self.optimization_goal = optimization_goal
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
         self.max_epoch = max_epoch
@@ -92,16 +120,43 @@ class MotorPositionsOptimizer:
         device = get_device(device)
 
         rank = self.ddp_setup["rank"]
-        
+
         if rank == 0:
             log.info("Start the motor positions optimization.")
 
-        # get motor positions or can they be zero in the beginning?
-        # if any alignment has already happend, they are not zero.
-        
-        optimizable_parameters = [group.kinematic.active_motor_positions for group in self.scenario.heliostat_field.heliostat_groups]
+        # Align all heliostats from all groups once, to the given incident ray direction and target, to set initial
+        # motor positions. The motor positions are set automatically within the align from incident ray method.
+        for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
+            (
+                active_heliostats_mask,
+                target_area_mask,
+                incident_ray_directions,
+            ) = self.scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                single_incident_ray_direction=self.incident_ray_direction,
+                single_target_area_index=self.target_area_index,
+                device=device,
+            )
 
-        self.optimizer = torch.optim.Adam(
+            # Activate heliostats.
+            heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask, device=device
+            )
+
+            # Align heliostats.
+            heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=self.scenario.target_areas.centers[target_area_mask],
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
+
+        optimizable_parameters = [
+            group.kinematic.active_motor_positions
+            for group in self.scenario.heliostat_field.heliostat_groups
+        ]
+
+        optimizer = torch.optim.Adam(
             optimizable_parameters,
             lr=self.initial_learning_rate,
         )
@@ -109,88 +164,141 @@ class MotorPositionsOptimizer:
         loss = torch.inf
         epoch = 0
         log_step = self.max_epoch // self.num_log
+        loss_function = torch.nn.MSELoss()
         while loss > self.tolerance and epoch <= self.max_epoch:
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
 
             bitmap_resolution = torch.tensor([256, 256])
 
-            combined_bitmaps_per_target = torch.zeros(
+            combined_bitmaps_on_optimization_target = torch.zeros(
                 (
-                    self.scenario.target_areas.number_of_target_areas,
+                    1,
                     bitmap_resolution[0],
                     bitmap_resolution[1],
                 ),
                 device=device,
             )
 
-                for group_index in ddp_setup["groups_to_ranks_mapping"][rank]:
-                    heliostat_group = self.scenario.heliostat_field.heliostat_groups[group_index]
+            for group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+                heliostat_group = self.scenario.heliostat_field.heliostat_groups[
+                    group_index
+                ]
 
-                    # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
-                    # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
-                    # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
-                    # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
-                    (
-                        active_heliostats_mask,
-                        target_area_mask,
-                        incident_ray_directions,
-                    ) = self.scenario.index_mapping(
-                        heliostat_group=heliostat_group,
-                        single_incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), #TODO
-                        single_target_area_index=1, #TODO == receiver
-                        device=device,
-                    )
+                (
+                    active_heliostats_mask,
+                    target_area_mask,
+                    incident_ray_directions,
+                ) = self.scenario.index_mapping(
+                    heliostat_group=heliostat_group,
+                    single_incident_ray_direction=self.incident_ray_direction,
+                    single_target_area_index=self.target_area_index,
+                    device=device,
+                )
 
-                    heliostat_group.activate_heliostats(
-                        active_heliostats_mask=active_heliostats_mask, device=device
-                    )
+                # Activate heliostats.
+                heliostat_group.activate_heliostats(
+                    active_heliostats_mask=active_heliostats_mask, device=device
+                )
 
-                    # TODO align with motor positions
-                    # Align heliostats.
-                    heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[target_area_mask],
-                        incident_ray_directions=incident_ray_directions,
-                        active_heliostats_mask=active_heliostats_mask,
-                        device=device,
-                    )
+                # Align heliostats.
+                heliostat_group.align_surfaces_with_motor_positions(
+                    motor_positions=heliostat_group.kinematic.active_motor_positions,
+                    active_heliostats_mask=active_heliostats_mask,
+                    device=device,
+                )
 
-                    # Create a ray tracer.
-                    ray_tracer = HeliostatRayTracer(
-                        scenario=self.scenario,
-                        heliostat_group=heliostat_group,
-                        world_size=ddp_setup["heliostat_group_world_size"],
-                        rank=ddp_setup["heliostat_group_rank"],
-                        batch_size=heliostat_group.number_of_active_heliostats,
-                        random_seed=ddp_setup["heliostat_group_rank"],
-                        bitmap_resolution=bitmap_resolution,
-                    )
+                # Create a ray tracer.
+                ray_tracer = HeliostatRayTracer(
+                    scenario=self.scenario,
+                    heliostat_group=heliostat_group,
+                    world_size=self.ddp_setup["heliostat_group_world_size"],
+                    rank=self.ddp_setup["heliostat_group_rank"],
+                    batch_size=heliostat_group.number_of_active_heliostats,
+                    random_seed=self.ddp_setup["heliostat_group_rank"],
+                    bitmap_resolution=bitmap_resolution,
+                )
 
-                    # Perform heliostat-based ray tracing.
-                    bitmaps_per_heliostat = ray_tracer.trace_rays(
-                        incident_ray_directions=incident_ray_directions,
-                        active_heliostats_mask=active_heliostats_mask,
-                        target_area_mask=target_area_mask,
-                        device=device,
-                    )
+                # Perform heliostat-based ray tracing.
+                bitmaps_per_heliostat = ray_tracer.trace_rays(
+                    incident_ray_directions=incident_ray_directions,
+                    active_heliostats_mask=active_heliostats_mask,
+                    target_area_mask=target_area_mask,
+                    device=device,
+                )
 
-                    bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-                        bitmaps_per_heliostat=bitmaps_per_heliostat,
-                        target_area_mask=target_area_mask,
-                        device=device,
-                    )
+                bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+                    bitmaps_per_heliostat=bitmaps_per_heliostat,
+                    target_area_mask=target_area_mask,
+                    device=device,
+                )
 
-                    combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
+                combined_bitmaps_on_optimization_target = (
+                    combined_bitmaps_on_optimization_target
+                    + bitmaps_per_target[self.target_area_index]
+                )
 
-                if ddp_setup["is_nested"]:
+            if self.ddp_setup["is_nested"]:
+                torch.distributed.all_reduce(
+                    combined_bitmaps_on_optimization_target,
+                    op=torch.distributed.ReduceOp.SUM,
+                    group=self.ddp_setup["process_subgroup"],
+                )
+
+            if self.ddp_setup["is_distributed"]:
+                torch.distributed.all_reduce(
+                    combined_bitmaps_on_optimization_target,
+                    op=torch.distributed.ReduceOp.SUM,
+                )
+
+            if self.method == config_dictionary.optimization_to_focal_spot:
+                # Determine the focal spots of all flux density distributions
+                current_result = utils.get_center_of_mass(
+                    bitmaps=combined_bitmaps_on_optimization_target,
+                    target_centers=self.scenario.target_areas.centers[target_area_mask],
+                    target_widths=self.scenario.target_areas.dimensions[
+                        target_area_mask
+                    ][:, 0],
+                    target_heights=self.scenario.target_areas.dimensions[
+                        target_area_mask
+                    ][:, 1],
+                    device=device,
+                )
+
+            if self.method == config_dictionary.optimization_to_distribution:
+                current_result = 0  # TODO define distribution.
+
+            loss = loss_function(
+                current_result,
+                self.optimization_goal,
+            )
+
+            loss.backward()
+
+            if self.ddp_setup["is_distributed"]:
+                for param_group in optimizer.param_groups:
+                    for param in param_group["params"]:
+                        if param.grad is not None and self.ddp_setup["is_nested"]:
+                            # Reduce gradients within each heliostat group.
+                            torch.distributed.all_reduce(
+                                param.grad,
+                                op=torch.distributed.ReduceOp.SUM,
+                                group=self.ddp_setup["process_subgroup"],
+                            )
+                            param.grad /= self.ddp_setup["heliostat_group_world_size"]
+                    # Reduce gradients among heliostat groups.
                     torch.distributed.all_reduce(
-                        combined_bitmaps_per_target,
+                        param.grad,
                         op=torch.distributed.ReduceOp.SUM,
-                        group=ddp_setup["process_subgroup"],
                     )
+                    param.grad /= self.ddp_setup["world_size"]
 
-                if ddp_setup["is_distributed"]:
-                    torch.distributed.all_reduce(
-                        combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
-                    )
+            optimizer.step()
 
+            if epoch % log_step == 0 and rank == 0:
+                log.info(
+                    f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                )
 
+            epoch += 1
+
+        log.info("Motor positions optimized")

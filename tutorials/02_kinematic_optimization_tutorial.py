@@ -60,9 +60,8 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    
     device = ddp_setup["device"]
-    
+
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
@@ -70,9 +69,7 @@ with setup_distributed_environment(
         )
 
     # Choose calibration method.
-    kinematic_calibration_method = (
-        config_dictionary.kinematic_calibration_raytracing
-    )
+    kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
 
     # Set optimizer parameters.
     tolerance = 0.0005

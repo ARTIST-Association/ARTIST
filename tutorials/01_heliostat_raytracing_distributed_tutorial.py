@@ -29,9 +29,8 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    
     device = ddp_setup["device"]
-    
+
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
@@ -62,11 +61,12 @@ with setup_distributed_environment(
         device=device,
     )
 
-    # Since each individual heliostat group has individual kinematic and actuator types, they must be 
+    # Since each individual heliostat group has individual kinematic and actuator types, they must be
     # processed seperatly. If a distributed environment exists, they can be processed in parallel,
     # otherwise each heliostat group results will be computed sequentially.
-    for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][ddp_setup["rank"]]:
-        
+    for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
+        ddp_setup["rank"]
+    ]:
         heliostat_group = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
         ]

@@ -7,7 +7,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import utils
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ class SurfaceReconstructor:
 
     Attributes
     ----------
-    ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+    ddp_setup : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
@@ -48,14 +48,14 @@ class SurfaceReconstructor:
     resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
-    num_log : int
-        The number of log statements during optimization.
     initial_learning_rate : float
         The initial learning rate for the optimizer (default is 0.0004).
     tolerance : float
         The optimizer tolerance.
     max_epoch : int
         The maximum number of optimization epochs.
+    num_log : int
+        The number of log statements during optimization.
 
     Methods
     -------
@@ -65,7 +65,7 @@ class SurfaceReconstructor:
 
     def __init__(
         self,
-        ddp_setup: dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+        ddp_setup: DistributedEnvironmentTypedDict,
         scenario: Scenario,
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
@@ -83,8 +83,8 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        ddp_setup : dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-           Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping. 
+        ddp_setup : DistributedEnvironmentTypedDict
+           Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
@@ -109,9 +109,9 @@ class SurfaceReconstructor:
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
-        
+
         rank = ddp_setup["rank"]
-        
+
         if rank == 0:
             log.info("Create a surface reconstructor.")
 
@@ -147,7 +147,6 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-        
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -184,7 +183,6 @@ class SurfaceReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
-
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_mask, device=device
@@ -216,6 +214,7 @@ class SurfaceReconstructor:
                 loss = torch.inf
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
+                loss_function = torch.nn.MSELoss()
                 while loss > self.tolerance and epoch <= self.max_epoch:
                     optimizer.zero_grad()
 
@@ -241,7 +240,7 @@ class SurfaceReconstructor:
                         evaluation_points=evaluation_points, device=device
                     )
 
-                    # The alignment module and the raytracer do not accept facetted points and normals, therefore they need to be reshaped. 
+                    # The alignment module and the raytracer do not accept facetted points and normals, therefore they need to be reshaped.
                     heliostat_group.active_surface_points = (
                         heliostat_group.active_surface_points.reshape(
                             heliostat_group.active_surface_points.shape[0], -1, 4
@@ -255,9 +254,7 @@ class SurfaceReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[
-                            target_area_mask
-                        ],
+                        aim_points=self.scenario.target_areas.centers[target_area_mask],
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -295,13 +292,14 @@ class SurfaceReconstructor:
                     )
 
                     if self.ddp_setup["is_nested"]:
-                        normalized_flux_distributions = torch.distributed.nn.functional.all_reduce(
-                            normalized_flux_distributions,
-                            group=self.ddp_setup["process_subgroup"],
-                            op=torch.distributed.ReduceOp.SUM,
+                        normalized_flux_distributions = (
+                            torch.distributed.nn.functional.all_reduce(
+                                normalized_flux_distributions,
+                                group=self.ddp_setup["process_subgroup"],
+                                op=torch.distributed.ReduceOp.SUM,
+                            )
                         )
 
-                    loss_function = torch.nn.MSELoss()
                     loss = loss_function(
                         normalized_flux_distributions,
                         normalized_measured_flux_distributions,
@@ -316,10 +314,11 @@ class SurfaceReconstructor:
                                     torch.distributed.all_reduce(
                                         param.grad,
                                         op=torch.distributed.ReduceOp.SUM,
-                                        group=self.ddp_setup["process_subgroup"]
+                                        group=self.ddp_setup["process_subgroup"],
                                     )
-                                    param.grad /= torch.distributed.get_world_size(self.ddp_setup["process_subgroup"])
-                        
+                                    param.grad /= self.ddp_setup[
+                                        "heliostat_group_world_size"
+                                    ]
 
                     optimizer.step()
 
