@@ -100,11 +100,11 @@ with setup_distributed_environment(
         )
 
     # Set optimizer parameters.
-    scenario.light_sources.light_source_list[0].number_of_rays = 200
+    scenario.light_sources.light_source_list[0].number_of_rays = 50
     tolerance = 0.00005
     max_epoch = 4000
-    initial_learning_rate = 1e-4
-    number_of_surface_points = torch.tensor([80, 80], device=device)
+    initial_learning_rate = 1e-3
+    number_of_surface_points = torch.tensor([120, 120], device=device)
     resolution = torch.tensor([256, 256], device=device)
 
     # Create the surface reconstructor.
