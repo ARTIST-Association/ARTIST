@@ -306,6 +306,3 @@ optimization_to_focal_spot = "focal_spot"
 """Key to select the motor position optimization to a focal spot."""
 optimization_to_distribution = "distribution"
 """Key to select the motor position optimization to a given distribution."""
-
-rectangular_facet = "rectangular"
-"""Defines a rectangular facet shape."""
