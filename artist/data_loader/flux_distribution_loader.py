@@ -32,6 +32,8 @@ def load_flux_from_png(
     resolution : torch.Tensor
         The resolution of the loaded png files (default is torch.tensor([256,256])).
         Tensor of shape [2].
+    number_of_measurements : int
+        Limits the number of measurements loaded if more paths than this number are provided (default is 4).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -57,11 +59,10 @@ def load_flux_from_png(
 
     resolution = tuple(resolution.to(device).tolist())
 
-    total_number_of_measurements = number_of_measurements * len(
-        heliostat_flux_path_mapping
-    )
-
+    total_number_of_measurements = 0
     for heliostat_name, paths in heliostat_flux_path_mapping:
+        if len(paths) < number_of_measurements:
+            number_of_measurements = len(paths)
         bitmaps = torch.empty(
             (number_of_measurements, resolution[0], resolution[1]), device=device
         )
@@ -74,6 +75,7 @@ def load_flux_from_png(
             bitmap_tensor = bitmap_tensor.view(resolution[1], resolution[0]) / 255.0
             bitmap = bitmap_tensor.squeeze(0)
             bitmaps[bitmap_index] = bitmap
+            total_number_of_measurements = total_number_of_measurements + 1
         flux_data_per_heliostat[heliostat_name] = bitmaps
 
     measured_fluxes = torch.empty(
