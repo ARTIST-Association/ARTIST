@@ -52,6 +52,8 @@ def extract_paint_calibration_properties_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
+    number_of_measurements : int
+        Limits the number of measurements loaded if more paths than this number are provided (default is 4).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
