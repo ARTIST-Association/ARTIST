@@ -82,7 +82,7 @@ with setup_distributed_environment(
         scenario=scenario,
         heliostat_data_mapping=heliostat_data_mapping,
         number_of_surface_points=number_of_surface_points,
-        resolution=resolution,
+        bitmap_resolution=resolution,
         initial_learning_rate=initial_learning_rate,
         tolerance=tolerance,
         max_epoch=max_epoch,

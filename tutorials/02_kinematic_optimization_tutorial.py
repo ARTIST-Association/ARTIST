@@ -86,7 +86,6 @@ with setup_distributed_environment(
         tolerance=tolerance,
         max_epoch=max_epoch,
         num_log=10,
-        device=device,
     )
 
     # Calibrate the kinematic.
