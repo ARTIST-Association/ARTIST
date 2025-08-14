@@ -95,6 +95,8 @@ class SurfaceReconstructor:
             The maximum optimization epoch (default is 1000).
         num_log : int
             The number of log statements during optimization (default is 3).
+        use_centered_flux_maps : bool
+            Whether to use centered flux maps for reconstruction (default is False).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -275,10 +277,10 @@ class SurfaceReconstructor:
                     device=device,
                 )
                 if self.use_centered_flux_maps:
-                    flux_distributions_cropped = utils.crop_image_region(
+                    flux_distributions = utils.crop_image_region(
                         images=flux_distributions,
-                        crop_width_m=config_dictionary.utis_target_width,
-                        crop_height_m=config_dictionary.utis_target_height,
+                        crop_width=config_dictionary.utis_target_width,
+                        crop_height=config_dictionary.utis_target_height,
                         target_plane_widths_m=self.scenario.target_areas.dimensions[
                             self.target_area_mask
                         ][:, 0],
@@ -286,7 +288,6 @@ class SurfaceReconstructor:
                             self.target_area_mask
                         ][:, 1],
                     )
-                    flux_distributions = flux_distributions_cropped
 
                 normalized_flux_distributions = utils.normalize_bitmaps(
                     flux_distributions=flux_distributions,

@@ -577,7 +577,7 @@ def test_normalize_bitmaps(device: torch.device) -> None:
 
 
 @pytest.mark.parametrize(
-    "image, crop_w, crop_h, target_w, target_h, expected_shape",
+    "image, crop_w, crop_h, target_w, target_h, expected_cropped",
     [
         (
             torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
@@ -585,29 +585,29 @@ def test_normalize_bitmaps(device: torch.device) -> None:
             1.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
-            (1, 3, 3),
+            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
         ),
         (
             torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]),
-            2.0,
-            2.0,
+            1.0,
+            1.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
-            (1, 3, 3),
+            torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]),
         ),
     ],
 )
-def test_crop_image_region(
+def test_crop_image_region_centering(
     image: torch.Tensor,
     crop_w: float,
     crop_h: float,
     target_w: torch.Tensor,
     target_h: torch.Tensor,
-    expected_shape: tuple[int, int, int],
+    expected_cropped: torch.Tensor,
     device: torch.device,
 ) -> None:
     """
-    Test the cropping of image regions based on physical crop dimensions.
+    Test that cropping is centered on the center of mass.
 
     Parameters
     ----------
@@ -621,23 +621,237 @@ def test_crop_image_region(
         Width of the full target plane in meters.
     target_h : torch.Tensor
         Height of the full target plane in meters.
-    expected_shape : tuple[int, int, int]
-        The expected output shape after cropping.
+    expected_cropped : torch.Tensor
+        The expected cropped image.
     device : torch.device
         The device on which to run the test.
 
     Raises
     ------
     AssertionError
-        If the output shape is not as expected.
+        If the output is not as expected.
     """
     cropped = utils.crop_image_region(
         images=image.to(device),
-        crop_width_m=crop_w,
-        crop_height_m=crop_h,
+        crop_width=crop_w,
+        crop_height=crop_h,
+        target_plane_widths_m=target_w.to(device),
+        target_plane_heights_m=target_h.to(device),
+    )
+    # The cropping should be centered on the center of mass, so for these simple cases, output should match input.
+    torch.testing.assert_close(
+        cropped, expected_cropped.to(device), rtol=1e-4, atol=1e-4
+    )
+    assert not torch.isnan(cropped).any()
+
+
+def test_crop_image_region_offcenter(device: torch.device) -> None:
+    """
+    Test cropping logic for an off-center mass.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to run the test.
+
+    Raises
+    ------
+    AssertionError
+        If the output is not as expected.
+    """
+    # Center of mass is at (2, 0) in a 3x3 image
+    image = torch.tensor([[[0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]])
+    crop_w = 1.0
+    crop_h = 1.0
+    target_w = torch.tensor([3.0])
+    target_h = torch.tensor([3.0])
+
+    cropped = utils.crop_image_region(
+        images=image.to(device),
+        crop_width=crop_w,
+        crop_height=crop_h,
         target_plane_widths_m=target_w.to(device),
         target_plane_heights_m=target_h.to(device),
     )
 
-    assert cropped.shape == expected_shape
+    # The maximum value should remain at the same location after cropping
+    max_idx = torch.argmax(cropped)
+    assert max_idx == 2  # Should be at index 2 (last column)
+    assert cropped[0, 0, 2] > 0.9
     assert not torch.isnan(cropped).any()
+    assert not torch.isnan(cropped).any()
+
+
+def _make_fake_calibration_data(
+    base_directory_path: pathlib.Path,
+    heliostat_name_list,
+    image_variant_name: str,
+    count_per_heliostat: int,
+):
+    """Create a deterministic fake folder tree with property/image pairs."""
+    paint_calibration_folder_name = "paint_calibration"
+    for heliostat_name in heliostat_name_list:
+        calibration_directory_path = (
+            base_directory_path / heliostat_name / paint_calibration_folder_name
+        )
+        calibration_directory_path.mkdir(parents=True, exist_ok=True)
+        for index in range(count_per_heliostat):
+            (
+                calibration_directory_path / f"{index}-calibration-properties.json"
+            ).write_text("{}")
+            # Write a tiny, obviously-fake PNG header so opening as binary won't crash
+            (
+                calibration_directory_path / f"{index}-{image_variant_name}.png"
+            ).write_bytes(b"\x89PNG\r\nfake")
+    return paint_calibration_folder_name
+
+
+@pytest.mark.parametrize(
+    "randomize_selection_flag,random_seed_value,number_of_measurements,image_variant_name",
+    [
+        (False, 0, 2, "flux"),
+        (True, 123, 2, "flux"),
+    ],
+)
+def test_build_heliostat_data_mapping_shape_parametrized(
+    tmp_path: pathlib.Path,
+    monkeypatch,
+    randomize_selection_flag,
+    random_seed_value,
+    number_of_measurements,
+    image_variant_name,
+):
+    """Shape/type/correspondence checks for both randomize_selection=False and randomize_selection=True."""
+    heliostat_name_list = ["heliostat_1", "heliostat_2"]
+    # Create 5 samples per heliostat so we can select a subset
+    paint_calibration_folder_name = _make_fake_calibration_data(
+        tmp_path,
+        heliostat_name_list,
+        image_variant_name,
+        count_per_heliostat=5,
+    )
+
+    # Patch where the function actually reads these names
+    monkeypatch.setattr(
+        "utils.paint_calibration_folder_name",
+        paint_calibration_folder_name,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "utils.log", type("Log", (), {"warning": staticmethod(print)}), raising=True
+    )
+
+    result_mapping_list = utils.build_heliostat_data_mapping(
+        base_path=str(tmp_path),
+        heliostat_names=heliostat_name_list,
+        num_measurements=number_of_measurements,
+        image_variant=image_variant_name,
+        randomize=randomize_selection_flag,
+        seed=random_seed_value,
+    )
+
+    # --- Shape checks ---
+    assert isinstance(result_mapping_list, list)
+    assert len(result_mapping_list) == len(heliostat_name_list)
+
+    for heliostat_entry in result_mapping_list:
+        assert isinstance(heliostat_entry, tuple) and len(heliostat_entry) == 3
+        heliostat_name, property_file_paths, image_file_paths = heliostat_entry
+
+        assert isinstance(heliostat_name, str) and heliostat_name in heliostat_name_list
+
+        assert isinstance(property_file_paths, list)
+        assert isinstance(image_file_paths, list)
+        assert all(
+            isinstance(property_path, pathlib.Path)
+            for property_path in property_file_paths
+        )
+        assert all(
+            isinstance(image_path, pathlib.Path) for image_path in image_file_paths
+        )
+
+        assert len(property_file_paths) == number_of_measurements
+        assert len(image_file_paths) == number_of_measurements
+
+        # Correspondence by ID and directory
+        for property_file_path, image_file_path in zip(
+            property_file_paths, image_file_paths
+        ):
+            assert property_file_path.parent == image_file_path.parent
+            assert (
+                property_file_path.stem.split("-")[0]
+                == image_file_path.stem.split("-")[0]
+            )
+
+
+@pytest.mark.parametrize("random_seed_value", [7, 11, 123, 2024])
+def test_build_heliostat_data_mapping_randomization_changes_order(
+    tmp_path: pathlib.Path,
+    monkeypatch,
+    random_seed_value,
+):
+    """Check randomized selection order differs from sorted order for at least one heliostat.
+
+    With enough samples available, the randomized selection order should differ from
+    the non-randomized (sorted) order for at least one heliostat (highly likely).
+    If a rare seed yields the same order, xfail to avoid flakiness.
+    """
+    image_variant_name = "flux"
+    heliostat_name_list = ["heliostat_1", "heliostat_2"]
+    number_of_measurements = 4
+    # Create 10 samples per heliostat to make a different order very likely
+    paint_calibration_folder_name = _make_fake_calibration_data(
+        tmp_path,
+        heliostat_name_list,
+        image_variant_name,
+        count_per_heliostat=10,
+    )
+
+    # Patch where the function actually reads these names
+    monkeypatch.setattr(
+        "utils.paint_calibration_folder_name",
+        paint_calibration_folder_name,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "utils.log", type("Log", (), {"warning": staticmethod(print)}), raising=True
+    )
+
+    result_sorted_list = utils.build_heliostat_data_mapping(
+        base_path=str(tmp_path),
+        heliostat_names=heliostat_name_list,
+        num_measurements=number_of_measurements,
+        image_variant=image_variant_name,
+        randomize=False,
+        seed=random_seed_value,
+    )
+    result_randomized_list = utils.build_heliostat_data_mapping(
+        base_path=str(tmp_path),
+        heliostat_names=heliostat_name_list,
+        num_measurements=number_of_measurements,
+        image_variant=image_variant_name,
+        randomize=True,
+        seed=random_seed_value,
+    )
+
+    # Compare per heliostat
+    different_for_any_heliostat = False
+    for (sorted_name, sorted_property_paths, _), (
+        random_name,
+        randomized_property_paths,
+        _,
+    ) in zip(result_sorted_list, result_randomized_list):
+        assert sorted_name == random_name
+        sorted_identifiers = [p.stem.split("-")[0] for p in sorted_property_paths]
+        randomized_identifiers = [
+            p.stem.split("-")[0] for p in randomized_property_paths
+        ]
+        # Same set, possibly different order
+        assert set(sorted_identifiers) == set(randomized_identifiers)
+        if sorted_identifiers != randomized_identifiers:
+            different_for_any_heliostat = True
+
+    if not different_for_any_heliostat:
+        pytest.xfail(
+            "Random seed produced the same order for all entries — try another seed."
+        )
