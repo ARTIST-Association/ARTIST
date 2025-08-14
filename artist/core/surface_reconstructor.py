@@ -44,6 +44,12 @@ class SurfaceReconstructor:
         A weight for the loss describing the total variation across predicted surface points.
     total_variation_loss_normals_weight : float
         A weight for the loss describing the total variation across predicted surface normals.
+    number_of_neighbors : int
+        The number of nearest neighbors to consider for the total variation loss.
+    radius : float | None
+        An optional radius limiting the distances considered for the for the total variation loss.
+    sigma : float | None
+        Determines how quickly the weight falls off as the distance increases for the total variation loss.
     early_stopping_threshold : float
         A threshold to stop optimization if the loss has not improved significantly.
     initial_learning_rate : float
@@ -61,12 +67,12 @@ class SurfaceReconstructor:
         Reconstruct NURBS surfaces from bitmaps.
     fixate_control_points_on_outer_edges()
         Fixate the u and v values of the control points on the outer edges of each facet.
-    total_variation_loss()
+    total_variation_loss_per_surface()
         Compute the total variation loss for surfaces.
     sum_mse_loss_per_heliostat()
         Compute a sum over the MSE losses per heliostat.
     """
-    
+
     def __init__(
         self,
         ddp_setup: DistributedEnvironmentTypedDict,
@@ -80,6 +86,9 @@ class SurfaceReconstructor:
         ideal_surface_loss_weight: float = 1.0,
         total_variation_loss_points_weight: float = 1.0,
         total_variation_loss_normals_weight: float = 1.0,
+        number_of_neighbors_tv_loss: int = 20,
+        radius_tv_loss: float | None = None,
+        sigma_tv_loss: float | None = None,
         early_stopping_threshold: float = 1e-3,
         initial_learning_rate: float = 1e-5,
         tolerance: float = 0.0005,
@@ -112,6 +121,12 @@ class SurfaceReconstructor:
             A weight for the loss describing the total variation across predicted surface points (default is 1.0).
         total_variation_loss_normals_weight : float
             A weight for the loss describing the total variation across predicted surface normals (default is 1.0).
+        number_of_neighbors : int
+            The number of nearest neighbors to consider for the total variation loss (default is 20).
+        radius : float | None
+            An optional radius limiting the distances considered for the for the total variation loss (default is None).
+        sigma : float | None
+            Determines how quickly the weight falls off as the distance increases for the total variation loss (default is None).
         early_stopping_threshold : float
             A threshold to stop optimization if the loss has not improved significantly (default is 1e-3).
         initial_learning_rate : float
@@ -143,6 +158,9 @@ class SurfaceReconstructor:
         self.ideal_surface_loss_weight = ideal_surface_loss_weight
         self.total_variation_loss_points_weight = total_variation_loss_points_weight
         self.total_variation_loss_normals_weight = total_variation_loss_normals_weight
+        self.number_of_neighbors_tv_loss = number_of_neighbors_tv_loss
+        self.radius_tv_loss = radius_tv_loss
+        self.sigma_tv_loss = sigma_tv_loss
         self.early_stopping_threshold = early_stopping_threshold
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
@@ -213,10 +231,17 @@ class SurfaceReconstructor:
                 )
 
                 # Get the start indices for the seperate heliostats in the active_-properties-tensors that contain heliostat duplicats for each sample.
-                nonzero_active_heliostats_mask = active_heliostats_mask[active_heliostats_mask > 0]
+                nonzero_active_heliostats_mask = active_heliostats_mask[
+                    active_heliostats_mask > 0
+                ]
                 start_indices_heliostats = torch.cumsum(
-                    torch.cat([torch.tensor([0], device=device), nonzero_active_heliostats_mask[:-1]]),
-                    dim=0
+                    torch.cat(
+                        [
+                            torch.tensor([0], device=device),
+                            nonzero_active_heliostats_mask[:-1],
+                        ]
+                    ),
+                    dim=0,
                 )
 
                 # Create NURBS evaluation points.
@@ -246,7 +271,11 @@ class SurfaceReconstructor:
                 loss_improvement = torch.inf
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
-                while loss_last_epoch > self.tolerance and epoch <= self.max_epoch and loss_improvement > self.early_stopping_threshold:
+                while (
+                    loss_last_epoch > self.tolerance
+                    and epoch <= self.max_epoch
+                    and loss_improvement > self.early_stopping_threshold
+                ):
                     optimizer.zero_grad()
 
                     # Activate heliostats.
@@ -270,10 +299,8 @@ class SurfaceReconstructor:
                     )
 
                     # The alignment module and the ray tracer do not accept facetted points and normals, therefore they need to be reshaped.
-                    heliostat_group.active_surface_points = (
-                        new_surface_points.reshape(
-                            heliostat_group.active_surface_points.shape[0], -1, 4
-                        )
+                    heliostat_group.active_surface_points = new_surface_points.reshape(
+                        heliostat_group.active_surface_points.shape[0], -1, 4
                     )
                     heliostat_group.active_surface_normals = (
                         new_surface_normals.reshape(
@@ -335,30 +362,46 @@ class SurfaceReconstructor:
                         active_heliostats_mask=active_heliostats_mask,
                         predictions=normalized_flux_distributions,
                         targets=normalized_measured_flux_distributions,
-                        device=device
+                        device=device,
                     )
 
                     # Loss regarding predicted control points deviation from ideal (flat but canted) control points.
                     ideal_surface_loss_function = torch.nn.MSELoss()
                     ideal_surface_loss = ideal_surface_loss_function(
-                        heliostat_group.nurbs_control_points[(active_heliostats_mask > 0).nonzero(as_tuple=True)[0]],
-                        heliostat_group.active_nurbs_control_points[start_indices_heliostats]
+                        heliostat_group.nurbs_control_points[
+                            (active_heliostats_mask > 0).nonzero(as_tuple=True)[0]
+                        ],
+                        heliostat_group.active_nurbs_control_points[
+                            start_indices_heliostats
+                        ],
                     )
 
                     # Loss regarding smoothness of surface points.
-                    total_variation_loss_points = self.total_variation_loss(
+                    total_variation_loss_points = self.total_variation_loss_per_surface(
                         surfaces=new_surface_points[start_indices_heliostats],
-                        device=device
-                    )
+                        number_of_neighbors=self.number_of_neighbors_tv_loss,
+                        radius=self.radius_tv_loss,
+                        sigma=self.sigma_tv_loss,
+                        device=device,
+                    ).sum()
 
                     # Loss regarding smoothness of surface normals.
-                    total_variation_loss_normals = self.total_variation_loss(
-                        surfaces=new_surface_normals[start_indices_heliostats],
-                        device=device
+                    total_variation_loss_normals = (
+                        self.total_variation_loss_per_surface(
+                            surfaces=new_surface_normals[start_indices_heliostats],
+                            device=device,
+                        ).sum()
                     )
 
                     # Sum of weighted losses.
-                    loss = self.flux_loss_weight * flux_loss + self.total_variation_loss_points_weight * total_variation_loss_points + self.total_variation_loss_points_weight * total_variation_loss_normals + self.ideal_surface_loss_weight * ideal_surface_loss
+                    loss = (
+                        self.flux_loss_weight * flux_loss
+                        + self.total_variation_loss_points_weight
+                        * total_variation_loss_points
+                        + self.total_variation_loss_points_weight
+                        * total_variation_loss_normals
+                        + self.ideal_surface_loss_weight * ideal_surface_loss
+                    )
 
                     loss.backward()
 
@@ -387,7 +430,7 @@ class SurfaceReconstructor:
                         log.info(
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
-                    
+
                     # Early stopping.
                     loss_improvement = loss_last_epoch - loss
 
@@ -395,17 +438,17 @@ class SurfaceReconstructor:
 
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
+    @staticmethod
     def fixate_control_points_on_outer_edges(
-        self,
         gradients: torch.Tensor,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Fixate the u and v values of the control points on the outer edges of each facet.
 
-        As the knots of the first and last knots on each facet have full multiplicity, the 
-        NURBS surfaces all start and end in control points. If the outer control points 
-        are not fixed in their u and v values, the reconstructed surfaces may not be 
+        As the knots of the first and last knots on each facet have full multiplicity, the
+        NURBS surfaces all start and end in control points. If the outer control points
+        are not fixed in their u and v values, the reconstructed surfaces may not be
         rectangular anymore. To keep them rectangular, this function zeros the gradients
         of the u and v coordinates of all outer control points.
 
@@ -413,23 +456,22 @@ class SurfaceReconstructor:
         ----------
         gradients : torch.Tensor
             The gradients of the outer control points.
-            Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 4].
+            Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        
+
         Returns
         -------
         torch.Tensor
             The updated gradients.
-            Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 4].
+            Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         """
         device = get_device(device=device)
-        
+
         with torch.no_grad():
-            
-            fixed_gradients = torch.zeros_like(gradients, device=device)
+            fixed_gradients = gradients.clone()
 
             height = gradients.shape[2]
             width = gradients.shape[3]
@@ -443,16 +485,16 @@ class SurfaceReconstructor:
                 (rows == 0) | (rows == height - 1) | (cols == 0) | (cols == width - 1)
             )
 
-            fixed_gradients[..., :2] = torch.where(
+            fixed_gradients[:, :, :, :, :2] = torch.where(
                 edge_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1),
                 torch.tensor(0.0, device=device),
-                gradients[..., :2],
+                gradients[:, :, :, :, :2],
             )
 
             return fixed_gradients
 
-    def total_variation_loss(
-        self,
+    @staticmethod
+    def total_variation_loss_per_surface(
         surfaces: torch.Tensor,
         number_of_neighbors: int = 20,
         radius: float | None = None,
@@ -465,10 +507,10 @@ class SurfaceReconstructor:
         Compute the total variation loss for surfaces.
 
         This loss term can be used as an addition to the overall loss during the surface reconstruction
-        optimization. It supresses the noise in the surface. It measures the noise in the surface by 
+        optimization. It supresses the noise in the surface. It measures the noise in the surface by
         taking absolute differences in the z values of the provided points. This loss implementation
-        focuses on local smoothness by applying a Gaussian distance weight and thereby letting 
-        closer points contribute more. This loss implementation is batched and can handle multiple 
+        focuses on local smoothness by applying a Gaussian distance weight and thereby letting
+        closer points contribute more. This loss implementation is batched and can handle multiple
         surfaces which are further batched in facets.
 
         Parameters
@@ -482,7 +524,7 @@ class SurfaceReconstructor:
             An optional radius limiting the distances considered for the loss (default is None).
         sigma : float | None
             Determines how quickly the weight falls off as the distance increases (default is None).
-        batch_size : int 
+        batch_size : int
             Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
         epsilon : float
             A small vlaue used to prevent divisions by zero (defualt is 1e-8).
@@ -499,7 +541,9 @@ class SurfaceReconstructor:
         """
         device = get_device(device=device)
 
-        number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = surfaces.shape
+        number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
+            surfaces.shape
+        )
         coordinates = surfaces[:, :, :, :2]
         z_values = surfaces[:, :, :, 2]
 
@@ -511,16 +555,22 @@ class SurfaceReconstructor:
                 coordinates_std = coordinates.std(dim=1).mean().item()
                 sigma = max(coordinates_std * 0.1, 1e-6)
         sigma = float(sigma)
-        
-        variation_loss_sum = torch.zeros((number_of_surfaces, number_of_facets), device=device)
-        number_of_valid_neighbors = torch.zeros((number_of_surfaces, number_of_facets), device=device)
-        
+
+        variation_loss_sum = torch.zeros(
+            (number_of_surfaces, number_of_facets), device=device
+        )
+        number_of_valid_neighbors = torch.zeros(
+            (number_of_surfaces, number_of_facets), device=device
+        )
+
         # Iterate over query points in batches to limit memory usage.
         for start_index in range(0, number_of_surface_points_per_facet, batch_size):
             # The loss will be distance weighted. Instead of building a full distance matrix for all points,
-            # the search is batched to make it more efficient. Every batch uses torch.cdist to find up to k 
+            # the search is batched to make it more efficient. Every batch uses torch.cdist to find up to k
             # nearest neighbors, this can optionally also be limited by a search radius.
-            end_index = min(start_index + batch_size, number_of_surface_points_per_facet)
+            end_index = min(
+                start_index + batch_size, number_of_surface_points_per_facet
+            )
             number_of_points_in_batch = end_index - start_index
 
             batch_coordinates = coordinates[:, :, start_index:end_index, :]
@@ -534,7 +584,9 @@ class SurfaceReconstructor:
             cols = (start_index + rows).to(device)
             self_mask = torch.zeros_like(distances, dtype=torch.bool)
             self_mask[:, :, rows, cols] = True
-            masked_distances = torch.where(self_mask, torch.full_like(distances, 1e9), distances)
+            masked_distances = torch.where(
+                self_mask, torch.full_like(distances, 1e9), distances
+            )
 
             # Add an optional radius mask. Only keep neighbors within radius.
             if radius is not None:
@@ -542,35 +594,57 @@ class SurfaceReconstructor:
             else:
                 radius_mask = torch.ones_like(masked_distances, dtype=torch.bool)
 
-            # Exclude coordinates outside of the search radius by setting them to a large value. 
-            masked_distances = torch.where(radius_mask, masked_distances, torch.full_like(masked_distances, 1e9))
+            # Exclude coordinates outside of the search radius by setting them to a large value.
+            masked_distances = torch.where(
+                radius_mask, masked_distances, torch.full_like(masked_distances, 1e9)
+            )
 
             # Select the k nearest neighbors (or fewer if the coordinate is near an edge).
-            number_of_neighbors_to_select = min(number_of_neighbors, number_of_surface_points_per_facet - 1)
-            selected_distances, selected_indices = torch.topk(masked_distances, number_of_neighbors_to_select, largest=False, dim=3)
+            number_of_neighbors_to_select = min(
+                number_of_neighbors, number_of_surface_points_per_facet - 1
+            )
+            selected_distances, selected_indices = torch.topk(
+                masked_distances, number_of_neighbors_to_select, largest=False, dim=3
+            )
             valid_mask = selected_distances < 1e9
 
             # Get all z_values of the selected neighbors and the absolute z_value_variations.
-            z_values_neighbors = torch.gather(z_values.unsqueeze(2).expand(-1, -1, number_of_points_in_batch, -1), 3, selected_indices)
-            z_value_variations = torch.abs(batch_z_values.unsqueeze(-1) - z_values_neighbors)
+            z_values_neighbors = torch.gather(
+                z_values.unsqueeze(2).expand(-1, -1, number_of_points_in_batch, -1),
+                3,
+                selected_indices,
+            )
+            z_value_variations = torch.abs(
+                batch_z_values.unsqueeze(-1) - z_values_neighbors
+            )
 
             # Set Gaussian weights using the selected distances.
-            z_value_variations = torch.abs(batch_z_values.unsqueeze(-1) - z_values_neighbors)
+            z_value_variations = torch.abs(
+                batch_z_values.unsqueeze(-1) - z_values_neighbors
+            )
             weights = torch.exp(-0.5 * (selected_distances / sigma) ** 2)
             weights = weights * valid_mask.type_as(weights)
-            z_value_variations = z_value_variations * valid_mask.type_as(z_value_variations)
+            z_value_variations = z_value_variations * valid_mask.type_as(
+                z_value_variations
+            )
 
             # Accumulate weighted z_value_variations.
-            variation_loss_sum = variation_loss_sum + (weights * z_value_variations).sum(dim=(2, 3))
-            number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(z_value_variations).sum(dim=(2, 3))
+            variation_loss_sum = variation_loss_sum + (
+                weights * z_value_variations
+            ).sum(dim=(2, 3))
+            number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
+                z_value_variations
+            ).sum(dim=(2, 3))
 
         # Batched total variation losses.
-        variation_loss_final = (variation_loss_sum / (number_of_valid_neighbors + epsilon)).sum()
-        
-        return variation_loss_final 
-    
+        variation_loss_final = variation_loss_sum / (
+            number_of_valid_neighbors + epsilon
+        )
+
+        return variation_loss_final
+
+    @staticmethod
     def sum_mse_loss_per_heliostat(
-        self,
         active_heliostats_mask: torch.Tensor,
         predictions: torch.Tensor,
         targets: torch.Tensor,
@@ -607,12 +681,14 @@ class SurfaceReconstructor:
         """
         device = get_device(device=device)
 
-        nonzero_active_heliostats_mask = active_heliostats_mask[ active_heliostats_mask > 0]
+        nonzero_active_heliostats_mask = active_heliostats_mask[
+            active_heliostats_mask > 0
+        ]
 
         # A sample to heliostat index mapping.
         heliostat_ids = torch.repeat_interleave(
             torch.arange(len(nonzero_active_heliostats_mask), device=device),
-            nonzero_active_heliostats_mask
+            nonzero_active_heliostats_mask,
         )
 
         # Compute per-sample MSE.
@@ -627,4 +703,3 @@ class SurfaceReconstructor:
         loss = group_means.sum()
 
         return loss
-    
