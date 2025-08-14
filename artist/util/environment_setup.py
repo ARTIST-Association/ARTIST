@@ -221,7 +221,7 @@ def setup_distributed_environment(
                 if torch.distributed.is_initialized():
                     torch.distributed.destroy_process_group()
             except Exception as e:
-                print(f"Distributed cleanup failed: {e}")
+                log.error(f"Distributed cleanup failed: {e}")
 
 
 def distribute_groups_among_ranks(
