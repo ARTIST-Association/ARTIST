@@ -9,7 +9,6 @@ from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 from artist.util.nurbs import NURBSSurfaces
-from hyperparameter_search.code import helper
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
@@ -270,7 +269,7 @@ class SurfaceReconstructor:
                         evaluation_points=evaluation_points, device=device
                     )
 
-                    # The alignment module and the raytracer do not accept facetted points and normals, therefore they need to be reshaped.
+                    # The alignment module and the ray tracer do not accept facetted points and normals, therefore they need to be reshaped.
                     heliostat_group.active_surface_points = (
                         new_surface_points.reshape(
                             heliostat_group.active_surface_points.shape[0], -1, 4
@@ -342,7 +341,7 @@ class SurfaceReconstructor:
                     # Loss regarding predicted control points deviation from ideal (flat but canted) control points.
                     ideal_surface_loss_function = torch.nn.MSELoss()
                     ideal_surface_loss = ideal_surface_loss_function(
-                        heliostat_group.nurbs_control_points,
+                        heliostat_group.nurbs_control_points[(active_heliostats_mask > 0).nonzero(as_tuple=True)[0]],
                         heliostat_group.active_nurbs_control_points[start_indices_heliostats]
                     )
 
@@ -392,44 +391,9 @@ class SurfaceReconstructor:
                     # Early stopping.
                     loss_improvement = loss_last_epoch - loss
 
-                    if epoch in [5, 50, 100, 200, 300, 400, 500, 600]:
-                        with torch.no_grad():
-                            for i in range(heliostat_group.number_of_heliostats):
-                                temp_nurbs = NURBSSurfaces(
-                                    degrees=heliostat_group.nurbs_degrees,
-                                    control_points=heliostat_group.nurbs_control_points[
-                                        i
-                                    ].unsqueeze(0),
-                                    device=device,
-                                )
-
-                                temp_points, temp_normals = (
-                                    temp_nurbs.calculate_surface_points_and_normals(
-                                        evaluation_points=evaluation_points[
-                                            0
-                                        ].unsqueeze(0),
-                                        device=device,
-                                    )
-                                )
-
-                                helper.plot_normal_angle_map(
-                                    surface_points=temp_points[0],
-                                    surface_normals=temp_normals[0],
-                                    reference_direction=torch.tensor(
-                                        [0.0, 0.0, 1.0, 0.0], device=device
-                                    ),
-                                    name=f"test_{i}_{epoch}",
-                                )
-
-                            helper.plot_multiple_fluxes(
-                                reconstructed=normalized_flux_distributions,
-                                references=normalized_measured_flux_distributions,
-                                name=f"test_{epoch}",
-                            )
-
                     epoch += 1
 
-                log.info("Surfaces reconstructed.")
+                log.info(f"Rank: {rank}, surfaces reconstructed.")
 
     def fixate_control_points_on_outer_edges(
         self,
