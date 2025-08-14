@@ -118,11 +118,6 @@ class KinematicOptimizer:
         """
         device = get_device(device=device)
 
-        rank = self.ddp_setup["rank"]
-
-        if rank == 0:
-            log.info("Start the kinematic calibration.")
-
         if (
             self.calibration_method
             == config_dictionary.kinematic_calibration_motor_positions
@@ -161,7 +156,7 @@ class KinematicOptimizer:
         rank = self.ddp_setup["rank"]
 
         if rank == 0:
-            log.info("Kinematic calibration with motor positions.")
+            log.info("Beginning kinematic calibration with motor positions.")
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
@@ -254,12 +249,12 @@ class KinematicOptimizer:
 
                     if epoch % log_step == 0:
                         log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                            f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
 
                     epoch += 1
 
-                log.info(f"Kinematic parameters of group {rank} optimized.")
+                log.info("Kinematic parameters optimized.")
 
     def _optimize_kinematic_parameters_with_raytracing(
         self,
@@ -283,7 +278,7 @@ class KinematicOptimizer:
         rank = self.ddp_setup["rank"]
 
         if rank == 0:
-            log.info("Kinematic optimization with ray tracing.")
+            log.info("Beginning kinematic optimization with ray tracing.")
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
@@ -359,6 +354,13 @@ class KinematicOptimizer:
                         device=device,
                     )
 
+                    if self.ddp_setup["is_nested"]:
+                        flux_distributions = torch.distributed.nn.functional.all_reduce(
+                            flux_distributions,
+                            group=self.ddp_setup["process_subgroup"],
+                            op=torch.distributed.ReduceOp.SUM,
+                        )
+
                     # Determine the focal spots of all flux density distributions
                     focal_spots = utils.get_center_of_mass(
                         bitmaps=flux_distributions,
@@ -373,13 +375,6 @@ class KinematicOptimizer:
                         ][:, 1],
                         device=device,
                     )
-
-                    if self.ddp_setup["is_nested"]:
-                        focal_spots = torch.distributed.nn.functional.all_reduce(
-                            focal_spots,
-                            group=self.ddp_setup["process_subgroup"],
-                            op=torch.distributed.ReduceOp.SUM,
-                        )
 
                     loss = (focal_spots - focal_spots_measured).abs().mean()
                     loss.backward()
@@ -404,4 +399,4 @@ class KinematicOptimizer:
 
                     epoch += 1
 
-                log.info(f"Kinematic parameters of group {rank} optimized.")
+                log.info(f"Rank: {rank}, kinematic parameters optimized.")
