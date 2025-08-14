@@ -59,7 +59,6 @@ class KinematicOptimizer:
         tolerance: float = 0.035,
         max_epoch: int = 600,
         num_log: int = 3,
-        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -82,13 +81,7 @@ class KinematicOptimizer:
             The maximum optimization epoch (default is 600).
         num_log : int
             The number of log statements during optimization (default is 3).
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
         """
-        device = get_device(device=device)
-
         rank = ddp_setup["rank"]
         if rank == 0:
             log.info("Create a kinematic optimizer.")
@@ -355,7 +348,7 @@ class KinematicOptimizer:
                     )
 
                     if self.ddp_setup["is_nested"]:
-                        flux_distributions = torch.distributed.nn.functional.all_reduce(
+                        torch.distributed.nn.functional.all_reduce(
                             flux_distributions,
                             group=self.ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
@@ -400,3 +393,16 @@ class KinematicOptimizer:
                     epoch += 1
 
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
+
+        if self.ddp_setup["is_distributed"]:
+            for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
+                torch.distributed.nn.functional.all_reduce(
+                    heliostat_group.kinematic.deviation_parameters,
+                    op=torch.distributed.ReduceOp.SUM,
+                )
+                torch.distributed.nn.functional.all_reduce(
+                    heliostat_group.kinematic.actuators.actuator_parameters,
+                    op=torch.distributed.ReduceOp.SUM,
+                )
+
+        log.info(f"Rank: {rank}, synchronised after kinematic calibration.")

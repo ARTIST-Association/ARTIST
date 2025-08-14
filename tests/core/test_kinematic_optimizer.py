@@ -117,7 +117,6 @@ def test_kinematic_optimizer(
         tolerance=tolerance,
         max_epoch=max_epoch,
         num_log=max_epoch,
-        device=device,
     )
 
     # Calibrate the kinematic.

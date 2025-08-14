@@ -33,7 +33,7 @@ class SurfaceReconstructor:
     number_of_surface_points : torch.Tensor
         The number of surface points of the reconstructed surfaces.
         Tensor of shape [2].
-    resolution : torch.Tensor
+    bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
     flux_loss_weight : float
@@ -81,7 +81,7 @@ class SurfaceReconstructor:
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
         ],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
-        resolution: torch.Tensor = torch.tensor([256, 256]),
+        bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         flux_loss_weight: float = 1.0,
         ideal_surface_loss_weight: float = 1.0,
         total_variation_loss_points_weight: float = 1.0,
@@ -110,7 +110,7 @@ class SurfaceReconstructor:
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
-        resolution : torch.Tensor
+        bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction.
             Tensor of shape [2].
         flux_loss_weight : float
@@ -153,7 +153,7 @@ class SurfaceReconstructor:
         self.scenario = scenario
         self.heliostat_data_mapping = heliostat_data_mapping
         self.number_of_surface_points = number_of_surface_points.to(device)
-        self.resolution = resolution.to(device)
+        self.bitmap_resolution = bitmap_resolution.to(device)
         self.flux_loss_weight = flux_loss_weight
         self.ideal_surface_loss_weight = ideal_surface_loss_weight
         self.total_variation_loss_points_weight = total_variation_loss_points_weight
@@ -206,7 +206,7 @@ class SurfaceReconstructor:
                 flux_distribution_loader.load_flux_from_png(
                     heliostat_flux_path_mapping=heliostat_flux_path_mapping,
                     heliostat_names=heliostat_group.names,
-                    resolution=self.resolution,
+                    resolution=self.bitmap_resolution,
                     device=device,
                 )
             )
@@ -324,7 +324,7 @@ class SurfaceReconstructor:
                         rank=self.ddp_setup["heliostat_group_rank"],
                         batch_size=heliostat_group.number_of_active_heliostats,
                         random_seed=self.ddp_setup["heliostat_group_rank"],
-                        bitmap_resolution=self.resolution,
+                        bitmap_resolution=self.bitmap_resolution,
                     )
 
                     # Perform heliostat-based ray tracing.
@@ -349,12 +349,10 @@ class SurfaceReconstructor:
 
                     # Reduce predicted fluxes from all ranks.
                     if self.ddp_setup["is_nested"]:
-                        normalized_flux_distributions = (
-                            torch.distributed.nn.functional.all_reduce(
-                                normalized_flux_distributions,
-                                group=self.ddp_setup["process_subgroup"],
-                                op=torch.distributed.ReduceOp.SUM,
-                            )
+                        torch.distributed.nn.functional.all_reduce(
+                            normalized_flux_distributions,
+                            group=self.ddp_setup["process_subgroup"],
+                            op=torch.distributed.ReduceOp.SUM,
                         )
 
                     # Loss regarding the predicted flux and the target flux.
@@ -437,6 +435,15 @@ class SurfaceReconstructor:
                     epoch += 1
 
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
+
+        if self.ddp_setup["is_distributed"]:
+            for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
+                torch.distributed.nn.functional.all_reduce(
+                    heliostat_group.nurbs_control_points,
+                    op=torch.distributed.ReduceOp.SUM,
+                )
+
+        log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
 
     @staticmethod
     def fixate_control_points_on_outer_edges(

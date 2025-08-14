@@ -147,11 +147,6 @@ class HeliostatGroup:
             (self.number_of_heliostats, 4), device=device
         )
 
-        self.active_motor_positions = torch.empty(
-            (self.number_of_active_heliostats, 2),
-            device=device,
-        )
-
     def align_surfaces_with_incident_ray_directions(
         self,
         aim_points: torch.Tensor,
@@ -271,6 +266,11 @@ class HeliostatGroup:
         )
         self.kinematic.active_deviation_parameters = (
             self.kinematic.deviation_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_motor_positions = (
+            self.kinematic.motor_positions.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
