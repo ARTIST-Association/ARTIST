@@ -673,3 +673,59 @@ def normalize_bitmaps(
     result = standardized * valid_mask
 
     return result
+
+def trapezoid_1d_distribution(
+    total_width: torch.Tensor,
+    slope_width: torch.Tensor,
+    plateau_width: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a one dimensional trapezoid distribution.
+
+    Parameter
+    ---------
+    total_width : torch.Tensor
+        The total width of the trapezoid.
+    slope_width : torch.Tensor
+        The width of the slope of the trapezoid.
+    plateau_width : torch.Tensor
+        The width of the plateau.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The one dimensional trapezoid distribution.
+    """
+    indices = torch.arange(total_width, device=device)
+    center = (total_width - 1) / 2
+    half_plateau = plateau_width / 2
+
+    # Distances from the plateau edge.
+    distances = torch.abs(indices - center) - half_plateau
+
+    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
+
+    return trapezoid
+
+def kl_divergence(
+    p: torch.Tensor, q: torch.Tensor, epsilon: float = 1e-12
+) -> torch.Tensor:
+    """
+    Compute D_KL(P||Q) over all pixels. P and Q can be any nonnegative tensors.
+
+    Parameters
+    ----------
+    p : torch.Temsor
+    q : torch.Tensor
+
+    Returns
+    -------
+    torch.Tensor
+        The kl divergnece.
+    """
+    return (p * (torch.log(((p + epsilon) / (q + epsilon))))).sum()

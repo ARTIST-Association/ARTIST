@@ -6,7 +6,7 @@ import torch
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -133,16 +133,30 @@ with setup_distributed_environment(
     if ddp_setup["is_distributed"]:
         torch.distributed.barrier()
 
+    # Choose motor position optimization method and set optimization goal.
+    motor_position_optimization_method = config_dictionary.optimization_to_focal_spot
+
+    if motor_position_optimization_method == config_dictionary.optimization_to_focal_spot:
+        optimization_goal = torch.tensor(
+            [[1.1493, -0.5030, 57.0474, 1.0000]], device=device
+        ),
+    if motor_position_optimization_method == config_dictionary.optimization_to_distribution:
+        e_trapezoid = utils.trapezoid_1d_distribution(
+            total_width=256, slope_width=2, plateau_width=120, device=device
+        )
+        u_trapezoid = utils.trapezoid_1d_distribution(
+            total_width=256, slope_width=2, plateau_width=248, device=device
+        )
+        optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
         ddp_setup=ddp_setup,
         scenario=scenario,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        method=config_dictionary.optimization_to_focal_spot,
-        optimization_goal=torch.tensor(
-            [[1.1493, -0.5030, 57.0474, 1.0000]], device=device
-        ),
+        method=config_dictionary.optimization_to_distribution,
+        optimization_goal=optimization_goal,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         max_epoch=100,
         num_log=max_epoch,
@@ -151,3 +165,9 @@ with setup_distributed_environment(
 
     # Optimize the motor positions.
     motor_positions_optimizer.optimize(device=device)
+
+
+
+# P || Q    Penalizes extra mass where target has none (avoids hallucinated bits).
+# Q || P    Penalizes missing mass in the target regions.
+# -> We should do kl-div for surface reconstruction as well!
