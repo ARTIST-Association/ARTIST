@@ -15,20 +15,27 @@ class RigidBody(Kinematic):
         The number of total heliostats using this rigid body kinematic.
     heliostat_positions : torch.Tensor
         The positions of all heliostats.
+        Tensor of shape [number_of_heliostats, 4].
     initial_orientations : torch.Tensor
         The initial orientation offsets of all heliostats.
+        Tensor of shape [number_of_heliostats, 4].
     deviation_parameters : torch.Tensor
         The kinematic deviation parameters of all heliostats.
+        Tensor of shape [number_of_heliostats, 18].
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostat_positions : torch.Tensor
         The positions of all active heliostats.
+        Tensor of shape [number_of_active_heliostats, 4].
     active_initial_orientations : torch.Tensor
-        The initial orientations of all active heliostats
+        The initial orientations of all active heliostats.
+        Tensor of shape [number_of_active_heliostats, 4].
     active_deviation_parameters : torch.Tensor
         The deviation parameters of all active heliostats.
+        Tensor of shape [number_of_active_heliostats, 18].
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematic.
+        Tensor of shape [4].
     actuators : Actuators
         The actuators used in the kinematic.
 
@@ -66,13 +73,17 @@ class RigidBody(Kinematic):
         number_of_heliostats : int
             The number of heliostats using this rigid body kinematic.
         heliostat_positions : torch.Tensor
-            The positions of the heliostats.
+            The positions of all heliostats.
+            Tensor of shape [number_of_heliostats, 4].
         initial_orientations : torch.Tensor
-            The initial orientation offsets of the heliostats.
+            The initial orientation offsets of all heliostats.
+            Tensor of shape [number_of_heliostats, 4].
         deviation_parameters : torch.Tensor
-            The deviation parameters for the kinematic.
+            The kinematic deviation parameters of all heliostats.
+            Tensor of shape [number_of_heliostats, 18].
         actuator_parameters : torch.Tensor
             The actuator parameters.
+            Tensor of shape [number_of_heliostats, n, 2], where n=7 for linear actuators or n=2 for ideal actuators.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -121,21 +132,24 @@ class RigidBody(Kinematic):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
         aim_points : torch.Tensor
             The aim points for the active heliostats.
+            Tensor of shape [number_of_active_heliostats, 4].
+        max_num_iterations : int
+            Maximum number of iterations (default is 2).
+        min_eps : float
+            Convergence criterion (default is 0.0001).#
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        max_num_iterations : int
-            Maximum number of iterations (default is 2).
-        min_eps : float
-            Convergence criterion (default is 0.0001).
 
         Returns
         -------
         torch.Tensor
             The orientation matrices.
+            Tensor of shape [number_of_active_heliostats, 4, 4].
         """
         device = get_device(device=device)
 
@@ -324,6 +338,7 @@ class RigidBody(Kinematic):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
+            Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -333,6 +348,7 @@ class RigidBody(Kinematic):
         -------
         torch.Tensor
             The orientation matrices.
+            Tensor of shape [number_of_active_heliostats, 4, 4].
         """
         device = get_device(device=device)
 

@@ -109,7 +109,7 @@ class Scenario:
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet (default is torch.tensor([50, 50])).
+            The number of surface points per facet (default is torch.tensor([50,50])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -246,7 +246,7 @@ class Scenario:
 
         If no mapping is provided, a default mapping for all heliostats within this group will be created.
         The default mapping will map all heliostats to the default ``single_incident_ray_direction``, which
-        simualtes a light source positioned in the south and the default ``single_target_area_index``, which
+        simulates a light source positioned in the south and the default ``single_target_area_index``, which
         is 0. To overwrite these defaults, please provide a ``single_incident_ray_direction`` or a
         ``single_target_area_index``.
 
@@ -257,7 +257,7 @@ class Scenario:
         string_mapping : list[tuple[str, str, torch.Tensor]] | None
             Strings that map heliostats to target areas and incident ray direction tensors (default is None).
         single_incident_ray_direction : torch.Tensor
-            The default incident ray direction (defualt is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+            The default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
         single_target_area_index : int
             The default target area index (default is 0).
         device : torch.device | None
@@ -268,11 +268,14 @@ class Scenario:
         Returns
         -------
         torch.Tensor
-            All incident ray directions for the heliostats in this scenario.
+            The mask specifying which heliostat is selected and how many times.
+            Tensor of shape [number_of_heliostats_in_group].
         torch.Tensor
-            The indices of all active heliostats in order.
+            The indices of target areas for all selected heliostats in order.
+            Tensor of shape [number_of_active_heliostats_in_group].
         torch.Tensor
-            The indices of target areas for all heliostats in order.
+            The incident ray directions for the selected heliostats in order.
+            Tensor of shape [number_of_active_heliostats_in_group, 4].
         """
         device = get_device(device=device)
 

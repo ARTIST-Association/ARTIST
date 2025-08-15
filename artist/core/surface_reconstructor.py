@@ -31,16 +31,22 @@ class SurfaceReconstructor:
         The heliostat group to be reconstructed.
     normalized_measured_flux_distributions : torch.Tensor
         The measured, normalized flux density distributions.
+        Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     incident_ray_directions : torch.Tensor
         The incident ray directions of the measured fluxes.
+        Tensor of shape [number_of_active_heliostats, 4].
     heliostats_mask : torch.Tensor
         A mask for the selected heliostats for reconstruction.
+        Tensor of shape [number_of_heliostats].
     target_area_mask : torch.Tensor
         The indices of the target area for each reconstruction.
+        Tensor of shape [number_of_active_heliostats].
     number_of_surface_points : torch.Tensor
         The number of surface points of the reconstructed surfaces.
+        Tensor of shape [2].
     resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
+        Tensor of shape [2].
     num_log : int
         The number of log statements during optimization.
     initial_learning_rate : float
@@ -85,8 +91,10 @@ class SurfaceReconstructor:
             The mapping of heliostat and reconstruction data.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
+            Tensor of shape [2].
         resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction.
+            Tensor of shape [2].
         initial_learning_rate : float
             The initial learning rate for the optimizer (default is 1e-5).
         tolerance : float

@@ -95,7 +95,7 @@ class H5ScenarioGenerator:
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
-        self._ceck_equal_facet_numbers()
+        self._check_equal_facet_numbers()
         self.version = version
 
     def _get_number_of_heliostat_groups(self) -> int:
@@ -127,22 +127,21 @@ class H5ScenarioGenerator:
                     unique_groups.add((selected_kinematic_type, selected_actuator_type))
         return len(unique_groups)
 
-    def _ceck_equal_facet_numbers(self):
+    def _check_equal_facet_numbers(self):
         """
-        Check that each heliostat has the same number of facets and each facet the same number of evaluation points.
+        Check that each heliostat has the same number of facets.
 
         Raises
         ------
         ValueError
-            If at least one heliostat has a different number of facets or one facet has a different number of evaluation
-            points.
+            If at least one heliostat has a different number of facets.
         """
         # Define accepted number of facets based on the prototype.
         accepted_number_of_facets = len(
             self.prototype_config.surface_prototype.facet_list
         )
 
-        # Check that every heliostat has the same number of facets and evaluation points.
+        # Check that every heliostat has the same number of facets.
         for heliostat in self.heliostat_list_config.heliostat_list:
             if heliostat.surface:
                 if len(heliostat.surface.facet_list) != accepted_number_of_facets:

@@ -27,7 +27,7 @@ class Surface:
         self, surface_config: SurfaceConfig, device: torch.device | None = None
     ) -> None:
         """
-        Initialize the surface.
+        Initialize the surface of one heliostat.
 
         The heliostat surface consists of one or more facets. The surface only describes the mirrors
         on the heliostat, not the whole heliostat. The surface can be aligned through the kinematic and
@@ -51,9 +51,9 @@ class Surface:
             self.nurbs_facets.append(
                 NURBSSurfaces(
                     degrees=facet_config.degrees,
-                    control_points=facet_config.control_points.unsqueeze(0)
-                    .unsqueeze(0)
-                    .expand(1, 1, -1, -1, -1),
+                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(
+                        0
+                    ),
                     device=device,
                 )
             )
@@ -66,13 +66,11 @@ class Surface:
         """
         Calculate all surface points and normals from all facets.
 
-        Note: This method should only be used once nurbs are no longer being optimized.
-        The returned surface points and normals are detached from the computational graph.
-
         Parameters
         ----------
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet.
+            The number of surface points per facet in east and then in north direction.
+            Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -81,9 +79,9 @@ class Surface:
         Returns
         -------
         torch.Tensor
-            The surface points, detached from the computational graph.
+            The surface points for one heliostat, tensor of shape [number_of_facets, number_of_surface_points_per_facet, 4].
         torch.Tensor
-            The surface normals, detached from the computational graph.
+            The surface normals for one heliostat, tensor of shape [number_of_facets, number_of_surface_normals_per_facet, 4].
         """
         device = get_device(device=device)
 
@@ -91,6 +89,9 @@ class Surface:
             number_of_evaluation_points=number_of_points_per_facet, device=device
         )
 
+        # The surface points and surface normals will be returned as tensors of shape:
+        # [number_of_facets, number_of_surface_points_per_facet, 4] and
+        # [number_of_facets, number_of_surface_normals_per_facet, 4].
         surface_points = torch.empty(
             len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
         )

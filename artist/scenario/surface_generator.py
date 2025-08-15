@@ -30,8 +30,6 @@ class SurfaceGenerator:
         Generate a fitted surface configuration.
     generate_ideal_surface_config()
         Generate an ideal surface configuration.
-    perform_canting_and_translation()
-        Perform the canting rotation and facet translation.
     """
 
     def __init__(
@@ -52,9 +50,9 @@ class SurfaceGenerator:
         Parameters
         ----------
         number_of_control_points : torch.Tensor
-            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20, 20])).
+            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20,20])).
         degrees : torch.Tensor
-            Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
+            Degree of the NURBS in the east and north direction (default is torch.tensor([3,3])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -69,9 +67,10 @@ class SurfaceGenerator:
         self,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         fit_method: str = config_dictionary.fit_nurbs_from_normals,
         tolerance: float = 1e-10,
-        initial_learning_rate: float = 1e-3,
         max_epoch: int = 400,
         device: torch.device | None = None,
     ) -> NURBSSurfaces:
@@ -87,9 +86,15 @@ class SurfaceGenerator:
         Parameters
         ----------
         surface_points : torch.Tensor
-            The surface points given as an (N, 4) tensor.
+            The surface points.
+            Tensor of shape [number_of_surface_points, 4].
         surface_normals : torch.Tensor
-            The surface normals given as an (N, 4) tensor.
+            The surface normals.
+            Tensor of shape [number_of_surface_normals, 4].
+        optimizer : torch.optim.Optimizer
+            The NURBS fit optimizer.
+        scheduler : torch.optim.lr_scheduler.LRScheduler | None
+            The NURBS fit learning rate scheduler (default is None).
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
@@ -168,8 +173,7 @@ class SurfaceGenerator:
         control_points[:, :, :, :, 2] = 0
 
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
-        evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
-        evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
+        evaluation_points[:, :2] = utils.normalize_points(evaluation_points[:, :2])
         evaluation_points = evaluation_points.unsqueeze(0).unsqueeze(0)
 
         nurbs_surface = NURBSSurfaces(
@@ -178,19 +182,12 @@ class SurfaceGenerator:
             device=device,
         )
 
-        # Optimize the control points of the NURBS surface.
-        optimizer = torch.optim.Adam(
-            [nurbs_surface.control_points.requires_grad_()],
-            lr=initial_learning_rate,
+        # Add optimizable parameters (control points of the NURBS surface) to the optimizer.
+        optimizer.param_groups.clear()
+        optimizer.add_param_group(
+            {"params": nurbs_surface.control_points.requires_grad_()}
         )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.2,
-            patience=50,
-            threshold=1e-7,
-            threshold_mode="abs",
-        )
+
         loss = torch.inf
         epoch = 0
         while loss > tolerance and epoch <= max_epoch:
@@ -210,7 +207,8 @@ class SurfaceGenerator:
             loss.backward()
 
             optimizer.step()
-            scheduler.step(loss.abs().mean())
+            if scheduler:
+                scheduler.step(loss.abs().mean())
             if epoch % 100 == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}.",
@@ -226,15 +224,21 @@ class SurfaceGenerator:
         canting: torch.Tensor,
         surface_points_with_facets_list: list[torch.Tensor],
         surface_normals_with_facets_list: list[torch.Tensor],
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         deflectometry_step_size: int = 100,
         fit_method: str = config_dictionary.fit_nurbs_from_normals,
         tolerance: float = 1e-10,
-        initial_learning_rate: float = 1e-3,
         max_epoch: int = 400,
         device: torch.device | None = None,
     ) -> SurfaceConfig:
         """
         Generate a fitted surface configuration.
+
+        The fitted surface configuration is composed of separate facets. Each facet is defined by fitted control points,
+        meaning the control points are fitted to measured point cloud or surface normals data. Initializing a surface
+        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting on real-world
+        conditions. The surface can be fitted to deflectometry data or any other provided point cloud data.
 
         Parameters
         ----------
@@ -242,13 +246,19 @@ class SurfaceGenerator:
             The heliostat name, used for logging.
         facet_translation_vectors : torch.Tensor
             Translation vector for each facet from heliostat origin to relative position.
+            Tensor of shape [number_of_facets, 4].
         canting : torch.Tensor
             The canting vector per facet in east and north direction.
+            Tensor of shape [number_of_facets, 2, 4].
         surface_points_with_facets_list : list[torch.Tensor]
             A list of facetted surface points. Points per facet may vary.
         surface_normals_with_facets_list : list[torch.Tensor]
             A list of facetted surface normals. Normals per facet may vary.
-        deflectometry_step_size : torch.Tensor
+        optimizer : torch.optim.Optimizer
+            The NURBS fit optimizer.
+        scheduler : torch.optim.lr_scheduler.LRScheduler | None
+            The NURBS fit learning rate scheduler (default is None).
+        deflectometry_step_size : int
             The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
@@ -274,22 +284,22 @@ class SurfaceGenerator:
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
-        min_x = min(
+        minimum_number_of_surface_points_all_facets = min(
             single_facet_surface_points.shape[0]
             for single_facet_surface_points in surface_points_with_facets_list
         )
         reduced_single_facet_surface_points = [
-            single_facet_surface_points[:min_x]
+            single_facet_surface_points[:minimum_number_of_surface_points_all_facets]
             for single_facet_surface_points in surface_points_with_facets_list
         ]
         surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
 
-        min_x = min(
+        minimum_number_of_surface_normals_all_facets = min(
             single_facet_surface_normals.shape[0]
             for single_facet_surface_normals in surface_normals_with_facets_list
         )
         reduced_single_facet_surface_normals = [
-            single_facet_surface_normals[:min_x]
+            single_facet_surface_normals[:minimum_number_of_surface_normals_all_facets]
             for single_facet_surface_normals in surface_normals_with_facets_list
         ]
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
@@ -302,17 +312,13 @@ class SurfaceGenerator:
             :, ::deflectometry_step_size
         ]
 
-        # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
-            facet_translation_vectors, device=device
-        )
         # If we are using a point cloud to learn the points, we do not need to translate the facets.
         if fit_method == config_dictionary.fit_nurbs_from_points:
             facet_translation_vectors = torch.zeros(
                 facet_translation_vectors.shape, device=device
             )
+
         # Convert to 4D format.
-        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
         surface_points_with_facets = utils.convert_3d_points_to_4d_format(
             surface_points_with_facets, device=device
         )
@@ -331,27 +337,25 @@ class SurfaceGenerator:
             nurbs = self.fit_nurbs(
                 surface_points=surface_points_with_facets[i],
                 surface_normals=surface_normals_with_facets[i],
+                optimizer=optimizer,
+                scheduler=scheduler,
                 fit_method=fit_method,
                 tolerance=tolerance,
-                initial_learning_rate=initial_learning_rate,
                 max_epoch=max_epoch,
                 device=device,
             )
 
-            # Only a translation is necessary, the canting is learned, therefore the cantings are unit vectors.
-            canted_control_points = self.perform_canting_and_translation(
-                points=nurbs.control_points[0, 0].detach(),
-                translation=facet_translation_vectors[i],
-                canting=torch.tensor(
-                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=device
-                ),
-                device=device,
+            # During the NURBS fit, the control points were updated to represent real-world surfaces, they implicitly
+            # learned the canting, but each facet is still centered around the origin, therefore a translation for each
+            # facet is necessary.
+            translated_control_points = (
+                nurbs.control_points[0, 0] + facet_translation_vectors[i, :3]
             )
 
             facet_config_list.append(
                 FacetConfig(
                     facet_key=f"facet_{i + 1}",
-                    control_points=canted_control_points,
+                    control_points=translated_control_points.detach(),
                     degrees=nurbs.degrees,
                     translation_vector=facet_translation_vectors[i],
                     canting=canting[i],
@@ -371,12 +375,20 @@ class SurfaceGenerator:
         """
         Generate an ideal surface configuration.
 
+        The ideal surface configuration is composed of separate facets. Each facet is defined by ideal control points,
+        meaning the control points start as 3D points on a flat, equidistant grid around the origin. These control points
+        are then canted (rotated) and translated to the facet positions. Initializing a surface from this configuration
+        results in an ideal heliostat surface without dents or bulges but with canting. This ideal heliostat surface can
+        be used as a starting point for a surface reconstruction based on measured flux distributions.
+
         Parameters
         ----------
         facet_translation_vectors : torch.Tensor
             Translation vector for each facet from heliostat origin to relative position.
+            Tensor of shape [number_of_facets, 4].
         canting : torch.Tensor
             The canting vector per facet in east and north direction.
+            Tensor of shape [number_of_facets, 2, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -391,12 +403,6 @@ class SurfaceGenerator:
 
         log.info("Beginning generation of the ideal surface configuration.")
         facet_config_list = []
-
-        # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
-            facet_translation_vectors, device=device
-        )
-        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
         for facet_index in range(facet_translation_vectors.shape[0]):
             control_points = torch.zeros(
@@ -424,16 +430,20 @@ class SurfaceGenerator:
             control_points[:, :, 1] = control_points_n
             control_points[:, :, 2] = 0
 
-            canted_control_points = self.perform_canting_and_translation(
-                points=control_points,
-                canting=canting[facet_index],
-                translation=facet_translation_vectors[facet_index],
-                device=device,
+            # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
+            # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
+            canted_and_translated_control_points = (
+                self._perform_canting_and_facet_translation(
+                    control_points=control_points,
+                    canting=canting[facet_index],
+                    facet_translation=facet_translation_vectors[facet_index],
+                    device=device,
+                )
             )
 
             facet_config = FacetConfig(
                 facet_key=f"facet_{facet_index + 1}",
-                control_points=canted_control_points,
+                control_points=canted_and_translated_control_points,
                 degrees=self.degrees,
                 translation_vector=facet_translation_vectors[facet_index],
                 canting=canting[facet_index],
@@ -446,24 +456,27 @@ class SurfaceGenerator:
 
         return surface_config
 
-    def perform_canting_and_translation(
+    def _perform_canting_and_facet_translation(
         self,
-        points: torch.Tensor,
-        translation: torch.Tensor,
+        control_points: torch.Tensor,
+        facet_translation: torch.Tensor,
         canting: torch.Tensor,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Perform the canting rotation and facet translation.
+        Perform the canting rotation and facet translation on the provided, ideal control points for a single facet.
 
         Parameters
         ----------
-        points : torch.Tensor
+        control_points : torch.Tensor
             The points to be canted and translated.
-        translation : torch.Tensor
-            The facet translation vector.
+            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        facet_translation : torch.Tensor
+            Translation vector for each facet from heliostat origin to relative position.
+            Tensor of shape [4].
         canting : torch.Tensor
-            The canting vectors in east and north direction.
+            The canting vector per facet in east and north direction.
+            Tensor of shape [2, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -473,6 +486,7 @@ class SurfaceGenerator:
         -------
         torch.Tensor
             The canted and translated points.
+            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         """
         device = get_device(device=device)
 
@@ -487,12 +501,12 @@ class SurfaceGenerator:
         rotation_matrix[3, 3] = 1.0
 
         canted_points = (
-            utils.convert_3d_points_to_4d_format(points=points, device=device).reshape(
-                -1, 4
-            )
+            utils.convert_3d_points_to_4d_format(
+                points=control_points, device=device
+            ).reshape(-1, 4)
             @ rotation_matrix.T
-        ).reshape(points.shape[0], points.shape[1], 4)
+        ).reshape(control_points.shape[0], control_points.shape[1], 4)
 
-        canted_with_translation = canted_points + translation
+        canted_with_translation = canted_points + facet_translation
 
         return canted_with_translation[:, :, :3]

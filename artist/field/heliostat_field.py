@@ -82,7 +82,8 @@ class HeliostatField:
         prototype_actuators : dict[str, str | torch.Tensor]
             The prototype for the actuators, including type and parameters.
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet.
+            The number of surface points per facet in east and then in north direction.
+            Tensor of shape [2].
         device : device: torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -233,9 +234,11 @@ class HeliostatField:
                 ]
 
             surface = Surface(surface_config, device=device)
+
             number_of_facets = len(surface_config.facet_list)
             degrees = torch.empty(2, dtype=torch.int32, device=device)
             # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+            # control_points: Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
             control_points = torch.empty(
                 (
                     number_of_facets,

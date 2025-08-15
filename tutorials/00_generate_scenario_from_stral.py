@@ -97,6 +97,17 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 # Generate surface configuration from STRAL data.
 surface_generator = SurfaceGenerator(device=device)
 
+# Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    nurbs_fit_optimizer,
+    mode="min",
+    factor=0.2,
+    patience=50,
+    threshold=1e-7,
+    threshold_mode="abs",
+)
+
 # Use this surface config for fitted deflectometry surfaces.
 surface_config = surface_generator.generate_fitted_surface_config(
     heliostat_name="heliostat_1",
@@ -104,6 +115,8 @@ surface_config = surface_generator.generate_fitted_surface_config(
     canting=canting,
     surface_points_with_facets_list=surface_points_with_facets_list,
     surface_normals_with_facets_list=surface_normals_with_facets_list,
+    optimizer=nurbs_fit_optimizer,
+    scheduler=nurbs_fit_scheduler,
     device=device,
 )
 

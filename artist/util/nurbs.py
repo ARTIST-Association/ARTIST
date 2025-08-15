@@ -8,19 +8,29 @@ class NURBSSurfaces(torch.nn.Module):
     """
     Implement differentiable NURBS for surface representations.
 
-    This implementation can be used to create multiple seperate NURBS surfaces at the same time
+    This implementation can be used to create multiple separate NURBS surfaces at the same time
     and they are handled in parallel.
 
     Attributes
     ----------
     degrees : torch.Tensor
-        The spline degrees.
+        The spline degrees in u and then in v direction.
+        Tensor of shape [2].
     control_points : torch.Tensor
         The control points.
+        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    uniform : bool
+        Indicates wether the NURBS are uniform or not.
+    number_of_surfaces : int
+        The number of NURBS surfaces processed in parallel (number of heliostats).
+    number_of_facets_per_surface : int
+        The number of facets per single NURBS surface.
     knot_vectors_u : torch.Tensor
         The knot vectors in the u direction.
+        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction + degree_u_direction + 1].
     knot_vectors_v : torch.Tensor
         The knot vectors in the v direction.
+        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_v_direction + degree_v_direction + 1].
 
     Methods
     -------
@@ -33,7 +43,7 @@ class NURBSSurfaces(torch.nn.Module):
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surfaces.
     forward()
-        Specify the forward operation of the NURBS, i.e. caluclate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
     """
 
     def __init__(
@@ -48,15 +58,17 @@ class NURBSSurfaces(torch.nn.Module):
 
         NURBS stands for Non-Uniform Rational B-Spline. NURBS allow for an efficient and precise reconstruction
         of the imperfect heliostat surfaces in the digital twin. This implementation of the NURBS is
-        differentiable. The NURBS surfaces require a degree in two directions, evaluation points, and control
-        points. These parameters are used to create the NURBS surface. For more details, see the NURBS tutorial.
+        differentiable. The NURBS surfaces require a degree in two directions and control points. These parameters
+        are used to create the NURBS surface. For more details, see the NURBS tutorial.
 
         Parameters
         ----------
-        degrees : torch.tensor
-            The spline degrees in east and north directions.
+        degrees : torch.Tensor
+            The spline degrees in u and then in v direction.
+            Tensor of shape [2].
         control_points : torch.Tensor
             The control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         uniform : bool
             Indicates wether the NURBS are uniform or not (default is True (uniform)).
         device : torch.device | None
@@ -151,8 +163,10 @@ class NURBSSurfaces(torch.nn.Module):
             The NURBS surface direction u or v.
         evaluation_points : torch.Tensor
             The evaluation points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         knot_vectors : torch.Tensor
             The knot vector for the NURBS surfaces in a single direction.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_one_direction + degree_one_direction + 1].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -162,6 +176,7 @@ class NURBSSurfaces(torch.nn.Module):
         -------
         torch.Tensor
             The knot spans.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points].
         """
         device = get_device(device=device)
 
@@ -213,7 +228,7 @@ class NURBSSurfaces(torch.nn.Module):
         spans: torch.Tensor,
         nth_derivative: int = 1,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> list[list[torch.Tensor]]:
         """
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
 
@@ -225,10 +240,13 @@ class NURBSSurfaces(torch.nn.Module):
             The NURBS surface direction u or v.
         evaluation_points : torch.Tensor
             The evaluation points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         knot_vectors : torch.Tensor
             Contains all the knots of the NURBS surfaces.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_one_direction + degree_one_direction + 1].
         spans : torch.Tensor
             The knot spans.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points].
         nth_derivative : int
             Specifies how many derivatives are calculated (default is 1).
         device : torch.device | None
@@ -238,7 +256,7 @@ class NURBSSurfaces(torch.nn.Module):
 
         Returns
         -------
-        torch.Tensor
+        list[list[torch.Tensor]]
             The derivatives of the basis functions.
         """
         device = get_device(device=device)
@@ -388,10 +406,13 @@ class NURBSSurfaces(torch.nn.Module):
         ----------
         control_points : torch.Tensor
             The control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 4].
         index_u : torch.Tensor
             The indices in u direction.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points].
         index_v : torch.Tensor
             The indices in v direction.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -401,6 +422,7 @@ class NURBSSurfaces(torch.nn.Module):
         -------
         torch.Tensor
             The gathered control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         """
         device = get_device(device=device)
 
@@ -438,6 +460,7 @@ class NURBSSurfaces(torch.nn.Module):
         ----------
         evaluation_points : torch.Tensor
             The evaluation points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -447,8 +470,10 @@ class NURBSSurfaces(torch.nn.Module):
         -------
         torch.Tensor
             The surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         torch.Tensor
             The surface normals.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         """
         device = get_device(device=device)
 
@@ -574,12 +599,13 @@ class NURBSSurfaces(torch.nn.Module):
         self, evaluation_points: torch.Tensor, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Specify the forward operation of the NURBS, i.e. caluclate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
 
         Parameters
         ----------
         evaluation_points : torch.Tensor
             The evaluation points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -589,8 +615,10 @@ class NURBSSurfaces(torch.nn.Module):
         -------
         torch.Tensor
             The surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         torch.Tensor
             The surface normals.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         """
         device = get_device(device=device)
 
