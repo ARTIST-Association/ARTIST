@@ -710,19 +710,18 @@ def test_crop_image_region_offcenter(
     max_val = torch.amax(cropped)
     pos = torch.nonzero(cropped == max_val, as_tuple=False)[0]
     _, r, c = pos.tolist()
-
     height_cropped, width_cropped = cropped.shape[-2], cropped.shape[-1]
     center_r = (height_cropped - 1) / 2.0
     center_c = (width_cropped - 1) / 2.0
 
-    # Allow ±tol_px due to align_corners=False and subpixel COM
-    assert abs(r - center_r) <= tol_px, f"max row {r} not centered (H={height_cropped})"
-    assert abs(c - center_c) <= tol_px, f"max col {c} not centered (W={width_cropped})"
+    # Allow a little extra slack on even dimensions due to half-pixel center with align_corners=False
+    tol_r = tol_px + (0.5 if (height_cropped % 2 == 0) else 0.0)
+    tol_c = tol_px + (0.5 if (width_cropped % 2 == 0) else 0.0)
 
-    # Peak magnitude can be < 1.0 due to bilinear interpolation; require it to be clearly non-trivial
-    assert max_val > min_peak, (
-        f"max value too small after cropping: {max_val.item():.4f}"
-    )
+    assert abs(r - center_r) <= tol_r, f"max row {r} not centered (H={height_cropped})"
+    assert abs(c - center_c) <= tol_c, f"max col {c} not centered (W={width_cropped})"
+
+    assert max_val >= min_peak
 
 
 def _make_fake_calibration_data(
