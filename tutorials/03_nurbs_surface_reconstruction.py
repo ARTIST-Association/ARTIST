@@ -112,7 +112,6 @@ with setup_distributed_environment(
                 tolerance=tolerance,
                 max_epoch=max_epoch,
                 num_log=max_epoch,
-                use_centered_flux_maps=True,
                 device=device,
             )
 
