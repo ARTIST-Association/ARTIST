@@ -232,7 +232,7 @@ class MotorPositionsOptimizer:
 
                 if self.method == config_dictionary.optimization_to_focal_spot:
                     # Determine the focal spots of all flux density distributions
-                    current_result = utils.get_center_of_mass(
+                    focal_spot = utils.get_center_of_mass(
                         bitmaps=flux_distribution_on_target.unsqueeze(0),
                         target_centers=self.scenario.target_areas.centers[
                             self.target_area_index
@@ -245,14 +245,25 @@ class MotorPositionsOptimizer:
                         ][1],
                         device=device,
                     )
+                    
+                    loss = loss_function(
+                        focal_spot,
+                        self.optimization_goal,
+                    )
+
 
                 if self.method == config_dictionary.optimization_to_distribution:
-                    current_result = 0  # TODO define distribution.
-
-                loss = loss_function(
-                    current_result,
-                    self.optimization_goal,
-                )
+                    target_distribution = (self.optimization_goal / (self.optimization_goal.sum() + 1e-12))
+                    flux_shifted = flux_distribution_on_target - flux_distribution_on_target.min()
+                    current_distribution = flux_shifted / flux_shifted.sum()
+                    log_target_distribution = torch.log(target_distribution + 1e-12)
+                    log_current_distribution = torch.log(current_distribution + 1e-12)
+                    
+                    loss = torch.nn.functional.kl_div(input=log_current_distribution, target=log_target_distribution, reduction='sum', log_target=True)
+                    # loss = torch.nn.functional.kl_div(log_current_distribution, target_distribution, reduction='sum', log_target=False)
+                    loss = utils.kl_divergence(p=target_distribution, q=current_distribution)
+                    # P represents the data/measured distribution (P=target)
+                    # Q represents an approximation of P (Q=prediction)
 
                 loss.backward()
 
