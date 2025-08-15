@@ -579,66 +579,70 @@ def test_normalize_bitmaps(device: torch.device) -> None:
 @pytest.mark.parametrize(
     "image, crop_w, crop_h, target_w, target_h, expected_cropped",
     [
+        # COM exactly at the geometric center -> cropping full plane should be identity
         (
             torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
-            1.0,
-            1.0,
+            3.0,
+            3.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
             torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
         ),
+        # Symmetric intensities -> COM at center -> identity expected
         (
-            torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]),
-            1.0,
-            1.0,
+            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]]]),
+            3.0,
+            3.0,
             torch.tensor([3.0]),
             torch.tensor([3.0]),
-            torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]),
+            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]]]),
         ),
     ],
 )
 def test_crop_image_region_centering(
     image: torch.Tensor,
-    crop_w: float,
-    crop_h: float,
-    target_w: torch.Tensor,
-    target_h: torch.Tensor,
+    crop_width: float,
+    crop_height: float,
+    target_width: torch.Tensor,
+    target_height: torch.Tensor,
     expected_cropped: torch.Tensor,
     device: torch.device,
 ) -> None:
     """
-    Test that cropping is centered on the center of mass.
+    Test that cropping is identity when the COM is at the geometric center.
+
+    When the center of mass (COM) is located at the geometric center of the image
+    and the crop dimensions span the full target plane, the cropping operation
+    should return the image unchanged.
 
     Parameters
     ----------
     image : torch.Tensor
-        A grayscale image or batch of images.
-    crop_w : float
+        Input image tensor to be cropped. Shape is expected to be
+        `(C, H, W)` or `(N, C, H, W)`, where `C` is the number of channels.
+    crop_width : float
         Desired crop width in meters.
-    crop_h : float
+    crop_height : float
         Desired crop height in meters.
-    target_w : torch.Tensor
-        Width of the full target plane in meters.
-    target_h : torch.Tensor
-        Height of the full target plane in meters.
+    target_width : torch.Tensor
+        Target plane width(s) in meters. Should be broadcastable to the batch
+        dimension of `image`.
+    target_height : torch.Tensor
+        Target plane height(s) in meters. Should be broadcastable to the batch
+        dimension of `image`.
     expected_cropped : torch.Tensor
-        The expected cropped image.
+        The expected output image tensor after cropping. Should match the input
+        `image` in this test scenario.
     device : torch.device
-        The device on which to run the test.
-
-    Raises
-    ------
-    AssertionError
-        If the output is not as expected.
+        The device (CPU or GPU) on which to perform the cropping operation.
     """
     cropped = utils.crop_image_region(
         images=image.to(device),
-        crop_width=crop_w,
-        crop_height=crop_h,
-        target_plane_widths_m=target_w.to(device),
-        target_plane_heights_m=target_h.to(device),
+        crop_width=crop_width,
+        crop_height=crop_height,
+        target_plane_widths_m=target_width.to(device),
+        target_plane_heights_m=target_height.to(device),
     )
-    # The cropping should be centered on the center of mass, so for these simple cases, output should match input.
     torch.testing.assert_close(
         cropped, expected_cropped.to(device), rtol=1e-4, atol=1e-4
     )
@@ -647,39 +651,59 @@ def test_crop_image_region_centering(
 
 def test_crop_image_region_offcenter(device: torch.device) -> None:
     """
-    Test cropping logic for an off-center mass.
+    Test cropping behavior when the COM is off-center.
+
+    For an image whose center of mass (COM) is offset from the geometric center,
+    the crop should be centered on the COM. With bilinear interpolation and
+    `align_corners=False`, the peak pixel value may attenuate depending on subpixel
+    alignment. This test verifies two conditions:
+    1. The brightest point in the cropped image is positioned near the geometric center.
+    2. The peak intensity remains non-trivial despite interpolation.
 
     Parameters
     ----------
     device : torch.device
-        The device on which to run the test.
+        The device (CPU or GPU) on which to perform the cropping operation.
 
-    Raises
-    ------
-    AssertionError
-        If the output is not as expected.
     """
-    # Center of mass is at (2, 0) in a 3x3 image
-    image = torch.tensor([[[0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]])
+    height = width = 33
+    image = torch.zeros((1, height, width), dtype=torch.float32)
+    # A single bright pixel near the top-right corner
+    image[0, 3, width - 4] = 1.0
+
+    target_width = torch.tensor([3.0])
+    target_height = torch.tensor([3.0])
     crop_w = 1.0
     crop_h = 1.0
-    target_w = torch.tensor([3.0])
-    target_h = torch.tensor([3.0])
 
     cropped = utils.crop_image_region(
         images=image.to(device),
         crop_width=crop_w,
         crop_height=crop_h,
-        target_plane_widths_m=target_w.to(device),
-        target_plane_heights_m=target_h.to(device),
+        target_plane_widths_m=target_width.to(device),
+        target_plane_heights_m=target_height.to(device),
     )
 
-    # The maximum value should remain at the same location after cropping
-    max_idx = torch.argmax(cropped)
-    assert max_idx == 2  # Should be at index 2 (last column)
-    assert cropped[0, 0, 2] > 0.9
+    # Sanity checks
+    assert cropped.shape == image.shape[-3:], "Function keeps HxW by contract"
     assert not torch.isnan(cropped).any()
-    assert not torch.isnan(cropped).any()
+
+    # Locate the maximum (batch, row, col)
+    max_val = torch.amax(cropped)
+    pos = torch.nonzero(cropped == max_val, as_tuple=False)[0]
+    _, r, c = pos.tolist()
+
+    height_cropped, width_cropped = cropped.shape[-2], cropped.shape[-1]
+    center_r, center_c = (height_cropped - 1) / 2.0, (width_cropped - 1) / 2.0
+
+    # Allow 1 px deviation because of align_corners=False + subpixel COM
+    tol_px = 1.0
+    assert abs(r - center_r) <= tol_px, f"max row {r} not centered (H={height_cropped})"
+    assert abs(c - center_c) <= tol_px, f"max col {c} not centered (W={width_cropped})"
+
+    # Peak magnitude can be < 1.0 due to bilinear interpolation; require it to be clearly non-trivial
+    # Theoretical worst case for a single 1 with bilinear is 0.25, set a safe bound
+    assert max_val > 0.5, f"max value too small after cropping: {max_val.item():.4f}"
 
 
 def _make_fake_calibration_data(
@@ -721,6 +745,39 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     number_of_measurements,
     image_variant_name,
 ):
+    """
+    Test shape, type, and correspondence checks for heliostat data mapping.
+
+    This parametrized test verifies that `utils.build_heliostat_data_mapping`
+    returns a correctly structured list of mappings for both
+    `randomize_selection=False` and `randomize_selection=True`.
+
+    The test:
+    1. Creates fake calibration data for multiple heliostats.
+    2. Monkeypatches relevant module variables to point to the fake data.
+    3. Invokes the mapping function with the given parameters.
+    4. Verifies:
+    - The return value is a list of the same length as the heliostat list.
+    - Each element is a tuple of `(heliostat_name, property_file_paths, image_file_paths)`.
+    - Types of elements and paths are correct.
+    - The number of measurements matches the expected value.
+    - Property/image file paths correspond by ID and reside in the same directory.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Temporary directory provided by pytest for creating fake calibration data.
+    monkeypatch : _pytest.monkeypatch.MonkeyPatch
+        Pytest fixture to dynamically replace module attributes for testing.
+    randomize_selection_flag : bool
+        Flag to randomize selection of measurement files when building the mapping.
+    random_seed_value : int
+        Random seed to use when `randomize_selection_flag` is `True` for reproducibility.
+    number_of_measurements : int
+        Number of measurement files to select per heliostat.
+    image_variant_name : str
+        Identifier for the variant of image data to use (e.g., "raw", "processed").
+    """
     """Shape/type/correspondence checks for both randomize_selection=False and randomize_selection=True."""
     heliostat_name_list = ["heliostat_1", "heliostat_2"]
     # Create 5 samples per heliostat so we can select a subset
@@ -733,12 +790,16 @@ def test_build_heliostat_data_mapping_shape_parametrized(
 
     # Patch where the function actually reads these names
     monkeypatch.setattr(
-        "utils.paint_calibration_folder_name",
+        utils,
+        "paint_calibration_folder_name",
         paint_calibration_folder_name,
         raising=True,
     )
     monkeypatch.setattr(
-        "utils.log", type("Log", (), {"warning": staticmethod(print)}), raising=True
+        utils,
+        "logging",
+        type("Log", (), {"warning": staticmethod(print)}),
+        raising=True,
     )
 
     result_mapping_list = utils.build_heliostat_data_mapping(
@@ -790,16 +851,30 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     monkeypatch,
     random_seed_value,
 ):
-    """Check randomized selection order differs from sorted order for at least one heliostat.
+    """
+    Test that randomized selection order or subset differs from the non-randomized version.
 
-    With enough samples available, the randomized selection order should differ from
-    the non-randomized (sorted) order for at least one heliostat (highly likely).
-    If a rare seed yields the same order, xfail to avoid flakiness.
+    This test verifies that when `randomize=True`, the file selection order (or subset)
+    returned by `utils.build_heliostat_data_mapping` differs from the deterministic
+    sorted selection for at least one heliostat, given enough available samples.
+
+    If, by rare chance, a specific seed yields the exact same selection for all heliostats,
+    the test is marked as `xfail` to avoid flakiness.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Temporary directory provided by pytest for creating fake calibration data.
+    monkeypatch : _pytest.monkeypatch.MonkeyPatch
+        Pytest fixture to dynamically replace module attributes for testing.
+    random_seed_value : int
+        Random seed to use for reproducibility in randomized selection.
     """
     image_variant_name = "flux"
     heliostat_name_list = ["heliostat_1", "heliostat_2"]
     number_of_measurements = 4
-    # Create 10 samples per heliostat to make a different order very likely
+
+    # Create 10 samples per heliostat so a different subset/order is very likely
     paint_calibration_folder_name = _make_fake_calibration_data(
         tmp_path,
         heliostat_name_list,
@@ -807,15 +882,13 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         count_per_heliostat=10,
     )
 
-    # Patch where the function actually reads these names
     monkeypatch.setattr(
-        "utils.paint_calibration_folder_name",
+        utils,
+        "paint_calibration_folder_name",
         paint_calibration_folder_name,
         raising=True,
     )
-    monkeypatch.setattr(
-        "utils.log", type("Log", (), {"warning": staticmethod(print)}), raising=True
-    )
+    monkeypatch.setattr(utils.logging, "warning", lambda *a, **k: None, raising=True)
 
     result_sorted_list = utils.build_heliostat_data_mapping(
         base_path=str(tmp_path),
@@ -842,16 +915,26 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         _,
     ) in zip(result_sorted_list, result_randomized_list):
         assert sorted_name == random_name
+
         sorted_identifiers = [p.stem.split("-")[0] for p in sorted_property_paths]
         randomized_identifiers = [
             p.stem.split("-")[0] for p in randomized_property_paths
         ]
-        # Same set, possibly different order
-        assert set(sorted_identifiers) == set(randomized_identifiers)
-        if sorted_identifiers != randomized_identifiers:
+
+        # Basic validity checks
+        assert len(sorted_identifiers) == number_of_measurements
+        assert len(randomized_identifiers) == number_of_measurements
+
+        # IDs should come from our fake data set
+        universe = {str(i) for i in range(10)}
+        assert set(sorted_identifiers).issubset(universe)
+        assert set(randomized_identifiers).issubset(universe)
+
+        # We expect randomized output to differ from the sorted selection
+        if randomized_identifiers != sorted_identifiers:
             different_for_any_heliostat = True
 
     if not different_for_any_heliostat:
         pytest.xfail(
-            "Random seed produced the same order for all entries — try another seed."
+            "Random seed produced the same selection as the sorted order for all entries — try another seed."
         )
