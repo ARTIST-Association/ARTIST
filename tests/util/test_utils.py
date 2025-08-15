@@ -577,7 +577,7 @@ def test_normalize_bitmaps(device: torch.device) -> None:
 
 
 @pytest.mark.parametrize(
-    "image, crop_w, crop_h, target_w, target_h, expected_cropped",
+    "image, crop_width, crop_height, target_width, target_height, expected_cropped",
     [
         # COM exactly at the geometric center -> cropping full plane should be identity
         (
@@ -649,37 +649,55 @@ def test_crop_image_region_centering(
     assert not torch.isnan(cropped).any()
 
 
-def test_crop_image_region_offcenter(device: torch.device) -> None:
+@pytest.mark.parametrize(
+    "height,width,bright_r,bright_c,crop_width,crop_height,target_width,target_height,tol_px,min_peak",
+    [
+        # Small offset near top-right
+        (33, 33, 3, 29, 1.0, 1.0, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
+        # Closer to center (subpixel COM effects still possible)
+        (65, 65, 30, 34, 1.2, 1.2, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
+        # Far corner to stress interpolation and centering
+        (64, 64, 1, 62, 0.8, 0.8, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
+        # Rectangular image
+        (48, 96, 5, 90, 1.0, 1.5, torch.tensor([4.0]), torch.tensor([2.0]), 1.0, 0.5),
+    ],
+    ids=[
+        "33x33_top-right",
+        "65x65_near-center",
+        "64x64_far-corner",
+        "48x96_rectangular",
+    ],
+)
+def test_crop_image_region_offcenter(
+    height: int,
+    width: int,
+    bright_r: int,
+    bright_c: int,
+    crop_width: float,
+    crop_height: float,
+    target_width: torch.Tensor,
+    target_height: torch.Tensor,
+    tol_px: float,
+    min_peak: float,
+    device: torch.device,
+) -> None:
     """
     Test cropping behavior when the COM is off-center.
 
-    For an image whose center of mass (COM) is offset from the geometric center,
-    the crop should be centered on the COM. With bilinear interpolation and
-    `align_corners=False`, the peak pixel value may attenuate depending on subpixel
-    alignment. This test verifies two conditions:
-    1. The brightest point in the cropped image is positioned near the geometric center.
-    2. The peak intensity remains non-trivial despite interpolation.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device (CPU or GPU) on which to perform the cropping operation.
-
+    The crop should be centered on the COM. With bilinear interpolation and
+    `align_corners=False`, the peak may attenuate, so ensure it remains non-trivial.
     """
-    height = width = 33
+    # Build image with a single bright pixel
     image = torch.zeros((1, height, width), dtype=torch.float32)
-    # A single bright pixel near the top-right corner
-    image[0, 3, width - 4] = 1.0
-
-    target_width = torch.tensor([3.0])
-    target_height = torch.tensor([3.0])
-    crop_w = 1.0
-    crop_h = 1.0
+    # Clamp to valid range just in case parameters push to boundary
+    br = int(max(0, min(height - 1, bright_r)))
+    bc = int(max(0, min(width - 1, bright_c)))
+    image[0, br, bc] = 1.0
 
     cropped = utils.crop_image_region(
         images=image.to(device),
-        crop_width=crop_w,
-        crop_height=crop_h,
+        crop_width=crop_width,
+        crop_height=crop_height,
         target_plane_widths_m=target_width.to(device),
         target_plane_heights_m=target_height.to(device),
     )
@@ -694,16 +712,17 @@ def test_crop_image_region_offcenter(device: torch.device) -> None:
     _, r, c = pos.tolist()
 
     height_cropped, width_cropped = cropped.shape[-2], cropped.shape[-1]
-    center_r, center_c = (height_cropped - 1) / 2.0, (width_cropped - 1) / 2.0
+    center_r = (height_cropped - 1) / 2.0
+    center_c = (width_cropped - 1) / 2.0
 
-    # Allow 1 px deviation because of align_corners=False + subpixel COM
-    tol_px = 1.0
+    # Allow ±tol_px due to align_corners=False and subpixel COM
     assert abs(r - center_r) <= tol_px, f"max row {r} not centered (H={height_cropped})"
     assert abs(c - center_c) <= tol_px, f"max col {c} not centered (W={width_cropped})"
 
     # Peak magnitude can be < 1.0 due to bilinear interpolation; require it to be clearly non-trivial
-    # Theoretical worst case for a single 1 with bilinear is 0.25, set a safe bound
-    assert max_val > 0.5, f"max value too small after cropping: {max_val.item():.4f}"
+    assert max_val > min_peak, (
+        f"max value too small after cropping: {max_val.item():.4f}"
+    )
 
 
 def _make_fake_calibration_data(
