@@ -75,7 +75,6 @@ class SurfaceReconstructor:
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
         num_log: int = 3,
-        use_centered_flux_maps: bool = False,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -88,7 +87,7 @@ class SurfaceReconstructor:
         heliostat_group : HeliostatGroup
             The heliostat group to be reconstructed.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and reconstruction data.
+            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the Center of Mass (CoM).
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
@@ -103,8 +102,6 @@ class SurfaceReconstructor:
             The maximum optimization epoch (default is 1000).
         num_log : int
             The number of log statements during optimization (default is 3).
-        use_centered_flux_maps : bool
-            Whether to use centered flux maps for reconstruction (default is False).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -122,22 +119,6 @@ class SurfaceReconstructor:
 
         self.scenario = scenario
         self.heliostat_group = heliostat_group
-
-        # Extract measured fluxes.
-        heliostat_flux_path_mapping = [
-            (heliostat_name, png_paths)
-            for heliostat_name, _, png_paths in heliostat_data_mapping
-            if heliostat_name in self.heliostat_group.names
-        ]
-
-        self.normalized_measured_flux_distributions = (
-            flux_distribution_loader.load_flux_from_png(
-                heliostat_flux_path_mapping=heliostat_flux_path_mapping,
-                heliostat_names=heliostat_group.names,
-                resolution=resolution,
-                device=device,
-            )
-        )
 
         # Extract environmental data for measured fluxes.
         heliostat_calibration_mapping = [
@@ -163,12 +144,38 @@ class SurfaceReconstructor:
         self.resolution = resolution.to(device)
         self.num_log = num_log
 
+        # Extract measured fluxes.
+        heliostat_flux_path_mapping = [
+            (heliostat_name, png_paths)
+            for heliostat_name, _, png_paths in heliostat_data_mapping
+            if heliostat_name in self.heliostat_group.names
+        ]
+
+        normalized_measured_flux_distributions = (
+            flux_distribution_loader.load_flux_from_png(
+                heliostat_flux_path_mapping=heliostat_flux_path_mapping,
+                heliostat_names=heliostat_group.names,
+                resolution=resolution,
+                device=device,
+            )
+        )
+
+        self.normalized_measured_flux_distributions = utils.crop_image_region(
+            images=normalized_measured_flux_distributions,
+            crop_width=config_dictionary.crop_target_width,
+            crop_height=config_dictionary.crop_target_height,
+            target_plane_widths_m=self.scenario.target_areas.dimensions[
+                self.target_area_mask
+            ][:, 0],
+            target_plane_heights_m=self.scenario.target_areas.dimensions[
+                self.target_area_mask
+            ][:, 1],
+        )
+
         # Create the optimizer.
         self.initial_learning_rate = initial_learning_rate
         self.tolerance = tolerance
         self.max_epoch = max_epoch
-
-        self.use_centered_flux_maps = use_centered_flux_maps
 
     def reconstruct_surfaces(
         self,
@@ -284,18 +291,17 @@ class SurfaceReconstructor:
                     target_area_mask=self.target_area_mask,
                     device=device,
                 )
-                if self.use_centered_flux_maps:
-                    flux_distributions = utils.crop_image_region(
-                        images=flux_distributions,
-                        crop_width=config_dictionary.utis_target_width,
-                        crop_height=config_dictionary.utis_target_height,
-                        target_plane_widths_m=self.scenario.target_areas.dimensions[
-                            self.target_area_mask
-                        ][:, 0],
-                        target_plane_heights_m=self.scenario.target_areas.dimensions[
-                            self.target_area_mask
-                        ][:, 1],
-                    )
+                flux_distributions = utils.crop_image_region(
+                    images=flux_distributions,
+                    crop_width=config_dictionary.crop_target_width,
+                    crop_height=config_dictionary.crop_target_height,
+                    target_plane_widths_m=self.scenario.target_areas.dimensions[
+                        self.target_area_mask
+                    ][:, 0],
+                    target_plane_heights_m=self.scenario.target_areas.dimensions[
+                        self.target_area_mask
+                    ][:, 1],
+                )
 
                 normalized_flux_distributions = utils.normalize_bitmaps(
                     flux_distributions=flux_distributions,

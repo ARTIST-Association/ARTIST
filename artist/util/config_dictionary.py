@@ -302,3 +302,8 @@ utis_target_width = 6
 """Key to access the width of the utis target."""
 utis_target_height = 6
 """Key to access the height of the utis target."""
+
+crop_target_width = 6
+"""Key to crop the target size width"""
+crop_target_height = 6
+"""Key to crop the target size height"""
