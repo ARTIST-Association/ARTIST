@@ -282,6 +282,7 @@ paint_motor_positions = "motor_position"
 paint_first_axis = "axis_1_motor_position"
 """Key to access the first motor position in a ``PAINT`` calibration.json file."""
 paint_second_axis = "axis_2_motor_position"
+paint_calibration_folder_name = "Calibration"
 
 linux = "Linux"
 """Key to access the Linux OS name."""
@@ -301,3 +302,8 @@ utis_target_width = 6
 """Key to access the width of the utis target."""
 utis_target_height = 6
 """Key to access the height of the utis target."""
+
+crop_target_width = 6
+"""Key to crop the target size width"""
+crop_target_height = 6
+"""Key to crop the target size height"""
