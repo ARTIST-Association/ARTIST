@@ -29,7 +29,8 @@ def load_flux_from_png(
     heliostat_names : list[str]
         All possible heliostat names.
     resolution : torch.Tensor
-        The resolution of the loaded png files (default is torch.tensor([256, 256])).
+        The resolution of the loaded png files (default is torch.tensor([256,256])).
+        Tensor of shape [2].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -39,6 +40,7 @@ def load_flux_from_png(
     -------
     torch.Tensor
         The measured flux density distributions.
+        Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     """
     device = get_device(device=device)
 
@@ -55,7 +57,8 @@ def load_flux_from_png(
                 Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
             )
             bitmap_tensor = torch.tensor(bitmap_data.getdata(), device=device)
-            bitmap_tensor = bitmap_tensor.view(resolution[0], resolution[1]) / 255.0
+            # Normalize pixel values from [0, 255] to [0.0, 1.0] (grayscale pixel values are in the range [0, 255]).
+            bitmap_tensor = bitmap_tensor.view(resolution[1], resolution[0]) / 255.0
             bitmap = bitmap_tensor.squeeze(0)
             bitmaps[bitmap_index] = bitmap
         flux_data_per_heliostat[heliostat_name] = bitmaps

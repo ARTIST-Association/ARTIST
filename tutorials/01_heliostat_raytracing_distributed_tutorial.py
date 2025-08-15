@@ -82,6 +82,10 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # The active_heliostats_mask is a tensor that shows the selection of active heliostats.
+        # For each index 0 indicates a deactivated heliostat and 1 an activated one.
+        # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
+        # It is a tensor of shape [number_of_heliostats_in_group].
         heliostat_group.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask, device=device
         )

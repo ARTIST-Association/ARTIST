@@ -64,12 +64,24 @@ def test_surface_generator(device: torch.device) -> None:
         )
     )
 
+    optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.2,
+        patience=50,
+        threshold=1e-7,
+        threshold_mode="abs",
+    )
+
     surface_config_paint_fit_normals = surface_generator.generate_fitted_surface_config(
         heliostat_name="test",
         facet_translation_vectors=facet_translation_vectors,
         canting=canting,
         surface_points_with_facets_list=surface_points_with_facets_list,
         surface_normals_with_facets_list=surface_normals_with_facets_list,
+        optimizer=optimizer,
+        scheduler=scheduler,
         deflectometry_step_size=5000,
         fit_method=config_dictionary.fit_nurbs_from_normals,
         max_epoch=1,
@@ -91,6 +103,8 @@ def test_surface_generator(device: torch.device) -> None:
         canting=canting,
         surface_points_with_facets_list=surface_points_with_facets_list,
         surface_normals_with_facets_list=surface_normals_with_facets_list,
+        optimizer=optimizer,
+        scheduler=scheduler,
         deflectometry_step_size=5000,
         fit_method=config_dictionary.fit_nurbs_from_normals,
         max_epoch=1,
@@ -102,6 +116,8 @@ def test_surface_generator(device: torch.device) -> None:
         canting=canting,
         surface_points_with_facets_list=surface_points_with_facets_list,
         surface_normals_with_facets_list=surface_normals_with_facets_list,
+        optimizer=optimizer,
+        scheduler=scheduler,
         deflectometry_step_size=5000,
         fit_method=config_dictionary.fit_nurbs_from_points,
         max_epoch=1,
@@ -168,12 +184,24 @@ def test_fit_nurbs_conversion_method_error(device: torch.device) -> None:
     with pytest.raises(NotImplementedError) as exc_info:
         surface_generator = SurfaceGenerator()
 
+        optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.2,
+            patience=50,
+            threshold=1e-7,
+            threshold_mode="abs",
+        )
+
         surface_generator.generate_fitted_surface_config(
             heliostat_name="test",
             facet_translation_vectors=torch.empty((1, 3), device=device),
             canting=torch.empty((1, 2, 3), device=device),
             surface_points_with_facets_list=[torch.empty((1, 3), device=device)],
             surface_normals_with_facets_list=[torch.empty((1, 3), device=device)],
+            optimizer=optimizer,
+            scheduler=scheduler,
             fit_method=invalid_method,
             device=device,
         )
