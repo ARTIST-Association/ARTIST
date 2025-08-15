@@ -684,8 +684,44 @@ def test_crop_image_region_offcenter(
     """
     Test cropping behavior when the COM is off-center.
 
-    The crop should be centered on the COM. With bilinear interpolation and
-    `align_corners=False`, the peak may attenuate, so ensure it remains non-trivial.
+    This parametrized test verifies that `utils.crop_image_region` correctly centers
+    the crop on the image’s center of mass (COM) when the bright pixel is not located
+    at the geometric center. It also checks that the peak pixel intensity remains
+    non-trivial after bilinear interpolation with `align_corners=False`.
+
+    The test:
+    1. Builds a synthetic image with a single bright pixel at a specified position.
+    2. Crops the image using given crop and target plane dimensions.
+    3. Asserts:
+    - Output shape matches the input `(C, H, W)`.
+    - No NaN values are present.
+    - The brightest pixel lies within a specified pixel tolerance of the crop center.
+    - The peak pixel intensity is above a specified minimum threshold.
+
+    Parameters
+    ----------
+    height : int
+        Height of the input image in pixels.
+    width : int
+        Width of the input image in pixels.
+    bright_r : int
+        Row index of the bright pixel before cropping.
+    bright_c : int
+        Column index of the bright pixel before cropping.
+    crop_width : float
+        Crop width in meters.
+    crop_height : float
+        Crop height in meters.
+    target_width : torch.Tensor
+        Target plane width(s) in meters; broadcastable to the batch.
+    target_height : torch.Tensor
+        Target plane height(s) in meters; broadcastable to the batch.
+    tol_px : float
+        Pixel tolerance allowed between the peak pixel position and the geometric center.
+    min_peak : float
+        Minimum acceptable peak intensity after cropping and interpolation.
+    device : torch.device
+    The device (CPU or GPU) on which to perform the cropping.
     """
     # Build image with a single bright pixel
     image = torch.zeros((1, height, width), dtype=torch.float32)
