@@ -23,6 +23,9 @@ def load_flux_from_png(
     """
     Load flux density distributions as tensors from png images.
 
+    Note that the order of width and height are reversed in PIL and torch.
+    PIL takes (width, height), while torch tensors are [height, width].
+
     Parameters
     ----------
     heliostat_flux_path_mapping : list[tuple[str, list[pathlib.Path]]]
@@ -57,38 +60,39 @@ def load_flux_from_png(
 
     flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(torch.Tensor)
 
-    resolution = tuple(resolution.to(device).tolist())
+    width, height = resolution.to(device).tolist()
 
     total_number_of_measurements = 0
     for heliostat_name, paths in heliostat_flux_path_mapping:
-        if len(paths) < number_of_measurements:
-            number_of_measurements = len(paths)
-        bitmaps = torch.empty(
-            (number_of_measurements, resolution[0], resolution[1]), device=device
-        )
+        number_of_measurements = min(len(paths), number_of_measurements)
+        bitmaps = torch.empty((number_of_measurements, height, width), device=device)
         for bitmap_index, path in enumerate(paths[:number_of_measurements]):
             bitmap_data = (
-                Image.open(path).convert("L").resize(resolution, Image.BILINEAR)
+                Image.open(path).convert("L").resize((width, height), Image.BILINEAR)
             )
-            bitmap_tensor = torch.tensor(bitmap_data.getdata(), device=device)
             # Normalize pixel values from [0, 255] to [0.0, 1.0] (grayscale pixel values are in the range [0, 255]).
-            bitmap_tensor = bitmap_tensor.view(resolution[1], resolution[0]) / 255.0
-            bitmap = bitmap_tensor.squeeze(0)
-            bitmaps[bitmap_index] = bitmap
+            bitmap_tensor = (
+                torch.tensor(bitmap_data.getdata(), device=device).view(height, width)
+                / 255.0
+            )
+            bitmaps[bitmap_index] = bitmap_tensor
             total_number_of_measurements = total_number_of_measurements + 1
         flux_data_per_heliostat[heliostat_name] = bitmaps
 
     measured_fluxes = torch.empty(
-        (total_number_of_measurements, resolution[0], resolution[1]), device=device
+        (total_number_of_measurements, height, width), device=device
     )
 
     if total_number_of_measurements > 0:
         index = 0
         for name in heliostat_names:
-            for flux_data in flux_data_per_heliostat.get(name, []):
-                measured_fluxes[index : index + flux_data.shape[0]] = flux_data
-                index += 1
+            flux_list = flux_data_per_heliostat.get(name, [])
+            for flux_data in flux_list:
+                n = flux_data.shape[0] if flux_data.ndim == 3 else 1
+                measured_fluxes[index : index + n] = flux_data
+                index += n
 
+        # Normalize flux distributions.
         measured_fluxes = utils.normalize_bitmaps(
             flux_distributions=measured_fluxes,
             target_area_widths=torch.full(
