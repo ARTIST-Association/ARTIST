@@ -372,17 +372,6 @@ class KinematicOptimizer:
                     loss = (focal_spots - focal_spots_measured).abs().mean()
                     loss.backward()
 
-                    if self.ddp_setup["is_nested"]:
-                        # Reduce gradients within each heliostat group.
-                        for param_group in optimizer.param_groups:
-                            for param in param_group["params"]:
-                                if param.grad is not None:
-                                    torch.distributed.all_reduce(
-                                        param.grad,
-                                        op=torch.distributed.ReduceOp.SUM,
-                                        group=self.ddp_setup["process_subgroup"],
-                                    )
-
                     optimizer.step()
 
                     if epoch % log_step == 0:
