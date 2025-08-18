@@ -269,11 +269,14 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_motor_positions = (
-            self.kinematic.motor_positions.repeat_interleave(
-                active_heliostats_mask, dim=0
+
+        #TODO
+        if self.kinematic.active_motor_positions.shape != self.kinematic.active_motor_positions.shape:
+            self.kinematic.active_motor_positions = (
+                self.kinematic.motor_positions.repeat_interleave(
+                    active_heliostats_mask, dim=0
+                )
             )
-        )
         self.kinematic.actuators.active_actuator_parameters = (
             self.kinematic.actuators.actuator_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0

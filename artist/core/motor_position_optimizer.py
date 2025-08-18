@@ -7,6 +7,9 @@ from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
+import matplotlib.pyplot as plt
+
+
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
 
@@ -157,6 +160,12 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
+            # TODO remove
+            duplicates = 50
+            active_heliostats_mask = active_heliostats_mask * duplicates
+            target_area_mask = target_area_mask.repeat(duplicates)
+            incident_ray_directions = incident_ray_directions.repeat(duplicates, 1)
+
             # Activate heliostats.
             heliostat_group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_mask, device=device
@@ -223,12 +232,12 @@ class MotorPositionsOptimizer:
                     device=device,
                 )[self.target_area_index]
 
-                if self.ddp_setup["is_nested"]:
-                    torch.distributed.all_reduce(
-                        flux_distribution_on_target,
-                        op=torch.distributed.ReduceOp.SUM,
-                        group=self.ddp_setup["process_subgroup"],
-                    )
+                # if self.ddp_setup["is_nested"]:
+                #     torch.distributed.all_reduce(
+                #         flux_distribution_on_target,
+                #         op=torch.distributed.ReduceOp.SUM,
+                #         group=self.ddp_setup["process_subgroup"],
+                #     )
 
                 if self.method == config_dictionary.optimization_to_focal_spot:
                     # Determine the focal spots of all flux density distributions
@@ -251,7 +260,6 @@ class MotorPositionsOptimizer:
                         self.optimization_goal,
                     )
 
-
                 if self.method == config_dictionary.optimization_to_distribution:
                     target_distribution = (self.optimization_goal / (self.optimization_goal.sum() + 1e-12))
                     flux_shifted = flux_distribution_on_target - flux_distribution_on_target.min()
@@ -259,26 +267,28 @@ class MotorPositionsOptimizer:
                     log_target_distribution = torch.log(target_distribution + 1e-12)
                     log_current_distribution = torch.log(current_distribution + 1e-12)
                     
-                    loss = torch.nn.functional.kl_div(input=log_current_distribution, target=log_target_distribution, reduction='sum', log_target=True)
-                    # loss = torch.nn.functional.kl_div(log_current_distribution, target_distribution, reduction='sum', log_target=False)
-                    loss = utils.kl_divergence(p=target_distribution, q=current_distribution)
-                    # P represents the data/measured distribution (P=target)
-                    # Q represents an approximation of P (Q=prediction)
+                    loss = torch.nn.functional.kl_div(input=log_target_distribution, target=log_current_distribution, reduction='sum', log_target=True)
+                    #print(f"loss rank: {rank} group: {heliostat_group_index} {loss}")
 
                 loss.backward()
 
-                if self.ddp_setup["is_nested"]:
-                    # Reduce gradients within each heliostat group.
-                    for param_group in optimizer.param_groups:
-                        for param in param_group["params"]:
-                            if param.grad is not None:
-                                torch.distributed.all_reduce(
-                                    param.grad,
-                                    op=torch.distributed.ReduceOp.SUM,
-                                    group=self.ddp_setup["process_subgroup"],
-                                )
+                # if self.ddp_setup["is_nested"]:
+                #     # Reduce gradients within each heliostat group.
+                #     for param_group in optimizer.param_groups:
+                #         for param in param_group["params"]:
+                #             if param.grad is not None:
+                #                 torch.distributed.all_reduce(
+                #                     param.grad,
+                #                     op=torch.distributed.ReduceOp.SUM,
+                #                     group=self.ddp_setup["process_subgroup"],
+                #                 )
+                #                 #print(f"gradients rank: {rank} group: {heliostat_group_index} {param.grad}")
 
                 optimizer.step()
+
+                with torch.no_grad():
+                    plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
+                    plt.savefig(f"flux_{epoch}_rank_{rank}_heliostat_group_{heliostat_group_index}.png")
 
                 if epoch % log_step == 0 and rank == 0:
                     log.info(
@@ -288,10 +298,6 @@ class MotorPositionsOptimizer:
                 epoch += 1
 
             log.info(f"Rank: {rank}, motor positions optimized.")
-            import matplotlib.pyplot as plt
-
-            plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
-            plt.savefig(f"result_{heliostat_group_index}.png")
 
         if self.ddp_setup["is_distributed"]:
             for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
@@ -301,7 +307,7 @@ class MotorPositionsOptimizer:
                 )
 
     @staticmethod
-    def trapezoid_1d(
+    def trapezoid(
         total_width: torch.Tensor,
         slope_width: torch.Tensor,
         plateau_width: torch.Tensor,

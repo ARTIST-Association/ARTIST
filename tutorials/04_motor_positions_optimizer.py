@@ -19,6 +19,8 @@ set_logger_config()
 # Set the device
 device = get_device()
 
+torch.autograd.set_detect_anomaly(True)
+
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
@@ -112,40 +114,24 @@ with setup_distributed_environment(
 
     # Set optimizer parameters.
     tolerance = 0.0005
-    max_epoch = 10
-    initial_learning_rate = 0.0005
-
-    # Create the kinematic optimizer.
-    kinematic_optimizer = KinematicOptimizer(
-        ddp_setup=ddp_setup,
-        scenario=scenario,
-        heliostat_data_mapping=heliostat_data_mapping,
-        calibration_method=kinematic_calibration_method,
-        initial_learning_rate=initial_learning_rate,
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        num_log=max_epoch,
-    )
-
-    # Calibrate the kinematic.
-    kinematic_optimizer.optimize(device=device)
-
-    if ddp_setup["is_distributed"]:
-        torch.distributed.barrier()
+    max_epoch = 60
+    initial_learning_rate = 1e-4
 
     # Choose motor position optimization method and set optimization goal.
-    motor_position_optimization_method = config_dictionary.optimization_to_focal_spot
+    motor_position_optimization_method = config_dictionary.optimization_to_distribution
+
+    scenario.light_sources.light_source_list[0].number_of_rays = 4
 
     if motor_position_optimization_method == config_dictionary.optimization_to_focal_spot:
         optimization_goal = torch.tensor(
             [[1.1493, -0.5030, 57.0474, 1.0000]], device=device
-        ),
+        )
     if motor_position_optimization_method == config_dictionary.optimization_to_distribution:
         e_trapezoid = utils.trapezoid_1d_distribution(
-            total_width=256, slope_width=2, plateau_width=120, device=device
+            total_width=256, slope_width=30, plateau_width=180, device=device
         )
         u_trapezoid = utils.trapezoid_1d_distribution(
-            total_width=256, slope_width=2, plateau_width=248, device=device
+            total_width=256, slope_width=30, plateau_width=180, device=device
         )
         optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
@@ -158,15 +144,14 @@ with setup_distributed_environment(
         method=config_dictionary.optimization_to_distribution,
         optimization_goal=optimization_goal,
         bitmap_resolution=torch.tensor([256, 256], device=device),
-        max_epoch=100,
+        initial_learning_rate=initial_learning_rate,
+        max_epoch=max_epoch,
         num_log=max_epoch,
         device=device,
     )
 
     # Optimize the motor positions.
     motor_positions_optimizer.optimize(device=device)
-
-
 
 # P || Q    Penalizes extra mass where target has none (avoids hallucinated bits).
 # Q || P    Penalizes missing mass in the target regions.

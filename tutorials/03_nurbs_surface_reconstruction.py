@@ -18,38 +18,74 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "heliostat_name_1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
             ),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+            ),
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-flux-centered.png"
+            ),
         ],
     ),
     (
-        "heliostat_name_2",
+        "AA31",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
             ),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+            ),
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
+            ),
         ],
     ),
-    # ...
+    (
+        "AC43",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
+            ),
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux-centered.png"
+            ),
+        ],
+    ),
 ]
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -71,7 +107,7 @@ with setup_distributed_environment(
     # Set optimizer parameters.
     scenario.light_sources.light_source_list[0].number_of_rays = 100
     tolerance = 0.00005
-    max_epoch = 700
+    max_epoch = 10
     initial_learning_rate = 1e-3
     number_of_surface_points = torch.tensor([50, 50], device=device)
     resolution = torch.tensor([256, 256], device=device)
