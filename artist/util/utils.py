@@ -1,11 +1,6 @@
-import logging
-import pathlib
-import random
-
 import torch
 import torch.nn.functional as functional
 
-from artist.util.config_dictionary import paint_calibration_folder_name
 from artist.util.environment_setup import get_device
 
 
@@ -678,8 +673,9 @@ def crop_image_region(
     images: torch.Tensor,
     crop_width: float,
     crop_height: float,
-    target_plane_widths_m: torch.Tensor,
-    target_plane_heights_m: torch.Tensor,
+    target_plane_widths: torch.Tensor,
+    target_plane_heights: torch.Tensor,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
     Crop a centered rectangular region from grayscale intensity images based on physical dimensions.
@@ -691,7 +687,8 @@ def crop_image_region(
     Parameters
     ----------
     images : torch.Tensor
-        Grayscale intensity images with shape (number of fluxmaps, bitmap height, bitmap width).
+        Grayscale intensity images.
+         Tensor of shape [number of fluxmaps, bitmap height, bitmap width].
     crop_width : float
         Desired width of the cropped region in meters.
     crop_height : float
@@ -707,9 +704,9 @@ def crop_image_region(
         The cropped image regions of shape (B, H, W).
     """
     batch_size, image_height, image_width = images.shape
-    device = images.device
+    device = get_device(device=device)
 
-    # 1. Compute center of mass
+    # 1. Compute center of mass.
     normalized_mass_map = images / (images.sum(dim=(1, 2), keepdim=True) + 1e-8)
 
     y_coordinates = torch.linspace(-1, 1, image_height, device=device)
@@ -721,18 +718,18 @@ def crop_image_region(
     x_center_of_mass = (x_grid * normalized_mass_map).sum(dim=(1, 2))  # (batch_size,)
     y_center_of_mass = (y_grid * normalized_mass_map).sum(dim=(1, 2))  # (batch_size,)
 
-    # 2. Compute scale to match desired crop size in meters
-    scale_x = crop_width / target_plane_widths_m  # (batch_size,)
-    scale_y = crop_height / target_plane_heights_m  # (batch_size,)
+    # 2. Compute scale to match desired crop size in meters.
+    scale_x = crop_width / target_plane_widths  # (batch_size,)
+    scale_y = crop_height / target_plane_heights  # (batch_size,)
 
-    # 3. Build affine transform matrices (scale and center)
+    # 3. Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(batch_size, 2, 3, device=device)
     affine_matrices[:, 0, 0] = scale_x
     affine_matrices[:, 1, 1] = scale_y
     affine_matrices[:, 0, 2] = x_center_of_mass
     affine_matrices[:, 1, 2] = y_center_of_mass
 
-    # 4. Apply affine transform
+    # 4. Apply affine transform.
     images_expanded = images[
         :, None, :, :
     ]  # (batch_size, 1, image_height, image_width)
@@ -744,82 +741,3 @@ def crop_image_region(
     )
 
     return cropped_images[:, 0, :, :]  # (batch_size, image_height, image_width)
-
-
-def build_heliostat_data_mapping(
-    base_path: str,
-    heliostat_names: list[str],
-    num_measurements: int,
-    image_variant: str,
-    randomize: bool = True,
-    seed: int = 42,
-) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
-    """
-    Build a mapping of heliostat names to their calibration property and image files.
-
-    This function searches for calibration data for each heliostat, retrieves corresponding
-    property and image files from the specified variant, and returns a structured mapping.
-    If fewer measurements are available than requested, a warning is printed and the available
-    subset is used. Optionally, the selection can be randomized using a fixed seed.
-
-    Parameters
-    ----------
-    base_path : str
-        Path to the root directory containing heliostat calibration data.
-    heliostat_names : list[str]
-        list of heliostat names to include in the mapping.
-    num_measurements : int
-        Number of valid calibration samples to retrieve per heliostat.
-    image_variant : str
-        Image variant to use. Must match the expected filename suffix ("flux", "flux-centered", "cropped", or "raw").
-    randomize : bool, optional
-        Whether to shuffle the measurement files before selection (default is True).
-    seed : int, optional
-        Random seed for reproducibility if randomize is True (default is 42).
-
-    Returns
-    -------
-    list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-        A list of tuples for each heliostat, where each tuple contains:
-        - the heliostat name,
-        - a list of selected property file paths,
-        - a list of corresponding image file paths.
-    """
-    base = pathlib.Path(base_path)
-    heliostat_map = []
-
-    for name in heliostat_names:
-        calibration_dir = base / name / paint_calibration_folder_name
-        if not calibration_dir.exists():
-            logging.warning(f"Calibration directory for {name} not found.")
-            continue
-
-        property_files = list(calibration_dir.glob("*-calibration-properties.json"))
-
-        if randomize:
-            random.Random(seed).shuffle(property_files)
-        else:
-            property_files.sort()
-
-        properties, images = [], []
-
-        for prop_file in property_files:
-            id_str = prop_file.stem.split("-")[0]
-            image_file = calibration_dir / f"{id_str}-{image_variant}.png"
-
-            if image_file.exists():
-                properties.append(prop_file)
-                images.append(image_file)
-
-                if len(properties) == num_measurements:
-                    break
-
-        if len(properties) < num_measurements:
-            logging.warning(
-                f"{name} has only {len(properties)} valid measurements (needed {num_measurements})."
-            )
-
-        if properties and images:
-            heliostat_map.append((name, properties, images))
-
-    return heliostat_map

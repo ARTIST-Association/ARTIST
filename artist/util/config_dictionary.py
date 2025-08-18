@@ -283,6 +283,7 @@ paint_first_axis = "axis_1_motor_position"
 """Key to access the first motor position in a ``PAINT`` calibration.json file."""
 paint_second_axis = "axis_2_motor_position"
 paint_calibration_folder_name = "Calibration"
+paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
 
 linux = "Linux"
 """Key to access the Linux OS name."""
