@@ -87,7 +87,7 @@ class SurfaceReconstructor:
         heliostat_group : HeliostatGroup
             The heliostat group to be reconstructed.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the Center of Mass (CoM).
+            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the Center of Mass.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
@@ -164,10 +164,10 @@ class SurfaceReconstructor:
             images=normalized_measured_flux_distributions,
             crop_width=config_dictionary.crop_target_width,
             crop_height=config_dictionary.crop_target_height,
-            target_plane_widths_m=self.scenario.target_areas.dimensions[
+            target_plane_widths=self.scenario.target_areas.dimensions[
                 self.target_area_mask
             ][:, 0],
-            target_plane_heights_m=self.scenario.target_areas.dimensions[
+            target_plane_heights=self.scenario.target_areas.dimensions[
                 self.target_area_mask
             ][:, 1],
         )
@@ -295,10 +295,10 @@ class SurfaceReconstructor:
                     images=flux_distributions,
                     crop_width=config_dictionary.crop_target_width,
                     crop_height=config_dictionary.crop_target_height,
-                    target_plane_widths_m=self.scenario.target_areas.dimensions[
+                    target_plane_widths=self.scenario.target_areas.dimensions[
                         self.target_area_mask
                     ][:, 0],
-                    target_plane_heights_m=self.scenario.target_areas.dimensions[
+                    target_plane_heights=self.scenario.target_areas.dimensions[
                         self.target_area_mask
                     ][:, 1],
                 )

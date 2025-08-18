@@ -5,21 +5,22 @@ import h5py
 import torch
 
 from artist.core.surface_reconstructor import SurfaceReconstructor
+from artist.data_loader.paint_loader import build_heliostat_data_mapping
 from artist.scenario.scenario import Scenario
+from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from artist.util.utils import build_heliostat_data_mapping
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 # Set up logger
+set_logger_config()
 log = logging.getLogger(__name__)
-
 # Set the device
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/path/to/scenario/file.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -57,7 +58,7 @@ scenario_path = pathlib.Path("/path/to/scenario/file.h5")
 heliostat_data_mapping = build_heliostat_data_mapping(
     base_path="/base/path/to/PAINT",
     heliostat_names=["AA39"],
-    num_measurements=4,
+    number_measurements=4,
     image_variant="flux-centered",
 )
 
