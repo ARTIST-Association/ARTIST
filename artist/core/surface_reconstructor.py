@@ -87,7 +87,7 @@ class SurfaceReconstructor:
         heliostat_group : HeliostatGroup
             The heliostat group to be reconstructed.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the Center of Mass.
+            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the center of mass.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
