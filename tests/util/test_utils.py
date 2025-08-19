@@ -599,7 +599,7 @@ def test_normalize_bitmaps(device: torch.device) -> None:
         ),
     ],
 )
-def test_crop_image_region_centering(
+def test_crop_flux_distributions_around_center_centering(
     image: torch.Tensor,
     crop_width: float,
     crop_height: float,
@@ -618,8 +618,8 @@ def test_crop_image_region_centering(
     Parameters
     ----------
     image : torch.Tensor
-        Input image tensor to be cropped. Shape is expected to be
-        `(C, H, W)` or `(N, C, H, W)`, where `C` is the number of channels.
+        Input image tensor to be cropped.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     crop_width : float
         Desired crop width in meters.
     crop_height : float
@@ -641,8 +641,8 @@ def test_crop_image_region_centering(
     AssertionError
     If test does not complete as expected.
     """
-    cropped = utils.crop_image_region(
-        images=image.to(device),
+    cropped = utils.crop_flux_distributions_around_center(
+        flux_distributions=image.to(device),
         crop_width=crop_width,
         crop_height=crop_height,
         target_plane_widths=target_width.to(device),
@@ -655,7 +655,7 @@ def test_crop_image_region_centering(
 
 
 @pytest.mark.parametrize(
-    "height,width,bright_r,bright_c,crop_width,crop_height,target_width,target_height,tol_px,min_peak",
+    "height, width, brightest_pixel_row, brightest_pixel_column, crop_width, crop_height, target_width, target_height, tolerance_pixel, min_peak",
     [
         # Small offset near top-right.
         (33, 33, 3, 29, 1.0, 1.0, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
@@ -673,23 +673,23 @@ def test_crop_image_region_centering(
         "48x96_rectangular",
     ],
 )
-def test_crop_image_region_offcenter(
+def test_crop_flux_distributions_around_center_offcenter(
     height: int,
     width: int,
-    bright_r: int,
-    bright_c: int,
+    brightest_pixel_row: int,
+    brightest_pixel_column: int,
     crop_width: float,
     crop_height: float,
     target_width: torch.Tensor,
     target_height: torch.Tensor,
-    tol_px: float,
+    tolerance_pixel: float,
     min_peak: float,
     device: torch.device,
 ) -> None:
     """
     Test cropping behavior when the center of mass is off-center.
 
-    This parametrized test verifies that `utils.crop_image_region` correctly centers
+    This parametrized test verifies that `utils.crop_flux_distributions_around_center` correctly centers
     the crop on the image’s center of mass (center of mass) when the bright pixel is not located
     at the geometric center. It also checks that the peak pixel intensity remains
     non-trivial after bilinear interpolation with `align_corners=False`.
@@ -733,38 +733,46 @@ def test_crop_image_region_offcenter(
          AssertionError
               If test does not complete as expected.
     """
-    # Build image with a single bright pixel
+    # Build image with a single bright pixel.
     image = torch.zeros((1, height, width), dtype=torch.float32)
-    # Clamp to valid range just in case parameters push to boundary
-    br = int(max(0, min(height - 1, bright_r)))
-    bc = int(max(0, min(width - 1, bright_c)))
-    image[0, br, bc] = 1.0
+    # Clamp to valid range just in case parameters push to boundary.
+    brightest_pixel_row_index = int(max(0, min(height - 1, brightest_pixel_row)))
+    brightest_pixel_column_index = int(max(0, min(width - 1, brightest_pixel_column)))
+    image[0, brightest_pixel_row_index, brightest_pixel_column_index] = 1.0
 
-    cropped = utils.crop_image_region(
-        images=image.to(device),
+    cropped = utils.crop_flux_distributions_around_center(
+        flux_distributions=image.to(device),
         crop_width=crop_width,
         crop_height=crop_height,
         target_plane_widths=target_width.to(device),
         target_plane_heights=target_height.to(device),
     )
 
-    # Sanity checks
+    # Sanity checks.
     assert cropped.shape == image.shape[-3:], "Function keeps HxW by contract"
     assert not torch.isnan(cropped).any()
 
-    # Locate the maximum (batch, row, col)
-    max_val = torch.amax(cropped)
-    pos = torch.nonzero(cropped == max_val, as_tuple=False)[0]
-    _, r, c = pos.tolist()
+    # Locate the maximum (batch, row, col).
+    maximum_value = torch.amax(cropped)
+    positions_of_maximum_values = torch.nonzero(
+        cropped == maximum_value, as_tuple=False
+    )[0]
+    _, row_index_of_maximum, column_index_of_maximum = (
+        positions_of_maximum_values.tolist()
+    )
     height_cropped, width_cropped = cropped.shape[-2], cropped.shape[-1]
-    center_r = (height_cropped - 1) / 2.0
-    center_c = (width_cropped - 1) / 2.0
+    center_row = (height_cropped - 1) / 2.0
+    center_column = (width_cropped - 1) / 2.0
 
-    # Allow a little extra slack on even dimensions due to half-pixel center with align_corners=False
-    tol_r = tol_px + (0.5 if (height_cropped % 2 == 0) else 0.0)
-    tol_c = tol_px + (0.5 if (width_cropped % 2 == 0) else 0.0)
+    # Allow a little extra slack on even dimensions due to half-pixel center with align_corners=False.
+    tolerance_row = tolerance_pixel + (0.5 if (height_cropped % 2 == 0) else 0.0)
+    tolerance_column = tolerance_pixel + (0.5 if (width_cropped % 2 == 0) else 0.0)
 
-    assert abs(r - center_r) <= tol_r, f"max row {r} not centered (H={height_cropped})"
-    assert abs(c - center_c) <= tol_c, f"max col {c} not centered (W={width_cropped})"
+    assert abs(row_index_of_maximum - center_row) <= tolerance_row, (
+        f"max row {row_index_of_maximum} not centered (H={height_cropped})"
+    )
+    assert abs(column_index_of_maximum - center_column) <= tolerance_column, (
+        f"max col {column_index_of_maximum} not centered (W={width_cropped})"
+    )
 
-    assert max_val >= min_peak
+    assert maximum_value >= min_peak

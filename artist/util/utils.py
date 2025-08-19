@@ -669,8 +669,8 @@ def normalize_bitmaps(
     return scaled_fluxes
 
 
-def crop_image_region(
-    images: torch.Tensor,
+def crop_flux_distributions_around_center(
+    flux_distributions: torch.Tensor,
     crop_width: float,
     crop_height: float,
     target_plane_widths: torch.Tensor,
@@ -680,34 +680,36 @@ def crop_image_region(
     """
     Crop a centered rectangular region from grayscale intensity images based on physical dimensions.
 
-    This function identifies the center of mass in each image and then crops a region centered at this point
+    This function identifies the center of mass in each image and then crops a region centered around this point
     with the specified physical width and height (in meters). The cropping is applied via affine transformation,
     which accounts for the desired crop size relative to the target's physical plane dimensions.
 
     Parameters
     ----------
-    images : torch.Tensor
+    flux_distributions : torch.Tensor
         Grayscale intensity images.
-         Tensor of shape [number of fluxmaps, bitmap height, bitmap width].
+        Tensor of shape [number of fluxmaps, bitmap height, bitmap width].
     crop_width : float
         Desired width of the cropped region in meters.
     crop_height : float
         Desired height of the cropped region in meters.
-    target_plane_widths_m : torch.Tensor
-        Physical widths in meters of each image in the batch with shape (B,).
-    target_plane_heights_m : torch.Tensor
-        Physical heights in meters of each image in the batch with shape (B,).
+    target_plane_widths : torch.Tensor
+        Physical widths in meters of each image in the batch with shape (number of fluxmaps,).
+    target_plane_heights : torch.Tensor
+        Physical heights in meters of each image in the batch with shape (number of fluxmaps,).
 
     Returns
     -------
     torch.Tensor
-        The cropped image regions of shape (B, H, W).
+        The cropped image regions of shape (number of fluxmaps, bitmap height, bitmap width).
     """
-    batch_size, image_height, image_width = images.shape
+    batch_size, image_height, image_width = flux_distributions.shape
     device = get_device(device=device)
 
     # 1. Compute center of mass.
-    normalized_mass_map = images / (images.sum(dim=(1, 2), keepdim=True) + 1e-8)
+    normalized_mass_map = flux_distributions / (
+        flux_distributions.sum(dim=(1, 2), keepdim=True) + 1e-8
+    )
 
     y_coordinates = torch.linspace(-1, 1, image_height, device=device)
     x_coordinates = torch.linspace(-1, 1, image_width, device=device)
@@ -730,7 +732,7 @@ def crop_image_region(
     affine_matrices[:, 1, 2] = y_center_of_mass
 
     # 4. Apply affine transform.
-    images_expanded = images[
+    images_expanded = flux_distributions[
         :, None, :, :
     ]  # (batch_size, 1, image_height, image_width)
     sampling_grid = functional.affine_grid(
