@@ -13,6 +13,7 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     TargetAreaListConfig,
 )
+from artist.util import config_dictionary
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -646,7 +647,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
 
     # Patch where the function actually reads these names.
     monkeypatch.setattr(
-        paint_loader,
+        config_dictionary,
         "paint_calibration_folder_name",
         paint_calibration_folder_name,
         raising=True,
@@ -735,7 +736,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     )
 
     monkeypatch.setattr(
-        paint_loader,
+        config_dictionary,
         "paint_calibration_folder_name",
         paint_calibration_folder_name,
         raising=True,
