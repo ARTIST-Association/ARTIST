@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 import torch
+from _pytest.monkeypatch import MonkeyPatch
 
 from artist import ARTIST_ROOT
 from artist.data_loader import paint_loader
@@ -574,7 +575,7 @@ def _make_fake_calibration_data(
             (
                 calibration_directory_path / f"{index}-calibration-properties.json"
             ).write_text("{}")
-            # Write a tiny, obviously-fake PNG header so opening as binary won't crash
+            # Write a tiny, obviously-fake PNG header so opening as binary won't crash.
             (
                 calibration_directory_path / f"{index}-{image_variant_name}.png"
             ).write_bytes(b"\x89PNG\r\nfake")
@@ -590,12 +591,12 @@ def _make_fake_calibration_data(
 )
 def test_build_heliostat_data_mapping_shape_parametrized(
     tmp_path: pathlib.Path,
-    monkeypatch,
-    randomize_selection_flag,
-    random_seed_value,
-    number_of_measurements,
-    image_variant_name,
-):
+    monkeypatch: MonkeyPatch,
+    randomize_selection_flag: bool,
+    random_seed_value: int,
+    number_of_measurements: int,
+    image_variant_name: str,
+) -> None:
     """
     Test shape, type, and correspondence checks for heliostat data mapping.
 
@@ -627,7 +628,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     number_of_measurements : int
         Number of measurement files to select per heliostat.
     image_variant_name : str
-        Identifier for the variant of image data to use (e.g., "raw", "processed").
+        Identifier for the variant of image data to use (e.g., ''raw'', ''processed'').
 
     Raises
     ------
@@ -635,7 +636,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
         If test does not complete as expected.
     """
     heliostat_name_list = ["heliostat_1", "heliostat_2"]
-    # Create 5 samples per heliostat so we can select a subset
+    # Create 5 samples per heliostat so we can select a subset.
     paint_calibration_folder_name = _make_fake_calibration_data(
         tmp_path,
         heliostat_name_list,
@@ -643,7 +644,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
         count_per_heliostat=5,
     )
 
-    # Patch where the function actually reads these names
+    # Patch where the function actually reads these names.
     monkeypatch.setattr(
         paint_loader,
         "paint_calibration_folder_name",
@@ -653,13 +654,13 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     result_mapping_list = paint_loader.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
-        number_measurements=number_of_measurements,
+        number_of_measurements=number_of_measurements,
         image_variant=image_variant_name,
         randomize=randomize_selection_flag,
         seed=random_seed_value,
     )
 
-    # Sjaüe checks.
+    # Shape checks.
     assert isinstance(result_mapping_list, list)
     assert len(result_mapping_list) == len(heliostat_name_list)
 
@@ -682,7 +683,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
         assert len(property_file_paths) == number_of_measurements
         assert len(image_file_paths) == number_of_measurements
 
-        # Correspondence by ID and directory
+        # Correspondence by ID and directory.
         for property_file_path, image_file_path in zip(
             property_file_paths, image_file_paths
         ):
@@ -696,9 +697,9 @@ def test_build_heliostat_data_mapping_shape_parametrized(
 @pytest.mark.parametrize("random_seed_value", [7, 11, 123, 2024])
 def test_build_heliostat_data_mapping_randomization_changes_order(
     tmp_path: pathlib.Path,
-    monkeypatch,
-    random_seed_value,
-):
+    monkeypatch: MonkeyPatch,
+    random_seed_value: int,
+) -> None:
     """
     Test that randomized selection order or subset differs from the non-randomized version.
 
@@ -706,8 +707,6 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     returned by `utils.build_heliostat_data_mapping` differs from the deterministic
     sorted selection for at least one heliostat, given enough available samples.
 
-    If, by rare chance, a specific seed yields the exact same selection for all heliostats,
-    the test is marked as `xfail` to avoid flakiness.
 
     Parameters
     ----------
@@ -727,7 +726,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     heliostat_name_list = ["heliostat_1", "heliostat_2"]
     number_of_measurements = 4
 
-    # Create 10 samples per heliostat so a different subset/order is very likely
+    # Create 10 samples per heliostat so a different subset/order is very likely.
     paint_calibration_folder_name = _make_fake_calibration_data(
         tmp_path,
         heliostat_name_list,
@@ -745,7 +744,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     result_sorted_list = paint_loader.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
-        number_measurements=number_of_measurements,
+        number_of_measurements=number_of_measurements,
         image_variant=image_variant_name,
         randomize=False,
         seed=random_seed_value,
@@ -753,7 +752,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     result_randomized_list = paint_loader.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
-        number_measurements=number_of_measurements,
+        number_of_measurements=number_of_measurements,
         image_variant=image_variant_name,
         randomize=True,
         seed=random_seed_value,
@@ -773,20 +772,20 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
             p.stem.split("-")[0] for p in randomized_property_paths
         ]
 
-        # Basic validity checks
+        # Basic validity checks.
         assert len(sorted_identifiers) == number_of_measurements
         assert len(randomized_identifiers) == number_of_measurements
 
-        # IDs should come from our fake data set
+        # IDs should come from our fake data set.
         universe = {str(i) for i in range(10)}
         assert set(sorted_identifiers).issubset(universe)
         assert set(randomized_identifiers).issubset(universe)
 
-        # We expect randomized output to differ from the sorted selection
+        # We expect randomized output to differ from the sorted selection.
         if randomized_identifiers != sorted_identifiers:
             different_for_any_heliostat = True
 
     if not different_for_any_heliostat:
         pytest.xfail(
-            "Random seed produced the same selection as the sorted order for all entries — try another seed."
+            "Random seed produced the same selection as the sorted order for all entries"
         )

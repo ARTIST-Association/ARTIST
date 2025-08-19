@@ -283,8 +283,9 @@ paint_first_axis = "axis_1_motor_position"
 """Key to access the first motor position in a ``PAINT`` calibration.json file."""
 paint_second_axis = "axis_2_motor_position"
 paint_calibration_folder_name = "Calibration"
+"""Folder name for calibration data in a ``PAINT`` tower.json file."""
 paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
-
+"""Ending for calibration properties files in a ``PAINT`` tower.json file."""
 linux = "Linux"
 """Key to access the Linux OS name."""
 windows = "Windows"
@@ -305,6 +306,6 @@ utis_target_height = 6
 """Key to access the height of the utis target."""
 
 crop_target_width = 6
-"""Key to crop the target size width"""
+"""Key to crop the target size width."""
 crop_target_height = 6
-"""Key to crop the target size height"""
+"""Key to crop the target size height."""

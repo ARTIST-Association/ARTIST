@@ -160,16 +160,18 @@ class SurfaceReconstructor:
             )
         )
 
-        self.normalized_measured_flux_distributions = utils.crop_image_region(
-            images=normalized_measured_flux_distributions,
-            crop_width=config_dictionary.crop_target_width,
-            crop_height=config_dictionary.crop_target_height,
-            target_plane_widths=self.scenario.target_areas.dimensions[
-                self.target_area_mask
-            ][:, 0],
-            target_plane_heights=self.scenario.target_areas.dimensions[
-                self.target_area_mask
-            ][:, 1],
+        self.normalized_measured_flux_distributions = (
+            utils.crop_flux_distributions_around_center(
+                flux_distributions=normalized_measured_flux_distributions,
+                crop_width=config_dictionary.crop_target_width,
+                crop_height=config_dictionary.crop_target_height,
+                target_plane_widths=self.scenario.target_areas.dimensions[
+                    self.target_area_mask
+                ][:, 0],
+                target_plane_heights=self.scenario.target_areas.dimensions[
+                    self.target_area_mask
+                ][:, 1],
+            )
         )
 
         # Create the optimizer.
@@ -291,8 +293,8 @@ class SurfaceReconstructor:
                     target_area_mask=self.target_area_mask,
                     device=device,
                 )
-                flux_distributions = utils.crop_image_region(
-                    images=flux_distributions,
+                flux_distributions = utils.crop_flux_distributions_around_center(
+                    flux_distributions=flux_distributions,
                     crop_width=config_dictionary.crop_target_width,
                     crop_height=config_dictionary.crop_target_height,
                     target_plane_widths=self.scenario.target_areas.dimensions[

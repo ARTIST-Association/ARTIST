@@ -58,7 +58,7 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 heliostat_data_mapping = build_heliostat_data_mapping(
     base_path="/base/path/to/PAINT",
     heliostat_names=["AA39"],
-    number_measurements=4,
+    number_of_measurements=4,
     image_variant="flux-centered",
 )
 

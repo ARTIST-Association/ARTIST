@@ -25,10 +25,6 @@ from artist.scenario.configuration_classes import (
 )
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, utils
-from artist.util.config_dictionary import (
-    paint_calibration_folder_name,
-    paint_calibration_properties_file_name_ending,
-)
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -932,20 +928,19 @@ def corner_points_to_plane(
 def build_heliostat_data_mapping(
     base_path: str,
     heliostat_names: list[str],
-    number_measurements: int,
+    number_of_measurements: int,
     image_variant: str,
     randomize: bool = True,
     seed: int = 42,
 ) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
     """
-    Build a mapping of heliostat names to their calibration property and image files loaded from paint.
+    Build a mapping of heliostat names to their calibration property and image files loaded from ``PAINT``.
 
-    It assuemes that files have the same structure as in the PAINT repository.
-
-    This function searches for calibration data for each heliostat, retrieves corresponding
+    It assuemes that files have the same structure as in the ``PAINT`` data base.
     property and image files from the specified variant, and returns a structured mapping.
-    If fewer measurements are available than requested, a warning is printed and the available
+    It assuemes that files have the same structure as in the ``PAINT`` data base.
     subset is used. Optionally, the selection can be randomized using a fixed seed.
+    If fewer measurements are available than requested, a warning is logged and the available
 
     Parameters
     ----------
@@ -953,13 +948,13 @@ def build_heliostat_data_mapping(
         Path to the root directory containing heliostat calibration data.
     heliostat_names : list[str]
         list of heliostat names to include in the mapping.
-    num_measurements : int
+    number_of_measurements : int
         Number of valid calibration samples to retrieve per heliostat.
     image_variant : str
-        Image variant to use. Must match the expected filename suffix ("flux", "flux-centered", "cropped", or "raw").
-    randomize : bool, optional
+        Image variant to use. Must match the expected filename suffix (``flux``, ``flux-centered``, ``cropped``, or ``raw``).
+    randomize : bool
         Whether to shuffle the measurement files before selection (default is True).
-    seed : int, optional
+    seed : int
         Random seed for reproducibility if randomize is True (default is 42).
 
     Returns
@@ -974,13 +969,15 @@ def build_heliostat_data_mapping(
     heliostat_map = []
 
     for name in heliostat_names:
-        calibration_dir = base / name / paint_calibration_folder_name
+        calibration_dir = base / name / config_dictionary.paint_calibration_folder_name
         if not calibration_dir.exists():
             logging.warning(f"Calibration directory for {name} not found.")
             continue
 
         property_files = list(
-            calibration_dir.glob(paint_calibration_properties_file_name_ending)
+            calibration_dir.glob(
+                config_dictionary.paint_calibration_properties_file_name_ending
+            )
         )
 
         if randomize:
@@ -998,12 +995,12 @@ def build_heliostat_data_mapping(
                 properties.append(property_file)
                 images.append(image_file)
 
-                if len(properties) == number_measurements:
+                if len(properties) == number_of_measurements:
                     break
 
-        if len(properties) < number_measurements:
-            logging.warning(
-                f"{name} has only {len(properties)} valid measurements (needed {number_measurements})."
+        if len(properties) < number_of_measurements:
+            log.warning(
+                f"{name} has only {len(properties)} valid measurements (needed {number_of_measurements})."
             )
 
         if properties and images:
