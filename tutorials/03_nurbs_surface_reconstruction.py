@@ -17,9 +17,6 @@ set_logger_config()
 # Set the device
 device = get_device()
 
-torch.autograd.set_detect_anomaly(True)
-
-
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
@@ -32,23 +29,23 @@ heliostat_data_mapping = [
             pathlib.Path(
                 "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
             ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
-            # ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-calibration-properties.json"
+            ),
         ],
         [
             pathlib.Path(
                 "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
             ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
-            # ),
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-flux-centered.png"
-            # ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/275564-flux-centered.png"
+            ),
         ],
     ),
     # (
@@ -70,25 +67,25 @@ heliostat_data_mapping = [
     #         ),
     #     ],
     # ),
-    # (
-    #     "AC43",
-    #     [
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
-    #         ),
-    #     ],
-    #     [
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux-centered.png"
-    #         ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux-centered.png"
-    #         ),
-    #     ],
-    # ),
+    (
+        "AC43",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
+            ),
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux-centered.png"
+            ),
+        ],
+    ),
 ]
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -108,30 +105,12 @@ with setup_distributed_environment(
         )
 
     # Set optimizer parameters.
-    scenario.light_sources.light_source_list[0].number_of_rays = 200
+    scenario.light_sources.light_source_list[0].number_of_rays = 20
     tolerance = 0.00005
-    max_epoch = 2000
-    initial_learning_rate = 1e-6
-    number_of_surface_points = torch.tensor([80, 80], device=device)
+    max_epoch = 10
+    initial_learning_rate = 1e-5
+    number_of_surface_points = torch.tensor([100, 100], device=device)
     resolution = torch.tensor([256, 256], device=device)
-
-    use_scheduler = "exponential" 
-    # Set up schedulers.
-    if use_scheduler == "exponential":
-        scheduler_parameters = {
-            "type": "exponential",
-            "gamma": [1.002] #[0.994, 0.996, 0.998]
-        }
-
-    if use_scheduler == "reduce_on_plateau":
-        scheduler_parameters = {
-            "type": "reduce_on_plateau",
-            "cooldown": [50],
-            "factor": [0.1, 0.5, 0.9],
-            "min_lr": [1e-9],
-            "patience": [50]
-        }
-
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -143,7 +122,6 @@ with setup_distributed_environment(
         initial_learning_rate=initial_learning_rate,
         tolerance=tolerance,
         max_epoch=max_epoch,
-        scheduler_parameters=scheduler_parameters,
         num_log=max_epoch,
         device=device,
     )

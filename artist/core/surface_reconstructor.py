@@ -44,11 +44,11 @@ class SurfaceReconstructor:
         A weight for the loss describing the total variation across predicted surface points.
     total_variation_loss_normals_weight : float
         A weight for the loss describing the total variation across predicted surface normals.
-    number_of_neighbors : int
+    number_of_neighbors_tv_loss : int
         The number of nearest neighbors to consider for the total variation loss.
-    radius : float | None
+    radius_tv_loss : float
         An optional radius limiting the distances considered for the for the total variation loss.
-    sigma : float | None
+    sigma_tv_loss : float
         Determines how quickly the weight falls off as the distance increases for the total variation loss.
     early_stopping_threshold : float
         A threshold to stop optimization if the loss has not improved significantly.
@@ -69,8 +69,8 @@ class SurfaceReconstructor:
         Fixate the u and v values of the control points on the outer edges of each facet.
     total_variation_loss_per_surface()
         Compute the total variation loss for surfaces.
-    sum_mse_loss_per_heliostat()
-        Compute a sum over the MSE losses per heliostat.
+    mean_loss_per_heliostat()
+        Compute mean losses for each heliostat with multiple samples.
     """
 
     def __init__(
@@ -80,7 +80,6 @@ class SurfaceReconstructor:
         heliostat_data_mapping: list[
             tuple[str, list[pathlib.Path], list[pathlib.Path]]
         ],
-        scheduler_parameters: dict[str, float],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         flux_loss_weight: float = 1.0,
@@ -122,11 +121,11 @@ class SurfaceReconstructor:
             A weight for the loss describing the total variation across predicted surface points (default is 1.0).
         total_variation_loss_normals_weight : float
             A weight for the loss describing the total variation across predicted surface normals (default is 1.0).
-        number_of_neighbors : int
+        number_of_neighbors_tv_loss : int
             The number of nearest neighbors to consider for the total variation loss (default is 20).
-        radius : float | None
+        radius_tv_loss : float | None
             An optional radius limiting the distances considered for the for the total variation loss (default is None).
-        sigma : float | None
+        sigma_tv_loss : float | None
             Determines how quickly the weight falls off as the distance increases for the total variation loss (default is None).
         early_stopping_threshold : float
             A threshold to stop optimization if the loss has not improved significantly (default is 1e-3).
@@ -149,8 +148,6 @@ class SurfaceReconstructor:
 
         if rank == 0:
             log.info("Create a surface reconstructor.")
-
-        self.scheduler_parameters = scheduler_parameters
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
@@ -269,19 +266,6 @@ class SurfaceReconstructor:
                     lr=self.initial_learning_rate,
                 )
 
-                # Create the scheduler.
-                if self.scheduler_parameters["type"] == "exponential":
-                    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.scheduler_parameters["gamma"][0])
-                
-
-                # cyclic_scheduler = torch.optim.lr_scheduler.CyclicLR(
-                #     optimizer,
-                #     base_lr=0.01,
-                #     max_lr=0.1,
-                #     step_size_up=10,
-                # )
-                # reduce_on_plateau_scheduler = ReduceLROnPlateau(optimizer, "min")
-
                 # Start the optimization.
                 ideal_surface_loss_function = torch.nn.MSELoss()
                 current_active_nurbs_control_points = torch.zeros_like(heliostat_group.active_nurbs_control_points, device=device)
@@ -296,7 +280,7 @@ class SurfaceReconstructor:
                 ):
                     optimizer.zero_grad()
 
-                    current_active_nurbs_control_points = heliostat_group.active_nurbs_control_points
+                    current_active_nurbs_control_points = heliostat_group.active_nurbs_control_points.detach()
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
@@ -367,13 +351,13 @@ class SurfaceReconstructor:
                         number_of_rays=ray_tracer.light_source.number_of_rays,
                     )
 
-                    # # Reduce predicted fluxes from all ranks.
-                    # if self.ddp_setup["is_nested"]:
-                    #     torch.distributed.nn.functional.all_reduce(
-                    #         normalized_flux_distributions,
-                    #         group=self.ddp_setup["process_subgroup"],
-                    #         op=torch.distributed.ReduceOp.SUM,
-                    #     )
+                    # Reduce predicted fluxes from all ranks within each subgroup.
+                    if self.ddp_setup["is_nested"]:
+                        normalized_flux_distributions = torch.distributed.nn.functional.all_reduce(
+                            normalized_flux_distributions,
+                            group=self.ddp_setup["process_subgroup"],
+                            op=torch.distributed.ReduceOp.SUM,
+                        )
 
                     # TODO kl_div for pixel loss
                     # Loss regarding the predicted flux and the target flux.
@@ -382,10 +366,9 @@ class SurfaceReconstructor:
                         predictions=normalized_flux_distributions,
                         targets=normalized_measured_flux_distributions,
                         device=device,
-                    ).sum()
+                    )
 
                     # Loss regarding predicted control points deviation from ideal (flat but canted) control points.
-                    # TODO
                     ideal_surface_loss = ideal_surface_loss_function(
                         heliostat_group.nurbs_control_points[
                             (active_heliostats_mask > 0).nonzero(as_tuple=True)[0]
@@ -417,13 +400,12 @@ class SurfaceReconstructor:
 
                     # Sum of weighted losses.
                     loss = (
-                        flux_loss_per_heliostat
-                        #self.flux_loss_weight * flux_loss_per_heliostat
-                        # + self.total_variation_loss_points_weight
-                        # * total_variation_loss_points
-                        # + self.total_variation_loss_points_weight
-                        # * total_variation_loss_normals
-                        #+ self.ideal_surface_loss_weight * ideal_surface_loss
+                        self.flux_loss_weight * flux_loss_per_heliostat.sum()
+                        + self.total_variation_loss_points_weight
+                        * total_variation_loss_points
+                        + self.total_variation_loss_points_weight
+                        * total_variation_loss_normals
+                        + self.ideal_surface_loss_weight * ideal_surface_loss
                     )
 
                     loss.backward()
@@ -448,7 +430,6 @@ class SurfaceReconstructor:
                     )
 
                     optimizer.step()
-                    scheduler.step()
 
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
@@ -463,14 +444,11 @@ class SurfaceReconstructor:
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
         if self.ddp_setup["is_distributed"]:
-            for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
-                torch.distributed.nn.functional.all_reduce(
-                    heliostat_group.nurbs_control_points,
-                    op=torch.distributed.ReduceOp.SUM,
-                )
-            #torch.save(heliostat_group.nurbs_control_points, f"mode_distributed_nurbs_cp_rank_{rank}_group_{heliostat_group_index}.pt")
+            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
+                source = self.ddp_setup['ranks_to_groups_mapping'][index]
+                torch.distributed.broadcast(heliostat_group.nurbs_control_points, src=source[0])
 
-        log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
+            log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
 
     @staticmethod
     def fixate_control_points_on_outer_edges(
@@ -699,10 +677,10 @@ class SurfaceReconstructor:
             Tensor of shape [number_of_heliostats].
         predictions : torch.Tensor
             The predicted values for all samples from all active heliostats.
-            Tensor of shape [number_of_active_heliostats, ..., ...]
+            Tensor of shape [number_of_active_heliostats, ..., ...].
         targets : torch.Tensor
             The target values for all samples from all active heliostats.
-            Tensor of shape [number_of_active_heliostats, ..., ...]
+            Tensor of shape [number_of_active_heliostats, ..., ...].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -711,30 +689,29 @@ class SurfaceReconstructor:
         Returns
         -------
         torch.Tensor
-            The loss.
+            The mean loss per heliostat.
+            Tensor of shape [number_of_active_heliostats].
         """
         device = get_device(device=device)
 
-        # Compute per-sample MSE for samples on the same rank.
-        rank_mask = (predictions != 0).any(dim=(1, 2))
-        per_sample_mse = ((predictions[rank_mask] - targets[rank_mask]) ** 2).mean(dim=(1, 2))
+        # Compute per-sample MSE for samples.
+        per_sample_losses = ((predictions - targets) ** 2).mean(dim=(1, 2))
 
-        # A sample to heliostat index mapping on each rank.
-        nonzero_active_heliostats_mask = active_heliostats_mask[
-            active_heliostats_mask > 0
-        ]
+        # A sample to heliostat index mapping.
         heliostat_ids = torch.repeat_interleave(
-            torch.arange(len(nonzero_active_heliostats_mask), device=device),
-            nonzero_active_heliostats_mask,
+            torch.arange(len(active_heliostats_mask), device=device),
+            active_heliostats_mask,
         )
-        combined_mask = heliostat_ids[rank_mask]
+
+        loss_sum_per_heliostat = torch.zeros(len(active_heliostats_mask), device=device)
+        loss_sum_per_heliostat = loss_sum_per_heliostat.index_add(0, heliostat_ids, per_sample_losses)
 
         # Compute mean MSE per heliostat on each rank.
-        heliostat_sums = torch.zeros(len(nonzero_active_heliostats_mask), device=device)
-        heliostat_sums.scatter_add_(0, combined_mask, per_sample_mse)
+        number_of_samples_per_heliostat = torch.zeros(len(active_heliostats_mask), device=device)
+        number_of_samples_per_heliostat.index_add_(0, heliostat_ids, torch.ones_like(per_sample_losses, device=device))
 
-        _, counts = torch.unique(combined_mask, return_counts=True)
-
-        mean_loss_per_heliostat = heliostat_sums / counts
+        counts_clamped = number_of_samples_per_heliostat.clamp_min(1.0)
+        mean_loss_per_heliostat = loss_sum_per_heliostat / counts_clamped
+        mean_loss_per_heliostat = mean_loss_per_heliostat * (number_of_samples_per_heliostat > 0)
 
         return mean_loss_per_heliostat

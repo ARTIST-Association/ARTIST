@@ -200,7 +200,10 @@ def setup_distributed_environment(
         heliostat_group_rank = 0
         heliostat_group_world_size = 1
         process_subgroup = None
-        ranks_to_groups_mapping = None
+        ranks_to_groups_mapping = defaultdict(list)
+        for single_rank, groups in groups_to_ranks_mapping.items():
+            for group in groups:
+                ranks_to_groups_mapping[group].append(single_rank)
 
     try:
         yield {

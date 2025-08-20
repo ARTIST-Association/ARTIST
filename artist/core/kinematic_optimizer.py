@@ -348,7 +348,7 @@ class KinematicOptimizer:
                     )
 
                     if self.ddp_setup["is_nested"]:
-                        torch.distributed.nn.functional.all_reduce(
+                        flux_distributions = torch.distributed.nn.functional.all_reduce(
                             flux_distributions,
                             group=self.ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
@@ -372,6 +372,17 @@ class KinematicOptimizer:
                     loss = (focal_spots - focal_spots_measured).abs().mean()
                     loss.backward()
 
+                    if self.ddp_setup["is_nested"]:
+                        # Reduce gradients within each heliostat group.
+                        for param_group in optimizer.param_groups:
+                            for param in param_group["params"]:
+                                if param.grad is not None:
+                                    param.grad = torch.distributed.nn.functional.all_reduce(
+                                        param.grad,
+                                        op=torch.distributed.ReduceOp.SUM,
+                                        group=self.ddp_setup["process_subgroup"],
+                                    )
+
                     optimizer.step()
 
                     if epoch % log_step == 0:
@@ -384,14 +395,9 @@ class KinematicOptimizer:
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
 
         if self.ddp_setup["is_distributed"]:
-            for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
-                torch.distributed.nn.functional.all_reduce(
-                    heliostat_group.kinematic.deviation_parameters,
-                    op=torch.distributed.ReduceOp.SUM,
-                )
-                torch.distributed.nn.functional.all_reduce(
-                    heliostat_group.kinematic.actuators.actuator_parameters,
-                    op=torch.distributed.ReduceOp.SUM,
-                )
+            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
+                source = self.ddp_setup['ranks_to_groups_mapping'][index]
+                torch.distributed.broadcast(heliostat_group.kinematic.deviation_parameters, src=source[0])
+                torch.distributed.broadcast(heliostat_group.kinematic.actuators.actuator_parameters, src=source[0])
 
-        log.info(f"Rank: {rank}, synchronised after kinematic calibration.")
+            log.info(f"Rank: {rank}, synchronised after kinematic calibration.")
