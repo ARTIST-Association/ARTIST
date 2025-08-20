@@ -674,10 +674,10 @@ def normalize_bitmaps(
 
     return result
 
-def trapezoid_1d_distribution(
-    total_width: torch.Tensor,
-    slope_width: torch.Tensor,
-    plateau_width: torch.Tensor,
+def trapezoid_distribution(
+    total_width: int,
+    slope_width: int,
+    plateau_width: int,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -685,11 +685,11 @@ def trapezoid_1d_distribution(
 
     Parameter
     ---------
-    total_width : torch.Tensor
+    total_width : int
         The total width of the trapezoid.
-    slope_width : torch.Tensor
+    slope_width : int
         The width of the slope of the trapezoid.
-    plateau_width : torch.Tensor
+    plateau_width : int
         The width of the plateau.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -700,6 +700,7 @@ def trapezoid_1d_distribution(
     -------
     torch.Tensor
         The one dimensional trapezoid distribution.
+        Tensor of shape [total_width].
     """
     indices = torch.arange(total_width, device=device)
     center = (total_width - 1) / 2
@@ -711,21 +712,3 @@ def trapezoid_1d_distribution(
     trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
 
     return trapezoid
-
-def kl_divergence(
-    p: torch.Tensor, q: torch.Tensor, epsilon: float = 1e-12
-) -> torch.Tensor:
-    """
-    Compute D_KL(P||Q) over all pixels. P and Q can be any nonnegative tensors.
-
-    Parameters
-    ----------
-    p : torch.Temsor
-    q : torch.Tensor
-
-    Returns
-    -------
-    torch.Tensor
-        The kl divergnece.
-    """
-    return (p * (torch.log(((p + epsilon) / (q + epsilon))))).sum()
