@@ -1,14 +1,12 @@
 import logging
 
+import matplotlib.pyplot as plt
 import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
-
-import matplotlib.pyplot as plt
-
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
@@ -160,12 +158,6 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            # TODO remove
-            duplicates = 50
-            active_heliostats_mask = active_heliostats_mask * duplicates
-            target_area_mask = target_area_mask.repeat(duplicates)
-            incident_ray_directions = incident_ray_directions.repeat(duplicates, 1)
-
             # Activate heliostats.
             heliostat_group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_mask, device=device
@@ -179,15 +171,20 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            heliostat_group.kinematic.motor_positions = (
-                heliostat_group.kinematic.active_motor_positions.clone().detach()
-            )
+            # TODO explain 
+            initial_motor_positions = heliostat_group.kinematic.active_motor_positions.detach().clone()
+            # Desired motor positions/ increment range for each actuator TODO load individual from paint. Why can different actuators have different max increments?
+            motor_positions_minimum = torch.zeros_like(heliostat_group.kinematic.active_motor_positions)
+            motor_positions_maximum = torch.full_like(heliostat_group.kinematic.active_motor_positions, 80000.0)
+            
+            lower_margin = initial_motor_positions - motor_positions_minimum
+            upper_margin = motor_positions_maximum - initial_motor_positions
+            scale = torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
 
-            optimizer = torch.optim.Adam(
-                [heliostat_group.kinematic.motor_positions.requires_grad_()],
-                lr=self.initial_learning_rate,
-            )
+            optimizable_parameter = torch.nn.Parameter(torch.zeros_like(initial_motor_positions, device=device))
+            optimizer = torch.optim.Adam([optimizable_parameter], lr=self.initial_learning_rate)
 
+            # Start the optimization.
             loss = torch.inf
             epoch = 0
             log_step = self.max_epoch // self.num_log
@@ -195,6 +192,10 @@ class MotorPositionsOptimizer:
             while loss > self.tolerance and epoch <= self.max_epoch:
                 optimizer.zero_grad()
 
+                # TODO explain.
+                motor_positions_normalized = torch.tanh(optimizable_parameter)
+                heliostat_group.kinematic.motor_positions = initial_motor_positions + motor_positions_normalized * scale
+     
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_mask, device=device
@@ -202,7 +203,7 @@ class MotorPositionsOptimizer:
 
                 # Align heliostats.
                 heliostat_group.align_surfaces_with_motor_positions(
-                    motor_positions=heliostat_group.kinematic.motor_positions,
+                    motor_positions=heliostat_group.kinematic.active_motor_positions,
                     active_heliostats_mask=active_heliostats_mask,
                     device=device,
                 )
@@ -219,28 +220,28 @@ class MotorPositionsOptimizer:
                 )
 
                 # Perform heliostat-based ray tracing.
-                bitmaps_per_heliostat = ray_tracer.trace_rays(
+                flux_distributions = ray_tracer.trace_rays(
                     incident_ray_directions=incident_ray_directions,
                     active_heliostats_mask=active_heliostats_mask,
                     target_area_mask=target_area_mask,
                     device=device,
                 )
 
+                if self.ddp_setup["is_nested"]:
+                    flux_distributions = torch.distributed.nn.functional.all_reduce(
+                        flux_distributions,
+                        group=self.ddp_setup["process_subgroup"],
+                        op=torch.distributed.ReduceOp.SUM,
+                    )
+
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
-                    bitmaps_per_heliostat=bitmaps_per_heliostat,
+                    bitmaps_per_heliostat=flux_distributions,
                     target_area_mask=target_area_mask,
                     device=device,
                 )[self.target_area_index]
 
-                # if self.ddp_setup["is_nested"]:
-                #     torch.distributed.all_reduce(
-                #         flux_distribution_on_target,
-                #         op=torch.distributed.ReduceOp.SUM,
-                #         group=self.ddp_setup["process_subgroup"],
-                #     )
-
                 if self.method == config_dictionary.optimization_to_focal_spot:
-                    # Determine the focal spots of all flux density distributions
+                    # Determine the focal spots of all flux density distributions.
                     focal_spot = utils.get_center_of_mass(
                         bitmaps=flux_distribution_on_target.unsqueeze(0),
                         target_centers=self.scenario.target_areas.centers[
@@ -266,24 +267,23 @@ class MotorPositionsOptimizer:
                     current_distribution = flux_shifted / flux_shifted.sum()
                     log_target_distribution = torch.log(target_distribution + 1e-12)
                     log_current_distribution = torch.log(current_distribution + 1e-12)
-                    
+                
                     loss = torch.nn.functional.kl_div(input=log_target_distribution, target=log_current_distribution, reduction='sum', log_target=True)
-                    #print(f"loss rank: {rank} group: {heliostat_group_index} {loss}")
+                    #loss = torch.nn.functional.kl_div(input=log_current_distribution, target=log_target_distribution, reduction='sum', log_target=True)
 
                 loss.backward()
 
-                # if self.ddp_setup["is_nested"]:
-                #     # Reduce gradients within each heliostat group.
-                #     for param_group in optimizer.param_groups:
-                #         for param in param_group["params"]:
-                #             if param.grad is not None:
-                #                 torch.distributed.all_reduce(
-                #                     param.grad,
-                #                     op=torch.distributed.ReduceOp.SUM,
-                #                     group=self.ddp_setup["process_subgroup"],
-                #                 )
-                #                 #print(f"gradients rank: {rank} group: {heliostat_group_index} {param.grad}")
-
+                if self.ddp_setup["is_nested"]:
+                    # Reduce gradients within each heliostat group.
+                    for param_group in optimizer.param_groups:
+                        for param in param_group["params"]:
+                            if param.grad is not None:
+                                param.grad = torch.distributed.nn.functional.all_reduce(
+                                    param.grad,
+                                    op=torch.distributed.ReduceOp.SUM,
+                                    group=self.ddp_setup["process_subgroup"],
+                                )
+                
                 optimizer.step()
 
                 with torch.no_grad():
@@ -300,49 +300,8 @@ class MotorPositionsOptimizer:
             log.info(f"Rank: {rank}, motor positions optimized.")
 
         if self.ddp_setup["is_distributed"]:
-            for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
-                torch.distributed.nn.functional.all_reduce(
-                    heliostat_group.kinematic.motor_positions,
-                    op=torch.distributed.ReduceOp.SUM,
-                )
+            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
+                source = self.ddp_setup['ranks_to_groups_mapping'][index]
+                torch.distributed.broadcast(heliostat_group.kinematic.motor_positions, src=source[0])
 
-    @staticmethod
-    def trapezoid(
-        total_width: torch.Tensor,
-        slope_width: torch.Tensor,
-        plateau_width: torch.Tensor,
-        device: torch.device | None = None,
-    ) -> torch.Tensor:
-        """
-        Create a one dimensional trapezoid distribution.
-
-        Parameter
-        ---------
-        total_width : torch.Tensor
-            The total width of the trapezoid.
-        slope_width : torch.Tensor
-            The width of the slope of the trapezoid.
-        plateau_width : torch.Tensor
-            The width of the plateau.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The one dimensional trapezoid distribution.
-        """
-        device = get_device(device)
-
-        indices = torch.arange(total_width, device=device)
-        center = (total_width - 1) / 2
-        half_plateau = plateau_width / 2
-
-        # Distances from the plateau edge.
-        distances = torch.abs(indices - center) - half_plateau
-
-        trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
-
-        return trapezoid
+            log.info(f"Rank: {rank}, synchronised after motor positions optimization.")
