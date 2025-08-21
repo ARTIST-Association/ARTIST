@@ -82,7 +82,7 @@ class HeliostatField:
         prototype_actuators : dict[str, str | torch.Tensor]
             The prototype for the actuators, including type and parameters.
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet in east and then in north direction.
+            The number of sampling points along each direction of each 2D facet.
             Tensor of shape [2].
         device : device: torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
