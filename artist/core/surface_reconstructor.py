@@ -1,5 +1,6 @@
 import logging
 import pathlib
+from typing import Callable
 
 import torch
 
@@ -69,7 +70,7 @@ class SurfaceReconstructor:
         Fixate the u and v values of the control points on the outer edges of each facet.
     total_variation_loss_per_surface()
         Compute the total variation loss for surfaces.
-    mean_loss_per_heliostat()
+    loss_per_heliostat()
         Compute mean losses for each heliostat with multiple samples.
     """
 
@@ -83,9 +84,9 @@ class SurfaceReconstructor:
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         flux_loss_weight: float = 1.0,
-        ideal_surface_loss_weight: float = 1.0,
-        total_variation_loss_points_weight: float = 1.0,
-        total_variation_loss_normals_weight: float = 1.0,
+        ideal_surface_loss_weight: float = 0.0,
+        total_variation_loss_points_weight: float = 0.0,
+        total_variation_loss_normals_weight: float = 0.0,
         number_of_neighbors_tv_loss: int = 20,
         radius_tv_loss: float | None = None,
         sigma_tv_loss: float | None = None,
@@ -169,6 +170,7 @@ class SurfaceReconstructor:
 
     def reconstruct_surfaces(
         self,
+        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         device: torch.device | None = None,
     ) -> None:
         """
@@ -176,6 +178,9 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
+        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+            A callable function that computes the loss. It accepts predictions and targets
+            and optionally other keyword arguments and return a tensor with loss values.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -339,34 +344,24 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
-                    # Normalize the flux distributions.
-                    normalized_flux_distributions = utils.normalize_bitmaps(
-                        flux_distributions=flux_distributions,
-                        target_area_widths=ray_tracer.scenario.target_areas.dimensions[
-                            target_area_mask
-                        ][:, 0],
-                        target_area_heights=ray_tracer.scenario.target_areas.dimensions[
-                            target_area_mask
-                        ][:, 1],
-                        number_of_rays=ray_tracer.light_source.number_of_rays,
-                    )
-
                     # Reduce predicted fluxes from all ranks within each subgroup.
                     if self.ddp_setup["is_nested"]:
-                        normalized_flux_distributions = torch.distributed.nn.functional.all_reduce(
-                            normalized_flux_distributions,
+                        flux_distributions = torch.distributed.nn.functional.all_reduce(
+                            flux_distributions,
                             group=self.ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
                         )
 
-                    # TODO kl_div for pixel loss
                     # Loss regarding the predicted flux and the target flux.
-                    flux_loss_per_heliostat = self.mean_loss_per_heliostat(
+                    flux_loss_per_heliostat = self.loss_per_heliostat(
                         active_heliostats_mask=active_heliostats_mask,
-                        predictions=normalized_flux_distributions,
+                        predictions=flux_distributions,
                         targets=normalized_measured_flux_distributions,
+                        loss_function=loss_function,
+                        target_area_dimensions=ray_tracer.scenario.target_areas.dimensions[target_area_mask],
+                        number_of_rays=ray_tracer.light_source.number_of_rays,
                         device=device,
-                    )
+                    ).sum()
 
                     # Loss regarding predicted control points deviation from ideal (flat but canted) control points.
                     ideal_surface_loss = ideal_surface_loss_function(
@@ -400,7 +395,7 @@ class SurfaceReconstructor:
 
                     # Sum of weighted losses.
                     loss = (
-                        self.flux_loss_weight * flux_loss_per_heliostat.sum()
+                        self.flux_loss_weight * flux_loss_per_heliostat
                         + self.total_variation_loss_points_weight
                         * total_variation_loss_points
                         + self.total_variation_loss_points_weight
@@ -656,10 +651,13 @@ class SurfaceReconstructor:
         return variation_loss_final
 
     @staticmethod
-    def mean_loss_per_heliostat(
+    def loss_per_heliostat(
         active_heliostats_mask: torch.Tensor,
         predictions: torch.Tensor,
         targets: torch.Tensor,
+        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        target_area_dimensions: torch.Tensor,
+        number_of_rays: int,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -677,10 +675,18 @@ class SurfaceReconstructor:
             Tensor of shape [number_of_heliostats].
         predictions : torch.Tensor
             The predicted values for all samples from all active heliostats.
-            Tensor of shape [number_of_active_heliostats, ..., ...].
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
         targets : torch.Tensor
             The target values for all samples from all active heliostats.
-            Tensor of shape [number_of_active_heliostats, ..., ...].
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+            A callable function that computes the loss. It accepts predictions and targets
+            and optionally other keyword arguments and return a tensor with loss values.
+        target_area_dimensions : torch.Tensor
+            The dimensions of the tower target areas aimed at.
+            Tensor of shape [number_of_flux_distributions, 2].
+        number_of_rays : int
+            The number of rays used to generate the flux.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -694,8 +700,14 @@ class SurfaceReconstructor:
         """
         device = get_device(device=device)
 
-        # Compute per-sample MSE for samples.
-        per_sample_losses = ((predictions - targets) ** 2).mean(dim=(1, 2))
+        # Compute per-sample losses.
+        per_sample_losses = loss_function(
+            predictions=predictions,
+            targets=targets,
+            target_area_dimensions=target_area_dimensions,
+            number_of_rays=number_of_rays,
+            device=device
+        )
 
         # A sample to heliostat index mapping.
         heliostat_ids = torch.repeat_interleave(
