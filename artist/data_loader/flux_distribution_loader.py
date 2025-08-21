@@ -6,7 +6,6 @@ from typing import DefaultDict
 import torch
 from PIL import Image
 
-from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -91,22 +90,6 @@ def load_flux_from_png(
                 n = flux_data.shape[0] if flux_data.ndim == 3 else 1
                 measured_fluxes[index : index + n] = flux_data
                 index += n
-
-        # Normalize flux distributions.
-        measured_fluxes = utils.normalize_bitmaps(
-            flux_distributions=measured_fluxes,
-            target_area_widths=torch.full(
-                (measured_fluxes.shape[0],),
-                config_dictionary.utis_target_width,
-                device=device,
-            ),
-            target_area_heights=torch.full(
-                (measured_fluxes.shape[0],),
-                config_dictionary.utis_target_height,
-                device=device,
-            ),
-            number_of_rays=measured_fluxes.sum(dim=[1, 2]),
-        )
 
         log.info(f"Rank {rank}: Loading measured flux density distributions complete.")
 
