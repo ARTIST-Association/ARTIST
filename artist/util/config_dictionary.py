@@ -95,9 +95,9 @@ rigid_body_number_of_deviation_parameters = 18
 """Number of deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
-number_of_linear_actuator_parameters = 7
+number_of_linear_actuator_parameters = 9
 """Number of actuator parameters for linear actuators."""
-number_of_ideal_actuator_parameters = 2
+number_of_ideal_actuator_parameters = 4
 """Number of actuator parameters for ideal actuators."""
 kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
@@ -108,6 +108,8 @@ actuator_clockwise_axis_movement = "clockwise_axis_movement"
 """Key to access the actuator clockwise parameter."""
 actuator_increment = "increment"
 """Key to access the actuator increment parameter."""
+actuator_min_max_motor_positions = "min_max_motor_positions"
+"""Key to access the minimum and maximum motor positions of an actuator."""
 actuator_initial_stroke_length = "initial_stroke_length"
 """Key to access the actuator initial stroke length parameter."""
 actuator_offset = "offset"
@@ -251,6 +253,10 @@ paint_actuator_type = "type_axis"
 """Key to access the actuator type in a ``PAINT`` heliostat_properties.json file."""
 paint_clockwise_axis_movement = "clockwise_axis_movement"
 """Key to access the actuators axis movement direction in a ``PAINT`` heliostat_properties.json file."""
+paint_min_increment = "min_increment"
+"""Key to access the actuators minimum increment in a ``PAINT`` heliostat_properties.json file."""
+paint_max_increment = "max_increment"
+"""Key to access the actuators maximum increment in a ``PAINT`` heliostat_properties.json file."""
 paint_facet_properties = "facet_properties"
 """Key to access the facet properties in a ``PAINT`` heliostat_properties.json file."""
 paint_number_of_facets = "number_of_facets"
