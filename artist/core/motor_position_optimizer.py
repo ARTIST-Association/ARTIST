@@ -116,7 +116,7 @@ class MotorPositionsOptimizer:
         self,
         loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> None:
         """
         Optimize the motor positions.
 
