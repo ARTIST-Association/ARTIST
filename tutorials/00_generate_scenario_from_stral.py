@@ -140,6 +140,7 @@ actuator1_prototype = ActuatorConfig(
     key="actuator_1",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
+    min_max_motor_positions=[0.0, 60000.0]
 )
 
 # Include an ideal actuator.
@@ -147,6 +148,7 @@ actuator2_prototype = ActuatorConfig(
     key="actuator_2",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
+    min_max_motor_positions=[0.0, 80000.0]
 )
 
 # Create a list of actuators.
@@ -175,11 +177,13 @@ actuator1_heliostat1 = ActuatorConfig(
     key="actuator_1",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
+    min_max_motor_positions=[0.0, 60000.0]
 )
 actuator2_heliostat1 = ActuatorConfig(
     key="actuator_2",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
+    min_max_motor_positions=[0.0, 80000.0]
 )
 
 actuator_heliostat1_list = [actuator1_heliostat1, actuator2_heliostat1]

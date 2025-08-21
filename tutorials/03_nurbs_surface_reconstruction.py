@@ -3,6 +3,7 @@ import pathlib
 import h5py
 import torch
 
+from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
@@ -75,6 +76,9 @@ with setup_distributed_environment(
     initial_learning_rate = 1e-4
     number_of_surface_points = torch.tensor([100, 100], device=device)
     resolution = torch.tensor([256, 256], device=device)
+    
+    loss_function = loss_functions.distribution_loss_kl_divergence
+    #loss_function = loss_functions.pixel_loss
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -91,4 +95,7 @@ with setup_distributed_environment(
     )
 
     # Reconstruct surfaces.
-    surface_reconstructor.reconstruct_surfaces(device=device)
+    surface_reconstructor.reconstruct_surfaces(
+        loss_function=loss_function,
+        device=device
+    )
