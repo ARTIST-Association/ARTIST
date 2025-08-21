@@ -497,8 +497,9 @@ def extract_paint_heliostat_properties(
         clockwise_axis_movement = paint_actuator[
             config_dictionary.paint_clockwise_axis_movement
         ]
+        min_max_motor_positions = [paint_actuator[config_dictionary.paint_min_increment], paint_actuator[config_dictionary.paint_max_increment]]
         actuator_parameters_list.append(
-            (actuator_type, clockwise_axis_movement, parameters)
+            (actuator_type, clockwise_axis_movement, min_max_motor_positions, parameters)
         )
     log.info("Loading heliostat properties data complete.")
 
@@ -722,7 +723,8 @@ def extract_paint_heliostats(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
                 type=actuator_parameters_tuple[0],
                 clockwise_axis_movement=actuator_parameters_tuple[1],
-                parameters=actuator_parameters_tuple[2],
+                min_max_motor_positions=actuator_parameters_tuple[2],
+                parameters=actuator_parameters_tuple[3],
             )
             actuator_list.append(actuator)
 
