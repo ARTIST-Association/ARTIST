@@ -26,6 +26,7 @@ class Scenario:
     ----------
     power_plant_position : torch.Tensor
         The position of the power plant as latitude, longitude, altitude.
+        Tensor of shape [3].
     target_areas : TowerTargetAreas
         All target areas on all towers of the power plant.
     light_sources : LightSourceArray
@@ -60,6 +61,7 @@ class Scenario:
         ----------
         power_plant_position : torch.Tensor,
             The position of the power plant as latitude, longitude, altitude.
+            Tensor of shape [3].
         target_areas : TargetAreaArray
             A list of tower target areas included in the scenario.
         light_sources : LightSourceArray
@@ -109,7 +111,8 @@ class Scenario:
         scenario_file : h5py.File
             The config file containing all the information about the scenario being loaded.
         number_of_points_per_facet : torch.Tensor
-            The number of surface points per facet (default is torch.tensor([50,50])).
+            The number of sampling points along each direction of each 2D facet (default is torch.tensor([50,50])).
+            Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -258,6 +261,7 @@ class Scenario:
             Strings that map heliostats to target areas and incident ray direction tensors (default is None).
         single_incident_ray_direction : torch.Tensor
             The default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+            Tensor of shape [4].
         single_target_area_index : int
             The default target area index (default is 0).
         device : torch.device | None
