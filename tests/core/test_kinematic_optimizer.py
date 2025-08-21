@@ -122,25 +122,24 @@ def test_kinematic_optimizer(
     # Calibrate the kinematic.
     kinematic_optimizer.optimize(device=device)
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_optimized_kinematic_parameters"
-        / f"{optimizer_method}_group_0_{device.type}.pt"
-    )
+    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/expected_optimized_kinematic_parameters"
+            / f"{optimizer_method}_group_{index}_{device.type}.pt"
+        )
 
-    expected = torch.load(expected_path, map_location=device, weights_only=True)
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(
-        scenario.heliostat_field.heliostat_groups[0].kinematic.deviation_parameters,
-        expected["kinematic_deviations"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
-    torch.testing.assert_close(
-        scenario.heliostat_field.heliostat_groups[
-            0
-        ].kinematic.actuators.actuator_parameters,
-        expected["actuator_parameters"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
+        torch.testing.assert_close(
+            heliostat_group.kinematic.deviation_parameters,
+            expected["kinematic_deviations"],
+            atol=5e-2,
+            rtol=5e-2,
+        )
+        torch.testing.assert_close(
+            heliostat_group.kinematic.actuators.actuator_parameters,
+            expected["actuator_parameters"],
+            atol=5e-2,
+            rtol=5e-2,
+        )

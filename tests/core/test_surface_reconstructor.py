@@ -1,15 +1,30 @@
 import pathlib
+from typing import Callable
 
 import h5py
+import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
+@pytest.mark.parametrize(
+    "loss_function",
+    [
+        (
+            loss_functions.distribution_loss_kl_divergence
+        ),
+        (
+            loss_functions.pixel_loss
+        ),
+    ],
+)
 def test_surface_reconstructor(
+    loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
     ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
@@ -18,6 +33,9 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
+    loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+        A callable function that computes the loss. It accepts predictions and targets
+        and optionally other keyword arguments and return a tensor with loss values.
     ddp_setup_for_testing : DistributedEnvironmentTypedDict
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -33,7 +51,7 @@ def test_surface_reconstructor(
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
-        / "tests/data/scenarios/test_scenario_paint_four_heliostats.h5"
+        / "tests/data/scenarios/test_scenario_paint_four_heliostats_ideal.h5"
     )
 
     heliostat_data_mapping = [
@@ -83,28 +101,26 @@ def test_surface_reconstructor(
         device=device,
     )
 
-    surface_reconstructor.reconstruct_surfaces(device=device)
-
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_reconstructed_surfaces"
-        / f"group_0_{device.type}.pt"
+    surface_reconstructor.reconstruct_surfaces(
+        loss_function=loss_function,
+        device=device
     )
 
-    expected = torch.load(expected_path, map_location=device, weights_only=True)
+    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
+        expected_path = (
+            pathlib.Path(ARTIST_ROOT)
+            / "tests/data/expected_reconstructed_surfaces"
+            / f"{loss_function.__name__}_group_{index}_{device.type}.pt"
+        )
+        
+        expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(
-        scenario.heliostat_field.heliostat_groups[0].active_surface_points,
-        expected["active_surface_points"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
-    torch.testing.assert_close(
-        scenario.heliostat_field.heliostat_groups[0].active_surface_normals,
-        expected["active_surface_normals"],
-        atol=5e-2,
-        rtol=5e-2,
-    )
+        torch.testing.assert_close(
+            heliostat_group.nurbs_control_points,
+            expected,
+            atol=5e-5,
+            rtol=5e-5,
+        )
 
 
 def test_fixate_control_points_on_outer_edges(

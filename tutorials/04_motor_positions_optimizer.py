@@ -19,9 +19,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -47,7 +45,7 @@ with setup_distributed_environment(
 
     if motor_position_optimization_method == config_dictionary.optimization_to_focal_spot:
         optimization_goal = torch.tensor(
-            [[1.1493, -0.5030, 57.0474, 1.0000]], device=device
+            [1.1493, -0.5030, 57.0474, 1.0000], device=device
         )
         loss_function = loss_functions.focal_spot_loss
     
