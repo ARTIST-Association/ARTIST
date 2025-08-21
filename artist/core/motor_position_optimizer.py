@@ -1,11 +1,10 @@
 import logging
+from typing import Callable
 
-import matplotlib.pyplot as plt
 import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
 log = logging.getLogger(__name__)
@@ -27,11 +26,9 @@ class MotorPositionsOptimizer:
         Tensor of shape [4].
     target_area_index : int
         The index of the target used for the optimization.
-    method : str
-        The method used for optimization. The motor positions can be optimized to aim at a
-        specific coordinate or to match a specific distribution.
     optimization_goal : torch.Tensor
         The desired focal spot or distribution.
+        Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
@@ -56,11 +53,10 @@ class MotorPositionsOptimizer:
         scenario: Scenario,
         incident_ray_direction: torch.Tensor,
         target_area_index: int,
-        method: str,
         optimization_goal: torch.Tensor,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         initial_learning_rate: float = 0.0004,
-        tolerance: float = 0.035,
+        tolerance: float = 1e-5,
         max_epoch: int = 600,
         num_log: int = 3,
         device: torch.device | None = None,
@@ -79,14 +75,12 @@ class MotorPositionsOptimizer:
             Tensor of shape [4].
         target_area_index : int
             The index of the target used for the optimization.
-        method : str
-            The method used for optimization. The motor positions can be optimized to aim at a
-            specific coordinate or to match a specific distribution.
         optimization_goal : torch.Tensor
             The desired focal spot or distribution.
+            Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during optimization (default is torch.tensor([256,256])).
-        Tensor of shape [2].
+            Tensor of shape [2].
         initial_learning_rate : float
             The initial learning rate for the optimizer (default is 0.0004).
         tolerance : float
@@ -111,7 +105,6 @@ class MotorPositionsOptimizer:
         self.scenario = scenario
         self.incident_ray_direction = incident_ray_direction
         self.target_area_index = target_area_index
-        self.method = method
         self.optimization_goal = optimization_goal
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.initial_learning_rate = initial_learning_rate
@@ -121,6 +114,7 @@ class MotorPositionsOptimizer:
 
     def optimize(
         self,
+        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -128,6 +122,9 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
+        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+            A callable function that computes the loss. It accepts predictions and targets
+            and optionally other keyword arguments and return a tensor with loss values.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -171,16 +168,33 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            # TODO explain 
+            # The motor positions are optimized through a reparameterization to ensure stable training 
+            # across different heliostats with widely varying initial motor positions and ranges. Motor
+            # positions can range from 0 to up to ~80000. Instead of directly optimizing the absolute 
+            # motor positions, which can differ in magnitudes, an unconstrained parameter is optimized.
+            # Directly optimizing the absolute motor positions, would have very different effects depending 
+            # on the scale of the motors. For small initial motor positions (e.g. ~100), a gradient update 
+            # of size 10 may cause a ~10% relative change, drastically altering the motor positions of this
+            # heliostat. For large initial motor positions (e.g. ~50,000), the same optimizer step would 
+            # correspond to only a 0.02% relative change in motor positions, effectively freezing the 
+            # optimization of this heliostat. This mismatch makes it impossible to choose a single learning 
+            # rate that works robustly across all heliostats.
+            # The reparametrization of the optimizable parameter (motor positions) defines the optimizable 
+            # parameter as: 
+            # motor_positions_optimized = tanh(torch.nn.Parameter(optimizable_parameter))
+            # The true motor positions can be reconstructed by:
+            # motor_positions = initial_motor_positions + motor_positions_normalized * scale
+            # where scale defines the range (e.g. up to ~80,000) for adjustments.
+            # By optimizing as explained above instead of raw motor positions, every heliostat sees updates 
+            # of comparable relative magnitude, regardless of the absolute size of its motors positions.
             initial_motor_positions = heliostat_group.kinematic.active_motor_positions.detach().clone()
-            # Desired motor positions/ increment range for each actuator TODO load individual from paint. Why can different actuators have different max increments?
-            motor_positions_minimum = torch.zeros_like(heliostat_group.kinematic.active_motor_positions)
-            motor_positions_maximum = torch.full_like(heliostat_group.kinematic.active_motor_positions, 80000.0)
-            
+            motor_positions_minimum = heliostat_group.kinematic.actuators.actuator_parameters[:, 2]
+            motor_positions_maximum = heliostat_group.kinematic.actuators.actuator_parameters[:, 3]
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
             scale = torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
 
+            # Create the optimizer.
             optimizable_parameter = torch.nn.Parameter(torch.zeros_like(initial_motor_positions, device=device))
             optimizer = torch.optim.Adam([optimizable_parameter], lr=self.initial_learning_rate)
 
@@ -188,11 +202,10 @@ class MotorPositionsOptimizer:
             loss = torch.inf
             epoch = 0
             log_step = self.max_epoch // self.num_log
-            loss_function = torch.nn.MSELoss()
             while loss > self.tolerance and epoch <= self.max_epoch:
                 optimizer.zero_grad()
 
-                # TODO explain.
+                # Reconstruct true motor positions from reparameterized version.
                 motor_positions_normalized = torch.tanh(optimizable_parameter)
                 heliostat_group.kinematic.motor_positions = initial_motor_positions + motor_positions_normalized * scale
      
@@ -240,36 +253,13 @@ class MotorPositionsOptimizer:
                     device=device,
                 )[self.target_area_index]
 
-                if self.method == config_dictionary.optimization_to_focal_spot:
-                    # Determine the focal spots of all flux density distributions.
-                    focal_spot = utils.get_center_of_mass(
-                        bitmaps=flux_distribution_on_target.unsqueeze(0),
-                        target_centers=self.scenario.target_areas.centers[
-                            self.target_area_index
-                        ],
-                        target_widths=self.scenario.target_areas.dimensions[
-                            self.target_area_index
-                        ][0],
-                        target_heights=self.scenario.target_areas.dimensions[
-                            self.target_area_index
-                        ][1],
-                        device=device,
-                    )
-                    
-                    loss = loss_function(
-                        focal_spot,
-                        self.optimization_goal,
-                    )
-
-                if self.method == config_dictionary.optimization_to_distribution:
-                    target_distribution = (self.optimization_goal / (self.optimization_goal.sum() + 1e-12))
-                    flux_shifted = flux_distribution_on_target - flux_distribution_on_target.min()
-                    current_distribution = flux_shifted / flux_shifted.sum()
-                    log_target_distribution = torch.log(target_distribution + 1e-12)
-                    log_current_distribution = torch.log(current_distribution + 1e-12)
-                
-                    loss = torch.nn.functional.kl_div(input=log_target_distribution, target=log_current_distribution, reduction='sum', log_target=True)
-                    #loss = torch.nn.functional.kl_div(input=log_current_distribution, target=log_target_distribution, reduction='sum', log_target=True)
+                loss = loss_function(
+                    predictions=flux_distribution_on_target.unsqueeze(0),
+                    targets=self.optimization_goal.unsqueeze(0),
+                    scenario=self.scenario,
+                    target_area_index=self.target_area_index,
+                    device=device
+                )
 
                 loss.backward()
 
@@ -286,13 +276,9 @@ class MotorPositionsOptimizer:
                 
                 optimizer.step()
 
-                with torch.no_grad():
-                    plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
-                    plt.savefig(f"flux_{epoch}_rank_{rank}_heliostat_group_{heliostat_group_index}.png")
-
                 if epoch % log_step == 0 and rank == 0:
                     log.info(
-                        f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                        f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}",
                     )
 
                 epoch += 1
