@@ -3,6 +3,7 @@ import pathlib
 import h5py
 import torch
 
+from artist.core import loss_functions
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config, utils
@@ -48,6 +49,8 @@ with setup_distributed_environment(
         optimization_goal = torch.tensor(
             [[1.1493, -0.5030, 57.0474, 1.0000]], device=device
         )
+        loss_function = loss_functions.focal_spot_loss
+    
     if motor_position_optimization_method == config_dictionary.optimization_to_distribution:
         e_trapezoid = utils.trapezoid_distribution(
             total_width=256, slope_width=30, plateau_width=180, device=device
@@ -56,6 +59,7 @@ with setup_distributed_environment(
             total_width=256, slope_width=30, plateau_width=180, device=device
         )
         optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+        loss_function = loss_functions.distribution_loss_kl_divergence
 
     # Set optimizer paramteres.
     initial_learning_rate = 1e-3
@@ -67,7 +71,6 @@ with setup_distributed_environment(
         scenario=scenario,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        method=config_dictionary.optimization_to_distribution,
         optimization_goal=optimization_goal,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         initial_learning_rate=initial_learning_rate,
@@ -77,8 +80,7 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    motor_positions_optimizer.optimize(device=device)
-
-# P || Q    Penalizes extra mass where target has none (avoids hallucinated bits).
-# Q || P    Penalizes missing mass in the target regions.
-# -> We should do kl-div for surface reconstruction as well!
+    motor_positions_optimizer.optimize(
+        loss_function=loss_function,
+        device=device
+    )
