@@ -627,7 +627,7 @@ def normalize_bitmaps(
     flux_distributions: torch.Tensor,
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,
-    number_of_rays: torch.Tensor,
+    number_of_rays: torch.Tensor | int,
 ) -> torch.Tensor:
     """
     Normalize a bitmap.
@@ -643,7 +643,7 @@ def normalize_bitmaps(
     target_area_heights : torch.Tensor
         The target area heights.
         Tensor of shape [number_of_bitmaps].
-    number_of_rays : torch.Tensor
+    number_of_rays : torch.Tensor | int
         The number of rays used to generate the flux.
         Tensor of shape [number_of_bitmaps].
 
@@ -683,8 +683,12 @@ def trapezoid_distribution(
     """
     Create a one dimensional trapezoid distribution.
 
-    Parameter
-    ---------
+    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
+    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is 
+    padded with zeros on both sides.
+
+    Parameters
+    ----------
     total_width : int
         The total width of the trapezoid.
     slope_width : int
