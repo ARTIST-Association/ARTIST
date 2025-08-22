@@ -15,12 +15,8 @@ from artist.util.environment_setup import DistributedEnvironmentTypedDict
 @pytest.mark.parametrize(
     "loss_function",
     [
-        (
-            loss_functions.distribution_loss_kl_divergence
-        ),
-        (
-            loss_functions.pixel_loss
-        ),
+        (loss_functions.distribution_loss_kl_divergence),
+        (loss_functions.pixel_loss),
     ],
 )
 def test_surface_reconstructor(
@@ -102,8 +98,7 @@ def test_surface_reconstructor(
     )
 
     surface_reconstructor.reconstruct_surfaces(
-        loss_function=loss_function,
-        device=device
+        loss_function=loss_function, device=device
     )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
@@ -112,7 +107,7 @@ def test_surface_reconstructor(
             / "tests/data/expected_reconstructed_surfaces"
             / f"{loss_function.__name__}_group_{index}_{device.type}.pt"
         )
-        
+
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(

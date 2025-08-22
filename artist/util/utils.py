@@ -674,6 +674,7 @@ def normalize_bitmaps(
 
     return result
 
+
 def trapezoid_distribution(
     total_width: int,
     slope_width: int,
@@ -684,7 +685,7 @@ def trapezoid_distribution(
     Create a one dimensional trapezoid distribution.
 
     If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
-    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is 
+    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
     padded with zeros on both sides.
 
     Parameters

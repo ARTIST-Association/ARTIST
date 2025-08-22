@@ -377,10 +377,12 @@ class KinematicOptimizer:
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
                                 if param.grad is not None:
-                                    param.grad = torch.distributed.nn.functional.all_reduce(
-                                        param.grad,
-                                        op=torch.distributed.ReduceOp.SUM,
-                                        group=self.ddp_setup["process_subgroup"],
+                                    param.grad = (
+                                        torch.distributed.nn.functional.all_reduce(
+                                            param.grad,
+                                            op=torch.distributed.ReduceOp.SUM,
+                                            group=self.ddp_setup["process_subgroup"],
+                                        )
                                     )
 
                     optimizer.step()
@@ -395,9 +397,16 @@ class KinematicOptimizer:
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
 
         if self.ddp_setup["is_distributed"]:
-            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
-                source = self.ddp_setup['ranks_to_groups_mapping'][index]
-                torch.distributed.broadcast(heliostat_group.kinematic.deviation_parameters, src=source[0])
-                torch.distributed.broadcast(heliostat_group.kinematic.actuators.actuator_parameters, src=source[0])
+            for index, heliostat_group in enumerate(
+                self.scenario.heliostat_field.heliostat_groups
+            ):
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
+                torch.distributed.broadcast(
+                    heliostat_group.kinematic.deviation_parameters, src=source[0]
+                )
+                torch.distributed.broadcast(
+                    heliostat_group.kinematic.actuators.actuator_parameters,
+                    src=source[0],
+                )
 
             log.info(f"Rank: {rank}, synchronised after kinematic calibration.")

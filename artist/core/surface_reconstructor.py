@@ -170,7 +170,7 @@ class SurfaceReconstructor:
 
     def reconstruct_surfaces(
         self,
-        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
     ) -> None:
         """
@@ -178,7 +178,7 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+        loss_function : Callable[..., torch.Tensor]
             A callable function that computes the loss. It accepts predictions and targets
             and optionally other keyword arguments and return a tensor with loss values.
         device : torch.device | None
@@ -273,7 +273,9 @@ class SurfaceReconstructor:
 
                 # Start the optimization.
                 ideal_surface_loss_function = torch.nn.MSELoss()
-                current_active_nurbs_control_points = torch.zeros_like(heliostat_group.active_nurbs_control_points, device=device)
+                current_active_nurbs_control_points = torch.zeros_like(
+                    heliostat_group.active_nurbs_control_points, device=device
+                )
                 loss_last_epoch = torch.inf
                 loss_improvement = torch.inf
                 epoch = 0
@@ -285,7 +287,9 @@ class SurfaceReconstructor:
                 ):
                     optimizer.zero_grad()
 
-                    current_active_nurbs_control_points = heliostat_group.active_nurbs_control_points.detach()
+                    current_active_nurbs_control_points = (
+                        heliostat_group.active_nurbs_control_points.detach()
+                    )
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
@@ -358,7 +362,9 @@ class SurfaceReconstructor:
                         predictions=flux_distributions,
                         targets=normalized_measured_flux_distributions,
                         loss_function=loss_function,
-                        target_area_dimensions=ray_tracer.scenario.target_areas.dimensions[target_area_mask],
+                        target_area_dimensions=ray_tracer.scenario.target_areas.dimensions[
+                            target_area_mask
+                        ],
                         number_of_rays=ray_tracer.light_source.number_of_rays,
                         device=device,
                     ).sum()
@@ -368,9 +374,7 @@ class SurfaceReconstructor:
                         heliostat_group.nurbs_control_points[
                             (active_heliostats_mask > 0).nonzero(as_tuple=True)[0]
                         ],
-                        current_active_nurbs_control_points[
-                            start_indices_heliostats
-                        ]
+                        current_active_nurbs_control_points[start_indices_heliostats],
                     )
 
                     # Loss regarding smoothness of surface points.
@@ -439,9 +443,13 @@ class SurfaceReconstructor:
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
         if self.ddp_setup["is_distributed"]:
-            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
-                source = self.ddp_setup['ranks_to_groups_mapping'][index]
-                torch.distributed.broadcast(heliostat_group.nurbs_control_points, src=source[0])
+            for index, heliostat_group in enumerate(
+                self.scenario.heliostat_field.heliostat_groups
+            ):
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
+                torch.distributed.broadcast(
+                    heliostat_group.nurbs_control_points, src=source[0]
+                )
 
             log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
 
@@ -655,7 +663,7 @@ class SurfaceReconstructor:
         active_heliostats_mask: torch.Tensor,
         predictions: torch.Tensor,
         targets: torch.Tensor,
-        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        loss_function: Callable[..., torch.Tensor],
         target_area_dimensions: torch.Tensor,
         number_of_rays: int,
         device: torch.device | None = None,
@@ -679,7 +687,7 @@ class SurfaceReconstructor:
         targets : torch.Tensor
             The target values for all samples from all active heliostats.
             Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+        loss_function : Callable[..., torch.Tensor]
             A callable function that computes the loss. It accepts predictions and targets
             and optionally other keyword arguments and return a tensor with loss values.
         target_area_dimensions : torch.Tensor
@@ -706,7 +714,7 @@ class SurfaceReconstructor:
             targets=targets,
             target_area_dimensions=target_area_dimensions,
             number_of_rays=number_of_rays,
-            device=device
+            device=device,
         )
 
         # A sample to heliostat index mapping.
@@ -716,14 +724,22 @@ class SurfaceReconstructor:
         )
 
         loss_sum_per_heliostat = torch.zeros(len(active_heliostats_mask), device=device)
-        loss_sum_per_heliostat = loss_sum_per_heliostat.index_add(0, heliostat_ids, per_sample_losses)
+        loss_sum_per_heliostat = loss_sum_per_heliostat.index_add(
+            0, heliostat_ids, per_sample_losses
+        )
 
         # Compute mean MSE per heliostat on each rank.
-        number_of_samples_per_heliostat = torch.zeros(len(active_heliostats_mask), device=device)
-        number_of_samples_per_heliostat.index_add_(0, heliostat_ids, torch.ones_like(per_sample_losses, device=device))
+        number_of_samples_per_heliostat = torch.zeros(
+            len(active_heliostats_mask), device=device
+        )
+        number_of_samples_per_heliostat.index_add_(
+            0, heliostat_ids, torch.ones_like(per_sample_losses, device=device)
+        )
 
         counts_clamped = number_of_samples_per_heliostat.clamp_min(1.0)
         mean_loss_per_heliostat = loss_sum_per_heliostat / counts_clamped
-        mean_loss_per_heliostat = mean_loss_per_heliostat * (number_of_samples_per_heliostat > 0)
+        mean_loss_per_heliostat = mean_loss_per_heliostat * (
+            number_of_samples_per_heliostat > 0
+        )
 
         return mean_loss_per_heliostat

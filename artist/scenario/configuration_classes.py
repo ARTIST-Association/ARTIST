@@ -990,7 +990,7 @@ class ActuatorConfig:
         actuator_dict = {
             config_dictionary.actuator_type_key: self.type,
             config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
-            config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions
+            config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
         if self.parameters is not None:
             actuator_dict.update(

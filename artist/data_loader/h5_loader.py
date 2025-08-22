@@ -641,7 +641,7 @@ def linear_actuators(
         actuator_parameters[0, index] = config_dictionary.linear_actuator_int
 
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
-        
+
         actuator_parameters[2, index] = minimum_motor_position
         actuator_parameters[3, index] = maximum_motor_position
 
@@ -749,9 +749,8 @@ def ideal_actuators(
         actuator_parameters[0, index] = config_dictionary.ideal_actuator_int
 
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
-                
+
         actuator_parameters[2, index] = minimum_motor_position
         actuator_parameters[3, index] = maximum_motor_position
-
 
     return actuator_parameters

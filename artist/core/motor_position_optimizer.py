@@ -114,7 +114,7 @@ class MotorPositionsOptimizer:
 
     def optimize(
         self,
-        loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
     ) -> None:
         """
@@ -122,7 +122,7 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+        loss_function : Callable[..., torch.Tensor],
             A callable function that computes the loss. It accepts predictions and targets
             and optionally other keyword arguments and return a tensor with loss values.
         device : torch.device | None
@@ -168,35 +168,45 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            # The motor positions are optimized through a reparameterization to ensure stable training 
+            # The motor positions are optimized through a reparameterization to ensure stable training
             # across different heliostats with widely varying initial motor positions and ranges. Motor
-            # positions can range from 0 to up to ~80000. Instead of directly optimizing the absolute 
+            # positions can range from 0 to up to ~80000. Instead of directly optimizing the absolute
             # motor positions, which can differ in magnitudes, an unconstrained parameter is optimized.
-            # Directly optimizing the absolute motor positions, would have very different effects depending 
-            # on the scale of the motors. For small initial motor positions (e.g. ~100), a gradient update 
+            # Directly optimizing the absolute motor positions, would have very different effects depending
+            # on the scale of the motors. For small initial motor positions (e.g. ~100), a gradient update
             # of size 10 may cause a ~10% relative change, drastically altering the motor positions of this
-            # heliostat. For large initial motor positions (e.g. ~50,000), the same optimizer step would 
-            # correspond to only a 0.02% relative change in motor positions, effectively freezing the 
-            # optimization of this heliostat. This mismatch makes it impossible to choose a single learning 
+            # heliostat. For large initial motor positions (e.g. ~50,000), the same optimizer step would
+            # correspond to only a 0.02% relative change in motor positions, effectively freezing the
+            # optimization of this heliostat. This mismatch makes it impossible to choose a single learning
             # rate that works robustly across all heliostats.
-            # The reparametrization of the optimizable parameter (motor positions) defines the optimizable 
-            # parameter as: 
+            # The reparametrization of the optimizable parameter (motor positions) defines the optimizable
+            # parameter as:
             # motor_positions_optimized = tanh(torch.nn.Parameter(optimizable_parameter))
             # The true motor positions can be reconstructed by:
             # motor_positions = initial_motor_positions + motor_positions_normalized * scale
             # where scale defines the range (e.g. up to ~80,000) for adjustments.
-            # By optimizing as explained above instead of raw motor positions, every heliostat sees updates 
+            # By optimizing as explained above instead of raw motor positions, every heliostat sees updates
             # of comparable relative magnitude, regardless of the absolute size of its motors positions.
-            initial_motor_positions = heliostat_group.kinematic.active_motor_positions.detach().clone()
-            motor_positions_minimum = heliostat_group.kinematic.actuators.actuator_parameters[:, 2]
-            motor_positions_maximum = heliostat_group.kinematic.actuators.actuator_parameters[:, 3]
+            initial_motor_positions = (
+                heliostat_group.kinematic.active_motor_positions.detach().clone()
+            )
+            motor_positions_minimum = (
+                heliostat_group.kinematic.actuators.actuator_parameters[:, 2]
+            )
+            motor_positions_maximum = (
+                heliostat_group.kinematic.actuators.actuator_parameters[:, 3]
+            )
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
             scale = torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
 
             # Create the optimizer.
-            optimizable_parameter = torch.nn.Parameter(torch.zeros_like(initial_motor_positions, device=device))
-            optimizer = torch.optim.Adam([optimizable_parameter], lr=self.initial_learning_rate)
+            optimizable_parameter = torch.nn.Parameter(
+                torch.zeros_like(initial_motor_positions, device=device)
+            )
+            optimizer = torch.optim.Adam(
+                [optimizable_parameter], lr=self.initial_learning_rate
+            )
 
             # Start the optimization.
             loss = torch.inf
@@ -207,8 +217,10 @@ class MotorPositionsOptimizer:
 
                 # Reconstruct true motor positions from reparameterized version.
                 motor_positions_normalized = torch.tanh(optimizable_parameter)
-                heliostat_group.kinematic.motor_positions = initial_motor_positions + motor_positions_normalized * scale
-     
+                heliostat_group.kinematic.motor_positions = (
+                    initial_motor_positions + motor_positions_normalized * scale
+                )
+
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_mask, device=device
@@ -258,7 +270,7 @@ class MotorPositionsOptimizer:
                     targets=self.optimization_goal.unsqueeze(0),
                     scenario=self.scenario,
                     target_area_index=self.target_area_index,
-                    device=device
+                    device=device,
                 )
 
                 loss.backward()
@@ -273,7 +285,7 @@ class MotorPositionsOptimizer:
                                     op=torch.distributed.ReduceOp.SUM,
                                     group=self.ddp_setup["process_subgroup"],
                                 )
-                
+
                 optimizer.step()
 
                 if epoch % log_step == 0 and rank == 0:
@@ -286,8 +298,12 @@ class MotorPositionsOptimizer:
             log.info(f"Rank: {rank}, motor positions optimized.")
 
         if self.ddp_setup["is_distributed"]:
-            for index, heliostat_group in enumerate(self.scenario.heliostat_field.heliostat_groups):
-                source = self.ddp_setup['ranks_to_groups_mapping'][index]
-                torch.distributed.broadcast(heliostat_group.kinematic.motor_positions, src=source[0])
+            for index, heliostat_group in enumerate(
+                self.scenario.heliostat_field.heliostat_groups
+            ):
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
+                torch.distributed.broadcast(
+                    heliostat_group.kinematic.motor_positions, src=source[0]
+                )
 
             log.info(f"Rank: {rank}, synchronised after motor positions optimization.")
