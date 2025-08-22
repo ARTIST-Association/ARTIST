@@ -85,7 +85,7 @@ def test_surface_reconstructor(
         )
 
     ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0]}
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(

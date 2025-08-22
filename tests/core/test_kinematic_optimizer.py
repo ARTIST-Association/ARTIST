@@ -105,7 +105,7 @@ def test_kinematic_optimizer(
         )
 
     ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0]}
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
