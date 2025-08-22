@@ -132,6 +132,9 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# VS Code project settings
+.vscode/settings.json
+
 # Rope project settings
 .ropeproject
 
@@ -151,7 +154,7 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-.vscode/settings.json
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

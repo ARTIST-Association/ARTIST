@@ -625,13 +625,14 @@ def test_crop_flux_distributions_around_center_centering(
     crop_height : float
         Desired crop height in meters.
     target_width : torch.Tensor
-        Target plane width(s) in meters. Should be broadcastable to the number of images.
+        Target plane widths in meters.
+        Tensor of shape [number_of_bitmaps].
     target_height : torch.Tensor
-        Target plane height(s) in meters. Should be broadcastable to the number of images.
-        dimension of `image`.
+        Target plane heights in meters.
+        Tensor of shape [number_of_bitmaps].
     expected_cropped : torch.Tensor
-        The expected output image tensor after cropping. Should match the input
-        `image` in this test scenario.
+        The expected output image tensor after cropping.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     device : torch.device
         The device on which to initialize tensors.
 
@@ -703,11 +704,11 @@ def test_crop_flux_distributions_around_center_offcenter(
     crop_height : float
         The desired crop height in meters.
     target_width : torch.Tensor
-        The target plane width(s) in meters. Should be broadcastable to the number of images.
-        dimension of the image.
+        Target plane widths in meters.
+        Tensor of shape [number_of_bitmaps].
     target_height : torch.Tensor
-        The target plane height(s) in meters.Should be broadcastable to the number of images.
-        dimension of the image.
+        Target plane heights in meters.
+        Tensor of shape [number_of_bitmaps].
     tolerance_pixel : float
         The pixel tolerance allowed between the peak pixel position and the geometric center.
     min_peak : float
@@ -735,8 +736,7 @@ def test_crop_flux_distributions_around_center_offcenter(
         target_plane_heights=target_height.to(device),
     )
 
-    # Shape checks.
-    assert cropped.shape == image.shape[-3:], "Function keeps HxW by contract"
+    assert cropped.shape == image.shape[-3:]
     assert not torch.isnan(cropped).any()
 
     maximum_value = torch.amax(cropped)
