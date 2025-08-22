@@ -102,7 +102,7 @@ def test_motor_positions_optimizer(
         )
 
     ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0]}
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
 
     # Set optimizer paramteres.
     initial_learning_rate = 1e-3
@@ -114,7 +114,7 @@ def test_motor_positions_optimizer(
         scenario=scenario,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        optimization_goal=request.getfixturevalue(loss_fixture_name)[0],
+        optimization_goal=request.getfixturevalue(loss_fixture_name)[0].to(device),
         bitmap_resolution=torch.tensor([256, 256], device=device),
         initial_learning_rate=initial_learning_rate,
         max_epoch=max_epoch,
