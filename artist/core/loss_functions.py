@@ -195,3 +195,30 @@ def kl_divergence(
     return (targets * (torch.log((targets + epsilon) / (predictions + epsilon)))).sum(
         dim=(1, 2)
     )
+
+
+def scale_loss(
+    loss: torch.Tensor,
+    reference_loss: torch.Tensor,
+    weight: float,
+) -> torch.Tensor:
+    """
+    Scale one loss so that its weighted contribution is a ratio of the reference loss.
+
+    Parameters
+    ----------
+    loss : torch.Tensor
+        The loss to be scaled.
+    reference_loss :  torch.Tensor
+        The reference loss.
+    weight : float
+        The weight or ratio used for the scaling.
+
+    Returns
+    -------
+    torch.Tensor
+        The scaled loss.
+    """
+    epsilon = 1e-12
+    scale = (reference_loss * weight) / (loss + epsilon)
+    return loss * scale

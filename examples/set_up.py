@@ -1,0 +1,95 @@
+import pathlib
+
+import h5py
+import torch
+
+from artist.core import learning_rate_schedulers, loss_functions
+from artist.core.surface_reconstructor import SurfaceReconstructor
+from artist.scenario.scenario import Scenario
+from artist.util.environment_setup import get_device
+
+
+def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
+    """
+    Set up a surface reconstructor used in a hyperparameter search.
+
+    Parameters
+    ----------
+    params : dict[str, float]
+
+    Returns
+    -------
+    float
+        The loss for a specific parameter configuration.
+    """
+    torch.manual_seed(7)
+    torch.cuda.manual_seed(7)
+
+    device = get_device()
+
+    # Set up ARTIST to run in single device mode.
+    ddp_setup = {
+        "device": device,
+        "is_distributed": False,
+        "is_nested": False,
+        "rank": 0,
+        "world_size": 1,
+        "process_subgroup": None,
+        "groups_to_ranks_mapping": {0: [...]},
+        "heliostat_group_rank": 0,
+        "heliostat_group_world_size": 1,
+        "ranks_to_groups_mapping": {0: [0], 1: [0]},
+    }
+
+    # Load the scenario.
+    with h5py.File(pathlib.Path(params["scenario_path"]), "r") as scenario_file:
+        scenario = Scenario.load_scenario_from_hdf5(
+            scenario_file=scenario_file, device=device
+        )
+    # Set number of rays.
+    scenario.light_sources.light_source_list[0].number_of_rays = params[
+        "number_of_rays"
+    ]
+
+    # Set nurbs degree.
+    for heliostat_group in scenario.heliostat_field.heliostat_groups:
+        heliostat_group.nurbs_degrees = torch.tensor(
+            [params["nurbs_degree"], params["nurbs_degree"]], device=device
+        )
+
+    # Create a heliostat data mapping for the specified number of training samples.
+    # TODO
+    heliostat_data_mapping = []
+
+    # Create the surface reconstructor.
+    surface_reconstructor = SurfaceReconstructor(
+        ddp_setup=ddp_setup,
+        scenario=scenario,
+        heliostat_data_mapping=heliostat_data_mapping,
+        number_of_surface_points=torch.tensor(
+            [params["number_of_surface_points"], params["number_of_surface_points"]],
+            device=device,
+        ),
+        bitmap_resolution=torch.tensor([256, 256], device=device),
+        flux_loss_weight=1.0,
+        ideal_surface_loss_weight=params["ideal_surface_loss_weight"],
+        total_variation_loss_points_weight=params["total_variation_loss_points_weight"],
+        total_variation_loss_normals_weight=params[
+            "total_variation_loss_normals_weight"
+        ],
+        number_of_neighbors_tv_loss=params["total_variation_loss_number_of_neighbors"],
+        sigma_tv_loss=params["total_variation_loss_sigma"],
+        early_stopping_threshold=1e-3,
+        initial_learning_rate=params["initial_learning_rate"],
+        scheduler=getattr(learning_rate_schedulers, params["scheduler"]),
+        scheduler_parameters=params,
+        tolerance=0.00005,
+        max_epoch=3000,
+        num_log=1,
+        device=device,
+    )
+
+    # Reconstruct surfaces.
+    surface_reconstructor.reconstruct_surfaces(
+        loss_function=getattr(loss_functions, params["loss_function"]), device=device
+    )
