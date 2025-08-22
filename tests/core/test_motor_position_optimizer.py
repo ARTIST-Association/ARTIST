@@ -118,7 +118,7 @@ def test_motor_positions_optimizer(
         bitmap_resolution=torch.tensor([256, 256], device=device),
         initial_learning_rate=initial_learning_rate,
         max_epoch=max_epoch,
-        num_log=max_epoch,
+        num_log=1,
         device=device,
     )
 

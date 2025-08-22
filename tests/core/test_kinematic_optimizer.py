@@ -116,7 +116,7 @@ def test_kinematic_optimizer(
         initial_learning_rate=initial_lr,
         tolerance=tolerance,
         max_epoch=max_epoch,
-        num_log=max_epoch,
+        num_log=1,
     )
 
     # Calibrate the kinematic.
