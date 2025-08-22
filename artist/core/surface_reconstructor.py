@@ -4,6 +4,7 @@ from typing import Callable
 
 import torch
 
+from artist.core import learning_rate_schedulers, loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.scenario.scenario import Scenario
@@ -47,8 +48,6 @@ class SurfaceReconstructor:
         A weight for the loss describing the total variation across predicted surface normals.
     number_of_neighbors_tv_loss : int
         The number of nearest neighbors to consider for the total variation loss.
-    radius_tv_loss : float
-        An optional radius limiting the distances considered for the for the total variation loss.
     sigma_tv_loss : float
         Determines how quickly the weight falls off as the distance increases for the total variation loss.
     early_stopping_threshold : float
@@ -84,14 +83,17 @@ class SurfaceReconstructor:
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         flux_loss_weight: float = 1.0,
-        ideal_surface_loss_weight: float = 0.0,
-        total_variation_loss_points_weight: float = 0.0,
-        total_variation_loss_normals_weight: float = 0.0,
+        ideal_surface_loss_weight: float = 0.5,
+        total_variation_loss_points_weight: float = 0.5,
+        total_variation_loss_normals_weight: float = 0.5,
         number_of_neighbors_tv_loss: int = 20,
-        radius_tv_loss: float | None = None,
         sigma_tv_loss: float | None = None,
         early_stopping_threshold: float = 1e-3,
         initial_learning_rate: float = 1e-5,
+        scheduler: Callable[
+            ..., torch.optim.lr_scheduler.LRScheduler
+        ] = learning_rate_schedulers.NoOpScheduler,
+        scheduler_parameters: dict[str, float] = {},
         tolerance: float = 0.0005,
         max_epoch: int = 1000,
         num_log: int = 3,
@@ -124,8 +126,6 @@ class SurfaceReconstructor:
             A weight for the loss describing the total variation across predicted surface normals (default is 1.0).
         number_of_neighbors_tv_loss : int
             The number of nearest neighbors to consider for the total variation loss (default is 20).
-        radius_tv_loss : float | None
-            An optional radius limiting the distances considered for the for the total variation loss (default is None).
         sigma_tv_loss : float | None
             Determines how quickly the weight falls off as the distance increases for the total variation loss (default is None).
         early_stopping_threshold : float
@@ -160,10 +160,11 @@ class SurfaceReconstructor:
         self.total_variation_loss_points_weight = total_variation_loss_points_weight
         self.total_variation_loss_normals_weight = total_variation_loss_normals_weight
         self.number_of_neighbors_tv_loss = number_of_neighbors_tv_loss
-        self.radius_tv_loss = radius_tv_loss
         self.sigma_tv_loss = sigma_tv_loss
         self.early_stopping_threshold = early_stopping_threshold
         self.initial_learning_rate = initial_learning_rate
+        self.scheduler = scheduler
+        self.scheduler_parameters = scheduler_parameters
         self.tolerance = tolerance
         self.max_epoch = max_epoch
         self.num_log = num_log
@@ -269,6 +270,11 @@ class SurfaceReconstructor:
                 optimizer = torch.optim.Adam(
                     [heliostat_group.nurbs_control_points.requires_grad_()],
                     lr=self.initial_learning_rate,
+                )
+
+                # Create a learning rate scheduler.
+                scheduler = self.scheduler(
+                    optimizer=optimizer, paramerters=self.scheduler_parameters
                 )
 
                 # Start the optimization.
@@ -381,7 +387,6 @@ class SurfaceReconstructor:
                     total_variation_loss_points = self.total_variation_loss_per_surface(
                         surfaces=new_surface_points[start_indices_heliostats],
                         number_of_neighbors=self.number_of_neighbors_tv_loss,
-                        radius=self.radius_tv_loss,
                         sigma=self.sigma_tv_loss,
                         device=device,
                     ).sum()
@@ -391,7 +396,6 @@ class SurfaceReconstructor:
                         self.total_variation_loss_per_surface(
                             surfaces=new_surface_normals[start_indices_heliostats],
                             number_of_neighbors=self.number_of_neighbors_tv_loss,
-                            radius=self.radius_tv_loss,
                             sigma=self.sigma_tv_loss,
                             device=device,
                         ).sum()
@@ -399,14 +403,23 @@ class SurfaceReconstructor:
 
                     # Sum of weighted losses.
                     loss = (
-                        self.flux_loss_weight * flux_loss_per_heliostat
-                        + self.total_variation_loss_points_weight
-                        * total_variation_loss_points
-                        + self.total_variation_loss_points_weight
-                        * total_variation_loss_normals
-                        + self.ideal_surface_loss_weight * ideal_surface_loss
+                        flux_loss_per_heliostat
+                        + loss_functions.scale_loss(
+                            loss=ideal_surface_loss,
+                            reference_loss=flux_loss_per_heliostat,
+                            weight=self.ideal_surface_loss_weight,
+                        )
+                        + loss_functions.scale_loss(
+                            loss=total_variation_loss_points,
+                            reference_loss=flux_loss_per_heliostat,
+                            weight=self.total_variation_loss_points_weight,
+                        )
+                        + loss_functions.scale_loss(
+                            loss=total_variation_loss_normals,
+                            reference_loss=flux_loss_per_heliostat,
+                            weight=self.total_variation_loss_normals_weight,
+                        )
                     )
-
                     loss.backward()
 
                     if self.ddp_setup["is_nested"]:
@@ -429,6 +442,7 @@ class SurfaceReconstructor:
                     )
 
                     optimizer.step()
+                    scheduler.step()
 
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
@@ -512,7 +526,6 @@ class SurfaceReconstructor:
     def total_variation_loss_per_surface(
         surfaces: torch.Tensor,
         number_of_neighbors: int = 20,
-        radius: float | None = None,
         sigma: float | None = None,
         batch_size: int = 512,
         epsilon: float = 1e-8,
@@ -535,8 +548,6 @@ class SurfaceReconstructor:
             Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_surface_points_per_facet, 4].
         number_of_neighbors : int
             The number of nearest neighbors to consider (default is 20).
-        radius : float | None
-            An optional radius limiting the distances considered for the loss (default is None).
         sigma : float | None
             Determines how quickly the weight falls off as the distance increases (default is None).
         batch_size : int
@@ -564,12 +575,9 @@ class SurfaceReconstructor:
 
         # Set sigma. Determines how quickly the weight falls off as the distance increases.
         if sigma is None:
-            if radius is not None:
-                sigma = float(radius) / 2.0 + 1e-12
-            else:
-                coordinates_std = coordinates.std(dim=1).mean().item()
-                sigma = max(coordinates_std * 0.1, 1e-6)
-        sigma = float(sigma)
+            coordinates_std = coordinates.std(dim=1).mean().item()
+            sigma = max(coordinates_std * 0.1, 1e-6)
+        sigma = float(sigma + 1e-12)
 
         variation_loss_sum = torch.zeros(
             (number_of_surfaces, number_of_facets), device=device
@@ -601,17 +609,6 @@ class SurfaceReconstructor:
             self_mask[:, :, rows, cols] = True
             masked_distances = torch.where(
                 self_mask, torch.full_like(distances, 1e9), distances
-            )
-
-            # Add an optional radius mask. Only keep neighbors within radius.
-            if radius is not None:
-                radius_mask = masked_distances <= float(radius)
-            else:
-                radius_mask = torch.ones_like(masked_distances, dtype=torch.bool)
-
-            # Exclude coordinates outside of the search radius by setting them to a large value.
-            masked_distances = torch.where(
-                radius_mask, masked_distances, torch.full_like(masked_distances, 1e9)
             )
 
             # Select the k nearest neighbors (or fewer if the coordinate is near an edge).

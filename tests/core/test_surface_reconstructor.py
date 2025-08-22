@@ -234,7 +234,7 @@ def test_total_variation_loss(
 
     # Calculate total variation loss
     loss = SurfaceReconstructor.total_variation_loss_per_surface(
-        surfaces=surfaces, number_of_neighbors=10, radius=0.5, sigma=1.0, device=device
+        surfaces=surfaces, number_of_neighbors=10, sigma=1.0, device=device
     )
 
     torch.testing.assert_close(
