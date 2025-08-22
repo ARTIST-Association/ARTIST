@@ -627,7 +627,7 @@ def normalize_bitmaps(
     flux_distributions: torch.Tensor,
     target_area_widths: torch.Tensor,
     target_area_heights: torch.Tensor,
-    number_of_rays: torch.Tensor,
+    number_of_rays: torch.Tensor | int,
 ) -> torch.Tensor:
     """
     Normalize a bitmap.
@@ -643,7 +643,7 @@ def normalize_bitmaps(
     target_area_heights : torch.Tensor
         The target area heights.
         Tensor of shape [number_of_bitmaps].
-    number_of_rays : torch.Tensor
+    number_of_rays : torch.Tensor | int
         The number of rays used to generate the flux.
         Tensor of shape [number_of_bitmaps].
 
@@ -661,8 +661,59 @@ def normalize_bitmaps(
         number_of_rays * plane_area_per_pixel
     ).unsqueeze(-1).unsqueeze(-1)
 
-    scaled_fluxes = (
-        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
-    ) / torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
+    std = torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
+    std = std + 1e-6
 
-    return scaled_fluxes
+    standardized = (
+        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
+    ) / std
+
+    valid_mask = (flux_distributions.sum(dim=(1, 2), keepdim=True) != 0).float()
+
+    result = standardized * valid_mask
+
+    return result
+
+
+def trapezoid_distribution(
+    total_width: int,
+    slope_width: int,
+    plateau_width: int,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a one dimensional trapezoid distribution.
+
+    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
+    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
+    padded with zeros on both sides.
+
+    Parameters
+    ----------
+    total_width : int
+        The total width of the trapezoid.
+    slope_width : int
+        The width of the slope of the trapezoid.
+    plateau_width : int
+        The width of the plateau.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The one dimensional trapezoid distribution.
+        Tensor of shape [total_width].
+    """
+    indices = torch.arange(total_width, device=device)
+    center = (total_width - 1) / 2
+    half_plateau = plateau_width / 2
+
+    # Distances from the plateau edge.
+    distances = torch.abs(indices - center) - half_plateau
+
+    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
+
+    return trapezoid

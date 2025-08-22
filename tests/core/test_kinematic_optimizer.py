@@ -8,6 +8,7 @@ from artist import ARTIST_ROOT
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
+from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 # Set up logger.
 set_logger_config()
@@ -35,6 +36,7 @@ def test_kinematic_optimizer(
     tolerance: float,
     max_epoch: int,
     initial_lr: float,
+    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
     """
@@ -50,6 +52,8 @@ def test_kinematic_optimizer(
         The maximum amount of epochs for the optimization loop.
     initial_lr : float
         The initial learning rate.
+    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -100,23 +104,25 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
+    ddp_setup_for_testing["device"] = device
+    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
+
+    # Create the kinematic optimizer.
+    kinematic_optimizer = KinematicOptimizer(
+        ddp_setup=ddp_setup_for_testing,
+        scenario=scenario,
+        heliostat_data_mapping=heliostat_data_mapping,
+        calibration_method=optimizer_method,
+        initial_learning_rate=initial_lr,
+        tolerance=tolerance,
+        max_epoch=max_epoch,
+        num_log=1,
+    )
+
+    # Calibrate the kinematic.
+    kinematic_optimizer.optimize(device=device)
+
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        # Create the kinematic optimizer.
-        kinematic_optimizer = KinematicOptimizer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            heliostat_data_mapping=heliostat_data_mapping,
-            calibration_method=optimizer_method,
-            initial_learning_rate=initial_lr,
-            tolerance=tolerance,
-            max_epoch=max_epoch,
-            num_log=max_epoch,
-            device=device,
-        )
-
-        # Calibrate the kinematic.
-        kinematic_optimizer.optimize(device=device)
-
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_kinematic_parameters"

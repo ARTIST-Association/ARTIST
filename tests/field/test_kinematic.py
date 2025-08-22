@@ -69,6 +69,8 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
             [
                 [0.0000e00, 0.0000e00],
                 [0.0000e00, 1.0000e00],
+                [0.0000e00, 0.0000e00],
+                [60000, 80000],
                 [1.5417e05, 1.5417e05],
                 [7.5000e-02, 7.5000e-02],
                 [3.4061e-01, 3.4790e-01],

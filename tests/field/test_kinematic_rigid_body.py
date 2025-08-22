@@ -62,17 +62,17 @@ def kinematic_model_linear(
     )
     initial_orientation = torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device)
 
-    linear_actuator_parameters = torch.zeros((6, 7, 2), device=device)
+    linear_actuator_parameters = torch.zeros((6, 9, 2), device=device)
     linear_actuator_parameters[:, 1, 1] = 1
-    linear_actuator_parameters[:, 2, 0] = 154166.666
-    linear_actuator_parameters[:, 2, 1] = 154166.666
-    linear_actuator_parameters[:, 3, :] = 0.075
-    linear_actuator_parameters[:, 4, 0] = 0.34061
-    linear_actuator_parameters[:, 4, 1] = 0.3479
-    linear_actuator_parameters[:, 5, 0] = 0.3204
-    linear_actuator_parameters[:, 5, 1] = 0.309
-    linear_actuator_parameters[:, 6, 0] = -1.570796
-    linear_actuator_parameters[:, 6, 1] = 0.959931
+    linear_actuator_parameters[:, 4, 0] = 154166.666
+    linear_actuator_parameters[:, 4, 1] = 154166.666
+    linear_actuator_parameters[:, 5, :] = 0.075
+    linear_actuator_parameters[:, 6, 0] = 0.34061
+    linear_actuator_parameters[:, 6, 1] = 0.3479
+    linear_actuator_parameters[:, 7, 0] = 0.3204
+    linear_actuator_parameters[:, 7, 1] = 0.309
+    linear_actuator_parameters[:, 8, 0] = -1.570796
+    linear_actuator_parameters[:, 8, 1] = 0.959931
 
     return RigidBody(
         number_of_heliostats=6,
@@ -132,7 +132,7 @@ def kinematic_model_ideal_1(
         device=device,
     )
 
-    actuator_parameters = torch.zeros((10, 2, 2), device=device)
+    actuator_parameters = torch.zeros((10, 4, 2), device=device)
     actuator_parameters[:, 0, :] = 1
     actuator_parameters[:, 1, 1] = 1
 
@@ -172,7 +172,7 @@ def kinematic_model_ideal_2(
         device=device,
     )
 
-    actuator_parameters = torch.zeros((3, 2, 2), device=device)
+    actuator_parameters = torch.zeros((3, 4, 2), device=device)
     actuator_parameters[:, 0, :] = 1
     actuator_parameters[:, 1, 1] = 1
 

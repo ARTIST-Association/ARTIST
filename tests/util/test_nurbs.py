@@ -121,8 +121,6 @@ def test_nurbs(device: torch.device) -> None:
 
         optimizer.step()
 
-        print(loss.abs().mean())
-
     torch.testing.assert_close(points, surface_points, atol=1e-2, rtol=1e-2)
 
 
