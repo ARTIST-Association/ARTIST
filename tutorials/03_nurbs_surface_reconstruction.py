@@ -76,9 +76,9 @@ with setup_distributed_environment(
     initial_learning_rate = 1e-4
     number_of_surface_points = torch.tensor([100, 100], device=device)
     resolution = torch.tensor([256, 256], device=device)
-    
+
     loss_function = loss_functions.distribution_loss_kl_divergence
-    #loss_function = loss_functions.pixel_loss
+    # loss_function = loss_functions.pixel_loss
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -96,6 +96,5 @@ with setup_distributed_environment(
 
     # Reconstruct surfaces.
     surface_reconstructor.reconstruct_surfaces(
-        loss_function=loss_function,
-        device=device
+        loss_function=loss_function, device=device
     )

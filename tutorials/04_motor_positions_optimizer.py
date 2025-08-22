@@ -43,21 +43,21 @@ with setup_distributed_environment(
 
     scenario.light_sources.light_source_list[0].number_of_rays = 4
 
-    if motor_position_optimization_method == config_dictionary.optimization_to_focal_spot:
-        optimization_goal = torch.tensor(
-            [1.1493, -0.5030, 57.0474, 1.0000], device=device
-        )
-        loss_function = loss_functions.focal_spot_loss
-    
-    if motor_position_optimization_method == config_dictionary.optimization_to_distribution:
-        e_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=180, device=device
-        )
-        u_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=180, device=device
-        )
-        optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
-        loss_function = loss_functions.distribution_loss_kl_divergence
+    # For an optimization using a focal spot as target use this loss function definition:
+    # optimization_goal = torch.tensor(
+    #     [1.1493, -0.5030, 57.0474, 1.0000], device=device
+    # )
+    # loss_function = loss_functions.focal_spot_loss
+
+    # For an optimization using a distribution as target use this loss function definition:
+    e_trapezoid = utils.trapezoid_distribution(
+        total_width=256, slope_width=30, plateau_width=180, device=device
+    )
+    u_trapezoid = utils.trapezoid_distribution(
+        total_width=256, slope_width=30, plateau_width=180, device=device
+    )
+    optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+    loss_function = loss_functions.distribution_loss_kl_divergence
 
     # Set optimizer paramteres.
     initial_learning_rate = 1e-3
@@ -78,7 +78,4 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    motor_positions_optimizer.optimize(
-        loss_function=loss_function,
-        device=device
-    )
+    motor_positions_optimizer.optimize(loss_function=loss_function, device=device)

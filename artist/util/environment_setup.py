@@ -25,7 +25,7 @@ class DistributedEnvironmentTypedDict(TypedDict):
     groups_to_ranks_mapping: dict[int, list[int]]
     heliostat_group_rank: int
     heliostat_group_world_size: int
-    ranks_to_groups_mapping: dict[int, list[int]] | None
+    ranks_to_groups_mapping: dict[int, list[int]]
 
 
 def initialize_ddp_environment(

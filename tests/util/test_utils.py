@@ -579,30 +579,15 @@ def test_normalize_bitmaps(device: torch.device) -> None:
 @pytest.mark.parametrize(
     "total_width, slope_width, plateau_width, expected",
     [
-        (
-            8,
-            2,
-            4,
-            torch.tensor([0.25, 0.75, 1.0, 1.0, 1.0, 1.0, 0.75, 0.25])
-        ),
-        (
-            4,
-            2,
-            4,
-            torch.tensor([1.0, 1.0, 1.0, 1.0])
-        ),
-        (
-            1,
-            2,
-            3,
-            torch.tensor([1.0])
-        ),
+        (8, 2, 4, torch.tensor([0.25, 0.75, 1.0, 1.0, 1.0, 1.0, 0.75, 0.25])),
+        (4, 2, 4, torch.tensor([1.0, 1.0, 1.0, 1.0])),
+        (1, 2, 3, torch.tensor([1.0])),
         (
             10,
             2,
             2,
-            torch.tensor([0.0, 0.0, 0.25, 0.75, 1.0, 1.0, 0.75, 0.25, 0.0, 0.0])
-        )
+            torch.tensor([0.0, 0.0, 0.25, 0.75, 1.0, 1.0, 0.75, 0.25, 0.0, 0.0]),
+        ),
     ],
 )
 def test_trapezoid_distribution(
@@ -610,7 +595,7 @@ def test_trapezoid_distribution(
     slope_width: int,
     plateau_width: int,
     expected: torch.Tensor,
-    device: torch.device
+    device: torch.device,
 ) -> None:
     """
     Test that the trapezoid distribution works as expected.
@@ -635,8 +620,7 @@ def test_trapezoid_distribution(
         total_width=total_width,
         slope_width=slope_width,
         plateau_width=plateau_width,
-        device=device
+        device=device,
     )
 
     torch.testing.assert_close(trapezoid, expected.to(device), atol=5e-4, rtol=5e-4)
-
