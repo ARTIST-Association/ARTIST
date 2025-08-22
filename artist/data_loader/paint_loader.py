@@ -937,7 +937,7 @@ def build_heliostat_data_mapping(
     Build a mapping of heliostat names to their calibration property and image files loaded from ``PAINT``.
 
     It assuemes that the data directory has the same structure  and file names the ``PAINT`` data base.
-    This method loads property and image files from the specified variant, and returns a structured mapping.    
+    This method loads property and image files from the specified variant, and returns a structured mapping.
     If fewer measurements are available than requested, a warning is logged and the available
     subset is used. Optionally, the selection can be randomized using a fixed seed.
 
