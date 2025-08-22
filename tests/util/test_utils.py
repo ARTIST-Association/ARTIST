@@ -647,6 +647,7 @@ def test_crop_flux_distributions_around_center_centering(
         crop_height=crop_height,
         target_plane_widths=target_width.to(device),
         target_plane_heights=target_height.to(device),
+        device=device,
     )
     torch.testing.assert_close(
         cropped, expected_cropped.to(device), rtol=1e-4, atol=1e-4
@@ -734,6 +735,7 @@ def test_crop_flux_distributions_around_center_offcenter(
         crop_height=crop_height,
         target_plane_widths=target_width.to(device),
         target_plane_heights=target_height.to(device),
+        device=device,
     )
 
     assert cropped.shape == image.shape[-3:]

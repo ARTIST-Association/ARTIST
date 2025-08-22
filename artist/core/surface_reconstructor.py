@@ -171,6 +171,7 @@ class SurfaceReconstructor:
                 target_plane_heights=self.scenario.target_areas.dimensions[
                     self.target_area_mask
                 ][:, 1],
+                device=device,
             )
         )
 
@@ -303,6 +304,7 @@ class SurfaceReconstructor:
                     target_plane_heights=self.scenario.target_areas.dimensions[
                         self.target_area_mask
                     ][:, 1],
+                    device=device,
                 )
 
                 normalized_flux_distributions = utils.normalize_bitmaps(

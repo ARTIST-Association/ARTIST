@@ -710,8 +710,9 @@ def crop_flux_distributions_around_center(
         The cropped image regions.
         Tensor of shape [number_of_fluxmaps, bitmap_height, bitmap_width].
     """
-    batch_size, image_height, image_width = flux_distributions.shape
     device = get_device(device=device)
+
+    number_of_flux_distributions, image_height, image_width = flux_distributions.shape
 
     # Compute center of mass.
     normalized_mass_map = flux_distributions / (
@@ -721,8 +722,8 @@ def crop_flux_distributions_around_center(
     y_coordinates = torch.linspace(-1, 1, image_height, device=device)
     x_coordinates = torch.linspace(-1, 1, image_width, device=device)
     y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
-    x_grid = x_grid.expand(batch_size, -1, -1)
-    y_grid = y_grid.expand(batch_size, -1, -1)
+    x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
+    y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
 
     x_center_of_mass = (x_grid * normalized_mass_map).sum(dim=(1, 2))
     y_center_of_mass = (y_grid * normalized_mass_map).sum(dim=(1, 2))
@@ -732,7 +733,7 @@ def crop_flux_distributions_around_center(
     scale_y = crop_height / target_plane_heights
 
     # Build affine transform matrices (scale and center).
-    affine_matrices = torch.zeros(batch_size, 2, 3, device=device)
+    affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
     affine_matrices[:, 0, 0] = scale_x
     affine_matrices[:, 1, 1] = scale_y
     affine_matrices[:, 0, 2] = x_center_of_mass
