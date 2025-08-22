@@ -7,7 +7,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -87,7 +87,7 @@ class SurfaceReconstructor:
         heliostat_group : HeliostatGroup
             The heliostat group to be reconstructed.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and reconstruction data.
+            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the center of mass.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
@@ -120,22 +120,6 @@ class SurfaceReconstructor:
         self.scenario = scenario
         self.heliostat_group = heliostat_group
 
-        # Extract measured fluxes.
-        heliostat_flux_path_mapping = [
-            (heliostat_name, png_paths)
-            for heliostat_name, _, png_paths in heliostat_data_mapping
-            if heliostat_name in self.heliostat_group.names
-        ]
-
-        self.normalized_measured_flux_distributions = (
-            flux_distribution_loader.load_flux_from_png(
-                heliostat_flux_path_mapping=heliostat_flux_path_mapping,
-                heliostat_names=heliostat_group.names,
-                resolution=resolution,
-                device=device,
-            )
-        )
-
         # Extract environmental data for measured fluxes.
         heliostat_calibration_mapping = [
             (heliostat_name, calibration_properties_paths)
@@ -159,6 +143,37 @@ class SurfaceReconstructor:
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.resolution = resolution.to(device)
         self.num_log = num_log
+
+        # Extract measured fluxes.
+        heliostat_flux_path_mapping = [
+            (heliostat_name, png_paths)
+            for heliostat_name, _, png_paths in heliostat_data_mapping
+            if heliostat_name in self.heliostat_group.names
+        ]
+
+        normalized_measured_flux_distributions = (
+            flux_distribution_loader.load_flux_from_png(
+                heliostat_flux_path_mapping=heliostat_flux_path_mapping,
+                heliostat_names=heliostat_group.names,
+                resolution=resolution,
+                device=device,
+            )
+        )
+
+        self.normalized_measured_flux_distributions = (
+            utils.crop_flux_distributions_around_center(
+                flux_distributions=normalized_measured_flux_distributions,
+                crop_width=config_dictionary.crop_target_width,
+                crop_height=config_dictionary.crop_target_height,
+                target_plane_widths=self.scenario.target_areas.dimensions[
+                    self.target_area_mask
+                ][:, 0],
+                target_plane_heights=self.scenario.target_areas.dimensions[
+                    self.target_area_mask
+                ][:, 1],
+                device=device,
+            )
+        )
 
         # Create the optimizer.
         self.initial_learning_rate = initial_learning_rate
@@ -219,6 +234,7 @@ class SurfaceReconstructor:
             loss = torch.inf
             epoch = 0
             log_step = self.max_epoch // self.num_log
+            loss_function = torch.nn.MSELoss()
             while loss > self.tolerance and epoch <= self.max_epoch:
                 optimizer.zero_grad()
 
@@ -278,6 +294,18 @@ class SurfaceReconstructor:
                     target_area_mask=self.target_area_mask,
                     device=device,
                 )
+                flux_distributions = utils.crop_flux_distributions_around_center(
+                    flux_distributions=flux_distributions,
+                    crop_width=config_dictionary.crop_target_width,
+                    crop_height=config_dictionary.crop_target_height,
+                    target_plane_widths=self.scenario.target_areas.dimensions[
+                        self.target_area_mask
+                    ][:, 0],
+                    target_plane_heights=self.scenario.target_areas.dimensions[
+                        self.target_area_mask
+                    ][:, 1],
+                    device=device,
+                )
 
                 normalized_flux_distributions = utils.normalize_bitmaps(
                     flux_distributions=flux_distributions,
@@ -290,7 +318,6 @@ class SurfaceReconstructor:
                     number_of_rays=ray_tracer.light_source.number_of_rays,
                 )
 
-                loss_function = torch.nn.MSELoss()
                 loss = loss_function(
                     normalized_flux_distributions,
                     self.normalized_measured_flux_distributions,
