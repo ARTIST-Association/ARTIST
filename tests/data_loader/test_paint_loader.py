@@ -561,12 +561,30 @@ def test_azimuth_elevation_to_enu(
 
 def _make_fake_calibration_data(
     base_directory_path: pathlib.Path,
-    heliostat_name_list,
+    heliostat_name_list: list[str],
     image_variant_name: str,
     count_per_heliostat: int,
-):
-    """Create a deterministic fake folder tree with property/image pairs."""
-    paint_calibration_folder_name = "paint_calibration"
+) -> str:
+    """
+    Create a deterministic fake folder tree with property/image pairs.
+
+    Parameters
+    ----------
+    base_directory_path : pathlib.Path
+        The base directory where the fake folder tree will be created.
+    heliostat_name_list : list[str]
+        List of heliostat names for which the calibration data will be created.
+    image_variant_name : str
+        Identifier for the variant of image data to use (e.g., ''raw'', 'processed'').
+    count_per_heliostat : int
+        Number of property/image pairs to create per heliostat.
+
+    Returns
+    -------
+    str
+        The name of the folder containing the calibration data.
+    """
+    paint_calibration_folder_name = config_dictionary.paint_calibration_folder_name
     for heliostat_name in heliostat_name_list:
         calibration_directory_path = (
             base_directory_path / heliostat_name / paint_calibration_folder_name
@@ -574,7 +592,8 @@ def _make_fake_calibration_data(
         calibration_directory_path.mkdir(parents=True, exist_ok=True)
         for index in range(count_per_heliostat):
             (
-                calibration_directory_path / f"{index}-calibration-properties.json"
+                calibration_directory_path
+                / f"{index}{config_dictionary.paint_calibration_properties_file_name_ending.split('*')[-1]}"
             ).write_text("{}")
             # Write a tiny, obviously-fake PNG header so opening as binary won't crash.
             (
@@ -708,12 +727,11 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     returned by `utils.build_heliostat_data_mapping` differs from the deterministic
     sorted selection for at least one heliostat, given enough available samples.
 
-
     Parameters
     ----------
     tmp_path : pathlib.Path
         Temporary directory provided by pytest for creating fake calibration data.
-    monkeypatch : _pytest.monkeypatch.MonkeyPatch
+    monkeypatch : MonkeyPatch
         Pytest fixture to dynamically replace module attributes for testing.
     random_seed_value : int
         Random seed to use for reproducibility in randomized selection.
@@ -759,7 +777,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         seed=random_seed_value,
     )
 
-    # Compare per heliostat
+    # Compare per heliostat.
     different_for_any_heliostat = False
     for (sorted_name, sorted_property_paths, _), (
         random_name,
@@ -785,8 +803,6 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         # We expect randomized output to differ from the sorted selection.
         if randomized_identifiers != sorted_identifiers:
             different_for_any_heliostat = True
-
-    if not different_for_any_heliostat:
-        pytest.xfail(
-            "Random seed produced the same selection as the sorted order for all entries"
+        assert different_for_any_heliostat, (
+            "Randomized selection did not differ from sorted order."
         )

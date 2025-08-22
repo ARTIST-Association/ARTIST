@@ -625,10 +625,9 @@ def test_crop_flux_distributions_around_center_centering(
     crop_height : float
         Desired crop height in meters.
     target_width : torch.Tensor
-        Target plane width(s) in meters. Should be broadcastable to the batch
-        dimension of `image`.
+        Target plane width(s) in meters. Should be broadcastable to the number of images.
     target_height : torch.Tensor
-        Target plane height(s) in meters. Should be broadcastable to the batch
+        Target plane height(s) in meters. Should be broadcastable to the number of images.
         dimension of `image`.
     expected_cropped : torch.Tensor
         The expected output image tensor after cropping. Should match the input
@@ -639,7 +638,7 @@ def test_crop_flux_distributions_around_center_centering(
     Raises
     ------
     AssertionError
-    If test does not complete as expected.
+        If test does not complete as expected.
     """
     cropped = utils.crop_flux_distributions_around_center(
         flux_distributions=image.to(device),
@@ -689,49 +688,37 @@ def test_crop_flux_distributions_around_center_offcenter(
     """
     Test cropping behavior when the center of mass is off-center.
 
-    This parametrized test verifies that `utils.crop_flux_distributions_around_center` correctly centers
-    the crop on the image’s center of mass (center of mass) when the bright pixel is not located
-    at the geometric center. It also checks that the peak pixel intensity remains
-    non-trivial after bilinear interpolation with `align_corners=False`.
-
-    The test:
-    1. Builds a synthetic image with a single bright pixel at a specified position.
-    2. Crops the image using given crop and target plane dimensions.
-    3. Asserts:
-    - Output shape matches the input `(C, H, W)`.
-    - No NaN values are present.
-    - The brightest pixel lies within a specified pixel tolerance of the crop center.
-    - The peak pixel intensity is above a specified minimum threshold.
-
     Parameters
     ----------
     height : int
-        Height of the input image in pixels.
+        The height of the input image in pixels.
     width : int
-        Width of the input image in pixels.
-    bright_r : int
-        Row index of the bright pixel before cropping.
-    bright_c : int
-        Column index of the bright pixel before cropping.
+        The width of the input image in pixels.
+    brightest_pixel_row : int
+        The row index of the brightest pixel before cropping.
+    brightest_pixel_column : int
+        The column index of the brightest pixel before cropping.
     crop_width : float
-        Crop width in meters.
+        The desired crop width in meters.
     crop_height : float
-        Crop height in meters.
+        The desired crop height in meters.
     target_width : torch.Tensor
-        Target plane width(s) in meters; broadcastable to the batch.
+        The target plane width(s) in meters. Should be broadcastable to the number of images.
+        dimension of the image.
     target_height : torch.Tensor
-        Target plane height(s) in meters; broadcastable to the batch.
-    tol_px : float
-        Pixel tolerance allowed between the peak pixel position and the geometric center.
+        The target plane height(s) in meters.Should be broadcastable to the number of images.
+        dimension of the image.
+    tolerance_pixel : float
+        The pixel tolerance allowed between the peak pixel position and the geometric center.
     min_peak : float
-        Minimum acceptable peak intensity after cropping and interpolation.
+        The minimum acceptable peak intensity after cropping and interpolation.
     device : torch.device
-     The device on which to initialize tensors.
+        The device on which to initialize tensors.
 
     Raises
     ------
-         AssertionError
-              If test does not complete as expected.
+    AssertionError
+        If the test does not complete as expected.
     """
     # Build image with a single bright pixel.
     image = torch.zeros((1, height, width), dtype=torch.float32)
@@ -748,11 +735,10 @@ def test_crop_flux_distributions_around_center_offcenter(
         target_plane_heights=target_height.to(device),
     )
 
-    # Sanity checks.
+    # Shape checks.
     assert cropped.shape == image.shape[-3:], "Function keeps HxW by contract"
     assert not torch.isnan(cropped).any()
 
-    # Locate the maximum (batch, row, col).
     maximum_value = torch.amax(cropped)
     positions_of_maximum_values = torch.nonzero(
         cropped == maximum_value, as_tuple=False

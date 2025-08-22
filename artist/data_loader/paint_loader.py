@@ -947,7 +947,7 @@ def build_heliostat_data_mapping(
     base_path : str
         Path to the root directory containing heliostat calibration data.
     heliostat_names : list[str]
-        list of heliostat names to include in the mapping.
+        List of heliostat names to include in the mapping.
     number_of_measurements : int
         Number of valid calibration samples to retrieve per heliostat.
     image_variant : str
@@ -971,7 +971,7 @@ def build_heliostat_data_mapping(
     for name in heliostat_names:
         calibration_dir = base / name / config_dictionary.paint_calibration_folder_name
         if not calibration_dir.exists():
-            logging.warning(f"Calibration directory for {name} not found.")
+            log.warning(f"Calibration directory for {name} not found.")
             continue
 
         property_files = list(
