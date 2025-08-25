@@ -28,8 +28,8 @@ class KinematicOptimizer:
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-        The mapping of heliostat and reconstruction data.
+    data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+        The data source name and the mapping of heliostat name and calibration data.
     calibration_method : str
         The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
     initial_learning_rate : float
@@ -51,14 +51,9 @@ class KinematicOptimizer:
         self,
         ddp_setup: DistributedEnvironmentTypedDict,
         scenario: Scenario,
-        heliostat_data_mapping: list[
-            tuple[str, list[pathlib.Path], list[pathlib.Path]]
-        ],
+        data: dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]],
+        optimization_configuration: dict[str, float],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
-        initial_learning_rate: float = 0.0004,
-        tolerance: float = 0.035,
-        max_epoch: int = 600,
-        num_log: int = 3,
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -69,18 +64,12 @@ class KinematicOptimizer:
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and calibration data.
+        data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+            The data source name and the mapping of heliostat name and calibration data.
+        optimization_configuration : dict[str, float]
+            The parameters for the optimizer, learning rate scheduler and early stopping.
         calibration_method : str
             The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
-        initial_learning_rate : float
-            The initial learning rate for the optimizer (default is 0.0004).
-        tolerance : float
-            The tolerance during optimization (default is 0.035).
-        max_epoch : int
-            The maximum optimization epoch (default is 600).
-        num_log : int
-            The number of log statements during optimization (default is 3).
         """
         rank = ddp_setup["rank"]
         if rank == 0:
@@ -88,12 +77,9 @@ class KinematicOptimizer:
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
-        self.heliostat_data_mapping = heliostat_data_mapping
+        self.data = data
         self.calibration_method = calibration_method
-        self.initial_learning_rate = initial_learning_rate
-        self.tolerance = tolerance
-        self.max_epoch = max_epoch
-        self.num_log = num_log
+        self.optimization_configuration = optimization_configuration
 
     def optimize(
         self,
@@ -159,23 +145,28 @@ class KinematicOptimizer:
             # Load the calibration data.
             heliostat_calibration_mapping = []
 
-            for heliostat, path_properties, _ in self.heliostat_data_mapping:
+            for heliostat, path_properties, _ in self.data[config_dictionary.heliostat_data_mapping]:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
 
-            (
-                focal_spots_measured,
-                incident_ray_directions,
-                motor_positions,
-                active_heliostats_mask,
-                _,
-            ) = paint_loader.extract_paint_calibration_properties_data(
-                heliostat_calibration_mapping=heliostat_calibration_mapping,
-                heliostat_names=heliostat_group.names,
-                target_area_names=self.scenario.target_areas.names,
-                power_plant_position=self.scenario.power_plant_position,
-                device=device,
-            )
+            if self.data[config_dictionary.data_source] == config_dictionary.paint:
+                (
+                    focal_spots_measured,
+                    incident_ray_directions,
+                    motor_positions,
+                    active_heliostats_mask,
+                    _,
+                ) = paint_loader.extract_paint_calibration_properties_data(
+                    heliostat_calibration_mapping=heliostat_calibration_mapping,
+                    heliostat_names=heliostat_group.names,
+                    target_area_names=self.scenario.target_areas.names,
+                    power_plant_position=self.scenario.power_plant_position,
+                    device=device,
+                )
+            else:
+                raise ValueError(
+                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
+                )
 
             if active_heliostats_mask.sum() > 0:
                 # Calculate the reflection directions of the measured calibration data.
@@ -198,14 +189,16 @@ class KinematicOptimizer:
                         heliostat_group.kinematic.deviation_parameters.requires_grad_(),
                         heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
                     ],
-                    lr=self.initial_learning_rate,
+                    lr=self.optimization_configuration[config_dictionary.initial_learning_rate],
                 )
 
                 # Start the optimization.
                 loss = torch.inf
+                best_loss = torch.inf
+                patience_counter = 0
                 epoch = 0
-                log_step = self.max_epoch // self.num_log
-                while loss > self.tolerance and epoch <= self.max_epoch:
+                log_step = self.optimization_configuration[config_dictionary.max_epoch] // self.optimization_configuration[config_dictionary.num_log]
+                while loss > self.optimization_configuration[config_dictionary.tolerance] and epoch <= self.optimization_configuration[config_dictionary.max_epoch]:
                     optimizer.zero_grad()
 
                     # Activate heliostats.
@@ -244,6 +237,16 @@ class KinematicOptimizer:
                         log.info(
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
+
+                    # Early stopping when loss has reached a plateau.
+                    if loss < best_loss - self.optimization_configuration[config_dictionary.early_stopping_delta]:
+                        best_loss = loss
+                        patience_counter = 0
+                    else:
+                        patience_counter += 1
+                    if patience_counter > self.optimization_configuration[config_dictionary.early_stopping_patience]:
+                        log.info(f"Early stopping at epoch {epoch}. The loss did not improve significantly for {self.optimization_configuration[config_dictionary.early_stopping_patience]} epochs.")
+                        break
 
                     epoch += 1
 
@@ -285,19 +288,24 @@ class KinematicOptimizer:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
 
-            (
-                focal_spots_measured,
-                incident_ray_directions,
-                _,
-                active_heliostats_mask,
-                target_area_mask,
-            ) = paint_loader.extract_paint_calibration_properties_data(
-                heliostat_calibration_mapping=heliostat_calibration_mapping,
-                heliostat_names=heliostat_group.names,
-                target_area_names=self.scenario.target_areas.names,
-                power_plant_position=self.scenario.power_plant_position,
-                device=device,
-            )
+            if self.data[config_dictionary.data_source] == config_dictionary.paint:
+                (
+                    focal_spots_measured,
+                    incident_ray_directions,
+                    _,
+                    active_heliostats_mask,
+                    target_area_mask,
+                ) = paint_loader.extract_paint_calibration_properties_data(
+                    heliostat_calibration_mapping=heliostat_calibration_mapping,
+                    heliostat_names=heliostat_group.names,
+                    target_area_names=self.scenario.target_areas.names,
+                    power_plant_position=self.scenario.power_plant_position,
+                    device=device,
+                )
+            else:
+                raise ValueError(
+                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
+                )
 
             if active_heliostats_mask.sum() > 0:
                 # Create the optimizer.
@@ -306,14 +314,16 @@ class KinematicOptimizer:
                         heliostat_group.kinematic.deviation_parameters.requires_grad_(),
                         heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
                     ],
-                    lr=self.initial_learning_rate,
+                    lr=self.optimization_configuration[config_dictionary.initial_learning_rate],
                 )
 
                 # Start the optimization.
                 loss = torch.inf
+                best_loss = torch.inf
+                patience_counter = 0
                 epoch = 0
-                log_step = self.max_epoch // self.num_log
-                while loss > self.tolerance and epoch <= self.max_epoch:
+                log_step = self.optimization_configuration[config_dictionary.max_epoch] // self.optimization_configuration[config_dictionary.num_log]
+                while loss > self.optimization_configuration[config_dictionary.tolerance] and epoch <= self.optimization_configuration[config_dictionary.max_epoch]:
                     optimizer.zero_grad()
 
                     # Activate heliostats.
@@ -391,6 +401,16 @@ class KinematicOptimizer:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
+                    
+                    # Early stopping when loss has reached a plateau.
+                    if loss < best_loss - self.optimization_configuration[config_dictionary.early_stopping_delta]:
+                        best_loss = loss
+                        patience_counter = 0
+                    else:
+                        patience_counter += 1
+                    if patience_counter > self.optimization_configuration[config_dictionary.early_stopping_patience]:
+                        log.info(f"Early stopping at epoch {epoch}. The loss did not improve significantly for {self.optimization_configuration[config_dictionary.early_stopping_patience]} epochs.")
+                        break
 
                     epoch += 1
 

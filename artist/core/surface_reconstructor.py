@@ -303,15 +303,12 @@ class SurfaceReconstructor:
                 current_active_nurbs_control_points = torch.zeros_like(
                     heliostat_group.active_nurbs_control_points, device=device
                 )
-                loss_last_epoch = torch.inf
-                loss_improvement = torch.inf
+                loss = torch.inf
+                best_loss = torch.inf
+                patience_counter = 0
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
-                while (
-                    loss_last_epoch > self.tolerance
-                    and epoch <= self.max_epoch
-                    and loss_improvement > self.early_stopping_threshold
-                ):
+                while loss > self.optimization_configuration[config_dictionary.tolerance] and epoch <= self.optimization_configuration[config_dictionary.max_epoch]:
                     optimizer.zero_grad()
 
                     current_active_nurbs_control_points = (
@@ -483,8 +480,15 @@ class SurfaceReconstructor:
                             f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                         )
 
-                    # Early stopping.
-                    loss_improvement = loss_last_epoch - loss
+                    # Early stopping when loss has reached a plateau.
+                    if loss < best_loss - self.optimization_configuration[config_dictionary.early_stopping_delta]:
+                        best_loss = loss
+                        patience_counter = 0
+                    else:
+                        patience_counter += 1
+                    if patience_counter > self.optimization_configuration[config_dictionary.early_stopping_patience]:
+                        log.info(f"Early stopping at epoch {epoch}. The loss did not improve significantly for {self.optimization_configuration[config_dictionary.early_stopping_patience]} epochs.")
+                        break
 
                     epoch += 1
 

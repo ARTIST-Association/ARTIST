@@ -99,6 +99,11 @@ def test_kinematic_optimizer(
         ),
     ]
 
+    data = {
+        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping
+    }
+
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
@@ -111,7 +116,7 @@ def test_kinematic_optimizer(
     kinematic_optimizer = KinematicOptimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
-        heliostat_data_mapping=heliostat_data_mapping,
+        data=data,
         calibration_method=optimizer_method,
         initial_learning_rate=initial_lr,
         tolerance=tolerance,

@@ -52,6 +52,12 @@ heliostat_data_mapping = [
     # ...
 ]
 
+# Create dict for the data source name and the heliostat_data_mapping.
+data = {
+    config_dictionary.data_source: config_dictionary.paint,
+    config_dictionary.heliostat_data_mapping: heliostat_data_mapping
+}
+
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
 )
@@ -71,21 +77,23 @@ with setup_distributed_environment(
     # Choose calibration method.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
 
-    # Set optimizer parameters.
-    tolerance = 0.0005
-    max_epoch = 1000
-    initial_learning_rate = 0.0005
+    # Set optimization parameters.
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: 0.0005,
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 1000,
+        config_dictionary.num_log: 100,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+    }
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
         ddp_setup=ddp_setup,
         scenario=scenario,
-        heliostat_data_mapping=heliostat_data_mapping,
+        data=data,
         calibration_method=kinematic_calibration_method,
-        initial_learning_rate=initial_learning_rate,
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        num_log=10,
+        optimization_configuration=optimization_configuration
     )
 
     # Calibrate the kinematic.
