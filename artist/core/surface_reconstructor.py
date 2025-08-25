@@ -8,7 +8,7 @@ from artist.core import learning_rate_schedulers, loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -109,7 +109,7 @@ class SurfaceReconstructor:
         scenario : Scenario
             The scenario.
         heliostat_data_mapping : list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]
-            The mapping of heliostat and reconstruction data.
+            The mapping of heliostat and reconstruction data. Each image will be loaded an centered around the center of mass.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces.
             Tensor of shape [2].
@@ -289,14 +289,11 @@ class SurfaceReconstructor:
                 )
 
                 # Start the optimization.
-                ideal_surface_loss_function = torch.nn.MSELoss()
-                current_active_nurbs_control_points = torch.zeros_like(
-                    heliostat_group.active_nurbs_control_points, device=device
-                )
                 loss_last_epoch = torch.inf
-                loss_improvement = torch.inf
+                loss = torch.inf
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
+                ideal_surface_loss_function = torch.nn.MSELoss()
                 while (
                     loss_last_epoch > self.tolerance
                     and epoch <= self.max_epoch
@@ -307,7 +304,6 @@ class SurfaceReconstructor:
                     current_active_nurbs_control_points = (
                         heliostat_group.active_nurbs_control_points.detach()
                     )
-
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
                         active_heliostats_mask=active_heliostats_mask, device=device
@@ -372,6 +368,19 @@ class SurfaceReconstructor:
                             group=self.ddp_setup["process_subgroup"],
                             op=torch.distributed.ReduceOp.SUM,
                         )
+                    
+                    flux_distributions = utils.crop_flux_distributions_around_center(
+                        flux_distributions=flux_distributions,
+                        crop_width=config_dictionary.crop_target_width,
+                        crop_height=config_dictionary.crop_target_height,
+                        target_plane_widths=self.scenario.target_areas.dimensions[
+                            target_area_mask
+                        ][:, 0],
+                        target_plane_heights=self.scenario.target_areas.dimensions[
+                            target_area_mask
+                        ][:, 1],
+                        device=device,
+                    )
 
                     # Loss regarding the predicted flux and the target flux.
                     flux_loss_per_heliostat = self.loss_per_heliostat(
@@ -379,10 +388,10 @@ class SurfaceReconstructor:
                         predictions=flux_distributions,
                         targets=normalized_measured_flux_distributions,
                         loss_function=loss_function,
-                        target_area_dimensions=ray_tracer.scenario.target_areas.dimensions[
+                        target_area_dimensions=self.scenario.target_areas.dimensions[
                             target_area_mask
                         ],
-                        number_of_rays=ray_tracer.light_source.number_of_rays,
+                        number_of_rays=self.scenario.light_sources.light_source_list[0].number_of_rays,
                         device=device,
                     ).sum()
 

@@ -1,3 +1,4 @@
+import logging
 import pathlib
 
 import h5py
@@ -5,6 +6,7 @@ import torch
 
 from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
+from artist.data_loader.paint_loader import build_heliostat_data_mapping
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -14,7 +16,7 @@ torch.cuda.manual_seed(7)
 
 # Set up logger
 set_logger_config()
-
+log = logging.getLogger(__name__)
 # Set the device
 device = get_device()
 
@@ -23,35 +25,44 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-heliostat_data_mapping = [
-    (
-        "heliostat_name_1",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    (
-        "heliostat_name_2",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    # ...
-]
+# heliostat_data_mapping = [
+#     (
+#         "heliostat_name_1",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+#     (
+#         "heliostat_name_2",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+#     # ...
+# ]
+
+
+heliostat_data_mapping = build_heliostat_data_mapping(
+    base_path="/base/path/to/PAINT",
+    heliostat_names=["AA39"],
+    number_of_measurements=4,
+    image_variant="flux-centered",
+)
+
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
