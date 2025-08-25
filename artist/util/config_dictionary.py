@@ -311,3 +311,14 @@ utis_crop_width = 6
 """Key to access the crop width used in utis."""
 utis_crop_height = 6
 """Key to access the crop height used in utis."""
+
+data_source = "data_source"
+paint = "paint"
+heliostat_data_mapping = "heliostat_data_mapping"
+
+initial_learning_rate = "initial_learning_rate"
+tolerance = "tolerance"
+max_epoch = "max_epoch"
+num_log = "num_log"
+early_stopping_delta = "early_stopping_delta"
+early_stopping_patience = "early_stopping_patience"

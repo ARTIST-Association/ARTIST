@@ -5,6 +5,7 @@ import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary
 from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
 
 log = logging.getLogger(__name__)
@@ -210,9 +211,11 @@ class MotorPositionsOptimizer:
 
             # Start the optimization.
             loss = torch.inf
+            best_loss = torch.inf
+            patience_counter = 0
             epoch = 0
             log_step = self.max_epoch // self.num_log
-            while loss > self.tolerance and epoch <= self.max_epoch:
+            while loss > self.optimization_configuration[config_dictionary.tolerance] and epoch <= self.optimization_configuration[config_dictionary.max_epoch]:
                 optimizer.zero_grad()
 
                 # Reconstruct true motor positions from reparameterized version.
@@ -292,6 +295,16 @@ class MotorPositionsOptimizer:
                     log.info(
                         f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}",
                     )
+
+                # Early stopping when loss has reached a plateau.
+                if loss < best_loss - self.optimization_configuration[config_dictionary.early_stopping_delta]:
+                    best_loss = loss
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                if patience_counter > self.optimization_configuration[config_dictionary.early_stopping_patience]:
+                    log.info(f"Early stopping at epoch {epoch}. The loss did not improve significantly for {self.optimization_configuration[config_dictionary.early_stopping_patience]} epochs.")
+                    break
 
                 epoch += 1
 
