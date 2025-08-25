@@ -173,7 +173,7 @@ class SurfaceReconstructor:
         self,
         loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
-    ) -> None:
+    ) -> torch.Tensor:
         """
         Reconstruct NURBS surfaces from bitmaps.
 
@@ -186,6 +186,11 @@ class SurfaceReconstructor:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The final loss of the reconstruction for each heliostat group.
         """
         device = get_device(device=device)
 
@@ -193,6 +198,12 @@ class SurfaceReconstructor:
 
         if rank == 0:
             log.info("Start the surface reconstruction.")
+
+        final_loss_per_group = torch.full(
+            self.scenario.heliostat_field.number_of_heliostat_groups,
+            torch.inf,
+            device=device,
+        )
 
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
             heliostat_group = self.scenario.heliostat_field.heliostat_groups[
@@ -454,6 +465,7 @@ class SurfaceReconstructor:
 
                     epoch += 1
 
+                final_loss_per_group[heliostat_group_index] = loss
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
         if self.ddp_setup["is_distributed"]:
