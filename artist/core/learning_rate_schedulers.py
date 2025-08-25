@@ -91,6 +91,9 @@ def reduce_on_plateau(
 
 class NoOpScheduler:
     """A no-op learning rate scheduler that does nothing, can be used as a default."""
+    
+    def __init__(self, **kwargs):
+        pass
 
     def step(self):
         """No-op step function."""

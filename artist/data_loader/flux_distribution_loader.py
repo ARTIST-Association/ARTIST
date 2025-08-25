@@ -16,7 +16,7 @@ def load_flux_from_png(
     heliostat_flux_path_mapping: list[tuple[str, list[pathlib.Path]]],
     heliostat_names: list[str],
     resolution: torch.Tensor = torch.tensor([256, 256]),
-    number_of_measurements: int = 4,
+    limit_number_of_measurements: int | None = None,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -34,8 +34,8 @@ def load_flux_from_png(
     resolution : torch.Tensor
         The resolution of the loaded png files (default is torch.tensor([256,256])).
         Tensor of shape [2].
-    number_of_measurements : int
-        Limits the number of measurements loaded if more paths than this number are provided (default is 4).
+    limit_number_of_measurements : int | None
+        Limits the number of measurements loaded if an int is provided (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -63,7 +63,7 @@ def load_flux_from_png(
 
     total_number_of_measurements = 0
     for heliostat_name, paths in heliostat_flux_path_mapping:
-        number_of_measurements = min(len(paths), number_of_measurements)
+        number_of_measurements = min(len(paths), limit_number_of_measurements or len(paths))
         bitmaps = torch.empty((number_of_measurements, height, width), device=device)
         for bitmap_index, path in enumerate(paths[:number_of_measurements]):
             bitmap_data = (

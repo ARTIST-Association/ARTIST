@@ -92,6 +92,7 @@ def test_surface_reconstructor(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         heliostat_data_mapping=heliostat_data_mapping,
+        initial_learning_rate=1e-4,
         max_epoch=2,
         num_log=1,
         device=device,

@@ -54,7 +54,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
         with pytest.raises(ValueError) as exc_info:
             Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
-                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
                 device=device,
             )
     assert (
@@ -70,7 +70,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
         with pytest.raises(ValueError) as exc_info:
             Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
-                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
                 device=device,
             )
     assert (

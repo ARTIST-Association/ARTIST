@@ -2,9 +2,11 @@ import pathlib
 
 import h5py
 import torch
+from mpi4py import MPI
 
 from artist.core import learning_rate_schedulers, loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
+from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util.environment_setup import get_device
 
@@ -25,7 +27,11 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    device = get_device()
+    # Get device.
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    device = torch.device(f"cuda:{rank % torch.cuda.device_count()}")
+    device = get_device(device)
 
     # Set up ARTIST to run in single device mode.
     ddp_setup = {
@@ -87,8 +93,12 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Create a heliostat data mapping for the specified number of training samples.
-    # TODO
-    heliostat_data_mapping = []
+    heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
+        base_path="/base/path/to/PAINT",
+        heliostat_names=["AA39"],
+        number_of_measurements=params["number_of_training_samples"],
+        image_variant="flux-centered",
+    )
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(

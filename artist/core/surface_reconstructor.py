@@ -200,7 +200,7 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         final_loss_per_group = torch.full(
-            self.scenario.heliostat_field.number_of_heliostat_groups,
+            (self.scenario.heliostat_field.number_of_heliostat_groups,),
             torch.inf,
             device=device,
         )
@@ -501,6 +501,8 @@ class SurfaceReconstructor:
                 )
 
             log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
+        
+        return final_loss_per_group
 
     @staticmethod
     def fixate_control_points_on_outer_edges(

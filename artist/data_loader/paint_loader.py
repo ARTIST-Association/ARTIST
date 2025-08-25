@@ -36,7 +36,7 @@ def extract_paint_calibration_properties_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
-    number_of_measurements: int = 4,
+    limit_number_of_measurements: int | None = None,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -53,8 +53,8 @@ def extract_paint_calibration_properties_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
-    number_of_measurements : int
-        Limits the number of measurements loaded if more paths than this number are provided (default is 4).
+    limit_number_of_measurements : int | None
+        Limits the number of measurements loaded if an int is provided (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -91,6 +91,7 @@ def extract_paint_calibration_properties_data(
     calibration_data_per_heliostat = defaultdict(list)
 
     for heliostat_name, paths in heliostat_calibration_mapping:
+        number_of_measurements = min(len(paths), limit_number_of_measurements or len(paths))
         for path in paths[:number_of_measurements]:
             with open(path, "r") as f:
                 calibration_data_dict = json.load(f)
