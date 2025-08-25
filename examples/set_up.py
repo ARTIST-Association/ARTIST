@@ -41,11 +41,40 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         "ranks_to_groups_mapping": {0: [0], 1: [0]},
     }
 
+    # For parameter combinations with too many rays (over 3000000) directly return a default loss,
+    # to avoid running this combination and to avoid causing "out of memory" errors.
+    total_number_of_rays = (
+        params["number_of_surface_points"]
+        * 2
+        * 4
+        * params["number_of_rays"]
+        * params["number_of_training_samples"]
+    )
+    if total_number_of_rays >= 3000000:
+        loss = 987987
+        return loss
+
+    number_of_surface_points_per_facet = torch.tensor(
+        [params["number_of_surface_points"], params["number_of_surface_points"]],
+        device=device,
+    )
+
+    number_of_control_points_per_facet = torch.tensor(
+        [params["number_of_control_points"], params["number_of_control_points"]],
+        device=device,
+    )
+
     # Load the scenario.
-    with h5py.File(pathlib.Path(params["scenario_path"]), "r") as scenario_file:
+    with h5py.File(
+        pathlib.Path("examples/data/scenarios/scenario.h5"), "r"
+    ) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            number_of_surface_points_per_facet=number_of_surface_points_per_facet,
+            change_number_of_control_points_per_facet=number_of_control_points_per_facet,
+            device=device,
         )
+
     # Set number of rays.
     scenario.light_sources.light_source_list[0].number_of_rays = params[
         "number_of_rays"
@@ -66,10 +95,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         ddp_setup=ddp_setup,
         scenario=scenario,
         heliostat_data_mapping=heliostat_data_mapping,
-        number_of_surface_points=torch.tensor(
-            [params["number_of_surface_points"], params["number_of_surface_points"]],
-            device=device,
-        ),
+        number_of_surface_points=number_of_surface_points_per_facet,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         flux_loss_weight=1.0,
         ideal_surface_loss_weight=params["ideal_surface_loss_weight"],
@@ -90,6 +116,8 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     )
 
     # Reconstruct surfaces.
-    surface_reconstructor.reconstruct_surfaces(
+    loss = surface_reconstructor.reconstruct_surfaces(
         loss_function=getattr(loss_functions, params["loss_function"]), device=device
     )
+
+    return loss[0].item()

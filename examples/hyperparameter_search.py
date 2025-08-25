@@ -38,20 +38,20 @@ if __name__ == "__main__":
     ]
 
     search_space = {
-        "scenario_path": tuple(scenario_paths),
+        "number_of_surface_points": (30, 100),
+        "number_of_control_points": (4, 100),
         "number_of_rays": (10, 200),
-        "nurbs_degree": (2, 3),
         "number_of_training_samples": (2, 16),
+        "nurbs_degree": (2, 3),
         "scheduler": ("exponential", "cyclic", "reduce_on_plateau"),
-        "lr_gamma": (0.99000, 0.99999),
-        "lr_min": (1e-7, 0.9),
-        "lr_max": (1e-4, 1.5e-4),
-        "lr_step_size_up": (50, 200),
-        "lr_reduce_factor": (0.3, 0.5),  # 0.1-0.9
-        "lr_patience": (20, 40),  # 10-50
-        "lr_threshold": (1e-4, 1e-1),
-        "lr_cooldown": (5, 20),
-        "number_of_surface_points": (30, 100),  # TODO might be too much memory.
+        "lr_gamma": (0.85, 0.999),
+        "lr_min": (1e-6, 1e-3),
+        "lr_max": (1e-3, 1e-1),
+        "lr_step_size_up": (100, 2000),
+        "lr_reduce_factor": (0.1, 0.7),
+        "lr_patience": (5, 50),
+        "lr_threshold": (1e-5, 1e-2),
+        "lr_cooldown": (0, 20),
         "ideal_surface_loss_weight": (1e-4, 9e-1),
         "total_variation_loss_points_weight": (1e-4, 9e-1),
         "total_variation_loss_normals_weight": (1e-4, 9e-1),
