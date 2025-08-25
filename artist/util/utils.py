@@ -623,6 +623,99 @@ def create_nurbs_evaluation_grid(
     return evaluation_points
 
 
+def create_ideal_canted_nurbs_control_points(
+    number_of_control_points: torch.Tensor,
+    canting: torch.Tensor,
+    facet_translation_vectors: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create ideal, canted and translated control points for each facet.
+
+    Parameters
+    ----------
+    number_of_control_points : torch.Tensor
+        The number of NURBS control points.
+        Tensor of shape [2].
+    canting : torch.Tensor
+        The canting vector for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
+    facet_translation_vectors : torch.Tensor
+        The facet translation vector for each facet.
+        Tensor of shape [number_of_facets, 4].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The canted and translated ideal NURBS control points.
+        Tensor of shape [number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    """
+    device = get_device(device=device)
+
+    number_of_facets = (facet_translation_vectors.shape[0],)
+
+    control_points = torch.zeros(
+        (
+            number_of_facets,
+            number_of_control_points[0],
+            number_of_control_points[1],
+            3,
+        ),
+        device=device,
+    )
+
+    offsets_e = torch.linspace(0, 1, control_points.shape[1], device=device)
+    offsets_n = torch.linspace(0, 1, control_points.shape[2], device=device)
+    start = -torch.norm(canting, dim=-1)
+    end = torch.norm(canting, dim=-1)
+    origin_offsets_e = (
+        start[:, 0, None] + (end - start)[:, 0, None] * offsets_e[None, :]
+    )
+    origin_offsets_n = (
+        start[:, 1, None] + (end - start)[:, 1, None] * offsets_n[None, :]
+    )
+
+    control_points_e = origin_offsets_e[:, :, None].expand(
+        -1, -1, origin_offsets_n.size(1)
+    )
+    control_points_n = origin_offsets_n[:, None, :].expand(
+        -1, origin_offsets_e.size(1), -1
+    )
+
+    control_points[:, :, :, 0] = control_points_e
+    control_points[:, :, :, 1] = control_points_n
+    control_points[:, :, :, 2] = 0
+
+    # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
+    # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
+    rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
+
+    rotation_matrix[:, :, 0] = torch.nn.functional.normalize(canting[:, 0], dim=1)
+    rotation_matrix[:, :, 1] = torch.nn.functional.normalize(canting[:, 1], dim=1)
+    rotation_matrix[:, :3, 2] = torch.nn.functional.normalize(
+        torch.linalg.cross(rotation_matrix[:, :3, 0], rotation_matrix[:, :3, 1]), dim=0
+    )
+
+    rotation_matrix[:, 3, 3] = 1.0
+
+    canted_points = (
+        convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
+            number_of_facets, -1, 4
+        )
+        @ rotation_matrix.mT
+    ).reshape(number_of_facets, control_points.shape[1], control_points.shape[2], 4)
+
+    canted_with_translation = (
+        canted_points + facet_translation_vectors[:, None, None, :]
+    )
+
+    return canted_with_translation[:, :, :, :3]
+
+
 def normalize_bitmaps(
     flux_distributions: torch.Tensor,
     target_area_widths: torch.Tensor,

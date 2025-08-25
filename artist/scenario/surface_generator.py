@@ -408,46 +408,17 @@ class SurfaceGenerator:
         log.info("Beginning generation of the ideal surface configuration.")
         facet_config_list = []
 
+        control_points = utils.create_ideal_canted_nurbs_control_points(
+            number_of_control_points=self.number_of_control_points,
+            canting=canting,
+            facet_translation_vectors=facet_translation_vectors,
+            device=device,
+        )
+
         for facet_index in range(facet_translation_vectors.shape[0]):
-            control_points = torch.zeros(
-                (self.number_of_control_points[0], self.number_of_control_points[1], 3),
-                device=device,
-            )
-            origin_offsets_e = torch.linspace(
-                -torch.norm(canting[facet_index], dim=-1)[0],
-                torch.norm(canting[facet_index], dim=-1)[0],
-                control_points.shape[0],
-                device=device,
-            )
-            origin_offsets_n = torch.linspace(
-                -torch.norm(canting[facet_index], dim=-1)[1],
-                torch.norm(canting[facet_index], dim=-1)[1],
-                control_points.shape[1],
-                device=device,
-            )
-
-            control_points_e, control_points_n = torch.meshgrid(
-                origin_offsets_e, origin_offsets_n, indexing="ij"
-            )
-
-            control_points[:, :, 0] = control_points_e
-            control_points[:, :, 1] = control_points_n
-            control_points[:, :, 2] = 0
-
-            # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
-            # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
-            canted_and_translated_control_points = (
-                self._perform_canting_and_facet_translation(
-                    control_points=control_points,
-                    canting=canting[facet_index],
-                    facet_translation=facet_translation_vectors[facet_index],
-                    device=device,
-                )
-            )
-
             facet_config = FacetConfig(
                 facet_key=f"facet_{facet_index + 1}",
-                control_points=canted_and_translated_control_points,
+                control_points=control_points[facet_index],
                 degrees=self.degrees,
                 translation_vector=facet_translation_vectors[facet_index],
                 canting=canting[facet_index],
@@ -459,58 +430,3 @@ class SurfaceGenerator:
         log.info("Surface configuration based on ideal heliostat complete!")
 
         return surface_config
-
-    def _perform_canting_and_facet_translation(
-        self,
-        control_points: torch.Tensor,
-        facet_translation: torch.Tensor,
-        canting: torch.Tensor,
-        device: torch.device | None = None,
-    ) -> torch.Tensor:
-        """
-        Perform the canting rotation and facet translation on the provided, ideal control points for a single facet.
-
-        Parameters
-        ----------
-        control_points : torch.Tensor
-            The points to be canted and translated.
-            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        facet_translation : torch.Tensor
-            Translation vector for each facet from heliostat origin to relative position.
-            Tensor of shape [4].
-        canting : torch.Tensor
-            The canting vector per facet in east and north direction.
-            Tensor of shape [2, 4].
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The canted and translated points.
-            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        """
-        device = get_device(device=device)
-
-        rotation_matrix = torch.zeros((4, 4), device=device)
-
-        rotation_matrix[:, 0] = torch.nn.functional.normalize(canting[0], dim=0)
-        rotation_matrix[:, 1] = torch.nn.functional.normalize(canting[1], dim=0)
-        rotation_matrix[:3, 2] = torch.nn.functional.normalize(
-            torch.linalg.cross(rotation_matrix[:3, 0], rotation_matrix[:3, 1]), dim=0
-        )
-
-        rotation_matrix[3, 3] = 1.0
-
-        canted_points = (
-            utils.convert_3d_points_to_4d_format(
-                points=control_points, device=device
-            ).reshape(-1, 4)
-            @ rotation_matrix.T
-        ).reshape(control_points.shape[0], control_points.shape[1], 4)
-
-        canted_with_translation = canted_points + facet_translation
-
-        return canted_with_translation[:, :, :3]
