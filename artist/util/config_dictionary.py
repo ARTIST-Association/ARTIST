@@ -307,12 +307,7 @@ nurbs_u_direction = 0
 nurbs_v_direction = 1
 """Key to access the nurbs v direction."""
 
-utis_target_width = 6
-"""Key to access the width of the utis target."""
-utis_target_height = 6
-"""Key to access the height of the utis target."""
-
-crop_target_width = 6
-"""Key to crop the target size width."""
-crop_target_height = 6
-"""Key to crop the target size height."""
+utis_crop_width = 6
+"""Key to access the crop width used in utis."""
+utis_crop_height = 6
+"""Key to access the crop height used in utis."""

@@ -219,7 +219,7 @@ class SurfaceReconstructor:
                     heliostat_flux_path_mapping.append((heliostat, path_pngs))
                     heliostat_calibration_mapping.append((heliostat, path_properties))
 
-            normalized_measured_flux_distributions = (
+            measured_flux_distributions = (
                 flux_distribution_loader.load_flux_from_png(
                     heliostat_flux_path_mapping=heliostat_flux_path_mapping,
                     heliostat_names=heliostat_group.names,
@@ -242,6 +242,16 @@ class SurfaceReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
+                # Crop target fluxes.
+                cropped_measured_flux_distributions = utils.crop_flux_distributions_around_center(
+                    flux_distributions=measured_flux_distributions,
+                    crop_width=config_dictionary.utis_crop_width,
+                    crop_height=config_dictionary.utis_crop_height,
+                    target_plane_widths=self.scenario.target_areas.dimensions[target_area_mask][:, 0],
+                    target_plane_heights=self.scenario.target_areas.dimensions[target_area_mask][:, 1],
+                    device=device
+                )
+
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_mask, device=device
@@ -289,11 +299,14 @@ class SurfaceReconstructor:
                 )
 
                 # Start the optimization.
+                ideal_surface_loss_function = torch.nn.MSELoss()
+                current_active_nurbs_control_points = torch.zeros_like(
+                    heliostat_group.active_nurbs_control_points, device=device
+                )
                 loss_last_epoch = torch.inf
-                loss = torch.inf
+                loss_improvement = torch.inf
                 epoch = 0
                 log_step = self.max_epoch // self.num_log
-                ideal_surface_loss_function = torch.nn.MSELoss()
                 while (
                     loss_last_epoch > self.tolerance
                     and epoch <= self.max_epoch
@@ -304,6 +317,7 @@ class SurfaceReconstructor:
                     current_active_nurbs_control_points = (
                         heliostat_group.active_nurbs_control_points.detach()
                     )
+
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
                         active_heliostats_mask=active_heliostats_mask, device=device
@@ -369,10 +383,10 @@ class SurfaceReconstructor:
                             op=torch.distributed.ReduceOp.SUM,
                         )
                     
-                    flux_distributions = utils.crop_flux_distributions_around_center(
+                    cropped_flux_distributions = utils.crop_flux_distributions_around_center(
                         flux_distributions=flux_distributions,
-                        crop_width=config_dictionary.crop_target_width,
-                        crop_height=config_dictionary.crop_target_height,
+                        crop_width=config_dictionary.utis_crop_width,
+                        crop_height=config_dictionary.utis_crop_height,
                         target_plane_widths=self.scenario.target_areas.dimensions[
                             target_area_mask
                         ][:, 0],
@@ -385,8 +399,8 @@ class SurfaceReconstructor:
                     # Loss regarding the predicted flux and the target flux.
                     flux_loss_per_heliostat = self.loss_per_heliostat(
                         active_heliostats_mask=active_heliostats_mask,
-                        predictions=flux_distributions,
-                        targets=normalized_measured_flux_distributions,
+                        predictions=cropped_flux_distributions,
+                        targets=cropped_measured_flux_distributions,
                         loss_function=loss_function,
                         target_area_dimensions=self.scenario.target_areas.dimensions[
                             target_area_mask
