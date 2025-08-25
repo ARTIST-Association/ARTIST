@@ -95,6 +95,6 @@ with setup_distributed_environment(
     )
 
     # Reconstruct surfaces.
-    surface_reconstructor.reconstruct_surfaces(
+    _ = surface_reconstructor.reconstruct_surfaces(
         loss_function=loss_function, device=device
     )
