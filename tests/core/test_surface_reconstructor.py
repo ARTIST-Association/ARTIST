@@ -97,7 +97,7 @@ def test_surface_reconstructor(
         device=device,
     )
 
-    surface_reconstructor.reconstruct_surfaces(
+    _ = surface_reconstructor.reconstruct_surfaces(
         loss_function=loss_function, device=device
     )
 
