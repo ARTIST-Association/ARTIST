@@ -554,12 +554,12 @@ def test_normalize_bitmaps(device: torch.device) -> None:
         flux_distributions=bitmaps,
         target_area_widths=torch.full(
             (bitmaps.shape[0],),
-            config_dictionary.utis_target_width,
+            config_dictionary.utis_crop_width,
             device=device,
         ),
         target_area_heights=torch.full(
             (bitmaps.shape[0],),
-            config_dictionary.utis_target_height,
+            config_dictionary.utis_crop_height,
             device=device,
         ),
         number_of_rays=bitmaps.sum(dim=[1, 2]),

@@ -110,12 +110,12 @@ def pixel_loss(
         flux_distributions=targets,
         target_area_widths=torch.full(
             (targets.shape[0],),
-            config_dictionary.utis_target_width,
+            config_dictionary.utis_crop_width,
             device=device,
         ),
         target_area_heights=torch.full(
             (targets.shape[0],),
-            config_dictionary.utis_target_height,
+            config_dictionary.utis_crop_height,
             device=device,
         ),
         number_of_rays=targets.sum(dim=[1, 2]),
