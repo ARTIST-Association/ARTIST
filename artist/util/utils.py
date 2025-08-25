@@ -657,7 +657,7 @@ def create_ideal_canted_nurbs_control_points(
     """
     device = get_device(device=device)
 
-    number_of_facets = (facet_translation_vectors.shape[0],)
+    number_of_facets = facet_translation_vectors.shape[0]
 
     control_points = torch.zeros(
         (
@@ -893,47 +893,3 @@ def crop_flux_distributions_around_center(
     )
 
     return cropped_images[:, 0, :, :]
-
-
-def trapezoid_distribution(
-    total_width: int,
-    slope_width: int,
-    plateau_width: int,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Create a one dimensional trapezoid distribution.
-
-    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
-    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
-    padded with zeros on both sides.
-
-    Parameters
-    ----------
-    total_width : int
-        The total width of the trapezoid.
-    slope_width : int
-        The width of the slope of the trapezoid.
-    plateau_width : int
-        The width of the plateau.
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        The one dimensional trapezoid distribution.
-        Tensor of shape [total_width].
-    """
-    indices = torch.arange(total_width, device=device)
-    center = (total_width - 1) / 2
-    half_plateau = plateau_width / 2
-
-    # Distances from the plateau edge.
-    distances = torch.abs(indices - center) - half_plateau
-
-    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
-
-    return trapezoid
