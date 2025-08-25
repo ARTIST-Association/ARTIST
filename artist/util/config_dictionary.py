@@ -288,7 +288,11 @@ paint_motor_positions = "motor_position"
 paint_first_axis = "axis_1_motor_position"
 """Key to access the first motor position in a ``PAINT`` calibration.json file."""
 paint_second_axis = "axis_2_motor_position"
-
+"""Key to access the second motor position in a ``PAINT`` calibration.json file."""
+paint_calibration_folder_name = "Calibration"
+"""Folder name for calibration data in ``PAINT``."""
+paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
+"""Ending for calibration properties files in ``PAINT``."""
 linux = "Linux"
 """Key to access the Linux OS name."""
 windows = "Windows"
@@ -308,7 +312,7 @@ utis_target_width = 6
 utis_target_height = 6
 """Key to access the height of the utis target."""
 
-optimization_to_focal_spot = "focal_spot"
-"""Key to select the motor position optimization to a focal spot."""
-optimization_to_distribution = "distribution"
-"""Key to select the motor position optimization to a given distribution."""
+crop_target_width = 6
+"""Key to crop the target size width."""
+crop_target_height = 6
+"""Key to crop the target size height."""

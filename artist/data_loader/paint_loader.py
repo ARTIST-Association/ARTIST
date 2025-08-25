@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+import random
 from collections import Counter, defaultdict
 
 import h5py
@@ -935,3 +936,86 @@ def corner_points_to_plane(
         + torch.abs(upper_right[2] - lower_right[2])
     ) / 2
     return plane_e, plane_u
+
+
+def build_heliostat_data_mapping(
+    base_path: str,
+    heliostat_names: list[str],
+    number_of_measurements: int,
+    image_variant: str,
+    randomize: bool = True,
+    seed: int = 42,
+) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
+    """
+    Build a mapping of heliostat names to their calibration property and image files loaded from ``PAINT``.
+
+    It assuemes that the data directory has the same structure  and file names the ``PAINT`` data base.
+    This method loads property and image files from the specified variant, and returns a structured mapping.
+    If fewer measurements are available than requested, a warning is logged and the available
+    subset is used. Optionally, the selection can be randomized using a fixed seed.
+
+    Parameters
+    ----------
+    base_path : str
+        Path to the root directory containing heliostat calibration data.
+    heliostat_names : list[str]
+        List of heliostat names to include in the mapping.
+    number_of_measurements : int
+        Number of valid calibration samples to retrieve per heliostat.
+    image_variant : str
+        Image variant to use. Must match the expected filename suffix (``flux``, ``flux-centered``, ``cropped``, or ``raw``).
+    randomize : bool
+        Whether to shuffle the measurement files before selection (default is True).
+    seed : int
+        Random seed for reproducibility (default is 42).
+
+    Returns
+    -------
+    list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        A list of tuples for each heliostat, where each tuple contains:
+        - the heliostat name,
+        - a list of selected property file paths,
+        - a list of corresponding image file paths.
+    """
+    base = pathlib.Path(base_path)
+    heliostat_map = []
+
+    for name in heliostat_names:
+        calibration_dir = base / name / config_dictionary.paint_calibration_folder_name
+        if not calibration_dir.exists():
+            log.warning(f"Calibration directory for {name} not found.")
+            continue
+
+        property_files = list(
+            calibration_dir.glob(
+                config_dictionary.paint_calibration_properties_file_name_ending
+            )
+        )
+
+        if randomize:
+            random.Random(seed).shuffle(property_files)
+        else:
+            property_files.sort()
+
+        properties, images = [], []
+
+        for property_file in property_files:
+            id_str = property_file.stem.split("-")[0]
+            image_file = calibration_dir / f"{id_str}-{image_variant}.png"
+
+            if image_file.exists():
+                properties.append(property_file)
+                images.append(image_file)
+
+                if len(properties) == number_of_measurements:
+                    break
+
+        if len(properties) < number_of_measurements:
+            log.warning(
+                f"{name} has only {len(properties)} valid measurements (needed {number_of_measurements})."
+            )
+
+        if properties and images:
+            heliostat_map.append((name, properties, images))
+
+    return heliostat_map
