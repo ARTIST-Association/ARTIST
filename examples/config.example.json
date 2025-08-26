@@ -1,0 +1,19 @@
+{
+  "device": "cuda:0",
+  "heliostats": ["AA39", "AY26", "BC34"],
+
+  "paint_repository_base_path": "/base/path/to/PAINT",
+  "paint_tower_file": "/WRI1030197-tower-measurements.json",
+
+  "examples_data_base_path": "/base/path/to/examples/data/folder",
+  "examples_heliostat_list_file": "heliostat_file_generated_by_00_example.json",
+  "examples_scenario_path": "scenarios/heliostat_calibration_paint",
+  "examples_save_plot_path": "/plots/",
+  "examples_results_path": "calibration_results.pt",
+  "examples_raytracing_scenario_path": "raytracing_scenario",
+
+  "01_examples_use_ray_tracing": false,
+  "01_examples_tolerance": 0.05,
+  "01_examples_max_epoch": 1000,
+  "01_examples_initial_learning_rate": 0.002
+}
