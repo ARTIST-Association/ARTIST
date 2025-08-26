@@ -91,7 +91,9 @@ def extract_paint_calibration_properties_data(
     calibration_data_per_heliostat = defaultdict(list)
 
     for heliostat_name, paths in heliostat_calibration_mapping:
-        number_of_measurements = min(len(paths), limit_number_of_measurements or len(paths))
+        number_of_measurements = min(
+            len(paths), limit_number_of_measurements or len(paths)
+        )
         for path in paths[:number_of_measurements]:
             with open(path, "r") as f:
                 calibration_data_dict = json.load(f)

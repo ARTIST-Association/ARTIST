@@ -135,12 +135,16 @@ kinematic_prototype_config = KinematicPrototypeConfig(
     initial_orientation=[0.0, 0.0, 1.0, 0.0],
 )
 
+# The minimum and maximum motor positions provided here are approximations of the actuators in the heliostat field in Juelich.
+min_max_motor_positions_actuator_1 = [0.0, 60000.0]
+min_max_motor_positions_actuator_2 = [0.0, 80000.0]
+
 # Include an ideal actuator.
 actuator1_prototype = ActuatorConfig(
     key="actuator_1",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
-    min_max_motor_positions=[0.0, 60000.0],
+    min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
 
 # Include an ideal actuator.
@@ -148,7 +152,7 @@ actuator2_prototype = ActuatorConfig(
     key="actuator_2",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
-    min_max_motor_positions=[0.0, 80000.0],
+    min_max_motor_positions=min_max_motor_positions_actuator_2,
 )
 
 # Create a list of actuators.
@@ -177,13 +181,13 @@ actuator1_heliostat1 = ActuatorConfig(
     key="actuator_1",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
-    min_max_motor_positions=[0.0, 60000.0],
+    min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
 actuator2_heliostat1 = ActuatorConfig(
     key="actuator_2",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
-    min_max_motor_positions=[0.0, 80000.0],
+    min_max_motor_positions=min_max_motor_positions_actuator_2,
 )
 
 actuator_heliostat1_list = [actuator1_heliostat1, actuator2_heliostat1]

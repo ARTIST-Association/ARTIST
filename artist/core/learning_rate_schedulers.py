@@ -2,6 +2,8 @@ import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
+from artist.util import config_dictionary
+
 
 def exponential(
     optimizer: Optimizer,
@@ -23,7 +25,7 @@ def exponential(
         An exponential learning rate scheduler.
     """
     scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        optimizer, gamma=parameters["lr_gamma"]
+        optimizer, gamma=parameters[config_dictionary.gamma]
     )
 
     return scheduler
@@ -50,9 +52,9 @@ def cyclic(
     """
     scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
-        base_lr=parameters["lr_min"],
-        max_lr=parameters["lr_max"],
-        step_size_up=parameters["lr_step_size_up"],
+        base_lr=parameters[config_dictionary.min],
+        max_lr=parameters[config_dictionary.max],
+        step_size_up=parameters[config_dictionary.step_size_up],
     )
 
     return scheduler
@@ -79,22 +81,11 @@ def reduce_on_plateau(
     """
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        factor=parameters["lr_reduce_factor"],
-        patience=parameters["lr_patience"],
-        threshold=parameters["lr_threshold"],
-        cooldown=parameters["lr_cooldown"],
-        min_lr=parameters["lr_min"],
+        factor=parameters[config_dictionary.reduce_factor],
+        patience=parameters[config_dictionary.patience],
+        threshold=parameters[config_dictionary.threshold],
+        cooldown=parameters[config_dictionary.cooldown],
+        min_lr=parameters[config_dictionary.min],
     )
 
     return scheduler
-
-
-class NoOpScheduler:
-    """A no-op learning rate scheduler that does nothing, can be used as a default."""
-    
-    def __init__(self, **kwargs):
-        pass
-
-    def step(self):
-        """No-op step function."""
-        pass

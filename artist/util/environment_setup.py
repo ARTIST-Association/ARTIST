@@ -207,16 +207,16 @@ def setup_distributed_environment(
 
     try:
         yield {
-            "device": device,
-            "is_distributed": is_distributed,
-            "is_nested": is_nested,
-            "rank": rank,
-            "world_size": world_size,
-            "process_subgroup": process_subgroup,
-            "groups_to_ranks_mapping": groups_to_ranks_mapping,
-            "heliostat_group_rank": heliostat_group_rank,
-            "heliostat_group_world_size": heliostat_group_world_size,
-            "ranks_to_groups_mapping": ranks_to_groups_mapping,
+            config_dictionary.device: device,
+            config_dictionary.is_distributed: is_distributed,
+            config_dictionary.is_nested: is_nested,
+            config_dictionary.rank: rank,
+            config_dictionary.world_size: world_size,
+            config_dictionary.process_subgroup: process_subgroup,
+            config_dictionary.groups_to_ranks_mapping: groups_to_ranks_mapping,
+            config_dictionary.heliostat_group_rank: heliostat_group_rank,
+            config_dictionary.heliostat_group_world_size: heliostat_group_world_size,
+            config_dictionary.ranks_to_groups_mapping: ranks_to_groups_mapping,
         }
     finally:
         if is_distributed:

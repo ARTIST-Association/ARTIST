@@ -63,7 +63,9 @@ def load_flux_from_png(
 
     total_number_of_measurements = 0
     for heliostat_name, paths in heliostat_flux_path_mapping:
-        number_of_measurements = min(len(paths), limit_number_of_measurements or len(paths))
+        number_of_measurements = min(
+            len(paths), limit_number_of_measurements or len(paths)
+        )
         bitmaps = torch.empty((number_of_measurements, height, width), device=device)
         for bitmap_index, path in enumerate(paths[:number_of_measurements]):
             bitmap_data = (
