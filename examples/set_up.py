@@ -8,6 +8,7 @@ from artist.core import learning_rate_schedulers, loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 
@@ -35,16 +36,16 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Set up ARTIST to run in single device mode.
     ddp_setup = {
-        "device": device,
-        "is_distributed": False,
-        "is_nested": False,
-        "rank": 0,
-        "world_size": 1,
-        "process_subgroup": None,
-        "groups_to_ranks_mapping": {0: [...]},
-        "heliostat_group_rank": 0,
-        "heliostat_group_world_size": 1,
-        "ranks_to_groups_mapping": {0: [0], 1: [0]},
+        config_dictionary.device: device,
+        config_dictionary.is_distributed: False,
+        config_dictionary.is_nested: False,
+        config_dictionary.rank: 0,
+        config_dictionary.world_size: 1,
+        config_dictionary.process_subgroup: None,
+        config_dictionary.groups_to_ranks_mapping: {0: [...]},
+        config_dictionary.heliostat_group_rank: 0,
+        config_dictionary.heliostat_group_world_size: 1,
+        config_dictionary.ranks_to_groups_mapping: {0: [0], 1: [0]},
     }
 
     # For parameter combinations with too many rays (over 3000000) directly return a default loss,

@@ -9,7 +9,7 @@ from artist import ARTIST_ROOT
 from artist.core import loss_functions
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
-from artist.util import utils
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
@@ -91,6 +91,21 @@ def test_motor_positions_optimizer(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+    }
+
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: 1e-3,
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 10,
+        config_dictionary.num_log: 1,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+    }
+
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/scenarios/test_scenario_paint_four_heliostats.h5"
@@ -101,29 +116,23 @@ def test_motor_positions_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
-
-    # Set optimizer paramteres.
-    initial_learning_rate = 1e-3
-    max_epoch = 5
+    ddp_setup_for_testing[config_dictionary.device] = device
+    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
+        optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
         optimization_goal=request.getfixturevalue(loss_fixture_name)[0].to(device),
         bitmap_resolution=torch.tensor([256, 256], device=device),
-        initial_learning_rate=initial_learning_rate,
-        max_epoch=max_epoch,
-        num_log=1,
         device=device,
     )
 
     # Optimize the motor positions.
-    motor_positions_optimizer.optimize(
+    _ = motor_positions_optimizer.optimize(
         loss_function=request.getfixturevalue(loss_fixture_name)[1], device=device
     )
 

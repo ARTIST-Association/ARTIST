@@ -5,7 +5,7 @@ import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -29,7 +29,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup["device"]
+    device = ddp_setup[config_dictionary.device]
 
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
@@ -64,8 +64,8 @@ with setup_distributed_environment(
     # Since each individual heliostat group has individual kinematic and actuator types, they must be
     # processed seperatly. If a distributed environment exists, they can be processed in parallel,
     # otherwise each heliostat group results will be computed sequentially.
-    for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
-        ddp_setup["rank"]
+    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+        ddp_setup[config_dictionary.rank]
     ]:
         heliostat_group = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
@@ -104,10 +104,10 @@ with setup_distributed_environment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            world_size=ddp_setup["heliostat_group_world_size"],
-            rank=ddp_setup["heliostat_group_rank"],
+            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+            rank=ddp_setup[config_dictionary.heliostat_group_rank],
             batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup["heliostat_group_rank"],
+            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
             bitmap_resolution=bitmap_resolution,
         )
 
@@ -128,14 +128,14 @@ with setup_distributed_environment(
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-    if ddp_setup["is_nested"]:
+    if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup["process_subgroup"],
+            group=ddp_setup[config_dictionary.process_subgroup],
         )
 
-    if ddp_setup["is_distributed"]:
+    if ddp_setup[config_dictionary.is_distributed]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )

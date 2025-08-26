@@ -1,10 +1,12 @@
 import pathlib
+from typing import Callable
 
 import h5py
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.core import loss_functions
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
@@ -15,27 +17,30 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "optimizer_method, tolerance, max_epoch, initial_lr",
+    "calibration_method, tolerance, max_epoch, initial_lr, loss_function",
     [
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.0005,
             15,
             0.001,
+            loss_functions.vector_loss,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0005,
             15,
             0.0001,
+            loss_functions.focal_spot_loss,
         ),
     ],
 )
 def test_kinematic_optimizer(
-    optimizer_method: str,
+    calibration_method: str,
     tolerance: float,
     max_epoch: int,
     initial_lr: float,
+    loss_function: Callable[..., torch.Tensor],
     ddp_setup_for_testing: DistributedEnvironmentTypedDict,
     device: torch.device,
 ) -> None:
@@ -44,14 +49,17 @@ def test_kinematic_optimizer(
 
     Parameters
     ----------
-    optimizer_method : str
-        The name of the optimizer method.
+    calibration_method : str
+        The name of the calibration method.
     tolerance : float
         Tolerance for the optimizer.
     max_epoch : int
         The maximum amount of epochs for the optimization loop.
     initial_lr : float
         The initial learning rate.
+    loss_function : Callable[..., torch.Tensor]
+        A callable function that computes the loss. It accepts predictions and targets
+        and optionally other keyword arguments and return a tensor with loss values.
     ddp_setup_for_testing : DistributedEnvironmentTypedDict
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -64,6 +72,21 @@ def test_kinematic_optimizer(
     """
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
+
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+    }
+
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: initial_lr,
+        config_dictionary.tolerance: tolerance,
+        config_dictionary.max_epoch: max_epoch,
+        config_dictionary.num_log: 1,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+    }
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
@@ -101,7 +124,7 @@ def test_kinematic_optimizer(
 
     data = {
         config_dictionary.data_source: config_dictionary.paint,
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -109,29 +132,26 @@ def test_kinematic_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
+    ddp_setup_for_testing[config_dictionary.device] = device
+    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
     # Create the kinematic optimizer.
     kinematic_optimizer = KinematicOptimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         data=data,
-        calibration_method=optimizer_method,
-        initial_learning_rate=initial_lr,
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        num_log=1,
+        optimization_configuration=optimization_configuration,
+        calibration_method=calibration_method,
     )
 
     # Calibrate the kinematic.
-    kinematic_optimizer.optimize(device=device)
+    _ = kinematic_optimizer.optimize(loss_function=loss_function, device=device)
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_kinematic_parameters"
-            / f"{optimizer_method}_group_{index}_{device.type}.pt"
+            / f"{calibration_method}_group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)

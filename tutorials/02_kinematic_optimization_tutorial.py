@@ -3,6 +3,7 @@ import pathlib
 import h5py
 import torch
 
+from artist.core import loss_functions
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
@@ -55,7 +56,7 @@ heliostat_data_mapping = [
 # Create dict for the data source name and the heliostat_data_mapping.
 data = {
     config_dictionary.data_source: config_dictionary.paint,
-    config_dictionary.heliostat_data_mapping: heliostat_data_mapping
+    config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -66,7 +67,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup["device"]
+    device = ddp_setup[config_dictionary.device]
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -74,8 +75,34 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
-    # Choose calibration method.
+    # Set calibration method and loss function.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
+    if (
+        kinematic_calibration_method
+        == config_dictionary.kinematic_calibration_raytracing
+    ):
+        loss_function = loss_functions.focal_spot_loss
+    if (
+        kinematic_calibration_method
+        == config_dictionary.kinematic_calibration_motor_positions
+    ):
+        loss_function = loss_functions.vector_loss
+
+    # Configure the learning rate scheduler. The example scheduler parameter dict includes
+    # example parameters for all three possible schedulers.
+    scheduler = (
+        config_dictionary.exponential
+    )  # exponential, cyclic or reduce_on_plateau
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.3,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 10,
+    }
 
     # Set optimization parameters.
     optimization_configuration = {
@@ -85,6 +112,8 @@ with setup_distributed_environment(
         config_dictionary.num_log: 100,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: scheduler,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
     # Create the kinematic optimizer.
@@ -92,9 +121,9 @@ with setup_distributed_environment(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
+        optimization_configuration=optimization_configuration,
         calibration_method=kinematic_calibration_method,
-        optimization_configuration=optimization_configuration
     )
 
     # Calibrate the kinematic.
-    kinematic_optimizer.optimize(device=device)
+    _ = kinematic_optimizer.optimize(loss_function=loss_function, device=device)

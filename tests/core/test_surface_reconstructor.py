@@ -9,6 +9,7 @@ from artist import ARTIST_ROOT
 from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary
 from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
@@ -84,8 +85,8 @@ def test_surface_reconstructor(
             scenario_file=scenario_file, device=device
         )
 
-    ddp_setup_for_testing["device"] = device
-    ddp_setup_for_testing["groups_to_ranks_mapping"] = {0: [0, 1]}
+    ddp_setup_for_testing[config_dictionary.device] = device
+    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -119,11 +120,11 @@ def test_surface_reconstructor(
         )
 
 
-def test_fixate_control_points_on_outer_edges(
+def test_lock_control_points_on_outer_edges(
     device: torch.device,
 ) -> None:
     """
-    Test the outer control points fixation function.
+    Test the outer control points lock function.
 
     Parameters
     ----------
@@ -147,7 +148,7 @@ def test_fixate_control_points_on_outer_edges(
     test_gradients[:, :, :, :, 1] = test_gradients_n
     test_gradients[:, :, :, :, 2] = torch.full_like(test_gradients_e, 5, device=device)
 
-    fixed_gradients = SurfaceReconstructor.fixate_control_points_on_outer_edges(
+    locked_gradients = SurfaceReconstructor.lock_control_points_on_outer_edges(
         gradients=test_gradients, device=device
     )
 
@@ -186,7 +187,7 @@ def test_fixate_control_points_on_outer_edges(
     )
 
     torch.testing.assert_close(
-        fixed_gradients,
+        locked_gradients,
         expected_gradients,
         atol=5e-2,
         rtol=5e-2,

@@ -17,6 +17,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
+    log_path = "path/to/log/file"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
@@ -52,9 +53,9 @@ if __name__ == "__main__":
         "lr_patience": (5, 50),
         "lr_threshold": (1e-5, 1e-2),
         "lr_cooldown": (0, 20),
-        "ideal_surface_loss_weight": (1e-4, 9e-1),
-        "total_variation_loss_points_weight": (1e-4, 9e-1),
-        "total_variation_loss_normals_weight": (1e-4, 9e-1),
+        "ideal_surface_loss_weight": (0.00, 1.00),
+        "total_variation_loss_points_weight": (0.00, 1.00),
+        "total_variation_loss_normals_weight": (0.00, 1.00),
         "total_variation_loss_number_of_neighbors": (0, 5000),
         "total_variation_loss_sigma": (0, 1),
         "initial_learning_rate": (1e-7, 0.9),
