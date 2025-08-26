@@ -161,11 +161,14 @@ cython_debug/
 
 #data files
 .pt
-.png 
-.jpg 
-.pdf 
+.png
+.jpg
+.pdf
 .json
 .csv
 .vscode/settings.json
-examples/data/heliostat_files.json
-examples/data/scenarios/heliostat_calibration_paint.h5
+examples/data/
+
+# Local config files
+config.local.json
+*.local.json
