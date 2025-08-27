@@ -288,7 +288,12 @@ class KinematicCalibrator:
                     loss.backward()
 
                     optimizer.step()
-                    scheduler.step()
+                    if isinstance(
+                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    ):
+                        scheduler.step(loss)
+                    else:
+                        scheduler.step()
 
                     if epoch % log_step == 0:
                         log.info(
@@ -512,7 +517,12 @@ class KinematicCalibrator:
                                     )
 
                     optimizer.step()
-                    scheduler.step()
+                    if isinstance(
+                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    ):
+                        scheduler.step(loss)
+                    else:
+                        scheduler.step()
 
                     if epoch % log_step == 0:
                         log.info(

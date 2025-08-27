@@ -330,7 +330,10 @@ class MotorPositionsOptimizer:
                                 )
 
                 optimizer.step()
-                scheduler.step()
+                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    scheduler.step(loss)
+                else:
+                    scheduler.step()
 
                 if epoch % log_step == 0 and rank == 0:
                     log.info(

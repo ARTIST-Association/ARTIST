@@ -13,14 +13,25 @@ from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss_function",
+    "loss_function, data_source, early_stopping_delta",
     [
-        (loss_functions.distribution_loss_kl_divergence),
-        (loss_functions.pixel_loss),
+        # Test standard behavior.
+        (loss_functions.distribution_loss_kl_divergence, "paint", 1e-4),
+        (
+            loss_functions.pixel_loss,
+            "paint",
+            1e-4,
+        ),
+        # Test invalid data source.
+        (loss_functions.pixel_loss, "invalid", 1e-4),
+        # Test early stopping.
+        (loss_functions.pixel_loss, "paint", 1.0),
     ],
 )
 def test_surface_reconstructor(
     loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    data_source: str,
+    early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -34,6 +45,10 @@ def test_surface_reconstructor(
         and optionally other keyword arguments and return a tensor with loss values.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    data_source : str
+        The name of the data source.
+    early_stopping_delta : float
+        The minimum required improvement to prevent early stopping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -46,7 +61,11 @@ def test_surface_reconstructor(
     torch.cuda.manual_seed(7)
 
     scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-4,
+        config_dictionary.reduce_factor: 0.9,
+        config_dictionary.patience: 100,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 20,
     }
 
     # Configure regularizers and their weights.
@@ -82,9 +101,9 @@ def test_surface_reconstructor(
         config_dictionary.tolerance: 5e-4,
         config_dictionary.max_epoch: 15,
         config_dictionary.num_log: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 10,
-        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.early_stopping_delta: early_stopping_delta,
+        config_dictionary.early_stopping_patience: 13,
+        config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
         config_dictionary.scheduler_parameters: scheduler_parameters,
         config_dictionary.regularizers: regularizers,
     }
@@ -124,7 +143,7 @@ def test_surface_reconstructor(
     ]
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.data_source: data_source,
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -143,26 +162,38 @@ def test_surface_reconstructor(
         optimization_configuration=optimization_configuration,
         device=device,
     )
+    if data_source == "invalid":
+        with pytest.raises(ValueError) as exc_info:
+            _ = surface_reconstructor.reconstruct_surfaces(
+                loss_function=loss_function, device=device
+            )
 
-    _ = surface_reconstructor.reconstruct_surfaces(
-        loss_function=loss_function, device=device
-    )
-
-    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_reconstructed_surfaces"
-            / f"{loss_function.__name__}_group_{index}_{device.type}.pt"
+            assert (
+                f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
+                in str(exc_info.value)
+            )
+    else:
+        _ = surface_reconstructor.reconstruct_surfaces(
+            loss_function=loss_function, device=device
         )
 
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
+        for index, heliostat_group in enumerate(
+            scenario.heliostat_field.heliostat_groups
+        ):
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/expected_reconstructed_surfaces"
+                / f"{loss_function.__name__}_group_{index}_{device.type}.pt"
+            )
 
-        torch.testing.assert_close(
-            heliostat_group.nurbs_control_points,
-            expected,
-            atol=5e-3,
-            rtol=5e-3,
-        )
+            expected = torch.load(expected_path, map_location=device, weights_only=True)
+
+            torch.testing.assert_close(
+                heliostat_group.nurbs_control_points,
+                expected,
+                atol=5e-3,
+                rtol=5e-3,
+            )
 
 
 def test_lock_control_points_on_outer_edges(
