@@ -1,5 +1,5 @@
 import pathlib
-from typing import Callable
+from typing import Any, Callable
 
 import h5py
 import pytest
@@ -10,7 +10,6 @@ from artist.core import loss_functions
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
-from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
 @pytest.fixture
@@ -63,7 +62,7 @@ def distribution_loss():
 def test_motor_positions_optimizer(
     loss_fixture_name: str,
     request: pytest.FixtureRequest,
-    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
+    ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
     """
@@ -78,7 +77,7 @@ def test_motor_positions_optimizer(
     optimizer_method : str
         The method used for optimization. The motor positions can be optimized to aim at a
         specific coordinate or to match a specific distribution.
-    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+    ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.

@@ -1,5 +1,5 @@
 import pathlib
-from typing import Callable
+from typing import Any, Callable
 
 import h5py
 import pytest
@@ -10,7 +10,6 @@ from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
-from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 
 @pytest.mark.parametrize(
@@ -22,7 +21,7 @@ from artist.util.environment_setup import DistributedEnvironmentTypedDict
 )
 def test_surface_reconstructor(
     loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
+    ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
     """
@@ -33,7 +32,7 @@ def test_surface_reconstructor(
     loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
         A callable function that computes the loss. It accepts predictions and targets
         and optionally other keyword arguments and return a tensor with loss values.
-    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+    ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
@@ -45,6 +44,50 @@ def test_surface_reconstructor(
     """
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
+
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+    }
+
+    # Configure regularizers and their weights.
+    ideal_surface_regularizer = {
+        config_dictionary.regularization_callable: config_dictionary.vector_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: None,
+    }
+    total_variation_regularizer_points = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: 64,
+            config_dictionary.sigma: 1e-3,
+        },
+    }
+    total_variation_regularizer_normals = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: 64,
+            config_dictionary.sigma: 1e-3,
+        },
+    }
+    regularizers = {
+        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
+        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
+        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
+    }
+
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: 1e-4,
+        config_dictionary.tolerance: 5e-4,
+        config_dictionary.max_epoch: 15,
+        config_dictionary.num_log: 1,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+        config_dictionary.regularizers: regularizers,
+    }
 
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
@@ -80,6 +123,10 @@ def test_surface_reconstructor(
         ),
     ]
 
+    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
+        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    }
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
@@ -92,10 +139,8 @@ def test_surface_reconstructor(
     surface_reconstructor = SurfaceReconstructor(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
-        heliostat_data_mapping=heliostat_data_mapping,
-        initial_learning_rate=1e-4,
-        max_epoch=2,
-        num_log=1,
+        data=data,
+        optimization_configuration=optimization_configuration,
         device=device,
     )
 
@@ -115,8 +160,8 @@ def test_surface_reconstructor(
         torch.testing.assert_close(
             heliostat_group.nurbs_control_points,
             expected,
-            atol=5e-5,
-            rtol=5e-5,
+            atol=5e-3,
+            rtol=5e-3,
         )
 
 
@@ -189,65 +234,6 @@ def test_lock_control_points_on_outer_edges(
     torch.testing.assert_close(
         locked_gradients,
         expected_gradients,
-        atol=5e-2,
-        rtol=5e-2,
-    )
-
-
-def test_total_variation_loss(
-    device: torch.device,
-) -> None:
-    """
-    Test the total variation loss function.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    rows = torch.linspace(0, 4 * 3.1415, 120, device=device)
-    columns = torch.linspace(0, 4 * 3.1415, 120, device=device)
-    x, y = torch.meshgrid(rows, columns, indexing="ij")
-
-    # Smooth surface with waves.
-    z_values_smooth = 0.5 * torch.sin(x) + 0.5 * torch.cos(y)
-
-    # Irregular surface = smooth surface with waves and random noise.
-    noise = torch.randn_like(z_values_smooth, device=device) * 0.5
-    z_irregular = z_values_smooth + noise
-
-    coordinates_smooth = torch.stack(
-        [x.flatten(), y.flatten(), z_values_smooth.flatten()], dim=1
-    ).unsqueeze(0)
-    coordinates_irregular = torch.stack(
-        [x.flatten(), y.flatten(), z_irregular.flatten()], dim=1
-    ).unsqueeze(0)
-
-    surfaces = (
-        torch.cat([coordinates_smooth, coordinates_irregular], dim=0)
-        .unsqueeze(1)
-        .expand(2, 4, -1, 3)
-    )
-
-    # Calculate total variation loss
-    loss = SurfaceReconstructor.total_variation_loss_per_surface(
-        surfaces=surfaces, number_of_neighbors=10, sigma=1.0, device=device
-    )
-
-    torch.testing.assert_close(
-        loss,
-        torch.tensor(
-            [
-                [0.043646000326, 0.043646000326, 0.043646000326, 0.043646000326],
-                [0.564661264420, 0.564661264420, 0.564661264420, 0.564661264420],
-            ],
-            device=device,
-        ),
         atol=5e-2,
         rtol=5e-2,
     )

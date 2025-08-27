@@ -56,8 +56,10 @@ if __name__ == "__main__":
         "ideal_surface_loss_weight": (0.00, 1.00),
         "total_variation_loss_points_weight": (0.00, 1.00),
         "total_variation_loss_normals_weight": (0.00, 1.00),
-        "total_variation_loss_number_of_neighbors": (0, 5000),
-        "total_variation_loss_sigma": (0, 1),
+        "total_variation_loss_number_of_neighbors_points": (0, 5000),
+        "total_variation_loss_sigma_points": (0, 1),
+        "total_variation_loss_number_of_neighbors_normals": (0, 5000),
+        "total_variation_loss_sigma_normals": (0, 1),
         "initial_learning_rate": (1e-7, 0.9),
         "loss_function": ("distribution_loss_kl_divergence", "pixel_loss"),
     }

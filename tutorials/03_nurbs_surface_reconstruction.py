@@ -64,11 +64,10 @@ heliostat_data_mapping = build_heliostat_data_mapping(
 )
 
 # Create dict for the data source name and the heliostat_data_mapping.
-data = {
+data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
     config_dictionary.data_source: config_dictionary.paint,
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
-
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path

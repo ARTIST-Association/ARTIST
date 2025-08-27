@@ -3,7 +3,7 @@ import platform
 from collections import defaultdict
 from contextlib import contextmanager
 from itertools import cycle, islice
-from typing import Generator, TypedDict
+from typing import Any, Generator
 
 import torch
 
@@ -11,21 +11,6 @@ from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
 """A logger for the environment."""
-
-
-class DistributedEnvironmentTypedDict(TypedDict):
-    """Configuration for distributed environment with types for the dictionary."""
-
-    device: torch.device
-    is_distributed: bool
-    is_nested: bool
-    rank: int
-    world_size: int
-    process_subgroup: torch.distributed.ProcessGroup | None
-    groups_to_ranks_mapping: dict[int, list[int]]
-    heliostat_group_rank: int
-    heliostat_group_world_size: int
-    ranks_to_groups_mapping: dict[int, list[int]]
 
 
 def initialize_ddp_environment(
@@ -157,7 +142,7 @@ def setup_distributed_environment(
     number_of_heliostat_groups: int,
     device: torch.device | None = None,
 ) -> Generator[
-    DistributedEnvironmentTypedDict,
+    dict[str, Any],
     None,
     None,
 ]:
