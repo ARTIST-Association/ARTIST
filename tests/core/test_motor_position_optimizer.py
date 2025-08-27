@@ -58,9 +58,16 @@ def distribution_loss():
     return optimization_goal, loss_function
 
 
-@pytest.mark.parametrize("loss_fixture_name", ["focal_spot_loss", "distribution_loss"])
+@pytest.mark.parametrize(
+    "loss_fixture_name, early_stopping_delta",
+    [
+        ("focal_spot_loss", 1e-4),
+        ("distribution_loss", 1.0),
+    ],
+)
 def test_motor_positions_optimizer(
     loss_fixture_name: str,
+    early_stopping_delta: float,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
@@ -72,6 +79,8 @@ def test_motor_positions_optimizer(
     ----------
     loss_fixture_name : str
         The fixture determining the loss function and optimization target.
+    early_stopping_delta : float
+        The minimum required improvement to prevent early stopping.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
     optimizer_method : str
@@ -91,17 +100,19 @@ def test_motor_positions_optimizer(
     torch.cuda.manual_seed(7)
 
     scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-3,
+        config_dictionary.max: 2e-3,
+        config_dictionary.step_size_up: 100,
     }
 
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 10,
+        config_dictionary.max_epoch: 15,
         config_dictionary.num_log: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 10,
-        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.early_stopping_delta: early_stopping_delta,
+        config_dictionary.early_stopping_patience: 13,
+        config_dictionary.scheduler: config_dictionary.cyclic,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 

@@ -16,30 +16,61 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, tolerance, max_epoch, initial_lr, loss_function",
+    "calibration_method, initial_lr, loss_function, data_source, early_stopping_delta",
     [
+        # Test standard behavior.
         (
             config_dictionary.kinematic_calibration_motor_positions,
-            0.0005,
-            15,
             0.001,
             loss_functions.vector_loss,
+            "paint",
+            1e-4,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
-            0.0005,
-            15,
             0.0001,
             loss_functions.focal_spot_loss,
+            "paint",
+            1e-4,
+        ),
+        # Test invalid data source.
+        (
+            config_dictionary.kinematic_calibration_motor_positions,
+            0.0001,
+            loss_functions.vector_loss,
+            "invalid",
+            1e-4,
+        ),
+        (
+            config_dictionary.kinematic_calibration_raytracing,
+            0.0001,
+            loss_functions.focal_spot_loss,
+            "invalid",
+            1e-4,
+        ),
+        # Test early stopping.
+        (
+            config_dictionary.kinematic_calibration_motor_positions,
+            0.0001,
+            loss_functions.vector_loss,
+            "paint",
+            1.0,
+        ),
+        (
+            config_dictionary.kinematic_calibration_raytracing,
+            0.0001,
+            loss_functions.focal_spot_loss,
+            "paint",
+            1.0,
         ),
     ],
 )
 def test_kinematic_calibrator(
     calibration_method: str,
-    tolerance: float,
-    max_epoch: int,
     initial_lr: float,
     loss_function: Callable[..., torch.Tensor],
+    data_source: str,
+    early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -50,15 +81,15 @@ def test_kinematic_calibrator(
     ----------
     calibration_method : str
         The name of the calibration method.
-    tolerance : float
-        Tolerance for the optimizer.
-    max_epoch : int
-        The maximum amount of epochs for the optimization loop.
     initial_lr : float
         The initial learning rate.
     loss_function : Callable[..., torch.Tensor]
         A callable function that computes the loss. It accepts predictions and targets
         and optionally other keyword arguments and return a tensor with loss values.
+    data_source : str
+        The name of the data source.
+    early_stopping_delta : float
+        The minimum required improvement to prevent early stopping.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -78,11 +109,11 @@ def test_kinematic_calibrator(
 
     optimization_configuration = {
         config_dictionary.initial_learning_rate: initial_lr,
-        config_dictionary.tolerance: tolerance,
-        config_dictionary.max_epoch: max_epoch,
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 15,
         config_dictionary.num_log: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.early_stopping_delta: early_stopping_delta,
+        config_dictionary.early_stopping_patience: 13,
         config_dictionary.scheduler: config_dictionary.exponential,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
@@ -122,7 +153,7 @@ def test_kinematic_calibrator(
     ]
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.data_source: data_source,
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
@@ -144,26 +175,40 @@ def test_kinematic_calibrator(
     )
 
     # Calibrate the kinematic.
-    _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)
+    if data_source == "invalid":
+        with pytest.raises(ValueError) as exc_info:
+            _ = kinematic_calibrator.calibrate(
+                loss_function=loss_function, device=device
+            )
 
-    for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_optimized_kinematic_parameters"
-            / f"{calibration_method}_group_{index}_{device.type}.pt"
-        )
+            assert (
+                f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
+                in str(exc_info.value)
+            )
 
-        expected = torch.load(expected_path, map_location=device, weights_only=True)
+    else:
+        _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)
 
-        torch.testing.assert_close(
-            heliostat_group.kinematic.deviation_parameters,
-            expected["kinematic_deviations"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
-        torch.testing.assert_close(
-            heliostat_group.kinematic.actuators.actuator_parameters,
-            expected["actuator_parameters"],
-            atol=5e-2,
-            rtol=5e-2,
-        )
+        for index, heliostat_group in enumerate(
+            scenario.heliostat_field.heliostat_groups
+        ):
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/expected_optimized_kinematic_parameters"
+                / f"{calibration_method}_group_{index}_{device.type}.pt"
+            )
+
+            expected = torch.load(expected_path, map_location=device, weights_only=True)
+
+            torch.testing.assert_close(
+                heliostat_group.kinematic.deviation_parameters,
+                expected["kinematic_deviations"],
+                atol=5e-2,
+                rtol=5e-2,
+            )
+            torch.testing.assert_close(
+                heliostat_group.kinematic.actuators.actuator_parameters,
+                expected["actuator_parameters"],
+                atol=5e-2,
+                rtol=5e-2,
+            )
