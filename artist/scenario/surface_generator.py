@@ -433,7 +433,7 @@ class SurfaceGenerator:
             # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
             # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
             canted_and_translated_control_points = (
-                self._perform_canting_and_facet_translation(
+                self.perform_canting_and_facet_translation(
                     control_points=control_points,
                     canting=canting[facet_index],
                     facet_translation=facet_translation_vectors[facet_index],
@@ -456,8 +456,8 @@ class SurfaceGenerator:
 
         return surface_config
 
-    def _perform_canting_and_facet_translation(
-        self,
+    @staticmethod
+    def perform_canting_and_facet_translation(
         control_points: torch.Tensor,
         facet_translation: torch.Tensor,
         canting: torch.Tensor,

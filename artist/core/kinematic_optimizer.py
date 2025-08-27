@@ -13,6 +13,43 @@ from artist.util.environment_setup import get_device
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""
 
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class AngleLoss(nn.Module):
+    def __init__(self, reduction="mean"):
+        super(AngleLoss, self).__init__()
+        if reduction not in ("none", "mean", "sum"):
+            raise ValueError(f"Invalid reduction mode: {reduction}")
+        self.reduction = reduction
+
+    def forward(self, input, target):
+        input = input[:, :3]
+        target = target[:, :3]
+        # Ensure input and target have the same shape
+        if input.shape != target.shape:
+            raise ValueError("Input and target must have the same shape")
+
+        # Normalize the input and target to unit vectors
+        input_norm = F.normalize(input, p=2, dim=-1)
+        target_norm = F.normalize(target, p=2, dim=-1)
+
+        # Compute cosine similarity
+        cos_sim = (
+            (input_norm * target_norm).sum(dim=-1).clamp(-1.0, 1.0)
+        )  # clamp for numerical stability
+
+        # Compute angle in radians
+        angle = torch.acos(cos_sim)
+
+        if self.reduction == "none":
+            return angle
+        elif self.reduction == "mean":
+            return angle.mean()
+        elif self.reduction == "sum":
+            return angle.sum()
+
 
 class KinematicOptimizer:
     """
@@ -75,6 +112,9 @@ class KinematicOptimizer:
         tolerance: float = 0.035,
         max_epoch: int = 600,
         num_log: int = 3,
+        loss_type: str = "l1",
+        loss_reduction: str = "mean",
+        loss_return_value: str = "mean",
         device: torch.device | None = None,
     ) -> None:
         """
@@ -203,7 +243,7 @@ class KinematicOptimizer:
     def _optimize_kinematic_parameters_with_motor_positions(
         self,
         device: torch.device | None = None,
-    ) -> None:
+    ) -> torch.Tensor:
         """
         Optimize the kinematic parameters using the motor positions.
 
@@ -244,7 +284,6 @@ class KinematicOptimizer:
         while loss > self.tolerance and epoch <= self.max_epoch:
             self.optimizer.zero_grad()
 
-            # Activate heliostats
             self.heliostat_group.activate_heliostats(
                 active_heliostats_mask=self.heliostats_mask, device=device
             )
@@ -257,7 +296,6 @@ class KinematicOptimizer:
                 )
             )
 
-            # Determine the preferred reflection directions for each heliostat.
             preferred_reflection_directions = raytracing_utils.reflect(
                 incident_ray_directions=self.incident_ray_directions,
                 reflection_surface_normals=orientations[:, 0:4, 2],
@@ -273,14 +311,12 @@ class KinematicOptimizer:
             )
 
             loss.backward()
-
             self.optimizer.step()
 
             if epoch % log_step == 0:
                 log.info(
                     f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
-
             epoch += 1
 
         log.info(f"Kinematic parameters of group {rank} optimized.")
@@ -371,7 +407,6 @@ class KinematicOptimizer:
                 log.info(
                     f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {self.optimizer.param_groups[0]['lr']}",
                 )
-
             epoch += 1
 
         log.info(f"Kinematic parameters of group {rank} optimized.")

@@ -36,6 +36,7 @@ def extract_paint_calibration_properties_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
+    centroid_extrected_by: str = config_dictionary.paint_utis,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -101,7 +102,7 @@ def extract_paint_calibration_properties_data(
                         ]
                     ],
                     calibration_data_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
+                        centroid_extrected_by
                     ],
                     calibration_data_dict[config_dictionary.paint_light_source_azimuth],
                     calibration_data_dict[
@@ -194,8 +195,8 @@ def extract_paint_tower_measurements(
     TargetAreaListConfig
         The configuration of the tower target areas.
     """
-    device = get_device(device=device)
-
+    device = get_device()
+    print(device)
     log.info("Beginning extraction of tower data from ```PAINT``` file.")
 
     with open(tower_measurements_path, "r") as file:
