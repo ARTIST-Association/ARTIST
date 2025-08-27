@@ -9,7 +9,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
-from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
@@ -21,7 +21,7 @@ class MotorPositionsOptimizer:
 
     Attributes
     ----------
-    ddp_setup : DistributedEnvironmentTypedDict
+    ddp_setup : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
@@ -47,7 +47,7 @@ class MotorPositionsOptimizer:
 
     def __init__(
         self,
-        ddp_setup: DistributedEnvironmentTypedDict,
+        ddp_setup: dict[str, Any],
         scenario: Scenario,
         optimization_configuration: dict[str, Any],
         incident_ray_direction: torch.Tensor,
@@ -61,7 +61,7 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        ddp_setup : DistributedEnvironmentTypedDict
+        ddp_setup : dict[str, Any]
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
@@ -225,11 +225,11 @@ class MotorPositionsOptimizer:
             )
 
             # Create a learning rate scheduler.
-            scheduler = getattr(
+            scheduler_fn = getattr(
                 learning_rate_schedulers,
                 self.optimization_configuration[config_dictionary.scheduler],
             )
-            scheduler: LRScheduler = scheduler(
+            scheduler: LRScheduler = scheduler_fn(
                 optimizer=optimizer,
                 parameters=self.optimization_configuration[
                     config_dictionary.scheduler_parameters

@@ -1,4 +1,4 @@
-from typing import Callable, Mapping
+from typing import Any, Callable
 
 import torch
 
@@ -10,7 +10,8 @@ from artist.util.environment_setup import get_device
 def vector_loss(
     predictions: torch.Tensor,
     targets: torch.Tensor,
-    **kwargs: Mapping[str, torch.Tensor],
+    reduction_dimensions: tuple[int] | None,
+    **kwargs: Any,
 ) -> torch.Tensor:
     """
     Compute the MSE loss for an optimization comparing two tensors.
@@ -23,7 +24,9 @@ def vector_loss(
     targets : torch.Tensor
         The target tensor.
         Tensor of shape [number_of_samples, 4].
-    **kwargs : Mapping[str, torch.Tensor]
+    reduction_dimensions : tuple[int] | None
+        The dimensions to reduce in the final loss.
+    **kwargs : Any
         Additional keyword arguments used for specific loss definitions only.
 
     Returns
@@ -37,8 +40,14 @@ def vector_loss(
         predictions,
         targets,
     )
+    reduced_loss = loss.mean(
+        *(() if reduction_dimensions is None else (reduction_dimensions,))
+    )
 
-    return loss.mean(dim=1)
+    if reduced_loss.dim() == 0:
+        reduced_loss = reduced_loss.unsqueeze(0)
+
+    return reduced_loss
 
 
 def focal_spot_loss(
@@ -111,11 +120,11 @@ def pixel_loss(
     Parameters
     ----------
     predictions : torch.Tensor
-        The flux distribution.
-        Tensor of shape [1, bitmap_resolution_e, bitmap_resolution_u].
+        The predicted flux distribution.
+        Tensor of shape [number_of_flux_distributions, bitmap_resolution_e, bitmap_resolution_u].
     targets : torch.Tensor
-        The desired focal spot.
-        Tensor of shape [1, 4].
+        The target flux distribution.
+        Tensor of shape [number_of_flux_distributions, bitmap_resolution_e, bitmap_resolution_u].
     target_area_dimensions : torch.Tensor
         The dimensions of the tower target areas aimed at.
         Tensor of shape [number_of_flux_distributions, 2].
@@ -163,7 +172,7 @@ def pixel_loss(
 def distribution_loss_kl_divergence(
     predictions: torch.Tensor,
     targets: torch.Tensor,
-    **kwargs: Mapping[str, torch.Tensor],
+    **kwargs: Any,
 ) -> torch.Tensor:
     r"""
     Compute the loss for an optimization using distributions as target.
@@ -192,7 +201,7 @@ def distribution_loss_kl_divergence(
     targets : torch.Tensor
         The target distributions.
         Tensor of shape [number_of_flux_distributions, bitmap_resolution_e, bitmap_resolution_u].
-    **kwargs : Mapping[str, torch.Tensor]
+    **kwargs : Any
         Additional keyword arguments used for specific loss definitions only.
 
     Returns
@@ -292,7 +301,7 @@ def loss_per_heliostat(
     targets: torch.Tensor,
     loss_function: Callable[..., torch.Tensor],
     device: torch.device | None = None,
-    **kwargs: Mapping[str, torch.Tensor],
+    **kwargs: Any,
 ) -> torch.Tensor:
     """
     Compute mean losses for each heliostat with multiple samples.
@@ -321,7 +330,7 @@ def loss_per_heliostat(
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
-    **kwargs : Mapping[str, torch.Tensor]
+    **kwargs : Any
         Additional keyword arguments used for specific loss definitions only.
 
     Returns

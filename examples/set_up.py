@@ -4,7 +4,7 @@ import h5py
 import torch
 from mpi4py import MPI
 
-from artist.core import learning_rate_schedulers, loss_functions
+from artist.core import loss_functions
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
@@ -83,9 +83,9 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Set number of rays.
-    scenario.light_sources.light_source_list[0].number_of_rays = params[
-        "number_of_rays"
-    ]
+    scenario.light_sources.light_source_list[0].number_of_rays = int(
+        params["number_of_rays"]
+    )
 
     # Set nurbs degree.
     for heliostat_group in scenario.heliostat_field.heliostat_groups:
@@ -97,38 +97,87 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
         base_path="/base/path/to/PAINT",
         heliostat_names=["AA39"],
-        number_of_measurements=params["number_of_training_samples"],
+        number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
     )
+
+    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
+        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    }
+
+    scheduler = params["scheduler"]
+    scheduler_parameters = {
+        config_dictionary.gamma: params["lr_gamma"],
+        config_dictionary.min: params["lr_min"],
+        config_dictionary.max: params["lr_max"],
+        config_dictionary.step_size_up: params["lr_step_size_up"],
+        config_dictionary.reduce_factor: params["lr_reduce_factor"],
+        config_dictionary.patience: params["lr_patience"],
+        config_dictionary.threshold: params["lr_threshold"],
+        config_dictionary.cooldown: params["lr_cooldown"],
+    }
+
+    # Configure regularizers and their weights.
+    ideal_surface_regularizer = {
+        config_dictionary.regularization_callable: config_dictionary.vector_loss,
+        config_dictionary.weight: params["ideal_surface_loss_weight"],
+        config_dictionary.regularizers_parameters: None,
+    }
+    total_variation_regularizer_points = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: params["total_variation_loss_points_weight"],
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: params[
+                "total_variation_loss_number_of_neighbors_points"
+            ],
+            config_dictionary.sigma: params["total_variation_loss_sigma_points"],
+        },
+    }
+    total_variation_regularizer_normals = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: params["total_variation_loss_normals_weight"],
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: params[
+                "total_variation_loss_number_of_neighbors_normals"
+            ],
+            config_dictionary.sigma: params["total_variation_loss_sigma_normals"],
+        },
+    }
+    regularizers = {
+        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
+        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
+        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
+    }
+
+    # Set optimizer parameters.
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
+        config_dictionary.tolerance: 0.00005,
+        config_dictionary.max_epoch: 3000,
+        config_dictionary.num_log: 1,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 20,
+        config_dictionary.scheduler: scheduler,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+        config_dictionary.regularizers: regularizers,
+    }
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
         ddp_setup=ddp_setup,
         scenario=scenario,
-        heliostat_data_mapping=heliostat_data_mapping,
+        data=data,
+        optimization_configuration=optimization_configuration,
         number_of_surface_points=number_of_surface_points_per_facet,
         bitmap_resolution=torch.tensor([256, 256], device=device),
-        flux_loss_weight=1.0,
-        ideal_surface_loss_weight=params["ideal_surface_loss_weight"],
-        total_variation_loss_points_weight=params["total_variation_loss_points_weight"],
-        total_variation_loss_normals_weight=params[
-            "total_variation_loss_normals_weight"
-        ],
-        number_of_neighbors_tv_loss=params["total_variation_loss_number_of_neighbors"],
-        sigma_tv_loss=params["total_variation_loss_sigma"],
-        early_stopping_threshold=1e-3,
-        initial_learning_rate=params["initial_learning_rate"],
-        scheduler=getattr(learning_rate_schedulers, params["scheduler"]),
-        scheduler_parameters=params,
-        tolerance=0.00005,
-        max_epoch=3000,
-        num_log=1,
         device=device,
     )
 
     # Reconstruct surfaces.
     loss = surface_reconstructor.reconstruct_surfaces(
-        loss_function=getattr(loss_functions, params["loss_function"]), device=device
+        loss_function=getattr(loss_functions, str(params["loss_function"])),
+        device=device,
     )
 
     return loss[0].item()

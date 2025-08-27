@@ -1,5 +1,5 @@
 import pathlib
-from typing import Callable
+from typing import Any, Callable
 
 import h5py
 import pytest
@@ -7,10 +7,9 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core import loss_functions
-from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.core.kinematic_calibrator import KinematicCalibrator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import DistributedEnvironmentTypedDict
 
 # Set up logger.
 set_logger_config()
@@ -35,17 +34,17 @@ set_logger_config()
         ),
     ],
 )
-def test_kinematic_optimizer(
+def test_kinematic_calibrator(
     calibration_method: str,
     tolerance: float,
     max_epoch: int,
     initial_lr: float,
     loss_function: Callable[..., torch.Tensor],
-    ddp_setup_for_testing: DistributedEnvironmentTypedDict,
+    ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
     """
-    Test the kinematic optimization methods.
+    Test the kinematic calibration methods.
 
     Parameters
     ----------
@@ -60,7 +59,7 @@ def test_kinematic_optimizer(
     loss_function : Callable[..., torch.Tensor]
         A callable function that computes the loss. It accepts predictions and targets
         and optionally other keyword arguments and return a tensor with loss values.
-    ddp_setup_for_testing : DistributedEnvironmentTypedDict
+    ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
@@ -122,7 +121,7 @@ def test_kinematic_optimizer(
         ),
     ]
 
-    data = {
+    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
         config_dictionary.data_source: config_dictionary.paint,
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
@@ -136,7 +135,7 @@ def test_kinematic_optimizer(
     ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
     # Create the kinematic optimizer.
-    kinematic_optimizer = KinematicOptimizer(
+    kinematic_calibrator = KinematicCalibrator(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         data=data,
@@ -145,7 +144,7 @@ def test_kinematic_optimizer(
     )
 
     # Calibrate the kinematic.
-    _ = kinematic_optimizer.optimize(loss_function=loss_function, device=device)
+    _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = (

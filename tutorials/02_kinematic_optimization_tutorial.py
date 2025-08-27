@@ -1,10 +1,11 @@
 import pathlib
+from typing import Callable
 
 import h5py
 import torch
 
 from artist.core import loss_functions
-from artist.core.kinematic_optimizer import KinematicOptimizer
+from artist.core.kinematic_calibrator import KinematicCalibrator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -23,7 +24,7 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-heliostat_data_mapping = [
+heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]] = [
     (
         "heliostat_name_1",
         [
@@ -54,7 +55,7 @@ heliostat_data_mapping = [
 ]
 
 # Create dict for the data source name and the heliostat_data_mapping.
-data = {
+data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
     config_dictionary.data_source: config_dictionary.paint,
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
@@ -77,16 +78,10 @@ with setup_distributed_environment(
 
     # Set calibration method and loss function.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
-    if (
-        kinematic_calibration_method
-        == config_dictionary.kinematic_calibration_raytracing
-    ):
-        loss_function = loss_functions.focal_spot_loss
-    if (
-        kinematic_calibration_method
-        == config_dictionary.kinematic_calibration_motor_positions
-    ):
-        loss_function = loss_functions.vector_loss
+    # Uncomment for calibration with raytracing:
+    loss_function: Callable[..., torch.Tensor] = loss_functions.focal_spot_loss
+    # Uncomment for calibration with motor positions.
+    # loss_function: Callable[..., torch.Tensor] = loss_functions.vector_loss
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
@@ -117,7 +112,7 @@ with setup_distributed_environment(
     }
 
     # Create the kinematic optimizer.
-    kinematic_optimizer = KinematicOptimizer(
+    kinematic_calibrator = KinematicCalibrator(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
@@ -126,4 +121,4 @@ with setup_distributed_environment(
     )
 
     # Calibrate the kinematic.
-    _ = kinematic_optimizer.optimize(loss_function=loss_function, device=device)
+    _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)

@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
@@ -11,28 +11,28 @@ from artist.data_loader import paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, raytracing_utils
-from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic optimizer."""
 
 
-class KinematicOptimizer:
+class KinematicCalibrator:
     """
-    An optimizer used to find optimal kinematic parameters.
+    An optimizer used to find calibrated kinematic parameters.
 
-    The kinematic optimizer optimizes kinematic parameters. These parameters are
+    The kinematic calibrator optimizes kinematic parameters. These parameters are
     specific to a certain kinematic type and can for example include the 18
     kinematic deviations parameters as well as five actuator parameters for each
     actuator of a rigid body kinematic.
 
     Attributes
     ----------
-    ddp_setup : DistributedEnvironmentTypedDict
+    ddp_setup : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+    data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         The data source name and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
@@ -41,15 +41,15 @@ class KinematicOptimizer:
 
     Methods
     -------
-    optimize()
-        Optimize the kinematic parameters.
+    calibrate()
+        Calibrate the kinematic parameters.
     """
 
     def __init__(
         self,
-        ddp_setup: DistributedEnvironmentTypedDict,
+        ddp_setup: dict[str, Any],
         scenario: Scenario,
-        data: dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]],
+        data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
         optimization_configuration: dict[str, Any],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
     ) -> None:
@@ -58,11 +58,11 @@ class KinematicOptimizer:
 
         Parameters
         ----------
-        ddp_setup : DistributedEnvironmentTypedDict
+        ddp_setup : dict[str, Any]
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+        data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data source name and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
@@ -79,7 +79,7 @@ class KinematicOptimizer:
         self.optimization_configuration = optimization_configuration
         self.calibration_method = calibration_method
 
-    def optimize(
+    def calibrate(
         self,
         loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
@@ -109,7 +109,7 @@ class KinematicOptimizer:
             self.calibration_method
             == config_dictionary.kinematic_calibration_motor_positions
         ):
-            loss = self._optimize_kinematic_parameters_with_motor_positions(
+            loss = self._calibrate_kinematic_parameters_with_motor_positions(
                 loss_function=loss_function,
                 device=device,
             )
@@ -118,22 +118,22 @@ class KinematicOptimizer:
             self.calibration_method
             == config_dictionary.kinematic_calibration_raytracing
         ):
-            loss = self._optimize_kinematic_parameters_with_raytracing(
+            loss = self._calibrate_kinematic_parameters_with_raytracing(
                 loss_function=loss_function,
                 device=device,
             )
 
         return loss
 
-    def _optimize_kinematic_parameters_with_motor_positions(
+    def _calibrate_kinematic_parameters_with_motor_positions(
         self,
         loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Optimize the kinematic parameters using the motor positions.
+        Calibrate the kinematic parameters using the motor positions.
 
-        This optimizer method optimizes the kinematic parameters by extracting the motor positions
+        This optimizer method calibrates the kinematic parameters by extracting the motor positions
         and incident ray directions from calibration data and using the scene's geometry.
 
         Parameters
@@ -175,9 +175,11 @@ class KinematicOptimizer:
             # Load the calibration data.
             heliostat_calibration_mapping = []
 
-            for heliostat, path_properties, _ in self.data[
-                config_dictionary.heliostat_data_mapping
-            ]:
+            heliostat_data_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                self.data[config_dictionary.heliostat_data_mapping],
+            )
+            for heliostat, path_properties, _ in heliostat_data_mapping:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
 
@@ -227,12 +229,12 @@ class KinematicOptimizer:
                 )
 
                 # Create a learning rate scheduler.
-                scheduler = getattr(
+                scheduler_fn = getattr(
                     learning_rate_schedulers,
                     self.optimization_configuration[config_dictionary.scheduler],
                 )
 
-                scheduler: LRScheduler = scheduler(
+                scheduler: LRScheduler = scheduler_fn(
                     optimizer=optimizer,
                     parameters=self.optimization_configuration[
                         config_dictionary.scheduler_parameters
@@ -279,6 +281,7 @@ class KinematicOptimizer:
                         predictions=preferred_reflection_directions,
                         targets=preferred_reflection_directions_measured,
                         loss_function=loss_function,
+                        reduction_dimensions=1,
                         device=device,
                     ).sum()
 
@@ -322,15 +325,15 @@ class KinematicOptimizer:
 
         return final_loss_per_group
 
-    def _optimize_kinematic_parameters_with_raytracing(
+    def _calibrate_kinematic_parameters_with_raytracing(
         self,
         loss_function: Callable[..., torch.Tensor],
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Optimize the kinematic parameters using ray tracing.
+        Calibrate the kinematic parameters using ray tracing.
 
-        This optimizer method optimizes the kinematic parameters by extracting the focus points
+        This calibration method optimizes the kinematic parameters by extracting the focus points
         of calibration images and using heliostat-tracing.
 
         Parameters
@@ -372,9 +375,11 @@ class KinematicOptimizer:
             # Load the calibration data.
             heliostat_calibration_mapping = []
 
-            for heliostat, path_properties, _ in self.data[
-                config_dictionary.heliostat_data_mapping
-            ]:
+            heliostat_data_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                self.data[config_dictionary.heliostat_data_mapping],
+            )
+            for heliostat, path_properties, _ in heliostat_data_mapping:
                 if heliostat in heliostat_group.names:
                     heliostat_calibration_mapping.append((heliostat, path_properties))
 
@@ -410,11 +415,11 @@ class KinematicOptimizer:
                 )
 
                 # Create a learning rate scheduler.
-                scheduler = getattr(
+                scheduler_fn = getattr(
                     learning_rate_schedulers,
                     self.optimization_configuration[config_dictionary.scheduler],
                 )
-                scheduler: LRScheduler = scheduler(
+                scheduler: LRScheduler = scheduler_fn(
                     optimizer=optimizer,
                     parameters=self.optimization_configuration[
                         config_dictionary.scheduler_parameters

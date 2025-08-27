@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
@@ -11,7 +11,7 @@ from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
-from artist.util.environment_setup import DistributedEnvironmentTypedDict, get_device
+from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
@@ -28,11 +28,11 @@ class SurfaceReconstructor:
 
     Attributes
     ----------
-    ddp_setup : DistributedEnvironmentTypedDict
+    ddp_setup : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+    data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         The data source name and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
@@ -53,9 +53,9 @@ class SurfaceReconstructor:
 
     def __init__(
         self,
-        ddp_setup: DistributedEnvironmentTypedDict,
+        ddp_setup: dict[str, Any],
         scenario: Scenario,
-        data: dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]],
+        data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
         optimization_configuration: dict[str, Any],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
@@ -66,11 +66,11 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        ddp_setup : DistributedEnvironmentTypedDict
+        ddp_setup : dict[str, Any]
            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        data : dict[str, str | list[tuple[str, list[pathlib.Path, list[pathlib.Path]]]]]
+        data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data source name and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler and early stopping.
@@ -146,9 +146,11 @@ class SurfaceReconstructor:
             heliostat_flux_path_mapping = []
             heliostat_calibration_mapping = []
 
-            for heliostat, path_properties, path_pngs in self.data[
-                config_dictionary.heliostat_data_mapping
-            ]:
+            heliostat_data_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                self.data[config_dictionary.heliostat_data_mapping],
+            )
+            for heliostat, path_properties, path_pngs in heliostat_data_mapping:
                 if heliostat in heliostat_group.names:
                     heliostat_flux_path_mapping.append((heliostat, path_pngs))
                     heliostat_calibration_mapping.append((heliostat, path_properties))
@@ -240,11 +242,11 @@ class SurfaceReconstructor:
                 )
 
                 # Create a learning rate scheduler.
-                scheduler = getattr(
+                scheduler_fn = getattr(
                     learning_rate_schedulers,
                     self.optimization_configuration[config_dictionary.scheduler],
                 )
-                scheduler: LRScheduler = scheduler(
+                scheduler: LRScheduler = scheduler_fn(
                     optimizer=optimizer,
                     parameters=self.optimization_configuration[
                         config_dictionary.scheduler_parameters
@@ -376,21 +378,22 @@ class SurfaceReconstructor:
                     loss = flux_loss_per_heliostat
 
                     # Include regularization terms.
-                    if self.optimization_configuration[config_dictionary.regularizers]:
-                        for loss_name, callable_name, weight, parameters in zip(
-                            self.optimization_configuration[
-                                config_dictionary.regularizers
-                            ].keys(),
-                            self.optimization_configuration[
-                                config_dictionary.regularizers
-                            ].values(),
-                        ):
-                            callable = (
-                                getattr(
-                                    loss_functions,
-                                    callable_name,
-                                ),
+                    regularizers = self.optimization_configuration[
+                        config_dictionary.regularizers
+                    ]
+                    if regularizers:
+                        for loss_name, regularizer_config in regularizers.items():
+                            callable = getattr(
+                                loss_functions,
+                                regularizer_config[
+                                    config_dictionary.regularization_callable
+                                ],
                             )
+                            weight = regularizer_config[config_dictionary.weight]
+                            parameters = regularizer_config[
+                                config_dictionary.regularizers_parameters
+                            ]
+
                             if loss_name == config_dictionary.ideal_surface_loss:
                                 regularisation_loss = callable(
                                     predictions=heliostat_group.nurbs_control_points[
@@ -401,8 +404,10 @@ class SurfaceReconstructor:
                                     targets=current_active_nurbs_control_points[
                                         start_indices_heliostats
                                     ],
+                                    reduction_dimensions=None,
                                 )
-                            if (
+
+                            elif (
                                 loss_name
                                 == config_dictionary.total_variation_loss_points
                             ):
@@ -416,7 +421,8 @@ class SurfaceReconstructor:
                                     sigma=parameters[config_dictionary.sigma],
                                     device=device,
                                 ).sum()
-                            if (
+
+                            elif (
                                 loss_name
                                 == config_dictionary.total_variation_loss_normals
                             ):
@@ -430,6 +436,11 @@ class SurfaceReconstructor:
                                     sigma=parameters[config_dictionary.sigma],
                                     device=device,
                                 ).sum()
+
+                            else:
+                                raise ValueError(
+                                    f"Regularization {loss_name} is unknown."
+                                )
 
                             loss = loss + loss_functions.scale_loss(
                                 loss=regularisation_loss,
