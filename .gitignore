@@ -168,6 +168,7 @@ cython_debug/
 .csv
 .vscode/settings.json
 examples/data/
+examples/plots/
 
 # Local config files
 config.local.json

@@ -1,144 +1,175 @@
-import re
-import pathlib
 import json
-from typing import Union, List, Tuple
+import pathlib
+import re
+from typing import Union
 
 from artist.util import config_dictionary
 
 
-def find_heliostats_with_min_calibrations(
-    paint_dir: Union[str, pathlib.Path],
-    min_files: int = 100,
-    max_heliostats: int = 10,
-    flux_suffix: str = "flux-centered",  # NEW PARAMETER
-) -> List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]]:
+def find_heliostats_with_minimum_calibrations(
+    paint_directory: Union[str, pathlib.Path],
+    minimum_calibration_files: int = 100,
+    maximum_heliostats: int = 10,
+    flux_file_suffix: str = "flux",
+) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
     """
-    Scans the PAINT directory for heliostat folders and returns those with
-    calibration JSONs and flux image files matching the given suffix.
+    Find heliostats that have at least a minimum number of valid calibration files.
+
+    Scan a PAINT directory for heliostat subdirectories that match the naming pattern, validate calibration JSONs
+    for required focal-spot keys, and collect matching flux image paths for a given suffix. The function returns a
+    sorted list of up to `maximum_heliostats` tuples of the form (heliostat_name, calibration_paths, flux_image_paths).
+    A calibration JSON is considered valid when its focal-spot section contains both
+    `config_dictionary.paint_helios` and `config_dictionary.paint_utis`; only the first `minimum_files` valid
+    calibrations per heliostat are used and missing or unreadable JSON files are skipped with a warning.
 
     Parameters
     ----------
-    paint_dir : str or Path
-        Path to the base PAINT directory.
-    min_files : int
-        Minimum number of calibration files required.
-    flux_suffix : str
-        Suffix to use for flux image filenames (e.g., "flux", "flux-centered").
+    paint_directory : str or pathlib.Path
+        The path to the base PAINT directory.
+    minimum_calibration_files : int
+        The minimum number of calibration files required.
+    maximum_heliostats : int
+        The maximum number of heliostats to include in the result.
+    flux_file_suffix : str
+        The suffix to use for flux image filenames (e.g., ''flux'', ''flux-centered'').
 
     Returns
     -------
-    List[Tuple[str, List[Path], List[Path]]]
-        Valid heliostat data.
+    list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        A list of tuples containing:
+        - The heliostat name.
+        - A list of valid calibration file paths.
+        - A list of flux image file paths.
     """
-    paint_dir = pathlib.Path(paint_dir)
-    name_pattern = re.compile(r"^[A-Z]{2}[0-9]{2}$")
-    heliostat_data = []
+    paint_directory = pathlib.Path(paint_directory)
+    heliostat_name_pattern = re.compile(r"^[A-Z]{2}[0-9]{2}$")
+    heliostat_data_list = []
 
-    for subdir in paint_dir.iterdir():
-        if not subdir.is_dir():
+    for subdirectory in paint_directory.iterdir():
+        if not subdirectory.is_dir():
             continue
 
-        name = subdir.name
-        if not name_pattern.match(name):
+        heliostat_name = subdirectory.name
+        if not heliostat_name_pattern.match(heliostat_name):
             continue
 
-        calibration_dir = subdir / "Calibration"
-        # deflectometry_dir = subdir / "Deflectometry"
-        if not calibration_dir.exists(): #or not deflectometry_dir.exists():
-             continue
+        calibration_directory = (
+            subdirectory / config_dictionary.paint_calibration_folder_name
+        )
+        if not calibration_directory.exists():
+            continue
 
-
-        calibration_files = sorted(calibration_dir.glob("*calibration-properties*.json"))
-        valid_calibration_files = []
-        for path in calibration_files:
+        calibration_file_paths = sorted(
+            calibration_directory.glob(
+                config_dictionary.paint_calibration_properties_file_name_ending
+            )
+        )
+        valid_calibration_file_paths = []
+        for calibration_file_path in calibration_file_paths:
             try:
-                with open(path, "r") as file:
-                    calibration_dict = json.load(file)
-                    focal_data = calibration_dict.get(config_dictionary.paint_focal_spot, {})
+                with open(calibration_file_path, "r") as calibration_file:
+                    calibration_data = json.load(calibration_file)
+                    focal_data = calibration_data.get(
+                        config_dictionary.paint_focal_spot, {}
+                    )
                     if (
                         config_dictionary.paint_helios in focal_data
                         and config_dictionary.paint_utis in focal_data
                     ):
-                        valid_calibration_files.append(path)
-            except Exception as e:
-                print(f"Warning: Skipping {path} due to error: {e}")
+                        valid_calibration_file_paths.append(calibration_file_path)
+            except Exception as error:
+                print(
+                    f"Warning: Skipping {calibration_file_path} due to error: {error}"
+                )
 
-        
-        if len(valid_calibration_files) < min_files:
+        if len(valid_calibration_file_paths) < minimum_calibration_files:
             continue
 
-        valid_calibration_files = valid_calibration_files[:min_files]
-        # deflectometry_files = sorted(deflectometry_dir.glob(f"{name}-filled*.h5"))
-        # if not deflectometry_files:
-        #     continue
+        valid_calibration_file_paths = valid_calibration_file_paths[
+            :minimum_calibration_files
+        ]
 
-        # Match flux images based on suffix (e.g., "flux", "flux-centered")
-        flux_image_files = []
-        for calib_path in valid_calibration_files:
-            stem = calib_path.stem.replace("-calibration-properties", "")
-            image_filename = f"{stem}-{flux_suffix}.png"
-            image_path = calibration_dir / image_filename
-            if image_path.exists():
-                flux_image_files.append(image_path)
+        flux_image_file_paths = []
+        for calibration_file_path in valid_calibration_file_paths:
+            file_stem = calibration_file_path.stem.replace(
+                "-calibration-properties", ""
+            )
+            flux_image_filename = f"{file_stem}-{flux_file_suffix}.png"
+            flux_image_path = calibration_directory / flux_image_filename
+            if flux_image_path.exists():
+                flux_image_file_paths.append(flux_image_path)
 
-        heliostat_data.append((name, valid_calibration_files, flux_image_files))
-        print(f"Added heliostat {name} to list. List length = {len(heliostat_data)}")
-        if len(heliostat_data) >= max_heliostats:
+        heliostat_data_list.append(
+            (heliostat_name, valid_calibration_file_paths, flux_image_file_paths)
+        )
+        print(
+            f"Added heliostat {heliostat_name} to list. List length = {len(heliostat_data_list)}"
+        )
+        if len(heliostat_data_list) >= maximum_heliostats:
             break
 
-    return sorted(heliostat_data, key=lambda x: x[0])
+    return sorted(heliostat_data_list, key=lambda heliostat: heliostat[0])
 
 
-def save_heliostat_list(heliostats: List[Tuple[str, List[pathlib.Path], List[pathlib.Path]]], output_path: Union[str, pathlib.Path]) -> None:
+def save_heliostat_list(
+    heliostat_data_list: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    output_file_path: Union[str, pathlib.Path],
+) -> None:
     """
-    Save list of heliostats to a JSON file, converting Path objects to strings.
+    Save a list of heliostats to a JSON file, converting pathlib.Path objects to strings.
 
     Parameters
     ----------
-    heliostats : List[Tuple[str, List[Path], List[Path]]]
-        List of heliostat data with calibration and flux paths.
-    output_path : str or Path
-        File path to save the list to.
+    heliostat_data_list : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        The list of heliostat data with calibration and flux paths.
+    output_file_path : str or pathlib.Path
+        The file path to save the list to.
     """
-    output_path = pathlib.Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_file_path = pathlib.Path(output_file_path)
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Convert Path objects to strings
     serializable_data = [
         {
-            "name": name,
-            "calibrations": [str(p) for p in calibs],
-            "flux_images": [str(p) for p in fluxes],
+            "name": heliostat_name,
+            "calibrations": [
+                str(calibration_path) for calibration_path in calibration_paths
+            ],
+            "flux_images": [str(flux_path) for flux_path in flux_paths],
         }
-        for name, calibs, fluxes in heliostats
+        for heliostat_name, calibration_paths, flux_paths in heliostat_data_list
     ]
 
-    with open(output_path, "w") as f:
-        json.dump(serializable_data, f, indent=2)
-    print(f"Saved {len(serializable_data)} heliostat entries to {output_path}")
-
+    with open(output_file_path, "w") as output_file:
+        json.dump(serializable_data, output_file, indent=2)
+    print(f"Saved {len(serializable_data)} heliostat entries to {output_file_path}")
 
 
 if __name__ == "__main__":
-    paint_dir = "/workVERLEIHNIX/share/PAINT"
-    output_json = "examples/data/heliostat_files.json"
-    min_calibrations = 80
-    max_heliostats = 800
-    exclude = {"AA39"}
-    flux_suffix = "flux" 
+    paint_directory = "/workVERLEIHNIX/share/PAINT"
+    output_json_file = "examples/data/heliostat_files.json"
+    minimum_calibrations = 80
+    maximum_heliostats = 10
+    excluded_heliostats = {"AA39"}
+    flux_file_suffix = "flux"
 
-    heliostat_data = find_heliostats_with_min_calibrations(
-        paint_dir,
-        min_files=min_calibrations,
-        max_heliostats=max_heliostats,
-        flux_suffix=flux_suffix,
+    heliostat_data_list = find_heliostats_with_minimum_calibrations(
+        paint_directory,
+        minimum_calibration_files=minimum_calibrations,
+        maximum_heliostats=maximum_heliostats,
+        flux_file_suffix=flux_file_suffix,
     )
 
-    heliostat_data = [h for h in heliostat_data if h[0] not in exclude]
-    heliostat_data = heliostat_data[:max_heliostats]
+    heliostat_data_list = [
+        heliostat_data
+        for heliostat_data in heliostat_data_list
+        if heliostat_data[0] not in excluded_heliostats
+    ]
+    heliostat_data_list = heliostat_data_list[:maximum_heliostats]
 
-    print(f"Selected {len(heliostat_data)} heliostats:")
-    for name, calibs, fluxes in heliostat_data:
-        print(f"- {name}: {len(calibs)} calibrations, {len(fluxes)} flux images ({flux_suffix})")
+    print(f"Selected {len(heliostat_data_list)} heliostats:")
+    for heliostat_name, calibration_paths, flux_paths in heliostat_data_list:
+        print(
+            f"- {heliostat_name}: {len(calibration_paths)} calibrations, {len(flux_paths)} flux images ({flux_file_suffix})"
+        )
 
-    save_heliostat_list(heliostat_data, output_json)
+    save_heliostat_list(heliostat_data_list, output_json_file)

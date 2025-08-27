@@ -186,8 +186,8 @@ def extract_paint_tower_measurements(
     TargetAreaListConfig
         The configuration of the tower target areas.
     """
-    device = get_device(device=device)
-
+    device = get_device()
+    print(device)
     log.info("Beginning extraction of tower data from ```PAINT``` file.")
 
     with open(tower_measurements_path, "r") as file:
