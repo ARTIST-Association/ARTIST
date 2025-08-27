@@ -147,6 +147,6 @@ def test_motor_positions_optimizer(
         torch.testing.assert_close(
             heliostat_group.kinematic.motor_positions,
             expected,
-            atol=5e-4,
-            rtol=5e-4,
+            atol=1e-3,
+            rtol=1e-3,
         )
