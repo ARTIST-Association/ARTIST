@@ -292,7 +292,7 @@ paint_properties_folder_name = "Properties"
 paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
 """Ending for calibration properties files in ``PAINT``."""
 paint_properties_file_name_ending = "-heliostat-properties.json"
-"""Ending for calibration properties files in ``PAINT``."""
+"""Ending for properties files in ``PAINT``."""
 
 """Key to access the second motor position in a ``PAINT`` calibration.json file."""
 paint_calibration_folder_name = "Calibration"
