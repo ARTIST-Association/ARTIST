@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
-    log_path = "/home/hgf_dlr/hgf_zas3427/artist-data/logs"
+    log_path = "path/to/log/dir"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
