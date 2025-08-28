@@ -3,7 +3,7 @@ import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict
 
 import cv2
 import h5py
@@ -33,7 +33,7 @@ sys.path.append(str(Path(__file__).resolve().parent))
 MEASUREMENT_IDS = {"AA39": 149576, "AY26": 247613, "BC34": 82084}
 
 
-def find_latest_deflectometry_file(name: str, paint_dir: Union[str, Path]) -> Path:
+def find_latest_deflectometry_file(name: str, paint_dir: str | Path) -> Path:
     """Find the latest deflectometry HDF5 file for a given heliostat.
 
     Parameters
@@ -64,11 +64,11 @@ def find_latest_deflectometry_file(name: str, paint_dir: Union[str, Path]) -> Pa
 
 
 def generate_paint_scenario(
-    paint_dir: Union[str, Path],
-    scenario_path: Union[str, Path],
-    tower_file: Union[str, Path],
-    heliostat_names: List[str],
-    device: Union[torch.device, str] = "cpu",
+    paint_dir: str | Path,
+    scenario_path: str | Path,
+    tower_file: str | Path,
+    heliostat_names: list[str],
+    device: torch.device | str = "cpu",
     use_deflectometry: bool = True,
 ) -> None:
     """Generate an HDF5 scenario from PAINT inputs.
@@ -99,8 +99,7 @@ def generate_paint_scenario(
         )
 
     # Prepare heliostat files.
-    # Build a union-of-lists to match extract_paint_heliostats signature.
-    # TODO UNION loswerden
+    # The function is a hacky workaround to catch a MyPy error.
 
     def create_heliostat_files_list(
         names, paint_dir, config_dict, use_deflectometry=False
@@ -204,7 +203,7 @@ def generate_paint_scenario(
 
 def load_image_as_tensor(
     name: str,
-    paint_dir: Union[str, Path],
+    paint_dir: str | Path,
     measurement_id: int,
     image_key: str,
 ) -> torch.Tensor:
@@ -316,7 +315,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_mask: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: torch.device | str = "cuda",
 ) -> torch.Tensor:
     """Align heliostats and perform heliostat ray tracing.
 
@@ -371,11 +370,11 @@ def align_and_trace_rays(
 
 
 def generate_flux_images(
-    scenario_path: Union[str, Path],
-    heliostats: List[str],
-    paint_dir: Union[str, Path],
-    result_file: Union[str, Path],
-    device: Union[torch.device, str],
+    scenario_path: str | Path,
+    heliostats: list[str],
+    paint_dir: str | Path,
+    result_file: str | Path,
+    device: torch.device | str,
     result_key: str = "flux_deflectometry",
 ) -> None:
     """Generate flux images via alignment and ray tracing and save to a merged result file.
@@ -408,14 +407,11 @@ def generate_flux_images(
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     scenario.light_sources.light_source_list[0].number_of_rays = 6000
-    # Build properties list for facet transforms. Annotate as union list for mypy.
-    heliostat_properties_tuples: List[
-        Union[Tuple[str, Path], Tuple[str, Path, Path]]
-    ] = [
+    heliostat_properties_tuples: list[tuple[str, Path] | tuple[str, Path, Path]] = [
         (
             name,
             pathlib.Path(
-                f"{paint_dir}/{name}/Properties/{name}-heliostat-properties.json"
+                f"{paint_dir}/{name}/{config_dictionary.paint_properties_folder_name}/{name}{config_dictionary.paint_properties_file_name_ending}"
             ),
         )
         for name in heliostats
@@ -433,7 +429,7 @@ def generate_flux_images(
     }
 
     # Build properties list for calibration extraction.
-    heliostat_data_mapping: List[Tuple[str, List[Path]]] = []
+    heliostat_data_mapping: list[tuple[str, list[Path]]] = []
     for name in heliostats:
         heliostat_data_mapping.append(
             (
@@ -532,7 +528,7 @@ def generate_flux_images(
 
 
 def plot_results_flux_comparision(
-    result_file: Union[str, Path], plot_save_path: Union[str, Path]
+    result_file: str | Path, plot_save_path: str | Path
 ) -> None:
     """Plot and save a multi-row comparison of raw, UTIS, deflectometry, and surface images.
 
@@ -594,7 +590,7 @@ def plot_results_flux_comparision(
         ax = [ax]
 
     # Define colormaps
-    colormaps: List[str] = ["gray", "hot", "hot", "jet"]
+    colormaps: list[str] = ["gray", "hot", "hot", "jet"]
 
     for i, (name, data) in enumerate(results_dict.items()):
         # Extract images
@@ -727,7 +723,7 @@ def main() -> None:
     examples_base = pathlib.Path(config["examples_base_path"])
 
     def join_safe(
-        base: pathlib.Path, relative_path: Union[str, pathlib.Path]
+        base: pathlib.Path, relative_path: str | pathlib.Path
     ) -> pathlib.Path:
         """Join base and a possibly absolute path by stripping leading separators."""
         relative_str = str(relative_path)

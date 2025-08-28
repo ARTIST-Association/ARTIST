@@ -318,7 +318,7 @@ def test_extract_paint_heliostats(
         The maximum amount of epochs for fitting the NURBS.
     expected_types : list[Any]
         The expected extracted data types.
-    expected_heliostat : list[Union[torch.Tensor, int, str]],
+    expected_heliostat : list[torch.Tensor| int| str],
         The expected extracted heliostat data.
     device : torch.device
         The device on which to initialize tensors.
@@ -467,7 +467,7 @@ def test_wgs84_to_enu_converter(
         The center of origin of the ENU coordinate system in WGS84 coordinates.
     expected_enu_coordinates : torch.Tensor
         The expected enu coordinates.
-    device : Union[torch.device, str]
+    device : torch.device| str
         The device on which to initialize tensors (default is cuda).
 
     Raises

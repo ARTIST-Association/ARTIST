@@ -1,13 +1,12 @@
 import json
 import pathlib
 import re
-from typing import Union
 
 from artist.util import config_dictionary
 
 
 def find_heliostats_with_minimum_calibrations(
-    paint_directory: Union[str, pathlib.Path],
+    paint_directory: str | pathlib.Path,
     minimum_calibration_files: int = 100,
     maximum_heliostats: int = 10,
     flux_file_suffix: str = "flux",
@@ -113,7 +112,7 @@ def find_heliostats_with_minimum_calibrations(
 
 def save_heliostat_list(
     heliostat_data_list: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    output_file_path: Union[str, pathlib.Path],
+    output_file_path: str | pathlib.Path,
 ) -> None:
     """
     Save a list of heliostats to a JSON file, converting pathlib.Path objects to strings.

@@ -1,6 +1,6 @@
 import math
 import pathlib
-from typing import Optional, Union
+from typing import Optional
 
 import h5py
 import matplotlib.pyplot as plt
@@ -15,7 +15,9 @@ from artist.util.environment_setup import get_device
 # If you have already generated the tutorial scenario yourself, you can use that scenario,
 # create and use any custom scenario, or use one provided in the artist/tutorials/data/scenarios directory.
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mp/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mp/ARTIST/tutorials/data/scenarios/test_scenario_paint_single_heliostat.h5"
+)
 
 # Set up logger.
 set_logger_config()
@@ -168,7 +170,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_mask: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: torch.device | str = "cuda",
 ) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat ray tracing.
@@ -181,7 +183,7 @@ def align_and_trace_rays(
         A mask for the active heliostats.
     target_area_mask : torch.Tensor
         The indices of the target areas for each active heliostat.
-    device : Union[torch.device, str]
+    device : torch.device| str
         The device on which to initialize tensors (default is cuda).
 
     Returns
