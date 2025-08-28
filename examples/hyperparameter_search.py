@@ -16,15 +16,15 @@ if __name__ == "__main__":
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
-    log_path = "path/to/log/file"
+    log_path = "/home/hgf_dlr/hgf_zas3427/artist-data/logs"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
-        level=logging.INFO,  # Logging level
-        log_file=f"{log_path}/{pathlib.Path(__file__).stem}.log",  # Logging path
-        log_to_stdout=True,  # Print log on stdout.
-        log_rank=False,  # Do not prepend MPI rank to logging messages.
-        colors=True,  # Use colors.
+        level=logging.INFO,
+        log_file=f"{log_path}/{pathlib.Path(__file__).stem}.log",
+        log_to_stdout=False,
+        log_rank=True,
+        colors=True,
     )
 
     search_space = {
@@ -53,19 +53,18 @@ if __name__ == "__main__":
         "loss_function": ("distribution_loss_kl_divergence", "pixel_loss"),
     }
 
-    seed = 2
-    rng = random.Random(
-        seed + comm.rank
-    )  # Separate random number generator for optimization.
+    seed = 7
+    rng = random.Random(seed + comm.rank)
+
     # Set up evolutionary operator.
-    num_generations = 5000  # Number of generations
+    num_generations = 100
     pop_size = 2 * comm.size  # Breeding population size
-    propagator = get_default_propagator(  # Get default evolutionary operator.
-        pop_size=pop_size,  # Breeding pool size
-        limits=search_space,  # Search-space limits
-        crossover_prob=0.7,  # Crossover probability
-        mutation_prob=0.4,  # Mutation probability
-        random_init_prob=0.1,  # Random-initialization probability
+    propagator = get_default_propagator(
+        pop_size=pop_size,
+        limits=search_space,
+        crossover_prob=0.7,
+        mutation_prob=0.4,
+        random_init_prob=0.1,
         rng=rng,  # Separate random number generator for Propulate optimization
     )
 
