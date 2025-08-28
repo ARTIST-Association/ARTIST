@@ -9,7 +9,6 @@ from propulate.utils.benchmark_functions import (
     parse_arguments,
 )
 
-from artist import ARTIST_ROOT
 from examples import set_up
 
 if __name__ == "__main__":
@@ -27,16 +26,6 @@ if __name__ == "__main__":
         log_rank=False,  # Do not prepend MPI rank to logging messages.
         colors=True,  # Use colors.
     )
-
-    scenario_paths = [
-        str(scenario_path)
-        for scenario_path in (
-            pathlib.Path(ARTIST_ROOT) / "examples/data/scenarios"
-        ).iterdir()
-        if scenario_path.is_file()
-        and scenario_path.name.startswith("scenario_")
-        and scenario_path.name.endswith("_control_points.h5")
-    ]
 
     search_space = {
         "number_of_surface_points": (30, 100),
