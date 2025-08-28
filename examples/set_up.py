@@ -95,7 +95,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Create a heliostat data mapping for the specified number of training samples.
     heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path="/home/hgf_dlr/hgf_zas3427/artist-data/paint",
+        base_path="path/to/paint/data/dir",
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
