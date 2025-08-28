@@ -255,17 +255,23 @@ class HeliostatField:
                 ),
                 device=device,
             )
+            canting = torch.empty((number_of_facets, 2, 4), device=device)
+            facet_translation_vectors = torch.empty(
+                (number_of_facets, 4), device=device
+            )
             for i in range(number_of_facets):
                 degrees = surface_config.facet_list[i].degrees
                 control_points[i] = surface_config.facet_list[i].control_points
+                canting[i] = surface_config.facet_list[i].canting
+                facet_translation_vectors[i] = surface_config.facet_list[
+                    i
+                ].translation_vector
 
-            if change_number_of_control_points_per_facet:
+            if change_number_of_control_points_per_facet is not None:
                 control_points = utils.create_ideal_canted_nurbs_control_points(
                     number_of_control_points=change_number_of_control_points_per_facet,
-                    canting=surface_config.facet_list[0].canting,
-                    facet_translation_vectors=surface_config.facet_list[
-                        0
-                    ].translation_vector,
+                    canting=canting,
+                    facet_translation_vectors=facet_translation_vectors,
                     device=device,
                 )
 
