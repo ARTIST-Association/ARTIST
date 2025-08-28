@@ -2,7 +2,7 @@ import copy
 import json
 import os
 import pathlib
-from typing import Optional, Tuple, Union
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -36,9 +36,9 @@ set_logger_config()
 
 
 def _generate_paint_scenario(
-    scenario_path: Union[str, pathlib.Path],
-    tower_file: Union[str, pathlib.Path],
-    heliostat_files_list: list[Tuple[str, pathlib.Path]],
+    scenario_path: str | pathlib.Path,
+    tower_file: str | pathlib.Path,
+    heliostat_files_list: list[tuple[str, pathlib.Path]],
     device: str = "cpu",
 ) -> None:
     """Generate a scenario file based on tower and heliostat data.
@@ -103,10 +103,10 @@ def _generate_paint_scenario(
 
 
 def _load_heliostat_data(
-    paint_repo: Union[str, pathlib.Path], input_path: Union[str, pathlib.Path]
-) -> Tuple[
-    list[Tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    list[Tuple[str, pathlib.Path]],
+    paint_repo: str | pathlib.Path, input_path: str | pathlib.Path
+) -> tuple[
+    list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    list[tuple[str, pathlib.Path]],
 ]:
     """Load heliostat calibration/flux-image mapping and derive properties file paths.
 
@@ -141,9 +141,9 @@ def _load_heliostat_data(
         raw_data = json.load(f)
 
     heliostat_data_mapping: list[
-        Tuple[str, list[pathlib.Path], list[pathlib.Path]]
+        tuple[str, list[pathlib.Path], list[pathlib.Path]]
     ] = []
-    heliostat_properties_list: list[Tuple[str, pathlib.Path]] = []
+    heliostat_properties_list: list[tuple[str, pathlib.Path]] = []
 
     for item in raw_data:
         name = item["name"]
@@ -164,11 +164,11 @@ def _load_heliostat_data(
 
 
 def load_or_create_scenario(
-    scenario_path: Union[str, pathlib.Path],
-    tower_file: Union[str, pathlib.Path],
-    heliostat_properties_list: list[Tuple[str, pathlib.Path]],
+    scenario_path: str | pathlib.Path,
+    tower_file: str | pathlib.Path,
+    heliostat_properties_list: list[tuple[str, pathlib.Path]],
     device: Optional[torch.device],
-) -> Tuple[Scenario, pathlib.Path]:
+) -> tuple[Scenario, pathlib.Path]:
     """Ensure scenario exists, create if missing, and return loaded Scenario and its HDF5 path.
 
     Parameters
@@ -212,8 +212,8 @@ def load_or_create_scenario(
 
 
 def filter_valid_heliostat_data(
-    heliostat_data_mapping: list[Tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-) -> list[Tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
+    heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]:
     """Filter flux images so each has a matching calibration stem per heliostat.
 
     Parameters
@@ -248,7 +248,7 @@ def run_calibration(
     scenario_utis: Scenario,
     scenario_helios: Scenario,
     valid_heliostat_data_mapping: list[
-        Tuple[str, list[pathlib.Path], list[pathlib.Path]]
+        tuple[str, list[pathlib.Path], list[pathlib.Path]]
     ],
     device: Optional[torch.device],
     centroids_extracted_by: Optional[list[str]] = None,
@@ -406,7 +406,7 @@ def attach_positions(results_dict: dict, scenario: Scenario) -> None:
 
 
 def plot_mrad_error_distributions(
-    results_dict: dict, save_path: Optional[Union[str, pathlib.Path]] = None
+    results_dict: dict, save_path: Optional[str | pathlib.Path] = None
 ) -> plt.Figure:
     """Plot histograms and KDEs of mrad losses (0–10 mrad) for HeliOS and UTIS across all heliostats.
 
@@ -533,7 +533,7 @@ def plot_mrad_error_distributions(
 
 
 def plot_mrad_vs_distance(
-    results_dict: dict, save_path: Optional[Union[str, pathlib.Path]] = None
+    results_dict: dict, save_path: Optional[str | pathlib.Path] = None
 ) -> plt.Figure:
     """Plot mean pointing error (mrad) vs. heliostat XY distance with trendlines.
 
@@ -635,12 +635,12 @@ def plot_mrad_vs_distance(
 
 
 def main(
-    paint_repository: Union[str, pathlib.Path],
-    heliostat_list_file: Union[str, pathlib.Path],
-    scenario_path: Union[str, pathlib.Path],
-    tower_file: Union[str, pathlib.Path],
+    paint_repository: str | pathlib.Path,
+    heliostat_list_file: str | pathlib.Path,
+    scenario_path: str | pathlib.Path,
+    tower_file: str | pathlib.Path,
     device: Optional[torch.device] = None,
-    results_path: Union[str, pathlib.Path] = "calibration_results.pt",
+    results_path: str | pathlib.Path = "calibration_results.pt",
     # Optimizer settings exposed here so they are easy to change:
     use_ray_tracing: bool = False,
     tolerance: float = 0.05,
@@ -735,9 +735,7 @@ if __name__ == "__main__":
     paint_base = pathlib.Path(config_data["paint_repository_base_path"])
     examples_base = pathlib.Path(config_data["examples_base_path"])
 
-    def join_safe(
-        base: pathlib.Path, maybe_rel: Union[str, pathlib.Path]
-    ) -> pathlib.Path:
+    def join_safe(base: pathlib.Path, maybe_rel: str | pathlib.Path) -> pathlib.Path:
         """Join base with maybe relative path, stripping leading separators."""
         s = str(maybe_rel)
         return base / s.lstrip("/\\")
