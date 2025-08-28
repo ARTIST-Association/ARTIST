@@ -18,13 +18,13 @@ class SurfaceGenerator:
     Attributes
     ----------
     number_of_control_points : torch.Tensor
-        Number of NURBS control points per facet in the east an north direction.
+        Number of NURBS control points per facet in the east and north direction.
     degrees : torch.Tensor
         Degree of the NURBS in the east and north direction.
 
     Methods
     -------
-    fit_nurbs_surface()
+    fit_nurbs()
         Fit the NURBS surface given the conversion method.
     generate_fitted_surface_config()
         Generate a fitted surface configuration.
@@ -41,22 +41,21 @@ class SurfaceGenerator:
         """
         Initialize the surface generator.
 
-        Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
-        exported to a binary file or downloaded from ```PAINT``. The data formats are different depending on their source.
-        To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the
+        Heliostat data, including information regarding their surfaces and structure, can be generated via 'STRAL' and
+        exported to a binary file or downloaded from 'PAINT'. The data formats are different depending on their source.
+        To convert this data into a surface configuration format suitable for ARTIST, this converter first loads the
         data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
-        be used directly in an ``ARTIST`` scenario.
+        be used directly in an ARTIST scenario.
 
         Parameters
         ----------
         number_of_control_points : torch.Tensor
-            Number of NURBS control points per facet in the east an north direction (default is torch.tensor([20,20])).
+            Number of NURBS control points per facet in the east and north direction (default is torch.tensor([10, 10])).
         degrees : torch.Tensor
-            Degree of the NURBS in the east and north direction (default is torch.tensor([3,3])).
+            Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
 
@@ -75,22 +74,20 @@ class SurfaceGenerator:
         device: torch.device | None = None,
     ) -> NURBSSurfaces:
         """
-        Fit the NURBS surface given the conversion method.
+        Fit a NURBS surface given the selected fitting method.
 
-        The surface points are first normalized and shifted to the range (0,1) to be compatible with the knot vector of
+        The surface points are first normalized and shifted to the range (0, 1) to be compatible with the knot vector of
         the NURBS surface. The NURBS surface is then initialized with the correct number of control points, degrees, and
         knots, and the origin of the control points is set based on the width and height of the point cloud. The control
-        points are then fitted to the surface points or surface normals using an Adam optimizer.
-        The optimization stops when the loss is less than the tolerance or the maximum number of epochs is reached.
+        points are then fitted to the surface points or surface normals using the provided optimizer. The optimization
+        stops when the loss is less than the tolerance or the maximum number of epochs is reached.
 
         Parameters
         ----------
         surface_points : torch.Tensor
-            The surface points.
-            Tensor of shape [number_of_surface_points, 4].
+            The surface points in homogeneous coordinates, shape (number_of_surface_points, 4).
         surface_normals : torch.Tensor
-            The surface normals.
-            Tensor of shape [number_of_surface_normals, 4].
+            The surface normals in homogeneous coordinates, shape (number_of_surface_normals, 4).
         optimizer : torch.optim.Optimizer
             The NURBS fit optimizer.
         scheduler : torch.optim.lr_scheduler.LRScheduler | None
@@ -98,15 +95,12 @@ class SurfaceGenerator:
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-        initial_learning_rate : float
-            The initial learning rate for the NURBS fit (default is 1e-3).
+            The tolerance value used for fitting NURBS surfaces (default is 1e-10).
         max_epoch : int
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------
@@ -115,8 +109,8 @@ class SurfaceGenerator:
 
         Returns
         -------
-        NURBSSurface
-            A NURBS surface.
+        NURBSSurfaces
+            A fitted NURBS surface container.
         """
         accepted_conversion_methods = [
             config_dictionary.fit_nurbs_from_points,
@@ -172,7 +166,7 @@ class SurfaceGenerator:
         control_points[:, :, :, :, 1] = control_points_n
         control_points[:, :, :, :, 2] = 0
 
-        # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
+        # Since NURBS are only defined between (0, 1), we need to normalize the evaluation points and remove the boundary points.
         evaluation_points[:, :2] = utils.normalize_points(evaluation_points[:, :2])
         evaluation_points = evaluation_points.unsqueeze(0).unsqueeze(0)
 
@@ -196,7 +190,6 @@ class SurfaceGenerator:
             )
 
             optimizer.zero_grad()
-
             loss_function = torch.nn.MSELoss()
 
             if fit_method == config_dictionary.fit_nurbs_from_points:
@@ -211,7 +204,7 @@ class SurfaceGenerator:
                 scheduler.step(loss.abs().mean())
             if epoch % 100 == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}.",
+                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}."
                 )
             epoch += 1
 
@@ -237,7 +230,7 @@ class SurfaceGenerator:
 
         The fitted surface configuration is composed of separate facets. Each facet is defined by fitted control points,
         meaning the control points are fitted to measured point cloud or surface normals data. Initializing a surface
-        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting on real-world
+        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting real-world
         conditions. The surface can be fitted to deflectometry data or any other provided point cloud data.
 
         Parameters
@@ -245,15 +238,13 @@ class SurfaceGenerator:
         heliostat_name : str
             The heliostat name, used for logging.
         facet_translation_vectors : torch.Tensor
-            Translation vector for each facet from heliostat origin to relative position.
-            Tensor of shape [number_of_facets, 4].
+            Translation vector for each facet from heliostat origin to relative position, shape (number_of_facets, 4).
         canting : torch.Tensor
-            The canting vector per facet in east and north direction.
-            Tensor of shape [number_of_facets, 2, 4].
+            The canting vectors per facet in east and north directions, shape (number_of_facets, 2, 4).
         surface_points_with_facets_list : list[torch.Tensor]
-            A list of facetted surface points. Points per facet may vary.
+            A list of faceted surface points in 3D; points per facet may vary. Each tensor shape: (number_of_points, 3).
         surface_normals_with_facets_list : list[torch.Tensor]
-            A list of facetted surface normals. Normals per facet may vary.
+            A list of faceted surface normals in 3D; normals per facet may vary. Each tensor shape: (number_of_normals, 3).
         optimizer : torch.optim.Optimizer
             The NURBS fit optimizer.
         scheduler : torch.optim.lr_scheduler.LRScheduler | None
@@ -263,15 +254,12 @@ class SurfaceGenerator:
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-        initial_learning_rate : float
-            The initial learning rate for the NURBS fit (default is 1e-3).
+            The tolerance value used for fitting NURBS surfaces (default is 1e-10).
         max_epoch : int
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -283,7 +271,7 @@ class SurfaceGenerator:
         log.info("Beginning generation of the fitted surface configuration.")
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
-        # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
+        # dimensions, so that they can be stacked into a single tensor and then can be used by ARTIST.
         minimum_number_of_surface_points_all_facets = min(
             single_facet_surface_points.shape[0]
             for single_facet_surface_points in surface_points_with_facets_list
@@ -304,7 +292,7 @@ class SurfaceGenerator:
         ]
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
 
-        # Select only selected number of points to reduce compute.
+        # Select only a subset of points to reduce compute.
         surface_points_with_facets = surface_points_with_facets[
             :, ::deflectometry_step_size
         ]
@@ -327,7 +315,7 @@ class SurfaceGenerator:
         )
 
         # Generate NURBS surface from multiple facets.
-        # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+        # Each facet automatically has the same control point dimensions. This is required in ARTIST.
         log.info(f"Generating NURBS surface for heliostat: {heliostat_name}.")
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
@@ -464,29 +452,24 @@ class SurfaceGenerator:
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Perform the canting rotation and facet translation on the provided, ideal control points for a single facet.
+        Perform the canting rotation and facet translation on the provided ideal control points for a single facet.
 
         Parameters
         ----------
         control_points : torch.Tensor
-            The points to be canted and translated.
-            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            The points to be canted and translated, shape (number_of_control_points_east, number_of_control_points_north, 3).
         facet_translation : torch.Tensor
-            Translation vector for each facet from heliostat origin to relative position.
-            Tensor of shape [4].
+            Translation vector for each facet from heliostat origin to relative position, shape (4,).
         canting : torch.Tensor
-            The canting vector per facet in east and north direction.
-            Tensor of shape [2, 4].
+            The canting vectors per facet in east and north directions, shape (2, 4).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
-            The canted and translated points.
-            Tensor of shape [number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            The canted and translated points, shape (number_of_control_points_east, number_of_control_points_north, 3).
         """
         device = get_device(device=device)
 
@@ -497,7 +480,6 @@ class SurfaceGenerator:
         rotation_matrix[:3, 2] = torch.nn.functional.normalize(
             torch.linalg.cross(rotation_matrix[:3, 0], rotation_matrix[:3, 1]), dim=0
         )
-
         rotation_matrix[3, 3] = 1.0
 
         canted_points = (
@@ -510,3 +492,71 @@ class SurfaceGenerator:
         canted_with_translation = canted_points + facet_translation
 
         return canted_with_translation[:, :, :3]
+
+    @staticmethod
+    def perform_inverse_canting_and_translation(
+        canted_points: torch.Tensor,
+        translation: torch.Tensor,
+        canting: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Invert the canting rotation and translation on a batch of facets.
+
+        Parameters
+        ----------
+        canted_points : torch.Tensor
+            Homogeneous points after the forward transform, shape (number_of_facets, number_of_points, 4).
+        translation : torch.Tensor
+            Batch of facet translations, shape (number_of_facets, 4).
+        canting : torch.Tensor
+            Batch of canting vectors (east, north), shape (number_of_facets, 2, 4).
+        device : torch.device | None
+            Computation device.
+
+        Returns
+        -------
+        torch.Tensor
+            Original 3D points, shape (number_of_facets, number_of_points, 3).
+        """
+        device = get_device(device=device)
+        number_of_facets, number_of_points, _ = canted_points.shape
+
+        # Build forward transform per facet (use only ENU 3D for rotation).
+        forward_transform = torch.zeros((number_of_facets, 4, 4), device=device)
+
+        east_unit_vector = torch.nn.functional.normalize(
+            canting[:, 0, :3], dim=1
+        )  # (F, 3).
+        north_unit_vector = torch.nn.functional.normalize(
+            canting[:, 1, :3], dim=1
+        )  # (F, 3).
+        up_unit_vector = torch.nn.functional.normalize(
+            torch.linalg.cross(east_unit_vector, north_unit_vector, dim=1), dim=1
+        )  # (F, 3).
+
+        forward_transform[:, :3, 0] = east_unit_vector
+        forward_transform[:, :3, 1] = north_unit_vector
+        forward_transform[:, :3, 2] = up_unit_vector
+        # Translation column; ensure bottom element is 1.
+        forward_transform[:, :3, 3] = translation[:, :3]
+        forward_transform[:, 3, 3] = 1.0
+
+        # Extract rotation and translation.
+        rotation_matrix = forward_transform[:, :3, :3]  # (F, 3, 3).
+        translation_vector = forward_transform[:, :3, 3]  # (F, 3).
+
+        # Compute inverse transform.
+        rotation_matrix_inverse = rotation_matrix.transpose(1, 2)  # (F, 3, 3).
+        translation_inverse = -torch.bmm(
+            rotation_matrix_inverse, translation_vector.unsqueeze(-1)
+        ).squeeze(-1)  # (F, 3).
+
+        inverse_transform = torch.zeros((number_of_facets, 4, 4), device=device)
+        inverse_transform[:, :3, :3] = rotation_matrix_inverse
+        inverse_transform[:, :3, 3] = translation_inverse
+        inverse_transform[:, 3, 3] = 1.0
+
+        # Apply inverse transform.
+        restored_points = torch.bmm(canted_points, inverse_transform.transpose(1, 2))
+        return restored_points[..., :3]
