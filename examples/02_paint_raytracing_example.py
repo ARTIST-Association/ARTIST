@@ -1,71 +1,347 @@
+import json
+import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, List, Tuple, Union
 
 import cv2
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from PIL import Image
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import paint_loader
+from artist.data_loader.paint_loader import (
+    extract_canting_and_translation_from_properties,
+)
+from artist.scenario.configuration_classes import (
+    LightSourceConfig,
+    LightSourceListConfig,
+)
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
 from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import set_logger_config
+from artist.util import config_dictionary, set_logger_config
+from artist.util.environment_setup import get_device
 
 sys.path.append(str(Path(__file__).resolve().parent))
-import json
-import os
-
-import paint_utils
-
-helmholtz_colors = {
-    "hgfblue": "#005AA0",
-    "hgfdarkblue": "#0A2D6E",
-    "hgfgreen": "#8CB423",
-    "hgfgray": "#5A696E",
-    "hgfaerospace": "#50C8AA",
-    "hgfearthandenvironment": "#326469",
-    "hgfenergy": "#FFD228",
-    "hgfhealth": "#D23264",
-    "hgfkeytechnologies": "#A0235A",
-    "hgfmatter": "#F0781E",
-}
 
 
 MEASUREMENT_IDS = {"AA39": 149576, "AY26": 247613, "BC34": 82084}
 
 
+def find_latest_deflectometry_file(name: str, paint_dir: Union[str, Path]) -> Path:
+    """Find the latest deflectometry HDF5 file for a given heliostat.
+
+    Parameters
+    ----------
+    name : str
+        Heliostat name (e.g., "AA39").
+    paint_dir : str | Path
+        Base PAINT directory.
+
+    Returns
+    -------
+    Path
+        Path to the latest deflectometry file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no matching file is found.
+    """
+    search_path = pathlib.Path(paint_dir) / name / "Deflectometry"
+    pattern = f"{name}-filled*.h5"
+    files = sorted(search_path.glob(pattern))
+    if not files:
+        raise FileNotFoundError(
+            f"No deflectometry file found for {name} in {search_path}"
+        )
+    return files[-1]
+
+
+def generate_paint_scenario(
+    paint_dir: Union[str, Path],
+    scenario_path: Union[str, Path],
+    tower_file: Union[str, Path],
+    heliostat_names: List[str],
+    device: Union[torch.device, str] = "cpu",
+    use_deflectometry: bool = True,
+) -> None:
+    """Generate an HDF5 scenario from PAINT inputs.
+
+    Parameters
+    ----------
+    paint_dir : str | Path
+        Base PAINT repository path.
+    scenario_path : str | Path
+        Output scenario path without extension ('.h5' will be added).
+    tower_file : str | Path
+        Path to the tower measurements HDF5.
+    heliostat_names : list[str]
+        Heliostat identifiers to include.
+    device : torch.device | str, optional
+        Torch device for processing, by default "cpu".
+    use_deflectometry : bool, optional
+        If True, include deflectometry data for surface fitting, by default True.
+    """
+    # Normalize to Path for mypy correctness
+    scenario_path = pathlib.Path(scenario_path)
+    tower_file_path = pathlib.Path(tower_file)
+
+    if not scenario_path.parent.is_dir():
+        raise FileNotFoundError(
+            f"The folder ``{scenario_path.parent}`` selected to save the scenario does not exist. "
+            "Please create the folder or adjust the file path before running again!"
+        )
+
+    # Prepare heliostat files.
+    # Build a union-of-lists to match extract_paint_heliostats signature.
+    # TODO UNION loswerden
+
+    def create_heliostat_files_list(
+        names, paint_dir, config_dict, use_deflectometry=False
+    ):
+        if use_deflectometry:
+            return [
+                (
+                    name,
+                    pathlib.Path(
+                        f"{paint_dir}/{name}/{config_dict.paint_properties_folder_name}/{name}{config_dict.paint_properties_file_name_ending}"
+                    ),
+                    find_latest_deflectometry_file(name, paint_dir),
+                )
+                for name in names
+            ]
+        else:
+            return [
+                (
+                    name,
+                    pathlib.Path(
+                        f"{paint_dir}/{name}/{config_dict.paint_properties_folder_name}/{name}{config_dict.paint_properties_file_name_ending}"
+                    ),
+                )
+                for name in names
+            ]
+
+    heliostat_files_list = create_heliostat_files_list(
+        heliostat_names, paint_dir, config_dictionary, use_deflectometry
+    )
+    paths_arg = heliostat_files_list
+
+    # Include the power plant configuration.
+    power_plant_config, target_area_list_config = (
+        paint_loader.extract_paint_tower_measurements(
+            tower_measurements_path=tower_file_path,  # pass Path
+            device=device,
+        )
+    )
+
+    # Include the light source configuration.
+    light_source1_config = LightSourceConfig(
+        light_source_key="sun_1",
+        light_source_type=config_dictionary.sun_key,
+        number_of_rays=10,
+        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        mean=0.0,
+        covariance=4.3681e-06,
+    )
+
+    # Create a list of light source configs - in this case only one.
+    light_source_list = [light_source1_config]
+
+    # Include the configuration for the list of light sources.
+    light_source_list_config = LightSourceListConfig(
+        light_source_list=light_source_list
+    )
+
+    number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
+    nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
+    nurbs_deflectometry_step_size = 100
+    nurbs_fit_tolerance = 1e-10
+    nurbs_fit_max_epoch = 400
+
+    # Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+    nurbs_fit_optimizer = torch.optim.Adam(
+        [torch.empty(1, requires_grad=True)], lr=1e-3
+    )
+    nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        nurbs_fit_optimizer,
+        mode="min",
+        factor=0.2,
+        patience=50,
+        threshold=1e-7,
+        threshold_mode="abs",
+    )
+
+    heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
+        paths=paths_arg,
+        power_plant_position=power_plant_config.power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        deflectometry_step_size=nurbs_deflectometry_step_size,
+        nurbs_fit_method=nurbs_fit_method,
+        nurbs_fit_tolerance=nurbs_fit_tolerance,
+        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+        nurbs_fit_optimizer=nurbs_fit_optimizer,
+        nurbs_fit_scheduler=nurbs_fit_scheduler,
+        device=device,
+    )
+
+    # Generate the scenario given the defined parameters.
+    scenario_generator = H5ScenarioGenerator(
+        file_path=scenario_path,  # pass Path
+        power_plant_config=power_plant_config,
+        target_area_list_config=target_area_list_config,
+        light_source_list_config=light_source_list_config,
+        prototype_config=prototype_config,
+        heliostat_list_config=heliostat_list_config,
+    )
+    scenario_generator.generate_scenario()
+
+
+def load_image_as_tensor(
+    name: str,
+    paint_dir: Union[str, Path],
+    measurement_id: int,
+    image_key: str,
+) -> torch.Tensor:
+    """Load a flux PNG as grayscale and return a float tensor in [0, 1].
+
+    Parameters
+    ----------
+    name : str
+        Heliostat name.
+    paint_dir : str | Path
+        Base PAINT directory.
+    measurement_id : int
+        Measurement identifier.
+    image_key : str
+        Image key suffix (e.g., "cropped", "flux").
+
+    Returns
+    -------
+    torch.Tensor
+        Grayscale image tensor with shape (H, W), dtype float32 in [0, 1].
+
+    Raises
+    ------
+    FileNotFoundError
+        If the image file does not exist.
+    """
+    # Build the path.
+    image_path = pathlib.Path(
+        f"{paint_dir}/{name}/{config_dictionary.paint_calibration_folder_name}/{measurement_id}-{image_key}.png"
+    )
+
+    # Open image in grayscale ('L' mode).
+    image = Image.open(image_path).convert("L")
+
+    # Convert to tensor and normalize to [0, 1] float.
+    tensor = torch.from_numpy(np.array(image)).float() / 255.0
+    return tensor
+
+
+def calculate_flux_deviation(
+    flux_tensor_one: torch.Tensor,
+    flux_tensor_two: torch.Tensor,
+    normalize_by: str = "f1",
+) -> torch.Tensor:
+    """Calculate a relative flux deviation between two flux maps.
+
+    The deviation is computed as the mean absolute difference after normalizing both
+    images by the mean intensity of the selected reference (normalize_by).
+
+    Parameters
+    ----------
+    flux_tensor_one : torch.Tensor
+        First flux tensor (reference), shape (..., H, W).
+    flux_tensor_two : torch.Tensor
+        Second flux tensor (comparison), shape (..., H, W).
+    normalize_by : {"f1", "f2"}, optional
+        Select whether to normalize intensities by the mean of the first ("f1")
+        or the second ("f2") tensor, by default "f1".
+
+    Returns
+    -------
+    torch.Tensor
+        Deviation per image (broadcast over leading batch dimensions), shape compatible
+        with the batch dimensions of the inputs.
+
+    Raises
+    ------
+    ValueError
+        If input shapes do not match or normalize_by has an invalid value.
+    """
+    if flux_tensor_one.shape != flux_tensor_two.shape:
+        raise ValueError(
+            f"Shape mismatch: flux_tensor_one {flux_tensor_one.shape} vs flux_tensor_two {flux_tensor_two.shape}"
+        )
+
+    # Keep device/dtype and support batched images (..., H, W).
+    eps = (
+        torch.finfo(flux_tensor_one.dtype).eps
+        if flux_tensor_one.is_floating_point()
+        else 1e-8
+    )
+    # Reduce over last two dims (H, W).
+    reduce_dims = tuple(range(flux_tensor_one.ndim - 2, flux_tensor_one.ndim))
+    m1 = flux_tensor_one.mean(dim=reduce_dims, keepdim=True).clamp_min(eps)
+    m2 = flux_tensor_two.mean(dim=reduce_dims, keepdim=True).clamp_min(eps)
+
+    # Scale both to comparable range; honor normalize_by.
+    if normalize_by == "f1":
+        f1n = flux_tensor_one / m1
+        f2n = flux_tensor_two / m1
+    elif normalize_by == "f2":
+        f1n = flux_tensor_one / m2
+        f2n = flux_tensor_two / m2
+    else:
+        raise ValueError("normalize_by must be 'f1' or 'f2'.")
+
+    abs_diff = (f1n - f2n).abs()
+    sum_abs_diff = abs_diff.sum(dim=reduce_dims)
+    # Normalization factor = mean of chosen reference (per-image), multiplied by pixel count.
+    ref_mean = 1.0  # Since we normalized by the chosen mean above.
+    num_px = flux_tensor_one.shape[-1] * flux_tensor_one.shape[-2]
+    deviation = sum_abs_diff / (ref_mean * num_px)
+    return deviation
+
+
 def align_and_trace_rays(
     scenario: Scenario,
-    aimpoints: torch.Tensor,
+    aim_points: torch.Tensor,
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_mask: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
-    """
-    Align the heliostat and perform heliostat ray tracing.
+    """Align heliostats and perform heliostat ray tracing.
 
     Parameters
     ----------
+    scenario : Scenario
+        Loaded scenario object.
+    aim_points : torch.Tensor
+        Aim points on the receiver for each heliostat; shape compatible with the
+        scenario's alignment routine.
     light_direction : torch.Tensor
-        The direction of the incoming light on the heliostat.
+        Incoming light directions per heliostat; shape compatible with the scenario.
     active_heliostats_mask : torch.Tensor
-        A mask for the active heliostats.
+        Mask indicating which heliostats are active.
     target_area_mask : torch.Tensor
-        The indices of the target areas for each active heliostat.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+        Target area indices for each active heliostat.
+    device : torch.device | str, optional
+        Device to use for computations, by default "cuda".
 
     Returns
     -------
     torch.Tensor
-        A tensor containing the distribution strengths used to generate the image on the receiver.
+        Flux density image(s) on the receiver.
     """
-    # Activate heliostats
+    # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
         active_heliostats_mask=active_heliostats_mask
     )
@@ -74,7 +350,7 @@ def align_and_trace_rays(
     scenario.heliostat_field.heliostat_groups[
         0
     ].align_surfaces_with_incident_ray_directions(
-        aim_points=aimpoints,
+        aim_points=aim_points,
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -82,8 +358,7 @@ def align_and_trace_rays(
 
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
-        scenario=scenario,
-        heliostat_group=scenario.heliostat_field.heliostat_groups[0],
+        scenario=scenario, heliostat_group=scenario.heliostat_field.heliostat_groups[0]
     )
 
     # Perform heliostat-based ray tracing.
@@ -95,19 +370,70 @@ def align_and_trace_rays(
     )
 
 
-def generate_flux_images(scenario_path, heliostats, paint_dir, result_file, device):
-    """Generate flux images via alignment and ray tracing and save to result_file."""
-    results_dict = {}
+def generate_flux_images(
+    scenario_path: Union[str, Path],
+    heliostats: List[str],
+    paint_dir: Union[str, Path],
+    result_file: Union[str, Path],
+    device: Union[torch.device, str],
+    result_key: str = "flux_deflectometry",
+) -> None:
+    """Generate flux images via alignment and ray tracing and save to a merged result file.
 
-    scenario_path = pathlib.Path(scenario_path).with_suffix(".h5")
+    Parameters
+    ----------
+    scenario_path : str | Path
+        Base path (without .h5) of the scenario to load.
+    heliostats : list[str]
+        Heliostat names to process, order must match extracted calibration data.
+    paint_dir : str | Path
+        PAINT repository path.
+    result_file : str | Path
+        Path to a single merged .pt file to store results for all runs.
+    device : torch.device | str
+        Device to run computations on.
+    result_key : str, optional
+        Key under which to store the result (e.g., "flux_deflectometry", "flux_ideal"),
+        by default "flux_deflectometry".
+    """
+    results_dict: Dict[str, Dict[str, np.ndarray]] = {}
+    results_path = pathlib.Path(result_file)
+    if results_path.exists():
+        results_dict = torch.load(results_path, weights_only=False)
 
-    # Load scenario
-    with h5py.File(scenario_path, "r") as scenario_file:
+    scenario_h5_path = pathlib.Path(scenario_path).with_suffix(".h5")
+
+    # Load scenario.
+    with h5py.File(scenario_h5_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     scenario.light_sources.light_source_list[0].number_of_rays = 6000
-    # Generate list
-    heliostat_data_mapping = []
+    # Build properties list for facet transforms. Annotate as union list for mypy.
+    heliostat_properties_tuples: List[
+        Union[Tuple[str, Path], Tuple[str, Path, Path]]
+    ] = [
+        (
+            name,
+            pathlib.Path(
+                f"{paint_dir}/{name}/Properties/{name}-heliostat-properties.json"
+            ),
+        )
+        for name in heliostats
+    ]
+
+    # Extract facet translations and canting vectors (homogeneous 4D for downstream APIs).
+    facet_transforms = extract_canting_and_translation_from_properties(
+        heliostat_list=heliostat_properties_tuples,
+        convert_to_4d=True,
+        device=device,
+    )
+    facet_transforms_by_name = {
+        heliostat_name: (facet_translations, facet_canting_vectors)
+        for heliostat_name, facet_translations, facet_canting_vectors in facet_transforms
+    }
+
+    # Build properties list for calibration extraction.
+    heliostat_data_mapping: List[Tuple[str, List[Path]]] = []
     for name in heliostats:
         heliostat_data_mapping.append(
             (
@@ -119,6 +445,7 @@ def generate_flux_images(scenario_path, heliostats, paint_dir, result_file, devi
                 ],
             )
         )
+
     # Load the calibration data.
     (
         focal_spots_calibration,
@@ -138,113 +465,122 @@ def generate_flux_images(scenario_path, heliostats, paint_dir, result_file, devi
         device=device,
     )
 
-    # Perform heliostat-based ray tracing.
     # Perform alignment and ray tracing to generate flux density images.
     flux = align_and_trace_rays(
         scenario=scenario,
-        aimpoints=focal_spots_calibration,
+        aim_points=focal_spots_calibration,
         light_direction=incident_ray_directions_calibration,
         active_heliostats_mask=heliostats_mask_calibration,
         target_area_mask=target_area_mask_calibration,
         device=device,
     )
 
-    # Load raw and UTIS image
+    # Load raw and UTIS image, update results.
     for i, name in enumerate(heliostats):
-        results_dict[name] = {}
-        utis_image = paint_utils.load_image_as_tensor(
-            name, paint_dir, MEASUREMENT_IDS[name], "flux"
-        )
-        raw_image = paint_utils.load_image_as_tensor(
-            name, paint_dir, MEASUREMENT_IDS[name], "cropped"
-        )
+        if name not in results_dict:
+            results_dict[name] = {}
 
-        results_dict[name]["image_raw"] = raw_image.cpu().detach().numpy()
-        results_dict[name]["utis_image"] = utis_image.cpu().detach().numpy()
-        results_dict[name]["flux_deflectometry"] = flux[i].cpu().detach().numpy()
-        facets = (
-            scenario.heliostat_field.heliostat_groups[0]
-            .surface_points[i]
-            .view(4, 2500, 4)
-        )
-        facets_decanted = SurfaceGenerator.perform_inverse_canting_and_translation(
-            canted_points=facets,
-            translation=scenario.heliostat_field.heliostat_groups[
-                0
-            ].active_facet_translations[i],
-            canting=scenario.heliostat_field.heliostat_groups[0].active_cantings[i],
-            device=device,
-        )
+        # Populate once if not present.
+        if "image_raw" not in results_dict[name]:
+            raw_image = load_image_as_tensor(
+                name, str(paint_dir), MEASUREMENT_IDS[name], "cropped"
+            )
+            results_dict[name]["image_raw"] = raw_image.cpu().detach().numpy()
 
-        facets_decanted = (
-            facets_decanted[:, :, 2].view(4, 50, 50).cpu().detach().numpy()
-        )
-        surface = np.block(
-            [
-                [facets_decanted[2], facets_decanted[0]],
-                [facets_decanted[3], facets_decanted[1]],
-            ]
-        )
+        if "utis_image" not in results_dict[name]:
+            utis_image = load_image_as_tensor(
+                name, str(paint_dir), MEASUREMENT_IDS[name], "flux"
+            )
+            results_dict[name]["utis_image"] = utis_image.cpu().detach().numpy()
 
-        results_dict[name]["surface"] = surface
+        # Store flux for the given scenario under the provided key.
+        results_dict[name][result_key] = flux[i].cpu().detach().numpy()
 
-    torch.save(results_dict, result_file)
+        # For the deflectometry scenario, keep the surface plot content as before.
+        if result_key == "flux_deflectometry" and "surface" not in results_dict[name]:
+            # Surface points per facet (canted).
+            facet_points_canted = (
+                scenario.heliostat_field.heliostat_groups[0]
+                .surface_points[i]
+                .view(4, 2500, 4)
+            )
+
+            # Apply inverse canting and translation using properties-derived transforms.
+            facet_translations, facet_canting_vectors = facet_transforms_by_name[name]
+            facet_points_decanted = (
+                SurfaceGenerator.perform_inverse_canting_and_translation(
+                    canted_points=facet_points_canted,
+                    translation=facet_translations,
+                    canting=facet_canting_vectors,
+                    device=device,
+                )
+            )
+
+            # Convert to Z grid for plotting.
+            facet_points_decanted = (
+                facet_points_decanted[:, :, 2].view(4, 50, 50).cpu().detach().numpy()
+            )
+            surface_z_grid = np.block(
+                [
+                    [facet_points_decanted[2], facet_points_decanted[0]],
+                    [facet_points_decanted[3], facet_points_decanted[1]],
+                ]
+            )
+            results_dict[name]["surface"] = surface_z_grid
+
+    torch.save(results_dict, results_path)
 
 
-def simulate_overexposure(
-    img: np.ndarray,
-    exposure: float = 5.0,
-    i_max: float = 1.0,
-    thresh: float = 0.9,
-    blur_ksize: int = 31,
-    blur_sigma: float = 10,
-) -> np.ndarray:
-    """Simulate sensor overexposure and bloom effect on a linear image.
+def plot_results_flux_comparision(
+    result_file: Union[str, Path], plot_save_path: Union[str, Path]
+) -> None:
+    """Plot and save a multi-row comparison of raw, UTIS, deflectometry, and surface images.
+
+    For each heliostat contained in the results file, this function creates a row with:
+    - Raw camera image
+    - UTIS flux image
+    - Deflectometry-based simulated flux image
+    - Deflectometry-derived surface deviation map
+
+    The resulting figure is saved as a PDF in the specified output directory.
 
     Parameters
     ----------
-    img : np.ndarray
-        Input image in linear intensity space (normalized to [0, 1]).
-    exposure : float
-        Exposure multiplier to simulate "overexposure".
-    i_max : float
-        Maximum sensor capacity (full well) before clipping.
-    thresh : float
-        Threshold (in normalized units) above which highlights are extracted for bloom.
-    blur_ksize : int
-        Kernel size for Gaussian blur (must be odd).
-    blur_sigma : float
-        Sigma value for Gaussian blur.
+    result_file : str | Path
+        Path to the torch .pt file containing a results_dict as produced by generate_flux_images.
+        The dict is expected to be of the form:
+        {
+            "<heliostat_name>": {
+                "image_raw": np.ndarray,
+                "utis_image": np.ndarray,
+                "flux_deflectometry": np.ndarray,
+                "surface": np.ndarray (optional)
+            },
+            ...
+        }
+    plot_save_path : str | Path
+        Directory path where the output PDF will be written.
 
     Returns
     -------
-    np.ndarray
-        Overexposed image with bloom/glare effect applied (clamped to [0, i_max]).
-    """
-    # Scale and hard clip
-    i_exp = img * exposure
-    i_clip = np.clip(i_exp, 0, i_max)
+    None
 
-    # Extract highlights for bloom
-    highlights = np.clip(i_exp - thresh, 0, None)
-
-    # Apply Gaussian blur to highlights
-    bloom = cv2.GaussianBlur(highlights, (blur_ksize, blur_ksize), blur_sigma)
-
-    # Composite clipped image + bloom, then clamp
-    return np.clip(i_clip + bloom, 0, i_max)
-
-
-def plot_results_flux_comparision(result_file, plot_save_path):
-    """Plot a multi-row comparison of raw, UTIS, deflectometry (with overexposure), and surface images for each heliostat.
-
-    Parameters
-    ----------
-    result_file : path to torch .pt file with results_dict
-    plot_save_path : directory to save the figure
+    Raises
+    ------
+    FileNotFoundError
+        If the result_file does not exist or the plot_save_path directory does not exist.
+    KeyError
+        If expected keys are missing for a heliostat entry (e.g., "image_raw", "utis_image", "flux_deflectometry").
     """
     # Load results
-    results_dict = torch.load(result_file, weights_only=False)
+    if not pathlib.Path(result_file).exists():
+        raise FileNotFoundError(f"Result file not found: {result_file}")
+    if not pathlib.Path(plot_save_path).exists():
+        raise FileNotFoundError(f"Output directory does not exist: {plot_save_path}")
+
+    results_dict: Dict[str, Dict[str, np.ndarray]] = torch.load(
+        result_file, weights_only=False
+    )
     num_hel = len(results_dict)
 
     # Create figure
@@ -258,7 +594,7 @@ def plot_results_flux_comparision(result_file, plot_save_path):
         ax = [ax]
 
     # Define colormaps
-    colormaps = ["gray", "hot", "hot", "jet"]
+    colormaps: List[str] = ["gray", "hot", "hot", "jet"]
 
     for i, (name, data) in enumerate(results_dict.items()):
         # Extract images
@@ -267,19 +603,9 @@ def plot_results_flux_comparision(result_file, plot_save_path):
         flux_def = data["flux_deflectometry"]
         surface = data.get("surface", np.zeros_like(raw))
 
-        # Simulate overexposure on deflectometry image
-        # flux_def = simulate_overexposure(
-        #     flux_def,
-        #     exposure=0.18,
-        #     i_max=1.0,
-        #     thresh=0.5,
-        #     blur_ksize=None,
-        #     blur_sigma=100
-        # )
-
         # Normalize intensities so each image has max=1
-        def normalize(img):
-            mx = img.max()
+        def normalize(img: np.ndarray) -> np.ndarray:
+            mx = float(img.max()) if img.size > 0 else 0.0
             return img / mx if mx > 0 else img
 
         raw = normalize(raw)
@@ -317,103 +643,63 @@ def plot_results_flux_comparision(result_file, plot_save_path):
     plt.close(fig)
 
 
-def plot_error_distributions(result_file, plot_save_path=None):
-    """Load results_dict and plot surface z-coordinate distributions for each heliostat.
+def simulate_overexposure(
+    image: np.ndarray,
+    exposure: float = 5.0,
+    i_max: float = 1.0,
+    thresh: float = 0.9,
+    blur_ksize: int = 31,
+    blur_sigma: float = 10,
+) -> np.ndarray:
+    """Simulate sensor overexposure and bloom effect on a linear image.
 
     Parameters
     ----------
-    result_file : path to .pt file
-    plot_save_path : directory to save the figure (optional)
+    image : np.ndarray
+        Input image in linear intensity space (normalized to [0, 1]).
+    exposure : float
+        Exposure multiplier to simulate "overexposure".
+    i_max : float
+        Maximum sensor capacity (full well) before clipping.
+    thresh : float
+        Threshold (in normalized units) above which highlights are extracted for bloom.
+    blur_ksize : int
+        Kernel size for Gaussian blur (must be odd).
+    blur_sigma : float
+        Sigma value for Gaussian blur.
+
+    Returns
+    -------
+    np.ndarray
+        Overexposed image with bloom/glare effect applied (clamped to [0, i_max]).
     """
-    from scipy.stats import gaussian_kde
+    # Scale and hard clip.
+    i_exp = image * exposure
+    i_clip = np.clip(i_exp, 0, i_max)
 
-    # Load the results dict from .pt file
-    results_dict = torch.load(result_file, weights_only=False)
+    # Extract highlights for bloom.
+    highlights = np.clip(i_exp - thresh, 0, None)
 
-    fig, axs = plt.subplots(2, 1, figsize=(4, 7.5), sharex=False)
+    # Apply Gaussian blur to highlights.
+    bloom = cv2.GaussianBlur(highlights, (blur_ksize, blur_ksize), blur_sigma)
 
-    # --- Upper subplot: surface Z KDEs ---
-    ax_surface = axs[0]
-    z_vals_all = []
-
-    ax_surface.axvline(x=0.0, color="black", linestyle="--", label="Ideal")
-
-    colors = [
-        helmholtz_colors["hgfblue"],
-        helmholtz_colors["hgfgreen"],
-        helmholtz_colors["hgfaerospace"],
-    ]
-
-    for idx, (name, data) in enumerate(results_dict.items()):
-        surface_points = data["surface"]  # shape [N, 3]
-        z_vals = surface_points[:, 2].flatten()
-
-        # KDE
-        kde = gaussian_kde(z_vals)
-        x_range = np.linspace(z_vals.min(), z_vals.max(), 200)
-        kde_vals = kde(x_range)
-
-        # Plot
-        ax_surface.plot(x_range, kde_vals, label=name, color=colors[idx])
-        z_vals_all.append(z_vals)
-
-    # ax_surface.set_title("Surface Z-Coordinate Distribution per Heliostat")
-    ax_surface.set_xlabel("Surface Coordinate in Z / m")
-    ax_surface.set_ylabel("Density / -")
-    ax_surface.legend()
-    ax_surface.grid(True)
-
-    # --- Lower subplot: placeholder for additional data (optional) ---
-    # --- Plot 2: Flux Deviation Error ---
-    ax_flux = axs[1]
-    heliostat_names = list(results_dict.keys())
-    x = np.arange(len(heliostat_names))
-
-    flux_error_ideal = []
-    flux_error_deflectometry = []
-
-    for name in heliostat_names:
-        utis = results_dict[name]["utis_image"]
-        flux_deflectometry = results_dict[name]["flux_deflectometry"]
-
-        error_deflec = paint_utils.calculate_flux_deviation(utis, flux_deflectometry)
-
-        flux_error_deflectometry.append(error_deflec)
-
-    ax_flux.scatter(
-        x,
-        flux_error_ideal,
-        label="Ideal",
-        color=helmholtz_colors["hgfgray"],
-        marker="o",
-    )
-    ax_flux.scatter(
-        x,
-        flux_error_deflectometry,
-        label="Deflectometry",
-        color=helmholtz_colors["hgfdarkblue"],
-        marker="x",
-    )
-
-    ax_flux.set_xticks(x)
-    ax_flux.set_xticklabels(heliostat_names, rotation=45, ha="right")
-    ax_flux.set_ylabel("Relative Flux Error / -")
-    ax_flux.legend()
-    ax_flux.grid(True)
-
-    # --- Save or show ---
-    if plot_save_path:
-        save_path = plot_save_path + "/02b_error_distributions.pdf"
-        fig.savefig(save_path, dpi=300, bbox_inches="tight")
-        print(f"Saved plot to {save_path}")
-    else:
-        plt.show()
-
-    plt.close(fig)
+    # Composite clipped image + bloom, then clamp.
+    return np.clip(i_clip + bloom, 0, i_max)
 
 
-def load_config():
-    """Load local example configuration from config.local.json."""
+def load_config() -> Dict[str, Any]:
+    """Load local example configuration from config.local.json.
+
+    Returns
+    -------
+    dict[str, Any]
+        Configuration dictionary read from config.local.json.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no config.local.json file can be found next to this script.
+    """
     script_dir = os.path.dirname(__file__)
     candidates = [
         os.path.join(script_dir, "config.local.json"),
@@ -428,59 +714,84 @@ def load_config():
     )
 
 
-def main():
-    """Run ray tracing example: generate flux images and plots from config."""
-    cfg = load_config()
-    # Map config -> args using new keys and base paths
-    paint_base = pathlib.Path(cfg["paint_repository_base_path"])
-    examples_base = pathlib.Path(cfg["examples_data_base_path"])
+def main() -> None:
+    """Run ray tracing example: generate flux images and plots from configuration.
+
+    Loads configuration, ensures scenarios exist (deflectometry and ideal),
+    generates/merges flux maps, and creates comparison plots.
+    """
+    config = load_config()
+
+    # Map config -> args using new keys and base paths.
+    paint_base = pathlib.Path(config["paint_repository_base_path"])
+    examples_base = pathlib.Path(config["examples_base_path"])
 
     def join_safe(
-        base: pathlib.Path, maybe_rel: Union[str, pathlib.Path]
+        base: pathlib.Path, relative_path: Union[str, pathlib.Path]
     ) -> pathlib.Path:
-        s = str(maybe_rel)
-        return base / s.lstrip("/\\")
+        """Join base and a possibly absolute path by stripping leading separators."""
+        relative_str = str(relative_path)
+        return base / relative_str.lstrip("/\\")
 
     paint_dir = paint_base
-    tower_file = join_safe(paint_base, cfg["paint_tower_file"])
-    heliostats = cfg["heliostats"]
-    device_str = cfg["device"]
-    scenario_base = join_safe(examples_base, cfg["examples_raytracing_scenario_path"])
-    result_file = join_safe(examples_base, cfg["examples_results_path"])
-    plot_save_path = cfg["examples_save_plot_path"]
+    tower_file = join_safe(paint_base, config["paint_tower_file"])
+    heliostats = config["heliostats"]
+    scenario_base = join_safe(
+        examples_base, config["examples_raytracing_scenario_path"]
+    )
+    result_file = join_safe(examples_base, config["examples_results_path"])
+    save_plot_path = join_safe(examples_base, config["examples_save_plot_path"])
 
-    device = torch.device(device_str)
+    device = get_device()
     set_logger_config()
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
     plt.rcParams["font.family"] = "sans-serif"
 
-    scenario_h5 = pathlib.Path(scenario_base).with_suffix(".h5")
-    if scenario_h5.exists():
-        print(
-            f"Scenario found at {scenario_h5}... continue without generating scenario."
-        )
-    else:
-        print(f"Scenario not found. Generating a new one at {scenario_h5}...")
-        paint_utils.generate_paint_scenario(
-            paint_dir=str(paint_dir),
-            scenario_path=pathlib.Path(scenario_base),
-            tower_file=str(tower_file),
-            heliostat_names=heliostats,
-            device=device,
-        )
+    # Generate two scenarios: deflectometry and ideal (no deflectometry).
+    scenario_deflec_base = pathlib.Path(str(scenario_base) + "_deflectometry")
+    scenario_ideal_base = pathlib.Path(str(scenario_base) + "_ideal")
 
+    for base, use_def in [(scenario_deflec_base, True), (scenario_ideal_base, False)]:
+        h5_path = base.with_suffix(".h5")
+        if h5_path.exists():
+            print(
+                f"Scenario found at {h5_path}... continue without generating scenario."
+            )
+        else:
+            print(
+                f"Scenario not found. Generating a new one at {h5_path} (use_deflectometry={use_def})..."
+            )
+            generate_paint_scenario(
+                paint_dir=str(paint_dir),
+                scenario_path=base,
+                tower_file=str(tower_file),
+                heliostat_names=heliostats,
+                device=device,
+                use_deflectometry=use_def,
+            )
+
+    # Generate and merge flux images for both scenarios into one results file.
     generate_flux_images(
-        scenario_path=scenario_base,
+        scenario_path=scenario_deflec_base,
         heliostats=heliostats,
         paint_dir=str(paint_dir),
         result_file=str(result_file),
         device=device,
+        result_key="flux_deflectometry",
     )
+    generate_flux_images(
+        scenario_path=scenario_ideal_base,
+        heliostats=heliostats,
+        paint_dir=str(paint_dir),
+        result_file=str(result_file),
+        device=device,
+        result_key="flux_ideal",
+    )
+
     plot_results_flux_comparision(
-        result_file=str(result_file), plot_save_path=str(plot_save_path)
+        result_file=str(result_file), plot_save_path=str(save_plot_path)
     )
-    # plot_error_distributions(result_file=result_file, plot_save_path=plot_save_path)
 
 
 if __name__ == "__main__":
