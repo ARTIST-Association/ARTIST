@@ -102,7 +102,7 @@ with setup_distributed_environment(
                 initial_learning_rate=initial_learning_rate,
                 tolerance=tolerance,
                 max_epoch=max_epoch,
-                num_log=10,
+                num_log_epochs=10,
                 device=device,
             )
 
