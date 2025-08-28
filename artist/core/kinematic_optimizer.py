@@ -138,7 +138,7 @@ class KinematicOptimizer:
         num_log_epochs: int = 3,
         loss_type: Literal["l1", "l2", "angle"] = "l1",
         loss_reduction: Literal["none", "mean", "sum"] = "mean",
-        loss_return_value: Literal["none", "mean", "sum"] = "mean",
+        loss_return_value: Literal["none", "mean", "sum", "angular"] = "mean",
         device: torch.device | None = None,
     ) -> None:
         """
@@ -166,8 +166,10 @@ class KinematicOptimizer:
             The loss function type to use during optimization. Default is "l1".
         loss_reduction : {"none", "mean", "sum"}, optional
             The reduction mode applied across the batch. Default is "mean".
-        loss_return_value : {"none", "mean", "sum"}, optional
-            The reduction applied across feature dimensions for l1/l2. Default is "mean".
+        loss_return_value : {"none", "mean", "sum", "angular_loss"}, optional
+            The reduction applied across feature dimensions for l1/l2. If "angular_loss",
+            per-sample value is the angular difference (radians) between predicted and target
+            directions (only valid for directional data). Default is "mean".
         device : torch.device | None, optional
             The device on which to perform computations. If None, the device is auto-selected.
         """
@@ -186,7 +188,7 @@ class KinematicOptimizer:
             raise ValueError(f"Unsupported loss_type: {loss_type}")
         if loss_reduction not in {"none", "mean", "sum"}:
             raise ValueError(f"Unsupported loss_reduction: {loss_reduction}")
-        if loss_return_value not in {"none", "mean", "sum"}:
+        if loss_return_value not in {"none", "mean", "sum", "angular"}:
             raise ValueError(f"Unsupported loss_return_value: {loss_return_value}")
 
         self.scenario = scenario
@@ -265,6 +267,15 @@ class KinematicOptimizer:
         """
         if context not in ("direction", "point"):
             raise ValueError(f"Unsupported context: {context}")
+
+        # If requested, return per-sample angular error as the feature "reduction".
+        if self.loss_return_value == "angular_loss":
+            if context != "direction":
+                raise ValueError(
+                    "loss_return_value 'angular_loss' is only supported for directional data."
+                )
+            loss_fn = AngleLoss(reduction="none")
+            return loss_fn(prediction, target)
 
         if self.loss_type == "angle":
             if context != "direction":
