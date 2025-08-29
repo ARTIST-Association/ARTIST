@@ -1,4 +1,4 @@
-"""Bundle all classes responsible for the core functions in ARTIST."""
+"""Bundle all classes responsible for the core functions in ''ARTIST''."""
 
 from artist.core.heliostat_ray_tracer import (
     DistortionsDataset,

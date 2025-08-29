@@ -110,7 +110,7 @@ def test_kinematic_optimizer(
             initial_learning_rate=initial_lr,
             tolerance=tolerance,
             max_epoch=max_epoch,
-            num_log=max_epoch,
+            num_log_epochs=max_epoch,
             device=device,
         )
 

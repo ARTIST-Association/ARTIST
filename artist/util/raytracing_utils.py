@@ -65,7 +65,7 @@ def line_plane_intersections(
         A small value corresponding to the upper limit (default: 1e-6).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises

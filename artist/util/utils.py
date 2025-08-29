@@ -26,7 +26,7 @@ def rotate_distortions(
         Up rotation angles in radians.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -85,7 +85,7 @@ def rotate_e(
         East rotation angles in radians.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -125,7 +125,7 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
         North rotation angles in radians.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -165,7 +165,7 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
         Up rotation angles in radians.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -213,7 +213,7 @@ def translate_enu(
         Up translations.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -264,7 +264,7 @@ def convert_3d_points_to_4d_format(
         Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -305,7 +305,7 @@ def convert_3d_directions_to_4d_format(
         Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -373,7 +373,7 @@ def decompose_rotations(
         The rotated vector.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -464,7 +464,7 @@ def transform_initial_angle(
         The initial orientation of the coordinate system.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -525,7 +525,7 @@ def get_center_of_mass(
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -602,7 +602,7 @@ def create_nurbs_evaluation_grid(
         therefore the evaluation points need a small offset from the endpoints.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -701,7 +701,7 @@ def crop_flux_distributions_around_center(
         Tensor of shape [number_of_fluxmaps].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns

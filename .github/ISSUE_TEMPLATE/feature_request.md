@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest a new feature for ARTIST
+about: Suggest a new feature for ''ARTIST''
 title: ''
 labels: ''
 assignees: ''

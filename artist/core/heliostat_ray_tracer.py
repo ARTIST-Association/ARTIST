@@ -223,7 +223,7 @@ class HeliostatRayTracer:
         """
         Initialize the heliostat ray tracer.
 
-        "Heliostat"-tracing is one kind of ray tracing applied in ARTIST. For this kind of ray tracing,
+        "Heliostat"-tracing is one kind of ray tracing applied in ''ARTIST''. For this kind of ray tracing,
         the rays are initialized on the heliostats. The rays originate in the discrete surface points.
         There they are multiplied, distorted, and scattered, and then they are sent to the aim points.
         Letting the rays originate on the heliostats, drastically reduces the number of rays that need
@@ -310,7 +310,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ''ARTIST'' will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -414,7 +414,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ''ARTIST'' will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -466,7 +466,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ''ARTIST'' will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -683,7 +683,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ''ARTIST'' will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
