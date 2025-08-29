@@ -38,7 +38,7 @@ def kl_divergence(
         The kl-divergence for each distribution.
         Tensor of shape [number_of_flux_distributions].
     """
-    return (targets * (torch.log((targets + epsilon) / (predictions + epsilon))))
+    return targets * (torch.log((targets + epsilon) / (predictions + epsilon)))
 
 
 def scale_loss(

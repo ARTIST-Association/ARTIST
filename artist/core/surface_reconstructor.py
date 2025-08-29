@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
