@@ -1,3 +1,4 @@
+import json
 import pathlib
 from typing import Any
 
@@ -801,3 +802,164 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         assert different_for_any_heliostat, (
             "Randomized selection did not differ from sorted order."
         )
+
+
+@pytest.mark.parametrize("convert_to_homogeneous_4d", [False, True])
+def test_extract_canting_and_translation_from_properties(
+    convert_to_homogeneous_4d: bool,
+    tmp_path: pathlib.Path,
+    device: torch.device,
+) -> None:
+    """
+    Verify extraction of facet translations and canting vectors from PAINT properties files.
+
+    This test builds a minimal, valid PAINT-style properties JSON with two facets,
+    writes it to a temporary file, and then checks that:
+      1) The function returns one entry per heliostat with the correct name.
+      2) The facet translation tensor has the expected shape and values.
+      3) The facet canting tensor has the expected shape and values.
+      4) When `convert_to_4d=True`, shapes reflect homogeneous coordinates and
+         the first three components match the original 3D data (we do not assert
+         the 4th component since implementation details may vary).
+
+    Parameters
+    ----------
+    convert_to_homogeneous_4d : bool
+        Whether to request 4D homogeneous output from the function under test.
+    tmp_path : pathlib.Path
+        Temporary directory provided by pytest to hold the generated properties file.
+    device : torch.device
+        The torch device fixture on which tensors should be allocated.
+
+    Raises
+    ------
+    AssertionError
+        If any of the returned values do not match the expected structure or data.
+    """
+    cfg = paint_loader.config_dictionary
+
+    # Build minimal valid payload with 2 facets
+    properties_payload = {
+        cfg.paint_facet_properties: {
+            cfg.paint_number_of_facets: 2,
+            cfg.paint_facets: [
+                {
+                    cfg.paint_translation_vector: [1.0, 2.0, 3.0],
+                    cfg.paint_canting_e: [0.1, 0.2, 0.3],
+                    cfg.paint_canting_n: [0.4, 0.5, 0.6],
+                },
+                {
+                    cfg.paint_translation_vector: [-1.0, -2.0, -3.0],
+                    cfg.paint_canting_e: [-0.1, -0.2, -0.3],
+                    cfg.paint_canting_n: [-0.4, -0.5, -0.6],
+                },
+            ],
+        }
+    }
+
+    properties_path = tmp_path / "heliostat_A.properties.json"
+    with open(properties_path, "w") as f:
+        json.dump(properties_payload, f)
+
+    # Explicitly annotate list to the expected Union element type (fixes mypy invariance issue)
+    heliostat_list: list[
+        tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
+    ] = [
+        ("heliostat_A", properties_path),
+        ("heliostat_B", properties_path, tmp_path / "unused_deflecto.json"),
+    ]
+
+    results = paint_loader.extract_canting_and_translation_from_properties(
+        heliostat_list=heliostat_list,
+        convert_to_4d=convert_to_homogeneous_4d,
+        device=device,
+    )
+
+    assert isinstance(results, list)
+    assert len(results) == 2
+
+    for expected_name in ("heliostat_A", "heliostat_B"):
+        match = next((r for r in results if r[0] == expected_name), None)
+        assert match is not None, f"Missing result for {expected_name}"
+
+        heliostat_name, facet_translations, facet_canting_vectors = match
+        assert heliostat_name == expected_name
+
+        if convert_to_homogeneous_4d:
+            assert facet_translations.shape == (2, 4)
+            assert facet_canting_vectors.shape == (2, 2, 4)
+        else:
+            assert facet_translations.shape == (2, 3)
+            assert facet_canting_vectors.shape == (2, 2, 3)
+
+        assert facet_translations.device == device
+        assert facet_canting_vectors.device == device
+        assert facet_translations.dtype == torch.float32
+        assert facet_canting_vectors.dtype == torch.float32
+
+        expected_translations = torch.tensor(
+            [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]], device=device
+        )
+        expected_canting = torch.tensor(
+            [
+                [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+                [[-0.1, -0.2, -0.3], [-0.4, -0.5, -0.6]],
+            ],
+            device=device,
+        )
+
+        torch.testing.assert_close(
+            facet_translations[..., :3],
+            expected_translations,
+            rtol=1e-6,
+            atol=1e-6,
+        )
+        torch.testing.assert_close(
+            facet_canting_vectors[..., :3],
+            expected_canting,
+            rtol=1e-6,
+            atol=1e-6,
+        )
+
+
+def test_extract_canting_and_translation_skips_invalid_files(
+    tmp_path: pathlib.Path, device: torch.device, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Ensure the function gracefully skips invalid entries (e.g., missing files) and logs a warning."""
+    cfg = paint_loader.config_dictionary
+    valid_payload = {
+        cfg.paint_facet_properties: {
+            cfg.paint_number_of_facets: 1,
+            cfg.paint_facets: [
+                {
+                    cfg.paint_translation_vector: [0.0, 0.0, 0.0],
+                    cfg.paint_canting_e: [1.0, 0.0, 0.0],
+                    cfg.paint_canting_n: [0.0, 1.0, 0.0],
+                }
+            ],
+        }
+    }
+    valid_path = tmp_path / "valid.json"
+    with open(valid_path, "w") as f:
+        json.dump(valid_payload, f)
+
+    missing_path = tmp_path / "missing.json"
+
+    # Explicit annotation to match the function signature (fixes mypy on invariance)
+    heliostat_list: list[
+        tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
+    ] = [
+        ("valid_heliostat", valid_path),
+        ("missing_heliostat", missing_path),
+    ]
+
+    with caplog.at_level("WARNING"):
+        results = paint_loader.extract_canting_and_translation_from_properties(
+            heliostat_list=heliostat_list, convert_to_4d=False, device=device
+        )
+
+    assert len(results) == 1
+    assert results[0][0] == "valid_heliostat"
+    assert any(
+        "Failed to extract canting/translation" in rec.message for rec in caplog.records
+    )
