@@ -135,6 +135,6 @@ testpaths = [
 [tool.coverage.run]
 omit = [
     "artist/util/scenario_generator.py",
-    "artist/util/configuration_classes.py"
+    "artist/util/configuration_classes.py",
     "examples/"
     ]
