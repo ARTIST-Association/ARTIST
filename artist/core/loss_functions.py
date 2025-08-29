@@ -21,7 +21,7 @@ class BaseLoss:
         Compute the loss.
 
         This method must be implemented by subclasses.
-        
+
         Parameters
         ----------
         predictions : torch.Tensor
@@ -93,6 +93,7 @@ class BaseLoss:
 
 # TODO: explain: use .sum() as reduction (of mse) because 4d tensors and last element is 0 or change to mean?
 
+
 class VectorLoss(BaseLoss):
     """
     Implement the vector loss.
@@ -101,11 +102,20 @@ class VectorLoss(BaseLoss):
         BaseLoss (_type_): _description_
     """
 
-    def __call__(self, prediction: torch.Tensor, ground_truth: torch.Tensor, target_area_mask: torch.Tensor, reduction_dimensions: tuple[int], device: torch.device | None, **kwargs: Any) -> torch.Tensor:
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        target_area_mask: torch.Tensor,
+        reduction_dimensions: tuple[int],
+        device: torch.device | None,
+        **kwargs: Any,
+    ) -> torch.Tensor:
         loss_function = torch.nn.MSELoss(reduction="none")
         loss = loss_function(prediction, ground_truth)
 
         return loss.sum(dim=reduction_dimensions)
+
 
 class FocalSpotLoss(BaseLoss):
     """
@@ -118,21 +128,31 @@ class FocalSpotLoss(BaseLoss):
     def __init__(self, scenario: Scenario):
         self.scenario = scenario
 
-    def __call__(self, prediction: torch.Tensor, ground_truth: torch.Tensor, target_area_mask: torch.Tensor, reduction_dimensions: tuple[int], device: torch.device | None, **kwargs: Any) -> torch.Tensor:
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        target_area_mask: torch.Tensor,
+        reduction_dimensions: tuple[int],
+        device: torch.device | None,
+        **kwargs: Any,
+    ) -> torch.Tensor:
         device = get_device(device=device)
 
         focal_spot = utils.get_center_of_mass(
             bitmaps=prediction,
             target_centers=self.scenario.target_areas.centers[target_area_mask],
             target_widths=self.scenario.target_areas.dimensions[target_area_mask][:, 0],
-            target_heights=self.scenario.target_areas.dimensions[target_area_mask][:, 1],
+            target_heights=self.scenario.target_areas.dimensions[target_area_mask][
+                :, 1
+            ],
             device=device,
         )
         loss_function = torch.nn.MSELoss(reduction="none")
         loss = loss_function(focal_spot, ground_truth)
-        
+
         return loss.sum(dim=reduction_dimensions)
-    
+
 
 class PixelLoss(BaseLoss):
     """
@@ -145,14 +165,28 @@ class PixelLoss(BaseLoss):
     def __init__(self, scenario: Scenario):
         self.scenario = scenario
 
-    def __call__(self, prediction: torch.Tensor, ground_truth: torch.Tensor, target_area_mask: torch.Tensor, reduction_dimensions: tuple[int], device: torch.device | None, **kwargs: Any) -> torch.Tensor:
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        target_area_mask: torch.Tensor,
+        reduction_dimensions: tuple[int],
+        device: torch.device | None,
+        **kwargs: Any,
+    ) -> torch.Tensor:
         device = get_device(device=device)
-        
+
         normalized_predictions = utils.normalize_bitmaps(
             flux_distributions=prediction,
-            target_area_widths=self.scenario.target_areas.dimensions[target_area_mask][:, 0],
-            target_area_heights=self.scenario.target_areas.dimensions[target_area_mask][:, 1],
-            number_of_rays=self.scenario.light_sources.light_source_list[0].number_of_rays,
+            target_area_widths=self.scenario.target_areas.dimensions[target_area_mask][
+                :, 0
+            ],
+            target_area_heights=self.scenario.target_areas.dimensions[target_area_mask][
+                :, 1
+            ],
+            number_of_rays=self.scenario.light_sources.light_source_list[
+                0
+            ].number_of_rays,
         )
         normalized_ground_truth = utils.normalize_bitmaps(
             flux_distributions=ground_truth,
@@ -168,12 +202,12 @@ class PixelLoss(BaseLoss):
             ),
             number_of_rays=ground_truth.sum(dim=[1, 2]),
         )
-        
+
         loss_function = torch.nn.MSELoss(reduction="none")
         loss = loss_function(normalized_predictions, normalized_ground_truth)
 
         return loss.sum(dim=reduction_dimensions)
-    
+
 
 class KLDivergenceLoss(BaseLoss):
     """
@@ -183,8 +217,18 @@ class KLDivergenceLoss(BaseLoss):
         BaseLoss (_type_): _description_
     """
 
-    def __call__(self, prediction: torch.Tensor, ground_truth: torch.Tensor, target_area_mask: torch.Tensor, reduction_dimensions: tuple[int], device: torch.device | None, **kwargs: Any) -> torch.Tensor:
-        ground_truth_distributions = ground_truth / (ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12)
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        target_area_mask: torch.Tensor,
+        reduction_dimensions: tuple[int],
+        device: torch.device | None,
+        **kwargs: Any,
+    ) -> torch.Tensor:
+        ground_truth_distributions = ground_truth / (
+            ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12
+        )
         flux_shifted = prediction - prediction.min()
         predicted_distributions = flux_shifted / (
             flux_shifted.sum(dim=(1, 2), keepdim=True) + 1e-12
@@ -195,5 +239,3 @@ class KLDivergenceLoss(BaseLoss):
         )
 
         return loss.sum(dim=reduction_dimensions)
- 	
-    

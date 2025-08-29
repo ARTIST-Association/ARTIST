@@ -304,12 +304,14 @@ class MotorPositionsOptimizer:
                     target_area_mask=target_area_mask,
                     device=device,
                 )[self.target_area_index]
-                
+
                 # sollte schon per heliostat sein.
                 loss = loss_definition(
                     prediction=flux_distribution_on_target.unsqueeze(0),
                     ground_truth=self.ground_truth.unsqueeze(0),
-                    target_area_mask=torch.tensor([self.target_area_index], device=device),
+                    target_area_mask=torch.tensor(
+                        [self.target_area_index], device=device
+                    ),
                     reduction_dimensions=(1,),
                     device=device,
                 )
