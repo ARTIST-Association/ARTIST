@@ -1,4 +1,4 @@
-"""Bundle all classes that represent physical objects in ARTIST."""
+"""Bundle all classes that represent physical objects in ''ARTIST''."""
 
 from artist.field.actuators import Actuators
 from artist.field.actuators_ideal import IdealActuators

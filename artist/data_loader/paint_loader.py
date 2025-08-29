@@ -53,9 +53,11 @@ def extract_paint_calibration_properties_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
+    centroid_extrected_by : str
+        The method by which the focal spot centroid was extracted (default is config_dictionary.paint_utis).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -185,7 +187,7 @@ def extract_paint_tower_measurements(
         The path to the tower measurement file.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -313,7 +315,7 @@ def extract_paint_heliostat_properties(
         The power plant position.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -526,7 +528,7 @@ def extract_paint_deflectometry_data(
         The number of facets.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -624,7 +626,7 @@ def extract_paint_heliostats(
         The NURBS fit learning rate scheduler (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -789,7 +791,7 @@ def azimuth_elevation_to_enu(
         Whether input is given in degrees (default is True).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -839,7 +841,7 @@ def convert_wgs84_coordinates_to_local_enu(
         Tensor of shape [3].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ''ARTIST'' will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
