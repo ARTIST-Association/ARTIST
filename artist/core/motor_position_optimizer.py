@@ -1,11 +1,12 @@
 import logging
-from typing import Any, Callable
+from typing import Any
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.core.loss_functions import BaseLoss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
@@ -52,7 +53,7 @@ class MotorPositionsOptimizer:
         optimization_configuration: dict[str, Any],
         incident_ray_direction: torch.Tensor,
         target_area_index: int,
-        optimization_goal: torch.Tensor,
+        ground_truth: torch.Tensor,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         device: torch.device | None = None,
     ) -> None:
@@ -95,12 +96,12 @@ class MotorPositionsOptimizer:
         self.optimization_configuration = optimization_configuration
         self.incident_ray_direction = incident_ray_direction
         self.target_area_index = target_area_index
-        self.optimization_goal = optimization_goal
+        self.ground_truth = ground_truth
         self.bitmap_resolution = bitmap_resolution.to(device)
 
     def optimize(
         self,
-        loss_function: Callable[..., torch.Tensor],
+        loss_definition: BaseLoss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         r"""
@@ -303,14 +304,13 @@ class MotorPositionsOptimizer:
                     target_area_mask=target_area_mask,
                     device=device,
                 )[self.target_area_index]
-
-                loss = loss_function(
-                    predictions=flux_distribution_on_target.unsqueeze(0),
-                    targets=self.optimization_goal.unsqueeze(0),
-                    scenario=self.scenario,
-                    target_area_mask=torch.tensor(
-                        [self.target_area_index], device=device
-                    ),
+                
+                # sollte schon per heliostat sein.
+                loss = loss_definition(
+                    prediction=flux_distribution_on_target.unsqueeze(0),
+                    ground_truth=self.ground_truth.unsqueeze(0),
+                    target_area_mask=torch.tensor([self.target_area_index], device=device),
+                    reduction_dimensions=(1,),
                     device=device,
                 )
 

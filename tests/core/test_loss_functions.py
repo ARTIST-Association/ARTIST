@@ -2,7 +2,7 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.core import loss_functions
+from artist.core import loss_functions_old
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scenario.scenario import Scenario
 
@@ -73,7 +73,7 @@ def test_vector_loss(
     AssertionError
         If test does not complete as expected.
     """
-    result = loss_functions.vector_loss(
+    result = loss_functions_old.vector_loss(
         predictions=predictions.to(device),
         targets=targets.to(device),
         reduction_dimensions=reduction_dimensions,
@@ -134,7 +134,7 @@ def test_focal_spot_loss(
 
     target_area_mask = torch.tensor([0], device=device)
 
-    result = loss_functions.focal_spot_loss(
+    result = loss_functions_old.focal_spot_loss(
         predictions=predictions.to(device),
         targets=targets.to(device),
         scenario=mock_scenario,
@@ -199,7 +199,7 @@ def test_pixel_loss(
     AssertionError
         If test does not complete as expected.
     """
-    result = loss_functions.pixel_loss(
+    result = loss_functions_old.pixel_loss(
         predictions=predictions.to(device),
         targets=targets.to(device),
         target_area_dimensions=target_area_dimensions.to(device),
@@ -258,7 +258,7 @@ def test_kl_divergence(
     AssertionError
         If test does not complete as expected.
     """
-    result = loss_functions.kl_divergence(
+    result = loss_functions_old.kl_divergence(
         predictions=predictions.to(device), targets=targets.to(device)
     )
 
@@ -305,7 +305,7 @@ def test_scale_loss(
     AssertionError
         If test does not complete as expected.
     """
-    scaled = loss_functions.scale_loss(
+    scaled = loss_functions_old.scale_loss(
         loss=loss.to(device), reference_loss=reference_loss.to(device), weight=weight
     )
 
@@ -353,7 +353,7 @@ def test_total_variation_loss(
     )
 
     # Calculate total variation loss
-    loss = loss_functions.total_variation_loss(
+    loss = loss_functions_old.total_variation_loss(
         surfaces=surfaces, number_of_neighbors=10, sigma=1.0, device=device
     )
 

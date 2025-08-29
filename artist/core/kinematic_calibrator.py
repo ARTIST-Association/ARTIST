@@ -1,12 +1,13 @@
 import logging
 import pathlib
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers, loss_functions
+from artist.core import learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.core.loss_functions import BaseLoss
 from artist.data_loader import paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
@@ -81,7 +82,7 @@ class KinematicCalibrator:
 
     def calibrate(
         self,
-        loss_function: Callable[..., torch.Tensor],
+        loss_definition: BaseLoss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -110,7 +111,7 @@ class KinematicCalibrator:
             == config_dictionary.kinematic_calibration_motor_positions
         ):
             loss = self._calibrate_kinematic_parameters_with_motor_positions(
-                loss_function=loss_function,
+                loss_definition=loss_definition,
                 device=device,
             )
 
@@ -119,7 +120,7 @@ class KinematicCalibrator:
             == config_dictionary.kinematic_calibration_raytracing
         ):
             loss = self._calibrate_kinematic_parameters_with_raytracing(
-                loss_function=loss_function,
+                loss_definition=loss_definition,
                 device=device,
             )
 
@@ -127,7 +128,7 @@ class KinematicCalibrator:
 
     def _calibrate_kinematic_parameters_with_motor_positions(
         self,
-        loss_function: Callable[..., torch.Tensor],
+        loss_definition: BaseLoss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -276,12 +277,17 @@ class KinematicCalibrator:
                         reflection_surface_normals=orientations[:, 0:4, 2],
                     )
 
-                    loss = loss_functions.loss_per_heliostat(
+                    per_sample_loss = loss_definition(
+                        prediction=preferred_reflection_directions,
+                        ground_truth=preferred_reflection_directions_measured,
+                        target_area_mask=_,
+                        reduction_dimensions=(1,),
+                        device=device,
+                    )
+
+                    loss = loss_definition.loss_per_heliostat(
+                        per_sample_loss=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
-                        predictions=preferred_reflection_directions,
-                        targets=preferred_reflection_directions_measured,
-                        loss_function=loss_function,
-                        reduction_dimensions=1,
                         device=device,
                     ).sum()
 
@@ -332,7 +338,7 @@ class KinematicCalibrator:
 
     def _calibrate_kinematic_parameters_with_raytracing(
         self,
-        loss_function: Callable[..., torch.Tensor],
+        loss_definition: BaseLoss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -489,14 +495,18 @@ class KinematicCalibrator:
                             op=torch.distributed.ReduceOp.SUM,
                         )
 
-                    loss = loss_functions.loss_per_heliostat(
-                        active_heliostats_mask=active_heliostats_mask,
-                        predictions=flux_distributions,
-                        targets=focal_spots_measured,
-                        loss_function=loss_function,
-                        device=device,
+                    per_sample_loss = loss_definition(
+                        prediction=flux_distributions,
+                        ground_truth=focal_spots_measured,
                         target_area_mask=target_area_mask,
-                        scenario=self.scenario,
+                        reduction_dimensions=(1,),
+                        device=device,
+                    )
+
+                    loss = loss_definition.loss_per_heliostat(
+                        per_sample_loss=per_sample_loss,
+                        active_heliostats_mask=active_heliostats_mask,
+                        device=device,
                     ).sum()
 
                     loss.backward()

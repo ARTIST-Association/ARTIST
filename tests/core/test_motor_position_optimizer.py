@@ -1,19 +1,19 @@
 import pathlib
-from typing import Any, Callable
+from typing import Any
 
 import h5py
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core import loss_functions
+from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
 
 
 @pytest.fixture
-def focal_spot_loss() -> tuple[torch.Tensor, Callable[..., torch.Tensor]]:
+def focal_spot() -> torch.Tensor:
     """
     Use a focal spot as target in the loss function.
 
@@ -26,14 +26,13 @@ def focal_spot_loss() -> tuple[torch.Tensor, Callable[..., torch.Tensor]]:
         A callable function that computes the loss. It accepts predictions and targets
         and optionally other keyword arguments and return a tensor with loss values.
     """
-    optimization_goal = torch.tensor([1.1493, -0.5030, 57.0474, 1.0000])
-    loss_function = loss_functions.focal_spot_loss
+    ground_truth = torch.tensor([1.1493, -0.5030, 57.0474, 1.0000])
 
-    return optimization_goal, loss_function
+    return ground_truth
 
 
 @pytest.fixture
-def distribution_loss():
+def distribution() -> torch.Tensor:
     """
     Use a distribution as target in the loss function.
 
@@ -52,21 +51,20 @@ def distribution_loss():
     u_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=180
     )
-    optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
-    loss_function = loss_functions.distribution_loss_kl_divergence
+    ground_truth = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
-    return optimization_goal, loss_function
+    return ground_truth
 
 
 @pytest.mark.parametrize(
-    "loss_fixture_name, early_stopping_delta",
+    "ground_truth, early_stopping_delta",
     [
-        ("focal_spot_loss", 1e-4),
-        ("distribution_loss", 1.0),
+        ("focal_spot", 1e-4),
+        ("distribution", 1.0),
     ],
 )
 def test_motor_positions_optimizer(
-    loss_fixture_name: str,
+    ground_truth: torch.Tensor,
     early_stopping_delta: float,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
@@ -136,21 +134,28 @@ def test_motor_positions_optimizer(
         optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        optimization_goal=request.getfixturevalue(loss_fixture_name)[0].to(device),
+        ground_truth=request.getfixturevalue(ground_truth).to(device),
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
 
+    if ground_truth == "focal_spot":
+        loss_definition = FocalSpotLoss(
+            scenario=scenario,
+        )
+    if ground_truth == "distribution":
+        loss_definition = KLDivergenceLoss()
+    
     # Optimize the motor positions.
     _ = motor_positions_optimizer.optimize(
-        loss_function=request.getfixturevalue(loss_fixture_name)[1], device=device
+        loss_definition=loss_definition, device=device
     )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_motor_positions"
-            / f"{request.getfixturevalue(loss_fixture_name)[1].__name__}_group_{index}_{device.type}.pt"
+            / f"{ground_truth}_group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)

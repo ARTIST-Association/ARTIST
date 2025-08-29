@@ -4,7 +4,7 @@ from typing import Callable
 import h5py
 import torch
 
-from artist.core import loss_functions
+from artist.core import loss_functions_old
 from artist.core.kinematic_calibrator import KinematicCalibrator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
@@ -79,7 +79,7 @@ with setup_distributed_environment(
     # Set calibration method and loss function.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
     # Uncomment for calibration with raytracing:
-    loss_function: Callable[..., torch.Tensor] = loss_functions.focal_spot_loss
+    loss_function: Callable[..., torch.Tensor] = loss_functions_old.focal_spot_loss
     # Uncomment for calibration with motor positions.
     # loss_function: Callable[..., torch.Tensor] = loss_functions.vector_loss
 

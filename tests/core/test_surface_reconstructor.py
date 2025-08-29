@@ -1,35 +1,35 @@
 import pathlib
-from typing import Any, Callable
+from typing import Any
 
 import h5py
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core import loss_functions
+from artist.core.loss_functions import KLDivergenceLoss, PixelLoss
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss_function, data_source, early_stopping_delta",
+    "loss, data_source, early_stopping_delta",
     [
         # Test standard behavior.
-        (loss_functions.distribution_loss_kl_divergence, "paint", 1e-4),
+        ("kl_divergence", "paint", 1e-4),
         (
-            loss_functions.pixel_loss,
+            "pixel_loss",
             "paint",
             1e-4,
         ),
         # Test invalid data source.
-        (loss_functions.pixel_loss, "invalid", 1e-4),
+        ("pixel_loss", "invalid", 1e-4),
         # Test early stopping.
-        (loss_functions.pixel_loss, "paint", 1.0),
+        ("pixel_loss", "paint", 1.0),
     ],
 )
 def test_surface_reconstructor(
-    loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    loss: PixelLoss | KLDivergenceLoss,
     data_source: str,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
@@ -162,10 +162,18 @@ def test_surface_reconstructor(
         optimization_configuration=optimization_configuration,
         device=device,
     )
+
+    if loss == "pixel_loss":
+        loss_definition = PixelLoss(
+            scenario=scenario,
+        )
+    if loss == "kl_divergence":
+        loss_definition = KLDivergenceLoss()
+
     if data_source == "invalid":
         with pytest.raises(ValueError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_function=loss_function, device=device
+                loss_definition=loss_definition, device=device
             )
 
             assert (
@@ -174,7 +182,7 @@ def test_surface_reconstructor(
             )
     else:
         _ = surface_reconstructor.reconstruct_surfaces(
-            loss_function=loss_function, device=device
+            loss_definition=loss_definition, device=device
         )
 
         for index, heliostat_group in enumerate(
@@ -183,7 +191,7 @@ def test_surface_reconstructor(
             expected_path = (
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss_function.__name__}_group_{index}_{device.type}.pt"
+                / f"{loss_definition.__name__}_group_{index}_{device.type}.pt"
             )
 
             expected = torch.load(expected_path, map_location=device, weights_only=True)

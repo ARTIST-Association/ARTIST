@@ -3,7 +3,7 @@ import pathlib
 import h5py
 import torch
 
-from artist.core import loss_functions
+from artist.core import loss_functions_old
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config, utils
@@ -56,7 +56,7 @@ with setup_distributed_environment(
         total_width=256, slope_width=30, plateau_width=180, device=device
     )
     optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
-    loss_function = loss_functions.distribution_loss_kl_divergence
+    loss_function = loss_functions_old.distribution_loss_kl_divergence
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
