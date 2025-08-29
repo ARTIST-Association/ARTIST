@@ -41,11 +41,11 @@ class SurfaceGenerator:
         """
         Initialize the surface generator.
 
-        Heliostat data, including information regarding their surfaces and structure, can be generated via 'STRAL' and
-        exported to a binary file or downloaded from 'PAINT'. The data formats are different depending on their source.
-        To convert this data into a surface configuration format suitable for ARTIST, this converter first loads the
+        Heliostat data, including information regarding their surfaces and structure, can be generated via ''STRAL'' and
+        exported to a binary file or downloaded from ''PAINT''. The data formats are different depending on their source.
+        To convert this data into a surface configuration format suitable for ''ARTIST'', this converter first loads the
         data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
-        be used directly in an ARTIST scenario.
+        be used directly in an ''ARTIST'' scenario.
 
         Parameters
         ----------
@@ -55,7 +55,7 @@ class SurfaceGenerator:
             Degree of the NURBS in the east and north direction (default is torch.tensor([3, 3])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
+            If None, ''ARTIST'' will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
 
@@ -100,7 +100,7 @@ class SurfaceGenerator:
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
+            If None, ''ARTIST'' will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------
@@ -118,7 +118,7 @@ class SurfaceGenerator:
         ]
         if fit_method not in accepted_conversion_methods:
             raise NotImplementedError(
-                f"The conversion method '{fit_method}' is not yet supported in ARTIST."
+                f"The conversion method '{fit_method}' is not yet supported in ''ARTIST''."
             )
 
         device = get_device(device=device)
@@ -259,7 +259,7 @@ class SurfaceGenerator:
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
+            If None, ''ARTIST'' will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -271,7 +271,7 @@ class SurfaceGenerator:
         log.info("Beginning generation of the fitted surface configuration.")
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
-        # dimensions, so that they can be stacked into a single tensor and then can be used by ARTIST.
+        # dimensions, so that they can be stacked into a single tensor and then can be used by ''ARTIST''.
         minimum_number_of_surface_points_all_facets = min(
             single_facet_surface_points.shape[0]
             for single_facet_surface_points in surface_points_with_facets_list
@@ -315,7 +315,7 @@ class SurfaceGenerator:
         )
 
         # Generate NURBS surface from multiple facets.
-        # Each facet automatically has the same control point dimensions. This is required in ARTIST.
+        # Each facet automatically has the same control point dimensions. This is required in ''ARTIST''.
         log.info(f"Generating NURBS surface for heliostat: {heliostat_name}.")
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
@@ -379,7 +379,7 @@ class SurfaceGenerator:
             Tensor of shape [number_of_facets, 2, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ''ARTIST'' will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -464,7 +464,7 @@ class SurfaceGenerator:
             The canting vectors per facet in east and north directions, shape (2, 4).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
+            If None, ''ARTIST'' will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
