@@ -174,5 +174,4 @@ examples/data/
 examples/plots/
 
 # Local config files
-config.local.json
-*.local.json
+**/*.local.json
