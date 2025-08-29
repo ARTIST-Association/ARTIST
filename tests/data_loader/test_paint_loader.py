@@ -815,12 +815,6 @@ def test_extract_canting_and_translation_from_properties(
 
     This test builds a minimal, valid PAINT-style properties JSON with two facets,
     writes it to a temporary file, and then checks that:
-      1) The function returns one entry per heliostat with the correct name.
-      2) The facet translation tensor has the expected shape and values.
-      3) The facet canting tensor has the expected shape and values.
-      4) When `convert_to_4d=True`, shapes reflect homogeneous coordinates and
-         the first three components match the original 3D data (we do not assert
-         the 4th component since implementation details may vary).
 
     Parameters
     ----------
@@ -838,7 +832,7 @@ def test_extract_canting_and_translation_from_properties(
     """
     cfg = paint_loader.config_dictionary
 
-    # Build minimal valid payload with 2 facets
+    # Build minimal valid payload with 2 facets.
     properties_payload = {
         cfg.paint_facet_properties: {
             cfg.paint_number_of_facets: 2,
@@ -861,7 +855,7 @@ def test_extract_canting_and_translation_from_properties(
     with open(properties_path, "w") as f:
         json.dump(properties_payload, f)
 
-    # Explicitly annotate list to the expected Union element type (fixes mypy invariance issue)
+    # Explicitly annotate list to the expected Union element type (fixes mypy invariance issue).
     heliostat_list: list[
         tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
     ] = [
@@ -925,7 +919,36 @@ def test_extract_canting_and_translation_from_properties(
 def test_extract_canting_and_translation_skips_invalid_files(
     tmp_path: pathlib.Path, device: torch.device, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Ensure the function gracefully skips invalid entries (e.g., missing files) and logs a warning."""
+    """Test that invalid/missing properties files are skipped and a warning is logged.
+
+    This test creates one valid PAINT properties file and one missing file path,
+    invokes :func:`paint_loader.extract_canting_and_translation_from_properties`
+    with both entries, and verifies that only the valid heliostat is returned and
+    a warning is emitted for the invalid entry.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Temporary directory used to create the test JSON file.
+    device : torch.device
+        Device on which tensors are allocated by the function under test.
+    caplog : pytest.LogCaptureFixture
+        Pytest fixture used to capture log output at the WARNING level.
+
+    Notes
+    -----
+    The function under test accepts a list of tuples of the form
+    ``(name, properties_path)`` or ``(name, properties_path, deflectometry_path)``.
+    The test explicitly annotates the list as
+    ``list[tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]]``
+    to satisfy ``mypy``'s list invariance rules.
+
+    Assertions
+    ----------
+    - Exactly one result is returned (the valid heliostat).
+    - The name of the returned heliostat matches the valid entry.
+    - A log message containing ``"Failed to extract canting/translation"`` is present.
+    """
     cfg = paint_loader.config_dictionary
     valid_payload = {
         cfg.paint_facet_properties: {
@@ -945,7 +968,7 @@ def test_extract_canting_and_translation_skips_invalid_files(
 
     missing_path = tmp_path / "missing.json"
 
-    # Explicit annotation to match the function signature (fixes mypy on invariance)
+    # Explicit annotation to match the function signature (fixes mypy on invariance).
     heliostat_list: list[
         tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
     ] = [
