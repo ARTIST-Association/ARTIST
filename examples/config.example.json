@@ -3,14 +3,19 @@
   "heliostats": ["AA39", "AY26", "BC34"],
 
   "paint_repository_base_path": "/base/path/to/PAINT",
-  "paint_tower_file": "/WRI1030197-tower-measurements.json",
+  "paint_tower_file": "/path/to/tower/measurements.json",
 
-  "examples_data_base_path": "/base/path/to/examples/data/folder",
-  "examples_heliostat_list_file": "heliostat_file_generated_by_00_example.json",
-  "examples_scenario_path": "scenarios/heliostat_calibration_paint",
-  "examples_save_plot_path": "/plots/",
-  "examples_results_path": "calibration_results.pt",
-  "examples_raytracing_scenario_path": "raytracing_scenario",
+  "examples_base_path": "/path/to/examples/base",
+  "examples_save_plot_path": "/path/to/plots",
+  "examples_heliostat_list_file": "/path/to/heliostat_files.json",
+  "examples_scenario_path": "/path/to/scenarios/heliostat_calibration_paint",
+  "examples_results_path": "/path/to/calibration_results.pt",
+  "examples_raytracing_scenario_path": "/path/to/scenarios/raytracing_scenario",
+
+  "00_examples_minimum_calibrations": 80,
+  "00_examples_maximum_heliostats": 10,
+  "00_examples_excluded_heliostats": ["AA39"],
+  "00_examples_flux_file_suffix": "flux",
 
   "01_examples_use_ray_tracing": false,
   "01_examples_tolerance": 0.05,
