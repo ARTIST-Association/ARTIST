@@ -4,7 +4,7 @@ import pathlib
 import h5py
 import torch
 
-from artist.core import loss_functions
+from artist.core import loss_functions_old
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_loader.paint_loader import build_heliostat_data_mapping
 from artist.scenario.scenario import Scenario
@@ -86,7 +86,7 @@ with setup_distributed_environment(
         )
 
     # Set loss function.
-    loss_function = loss_functions.distribution_loss_kl_divergence
+    loss_function = loss_functions_old.distribution_loss_kl_divergence
     # Another possibility would be the pixel loss:
     # loss_function = loss_functions.pixel_loss
 

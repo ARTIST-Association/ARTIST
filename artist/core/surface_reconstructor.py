@@ -5,8 +5,9 @@ from typing import Any, Callable, cast
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers, loss_functions
+from artist.core import learning_rate_schedulers, loss_functions_old
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.core.loss_functions import BaseLoss
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
@@ -101,7 +102,7 @@ class SurfaceReconstructor:
 
     def reconstruct_surfaces(
         self,
-        loss_function: Callable[..., torch.Tensor],
+        loss_definition: BaseLoss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -361,18 +362,18 @@ class SurfaceReconstructor:
                     )
 
                     # Loss comparing the predicted flux and the target flux.
-                    flux_loss_per_heliostat = loss_functions.loss_per_heliostat(
-                        active_heliostats_mask=active_heliostats_mask,
-                        predictions=cropped_flux_distributions,
-                        targets=cropped_measured_flux_distributions,
-                        loss_function=loss_function,
+                    per_sample_loss = loss_definition(
+                        prediction=cropped_flux_distributions,
+                        ground_truth=cropped_measured_flux_distributions,
+                        target_area_mask=target_area_mask,
+                        reduction_dimensions=(1, 2),
                         device=device,
-                        target_area_dimensions=self.scenario.target_areas.dimensions[
-                            target_area_mask
-                        ],
-                        number_of_rays=self.scenario.light_sources.light_source_list[
-                            0
-                        ].number_of_rays,
+                    )
+
+                    flux_loss_per_heliostat = loss_definition.loss_per_heliostat(
+                        per_sample_loss=per_sample_loss,
+                        active_heliostats_mask=active_heliostats_mask,
+                        device=device,
                     ).sum()
 
                     loss = flux_loss_per_heliostat
@@ -384,7 +385,7 @@ class SurfaceReconstructor:
                     if regularizers:
                         for loss_name, regularizer_config in regularizers.items():
                             callable = getattr(
-                                loss_functions,
+                                loss_functions_old,
                                 regularizer_config[
                                     config_dictionary.regularization_callable
                                 ],
@@ -442,7 +443,7 @@ class SurfaceReconstructor:
                                     f"Regularization {loss_name} is unknown."
                                 )
 
-                            loss = loss + loss_functions.scale_loss(
+                            loss = loss + loss_functions_old.scale_loss(
                                 loss=regularisation_loss,
                                 reference_loss=flux_loss_per_heliostat,
                                 weight=weight,

@@ -9,7 +9,7 @@ from propulate.utils.benchmark_functions import (
     parse_arguments,
 )
 
-from examples import set_up
+from examples.hyperparameter_optimization import set_up
 
 if __name__ == "__main__":
     comm = MPI.COMM_WORLD

@@ -1,13 +1,13 @@
 import pathlib
-from typing import Any, Callable
+from typing import Any
 
 import h5py
 import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core import loss_functions
 from artist.core.kinematic_calibrator import KinematicCalibrator
+from artist.core.loss_functions import FocalSpotLoss, VectorLoss
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 
@@ -16,20 +16,20 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_lr, loss_function, data_source, early_stopping_delta",
+    "calibration_method, initial_lr, loss, data_source, early_stopping_delta",
     [
         # Test standard behavior.
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.001,
-            loss_functions.vector_loss,
+            "vector_loss",
             "paint",
             1e-4,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            loss_functions.focal_spot_loss,
+            "focal_spot_loss",
             "paint",
             1e-4,
         ),
@@ -37,14 +37,14 @@ set_logger_config()
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.0001,
-            loss_functions.vector_loss,
+            "vector_loss",
             "invalid",
             1e-4,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            loss_functions.focal_spot_loss,
+            "focal_spot_loss",
             "invalid",
             1e-4,
         ),
@@ -52,14 +52,14 @@ set_logger_config()
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.0001,
-            loss_functions.vector_loss,
+            "vector_loss",
             "paint",
             1.0,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            loss_functions.focal_spot_loss,
+            "focal_spot_loss",
             "paint",
             1.0,
         ),
@@ -68,7 +68,7 @@ set_logger_config()
 def test_kinematic_calibrator(
     calibration_method: str,
     initial_lr: float,
-    loss_function: Callable[..., torch.Tensor],
+    loss: str,
     data_source: str,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
@@ -174,11 +174,18 @@ def test_kinematic_calibrator(
         calibration_method=calibration_method,
     )
 
+    if loss == "vector_loss":
+        loss_definition = VectorLoss()
+    if loss == "focal_spot_loss":
+        loss_definition = FocalSpotLoss(
+            scenario=scenario,
+        )
+
     # Calibrate the kinematic.
     if data_source == "invalid":
         with pytest.raises(ValueError) as exc_info:
             _ = kinematic_calibrator.calibrate(
-                loss_function=loss_function, device=device
+                loss_definition=loss_definition, device=device
             )
 
             assert (
@@ -187,7 +194,7 @@ def test_kinematic_calibrator(
             )
 
     else:
-        _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)
+        _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)
 
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups
