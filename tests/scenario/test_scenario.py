@@ -54,7 +54,9 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
         with pytest.raises(ValueError) as exc_info:
             Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
-                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                number_of_surface_points_per_facet=torch.tensor(
+                    [50, 50], device=device
+                ),
                 device=device,
             )
     assert (
@@ -70,7 +72,9 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
         with pytest.raises(ValueError) as exc_info:
             Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
-                number_of_points_per_facet=torch.tensor([50, 50], device=device),
+                number_of_surface_points_per_facet=torch.tensor(
+                    [50, 50], device=device
+                ),
                 device=device,
             )
     assert (
@@ -311,4 +315,44 @@ def test_index_mapping(
             expected[2].to(device),
             atol=5e-4,
             rtol=5e-4,
+        )
+
+
+def test_load_scenario_and_change_control_points(
+    device: torch.device,
+) -> None:
+    """
+    Test the change of number of control points while loading a scenario.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    scenario_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/scenarios/test_scenario_paint_single_heliostat.h5"
+    )
+    # Load the scenario.
+    with h5py.File(
+        scenario_path,
+        "r",
+    ) as config_h5:
+        scenario = Scenario.load_scenario_from_hdf5(
+            scenario_file=config_h5,
+            number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
+            change_number_of_control_points_per_facet=torch.tensor(
+                [13, 13], device=device
+            ),
+            device=device,
+        )
+
+        torch.testing.assert_close(
+            scenario.heliostat_field.heliostat_groups[0].nurbs_control_points.shape,
+            torch.Size([1, 4, 13, 13, 3]),
         )

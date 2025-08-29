@@ -45,12 +45,13 @@ from artist.scenario.scenario import Scenario
         ),
         (
             [
+                ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
                 ("AA31", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-                ("AA35", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
                 ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
-                ("AB38", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
+                ("AC43", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0])),
             ],
             "test_scenario_paint_mix_ideal_prototype_deflectometry",
+            # AA28-from-prototype, AA31-ideal, AA39-deflectometry, AC43-prototype.
         ),
     ],
 )
@@ -91,7 +92,7 @@ def test_integration_alignment(
     ) as config_h5:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=config_h5,
-            number_of_points_per_facet=torch.tensor([50, 50], device=device),
+            number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
             device=device,
         )
 

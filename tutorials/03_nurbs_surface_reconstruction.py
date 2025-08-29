@@ -4,10 +4,11 @@ import pathlib
 import h5py
 import torch
 
+from artist.core import loss_functions_old
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_loader.paint_loader import build_heliostat_data_mapping
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -62,6 +63,11 @@ heliostat_data_mapping = build_heliostat_data_mapping(
     image_variant="flux-centered",
 )
 
+# Create dict for the data source name and the heliostat_data_mapping.
+data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
+    config_dictionary.data_source: config_dictionary.paint,
+    config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+}
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -70,50 +76,93 @@ number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
 with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
-) as (
-    device,
-    is_distributed,
-    is_nested,
-    rank,
-    world_size,
-    process_subgroup,
-    groups_to_ranks_mapping,
-    heliostat_group_rank,
-    heliostat_group_world_size,
-):
+) as ddp_setup:
+    device = ddp_setup[config_dictionary.device]
+
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
 
-    for heliostat_group_index in groups_to_ranks_mapping[rank]:
-        # If there are more ranks than heliostat groups, some ranks will be left idle.
-        if rank < scenario.heliostat_field.number_of_heliostat_groups:
-            heliostat_group = scenario.heliostat_field.heliostat_groups[
-                heliostat_group_index
-            ]
+    # Set loss function.
+    loss_function = loss_functions_old.distribution_loss_kl_divergence
+    # Another possibility would be the pixel loss:
+    # loss_function = loss_functions.pixel_loss
 
-            # Set parameters.
-            scenario.light_sources.light_source_list[0].number_of_rays = 200
-            tolerance = 0.00005
-            max_epoch = 4000
-            initial_learning_rate = 1e-6
-            number_of_surface_points = torch.tensor([80, 80], device=device)
-            resolution = torch.tensor([256, 256], device=device)
+    # Configure the learning rate scheduler. The example scheduler parameter dict includes
+    # example parameters for all three possible schedulers.
+    scheduler = (
+        config_dictionary.exponential
+    )  # exponential, cyclic or reduce_on_plateau
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.3,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 10,
+    }
 
-            # Create the surface reconstructor.
-            surface_reconstructor = SurfaceReconstructor(
-                scenario=scenario,
-                heliostat_group=heliostat_group,
-                heliostat_data_mapping=heliostat_data_mapping,
-                number_of_surface_points=number_of_surface_points,
-                resolution=resolution,
-                initial_learning_rate=initial_learning_rate,
-                tolerance=tolerance,
-                max_epoch=max_epoch,
-                num_log=max_epoch,
-                device=device,
-            )
+    # Configure regularizers and their weights.
+    ideal_surface_regularizer = {
+        config_dictionary.regularization_callable: config_dictionary.vector_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: None,
+    }
+    total_variation_regularizer_points = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: 64,
+            config_dictionary.sigma: 1e-3,
+        },
+    }
+    total_variation_regularizer_normals = {
+        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
+        config_dictionary.weight: 0.5,
+        config_dictionary.regularizers_parameters: {
+            config_dictionary.number_of_neighbors: 64,
+            config_dictionary.sigma: 1e-3,
+        },
+    }
+    regularizers = {
+        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
+        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
+        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
+    }
 
-            surface_reconstructor.reconstruct_surfaces(device=device)
+    # Set optimizer parameters.
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: 1e-4,
+        config_dictionary.tolerance: 0.00005,
+        config_dictionary.max_epoch: 500,
+        config_dictionary.num_log: 50,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: scheduler,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+        config_dictionary.regularizers: regularizers,
+    }
+
+    scenario.light_sources.light_source_list[0].number_of_rays = 20
+    number_of_surface_points = torch.tensor([100, 100], device=device)
+    resolution = torch.tensor([256, 256], device=device)
+
+    # Create the surface reconstructor.
+    surface_reconstructor = SurfaceReconstructor(
+        ddp_setup=ddp_setup,
+        scenario=scenario,
+        data=data,
+        optimization_configuration=optimization_configuration,
+        number_of_surface_points=number_of_surface_points,
+        bitmap_resolution=resolution,
+        device=device,
+    )
+
+    # Reconstruct surfaces.
+    _ = surface_reconstructor.reconstruct_surfaces(
+        loss_function=loss_function, device=device
+    )

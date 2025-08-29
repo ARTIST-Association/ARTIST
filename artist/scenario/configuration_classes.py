@@ -937,6 +937,8 @@ class ActuatorConfig:
         The type of actuator to use, e.g. linear or ideal.
     clockwise_axis_movement : bool
         Boolean indicating if the actuator operates in a clockwise manner.
+    min_max_motor_positions : list[float]
+        The minimum and maximum motor positions.
     parameters : ActuatorParameters | None
         The parameters of the actuator
 
@@ -951,6 +953,7 @@ class ActuatorConfig:
         key: str,
         type: str,
         clockwise_axis_movement: bool,
+        min_max_motor_positions: list[float],
         parameters: ActuatorParameters | None = None,
     ) -> None:
         """
@@ -964,12 +967,15 @@ class ActuatorConfig:
             The type of actuator to use, e.g. linear or ideal.
         clockwise_axis_movement : bool
             Boolean indicating if the actuator operates in a clockwise or counterclockwise manner.
+        min_max_motor_positions : list[float]
+            The minimum and maximum motor positions.
         parameters : ActuatorParameters | None
             The parameters of the actuator.
         """
         self.key = key
         self.type = type
         self.clockwise_axis_movement = clockwise_axis_movement
+        self.min_max_motor_positions = min_max_motor_positions
         self.parameters = parameters
 
     def create_actuator_dict(self) -> dict[str, Any]:
@@ -984,6 +990,7 @@ class ActuatorConfig:
         actuator_dict = {
             config_dictionary.actuator_type_key: self.type,
             config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
+            config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
         if self.parameters is not None:
             actuator_dict.update(

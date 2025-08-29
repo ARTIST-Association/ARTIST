@@ -36,6 +36,7 @@ def extract_paint_calibration_properties_data(
     power_plant_position: torch.Tensor,
     heliostat_names: list[str],
     target_area_names: list[str],
+    limit_number_of_measurements: int | None = None,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -52,6 +53,8 @@ def extract_paint_calibration_properties_data(
         All possible heliostat names.
     target_area_names : list[str]
         All possible target area names.
+    limit_number_of_measurements : int | None
+        Limits the number of measurements loaded if an int is provided (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -88,7 +91,10 @@ def extract_paint_calibration_properties_data(
     calibration_data_per_heliostat = defaultdict(list)
 
     for heliostat_name, paths in heliostat_calibration_mapping:
-        for path in paths:
+        number_of_measurements = min(
+            len(paths), limit_number_of_measurements or len(paths)
+        )
+        for path in paths[:number_of_measurements]:
             with open(path, "r") as f:
                 calibration_data_dict = json.load(f)
             replication_counter[heliostat_name] += 1
@@ -299,7 +305,7 @@ def extract_paint_heliostat_properties(
     torch.Tensor,
     KinematicDeviations,
     torch.Tensor,
-    list[tuple[str, bool, ActuatorParameters]],
+    list[tuple[str, bool, list[float], ActuatorParameters]],
 ]:
     """
     Extract heliostat properties from paint.
@@ -332,7 +338,7 @@ def extract_paint_heliostat_properties(
     torch.Tensor
         The initial orientation.
         Tensor of shape [4].
-    list[tuple[str, bool, ActuatorParameters]]
+    list[tuple[str, bool, list[float], ActuatorParameters]]
         The actuator parameter list.
     """
     device = get_device(device=device)
@@ -495,8 +501,17 @@ def extract_paint_heliostat_properties(
         clockwise_axis_movement = paint_actuator[
             config_dictionary.paint_clockwise_axis_movement
         ]
+        min_max_motor_positions = [
+            paint_actuator[config_dictionary.paint_min_increment],
+            paint_actuator[config_dictionary.paint_max_increment],
+        ]
         actuator_parameters_list.append(
-            (actuator_type, clockwise_axis_movement, parameters)
+            (
+                actuator_type,
+                clockwise_axis_movement,
+                min_max_motor_positions,
+                parameters,
+            )
         )
     log.info("Loading heliostat properties data complete.")
 
@@ -720,7 +735,8 @@ def extract_paint_heliostats(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
                 type=actuator_parameters_tuple[0],
                 clockwise_axis_movement=actuator_parameters_tuple[1],
-                parameters=actuator_parameters_tuple[2],
+                min_max_motor_positions=actuator_parameters_tuple[2],
+                parameters=actuator_parameters_tuple[3],
             )
             actuator_list.append(actuator)
 

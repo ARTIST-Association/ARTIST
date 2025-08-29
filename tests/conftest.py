@@ -39,3 +39,37 @@ def device(request: pytest.FixtureRequest) -> torch.device:
             return torch.device("cpu")
 
     return torch.device("cpu")
+
+
+@pytest.fixture
+def ddp_setup_for_testing() -> dict[
+    str,
+    torch.device
+    | bool
+    | int
+    | torch.distributed.ProcessGroup
+    | dict[int, list[int]]
+    | None,
+]:
+    """
+    Return a single device distributed setup used in tests.
+
+    The device and groups_to_ranks_mapping should be set in every test as needed.
+
+    Returns
+    -------
+    dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
+        The single device distributed setup used in tests.
+    """
+    return {
+        config_dictionary.device: None,
+        config_dictionary.is_distributed: False,
+        config_dictionary.is_nested: False,
+        config_dictionary.rank: 0,
+        config_dictionary.world_size: 1,
+        config_dictionary.process_subgroup: None,
+        config_dictionary.groups_to_ranks_mapping: None,
+        config_dictionary.heliostat_group_rank: 0,
+        config_dictionary.heliostat_group_world_size: 1,
+        config_dictionary.ranks_to_groups_mapping: None,
+    }

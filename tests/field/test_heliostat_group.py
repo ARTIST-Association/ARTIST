@@ -1,6 +1,7 @@
 import pytest
 import torch
 
+from artist.field.heliostat_group import HeliostatGroup
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 
 
@@ -106,3 +107,53 @@ def test_activate_heliostats(
         heliostat_group.kinematic.actuators.active_actuator_parameters.shape[0]
         == expected_size
     )
+
+
+def test_abstract_align(
+    device: torch.device,
+) -> None:
+    """
+    Test the abstract methods of the heliostat group.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    abstract_heliostat_group = HeliostatGroup(
+        names=["heliostat_1", "heliostat_2", "heliostat_3"],
+        positions=torch.tensor(
+            [[1.0, 0.0, 0.0, 1.0], [2.0, 0.0, 0.0, 1.0], [3.0, 0.0, 0.0, 1.0]],
+            device=device,
+        ),
+        surface_points=torch.rand((3, 100, 4), device=device),
+        surface_normals=torch.rand((3, 100, 4), device=device),
+        initial_orientations=torch.tensor(
+            [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
+            device=device,
+        ),
+        nurbs_control_points=torch.empty((3, 4, 10, 10, 4), device=device),
+        nurbs_degrees=torch.tensor([2, 2], device=device),
+    )
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        abstract_heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=torch.tensor([0.0, 0.0, 1.0, 1.0], device=device),
+            incident_ray_directions=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+            active_heliostats_mask=torch.tensor([0, 1], device=device),
+            device=device,
+        )
+    assert "Must be overridden!" in str(exc_info.value)
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        abstract_heliostat_group.align_surfaces_with_motor_positions(
+            motor_positions=torch.tensor([1.0, 1.0], device=device),
+            active_heliostats_mask=torch.tensor([0, 1], device=device),
+            device=device,
+        )
+    assert "Must be overridden!" in str(exc_info.value)
