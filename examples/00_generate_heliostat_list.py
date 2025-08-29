@@ -1,4 +1,5 @@
 import json
+import os
 import pathlib
 import re
 
@@ -91,7 +92,7 @@ def find_heliostats_with_minimum_calibrations(
         flux_image_file_paths = []
         for calibration_file_path in valid_calibration_file_paths:
             file_stem = calibration_file_path.stem.replace(
-                "-calibration-properties", ""
+                config_dictionary.paint_calibration_properties_file_name_ending, ""
             )
             flux_image_filename = f"{file_stem}-{flux_file_suffix}.png"
             flux_image_path = calibration_directory / flux_image_filename
@@ -144,12 +145,36 @@ def save_heliostat_list(
 
 
 if __name__ == "__main__":
-    paint_directory = "/workVERLEIHNIX/share/PAINT"
-    output_json_file = "examples/data/heliostat_files.json"
-    minimum_calibrations = 80
-    maximum_heliostats = 10
-    excluded_heliostats = {"AA39"}
-    flux_file_suffix = "flux"
+
+    def load_config():
+        """Load local example configuration from config.local.json (same pattern as 01/02)."""
+        script_dir = os.path.dirname(__file__)
+        candidates = [
+            os.path.join(script_dir, "config.local.json"),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                with open(path) as f:
+                    return json.load(f)
+        raise FileNotFoundError(
+            "No config.local.json found. Copy config.example.json to config.local.json and customize it."
+        )
+
+    def join_safe(base: pathlib.Path, maybe_rel: str | pathlib.Path) -> pathlib.Path:
+        """Join base with possibly relative path, stripping leading separators."""
+        s = str(maybe_rel)
+        return base / s.lstrip("/\\")
+
+    config = load_config()
+    paint_base = pathlib.Path(config["paint_repository_base_path"])
+    examples_base = pathlib.Path(config["examples_base_path"])
+
+    paint_directory = paint_base
+    output_json_file = join_safe(examples_base, config["examples_heliostat_list_file"])
+    minimum_calibrations = config.get("00_examples_minimum_calibrations", 80)
+    maximum_heliostats = config.get("00_examples_maximum_heliostats", 10)
+    excluded_heliostats = set(config.get("00_examples_excluded_heliostats", []))
+    flux_file_suffix = config.get("00_examples_flux_file_suffix", "flux")
 
     heliostat_data_list = find_heliostats_with_minimum_calibrations(
         paint_directory,
