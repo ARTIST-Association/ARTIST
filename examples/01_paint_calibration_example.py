@@ -39,7 +39,7 @@ def _generate_paint_scenario(
     scenario_path: str | pathlib.Path,
     tower_file: str | pathlib.Path,
     heliostat_files_list: list[tuple[str, pathlib.Path]],
-    device: str = "cpu",
+    device: Optional[torch.device],
 ) -> None:
     """Generate a scenario file based on tower and heliostat data.
 
@@ -197,7 +197,7 @@ def load_or_create_scenario(
             scenario_path=scenario_path,
             tower_file=tower_file,
             heliostat_files_list=heliostat_properties_list,
-            device=str(device) if device is not None else "cpu",
+            device=device,
         )
     else:
         print(f"Scenario already exists at {scenario_path}. Skipping generation.")
@@ -385,23 +385,6 @@ def run_calibration(
                     results_dict[name][centroid] = per_heliostat_losses
 
     return results_dict
-
-
-def attach_positions(results_dict: dict, scenario: Scenario) -> None:
-    """Attach heliostat positions to results for all groups.
-
-    Parameters
-    ----------
-    results_dict : dict
-        Dictionary that will be augmented with a "position" entry per heliostat.
-    scenario : Scenario
-        Scenario containing heliostat groups with positions.
-    """
-    for group in scenario.heliostat_field.heliostat_groups:
-        for name, position in zip(group.names, group.positions):
-            if name not in results_dict:
-                results_dict[name] = {}
-            results_dict[name]["position"] = position.clone().detach().cpu().tolist()
 
 
 def plot_mrad_error_distributions(
@@ -673,7 +656,7 @@ def main(
     Returns
     -------
     dict
-        Results dictionary keyed by heliostat name.
+        Results dictionary keyed by heliostat name, including a "position" entry per heliostat.
     """
     heliostat_data_mapping, heliostat_properties_list = _load_heliostat_data(
         paint_repository, heliostat_list_file
@@ -705,7 +688,13 @@ def main(
         initial_learning_rate=initial_learning_rate,
     )
 
-    attach_positions(results_dict, scenario)
+    # Inline attach_positions: ensure positions are included before saving.
+    for group in scenario.heliostat_field.heliostat_groups:
+        for name, position in zip(group.names, group.positions):
+            results_dict.setdefault(name, {})["position"] = (
+                position.clone().detach().cpu().tolist()
+            )
+
     torch.save(results_dict, results_path)
     print(f"Calibration results saved to {results_path}")
     return results_dict
@@ -744,7 +733,7 @@ if __name__ == "__main__":
     )
     scenario_path = join_safe(examples_base, config_data["examples_scenario_path"])
     tower_file = join_safe(paint_base, config_data["paint_tower_file"])
-    results_path = join_safe(examples_base, config_data["examples_results_path"])
+    results_path = join_safe(examples_base, config_data["01_examples_results_path"])
     save_plot_path = join_safe(examples_base, config_data["examples_save_plot_path"])
 
     device = get_device()
