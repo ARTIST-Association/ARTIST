@@ -41,7 +41,7 @@ def find_latest_deflectometry_file(name: str, paint_dir: str | Path) -> Path:
     name : str
         Heliostat name (e.g., "AA39").
     paint_dir : str | Path
-        Base PAINT directory.
+        Base ''PAINT'' directory.
 
     Returns
     -------
@@ -71,12 +71,12 @@ def generate_paint_scenario(
     device: torch.device | str = "cpu",
     use_deflectometry: bool = True,
 ) -> None:
-    """Generate an HDF5 scenario from PAINT inputs.
+    """Generate an HDF5 scenario from ''PAINT'' inputs.
 
     Parameters
     ----------
     paint_dir : str | Path
-        Base PAINT repository path.
+        Base ''PAINT'' repository path.
     scenario_path : str | Path
         Output scenario path without extension ('.h5' will be added).
     tower_file : str | Path
@@ -214,7 +214,7 @@ def load_image_as_tensor(
     name : str
         Heliostat name.
     paint_dir : str | Path
-        Base PAINT directory.
+        Base ''PAINT'' directory.
     measurement_id : int
         Measurement identifier.
     image_key : str
@@ -386,7 +386,7 @@ def generate_flux_images(
     heliostats : list[str]
         Heliostat names to process, order must match extracted calibration data.
     paint_dir : str | Path
-        PAINT repository path.
+        ''PAINT'' repository path.
     result_file : str | Path
         Path to a single merged .pt file to store results for all runs.
     device : torch.device | str

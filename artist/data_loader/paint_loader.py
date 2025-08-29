@@ -600,7 +600,7 @@ def extract_paint_heliostats(
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
 
-    Note: Currently in PAINT all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
+    Note: Currently in ''PAINT'' all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
 
     Parameters
     ----------
@@ -705,7 +705,7 @@ def extract_paint_heliostats(
         prototype_surface = surface_config
 
         # Include the kinematic configuration.
-        # Currently in PAINT all heliostats use a rigid body kinematic.
+        # Currently in ''PAINT'' all heliostats use a rigid body kinematic.
         kinematic_config = KinematicConfig(
             type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
@@ -1018,7 +1018,7 @@ def extract_canting_and_translation_from_properties(
     device: torch.device | None = None,
 ) -> list[tuple[str, torch.Tensor, torch.Tensor]]:
     """
-    Extract facet translation and canting vectors per heliostat from PAINT properties files.
+    Extract facet translation and canting vectors per heliostat from ''PAINT'' properties files.
 
     Parameters
     ----------
