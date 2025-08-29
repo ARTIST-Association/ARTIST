@@ -289,7 +289,7 @@ def get_device(
             "No device type provided. The device will default to GPU based on availability and OS, otherwise to CPU."
         )
         if os_name == config_dictionary.linux or os_name == config_dictionary.windows:
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             log.info(
                 f"OS: {os_name}, cuda available: {torch.cuda.is_available()}, selected device type: {device.type}"
             )
