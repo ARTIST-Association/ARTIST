@@ -731,11 +731,11 @@ def main() -> None:
 
     paint_dir = paint_base
     tower_file = join_safe(paint_base, config["paint_tower_file"])
-    heliostats = config["heliostats"]
+    heliostats = config["02_heliostats"]
     scenario_base = join_safe(
         examples_base, config["examples_raytracing_scenario_path"]
     )
-    result_file = join_safe(examples_base, config["examples_results_path"])
+    result_file = join_safe(examples_base, config["02_examples_results_path"])
     save_plot_path = join_safe(examples_base, config["examples_save_plot_path"])
 
     device = get_device()
