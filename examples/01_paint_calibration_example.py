@@ -292,7 +292,7 @@ def run_calibration(
     ]
 
     number_of_heliostat_groups = len(scenario_utis.heliostat_field.heliostat_groups)
-    # Validate that UTIS and HeliOS scenarios have matching topology
+    # Validate that UTIS and HeliOS scenarios have matching topology.
     number_of_heliostat_groups_utis = len(
         scenario_utis.heliostat_field.heliostat_groups
     )
@@ -319,7 +319,6 @@ def run_calibration(
         heliostat_group_rank,
         heliostat_group_world_size,
     ):
-        # Use the device from context
         device_used = device_ctx
 
         for centroid in centroids_extracted_by:
@@ -432,7 +431,7 @@ def plot_mrad_error_distributions(
         helios_losses.extend(np.asarray(data[config_dictionary.paint_helios]) * 1000.0)
         utis_losses.extend(np.asarray(data[config_dictionary.paint_utis]) * 1000.0)
 
-    # Handle empty inputs gracefully.
+    # Handle empty inputs.
     if len(helios_losses) == 0 or len(utis_losses) == 0:
         fig, ax = plt.subplots(figsize=FIGSIZE)
         ax.set_title("No data available to plot.")
@@ -641,7 +640,6 @@ def main(
     tower_file: str | pathlib.Path,
     device: Optional[torch.device] = None,
     results_path: str | pathlib.Path = "calibration_results.pt",
-    # Optimizer settings exposed here so they are easy to change:
     use_ray_tracing: bool = False,
     tolerance: float = 0.05,
     max_epoch: int = 1000,
@@ -714,7 +712,7 @@ def main(
 
 
 if __name__ == "__main__":
-    # Inputs.
+
     def load_config():
         """Load local example configuration from config.local.json."""
         script_dir = os.path.dirname(__file__)
@@ -781,6 +779,5 @@ if __name__ == "__main__":
             initial_learning_rate=initial_learning_rate,
         )
 
-    # Create plots.
     plot_mrad_vs_distance(results_dict, save_path=save_plot_path)
     plot_mrad_error_distributions(results_dict, save_path=save_plot_path)
