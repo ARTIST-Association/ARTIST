@@ -44,7 +44,7 @@ def test_total_variation_regularizer(
         .expand(2, 4, -1, 3)
     )
 
-    total_variation=TotalVariationRegularizer(
+    total_variation = TotalVariationRegularizer(
         weight=1.0,
         reduction_dimensions=(1,),
         surface="surface_points",
@@ -56,7 +56,7 @@ def test_total_variation_regularizer(
         original_nurbs_control_points=torch.empty(1, device=device),
         surface_points=surfaces,
         surface_normals=torch.empty(1, device=device),
-        device=device
+        device=device,
     )
 
     torch.testing.assert_close(
@@ -105,17 +105,15 @@ def test_ideal_surface_regularizer(
     AssertionError
         If test does not complete as expected.
     """
-    total_variation=IdealSurfaceRegularizer(
-        weight=1.0,
-        reduction_dimensions=(1, 2, 3, 4)
+    total_variation = IdealSurfaceRegularizer(
+        weight=1.0, reduction_dimensions=(1, 2, 3, 4)
     )
     loss = total_variation(
         current_nurbs_control_points=current_nurbs_control_points.to(device),
         original_nurbs_control_points=original_nurbs_control_points.to(device),
         surface_points=torch.empty(1, device=device),
         surface_normals=torch.empty(1, device=device),
-        device=device
+        device=device,
     )
 
     torch.testing.assert_close(loss, expected.to(device), atol=5e-2, rtol=5e-2)
-

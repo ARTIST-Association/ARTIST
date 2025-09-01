@@ -7,16 +7,33 @@ from artist.core.core_utils import per_heliostat_reduction, scale_loss
 @pytest.mark.parametrize(
     "per_sample_values, active_heliostats_mask, expected",
     [
-        (torch.tensor([2.0, 5.0, 6.0, 10.0]), torch.tensor([1, 3]), torch.tensor([2.0, 7.0])),
-        (torch.tensor([1.0, 3.0, 5.0, 10.0]), torch.tensor([2, 0, 2]), torch.tensor([2.0, 0.0, 7.5])),
-        (torch.tensor([2.0, 4.0]), torch.tensor([2, 0]), torch.tensor([3.0, 0.0,])),
-    ]
+        (
+            torch.tensor([2.0, 5.0, 6.0, 10.0]),
+            torch.tensor([1, 3]),
+            torch.tensor([2.0, 7.0]),
+        ),
+        (
+            torch.tensor([1.0, 3.0, 5.0, 10.0]),
+            torch.tensor([2, 0, 2]),
+            torch.tensor([2.0, 0.0, 7.5]),
+        ),
+        (
+            torch.tensor([2.0, 4.0]),
+            torch.tensor([2, 0]),
+            torch.tensor(
+                [
+                    3.0,
+                    0.0,
+                ]
+            ),
+        ),
+    ],
 )
 def test_per_heliostat_reduction(
-    per_sample_values: torch.Tensor, 
-    active_heliostats_mask: torch.Tensor, 
-    expected: torch.Tensor, 
-    device: torch.device
+    per_sample_values: torch.Tensor,
+    active_heliostats_mask: torch.Tensor,
+    expected: torch.Tensor,
+    device: torch.device,
 ) -> None:
     """
     Test the per heliostat reduction.
@@ -41,12 +58,13 @@ def test_per_heliostat_reduction(
         If test does not complete as expected.
     """
     result = per_heliostat_reduction(
-        per_sample_values=per_sample_values.to(device), 
-        active_heliostats_mask=active_heliostats_mask.to(device), 
-        device=device
+        per_sample_values=per_sample_values.to(device),
+        active_heliostats_mask=active_heliostats_mask.to(device),
+        device=device,
     )
 
     assert torch.allclose(result, expected.to(device))
+
 
 @pytest.mark.parametrize(
     "loss, reference, weight, expected",
