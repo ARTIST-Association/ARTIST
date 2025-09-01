@@ -4,9 +4,9 @@ import pathlib
 import h5py
 import torch
 
-from artist.core import loss_functions_old
+from artist.core.loss_functions import KLDivergenceLoss
+from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_loader.paint_loader import build_heliostat_data_mapping
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -25,43 +25,35 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-# heliostat_data_mapping = [
-#     (
-#         "heliostat_name_1",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-#     (
-#         "heliostat_name_2",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-#     # ...
-# ]
-
-
-heliostat_data_mapping = build_heliostat_data_mapping(
-    base_path="/base/path/to/PAINT",
-    heliostat_names=["AA39"],
-    number_of_measurements=4,
-    image_variant="flux-centered",
-)
+heliostat_data_mapping = [
+    (
+        "heliostat_name_1",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    # ...
+]
 
 # Create dict for the data source name and the heliostat_data_mapping.
 data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
@@ -86,9 +78,9 @@ with setup_distributed_environment(
         )
 
     # Set loss function.
-    loss_function = loss_functions_old.distribution_loss_kl_divergence
+    loss_definition = KLDivergenceLoss()
     # Another possibility would be the pixel loss:
-    # loss_function = loss_functions.pixel_loss
+    # loss_definition = PixelLoss(scenario=scenario)
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
@@ -107,32 +99,29 @@ with setup_distributed_environment(
     }
 
     # Configure regularizers and their weights.
-    ideal_surface_regularizer = {
-        config_dictionary.regularization_callable: config_dictionary.vector_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: None,
-    }
-    total_variation_regularizer_points = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: 64,
-            config_dictionary.sigma: 1e-3,
-        },
-    }
-    total_variation_regularizer_normals = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: 64,
-            config_dictionary.sigma: 1e-3,
-        },
-    }
-    regularizers = {
-        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
-        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
-        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
-    }
+    ideal_surface_regularizer = IdealSurfaceRegularizer(
+        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+    )
+    total_variation_regularizer_points = TotalVariationRegularizer(
+        weight=0.5,
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_points,
+        number_of_neighbors=64,
+        sigma=1e-3,
+    )
+    total_variation_regularizer_normals = TotalVariationRegularizer(
+        weight=0.5,
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_points,
+        number_of_neighbors=64,
+        sigma=1e-3,
+    )
+
+    regularizers = [
+        ideal_surface_regularizer,
+        total_variation_regularizer_points,
+        total_variation_regularizer_normals,
+    ]
 
     # Set optimizer parameters.
     optimization_configuration = {
@@ -164,5 +153,5 @@ with setup_distributed_environment(
 
     # Reconstruct surfaces.
     _ = surface_reconstructor.reconstruct_surfaces(
-        loss_function=loss_function, device=device
+        loss_definition=loss_definition, device=device
     )

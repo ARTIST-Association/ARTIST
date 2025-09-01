@@ -6,6 +6,7 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
+from artist.core.core_utils import per_heliostat_reduction
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import BaseLoss
 from artist.data_loader import paint_loader
@@ -90,9 +91,8 @@ class KinematicCalibrator:
 
         Parameters
         ----------
-        loss_function : Callable[..., torch.Tensor]
-            A callable function that computes the loss. It accepts predictions and targets
-            and optionally other keyword arguments and return a tensor with loss values.
+        loss_definition : BaseLoss
+            The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -139,9 +139,8 @@ class KinematicCalibrator:
 
         Parameters
         ----------
-        loss_function : Callable[..., torch.Tensor]
-            A callable function that computes the loss. It accepts predictions and targets
-            and optionally other keyword arguments and return a tensor with loss values.
+        loss_definition : BaseLoss
+            The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -285,8 +284,8 @@ class KinematicCalibrator:
                         device=device,
                     )
 
-                    loss = loss_definition.loss_per_heliostat(
-                        per_sample_loss=per_sample_loss,
+                    loss = per_heliostat_reduction(
+                        per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
                     ).sum()
@@ -349,9 +348,8 @@ class KinematicCalibrator:
 
         Parameters
         ----------
-        loss_function : Callable[..., torch.Tensor]
-            A callable function that computes the loss. It accepts predictions and targets
-            and optionally other keyword arguments and return a tensor with loss values.
+        loss_definition : BaseLoss
+            The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -503,8 +501,8 @@ class KinematicCalibrator:
                         device=device,
                     )
 
-                    loss = loss_definition.loss_per_heliostat(
-                        per_sample_loss=per_sample_loss,
+                    loss = per_heliostat_reduction(
+                        per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
                     ).sum()

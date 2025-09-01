@@ -33,7 +33,7 @@ class MotorPositionsOptimizer:
         Tensor of shape [4].
     target_area_index : int
         The index of the target used for the optimization.
-    optimization_goal : torch.Tensor
+    ground_truth : torch.Tensor
         The desired focal spot or distribution.
         Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     bitmap_resolution : torch.Tensor
@@ -73,7 +73,7 @@ class MotorPositionsOptimizer:
             Tensor of shape [4].
         target_area_index : int
             The index of the target used for the optimization.
-        optimization_goal : torch.Tensor
+        ground_truth : torch.Tensor
             The desired focal spot or distribution.
             Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
         bitmap_resolution : torch.Tensor
@@ -140,9 +140,8 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        loss_function : Callable[..., torch.Tensor]
-            A callable function that computes the loss. It accepts predictions and targets
-            and optionally other keyword arguments and return a tensor with loss values.
+        loss_definition : BaseLoss
+            The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -304,15 +303,16 @@ class MotorPositionsOptimizer:
                     target_area_mask=target_area_mask,
                     device=device,
                 )[self.target_area_index]
-                
-                # sollte schon per heliostat sein.
+
                 loss = loss_definition(
                     prediction=flux_distribution_on_target.unsqueeze(0),
                     ground_truth=self.ground_truth.unsqueeze(0),
-                    target_area_mask=torch.tensor([self.target_area_index], device=device),
+                    target_area_mask=torch.tensor(
+                        [self.target_area_index], device=device
+                    ),
                     reduction_dimensions=(1,),
                     device=device,
-                )
+                ).sum()
 
                 loss.backward()
 

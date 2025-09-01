@@ -7,6 +7,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, PixelLoss
+from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
@@ -29,7 +30,7 @@ from artist.util import config_dictionary
     ],
 )
 def test_surface_reconstructor(
-    loss: PixelLoss | KLDivergenceLoss,
+    loss: str,
     data_source: str,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
@@ -40,15 +41,14 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
-    loss_function : Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
-        A callable function that computes the loss. It accepts predictions and targets
-        and optionally other keyword arguments and return a tensor with loss values.
-    ddp_setup_for_testing : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    loss : str
+        The type of the loss function.
     data_source : str
         The name of the data source.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
+    ddp_setup_for_testing : dict[str, Any]
+        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -69,32 +69,29 @@ def test_surface_reconstructor(
     }
 
     # Configure regularizers and their weights.
-    ideal_surface_regularizer = {
-        config_dictionary.regularization_callable: config_dictionary.vector_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: None,
-    }
-    total_variation_regularizer_points = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: 64,
-            config_dictionary.sigma: 1e-3,
-        },
-    }
-    total_variation_regularizer_normals = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: 0.5,
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: 64,
-            config_dictionary.sigma: 1e-3,
-        },
-    }
-    regularizers = {
-        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
-        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
-        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
-    }
+    ideal_surface_regularizer = IdealSurfaceRegularizer(
+        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+    )
+    total_variation_regularizer_points = TotalVariationRegularizer(
+        weight=0.5,
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_points,
+        number_of_neighbors=64,
+        sigma=1e-3,
+    )
+    total_variation_regularizer_normals = TotalVariationRegularizer(
+        weight=0.5,
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_points,
+        number_of_neighbors=64,
+        sigma=1e-3,
+    )
+
+    regularizers = [
+        ideal_surface_regularizer,
+        total_variation_regularizer_points,
+        total_variation_regularizer_normals,
+    ]
 
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 1e-4,
@@ -191,7 +188,7 @@ def test_surface_reconstructor(
             expected_path = (
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss_definition.__name__}_group_{index}_{device.type}.pt"
+                / f"{loss}_group_{index}_{device.type}.pt"
             )
 
             expected = torch.load(expected_path, map_location=device, weights_only=True)
