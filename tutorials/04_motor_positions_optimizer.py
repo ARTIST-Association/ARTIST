@@ -3,7 +3,7 @@ import pathlib
 import h5py
 import torch
 
-from artist.core import loss_functions_old
+from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config, utils
@@ -40,13 +40,12 @@ with setup_distributed_environment(
 
     scenario.light_sources.light_source_list[0].number_of_rays = 4
 
-    # Set loss function and define the optimization "target" (which is called optimization goal
-    # to prevent confusion with the tower "target" areas).
-    # For an optimization using a focal spot as target use this loss function definition:
-    # optimization_goal = torch.tensor(
+    # Set loss function and define the ground truth.
+    # For an optimization using a focal spot as ground truth use this loss definition:
+    # ground_truth = torch.tensor(
     #     [1.1493, -0.5030, 57.0474, 1.0000], device=device
     # )
-    # loss_function = loss_functions.focal_spot_loss
+    # loss_definition = FocalSpotLoss(scenario=scenario)
 
     # For an optimization using a distribution as target use this loss function definition:
     e_trapezoid = utils.trapezoid_distribution(
@@ -55,8 +54,8 @@ with setup_distributed_environment(
     u_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=180, device=device
     )
-    optimization_goal = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
-    loss_function = loss_functions_old.distribution_loss_kl_divergence
+    ground_truth = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+    loss_definition = KLDivergenceLoss()
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
@@ -93,10 +92,12 @@ with setup_distributed_environment(
         optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        optimization_goal=optimization_goal,
+        ground_truth=ground_truth,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
 
     # Optimize the motor positions.
-    _ = motor_positions_optimizer.optimize(loss_function=loss_function, device=device)
+    _ = motor_positions_optimizer.optimize(
+        loss_definition=loss_definition, device=device
+    )

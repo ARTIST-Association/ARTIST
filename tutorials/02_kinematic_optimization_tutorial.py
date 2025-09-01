@@ -1,11 +1,10 @@
 import pathlib
-from typing import Callable
 
 import h5py
 import torch
 
-from artist.core import loss_functions_old
 from artist.core.kinematic_calibrator import KinematicCalibrator
+from artist.core.loss_functions import FocalSpotLoss
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -79,9 +78,9 @@ with setup_distributed_environment(
     # Set calibration method and loss function.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
     # Uncomment for calibration with raytracing:
-    loss_function: Callable[..., torch.Tensor] = loss_functions_old.focal_spot_loss
+    loss_definition = FocalSpotLoss(scenario=scenario)
     # Uncomment for calibration with motor positions.
-    # loss_function: Callable[..., torch.Tensor] = loss_functions.vector_loss
+    # loss_definition = VectorLoss()
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
@@ -121,4 +120,4 @@ with setup_distributed_environment(
     )
 
     # Calibrate the kinematic.
-    _ = kinematic_calibrator.calibrate(loss_function=loss_function, device=device)
+    _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)

@@ -145,7 +145,7 @@ def test_motor_positions_optimizer(
         )
     if ground_truth == "distribution":
         loss_definition = KLDivergenceLoss()
-    
+
     # Optimize the motor positions.
     _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device

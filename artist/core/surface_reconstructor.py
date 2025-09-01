@@ -1,11 +1,12 @@
 import logging
 import pathlib
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers, loss_functions_old
+from artist.core import learning_rate_schedulers
+from artist.core.core_utils import per_heliostat_reduction, scale_loss
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import BaseLoss
 from artist.data_loader import flux_distribution_loader, paint_loader
@@ -110,9 +111,8 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        loss_function : Callable[..., torch.Tensor]
-            A callable function that computes the loss. It accepts predictions and targets
-            and optionally other keyword arguments and return a tensor with loss values.
+        loss_definition : BaseLoss
+            The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -218,6 +218,10 @@ class SurfaceReconstructor:
                     dim=0,
                 )
 
+                original_nurbs_control_points = (
+                    heliostat_group.nurbs_control_points.clone().detach()
+                )
+
                 # Create NURBS evaluation points.
                 evaluation_points = (
                     utils.create_nurbs_evaluation_grid(
@@ -255,9 +259,6 @@ class SurfaceReconstructor:
                 )
 
                 # Start the optimization.
-                current_active_nurbs_control_points = torch.zeros_like(
-                    heliostat_group.active_nurbs_control_points, device=device
-                )
                 loss = torch.inf
                 best_loss = torch.inf
                 patience_counter = 0
@@ -272,10 +273,6 @@ class SurfaceReconstructor:
                     <= self.optimization_configuration[config_dictionary.max_epoch]
                 ):
                     optimizer.zero_grad()
-
-                    current_active_nurbs_control_points = (
-                        heliostat_group.active_nurbs_control_points.detach()
-                    )
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
@@ -370,8 +367,8 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
-                    flux_loss_per_heliostat = loss_definition.loss_per_heliostat(
-                        per_sample_loss=per_sample_loss,
+                    flux_loss_per_heliostat = per_heliostat_reduction(
+                        per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
                     ).sum()
@@ -379,75 +376,26 @@ class SurfaceReconstructor:
                     loss = flux_loss_per_heliostat
 
                     # Include regularization terms.
-                    regularizers = self.optimization_configuration[
+                    for regularizer in self.optimization_configuration[
                         config_dictionary.regularizers
-                    ]
-                    if regularizers:
-                        for loss_name, regularizer_config in regularizers.items():
-                            callable = getattr(
-                                loss_functions_old,
-                                regularizer_config[
-                                    config_dictionary.regularization_callable
-                                ],
-                            )
-                            weight = regularizer_config[config_dictionary.weight]
-                            parameters = regularizer_config[
-                                config_dictionary.regularizers_parameters
-                            ]
+                    ]:
+                        regularization_term = regularizer(
+                            current_nurbs_control_points=heliostat_group.nurbs_control_points,
+                            original_nurbs_control_points=original_nurbs_control_points,
+                            surface_points=new_surface_points[start_indices_heliostats],
+                            surface_normals=new_surface_normals[
+                                start_indices_heliostats
+                            ],
+                            device=device,
+                        ).sum()
 
-                            if loss_name == config_dictionary.ideal_surface_loss:
-                                regularisation_loss = callable(
-                                    predictions=heliostat_group.nurbs_control_points[
-                                        (active_heliostats_mask > 0).nonzero(
-                                            as_tuple=True
-                                        )[0]
-                                    ],
-                                    targets=current_active_nurbs_control_points[
-                                        start_indices_heliostats
-                                    ],
-                                    reduction_dimensions=None,
-                                )
+                        scaled_regularization_term = scale_loss(
+                            loss=regularization_term,
+                            reference=flux_loss_per_heliostat,
+                            weight=regularizer.weight,
+                        )
 
-                            elif (
-                                loss_name
-                                == config_dictionary.total_variation_loss_points
-                            ):
-                                regularisation_loss = callable(
-                                    surfaces=new_surface_points[
-                                        start_indices_heliostats
-                                    ],
-                                    number_of_neighbors=parameters[
-                                        config_dictionary.number_of_neighbors
-                                    ],
-                                    sigma=parameters[config_dictionary.sigma],
-                                    device=device,
-                                ).sum()
-
-                            elif (
-                                loss_name
-                                == config_dictionary.total_variation_loss_normals
-                            ):
-                                regularisation_loss = callable(
-                                    surfaces=new_surface_normals[
-                                        start_indices_heliostats
-                                    ],
-                                    number_of_neighbors=parameters[
-                                        config_dictionary.number_of_neighbors
-                                    ],
-                                    sigma=parameters[config_dictionary.sigma],
-                                    device=device,
-                                ).sum()
-
-                            else:
-                                raise ValueError(
-                                    f"Regularization {loss_name} is unknown."
-                                )
-
-                            loss = loss + loss_functions_old.scale_loss(
-                                loss=regularisation_loss,
-                                reference_loss=flux_loss_per_heliostat,
-                                weight=weight,
-                            )
+                        loss = loss + scaled_regularization_term
 
                     loss.backward()
 
@@ -464,7 +412,7 @@ class SurfaceReconstructor:
                                         ],
                                     )
 
-                    # Keep the surfaces in their original geometric shape by fixating the control points on the outer edges.
+                    # Keep the surfaces in their original geometric shape by locking the control points on the outer edges.
                     optimizer.param_groups[0]["params"][
                         0
                     ].grad = self.lock_control_points_on_outer_edges(

@@ -194,7 +194,9 @@ def test_kinematic_calibrator(
             )
 
     else:
-        _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)
+        _ = kinematic_calibrator.calibrate(
+            loss_definition=loss_definition, device=device
+        )
 
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups

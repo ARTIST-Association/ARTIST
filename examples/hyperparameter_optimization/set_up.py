@@ -176,7 +176,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Reconstruct surfaces.
     loss = surface_reconstructor.reconstruct_surfaces(
-        loss_function=getattr(loss_functions, str(params["loss_function"])),
+        loss_definition=getattr(loss_functions, str(params["loss_function"])),
         device=device,
     )
 
