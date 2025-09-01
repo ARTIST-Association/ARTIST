@@ -1,6 +1,6 @@
 import math
 import pathlib
-from typing import Optional
+from typing import Optional, Union
 
 import h5py
 import matplotlib.pyplot as plt
@@ -170,7 +170,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_mask: torch.Tensor,
-    device: torch.device | str = "cuda",
+    device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat ray tracing.
@@ -183,7 +183,7 @@ def align_and_trace_rays(
         A mask for the active heliostats.
     target_area_mask : torch.Tensor
         The indices of the target areas for each active heliostat.
-    device : torch.device| str
+    device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
     Returns
