@@ -162,7 +162,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-#data files
+#data files.
 .pt
 .png
 .jpg
@@ -170,8 +170,8 @@ cython_debug/
 .json
 .csv
 .vscode/settings.json
-examples/data/
-examples/plots/
+examples/paint_plots/data/
+examples/paint_plots/plots/
 
-# Local config files
+# Local config files.
 **/config.local.json
