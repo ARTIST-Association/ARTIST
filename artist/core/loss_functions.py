@@ -91,12 +91,24 @@ class VectorLoss(Loss):
             Keyword arguments.
             The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
 
+        Raises
+        ------
+        ValueError
+            If expected keyword arguments are not passed.
+
         Returns
         -------
         torch.Tensor
             The summed MSE vector loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
+        expected_kwargs = ["reduction_dimensions"]
+        for key in expected_kwargs:
+            if key not in kwargs:
+                raise ValueError(
+                    f"The vector loss expects {key} as keyword argument. Please add this argument."
+                )
+
         loss = self.loss_function(prediction, ground_truth)
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
@@ -150,12 +162,24 @@ class FocalSpotLoss(Loss):
             Keyword arguments.
             The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
 
+        Raises
+        ------
+        ValueError
+            If expected keyword arguments are not passed.
+
         Returns
         -------
         torch.Tensor
             The summed MSE focal spot loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
+        expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        for key in expected_kwargs:
+            if key not in kwargs:
+                raise ValueError(
+                    f"The focal spot loss expects {key} as keyword argument. Please add this argument."
+                )
+
         device = get_device(device=kwargs["device"])
 
         target_area_mask = kwargs["target_area_mask"]
@@ -223,12 +247,24 @@ class PixelLoss(Loss):
             Keyword arguments.
             The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the pixel loss.
 
+        Raises
+        ------
+        ValueError
+            If expected keyword arguments are not passed.
+
         Returns
         -------
         torch.Tensor
             The summed MSE pixel loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
+        expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        for key in expected_kwargs:
+            if key not in kwargs:
+                raise ValueError(
+                    f"The focal spot loss expects {key} as keyword argument. Please add this argument."
+                )
+
         device = get_device(device=kwargs["device"])
 
         target_area_mask = kwargs["target_area_mask"]
@@ -315,6 +351,10 @@ class KLDivergenceLoss(Loss):
             Keyword arguments.
             The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
 
+        Raises
+        ------
+        ValueError
+            If expected keyword arguments are not passed.
 
         Returns
         -------
@@ -322,6 +362,13 @@ class KLDivergenceLoss(Loss):
             The summed kl-divergence loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
+        expected_kwargs = ["reduction_dimensions"]
+        for key in expected_kwargs:
+            if key not in kwargs:
+                raise ValueError(
+                    f"The vector loss expects {key} as keyword argument. Please add this argument."
+                )
+
         if ground_truth.min() < 0:
             ground_truth = ground_truth - ground_truth.min()
         ground_truth_distributions = (
