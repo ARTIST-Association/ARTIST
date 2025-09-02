@@ -554,12 +554,12 @@ def test_normalize_bitmaps(device: torch.device) -> None:
         flux_distributions=bitmaps,
         target_area_widths=torch.full(
             (bitmaps.shape[0],),
-            config_dictionary.utis_target_width,
+            config_dictionary.utis_crop_width,
             device=device,
         ),
         target_area_heights=torch.full(
             (bitmaps.shape[0],),
-            config_dictionary.utis_target_height,
+            config_dictionary.utis_crop_height,
             device=device,
         ),
         number_of_rays=bitmaps.sum(dim=[1, 2]),
@@ -574,6 +574,56 @@ def test_normalize_bitmaps(device: torch.device) -> None:
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(normalized_bitmaps, expected, atol=5e-4, rtol=5e-4)
+
+
+@pytest.mark.parametrize(
+    "total_width, slope_width, plateau_width, expected",
+    [
+        (8, 2, 4, torch.tensor([0.25, 0.75, 1.0, 1.0, 1.0, 1.0, 0.75, 0.25])),
+        (4, 2, 4, torch.tensor([1.0, 1.0, 1.0, 1.0])),
+        (1, 2, 3, torch.tensor([1.0])),
+        (
+            10,
+            2,
+            2,
+            torch.tensor([0.0, 0.0, 0.25, 0.75, 1.0, 1.0, 0.75, 0.25, 0.0, 0.0]),
+        ),
+    ],
+)
+def test_trapezoid_distribution(
+    total_width: int,
+    slope_width: int,
+    plateau_width: int,
+    expected: torch.Tensor,
+    device: torch.device,
+) -> None:
+    """
+    Test that the trapezoid distribution works as expected.
+
+    Parameters
+    ----------
+    total_width : int
+        The total width of the trapezoid.
+    slope_width : int
+        The width of the slope of the trapezoid.
+    plateau_width : int
+        The width of the plateau.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    trapezoid = utils.trapezoid_distribution(
+        total_width=total_width,
+        slope_width=slope_width,
+        plateau_width=plateau_width,
+        device=device,
+    )
+
+    torch.testing.assert_close(trapezoid, expected.to(device), atol=5e-4, rtol=5e-4)
 
 
 @pytest.mark.parametrize(
