@@ -87,8 +87,9 @@ class VectorLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, ...].
-        **_ : Any
+        **kwargs : Any
             Keyword arguments.
+            The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
 
         Returns
         -------
@@ -147,6 +148,7 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples, 4].
         **kwargs : Any
             Keyword arguments.
+            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
 
         Returns
         -------
@@ -219,6 +221,7 @@ class PixelLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         **kwargs : Any
             Keyword arguments.
+            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the pixel loss.
 
         Returns
         -------
@@ -310,6 +313,8 @@ class KLDivergenceLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         **kwargs : Any
             Keyword arguments.
+            The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
+
 
         Returns
         -------
