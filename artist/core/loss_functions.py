@@ -8,15 +8,23 @@ from artist.util.environment_setup import get_device
 
 
 class Loss:
-    """Abstract base class for all loss functions."""
+    """
+    Abstract base class for all loss functions.
 
-    def __init__(self, loss_function) -> None:
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+    """
+
+    def __init__(self, loss_function: torch.nn.Module) -> None:
         """
         Initialize the the base loss.
 
         Parameters
         ----------
-        loss_function: TODO
+        loss_function : torch.nn.Module
+            A torch module implementing a loss.
         """
         self.loss_function = loss_function
 
@@ -24,7 +32,6 @@ class Loss:
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
         **kwargs: Any,
     ) -> torch.Tensor:
         """
@@ -38,8 +45,6 @@ class Loss:
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of variable shape.
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the loss.
         **kwargs : Any
             Keyword arguments.
 
@@ -52,7 +57,14 @@ class Loss:
 
 
 class VectorLoss(Loss):
-    """A loss defined as the elementwise squared distance (Euclidean distance) between predicted vectors and the ground truth."""
+    """
+    A loss defined as the elementwise squared distance (Euclidean distance) between predicted vectors and the ground truth.
+
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+    """
 
     def __init__(self) -> None:
         """Initialize the vector loss."""
@@ -62,8 +74,7 @@ class VectorLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
         """
         Compute the vector loss.
@@ -76,8 +87,6 @@ class VectorLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, ...].
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the final loss.
         **_ : Any
             Keyword arguments.
 
@@ -89,7 +98,7 @@ class VectorLoss(Loss):
         """
         loss = self.loss_function(prediction, ground_truth)
 
-        return loss.sum(dim=reduction_dimensions)
+        return loss.sum(dim=kwargs["reduction_dimensions"])
 
 
 class FocalSpotLoss(Loss):
@@ -98,6 +107,8 @@ class FocalSpotLoss(Loss):
 
     Attributes
     ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
     scenario : Scenario
         The scenario.
     """
@@ -118,7 +129,6 @@ class FocalSpotLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
         **kwargs: Any,
     ) -> torch.Tensor:
         """
@@ -135,8 +145,6 @@ class FocalSpotLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, 4].
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the final loss.
         **kwargs : Any
             Keyword arguments.
 
@@ -162,7 +170,7 @@ class FocalSpotLoss(Loss):
 
         loss = self.loss_function(focal_spot, ground_truth)
 
-        return loss.sum(dim=reduction_dimensions)
+        return loss.sum(dim=kwargs["reduction_dimensions"])
 
 
 class PixelLoss(Loss):
@@ -171,6 +179,8 @@ class PixelLoss(Loss):
 
     Attributes
     ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
     scenario : Scenario
         The scenario.
     """
@@ -191,7 +201,6 @@ class PixelLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
         **kwargs: Any,
     ) -> torch.Tensor:
         """
@@ -208,8 +217,6 @@ class PixelLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the final loss.
         **kwargs : Any
             Keyword arguments.
 
@@ -252,11 +259,18 @@ class PixelLoss(Loss):
 
         loss = self.loss_function(normalized_predictions, normalized_ground_truth)
 
-        return loss.sum(dim=reduction_dimensions)
+        return loss.sum(dim=kwargs["reduction_dimensions"])
 
 
 class KLDivergenceLoss(Loss):
-    """A loss defined as the Kullback-Leibler divergence between predicted values and the ground truth."""
+    """
+    A loss defined as the Kullback-Leibler divergence between predicted values and the ground truth.
+
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+    """
 
     def __init__(self) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
@@ -268,8 +282,7 @@ class KLDivergenceLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
         r"""
         Compute the Kullback-Leibler divergence loss :math:`D_{\mathrm{KL}}(P \parallel Q)`.
@@ -295,9 +308,7 @@ class KLDivergenceLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the final loss.
-        **_ : Any
+        **kwargs : Any
             Keyword arguments.
 
         Returns
@@ -322,11 +333,18 @@ class KLDivergenceLoss(Loss):
 
         loss = self.loss_function(log_input, log_target)
 
-        return loss.sum(dim=reduction_dimensions)
+        return loss.sum(dim=kwargs["reduction_dimensions"])
 
 
 class AngleLoss(Loss):
-    """A loss defined as the angular difference between the prediction and ground truth."""
+    """
+    A loss defined as the angular difference between the prediction and ground truth.
+
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+    """
 
     def __init__(self) -> None:
         """Initialize the angle loss."""
@@ -336,7 +354,6 @@ class AngleLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        reduction_dimensions: tuple[int, ...],
         **_: Any,
     ) -> torch.Tensor:
         """
@@ -350,8 +367,6 @@ class AngleLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, 4].
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the final loss.
         **_ : Any
             Keyword arguments.
 
