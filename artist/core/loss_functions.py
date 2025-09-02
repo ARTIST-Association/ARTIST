@@ -16,7 +16,7 @@ class Loss:
 
         Parameters
         ----------
-        loss_function :
+        loss_function: TODO
         """
         self.loss_function = loss_function
 
@@ -323,3 +323,46 @@ class KLDivergenceLoss(Loss):
         loss = self.loss_function(log_input, log_target)
 
         return loss.sum(dim=reduction_dimensions)
+
+
+class AngleLoss(Loss):
+    """A loss defined as the angular difference between the prediction and ground truth."""
+
+    def __init__(self) -> None:
+        """Initialize the angle loss."""
+        super().__init__(loss_function=torch.nn.CosineSimilarity(dim=-1))
+
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        reduction_dimensions: tuple[int, ...],
+        **_: Any,
+    ) -> torch.Tensor:
+        """
+        Compute the cosine similarity between the prediction and ground truth.
+
+        Parameters
+        ----------
+        prediction : torch.Tensor
+            The predicted values.
+            Tensor of shape [number_of_samples, 4].
+        ground_truth : torch.Tensor
+            The ground truth.
+            Tensor of shape [number_of_samples, 4].
+        reduction_dimensions : tuple[int, ...]
+            The dimensions along which to reduce the final loss.
+        **_ : Any
+            Keyword arguments.
+
+        Returns
+        -------
+        torch.Tensor
+            The summed loss reduced along the specified dimensions.
+            Tensor of shape [number_of_samples].
+        """
+        cos_sim = self.loss_function(prediction, ground_truth)
+
+        loss = 1.0 - cos_sim
+
+        return loss
