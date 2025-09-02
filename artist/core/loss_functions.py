@@ -174,11 +174,15 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        errors = []
         for key in expected_kwargs:
             if key not in kwargs:
-                raise ValueError(
-                    f"The focal spot loss expects {key} as keyword argument. Please add this argument."
-                )
+                errors.append(f"Please add {key} as keyword argument.")
+        if errors:
+            raise ValueError(
+                f"The focal spot loss expects {expected_kwargs} as keyword arguments. "
+                + " ".join(errors)
+            )
 
         device = get_device(device=kwargs["device"])
 
@@ -259,11 +263,15 @@ class PixelLoss(Loss):
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        errors = []
         for key in expected_kwargs:
             if key not in kwargs:
-                raise ValueError(
-                    f"The focal spot loss expects {key} as keyword argument. Please add this argument."
-                )
+                errors.append(f"Please add {key} as keyword argument.")
+        if errors:
+            raise ValueError(
+                f"The vector loss expects {expected_kwargs} as keyword arguments. "
+                + " ".join(errors)
+            )
 
         device = get_device(device=kwargs["device"])
 
@@ -366,7 +374,7 @@ class KLDivergenceLoss(Loss):
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The vector loss expects {key} as keyword argument. Please add this argument."
+                    f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
 
         if ground_truth.min() < 0:

@@ -66,12 +66,18 @@ def test_base_loss(
             (1),
             torch.tensor([1.0, 2.0]),
         ),
+        (
+            torch.tensor([[2.0, 3.0, 4.0, 5.0]]),
+            torch.tensor([[1.0, 2.0, 3.0, 4.0]]),
+            None,
+            torch.tensor([4.0]),
+        ),
     ],
 )
 def test_vector_loss(
     prediction: torch.Tensor,
     ground_truth: torch.Tensor,
-    reduction_dimensions: tuple[int],
+    reduction_dimensions: tuple[int] | None,
     expected: torch.Tensor,
     device: torch.device,
 ) -> None:
@@ -86,7 +92,7 @@ def test_vector_loss(
     ground_truth : torch.Tensor
         The ground truth.
         Tensor of shape [number_of_samples, 4].
-    reduction_dimensions : tuple[int]
+    reduction_dimensions : tuple[int] | None
         The dimensions along which to reduce the final loss.
         reduction_dimensions : tuple[int] | None
         The dimensions to reduce over.
@@ -102,29 +108,49 @@ def test_vector_loss(
         If test does not complete as expected.
     """
     vector_loss = VectorLoss()
-    result = vector_loss(
-        prediction=prediction.to(device),
-        ground_truth=ground_truth.to(device),
-        target_area_mask=torch.tensor([0, 1], device=device),
-        reduction_dimensions=reduction_dimensions,
-        device=device,
-    )
+    if reduction_dimensions is None:
+        with pytest.raises(ValueError) as exc_info:
+            result = vector_loss(
+                prediction=prediction.to(device),
+                ground_truth=ground_truth.to(device),
+                device=device,
+            )
+        assert (
+            "The vector loss expects reduction_dimensions as keyword argument. Please add this argument."
+            in str(exc_info.value)
+        )
+    else:
+        result = vector_loss(
+            prediction=prediction.to(device),
+            ground_truth=ground_truth.to(device),
+            target_area_mask=torch.tensor([0, 1], device=device),
+            reduction_dimensions=reduction_dimensions,
+            device=device,
+        )
 
-    torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+        torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, expected",
+    "prediction, ground_truth, expected, kwargs",
     [
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
             torch.tensor([0.0]),
+            True,
         ),
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
             torch.tensor([3.0]),
+            True,
+        ),
+        (
+            torch.ones((1, 2, 2)),
+            torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
+            torch.tensor([3.0]),
+            False,
         ),
     ],
 )
@@ -132,6 +158,7 @@ def test_focal_spot_loss(
     prediction: torch.Tensor,
     ground_truth: torch.Tensor,
     expected: torch.Tensor,
+    kwargs: bool,
     mocker: MockerFixture,
     device: torch.device,
 ) -> None:
@@ -149,6 +176,8 @@ def test_focal_spot_loss(
     expected : torch.Tensor
         The expected loss.
         Tensor of shape [number_of_flux_distributions].
+    kwargs : bool
+        Specifies if keyword arguments are passed.
     mocker : MockerFixture
         A pytest-mocker fixture used to create mock objects.
     device : torch.device
@@ -168,19 +197,31 @@ def test_focal_spot_loss(
     target_area_mask = torch.tensor([0], device=device)
 
     focal_spot_loss = FocalSpotLoss(scenario=mock_scenario)
-    result = focal_spot_loss(
-        prediction=prediction.to(device),
-        ground_truth=ground_truth.to(device),
-        target_area_mask=target_area_mask,
-        reduction_dimensions=(1,),
-        device=device,
-    )
 
-    torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+    if not kwargs:
+        with pytest.raises(ValueError) as exc_info:
+            result = focal_spot_loss(
+                prediction=prediction.to(device),
+                ground_truth=ground_truth.to(device),
+            )
+        assert (
+            "The focal spot loss expects ['reduction_dimensions', 'device', 'target_area_mask'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_mask as keyword argument."
+            in str(exc_info.value)
+        )
+    else:
+        result = focal_spot_loss(
+            prediction=prediction.to(device),
+            ground_truth=ground_truth.to(device),
+            target_area_mask=target_area_mask,
+            reduction_dimensions=(1,),
+            device=device,
+        )
+
+        torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, target_area_dimensions, number_of_rays, expected",
+    "prediction, ground_truth, target_area_dimensions, number_of_rays, expected, kwargs",
     [
         (
             torch.tensor([[[1.0, 2.0], [3.0, 4.0]]]),
@@ -188,6 +229,7 @@ def test_focal_spot_loss(
             torch.tensor([[2.0, 2.0]]),
             100,
             torch.tensor([0.0]),
+            True,
         ),
         (
             torch.tensor([[[2.0, 3.0], [9.0, 12.0]]]),
@@ -195,6 +237,15 @@ def test_focal_spot_loss(
             torch.tensor([[2.0, 2.0]]),
             100,
             torch.tensor([0.761904418468]),
+            True,
+        ),
+        (
+            torch.tensor([[[2.0, 3.0], [9.0, 12.0]]]),
+            torch.tensor([[[1.0, 2.0], [8.0, 6.0]]]),
+            torch.tensor([[2.0, 2.0]]),
+            100,
+            torch.tensor([0.761904418468]),
+            False,
         ),
     ],
 )
@@ -204,6 +255,7 @@ def test_pixel_loss(
     target_area_dimensions: torch.Tensor,
     number_of_rays: int,
     expected: torch.Tensor,
+    kwargs: bool,
     mocker: MockerFixture,
     device: torch.device,
 ) -> None:
@@ -226,6 +278,8 @@ def test_pixel_loss(
     expected : torch.Tensor
         The expected pixel loss.
         Tensor of shape [number_of_samples].
+    kwargs : bool
+        Specifies if keyword arguments are passed.
     mocker : MockerFixture
         A pytest-mocker fixture used to create mock objects.
     device : torch.device
@@ -251,25 +305,38 @@ def test_pixel_loss(
     target_area_mask = torch.tensor([0], device=device)
 
     pixel_loss = PixelLoss(scenario=mock_scenario)
-    result = pixel_loss(
-        prediction=prediction.to(device),
-        ground_truth=ground_truth.to(device),
-        target_area_mask=target_area_mask,
-        reduction_dimensions=(1, 2),
-        number_of_rays=number_of_rays,
-        device=device,
-    )
 
-    torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+    if not kwargs:
+        with pytest.raises(ValueError) as exc_info:
+            result = pixel_loss(
+                prediction=prediction.to(device),
+                ground_truth=ground_truth.to(device),
+            )
+        assert (
+            "The vector loss expects ['reduction_dimensions', 'device', 'target_area_mask'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_mask as keyword argument."
+            in str(exc_info.value)
+        )
+
+    else:
+        result = pixel_loss(
+            prediction=prediction.to(device),
+            ground_truth=ground_truth.to(device),
+            target_area_mask=target_area_mask,
+            reduction_dimensions=(1, 2),
+            device=device,
+        )
+
+        torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, expected",
+    "prediction, ground_truth, expected, kwargs",
     [
         (
             torch.tensor([[[0.5, 0.5]]]),
             torch.tensor([[[0.5, 0.5]]]),
             torch.tensor([0.0]),
+            True,
         ),
         (
             torch.tensor(
@@ -285,6 +352,7 @@ def test_pixel_loss(
                 ]
             ),
             torch.tensor([2.311237096786, 1.351369142532]),
+            True,
         ),
         (
             torch.tensor(
@@ -300,6 +368,13 @@ def test_pixel_loss(
                 ]
             ),
             torch.tensor([1.351369142532, 2.311237096786]),
+            True,
+        ),
+        (
+            torch.tensor([[[0.5, 0.5]]]),
+            torch.tensor([[[0.5, 0.5]]]),
+            torch.tensor([0.0]),
+            False,
         ),
     ],
 )
@@ -307,6 +382,7 @@ def test_kl_divergence(
     prediction: torch.Tensor,
     ground_truth: torch.Tensor,
     expected: torch.Tensor,
+    kwargs: bool,
     device: torch.device,
 ) -> None:
     """
@@ -323,6 +399,8 @@ def test_kl_divergence(
     expected : torch.Tensor
         The expected KL divergence result.
         Tensor of shape [number_of_flux_distributions].
+    kwargs : bool
+        Specifies if keyword arguments are passed.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -332,15 +410,27 @@ def test_kl_divergence(
         If test does not complete as expected.
     """
     kl_divergence = KLDivergenceLoss()
-    result = kl_divergence(
-        prediction=prediction.to(device),
-        ground_truth=ground_truth.to(device),
-        target_area_mask=torch.tensor([0, 1], device=device),
-        reduction_dimensions=(1, 2),
-        device=device,
-    )
 
-    torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+    if not kwargs:
+        with pytest.raises(ValueError) as exc_info:
+            result = kl_divergence(
+                prediction=prediction.to(device),
+                ground_truth=ground_truth.to(device),
+            )
+        assert (
+            "The kl-divergence loss expects reduction_dimensions as keyword argument. Please add this argument."
+            in str(exc_info.value)
+        )
+    else:
+        result = kl_divergence(
+            prediction=prediction.to(device),
+            ground_truth=ground_truth.to(device),
+            target_area_mask=torch.tensor([0, 1], device=device),
+            reduction_dimensions=(1, 2),
+            device=device,
+        )
+
+        torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
