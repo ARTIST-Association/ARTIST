@@ -2,22 +2,29 @@ from typing import Any
 
 import torch
 
-from artist.core.core_utils import kl_divergence
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 
-class BaseLoss:
+class Loss:
     """Abstract base class for all loss functions."""
+
+    def __init__(self, loss_function) -> None:
+        """
+        Initialize the the base loss.
+
+        Parameters
+        ----------
+        loss_function :
+        """
+        self.loss_function = loss_function
 
     def __call__(
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        target_area_mask: torch.Tensor,
-        reduction_dimensions: tuple[int],
-        device: torch.device | None,
+        reduction_dimensions: tuple[int, ...],
         **kwargs: Any,
     ) -> torch.Tensor:
         """
@@ -27,17 +34,14 @@ class BaseLoss:
         ----------
         prediction : torch.Tensor
             The predicted values.
+            Tensor of variable shape.
         ground_truth : torch.Tensor
             The ground truth.
-        target_area_mask : torch.Tensor
-            The indices of target areas corresponding to each sample.
-            Tensor of shape [number_of_samples].
-        reduction_dimensions : tuple[int]
-            The dimensions along which to reduce the final loss.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            Tensor of variable shape.
+        reduction_dimensions : tuple[int, ...]
+            The dimensions along which to reduce the loss.
+        **kwargs : Any
+            Keyword arguments.
 
         Raises
         ------
@@ -47,17 +51,19 @@ class BaseLoss:
         raise NotImplementedError("Must be overridden!")
 
 
-class VectorLoss(BaseLoss):
+class VectorLoss(Loss):
     """A loss defined as the elementwise squared distance (Euclidean distance) between predicted vectors and the ground truth."""
+
+    def __init__(self) -> None:
+        """Initialize the vector loss."""
+        super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
 
     def __call__(
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        target_area_mask: torch.Tensor,
-        reduction_dimensions: tuple[int],
-        device: torch.device | None,
-        **kwargs: Any,
+        reduction_dimensions: tuple[int, ...],
+        **_: Any,
     ) -> torch.Tensor:
         """
         Compute the vector loss.
@@ -66,32 +72,27 @@ class VectorLoss(BaseLoss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, 4].
+            Tensor of shape [number_of_samples, ...].
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, 4].
-        target_area_mask : torch.Tensor
-            The indices of target areas corresponding to each sample.
-            Tensor of shape [number_of_samples].
-        reduction_dimensions : tuple[int]
+            Tensor of shape [number_of_samples, ...].
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the final loss.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+        **_ : Any
+            Keyword arguments.
 
         Returns
         -------
         torch.Tensor
             The summed MSE vector loss reduced along the specified dimensions.
+            Tensor of shape [number_of_samples].
         """
-        loss_function = torch.nn.MSELoss(reduction="none")
-        loss = loss_function(prediction, ground_truth)
+        loss = self.loss_function(prediction, ground_truth)
 
         return loss.sum(dim=reduction_dimensions)
 
 
-class FocalSpotLoss(BaseLoss):
+class FocalSpotLoss(Loss):
     """
     A loss defined as the elementwise squared distance (Euclidean distance) between predicted focal spots and the ground truth.
 
@@ -110,16 +111,17 @@ class FocalSpotLoss(BaseLoss):
         scenario : Scenario
             The scenario.
         """
+        super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
         self.scenario = scenario
 
     def __call__(
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
+        reduction_dimensions: tuple[int, ...],
         target_area_mask: torch.Tensor,
-        reduction_dimensions: tuple[int],
-        device: torch.device | None,
-        **kwargs: Any,
+        device: torch.device | None = None,
+        **_: Any,
     ) -> torch.Tensor:
         """
         Compute the focal spot loss.
@@ -135,20 +137,16 @@ class FocalSpotLoss(BaseLoss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, 4].
-        target_area_mask : torch.Tensor
-            The indices of target areas corresponding to each sample.
-            Tensor of shape [number_of_samples].
-        reduction_dimensions : tuple[int]
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the final loss.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+        **kwargs : Any
+            Keyword arguments.
 
         Returns
         -------
         torch.Tensor
             The summed MSE focal spot loss reduced along the specified dimensions.
+            Tensor of shape [number_of_samples].
         """
         device = get_device(device=device)
 
@@ -161,13 +159,13 @@ class FocalSpotLoss(BaseLoss):
             ],
             device=device,
         )
-        loss_function = torch.nn.MSELoss(reduction="none")
-        loss = loss_function(focal_spot, ground_truth)
+
+        loss = self.loss_function(focal_spot, ground_truth)
 
         return loss.sum(dim=reduction_dimensions)
 
 
-class PixelLoss(BaseLoss):
+class PixelLoss(Loss):
     """
     A loss defined as the elementwise squared distance (Euclidean distance) between each pixel of predicted bitmaps and the ground truth.
 
@@ -186,16 +184,17 @@ class PixelLoss(BaseLoss):
         scenario : Scenario
             The scenario.
         """
+        super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
         self.scenario = scenario
 
     def __call__(
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
+        reduction_dimensions: tuple[int, ...],
         target_area_mask: torch.Tensor,
-        reduction_dimensions: tuple[int],
-        device: torch.device | None,
-        **kwargs: Any,
+        device: torch.device | None = None,
+        **_: Any,
     ) -> torch.Tensor:
         """
         Compute the pixel loss.
@@ -211,20 +210,16 @@ class PixelLoss(BaseLoss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        target_area_mask : torch.Tensor
-            The indices of target areas corresponding to each sample.
-            Tensor of shape [number_of_samples].
-        reduction_dimensions : tuple[int]
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the final loss.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+        **kwargs : Any
+            Keyword arguments.
 
         Returns
         -------
         torch.Tensor
             The summed MSE pixel loss reduced along the specified dimensions.
+            Tensor of shape [number_of_samples].
         """
         device = get_device(device=device)
 
@@ -255,26 +250,29 @@ class PixelLoss(BaseLoss):
             number_of_rays=ground_truth.sum(dim=[1, 2]),
         )
 
-        loss_function = torch.nn.MSELoss(reduction="none")
-        loss = loss_function(normalized_predictions, normalized_ground_truth)
+        loss = self.loss_function(normalized_predictions, normalized_ground_truth)
 
         return loss.sum(dim=reduction_dimensions)
 
 
-class KLDivergenceLoss(BaseLoss):
+class KLDivergenceLoss(Loss):
     """A loss defined as the Kullback-Leibler divergence between predicted values and the ground truth."""
+
+    def __init__(self) -> None:
+        """Initialize the Kullback-Leibler divergence loss."""
+        super().__init__(
+            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
+        )
 
     def __call__(
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        target_area_mask: torch.Tensor,
-        reduction_dimensions: tuple[int],
-        device: torch.device | None,
-        **kwargs: Any,
+        reduction_dimensions: tuple[int, ...],
+        **_: Any,
     ) -> torch.Tensor:
         r"""
-        Compute the Kullback-Leibler divergence loss.
+        Compute the Kullback-Leibler divergence loss :math:`D_{\mathrm{KL}}(P \parallel Q)`.
 
         The elements in the prediction and ground truth are normalized and shifted, to be greater or
         equal to zero. The kl-divergence is defined by:
@@ -297,31 +295,31 @@ class KLDivergenceLoss(BaseLoss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        target_area_mask : torch.Tensor
-            The indices of target areas corresponding to each sample.
-            Tensor of shape [number_of_samples].
-        reduction_dimensions : tuple[int]
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the final loss.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+        **_ : Any
+            Keyword arguments.
 
         Returns
         -------
         torch.Tensor
             The summed kl-divergence loss reduced along the specified dimensions.
+            Tensor of shape [number_of_samples].
         """
-        ground_truth_distributions = ground_truth / (
-            ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12
-        )
-        flux_shifted = prediction - prediction.min()
-        predicted_distributions = flux_shifted / (
-            flux_shifted.sum(dim=(1, 2), keepdim=True) + 1e-12
-        )
+        if ground_truth.min() < 0:
+            ground_truth = ground_truth - ground_truth.min()
+        ground_truth_distributions = (
+            ground_truth / (ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12)
+        ) + 1e-12
+        if prediction.min() < 0:
+            prediction = prediction - prediction.min()
+        predicted_distributions = (
+            prediction / (prediction.sum(dim=(1, 2), keepdim=True) + 1e-12)
+        ) + 1e-12
 
-        loss = kl_divergence(
-            predictions=ground_truth_distributions, targets=predicted_distributions
-        )
+        log_input = torch.log(predicted_distributions)
+        log_target = torch.log(ground_truth_distributions)
+
+        loss = self.loss_function(log_input, log_target)
 
         return loss.sum(dim=reduction_dimensions)

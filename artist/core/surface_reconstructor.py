@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import LRScheduler
 from artist.core import learning_rate_schedulers
 from artist.core.core_utils import per_heliostat_reduction, scale_loss
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.loss_functions import BaseLoss
+from artist.core.loss_functions import Loss
 from artist.data_loader import flux_distribution_loader, paint_loader
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
@@ -103,7 +103,7 @@ class SurfaceReconstructor:
 
     def reconstruct_surfaces(
         self,
-        loss_definition: BaseLoss,
+        loss_definition: Loss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -111,7 +111,7 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        loss_definition : BaseLoss
+        loss_definition : Loss
             The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).

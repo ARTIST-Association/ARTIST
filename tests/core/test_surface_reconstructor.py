@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.loss_functions import KLDivergenceLoss, PixelLoss
+from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
 from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
@@ -14,23 +14,16 @@ from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss, data_source, early_stopping_delta",
+    "loss_class, data_source, early_stopping_delta",
     [
-        # Test standard behavior.
-        ("kl_divergence", "paint", 1e-4),
-        (
-            "pixel_loss",
-            "paint",
-            1e-4,
-        ),
-        # Test invalid data source.
-        ("pixel_loss", "invalid", 1e-4),
-        # Test early stopping.
-        ("pixel_loss", "paint", 1.0),
+        (KLDivergenceLoss, "paint", 1e-4),
+        (PixelLoss, "paint", 1e-4),
+        (PixelLoss, "invalid", 1e-4),
+        (PixelLoss, "paint", 1.0),
     ],
 )
 def test_surface_reconstructor(
-    loss: str,
+    loss_class: Loss,
     data_source: str,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
@@ -41,8 +34,8 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
-    loss : str
-        The type of the loss function.
+    loss_class : Loss
+        The loss class.
     data_source : str
         The name of the data source.
     early_stopping_delta : float
@@ -82,7 +75,7 @@ def test_surface_reconstructor(
     total_variation_regularizer_normals = TotalVariationRegularizer(
         weight=0.5,
         reduction_dimensions=(1,),
-        surface=config_dictionary.surface_points,
+        surface=config_dictionary.surface_normals,
         number_of_neighbors=64,
         sigma=1e-3,
     )
@@ -160,12 +153,9 @@ def test_surface_reconstructor(
         device=device,
     )
 
-    if loss == "pixel_loss":
-        loss_definition = PixelLoss(
-            scenario=scenario,
-        )
-    if loss == "kl_divergence":
-        loss_definition = KLDivergenceLoss()
+    loss_definition = (
+        PixelLoss(scenario=scenario) if loss_class is PixelLoss else KLDivergenceLoss()
+    )
 
     if data_source == "invalid":
         with pytest.raises(ValueError) as exc_info:
@@ -185,10 +175,11 @@ def test_surface_reconstructor(
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups
         ):
+            loss_name = "pixel_loss" if loss_class is PixelLoss else "kl_divergence"
             expected_path = (
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss}_group_{index}_{device.type}.pt"
+                / f"{loss_name}_group_{index}_{device.type}.pt"
             )
 
             expected = torch.load(expected_path, map_location=device, weights_only=True)

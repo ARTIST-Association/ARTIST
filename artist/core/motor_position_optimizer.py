@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.loss_functions import BaseLoss
+from artist.core.loss_functions import Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
@@ -101,7 +101,7 @@ class MotorPositionsOptimizer:
 
     def optimize(
         self,
-        loss_definition: BaseLoss,
+        loss_definition: Loss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         r"""
@@ -140,7 +140,7 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        loss_definition : BaseLoss
+        loss_definition : Loss
             The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).

@@ -7,7 +7,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_calibrator import KinematicCalibrator
-from artist.core.loss_functions import FocalSpotLoss, VectorLoss
+from artist.core.loss_functions import FocalSpotLoss, Loss, VectorLoss
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 
@@ -16,50 +16,47 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_lr, loss, data_source, early_stopping_delta",
+    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta",
     [
-        # Test standard behavior.
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.001,
-            "vector_loss",
+            VectorLoss,
             "paint",
             1e-4,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            "focal_spot_loss",
+            FocalSpotLoss,
             "paint",
             1e-4,
         ),
-        # Test invalid data source.
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.0001,
-            "vector_loss",
+            VectorLoss,
             "invalid",
             1e-4,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            "focal_spot_loss",
+            FocalSpotLoss,
             "invalid",
             1e-4,
         ),
-        # Test early stopping.
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.0001,
-            "vector_loss",
+            VectorLoss,
             "paint",
             1.0,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
-            "focal_spot_loss",
+            FocalSpotLoss,
             "paint",
             1.0,
         ),
@@ -67,8 +64,8 @@ set_logger_config()
 )
 def test_kinematic_calibrator(
     calibration_method: str,
-    initial_lr: float,
-    loss: str,
+    initial_learning_rate: float,
+    loss_class: Loss,
     data_source: str,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
@@ -81,11 +78,10 @@ def test_kinematic_calibrator(
     ----------
     calibration_method : str
         The name of the calibration method.
-    initial_lr : float
+    initial_learning_rate : float
         The initial learning rate.
-    loss_function : Callable[..., torch.Tensor]
-        A callable function that computes the loss. It accepts predictions and targets
-        and optionally other keyword arguments and return a tensor with loss values.
+    loss_class : Loss
+        The loss class.
     data_source : str
         The name of the data source.
     early_stopping_delta : float
@@ -108,7 +104,7 @@ def test_kinematic_calibrator(
     }
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: initial_lr,
+        config_dictionary.initial_learning_rate: initial_learning_rate,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 15,
         config_dictionary.num_log: 1,
@@ -174,12 +170,11 @@ def test_kinematic_calibrator(
         calibration_method=calibration_method,
     )
 
-    if loss == "vector_loss":
-        loss_definition = VectorLoss()
-    if loss == "focal_spot_loss":
-        loss_definition = FocalSpotLoss(
-            scenario=scenario,
-        )
+    loss_definition = (
+        FocalSpotLoss(scenario=scenario)
+        if loss_class is FocalSpotLoss
+        else VectorLoss()
+    )
 
     # Calibrate the kinematic.
     if data_source == "invalid":

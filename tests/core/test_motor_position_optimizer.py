@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
+from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
@@ -57,14 +57,15 @@ def distribution() -> torch.Tensor:
 
 
 @pytest.mark.parametrize(
-    "ground_truth, early_stopping_delta",
+    "loss_class, ground_truth_fixture, early_stopping_delta",
     [
-        ("focal_spot", 1e-4),
-        ("distribution", 1.0),
+        (FocalSpotLoss, focal_spot, 1e-4),
+        (KLDivergenceLoss, distribution, 1.0),
     ],
 )
 def test_motor_positions_optimizer(
-    ground_truth: torch.Tensor,
+    loss_class: Loss,
+    ground_truth_fixture: torch.Tensor,
     early_stopping_delta: float,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
@@ -75,15 +76,14 @@ def test_motor_positions_optimizer(
 
     Parameters
     ----------
-    loss_fixture_name : str
-        The fixture determining the loss function and optimization target.
+    loss_class : Loss
+        The loss class.
+    ground_truth_fixture : torch.Tensor
+        A fixture to retrive the ground truth.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    optimizer_method : str
-        The method used for optimization. The motor positions can be optimized to aim at a
-        specific coordinate or to match a specific distribution.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -134,17 +134,16 @@ def test_motor_positions_optimizer(
         optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        ground_truth=request.getfixturevalue(ground_truth).to(device),
+        ground_truth=request.getfixturevalue(ground_truth_fixture).to(device),
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
 
-    if ground_truth == "focal_spot":
-        loss_definition = FocalSpotLoss(
-            scenario=scenario,
-        )
-    if ground_truth == "distribution":
-        loss_definition = KLDivergenceLoss()
+    loss_definition = (
+        FocalSpotLoss(scenario=scenario)
+        if loss_class is FocalSpotLoss
+        else KLDivergenceLoss()
+    )
 
     # Optimize the motor positions.
     _ = motor_positions_optimizer.optimize(
@@ -152,10 +151,11 @@ def test_motor_positions_optimizer(
     )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
+        loss_name = "focal_spot" if loss_class is FocalSpotLoss else "distribution"
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_motor_positions"
-            / f"{ground_truth}_group_{index}_{device.type}.pt"
+            / f"{loss_name}_group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)

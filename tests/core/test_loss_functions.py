@@ -3,9 +3,9 @@ import torch
 from pytest_mock import MockerFixture
 
 from artist.core.loss_functions import (
-    BaseLoss,
     FocalSpotLoss,
     KLDivergenceLoss,
+    Loss,
     PixelLoss,
     VectorLoss,
 )
@@ -31,7 +31,8 @@ def test_base_loss(
     AssertionError
         If test does not complete as expected.
     """
-    base_loss = BaseLoss()
+    base_loss = Loss(loss_function=torch.nn.MSELoss)
+
     with pytest.raises(NotImplementedError) as exc_info:
         base_loss(
             prediction=torch.empty((2, 4), device=device),
@@ -270,14 +271,34 @@ def test_pixel_loss(
             torch.tensor([0.0]),
         ),
         (
-            torch.tensor([[[0.5, 0.75]]]),
-            torch.tensor([[[1.0, 0.0]]]),
-            torch.tensor([27.631021499634]),
+            torch.tensor(
+                [
+                    [[5.4, 5.71, 2.46], [2.86, 0.44, 0.11]],
+                    [[0.5, 0.75, 0.41], [0.11, 2.55, 3.09]],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [[0.5, 0.75, 0.41], [0.11, 2.55, 3.09]],
+                    [[5.4, 5.71, 2.46], [2.86, 0.44, 0.11]],
+                ]
+            ),
+            torch.tensor([2.311237096786, 1.351369142532]),
         ),
         (
-            torch.tensor([[[1.0, 0.0]]]),
-            torch.tensor([[[0.5, 0.75]]]),
-            torch.tensor([0.916290760040]),
+            torch.tensor(
+                [
+                    [[0.5, 0.75, 0.41], [0.11, 2.55, 3.09]],
+                    [[5.4, 5.71, 2.46], [2.86, 0.44, 0.11]],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [[5.4, 5.71, 2.46], [2.86, 0.44, 0.11]],
+                    [[0.5, 0.75, 0.41], [0.11, 2.55, 3.09]],
+                ]
+            ),
+            torch.tensor([1.351369142532, 2.311237096786]),
         ),
     ],
 )
