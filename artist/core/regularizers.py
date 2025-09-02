@@ -32,12 +32,36 @@ class Regularizer:
         self.weight = weight
         self.reduction_dimensions = reduction_dimensions
 
-    def __call__(self, **kwargs: Any) -> torch.Tensor:
+    def __call__(
+        self,
+        current_nurbs_control_points: torch.Tensor,
+        original_nurbs_control_points: torch.Tensor,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
+        device: torch.device | None = None,
+        **kwargs: Any,
+    ) -> torch.Tensor:
         """
         Compute the regularization.
 
         Parameters
         ----------
+        current_nurbs_control_points : torch.Tensor
+            The predicted nurbs control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_nurbs_control_points : torch.Tensor
+            The original, unchanged control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        surface_points : torch.Tensor
+            The surface points of the predicted surface.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
+        surface_normals : torch.Tensor
+            The surface normals of the predicted surface.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         **kwargs : Any
             Keyword arguments.
 
@@ -111,6 +135,8 @@ class TotalVariationRegularizer(Regularizer):
 
     def __call__(
         self,
+        current_nurbs_control_points: torch.Tensor,
+        original_nurbs_control_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -126,6 +152,12 @@ class TotalVariationRegularizer(Regularizer):
 
         Parameters
         ----------
+        current_nurbs_control_points : torch.Tensor
+            The predicted nurbs control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_nurbs_control_points : torch.Tensor
+            The original, unchanged control points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -136,7 +168,7 @@ class TotalVariationRegularizer(Regularizer):
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        **_ : Any
+        **kwargs : Any
             Keyword arguments.
 
         Returns
@@ -261,6 +293,9 @@ class IdealSurfaceRegularizer(Regularizer):
         self,
         current_nurbs_control_points: torch.Tensor,
         original_nurbs_control_points: torch.Tensor,
+        surface_points: torch.Tensor,
+        surface_normals: torch.Tensor,
+        device: torch.device | None = None,
         **_: Any,
     ) -> torch.Tensor:
         """
@@ -277,6 +312,16 @@ class IdealSurfaceRegularizer(Regularizer):
         original_nurbs_control_points : torch.Tensor
             The original, unchanged control points.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        surface_points : torch.Tensor
+            The surface points of the predicted surface.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
+        surface_normals : torch.Tensor
+            The surface normals of the predicted surface.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         **_ : Any
             Keyword arguments.
 

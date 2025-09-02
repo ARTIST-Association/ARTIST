@@ -50,7 +50,7 @@ if __name__ == "__main__":
         "total_variation_loss_number_of_neighbors_normals": (0, 5000),
         "total_variation_loss_sigma_normals": (0, 1),
         "initial_learning_rate": (1e-7, 0.9),
-        "loss_function": ("distribution_loss_kl_divergence", "pixel_loss"),
+        "loss_class": ("KLDivergenceLoss", "PixelLoss"),
     }
 
     seed = 7

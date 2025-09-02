@@ -1,7 +1,40 @@
 import pytest
 import torch
 
-from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
+from artist.core.regularizers import (
+    IdealSurfaceRegularizer,
+    Regularizer,
+    TotalVariationRegularizer,
+)
+
+
+def test_base_regularizer(
+    device: torch.device,
+) -> None:
+    """
+    Test the abstract method of the abstract regularizer.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    base_regularizer = Regularizer(weight=1.0, reduction_dimensions=(1,))
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        base_regularizer(
+            current_nurbs_control_points=torch.empty((2, 4), device=device),
+            original_nurbs_control_points=torch.empty((2, 4), device=device),
+            surface_points=torch.tensor([0, 1], device=device),
+            surface_normals=(1,),
+            device=device,
+        )
+    assert "Must be overridden!" in str(exc_info.value)
 
 
 def test_total_variation_regularizer(

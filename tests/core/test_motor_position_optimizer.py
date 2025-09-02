@@ -57,15 +57,15 @@ def distribution() -> torch.Tensor:
 
 
 @pytest.mark.parametrize(
-    "loss_class, ground_truth_fixture, early_stopping_delta",
+    "loss_class, ground_truth_fixture_name, early_stopping_delta",
     [
-        (FocalSpotLoss, focal_spot, 1e-4),
-        (KLDivergenceLoss, distribution, 1.0),
+        (FocalSpotLoss, "focal_spot", 1e-4),
+        (KLDivergenceLoss, "distribution", 1.0),
     ],
 )
 def test_motor_positions_optimizer(
     loss_class: Loss,
-    ground_truth_fixture: torch.Tensor,
+    ground_truth_fixture_name: torch.Tensor,
     early_stopping_delta: float,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
@@ -78,7 +78,7 @@ def test_motor_positions_optimizer(
     ----------
     loss_class : Loss
         The loss class.
-    ground_truth_fixture : torch.Tensor
+    ground_truth_fixture_name : str
         A fixture to retrive the ground truth.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
@@ -134,7 +134,7 @@ def test_motor_positions_optimizer(
         optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
-        ground_truth=request.getfixturevalue(ground_truth_fixture).to(device),
+        ground_truth=request.getfixturevalue(ground_truth_fixture_name).to(device),
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
@@ -151,11 +151,10 @@ def test_motor_positions_optimizer(
     )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        loss_name = "focal_spot" if loss_class is FocalSpotLoss else "distribution"
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_motor_positions"
-            / f"{loss_name}_group_{index}_{device.type}.pt"
+            / f"{ground_truth_fixture_name}_group_{index}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)
