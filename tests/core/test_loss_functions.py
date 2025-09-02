@@ -3,6 +3,7 @@ import torch
 from pytest_mock import MockerFixture
 
 from artist.core.loss_functions import (
+    AngleLoss,
     FocalSpotLoss,
     KLDivergenceLoss,
     Loss,
@@ -336,6 +337,74 @@ def test_kl_divergence(
         ground_truth=ground_truth.to(device),
         target_area_mask=torch.tensor([0, 1], device=device),
         reduction_dimensions=(1, 2),
+        device=device,
+    )
+
+    torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "prediction, ground_truth, reduction_dimensions, expected",
+    [
+        (
+            torch.tensor([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]]),
+            torch.tensor([[1.0, 2.0, 3.0, 4.0], [3.0, 1.0, 3.2, 4.0]]),
+            (1),
+            torch.tensor([0.0, 7.196009159088e-02]),
+        ),
+        (
+            torch.tensor([[0.0, 1.0, 0.0]]),
+            torch.tensor([[0.0, -1.0, 0.0]]),
+            (1),
+            torch.tensor([2.0]),
+        ),
+        (
+            torch.tensor([[0.0, 1.0, 0.0]]),
+            torch.tensor([[1.0, 0.0, 0.0]]),
+            (1),
+            torch.tensor([1.0]),
+        ),
+    ],
+)
+def test_angle_loss(
+    prediction: torch.Tensor,
+    ground_truth: torch.Tensor,
+    reduction_dimensions: tuple[int],
+    expected: torch.Tensor,
+    device: torch.device,
+) -> None:
+    """
+    Test the vector loss.
+
+    Parameters
+    ----------
+    prediction : torch.Tensor
+        The predicted values.
+        Tensor of variable shape.
+    ground_truth : torch.Tensor
+        The ground truth.
+        Tensor of variable shape.
+    reduction_dimensions : tuple[int]
+        The dimensions along which to reduce the final loss.
+        reduction_dimensions : tuple[int] | None
+        The dimensions to reduce over.
+    expected : torch.Tensor
+        The expected loss.
+        Tensor of shape [number_of_samples].
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    vector_loss = AngleLoss()
+    result = vector_loss(
+        prediction=prediction.to(device),
+        ground_truth=ground_truth.to(device),
+        target_area_mask=torch.tensor([0, 1], device=device),
+        reduction_dimensions=reduction_dimensions,
         device=device,
     )
 
