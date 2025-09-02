@@ -119,9 +119,7 @@ class FocalSpotLoss(Loss):
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
         reduction_dimensions: tuple[int, ...],
-        target_area_mask: torch.Tensor,
-        device: torch.device | None = None,
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
         """
         Compute the focal spot loss.
@@ -148,7 +146,9 @@ class FocalSpotLoss(Loss):
             The summed MSE focal spot loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
-        device = get_device(device=device)
+        device = get_device(device=kwargs["device"])
+
+        target_area_mask = kwargs["target_area_mask"]
 
         focal_spot = utils.get_center_of_mass(
             bitmaps=prediction,
@@ -192,9 +192,7 @@ class PixelLoss(Loss):
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
         reduction_dimensions: tuple[int, ...],
-        target_area_mask: torch.Tensor,
-        device: torch.device | None = None,
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
         """
         Compute the pixel loss.
@@ -221,7 +219,9 @@ class PixelLoss(Loss):
             The summed MSE pixel loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
-        device = get_device(device=device)
+        device = get_device(device=kwargs["device"])
+
+        target_area_mask = kwargs["target_area_mask"]
 
         normalized_predictions = utils.normalize_bitmaps(
             flux_distributions=prediction,

@@ -5,6 +5,8 @@ import torch
 from mpi4py import MPI
 
 from artist.core import loss_functions
+from artist.core.loss_functions import KLDivergenceLoss, PixelLoss
+from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
@@ -72,9 +74,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     )
 
     # Load the scenario.
-    with h5py.File(
-        pathlib.Path("examples/data/scenarios/scenario.h5"), "r"
-    ) as scenario_file:
+    with h5py.File(pathlib.Path("path/to/scenario/scenario.h5"), "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=number_of_surface_points_per_facet,
@@ -119,36 +119,33 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     }
 
     # Configure regularizers and their weights.
-    ideal_surface_regularizer = {
-        config_dictionary.regularization_callable: config_dictionary.vector_loss,
-        config_dictionary.weight: params["ideal_surface_loss_weight"],
-        config_dictionary.regularizers_parameters: None,
-    }
-    total_variation_regularizer_points = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: params["total_variation_loss_points_weight"],
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: params[
-                "total_variation_loss_number_of_neighbors_points"
-            ],
-            config_dictionary.sigma: params["total_variation_loss_sigma_points"],
-        },
-    }
-    total_variation_regularizer_normals = {
-        config_dictionary.regularization_callable: config_dictionary.total_variation_loss,
-        config_dictionary.weight: params["total_variation_loss_normals_weight"],
-        config_dictionary.regularizers_parameters: {
-            config_dictionary.number_of_neighbors: params[
-                "total_variation_loss_number_of_neighbors_normals"
-            ],
-            config_dictionary.sigma: params["total_variation_loss_sigma_normals"],
-        },
-    }
-    regularizers = {
-        config_dictionary.ideal_surface_loss: ideal_surface_regularizer,
-        config_dictionary.total_variation_loss_points: total_variation_regularizer_points,
-        config_dictionary.total_variation_loss_normals: total_variation_regularizer_normals,
-    }
+    ideal_surface_regularizer = IdealSurfaceRegularizer(
+        weight=params["ideal_surface_loss_weight"], reduction_dimensions=(1, 2, 3, 4)
+    )
+    total_variation_regularizer_points = TotalVariationRegularizer(
+        weight=params["total_variation_loss_points_weight"],
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_points,
+        number_of_neighbors=int(
+            params["total_variation_loss_number_of_neighbors_points"]
+        ),
+        sigma=params["total_variation_loss_sigma_points"],
+    )
+    total_variation_regularizer_normals = TotalVariationRegularizer(
+        weight=params["total_variation_loss_normals_weight"],
+        reduction_dimensions=(1,),
+        surface=config_dictionary.surface_normals,
+        number_of_neighbors=int(
+            params["total_variation_loss_number_of_neighbors_normals"]
+        ),
+        sigma=params["total_variation_loss_sigma_normals"],
+    )
+
+    regularizers = [
+        ideal_surface_regularizer,
+        total_variation_regularizer_points,
+        total_variation_regularizer_normals,
+    ]
 
     # Set optimizer parameters.
     optimization_configuration = {
@@ -174,9 +171,15 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         device=device,
     )
 
+    # Define loss.
+    loss_class = getattr(loss_functions, str(params["loss_class"]))
+    loss_definition = (
+        PixelLoss(scenario=scenario) if loss_class is PixelLoss else KLDivergenceLoss()
+    )
+
     # Reconstruct surfaces.
     loss = surface_reconstructor.reconstruct_surfaces(
-        loss_definition=getattr(loss_functions, str(params["loss_function"])),
+        loss_definition=loss_definition,
         device=device,
     )
 
