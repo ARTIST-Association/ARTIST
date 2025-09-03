@@ -132,7 +132,7 @@ surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.face
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
     type=config_dictionary.rigid_body_key,
-    initial_orientation=[0.0, 0.0, 1.0, 0.0],
+    initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
 # The minimum and maximum motor positions provided here are approximations of the actuators in the heliostat field in Juelich.
@@ -173,7 +173,7 @@ prototype_config = PrototypeConfig(
 # Include kinematic configuration for the heliostat.
 heliostat1_kinematic_config = KinematicConfig(
     type=config_dictionary.rigid_body_key,
-    initial_orientation=[0.0, 0.0, 1.0, 0.0],
+    initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
 # Include actuators for the heliostat.
