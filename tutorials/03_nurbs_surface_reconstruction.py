@@ -17,6 +17,7 @@ torch.cuda.manual_seed(7)
 # Set up logger
 set_logger_config()
 log = logging.getLogger(__name__)
+
 # Set the device
 device = get_device()
 

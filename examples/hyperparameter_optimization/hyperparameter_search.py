@@ -19,6 +19,9 @@ from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
+log = logging.getLogger(__name__)
+"""A logger for the surface reconstructor."""
+
 
 def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     """
@@ -50,10 +53,10 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.rank: 0,
         config_dictionary.world_size: 1,
         config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [...]},
+        config_dictionary.groups_to_ranks_mapping: {0: [0]},
         config_dictionary.heliostat_group_rank: 0,
         config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0], 1: [0]},
+        config_dictionary.ranks_to_groups_mapping: {0: [0]},
     }
 
     # For parameter combinations with too many rays (over 3000000) directly return a default loss,
@@ -65,7 +68,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         * params["number_of_rays"]
         * params["number_of_training_samples"]
     )
-    if total_number_of_rays >= 3000000:
+    if total_number_of_rays >= 1000000:
         loss = 987987
         return loss
 
@@ -83,9 +86,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     # The scenario .h5 file should contain a setup with at least one heliostat (with the same name(s)
     # as the heliostat(s) for which reconstruction data is provided). The heliostat(s) in this scenario
     # should be initialized with an ideal surface, do not provide deflectometry data!
-    with h5py.File(
-        pathlib.Path("/home/hgf_dlr/hgf_zas3427/artist-data/scenario.h5"), "r"
-    ) as scenario_file:
+    with h5py.File(pathlib.Path("path/to/scenario/scenario.h5"), "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=number_of_surface_points_per_facet,
@@ -106,10 +107,11 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Create a heliostat data mapping for the specified number of training samples.
     heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path="/home/hgf_dlr/hgf_zas3427/artist-data/paint",
+        base_path="/path/to/data/paint",
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
+        randomize=False,
     )
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
@@ -202,9 +204,12 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 if __name__ == "__main__":
     comm = MPI.COMM_WORLD
 
+    rank = comm.Get_rank()
+    print(rank)
+
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
-    log_path = "/home/hgf_dlr/hgf_zas3427/artist-data/logs"
+    log_path = "/path/to/logs"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
