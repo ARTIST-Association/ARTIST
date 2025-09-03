@@ -12,10 +12,10 @@ class LinearActuators(Actuators):
     ----------
     actuator_parameters : torch.Tensor
         The actuator parameters.
-        Tensor of shape [number_of_heliostats, 7, 2].
+        Tensor of shape [number_of_heliostats, 9, 2].
     active_actuator_parameters : torch.Tensor
         The active actuator parameters.
-        Tensor of shape [number_of_active_heliostats, 7, 2].
+        Tensor of shape [number_of_active_heliostats, 9, 2].
 
 
     Methods
@@ -36,9 +36,10 @@ class LinearActuators(Actuators):
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. One linear actuator has seven parameters.
+        A linear actuator describes movement within a 2D plane. One linear actuator has nine parameters.
         Ordered by index, the first parameter describes the type of the actuator, i.e. linear, the second parameter
-        describes the turning direction of the actuator. The next five parameters are the increment, which stores
+        describes the turning direction of the actuator. The third and fourth parameters are the minimum and
+        maximum motor positions. The next five parameters are the increment, which stores
         the information about the stroke length change per motor step, the initial stroke length, and an offset
         that describes the difference between the linear actuator's pivoting point and the point around which the
         actuator is allowed to pivot. Next, the actuator's pivoting radius is described by the pivot radius and
@@ -48,8 +49,8 @@ class LinearActuators(Actuators):
         Parameters
         ----------
         actuator_parameters : torch.Tensor
-            The seven actuator parameters.
-            Tensor of shape [number_of_heliostats, 7, 2].
+            The nine actuator parameters.
+            Tensor of shape [number_of_heliostats, 9, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ''ARTIST'' will automatically select the most appropriate
@@ -80,18 +81,18 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         """
         stroke_lengths = (
-            motor_positions / self.active_actuator_parameters[:, 2]
-            + self.active_actuator_parameters[:, 3]
+            motor_positions / self.active_actuator_parameters[:, 4]
+            + self.active_actuator_parameters[:, 5]
         )
         calc_step_1 = (
-            self.active_actuator_parameters[:, 4] ** 2
-            + self.active_actuator_parameters[:, 5] ** 2
+            self.active_actuator_parameters[:, 6] ** 2
+            + self.active_actuator_parameters[:, 7] ** 2
             - stroke_lengths**2
         )
         calc_step_2 = (
             2.0
-            * self.active_actuator_parameters[:, 4]
-            * self.active_actuator_parameters[:, 5]
+            * self.active_actuator_parameters[:, 6]
+            * self.active_actuator_parameters[:, 7]
         )
         calc_step_3 = calc_step_1 / calc_step_2
         absolute_angles = torch.arccos(torch.clamp(calc_step_3, min=-1.0, max=1.0))
@@ -133,7 +134,7 @@ class LinearActuators(Actuators):
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self.active_actuator_parameters[:, 6]
+            self.active_actuator_parameters[:, 8]
             + delta_angles * (self.active_actuator_parameters[:, 1] == 1)
             - delta_angles * (self.active_actuator_parameters[:, 1] == 0)
         )
@@ -169,8 +170,8 @@ class LinearActuators(Actuators):
 
         delta_angles = torch.where(
             self.active_actuator_parameters[:, 1] == 1,
-            angles - self.active_actuator_parameters[:, 6],
-            self.active_actuator_parameters[:, 6] - angles,
+            angles - self.active_actuator_parameters[:, 8],
+            self.active_actuator_parameters[:, 8] - angles,
         )
 
         absolute_initial_angles = self._motor_positions_to_absolute_angles(
@@ -182,16 +183,16 @@ class LinearActuators(Actuators):
         calc_step_3 = torch.cos(initial_angles)
         calc_step_2 = (
             2.0
-            * self.active_actuator_parameters[:, 4]
-            * self.active_actuator_parameters[:, 5]
+            * self.active_actuator_parameters[:, 6]
+            * self.active_actuator_parameters[:, 7]
         )
         calc_step_1 = calc_step_3 * calc_step_2
         stroke_lengths = torch.sqrt(
-            self.active_actuator_parameters[:, 4] ** 2
-            + self.active_actuator_parameters[:, 5] ** 2
+            self.active_actuator_parameters[:, 6] ** 2
+            + self.active_actuator_parameters[:, 7] ** 2
             - calc_step_1
         )
         motor_positions = (
-            stroke_lengths - self.active_actuator_parameters[:, 3]
-        ) * self.active_actuator_parameters[:, 2]
+            stroke_lengths - self.active_actuator_parameters[:, 5]
+        ) * self.active_actuator_parameters[:, 4]
         return motor_positions

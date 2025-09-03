@@ -11,10 +11,10 @@ class IdealActuators(Actuators):
     ----------
     actuator_parameters : torch.Tensor
         The actuator parameters.
-        Tensor of shape [number_of_heliostats, 2, 2].
+        Tensor of shape [number_of_heliostats, 4, 2].
     active_actuator_parameters : torch.Tensor
         The active actuator parameters.
-        Tensor of shape [number_of_active_heliostats, 2, 2].
+        Tensor of shape [number_of_active_heliostats, 4, 2].
 
 
     Methods
@@ -38,8 +38,8 @@ class IdealActuators(Actuators):
         Parameters
         ----------
         actuator_parameters : torch.Tensor
-            The two actuator parameters.
-            Tensor of shape [number_of_heliostats, 2, 2].
+            The four actuator parameters.
+            Tensor of shape [number_of_heliostats, 4, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ''ARTIST'' will automatically select the most appropriate
