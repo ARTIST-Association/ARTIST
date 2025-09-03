@@ -462,7 +462,7 @@ class HeliostatRayTracer:
             Used to map bitmaps per heliostat to correct index.
             Tensor of shape [number_of_heliostats].
         target_area_mask : torch.Tensor
-            The indices of target areas on which each heliostat should be raytraced.
+            The indices of target areas on which each heliostat is raytraced.
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
