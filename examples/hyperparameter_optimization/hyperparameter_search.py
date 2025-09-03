@@ -68,7 +68,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         * params["number_of_rays"]
         * params["number_of_training_samples"]
     )
-    if total_number_of_rays >= 1000000:
+    if total_number_of_rays >= 2000000:
         loss = 987987
         return loss
 
@@ -219,12 +219,16 @@ if __name__ == "__main__":
         log_rank=True,
         colors=True,
     )
+    
+    log = logging.getLogger(__name__)
+    rank = comm.Get_rank()
+    log.info(rank)
 
     search_space = {
         "number_of_surface_points": (30, 100),
         "number_of_control_points": (4, 100),
         "number_of_rays": (10, 200),
-        "number_of_training_samples": (2, 16),
+        "number_of_training_samples": (2, 8),
         "nurbs_degree": (2, 3),
         "scheduler": ("exponential", "cyclic", "reduce_on_plateau"),
         "lr_gamma": (0.85, 0.999),
@@ -250,7 +254,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     # Set up evolutionary operator.
-    num_generations = 100
+    num_generations = 1000
     pop_size = 2 * comm.size  # Breeding population size
     propagator = get_default_propagator(
         pop_size=pop_size,
@@ -277,6 +281,6 @@ if __name__ == "__main__":
         debug=2,  # Logging interval and verbosity level
     )
     propulator.summarize(
-        top_n=1,
+        top_n=10,
         debug=2,  # Print top-n best individuals on each island in summary.
     )
