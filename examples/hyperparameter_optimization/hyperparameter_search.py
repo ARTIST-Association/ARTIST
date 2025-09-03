@@ -50,10 +50,10 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.rank: 0,
         config_dictionary.world_size: 1,
         config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [...]},
+        config_dictionary.groups_to_ranks_mapping: {0: [0]},
         config_dictionary.heliostat_group_rank: 0,
         config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0], 1: [0]},
+        config_dictionary.ranks_to_groups_mapping: {0: [0]},
     }
 
     # For parameter combinations with too many rays (over 3000000) directly return a default loss,
@@ -65,7 +65,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         * params["number_of_rays"]
         * params["number_of_training_samples"]
     )
-    if total_number_of_rays >= 3000000:
+    if total_number_of_rays >= 2000000:
         loss = 987987
         return loss
 
@@ -110,6 +110,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
+        #randomize=False
     )
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
@@ -214,12 +215,16 @@ if __name__ == "__main__":
         log_rank=True,
         colors=True,
     )
+    
+    log = logging.getLogger(__name__)
+    rank = comm.Get_rank()
+    log.info(rank)
 
     search_space = {
         "number_of_surface_points": (30, 100),
         "number_of_control_points": (4, 100),
         "number_of_rays": (10, 200),
-        "number_of_training_samples": (2, 16),
+        "number_of_training_samples": (2, 8),
         "nurbs_degree": (2, 3),
         "scheduler": ("exponential", "cyclic", "reduce_on_plateau"),
         "lr_gamma": (0.85, 0.999),
@@ -245,7 +250,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     # Set up evolutionary operator.
-    num_generations = 100
+    num_generations = 1000
     pop_size = 2 * comm.size  # Breeding population size
     propagator = get_default_propagator(
         pop_size=pop_size,
@@ -272,6 +277,6 @@ if __name__ == "__main__":
         debug=2,  # Logging interval and verbosity level
     )
     propulator.summarize(
-        top_n=1,
+        top_n=10,
         debug=2,  # Print top-n best individuals on each island in summary.
     )
