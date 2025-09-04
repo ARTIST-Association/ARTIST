@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "artist"
-version = "0.0.1"
+version = "1.0.0"
 authors = [
   { name="ARTIST Consortium", email="artist@lists.kit.edu" },
 ]
@@ -36,7 +36,11 @@ dev = [
     "sphinxcontrib-napoleon",
     "sphinxemoji",
 ]
-mpi = ["mpi4py",]
+examples = [
+    "mpi4py",
+    "propulate",
+    "matplotlib",
+]
 tutorials = ["matplotlib"]
 
 [project.urls]
