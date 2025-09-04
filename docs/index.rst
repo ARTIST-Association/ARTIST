@@ -68,6 +68,8 @@ You can find more detailed installation instructions in :ref:`installation`.
 
    install
    artist_under_the_hood
+   heliostats
+   nurbs_tutorial
    usage
 
 .. Links

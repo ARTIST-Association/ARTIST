@@ -3,17 +3,16 @@
 How To Use ``ARTIST``
 =====================
 
-Here, you can find an overview of multiple examples detailing how to use ``ARTIST``.
+Here, you can find an overview of multiple examples and tutorials detailing how to use ``ARTIST``.
 
-If you are interested in an explanation of what is happening under the hood, please checkout
-:ref:`this description <artist_under_hood>`.
+More general information including can be found by reading up on what is happening in ``ARTIST``
+:ref:`under the hood <artist_under_hood>`, some important :ref:`heliostat information <heliostats>`, and an
+:ref:`overview of nurbs <nurbs>`.
 
 .. toctree::
    :maxdepth: 1
 
-   nurbs_tutorial
    scenario
-   heliostats
    tutorial_generating_scenario
    tutorial_heliostat_raytracing
    tutorial_distributed_raytracing
