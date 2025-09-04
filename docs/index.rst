@@ -50,7 +50,7 @@ To install ``ARTIST``, run the following in your terminal:
 
 .. code-block:: console
 
-    $ pip install https://github.com/ARTIST-Association/ARTIST
+    $ pip install artist
 
 You can check whether your installation was successful by importing ``ARTIST`` in ``Python``:
 
