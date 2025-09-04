@@ -67,6 +67,7 @@ You can find more detailed installation instructions in :ref:`installation`.
    :caption: Contents
 
    install
+   artist_under_the_hood
    usage
 
 .. Links
