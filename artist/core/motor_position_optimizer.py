@@ -159,11 +159,13 @@ class MotorPositionsOptimizer:
         if rank == 0:
             log.info("Start the motor positions optimization.")
 
-        final_loss_per_group = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostat_groups,),
-            torch.inf,
-            device=device,
-        )
+        optimizable_parameters_all_groups = []
+        scales_all_groups = []
+        initial_motor_positions_all_groups = []
+
+        active_heliostats_masks_all_groups = []
+        target_area_masks_all_groups = []
+        incident_ray_directions_all_groups = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -172,30 +174,23 @@ class MotorPositionsOptimizer:
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
 
+            active_heliostats_masks_all_groups.append(torch.ones(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device))
+            target_area_masks_all_groups.append(torch.full((heliostat_group.number_of_heliostats,), self.target_area_index, dtype=torch.int32, device=device))
+            incident_ray_directions_all_groups.append(self.incident_ray_direction.repeat(heliostat_group.number_of_heliostats, 1))
+            
             # Align all heliostats once, to the given incident ray direction and target, to set initial motor
             # positions. The motor positions are set automatically within the ``align_surfaces_with_incident_ray_directions()``
             # method.
-            (
-                active_heliostats_mask,
-                target_area_mask,
-                incident_ray_directions,
-            ) = self.scenario.index_mapping(
-                heliostat_group=heliostat_group,
-                single_incident_ray_direction=self.incident_ray_direction,
-                single_target_area_index=self.target_area_index,
-                device=device,
-            )
-
             # Activate heliostats.
             heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask, device=device
+                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index], device=device
             )
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[target_area_mask],
-                incident_ray_directions=incident_ray_directions,
-                active_heliostats_mask=active_heliostats_mask,
+                aim_points=self.scenario.target_areas.centers[target_area_masks_all_groups[heliostat_group_index]],
+                incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
+                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
                 device=device,
             )
 
@@ -203,6 +198,7 @@ class MotorPositionsOptimizer:
             initial_motor_positions = (
                 heliostat_group.kinematic.active_motor_positions.detach().clone()
             )
+            initial_motor_positions_all_groups.append(initial_motor_positions)
             motor_positions_minimum = (
                 heliostat_group.kinematic.actuators.actuator_parameters[:, 2]
             )
@@ -211,62 +207,72 @@ class MotorPositionsOptimizer:
             )
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
-            scale = torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
+            scales_all_groups.append(torch.minimum(lower_margin, upper_margin).clamp(min=1.0))
 
             # Create the optimizer.
-            optimizable_parameter = torch.nn.Parameter(
+            optimizable_parameters_all_groups.append(torch.nn.Parameter(
                 torch.zeros_like(initial_motor_positions, device=device)
-            )
-            optimizer = torch.optim.Adam(
-                [optimizable_parameter],
-                lr=self.optimization_configuration[
-                    config_dictionary.initial_learning_rate
-                ],
-            )
+            ))
 
-            # Create a learning rate scheduler.
-            scheduler_fn = getattr(
-                learning_rate_schedulers,
-                self.optimization_configuration[config_dictionary.scheduler],
-            )
-            scheduler: LRScheduler = scheduler_fn(
-                optimizer=optimizer,
-                parameters=self.optimization_configuration[
-                    config_dictionary.scheduler_parameters
-                ],
-            )
+        optimizer = torch.optim.Adam(
+            optimizable_parameters_all_groups,
+            lr=self.optimization_configuration[
+                config_dictionary.initial_learning_rate
+            ],
+        )
 
-            # Start the optimization.
-            loss = torch.inf
-            best_loss = torch.inf
-            patience_counter = 0
-            epoch = 0
-            log_step = (
-                self.optimization_configuration[config_dictionary.max_epoch]
-                // self.optimization_configuration[config_dictionary.num_log]
-            )
-            while (
-                loss > self.optimization_configuration[config_dictionary.tolerance]
-                and epoch
-                <= self.optimization_configuration[config_dictionary.max_epoch]
-            ):
-                optimizer.zero_grad()
+        # Create a learning rate scheduler.
+        scheduler_fn = getattr(
+            learning_rate_schedulers,
+            self.optimization_configuration[config_dictionary.scheduler],
+        )
+        scheduler: LRScheduler = scheduler_fn(
+            optimizer=optimizer,
+            parameters=self.optimization_configuration[
+                config_dictionary.scheduler_parameters
+            ],
+        )
+
+        # Start the optimization.
+        loss = torch.inf
+        best_loss = torch.inf
+        patience_counter = 0
+        epoch = 0
+        log_step = (
+            self.optimization_configuration[config_dictionary.max_epoch]
+            // self.optimization_configuration[config_dictionary.num_log]
+        )
+        while (
+            loss > self.optimization_configuration[config_dictionary.tolerance]
+            and epoch
+            <= self.optimization_configuration[config_dictionary.max_epoch]
+        ):
+            optimizer.zero_grad()
+
+            total_flux = torch.zeros((self.bitmap_resolution[0], self.bitmap_resolution[1]), device=device)
+        
+            for heliostat_group_index in self.ddp_setup[
+                config_dictionary.groups_to_ranks_mapping
+            ][rank]:
+                heliostat_group: HeliostatGroup = (
+                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+                )
 
                 # Reconstruct true motor positions from reparameterized version.
-                motor_positions_normalized = torch.tanh(optimizable_parameter)
+                motor_positions_normalized = torch.tanh(optimizer.param_groups[0]["params"][heliostat_group_index])
                 heliostat_group.kinematic.motor_positions = (
-                    initial_motor_positions + motor_positions_normalized * scale
+                    initial_motor_positions_all_groups[heliostat_group_index] + motor_positions_normalized * scales_all_groups[heliostat_group_index]
                 )
 
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
-                    active_heliostats_mask=active_heliostats_mask, device=device
+                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index], device=device
                 )
 
                 # Align heliostats.
                 heliostat_group.align_surfaces_with_motor_positions(
                     motor_positions=heliostat_group.kinematic.active_motor_positions,
-                    active_heliostats_mask=active_heliostats_mask,
+                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
                     device=device,
                 )
 
@@ -285,9 +291,9 @@ class MotorPositionsOptimizer:
 
                 # Perform heliostat-based ray tracing.
                 flux_distributions = ray_tracer.trace_rays(
-                    incident_ray_directions=incident_ray_directions,
-                    active_heliostats_mask=active_heliostats_mask,
-                    target_area_mask=target_area_mask,
+                    incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
+                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
+                    target_area_mask=target_area_masks_all_groups[heliostat_group_index],
                     device=device,
                 )
 
@@ -300,73 +306,68 @@ class MotorPositionsOptimizer:
 
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
-                    target_area_mask=target_area_mask,
+                    target_area_mask=target_area_masks_all_groups[heliostat_group_index],
                     device=device,
                 )[self.target_area_index]
 
-                loss = loss_definition(
-                    prediction=flux_distribution_on_target.unsqueeze(0),
-                    ground_truth=self.ground_truth.unsqueeze(0),
-                    target_area_mask=torch.tensor(
-                        [self.target_area_index], device=device
-                    ),
-                    reduction_dimensions=(1,),
-                    device=device,
-                ).sum()
+                total_flux = total_flux + flux_distribution_on_target
+            
+            if self.ddp_setup[config_dictionary.is_distributed]:
+                total_flux = torch.distributed.nn.functional.all_reduce(
+                    total_flux,
+                    group=self.ddp_setup[config_dictionary.process_subgroup],
+                    op=torch.distributed.ReduceOp.SUM,
+                )
 
-                loss.backward()
+            loss = loss_definition(
+                prediction=total_flux.unsqueeze(0),
+                ground_truth=self.ground_truth.unsqueeze(0),
+                target_area_mask=torch.tensor(
+                    [self.target_area_index], device=device
+                ),
+                reduction_dimensions=(1,),
+                device=device,
+            ).sum()
 
-                if self.ddp_setup[config_dictionary.is_nested]:
-                    # Reduce gradients within each heliostat group.
-                    for param_group in optimizer.param_groups:
-                        for param in param_group["params"]:
-                            if param.grad is not None:
-                                param.grad = torch.distributed.nn.functional.all_reduce(
-                                    param.grad,
-                                    op=torch.distributed.ReduceOp.SUM,
-                                    group=self.ddp_setup[
-                                        config_dictionary.process_subgroup
-                                    ],
-                                )
+            loss.backward()
 
-                optimizer.step()
-                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    scheduler.step(loss)
-                else:
-                    scheduler.step()
+            optimizer.step()
+            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                scheduler.step(loss)
+            else:
+                scheduler.step()
 
-                if epoch % log_step == 0 and rank == 0:
-                    log.info(
-                        f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}",
-                    )
+            if epoch % log_step == 0 and rank == 0:
+                log.info(
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}",
+                )
 
-                # Early stopping when loss has reached a plateau.
-                if (
-                    loss
-                    < best_loss
-                    - self.optimization_configuration[
-                        config_dictionary.early_stopping_delta
-                    ]
-                ):
-                    best_loss = loss
-                    patience_counter = 0
-                else:
-                    patience_counter += 1
-                if (
-                    patience_counter
-                    > self.optimization_configuration[
-                        config_dictionary.early_stopping_patience
-                    ]
-                ):
-                    log.info(
-                        f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                    )
-                    break
+            # Early stopping when loss has reached a plateau.
+            if (
+                loss
+                < best_loss
+                - self.optimization_configuration[
+                    config_dictionary.early_stopping_delta
+                ]
+            ):
+                best_loss = loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+            if (
+                patience_counter
+                > self.optimization_configuration[
+                    config_dictionary.early_stopping_patience
+                ]
+            ):
+                log.info(
+                    f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
+                )
+                break
 
-                epoch += 1
+            epoch += 1
 
-            final_loss_per_group[heliostat_group_index] = loss
-            log.info(f"Rank: {rank}, motor positions optimized.")
+        log.info(f"Rank: {rank}, motor positions optimized.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
@@ -381,4 +382,4 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronised after motor positions optimization.")
 
-        return final_loss_per_group
+        return loss
