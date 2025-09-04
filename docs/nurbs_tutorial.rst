@@ -222,16 +222,15 @@ Usage
 
 Using NURBS in ``ARTIST`` is simple:
 
-- A NURBS surface can be initialized by only providing the desired ``degree_e`` and ``degree_n``, the
-  ``evaluation_points_e`` and ``evaluation_points_n``, and the ``control points``, where ``e`` and ``n`` stand for the
-  east and north directions. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
-  Internally, the uniform knot vectors ``knots_e`` and ``knots_n`` are calculated from the input.
+- A NURBS surface can be initialized by only providing the desired ``degrees`` in the ``u`` and ``v`` direction, and the
+  associated ``control points``. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
+  Internally, the uniform knot vectors are calculated from the input.
 - The user can then simply call ``calculate_surface_points_and_normals()`` on the ``NURBSSurface`` and the surface
   points and surface normals are calculated and returned.
 
 For this calculation of the surface points and surface normals, three internal steps are executed:
 
-1. ``find_span()`` is called for both directions (east and north) to determine which evaluation point corresponds to
+1. ``find_span()`` is called for both directions to determine which evaluation point corresponds to
    which knot in the knot vector.
 2. Next, the basis functions and their derivatives are calculated, again for both directions using
    ``basis_function_and_derivatives()``.
