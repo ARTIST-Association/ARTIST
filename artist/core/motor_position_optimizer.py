@@ -167,58 +167,74 @@ class MotorPositionsOptimizer:
         target_area_masks_all_groups = []
         incident_ray_directions_all_groups = []
 
-        for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
-        ][rank]:
-            heliostat_group: HeliostatGroup = (
-                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+        for group_index, group in enumerate(
+            self.scenario.heliostat_field.heliostat_groups
+        ):
+            active_heliostats_masks_all_groups.append(
+                torch.ones(
+                    group.number_of_heliostats,
+                    dtype=torch.int32,
+                    device=device,
+                )
+            )
+            target_area_masks_all_groups.append(
+                torch.full(
+                    (group.number_of_heliostats,),
+                    self.target_area_index,
+                    dtype=torch.int32,
+                    device=device,
+                )
+            )
+            incident_ray_directions_all_groups.append(
+                self.incident_ray_direction.repeat(group.number_of_heliostats, 1)
             )
 
-            active_heliostats_masks_all_groups.append(torch.ones(heliostat_group.number_of_heliostats, dtype=torch.int32, device=device))
-            target_area_masks_all_groups.append(torch.full((heliostat_group.number_of_heliostats,), self.target_area_index, dtype=torch.int32, device=device))
-            incident_ray_directions_all_groups.append(self.incident_ray_direction.repeat(heliostat_group.number_of_heliostats, 1))
-            
             # Align all heliostats once, to the given incident ray direction and target, to set initial motor
             # positions. The motor positions are set automatically within the ``align_surfaces_with_incident_ray_directions()``
             # method.
             # Activate heliostats.
-            heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index], device=device
+            group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
+                device=device,
             )
 
             # Align heliostats.
-            heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[target_area_masks_all_groups[heliostat_group_index]],
-                incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
-                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
+            group.align_surfaces_with_incident_ray_directions(
+                aim_points=self.scenario.target_areas.centers[
+                    target_area_masks_all_groups[group_index]
+                ],
+                incident_ray_directions=incident_ray_directions_all_groups[group_index],
+                active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
                 device=device,
             )
 
             # Reparametrization of the motor positions (optimizable parameter).
             initial_motor_positions = (
-                heliostat_group.kinematic.active_motor_positions.detach().clone()
+                group.kinematic.active_motor_positions.detach().clone()
             )
             initial_motor_positions_all_groups.append(initial_motor_positions)
-            motor_positions_minimum = (
-                heliostat_group.kinematic.actuators.actuator_parameters[:, 2]
-            )
-            motor_positions_maximum = (
-                heliostat_group.kinematic.actuators.actuator_parameters[:, 3]
-            )
+            motor_positions_minimum = group.kinematic.actuators.actuator_parameters[
+                :, 2
+            ]
+            motor_positions_maximum = group.kinematic.actuators.actuator_parameters[
+                :, 3
+            ]
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
-            scales_all_groups.append(torch.minimum(lower_margin, upper_margin).clamp(min=1.0))
+            scales_all_groups.append(
+                torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
+            )
 
             # Create the optimizer.
-            optimizable_parameters_all_groups.append(torch.nn.Parameter(
-                torch.zeros_like(initial_motor_positions, device=device)
-            ))
+            optimizable_parameters_all_groups.append(
+                torch.nn.Parameter(
+                    torch.zeros_like(initial_motor_positions, device=device)
+                )
+            )
 
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
-            lr=self.optimization_configuration[
-                config_dictionary.initial_learning_rate
-            ],
+            lr=self.optimization_configuration[config_dictionary.initial_learning_rate],
         )
 
         # Create a learning rate scheduler.
@@ -244,35 +260,47 @@ class MotorPositionsOptimizer:
         )
         while (
             loss > self.optimization_configuration[config_dictionary.tolerance]
-            and epoch
-            <= self.optimization_configuration[config_dictionary.max_epoch]
+            and epoch <= self.optimization_configuration[config_dictionary.max_epoch]
         ):
             optimizer.zero_grad()
 
-            total_flux = torch.zeros((self.bitmap_resolution[0], self.bitmap_resolution[1]), device=device)
-        
+            total_flux = torch.zeros(
+                (self.bitmap_resolution[0], self.bitmap_resolution[1]), device=device
+            )
+
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
             ][rank]:
                 heliostat_group: HeliostatGroup = (
-                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+                    self.scenario.heliostat_field.heliostat_groups[
+                        heliostat_group_index
+                    ]
                 )
 
                 # Reconstruct true motor positions from reparameterized version.
-                motor_positions_normalized = torch.tanh(optimizer.param_groups[0]["params"][heliostat_group_index])
+                motor_positions_normalized = torch.tanh(
+                    optimizer.param_groups[0]["params"][heliostat_group_index]
+                )
                 heliostat_group.kinematic.motor_positions = (
-                    initial_motor_positions_all_groups[heliostat_group_index] + motor_positions_normalized * scales_all_groups[heliostat_group_index]
+                    initial_motor_positions_all_groups[heliostat_group_index]
+                    + motor_positions_normalized
+                    * scales_all_groups[heliostat_group_index]
                 )
 
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
-                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index], device=device
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
+                    device=device,
                 )
 
                 # Align heliostats.
                 heliostat_group.align_surfaces_with_motor_positions(
                     motor_positions=heliostat_group.kinematic.active_motor_positions,
-                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )
 
@@ -291,9 +319,15 @@ class MotorPositionsOptimizer:
 
                 # Perform heliostat-based ray tracing.
                 flux_distributions = ray_tracer.trace_rays(
-                    incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
-                    active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
-                    target_area_mask=target_area_masks_all_groups[heliostat_group_index],
+                    incident_ray_directions=incident_ray_directions_all_groups[
+                        heliostat_group_index
+                    ],
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
+                    target_area_mask=target_area_masks_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )
 
@@ -306,25 +340,24 @@ class MotorPositionsOptimizer:
 
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
-                    target_area_mask=target_area_masks_all_groups[heliostat_group_index],
+                    target_area_mask=target_area_masks_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )[self.target_area_index]
 
                 total_flux = total_flux + flux_distribution_on_target
-            
+
             if self.ddp_setup[config_dictionary.is_distributed]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
                     total_flux,
-                    group=self.ddp_setup[config_dictionary.process_subgroup],
                     op=torch.distributed.ReduceOp.SUM,
                 )
 
             loss = loss_definition(
                 prediction=total_flux.unsqueeze(0),
                 ground_truth=self.ground_truth.unsqueeze(0),
-                target_area_mask=torch.tensor(
-                    [self.target_area_index], device=device
-                ),
+                target_area_mask=torch.tensor([self.target_area_index], device=device),
                 reduction_dimensions=(1,),
                 device=device,
             ).sum()
