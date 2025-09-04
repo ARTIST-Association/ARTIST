@@ -347,20 +347,12 @@ class FacetConfig:
         The key used to identify the facet in the HDF5 file.
     control_points : torch.Tensor
         The NURBS control points.
-    degree_e : torch.Tensor
-        The NURBS degree in the east direction.
-    degree_n : torch.Tensor
-        The NURBS degree in the north direction.
-    number_eval_points_e : int
-        The number of evaluation points for the NURBS surface in the east direction.
-    number_eval_points_n : int
-        The number of evaluation points for the NURBS surface in the north direction.
+    degrees : torch.Tensor
+        The NURBS degree in the east and north direction.
     translation_vector : torch.Tensor
         The translation_vector of the facet.
-    canting_e : torch.Tensor
-        The canting vector in the east direction.
-    canting_n : torch.Tensor
-        The canting vector in the north direction.
+    canting: torch.Tensor
+        The canting vectors in the east and north direction.
 
     Methods
     -------
@@ -372,13 +364,9 @@ class FacetConfig:
         self,
         facet_key: str,
         control_points: torch.Tensor,
-        degree_e: int,
-        degree_n: int,
-        number_eval_points_e: int,
-        number_eval_points_n: int,
+        degrees: torch.Tensor,
         translation_vector: torch.Tensor,
-        canting_e: torch.Tensor,
-        canting_n: torch.Tensor,
+        canting: torch.Tensor,
     ) -> None:
         """
         Initialize the facet configuration.
@@ -389,30 +377,18 @@ class FacetConfig:
             The key used to identify the facet in the HDF5 file.
         control_points : torch.Tensor
             The NURBS control points.
-        degree_e : torch.Tensor
-            The NURBS degree in the east direction.
-        degree_n : torch.Tensor
-            The NURBS degree in the north direction.
-        number_eval_points_e : int
-            The number of evaluation points for the NURBS surface in the east direction.
-        number_eval_points_n : int
-            The number of evaluation points for the NURBS surface in the north direction.
+        degrees : torch.Tensor
+            The NURBS degree in the east and north direction.
         translation_vector : torch.Tensor
             The translation_vector of the facet.
-        canting_e : torch.Tensor
-            The canting vector in the east direction.
-        canting_n : torch.Tensor
-            The canting vector in the north direction.
+        canting: torch.Tensor
+            The canting vectors in the east and north direction.
         """
         self.facet_key = facet_key
         self.control_points = control_points
-        self.degree_e = degree_e
-        self.degree_n = degree_n
-        self.number_eval_points_e = number_eval_points_e
-        self.number_eval_points_n = number_eval_points_n
+        self.degrees = degrees
         self.translation_vector = translation_vector
-        self.canting_e = canting_e
-        self.canting_n = canting_n
+        self.canting = canting
 
     def create_facet_dict(self) -> dict[str, Any]:
         """
@@ -425,13 +401,9 @@ class FacetConfig:
         """
         return {
             config_dictionary.facet_control_points: self.control_points,
-            config_dictionary.facet_degree_e: self.degree_e,
-            config_dictionary.facet_degree_n: self.degree_n,
-            config_dictionary.facet_number_eval_e: self.number_eval_points_e,
-            config_dictionary.facet_number_eval_n: self.number_eval_points_n,
+            config_dictionary.facet_degrees: self.degrees,
             config_dictionary.facets_translation_vector: self.translation_vector,
-            config_dictionary.facets_canting_e: self.canting_e,
-            config_dictionary.facets_canting_n: self.canting_n,
+            config_dictionary.facets_canting: self.canting,
         }
 
 
@@ -965,6 +937,8 @@ class ActuatorConfig:
         The type of actuator to use, e.g. linear or ideal.
     clockwise_axis_movement : bool
         Boolean indicating if the actuator operates in a clockwise manner.
+    min_max_motor_positions : list[float]
+        The minimum and maximum motor positions.
     parameters : ActuatorParameters | None
         The parameters of the actuator
 
@@ -979,6 +953,7 @@ class ActuatorConfig:
         key: str,
         type: str,
         clockwise_axis_movement: bool,
+        min_max_motor_positions: list[float],
         parameters: ActuatorParameters | None = None,
     ) -> None:
         """
@@ -992,12 +967,15 @@ class ActuatorConfig:
             The type of actuator to use, e.g. linear or ideal.
         clockwise_axis_movement : bool
             Boolean indicating if the actuator operates in a clockwise or counterclockwise manner.
+        min_max_motor_positions : list[float]
+            The minimum and maximum motor positions.
         parameters : ActuatorParameters | None
             The parameters of the actuator.
         """
         self.key = key
         self.type = type
         self.clockwise_axis_movement = clockwise_axis_movement
+        self.min_max_motor_positions = min_max_motor_positions
         self.parameters = parameters
 
     def create_actuator_dict(self) -> dict[str, Any]:
@@ -1012,6 +990,7 @@ class ActuatorConfig:
         actuator_dict = {
             config_dictionary.actuator_type_key: self.type,
             config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
+            config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
         if self.parameters is not None:
             actuator_dict.update(
@@ -1161,8 +1140,6 @@ class HeliostatConfig:
         The numerical ID of the heliostat.
     position : torch.Tensor
         The position of the heliostat.
-    aim_point : torch.Tensor
-        The position of the heliostat aim point.
     surface : SurfaceConfig | None
         An optional individual surface config for the heliostat.
     kinematic : KinematicConfig | None
@@ -1181,7 +1158,6 @@ class HeliostatConfig:
         name: str,
         id: int,
         position: torch.Tensor,
-        aim_point: torch.Tensor,
         surface: SurfaceConfig | None = None,
         kinematic: KinematicConfig | None = None,
         actuators: ActuatorListConfig | None = None,
@@ -1197,8 +1173,6 @@ class HeliostatConfig:
             The numerical ID of the heliostat.
         position : torch.Tensor
             The position of the heliostat.
-        aim_point : torch.Tensor
-            The position of the heliostat aim point.
         surface : SurfaceConfig | None
             An optional individual surface config for the heliostat.
         kinematic : KinematicConfig | None
@@ -1209,7 +1183,6 @@ class HeliostatConfig:
         self.name = name
         self.id = id
         self.position = position
-        self.aim_point = aim_point
         self.surface = surface
         self.kinematic = kinematic
         self.actuators = actuators
@@ -1226,7 +1199,6 @@ class HeliostatConfig:
         heliostat_dict = {
             config_dictionary.heliostat_id: self.id,
             config_dictionary.heliostat_position: self.position,
-            config_dictionary.heliostat_aim_point: self.aim_point,
         }
         if self.surface is not None:
             heliostat_dict.update(

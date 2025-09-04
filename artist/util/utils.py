@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as functional
 
 from artist.util.environment_setup import get_device
 
@@ -247,18 +248,20 @@ def translate_enu(
     return matrix
 
 
-def convert_3d_point_to_4d_format(
-    point: torch.Tensor, device: torch.device | None = None
+def convert_3d_points_to_4d_format(
+    points: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append ones to the last dimension of a 3D point vector.
+    Append ones to the last dimension of a 3D point vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    point : torch.Tensor
-        Input point in a 3D format.
+    points : torch.Tensor
+        Input points in a 3D format.
+        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -273,28 +276,33 @@ def convert_3d_point_to_4d_format(
     -------
     torch.Tensor
         Point vector with ones appended at the last dimension.
+        Tensor of shape [..., 4].
     """
     device = get_device(device=device)
 
-    if point.size(dim=-1) != 3:
-        raise ValueError(f"Expected a 3D point but got a point of shape {point.shape}!")
+    if points.size(dim=-1) != 3:
+        raise ValueError(f"Expected 3D points but got points of shape {points.shape}!")
 
-    ones_tensor = torch.ones(point.shape[:-1] + (1,), dtype=point.dtype, device=device)
-    return torch.cat((point, ones_tensor), dim=-1)
+    ones_tensor = torch.ones(
+        points.shape[:-1] + (1,), dtype=points.dtype, device=device
+    )
+    return torch.cat((points, ones_tensor), dim=-1)
 
 
-def convert_3d_direction_to_4d_format(
-    direction: torch.Tensor, device: torch.device | None = None
+def convert_3d_directions_to_4d_format(
+    directions: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append zeros to the last dimension of a 3D direction vector.
+    Append zeros to the last dimension of 3D direction vectors.
 
     Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    This function can handle batched tensors.
 
     Parameters
     ----------
-    direction : torch.Tensor
+    directions : torch.Tensor
         Input direction in a 3D format.
+        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
@@ -308,40 +316,45 @@ def convert_3d_direction_to_4d_format(
     Returns
     -------
     torch.Tensor
-        Direction vector with ones appended at the last dimension.
+        Direction vectors with ones appended at the last dimension.
+        Tensor of shape [..., 4].
     """
     device = get_device(device=device)
 
-    if direction.size(dim=-1) != 3:
+    if directions.size(dim=-1) != 3:
         raise ValueError(
-            f"Expected a 3D direction but got a direction of shape {direction.shape}!"
+            f"Expected 3D directions but got directions of shape {directions.shape}!"
         )
 
     zeros_tensor = torch.zeros(
-        direction.shape[:-1] + (1,), dtype=direction.dtype, device=device
+        directions.shape[:-1] + (1,), dtype=directions.dtype, device=device
     )
-    return torch.cat((direction, zeros_tensor), dim=-1)
+    return torch.cat((directions, zeros_tensor), dim=-1)
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """
-    Normalize points in a tensor to the open interval of (0,1).
+    Normalize each column of a 2D tensor to the open interval (0, 1).
 
     Parameters
     ----------
     points : torch.Tensor
         A tensor containing points to be normalized.
+        Tensor of shape [number_of_points, 2].
 
     Returns
     -------
     torch.Tensor
         The normalized points.
+        Tensor of shape [number_of_points, 2].
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    points_normalized = (points[:] - min(points[:]) + 1e-5) / max(
-        (points[:] - min(points[:])) + 2e-5
-    )
-    return points_normalized
+    min_vals = torch.min(points, dim=0).values
+    point_range = points - min_vals
+    max_vals = torch.max(point_range + 2e-5, dim=0).values
+    normalized = (point_range + 1e-5) / max_vals
+
+    return normalized
 
 
 def decompose_rotations(
@@ -498,12 +511,16 @@ def get_center_of_mass(
     ----------
     bitmaps : torch.Tensor
         The flux densities in form of bitmaps.
+        Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     target_centers : torch.Tensor
         The positions of the centers of the targets.
+        Tensor of shape [number_of_active_heliostats, 4].
     target_widths : float
         The widths of the target surfaces.
+        Tensor of shape [number_of_active_heliostats].
     target_heights : float
         The heights of the target surfaces.
+        Tensor of shape [number_of_active_heliostats].
     threshold : float
         Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : torch.device | None
@@ -515,6 +532,7 @@ def get_center_of_mass(
     -------
     torch.Tensor
         The coordinates of the flux density centers of mass.
+        Tensor of shape [number_of_active_heliostats, 4].
     """
     device = get_device(device=device)
 
@@ -563,3 +581,315 @@ def get_center_of_mass(
     )
 
     return center_coordinates
+
+
+def create_nurbs_evaluation_grid(
+    number_of_evaluation_points: torch.Tensor,
+    epsilon: float = 1e-7,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a grid of evaluation points for a nurbs surface.
+
+    Parameters
+    ----------
+    number_of_evaluation_points : torch.Tensor
+        The number of nurbs evaluation points in east and north direction.
+        Tensor of shape [2].
+    epsilon : float
+        Offset for the nurbs evaluation points (default is 1e-7).
+        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
+        therefore the evaluation points need a small offset from the endpoints.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The evaluation points.
+        Tensor of shape [number_of_evaluation_points_e * number_of_evaluation_points_e, 2].
+    """
+    device = get_device(device=device)
+
+    evaluation_points_e = torch.linspace(
+        epsilon, 1 - epsilon, number_of_evaluation_points[0], device=device
+    )
+    evaluation_points_n = torch.linspace(
+        epsilon, 1 - epsilon, number_of_evaluation_points[1], device=device
+    )
+    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
+
+    return evaluation_points
+
+
+def create_ideal_canted_nurbs_control_points(
+    number_of_control_points: torch.Tensor,
+    canting: torch.Tensor,
+    facet_translation_vectors: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create ideal, canted and translated control points for each facet.
+
+    Parameters
+    ----------
+    number_of_control_points : torch.Tensor
+        The number of NURBS control points.
+        Tensor of shape [2].
+    canting : torch.Tensor
+        The canting vector for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
+    facet_translation_vectors : torch.Tensor
+        The facet translation vector for each facet.
+        Tensor of shape [number_of_facets, 4].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The canted and translated ideal NURBS control points.
+        Tensor of shape [number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    """
+    device = get_device(device=device)
+
+    number_of_facets = facet_translation_vectors.shape[0]
+
+    control_points = torch.zeros(
+        (
+            number_of_facets,
+            number_of_control_points[0],
+            number_of_control_points[1],
+            3,
+        ),
+        device=device,
+    )
+
+    offsets_e = torch.linspace(0, 1, control_points.shape[1], device=device)
+    offsets_n = torch.linspace(0, 1, control_points.shape[2], device=device)
+    start = -torch.norm(canting, dim=-1)
+    end = torch.norm(canting, dim=-1)
+    origin_offsets_e = (
+        start[:, 0, None] + (end - start)[:, 0, None] * offsets_e[None, :]
+    )
+    origin_offsets_n = (
+        start[:, 1, None] + (end - start)[:, 1, None] * offsets_n[None, :]
+    )
+
+    control_points_e = origin_offsets_e[:, :, None].expand(
+        -1, -1, origin_offsets_n.size(1)
+    )
+    control_points_n = origin_offsets_n[:, None, :].expand(
+        -1, origin_offsets_e.size(1), -1
+    )
+
+    control_points[:, :, :, 0] = control_points_e
+    control_points[:, :, :, 1] = control_points_n
+    control_points[:, :, :, 2] = 0
+
+    # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
+    # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
+    rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
+
+    rotation_matrix[:, :, 0] = torch.nn.functional.normalize(canting[:, 0], dim=1)
+    rotation_matrix[:, :, 1] = torch.nn.functional.normalize(canting[:, 1], dim=1)
+    rotation_matrix[:, :3, 2] = torch.nn.functional.normalize(
+        torch.linalg.cross(rotation_matrix[:, :3, 0], rotation_matrix[:, :3, 1]), dim=0
+    )
+
+    rotation_matrix[:, 3, 3] = 1.0
+
+    canted_points = (
+        convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
+            number_of_facets, -1, 4
+        )
+        @ rotation_matrix.mT
+    ).reshape(number_of_facets, control_points.shape[1], control_points.shape[2], 4)
+
+    canted_with_translation = (
+        canted_points + facet_translation_vectors[:, None, None, :]
+    )
+
+    return canted_with_translation[:, :, :, :3]
+
+
+def normalize_bitmaps(
+    flux_distributions: torch.Tensor,
+    target_area_widths: torch.Tensor,
+    target_area_heights: torch.Tensor,
+    number_of_rays: torch.Tensor | int,
+) -> torch.Tensor:
+    """
+    Normalize a bitmap.
+
+    Parameters
+    ----------
+    flux_distributions : torch.Tensor
+        The flux distributions to be normalized.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
+    target_area_widths : torch.Tensor
+        The target area widths.
+        Tensor of shape [number_of_bitmaps].
+    target_area_heights : torch.Tensor
+        The target area heights.
+        Tensor of shape [number_of_bitmaps].
+    number_of_rays : torch.Tensor | int
+        The number of rays used to generate the flux.
+        Tensor of shape [number_of_bitmaps].
+
+    Returns
+    -------
+    torch.Tensor
+        The normalized and scaled flux density distributions.
+        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
+    """
+    plane_areas = target_area_widths * target_area_heights
+    num_pixels = flux_distributions.shape[1] * flux_distributions.shape[2]
+    plane_area_per_pixel = plane_areas / num_pixels
+
+    normalized_fluxes = flux_distributions / (
+        number_of_rays * plane_area_per_pixel
+    ).unsqueeze(-1).unsqueeze(-1)
+
+    std = torch.std(normalized_fluxes, dim=(1, 2), keepdim=True)
+    std = std + 1e-6
+
+    standardized = (
+        normalized_fluxes - torch.mean(normalized_fluxes, dim=(1, 2), keepdim=True)
+    ) / std
+
+    valid_mask = (flux_distributions.sum(dim=(1, 2), keepdim=True) != 0).float()
+
+    result = standardized * valid_mask
+
+    return result
+
+
+def trapezoid_distribution(
+    total_width: int,
+    slope_width: int,
+    plateau_width: int,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Create a one dimensional trapezoid distribution.
+
+    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
+    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
+    padded with zeros on both sides.
+
+    Parameters
+    ----------
+    total_width : int
+        The total width of the trapezoid.
+    slope_width : int
+        The width of the slope of the trapezoid.
+    plateau_width : int
+        The width of the plateau.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The one dimensional trapezoid distribution.
+        Tensor of shape [total_width].
+    """
+    indices = torch.arange(total_width, device=device)
+    center = (total_width - 1) / 2
+    half_plateau = plateau_width / 2
+
+    # Distances from the plateau edge.
+    distances = torch.abs(indices - center) - half_plateau
+
+    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
+
+    return trapezoid
+
+
+def crop_flux_distributions_around_center(
+    flux_distributions: torch.Tensor,
+    crop_width: float,
+    crop_height: float,
+    target_plane_widths: torch.Tensor,
+    target_plane_heights: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Crop a centered rectangular region from grayscale intensity images based on physical dimensions.
+
+    This function identifies the center of mass in each image and then crops a region centered around this point
+    with the specified physical width and height (in meters). The cropping is applied via affine transformation,
+    which accounts for the desired crop size relative to the target's physical plane dimensions.
+
+    Parameters
+    ----------
+    flux_distributions : torch.Tensor
+        Grayscale intensity images.
+        Tensor of shape [number_of_fluxmaps, bitmap_height, bitmap_width].
+    crop_width : float
+        Desired width of the cropped region in meters.
+    crop_height : float
+        Desired height of the cropped region in meters.
+    target_plane_widths : torch.Tensor
+        Physical widths in meters of each image in the batch.
+        Tensor of shape [number_of_fluxmaps].
+    target_plane_heights : torch.Tensor
+        Physical heights in meters of each image in the batch.
+        Tensor of shape [number_of_fluxmaps].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The cropped image regions.
+        Tensor of shape [number_of_fluxmaps, bitmap_height, bitmap_width].
+    """
+    device = get_device(device=device)
+
+    number_of_flux_distributions, image_height, image_width = flux_distributions.shape
+
+    # Compute center of mass.
+    normalized_mass_map = flux_distributions / (
+        flux_distributions.sum(dim=(1, 2), keepdim=True) + 1e-8
+    )
+
+    y_coordinates = torch.linspace(-1, 1, image_height, device=device)
+    x_coordinates = torch.linspace(-1, 1, image_width, device=device)
+    y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
+    x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
+    y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
+
+    x_center_of_mass = (x_grid * normalized_mass_map).sum(dim=(1, 2))
+    y_center_of_mass = (y_grid * normalized_mass_map).sum(dim=(1, 2))
+
+    # Compute scale to match desired crop size in meters.
+    scale_x = crop_width / target_plane_widths
+    scale_y = crop_height / target_plane_heights
+
+    # Build affine transform matrices (scale and center).
+    affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
+    affine_matrices[:, 0, 0] = scale_x
+    affine_matrices[:, 1, 1] = scale_y
+    affine_matrices[:, 0, 2] = x_center_of_mass
+    affine_matrices[:, 1, 2] = y_center_of_mass
+
+    # Apply affine transform.
+    images_expanded = flux_distributions[:, None, :, :]
+    sampling_grid = functional.affine_grid(
+        affine_matrices, size=images_expanded.shape, align_corners=False
+    )
+    cropped_images = functional.grid_sample(
+        images_expanded, sampling_grid, align_corners=False, padding_mode="zeros"
+    )
+
+    return cropped_images[:, 0, :, :]

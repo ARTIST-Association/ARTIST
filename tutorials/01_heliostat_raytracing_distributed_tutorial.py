@@ -5,7 +5,7 @@ import torch
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -18,9 +18,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "please/insert/the/path/to/the/scenario/here/test_scenario_paint_multiple_heliostat_groups.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -30,47 +28,48 @@ number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
 with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
-) as (
-    device,
-    is_distributed,
-    is_nested,
-    rank,
-    world_size,
-    process_subgroup,
-    groups_to_ranks_mapping,
-    heliostat_group_rank,
-    heliostat_group_world_size,
-):
+) as ddp_setup:
+    device = ddp_setup[config_dictionary.device]
+
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            device=device,
         )
 
-    incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
+        # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
+        # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
+        # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
+        # from a sun positiond directly in the south and they will all be raytraced on the first target found in your scenario.
+        heliostat_target_light_source_mapping = None
+        # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
+        # heliostat_target_light_source_mapping = [
+        #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+        #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+        #     (...)
+        # ]
 
-    heliostat_target_light_source_mapping = None
+    bitmap_resolution = torch.tensor([256, 256])
 
-    # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-    # heliostat_target_light_source_mapping = [
-    #     ("AA39", "receiver", incident_ray_direction),
-    #     ("AA35", "solar_tower_juelich_upper", incident_ray_direction),
-    # ]
-
-    bitmap_resolution_e = 256
-    bitmap_resolution_u = 256
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution_e,
-            bitmap_resolution_u,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
         ),
         device=device,
     )
 
-    for group_index in groups_to_ranks_mapping[rank]:
-        heliostat_group = scenario.heliostat_field.heliostat_groups[group_index]
-
+    # Since each individual heliostat group has individual kinematic and actuator types, they must be
+    # processed seperatly. If a distributed environment exists, they can be processed in parallel,
+    # otherwise each heliostat group results will be computed sequentially.
+    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+        ddp_setup[config_dictionary.rank]
+    ]:
+        heliostat_group = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
         # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
         # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
         # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
@@ -85,6 +84,14 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # The active_heliostats_mask is a tensor that shows the selection of active heliostats.
+        # For each index 0 indicates a deactivated heliostat and 1 an activated one.
+        # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
+        # It is a tensor of shape [number_of_heliostats_in_group].
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask, device=device
+        )
+
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
@@ -93,16 +100,15 @@ with setup_distributed_environment(
             device=device,
         )
 
-        # Create a ray tracer.
+        # Create a parallelized ray tracer.
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            world_size=heliostat_group_world_size,
-            rank=heliostat_group_rank,
-            batch_size=4,
-            random_seed=heliostat_group_rank,
-            bitmap_resolution_e=bitmap_resolution_e,
-            bitmap_resolution_u=bitmap_resolution_u,
+            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+            rank=ddp_setup[config_dictionary.heliostat_group_rank],
+            batch_size=heliostat_group.number_of_active_heliostats,
+            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+            bitmap_resolution=bitmap_resolution,
         )
 
         # Perform heliostat-based ray tracing.
@@ -113,6 +119,7 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # Get the flux distributions per target.
         bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
             bitmaps_per_heliostat=bitmaps_per_heliostat,
             target_area_mask=target_area_mask,
@@ -121,14 +128,14 @@ with setup_distributed_environment(
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-    if is_nested:
+    if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=process_subgroup,
+            group=ddp_setup[config_dictionary.process_subgroup],
         )
 
-    if is_distributed:
+    if ddp_setup[config_dictionary.is_distributed]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )

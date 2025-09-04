@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "torch",
+    "pillow",
     "h5py",
     "colorlog",
 ]

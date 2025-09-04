@@ -51,26 +51,21 @@ def surface_config(
                 dtype=torch.float,
                 device=device,
             ),
-            degree_e=int(facet_config[facet][config_dictionary.facet_degree_e][()]),
-            degree_n=int(facet_config[facet][config_dictionary.facet_degree_n][()]),
-            number_eval_points_e=int(
-                facet_config[facet][config_dictionary.facet_number_eval_e][()]
-            ),
-            number_eval_points_n=int(
-                facet_config[facet][config_dictionary.facet_number_eval_n][()]
+            degrees=torch.tensor(
+                [
+                    facet_config[facet][config_dictionary.facet_degrees][()][0],
+                    facet_config[facet][config_dictionary.facet_degrees][()][1],
+                ],
+                dtype=torch.int32,
+                device=device,
             ),
             translation_vector=torch.tensor(
                 facet_config[facet][config_dictionary.facets_translation_vector][()],
                 dtype=torch.float,
                 device=device,
             ),
-            canting_e=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_e][()],
-                dtype=torch.float,
-                device=device,
-            ),
-            canting_n=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting_n][()],
+            canting=torch.tensor(
+                facet_config[facet][config_dictionary.facets_canting][()],
                 dtype=torch.float,
                 device=device,
             ),
@@ -554,7 +549,7 @@ def linear_actuators(
     Returns
     -------
     torch.Tensor
-        Seven actuator parameters for each linear actuator in the file.
+        Nine actuator parameters for each linear actuator in the file.
     """
     device = get_device(device=device)
 
@@ -574,6 +569,16 @@ def linear_actuators(
             actuator_config[actuator][
                 config_dictionary.actuator_clockwise_axis_movement
             ][()]
+        )
+        minimum_motor_position = float(
+            actuator_config[actuator][
+                config_dictionary.actuator_min_max_motor_positions
+            ][()][0]
+        )
+        maximum_motor_position = float(
+            actuator_config[actuator][
+                config_dictionary.actuator_min_max_motor_positions
+            ][()][1]
         )
         increment = actuator_config.get(
             f"{actuator}/"
@@ -637,27 +642,30 @@ def linear_actuators(
 
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
 
-        actuator_parameters[2, index] = (
+        actuator_parameters[2, index] = minimum_motor_position
+        actuator_parameters[3, index] = maximum_motor_position
+
+        actuator_parameters[4, index] = (
             torch.tensor(increment[()], dtype=torch.float, device=device)
             if increment
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[3, index] = (
+        actuator_parameters[5, index] = (
             torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
             if initial_stroke_length
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[4, index] = (
+        actuator_parameters[6, index] = (
             torch.tensor(offset[()], dtype=torch.float, device=device)
             if offset
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[5, index] = (
+        actuator_parameters[7, index] = (
             torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
             if pivot_radius
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[6, index] = (
+        actuator_parameters[8, index] = (
             torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
             else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -669,7 +677,7 @@ def linear_actuators(
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator one needs to be transformed accordingly.
-    actuator_parameters[6, 0] = utils.transform_initial_angle(
+    actuator_parameters[8, 0] = utils.transform_initial_angle(
         initial_angle=actuator_parameters[6, 0].unsqueeze(0),
         initial_orientation=initial_orientation,
         device=device,
@@ -705,7 +713,7 @@ def ideal_actuators(
     Returns
     -------
     torch.Tensor
-        Two actuator parameters for each ideal actuator in the file.
+        Four actuator parameters for each ideal actuator in the file.
     """
     device = get_device(device=device)
 
@@ -727,8 +735,22 @@ def ideal_actuators(
             ][()]
         )
 
+        minimum_motor_position = float(
+            actuator_config[actuator][
+                config_dictionary.actuator_min_max_motor_positions
+            ][()][0]
+        )
+        maximum_motor_position = float(
+            actuator_config[actuator][
+                config_dictionary.actuator_min_max_motor_positions
+            ][()][1]
+        )
+
         actuator_parameters[0, index] = config_dictionary.ideal_actuator_int
 
         actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
+
+        actuator_parameters[2, index] = minimum_motor_position
+        actuator_parameters[3, index] = maximum_motor_position
 
     return actuator_parameters
