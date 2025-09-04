@@ -33,14 +33,15 @@ smooth parametric descriptions of heliostats.
 - **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation,
   allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
 
-- **Optimized flux density:** Coming soon so stay tuned :rocket:!
+- **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by optimizing
+  the motor positions of all heliostats to distribute the flux optimally over the receiver.
 
 
 ## Installation
 We heavily recommend installing the `ARTIST` package in a dedicated `Python3.10+` virtual environment. You can
 install ``ARTIST`` directly from the GitHub repository via:
 ```bash
-pip install git+https://github.com/ARTIST-Association/ARTIST
+pip install artist
 ```
 Alternatively, you can install ``ARTIST`` locally. To achieve this, there are two steps you need to follow:
 1. Clone the `ARTIST` repository:

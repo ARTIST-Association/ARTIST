@@ -34,7 +34,7 @@ class Loss:
         ground_truth: torch.Tensor,
         **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the loss.
 
         Parameters
@@ -45,7 +45,7 @@ class Loss:
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of variable shape.
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
 
         Raises
@@ -76,7 +76,7 @@ class VectorLoss(Loss):
         ground_truth: torch.Tensor,
         **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the vector loss.
 
         Parameters
@@ -87,7 +87,7 @@ class VectorLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, ...].
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
             The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
 
@@ -144,7 +144,7 @@ class FocalSpotLoss(Loss):
         ground_truth: torch.Tensor,
         **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the focal spot loss.
 
         First the focal spots of the prediction are computed, then the loss is computed and reduced
@@ -158,7 +158,7 @@ class FocalSpotLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, 4].
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
             The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
 
@@ -233,7 +233,7 @@ class PixelLoss(Loss):
         ground_truth: torch.Tensor,
         **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the pixel loss.
 
         First the predicted bitmaps and the ground truth are normalized, then the loss is
@@ -247,7 +247,7 @@ class PixelLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
             The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the pixel loss.
 
@@ -355,7 +355,7 @@ class KLDivergenceLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
             The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
 
@@ -414,9 +414,9 @@ class AngleLoss(Loss):
         self,
         prediction: torch.Tensor,
         ground_truth: torch.Tensor,
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the cosine similarity between the prediction and ground truth.
 
         Parameters
@@ -427,7 +427,7 @@ class AngleLoss(Loss):
         ground_truth : torch.Tensor
             The ground truth.
             Tensor of shape [number_of_samples, 4].
-        **_ : Any
+        \*\*kwargs : Any
             Keyword arguments.
 
         Returns

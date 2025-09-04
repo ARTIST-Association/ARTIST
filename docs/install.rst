@@ -11,8 +11,25 @@ For best results, we recommend installing ``ARTIST`` in a separate virtual envir
    $ source ./ARTIST/bin/activate
    $ pip install --upgrade pip
 
-Since ``ARTIST`` is still under development and therefore not yet available via `PyPI`_, we suggest installing ``ARTIST``
-directly from the `Github main branch`_ using ``pip``:
+You can install the latest stable version of ``ARTIST`` directly from PyPI using:
+
+.. code-block:: console
+
+    $ pip install artist
+
+To install ``ARTIST`` with extra dependencies to run the tutorials you will need to use:
+
+.. code-block:: console
+
+    $ pip install "artist[tutorials]"
+
+or for the extra dependencies required for the examples:
+
+.. code-block:: console
+
+    $ pip install "artist[examples]"
+
+Alternatively, you can install the latest development version directly from the official GitHub repository:
 
 .. code-block:: console
 
@@ -37,9 +54,3 @@ You can check whether your installation was successful by importing ``ARTIST`` i
 .. code-block:: python
 
    import artist
-
-
-.. Links
-.. _PyPI: [Include Link Here]
-.. _Github main branch: https://github.com/ARTIST-Association/ARTIST
-.. _OpenMPI: https://www.open-mpi.org/

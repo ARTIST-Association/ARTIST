@@ -1,7 +1,7 @@
 .. _nurbs:
 
-An Introduction to NURBS
-========================
+NURBS in ``ARTIST``
+===================
 
 ``ARTIST`` uses Non-Uniform Rational B-Splines (NURBS) to model the surface of heliostats for multiple reasons:
 
@@ -11,18 +11,18 @@ An Introduction to NURBS
   from point clouds or deflectometry data.
 - NURBS are **precise and performant**.
 
-This tutorial is divided into two parts. First, we consider some **NURBS Theory** before investigating **NURBS in
+Here we first consider some **NURBS Theory** before investigating **NURBS in
 ARTIST**.
 
 NURBS Theory
 ------------
 
-In this section of the tutorial, we consider the NURBS theory.
+In this section, we consider the NURBS theory.
 
-Simplifications for the Scope of this Tutorial
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Simplifications
+^^^^^^^^^^^^^^^
 
-For the scope of this tutorial and for the sake of simplicity, we only considers NURBS curves and not surfaces.
+For the sake of simplicity, we only considers NURBS curves and not surfaces.
 
 - The behavior of NURBS curves in two dimensions can easily be transferred to NURBS surfaces in three dimensions.
 - Two NURBS curves can span a NURBS surface.
@@ -129,7 +129,7 @@ further important observations include:
   strength, thus they are uniform (and have uniform knot vectors).
 - If this is not desired, then non-uniform NURBS with non-uniform knots must be considered.
 
-In ``ARTIST``, we only apply uniform NURBS. However, to complete the tutorial, we should also understand
+In ``ARTIST``, we only apply uniform NURBS. However, for completeness, we should also understand
 how to create non-uniform NURBS.
 
 Knots
@@ -222,16 +222,15 @@ Usage
 
 Using NURBS in ``ARTIST`` is simple:
 
-- A NURBS surface can be initialized by only providing the desired ``degree_e`` and ``degree_n``, the
-  ``evaluation_points_e`` and ``evaluation_points_n``, and the ``control points``, where ``e`` and ``n`` stand for the
-  east and north directions. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
-  Internally, the uniform knot vectors ``knots_e`` and ``knots_n`` are calculated from the input.
+- A NURBS surface can be initialized by only providing the desired ``degrees`` in the ``u`` and ``v`` direction, and the
+  associated ``control points``. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
+  Internally, the uniform knot vectors are calculated from the input.
 - The user can then simply call ``calculate_surface_points_and_normals()`` on the ``NURBSSurface`` and the surface
   points and surface normals are calculated and returned.
 
 For this calculation of the surface points and surface normals, three internal steps are executed:
 
-1. ``find_span()`` is called for both directions (east and north) to determine which evaluation point corresponds to
+1. ``find_span()`` is called for both directions to determine which evaluation point corresponds to
    which knot in the knot vector.
 2. Next, the basis functions and their derivatives are calculated, again for both directions using
    ``basis_function_and_derivatives()``.
