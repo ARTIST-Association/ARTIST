@@ -42,7 +42,7 @@ def distribution(device) -> torch.Tensor:
     distribution_path_group_1 = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_optimized_motor_positions"
-        / "desired_distribution.pt"
+        / "distribution.pt"
     )
 
     ground_truth = torch.load(distribution_path_group_1, map_location=device, weights_only=True)

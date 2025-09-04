@@ -391,7 +391,7 @@ class KLDivergenceLoss(Loss):
         log_input = torch.log(predicted_distributions)
         log_target = torch.log(ground_truth_distributions)
 
-        loss = self.loss_function(log_input, log_target)
+        loss = self.loss_function(log_target, log_input)
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
 
