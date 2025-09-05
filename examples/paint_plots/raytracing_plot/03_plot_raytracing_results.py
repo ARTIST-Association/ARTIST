@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Dict
 
-from matplotlib import pyplot as plt
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 
 from examples.paint_plots.helpers import join_safe, load_config
 
@@ -123,6 +123,7 @@ def plot_results_flux_comparision(
     print(f"Saved overexposed flux comparison to {out_file}")
 
     plt.close(fig)
+
 
 plt.rcParams["font.family"] = "sans-serif"
 

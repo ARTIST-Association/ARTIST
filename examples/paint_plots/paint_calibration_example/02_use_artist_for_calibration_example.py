@@ -1,31 +1,23 @@
+import argparse
 import copy
-import json
-import os
 import pathlib
 from typing import Optional
 
 import h5py
-import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
 from artist.core.kinematic_optimizer import KinematicOptimizer
 from artist.data_loader import paint_loader
-from artist.scenario.configuration_classes import (
-    LightSourceConfig,
-    LightSourceListConfig,
-)
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-
-import re
-
-from artist.util import config_dictionary
 from examples.paint_plots import paint_plot_helpers
-from examples.paint_plots.paint_plot_helpers import filter_valid_heliostat_data, join_safe, load_config
-import argparse
+from examples.paint_plots.paint_plot_helpers import (
+    filter_valid_heliostat_data,
+    join_safe,
+    load_config,
+)
+
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
@@ -39,14 +31,6 @@ set_logger_config()
 # ---------------
 # helper functions
 # ---------------
-
-
-
-
-
-
-
-
 
 
 def run_calibration(
@@ -192,7 +176,6 @@ def run_calibration(
 
 
 if __name__ == "__main__":
-
     config = load_config()
 
     paint_directory = pathlib.Path(config["paint_repository_base_path"])
@@ -206,19 +189,46 @@ if __name__ == "__main__":
 
     # Parse non-path settings from CLI, not from config file
     parser = argparse.ArgumentParser(description="ARTIST paint calibration example")
-    parser.add_argument("--use-ray-tracing", action="store_true", default=False, help="Enable ray tracing optimization mode")
-    parser.add_argument("--tolerance", type=float, default=None, help="Target tolerance for optimizer")
-    parser.add_argument("--max-epoch", type=int, default=None, help="Maximum number of optimization epochs")
-    parser.add_argument("--initial-learning-rate", type=float, default=None, help="Learning rate for optimizer")
+    parser.add_argument(
+        "--use-ray-tracing",
+        action="store_true",
+        default=False,
+        help="Enable ray tracing optimization mode",
+    )
+    parser.add_argument(
+        "--tolerance", type=float, default=None, help="Target tolerance for optimizer"
+    )
+    parser.add_argument(
+        "--max-epoch",
+        type=int,
+        default=None,
+        help="Maximum number of optimization epochs",
+    )
+    parser.add_argument(
+        "--initial-learning-rate",
+        type=float,
+        default=None,
+        help="Learning rate for optimizer",
+    )
     args = parser.parse_args()
 
     device = get_device()
 
     use_ray_tracing = args.use_ray_tracing
-    tolerance = args.tolerance if args.tolerance is not None else (0.035 if use_ray_tracing else 0.05)
-    max_epoch = args.max_epoch if args.max_epoch is not None else (600 if use_ray_tracing else 1000)
+    tolerance = (
+        args.tolerance
+        if args.tolerance is not None
+        else (0.035 if use_ray_tracing else 0.05)
+    )
+    max_epoch = (
+        args.max_epoch
+        if args.max_epoch is not None
+        else (600 if use_ray_tracing else 1000)
+    )
     initial_learning_rate = (
-        args.initial_learning_rate if args.initial_learning_rate is not None else (0.005 if use_ray_tracing else 0.003)
+        args.initial_learning_rate
+        if args.initial_learning_rate is not None
+        else (0.005 if use_ray_tracing else 0.003)
     )
 
     # Run calibration.
@@ -234,9 +244,9 @@ if __name__ == "__main__":
     scenario_utis = copy.deepcopy(scenario)
     scenario_helios = copy.deepcopy(scenario)
 
-    heliostat_data_mapping, heliostat_properties_list = paint_plot_helpers.load_heliostat_data(
-    paint_directory, heliostat_list_file
-)
+    heliostat_data_mapping, heliostat_properties_list = (
+        paint_plot_helpers.load_heliostat_data(paint_directory, heliostat_list_file)
+    )
 
     valid_heliostat_data_mapping = filter_valid_heliostat_data(heliostat_data_mapping)
 

@@ -5,7 +5,6 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-
 from artist.util import config_dictionary, set_logger_config
 from examples.paint_plots.helpers import join_safe, load_config
 
@@ -18,6 +17,7 @@ LEGEND_FONTSIZE = 8
 
 # Set up logger.
 set_logger_config()
+
 
 def plot_mrad_error_distributions(
     results_dict: dict, save_path: Optional[str | pathlib.Path] = None
@@ -256,12 +256,11 @@ results_path = join_safe(paint_plots_base_path, config["results_calibration_dict
 save_plot_path = join_safe(paint_plots_base_path, config["results_plot_path"])
 
 if results_path.exists():
-  results_dict = torch.load(results_path, weights_only=False)   
+    results_dict = torch.load(results_path, weights_only=False)
 else:
-  print(f"Did not found existing results at {results_path}. please run 02_run_calibration first.")
-        
-
-
+    print(
+        f"Did not found existing results at {results_path}. please run 02_run_calibration first."
+    )
 
 
 plot_mrad_vs_distance(results_dict, save_path=save_plot_path)
