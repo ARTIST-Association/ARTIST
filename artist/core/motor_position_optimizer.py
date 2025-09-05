@@ -150,7 +150,7 @@ class MotorPositionsOptimizer:
         Returns
         -------
         torch.Tensor
-            The final loss of the motor postion optimization for each heliostat group.
+            The final loss of the motor postion optimization.
         """
         device = get_device(device)
 
