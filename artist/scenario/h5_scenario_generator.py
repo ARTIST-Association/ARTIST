@@ -205,7 +205,10 @@ class H5ScenarioGenerator:
     def generate_scenario(self) -> None:
         """Generate the scenario and save it as an HDF5 file."""
         log.info(f"Generating a scenario saved to: {self.file_path}.")
-        save_name = self.file_path.parent / (self.file_path.name + ".h5")
+        if self.file_path.suffix != ".h5":
+            save_name = self.file_path.with_suffix(self.file_path.suffix + ".h5")
+        else:
+            save_name = self.file_path
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
             log.info(f"Using scenario generator version {self.version}.")

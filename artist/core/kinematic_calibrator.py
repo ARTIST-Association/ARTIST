@@ -85,7 +85,7 @@ class KinematicCalibrator:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> list[torch.Tensor]:
         """
         Optimize the kinematic parameters.
 
@@ -100,9 +100,10 @@ class KinematicCalibrator:
 
         Returns
         -------
-        torch.Tensor
-            The final loss of the kinematic calibration for each heliostat group.
-            Tensor of shape [number_of_heliostat_groups].
+        list[torch.Tensor]
+            A list with one entry per heliostat group. Each entry is a tensor containing
+            the per-heliostat loss for that group (shape: [num_active_heliostats_in_group]).
+            If a group has no active heliostats, an empty tensor is stored.
         """
         device = get_device(device=device)
 
@@ -130,7 +131,7 @@ class KinematicCalibrator:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> list[torch.Tensor]:
         """
         Calibrate the kinematic parameters using the motor positions.
 
@@ -148,9 +149,10 @@ class KinematicCalibrator:
 
         Returns
         -------
-        torch.Tensor
-            The final loss of the kinematic calibration for each heliostat group.
-            Tensor of shape [number_of_heliostat_groups].
+        list[torch.Tensor]
+            A list with one entry per heliostat group. Each entry is a tensor containing
+            one loss per heliostat.
+            If a group has no active heliostats, an empty tensor is stored with inf loss.
         """
         device = get_device(device=device)
 
@@ -159,11 +161,8 @@ class KinematicCalibrator:
         if rank == 0:
             log.info("Beginning kinematic calibration with motor positions.")
 
-        final_loss_per_group = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostat_groups,),
-            torch.inf,
-            device=device,
-        )
+        # Collect per-heliostat loss per group.
+        final_loss_per_group: list[torch.Tensor] = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -284,11 +283,13 @@ class KinematicCalibrator:
                         device=device,
                     )
 
-                    loss = per_heliostat_reduction(
+                    per_heliostat_loss = per_heliostat_reduction(
                         per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
-                    ).sum()
+                    )
+
+                    loss = per_heliostat_loss.sum()
 
                     loss.backward()
 
@@ -330,8 +331,12 @@ class KinematicCalibrator:
 
                     epoch += 1
 
-                final_loss_per_group[heliostat_group_index] = loss
+                # Append per-heliostat loss for this group.
+                final_loss_per_group.append(per_heliostat_loss)
                 log.info("Kinematic parameters optimized.")
+            else:
+                # Preserve group alignment with an empty tensor.
+                final_loss_per_group.append(torch.empty(torch.inf, device=device))
 
         return final_loss_per_group
 
@@ -339,7 +344,7 @@ class KinematicCalibrator:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> list[torch.Tensor]:
         """
         Calibrate the kinematic parameters using ray tracing.
 
@@ -357,9 +362,10 @@ class KinematicCalibrator:
 
         Returns
         -------
-        torch.Tensor
-            The final loss of the kinematic calibration for each heliostat group.
-            Tensor of shape [number_of_heliostat_groups].
+        list[torch.Tensor]
+            A list with one entry per heliostat group. Each entry is a tensor containing
+            one loss per heliostat.
+            If a group has no active heliostats, an empty tensor is stored with inf loss.
         """
         device = get_device(device=device)
 
@@ -368,11 +374,8 @@ class KinematicCalibrator:
         if rank == 0:
             log.info("Beginning kinematic optimization with ray tracing.")
 
-        final_loss_per_group = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostat_groups,),
-            torch.inf,
-            device=device,
-        )
+        # Collect per-heliostat loss per group.
+        final_loss_per_group: list[torch.Tensor] = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -501,11 +504,13 @@ class KinematicCalibrator:
                         device=device,
                     )
 
-                    loss = per_heliostat_reduction(
+                    # Keep per-heliostat loss and sum for scalar loss.
+                    per_heliostat_loss = per_heliostat_reduction(
                         per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
-                    ).sum()
+                    )
+                    loss = per_heliostat_loss.sum()
 
                     loss.backward()
 
@@ -562,8 +567,12 @@ class KinematicCalibrator:
 
                     epoch += 1
 
-                final_loss_per_group[heliostat_group_index] = loss
+                # Store per-heliostat loss for this group.
+                final_loss_per_group.append(per_heliostat_loss)
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
+            else:
+                # Preserve group alignment with an empty tensor.
+                final_loss_per_group.append(torch.empty(torch.inf, device=device))
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(

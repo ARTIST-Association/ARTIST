@@ -918,6 +918,7 @@ class ActuatorParameters:
             actuator_parameters_dict.update(
                 {config_dictionary.actuator_pivot_radius: self.pivot_radius}
             )
+
         if self.initial_angle is not None:
             actuator_parameters_dict.update(
                 {config_dictionary.actuator_initial_angle: self.initial_angle}

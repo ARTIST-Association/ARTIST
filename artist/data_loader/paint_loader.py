@@ -37,6 +37,7 @@ def extract_paint_calibration_properties_data(
     heliostat_names: list[str],
     target_area_names: list[str],
     limit_number_of_measurements: int | None = None,
+    centroid_extrected_by: str = config_dictionary.paint_utis,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -55,9 +56,11 @@ def extract_paint_calibration_properties_data(
         All possible target area names.
     limit_number_of_measurements : int | None
         Limits the number of measurements loaded if an int is provided (default is None).
+    centroid_extrected_by : str
+        The method by which the focal spot centroid was extracted (default is config_dictionary.paint_utis).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -107,7 +110,7 @@ def extract_paint_calibration_properties_data(
                         ]
                     ],
                     calibration_data_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
+                        centroid_extrected_by
                     ],
                     calibration_data_dict[config_dictionary.paint_light_source_azimuth],
                     calibration_data_dict[
@@ -190,7 +193,7 @@ def extract_paint_tower_measurements(
         The path to the tower measurement file.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -201,7 +204,6 @@ def extract_paint_tower_measurements(
         The configuration of the tower target areas.
     """
     device = get_device(device=device)
-
     log.info("Beginning extraction of tower data from ```PAINT``` file.")
 
     with open(tower_measurements_path, "r") as file:
@@ -319,7 +321,7 @@ def extract_paint_heliostat_properties(
         The power plant position.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -541,7 +543,7 @@ def extract_paint_deflectometry_data(
         The number of facets.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -613,7 +615,7 @@ def extract_paint_heliostats(
     """
     Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
 
-    Note: Currently in PAINT all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
+    Note: Currently in ``PAINT`` all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
 
     Parameters
     ----------
@@ -639,7 +641,7 @@ def extract_paint_heliostats(
         The NURBS fit learning rate scheduler (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -718,7 +720,7 @@ def extract_paint_heliostats(
         prototype_surface = surface_config
 
         # Include the kinematic configuration.
-        # Currently in PAINT all heliostats use a rigid body kinematic.
+        # Currently in ``PAINT`` all heliostats use a rigid body kinematic.
         kinematic_config = KinematicConfig(
             type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
@@ -805,7 +807,7 @@ def azimuth_elevation_to_enu(
         Whether input is given in degrees (default is True).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -855,7 +857,7 @@ def convert_wgs84_coordinates_to_local_enu(
         Tensor of shape [3].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -1022,3 +1024,93 @@ def build_heliostat_data_mapping(
             heliostat_map.append((name, properties, images))
 
     return heliostat_map
+
+
+def extract_canting_and_translation_from_properties(
+    heliostat_list: list[
+        tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
+    ],
+    convert_to_4d: bool = False,
+    device: torch.device | None = None,
+) -> list[tuple[str, torch.Tensor, torch.Tensor]]:
+    """
+    Extract facet translation and canting vectors per heliostat from ``PAINT`` properties files.
+
+    Parameters
+    ----------
+    heliostat_list : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
+        A list where each entry is:
+        - (heliostat_name, heliostat_properties_path)
+        - or (heliostat_name, heliostat_properties_path, heliostat_deflectometry_path)
+        Only the properties path is used.
+    convert_to_4d : bool
+        If True, convert the returned 3D vectors to 4D homogeneous format (default False).
+    device : torch.device | None
+        The device on which to create tensors (default None -> auto select).
+
+    Returns
+    -------
+    list[tuple[str, torch.Tensor, torch.Tensor]]
+        For each heliostat: (heliostat_name, facet_translations, facet_canting_vectors)
+        - facet_translations shape: [num_facets, 3] (or [num_facets, 4] if convert_to_4d)
+        - facet_canting_vectors shape: [num_facets, 2, 3] (or [num_facets, 2, 4] if convert_to_4d)
+    """
+    device = get_device(device=device)
+    facet_transforms_per_heliostat: list[tuple[str, torch.Tensor, torch.Tensor]] = []
+
+    for entry in heliostat_list:
+        try:
+            heliostat_name = str(entry[0])
+            properties_path = pathlib.Path(entry[1])
+
+            with open(properties_path, "r") as f:
+                heliostat_dict = json.load(f)
+
+            num_facets = heliostat_dict[config_dictionary.paint_facet_properties][
+                config_dictionary.paint_number_of_facets
+            ]
+
+            # Allocate tensors (ENU 3D by default)
+            facet_translations_enu3 = torch.empty((num_facets, 3), device=device)
+            facet_canting_vectors_enu3 = torch.empty((num_facets, 2, 3), device=device)
+
+            # Fill from JSON
+            for facet_idx in range(num_facets):
+                facet_entry = heliostat_dict[config_dictionary.paint_facet_properties][
+                    config_dictionary.paint_facets
+                ][facet_idx]
+                facet_translations_enu3[facet_idx, :] = torch.tensor(
+                    facet_entry[config_dictionary.paint_translation_vector],
+                    device=device,
+                )
+                facet_canting_vectors_enu3[facet_idx, 0] = torch.tensor(
+                    facet_entry[config_dictionary.paint_canting_e], device=device
+                )
+                facet_canting_vectors_enu3[facet_idx, 1] = torch.tensor(
+                    facet_entry[config_dictionary.paint_canting_n], device=device
+                )
+
+            # Optional conversion to homogeneous 4D
+            if convert_to_4d:
+                facet_translations = utils.convert_3d_directions_to_4d_format(
+                    facet_translations_enu3, device=device
+                )
+                facet_canting_vectors = utils.convert_3d_directions_to_4d_format(
+                    facet_canting_vectors_enu3, device=device
+                )
+            else:
+                facet_translations = facet_translations_enu3
+                facet_canting_vectors = facet_canting_vectors_enu3
+
+            facet_transforms_per_heliostat.append(
+                (heliostat_name, facet_translations, facet_canting_vectors)
+            )
+
+        except Exception as ex:
+            log.warning(
+                f"Failed to extract canting/translation for '{entry[0]}' "
+                f"from properties '{entry[1]}': {ex}"
+            )
+            continue
+
+    return facet_transforms_per_heliostat
