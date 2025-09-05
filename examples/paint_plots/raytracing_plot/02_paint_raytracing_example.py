@@ -1,20 +1,25 @@
 import pathlib
 from typing import Dict
+
 import h5py
 import numpy as np
 import torch
+from PIL import Image
+
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import paint_loader
-from artist.data_loader.paint_loader import extract_canting_and_translation_from_properties
+from artist.data_loader.paint_loader import (
+    extract_canting_and_translation_from_properties,
+)
 from artist.scenario.scenario import Scenario
-from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 from examples.paint_plots import helpers
 from examples.paint_plots.helpers import join_safe, load_config
-from PIL import Image
 
 MEASUREMENT_IDS = {"AA39": 149576, "AY26": 247613, "BC34": 82084}
+
+
 def load_image_as_tensor(
     name: str,
     paint_dir: str | pathlib.Path,
@@ -155,7 +160,9 @@ def generate_flux_images(
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     scenario.light_sources.light_source_list[0].number_of_rays = 6000
-    heliostat_properties_tuples: list[tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]] = [
+    heliostat_properties_tuples: list[
+        tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
+    ] = [
         (
             name,
             pathlib.Path(
@@ -251,13 +258,11 @@ def generate_flux_images(
 
             # Apply inverse canting and translation using properties-derived transforms.
             facet_translations, facet_canting_vectors = facet_transforms_by_name[name]
-            facet_points_decanted = (
-                helpers.perform_inverse_canting_and_translation(
-                    canted_points=facet_points_canted,
-                    translation=facet_translations,
-                    canting=facet_canting_vectors,
-                    device=device,
-                )
+            facet_points_decanted = helpers.perform_inverse_canting_and_translation(
+                canted_points=facet_points_canted,
+                translation=facet_translations,
+                canting=facet_canting_vectors,
+                device=device,
             )
 
             # Convert to Z grid for plotting.
@@ -275,10 +280,7 @@ def generate_flux_images(
     torch.save(results_dict, results_path)
 
 
-
-
-    
-def main():    
+def main():
     config = load_config()
 
     device = torch.device(config["device"])
@@ -286,7 +288,9 @@ def main():
 
     paint_dir = pathlib.Path(config["paint_repository_base_path"])
     paint_plots_base_path = pathlib.Path(config["base_path"])
-    results_path = join_safe(paint_plots_base_path, config["results_raytracing_dict_path"])
+    results_path = join_safe(
+        paint_plots_base_path, config["results_raytracing_dict_path"]
+    )
     # save_plot_path = join_safe(examples_base, config["examples_save_plot_path"])
 
     # device = get_device()
@@ -294,13 +298,10 @@ def main():
     # torch.manual_seed(7)
     # torch.cuda.manual_seed(7)
 
-
-    scenario_base = join_safe(
-        paint_plots_base_path, config["raytracing_scenario_path"]
-    )
+    scenario_base = join_safe(paint_plots_base_path, config["raytracing_scenario_path"])
     scenario_deflec_base = pathlib.Path(str(scenario_base) + "_deflectometry")
     scenario_ideal_base = pathlib.Path(str(scenario_base) + "_ideal")
-    
+
     heliostats = ["AA39", "AY26", "BC34"]
 
     # Generate and merge flux images for both scenarios into one results file.
@@ -324,5 +325,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

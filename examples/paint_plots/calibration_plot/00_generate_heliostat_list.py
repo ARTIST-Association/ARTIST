@@ -1,11 +1,10 @@
+import argparse
 import json
-import os
 import pathlib
 import re
 
 from artist.util import config_dictionary
 from examples.paint_plots.helpers import join_safe, load_config
-import argparse
 
 
 def find_heliostats_with_minimum_calibrations(
@@ -93,7 +92,11 @@ def find_heliostats_with_minimum_calibrations(
 
         flux_image_file_paths = []
 
-        ending = config_dictionary.paint_calibration_properties_file_name_ending.replace("*", "").replace(".json", "")
+        ending = (
+            config_dictionary.paint_calibration_properties_file_name_ending.replace(
+                "*", ""
+            ).replace(".json", "")
+        )
 
         for calibration_file_path in valid_calibration_file_paths:
             # file_stem = calibration_file_path.stem.replace(
@@ -152,16 +155,14 @@ def save_heliostat_list(
 
 
 if __name__ == "__main__":
-
-
     config = load_config()
     paint_directory = pathlib.Path(config["paint_repository_base_path"])
-
 
     paint_plot_base_path = pathlib.Path(config["base_path"])
 
     output_json_file = join_safe(paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"]))
     parser = argparse.ArgumentParser(description="Generate heliostat list with calibration info.")
+
     parser.add_argument(
         "--minimum-calibrations",
         type=int,

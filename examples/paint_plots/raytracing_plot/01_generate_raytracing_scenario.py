@@ -1,31 +1,17 @@
-import json
-import os
 import logging
 import pathlib
 import sys
 from pathlib import Path
-from typing import Any, Dict
 
-import cv2
-import h5py
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
 
-
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.data_loader import paint_loader
-from artist.data_loader.paint_loader import (
-    extract_canting_and_translation_from_properties,
-)
 from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.scenario.scenario import Scenario
-from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 from examples.paint_plots.helpers import join_safe, load_config
 
@@ -203,45 +189,42 @@ def generate_paint_scenario(
 
 
 def main() -> None:
-  config = load_config()
+    config = load_config()
 
-  device = torch.device(config["device"])
-  device = get_device(device)
+    device = torch.device(config["device"])
+    device = get_device(device)
 
-  # Map config -> args using new keys and base paths.
-  paint_dir = pathlib.Path(config["paint_repository_base_path"])
-  tower_file = join_safe(paint_dir, config["paint_tower_file"])
+    # Map config -> args using new keys and base paths.
+    paint_dir = pathlib.Path(config["paint_repository_base_path"])
+    tower_file = join_safe(paint_dir, config["paint_tower_file"])
 
-  examples_base = pathlib.Path(config["base_path"])
-  heliostats = ["AA39", "AY26", "BC34"]
- 
-  scenario_base = join_safe(
-        examples_base, config["raytracing_scenario_path"]
-    )
+    examples_base = pathlib.Path(config["base_path"])
+    heliostats = ["AA39", "AY26", "BC34"]
 
-# Generate two scenarios: deflectometry and ideal (no deflectometry).
-  scenario_deflec_base = pathlib.Path(str(scenario_base) + "_deflectometry")
-  scenario_ideal_base = pathlib.Path(str(scenario_base) + "_ideal")
+    scenario_base = join_safe(examples_base, config["raytracing_scenario_path"])
 
-  for base, use_def in [(scenario_deflec_base, True), (scenario_ideal_base, False)]:
-      h5_path = base.with_suffix(".h5")
-      if h5_path.exists():
-          print(
-              f"Scenario found at {h5_path}... continue without generating scenario."
-          )
-      else:
-          print(
-              f"Scenario not found. Generating a new one at {h5_path} (use_deflectometry={use_def})..."
-          )
-          generate_paint_scenario(
-              paint_dir=str(paint_dir),
-              scenario_path=base,
-              tower_file=str(tower_file),
-              heliostat_names=heliostats,
-              device=device,
-              use_deflectometry=use_def,
-          )
+    # Generate two scenarios: deflectometry and ideal (no deflectometry).
+    scenario_deflec_base = pathlib.Path(str(scenario_base) + "_deflectometry")
+    scenario_ideal_base = pathlib.Path(str(scenario_base) + "_ideal")
 
+    for base, use_def in [(scenario_deflec_base, True), (scenario_ideal_base, False)]:
+        h5_path = base.with_suffix(".h5")
+        if h5_path.exists():
+            print(
+                f"Scenario found at {h5_path}... continue without generating scenario."
+            )
+        else:
+            print(
+                f"Scenario not found. Generating a new one at {h5_path} (use_deflectometry={use_def})..."
+            )
+            generate_paint_scenario(
+                paint_dir=str(paint_dir),
+                scenario_path=base,
+                tower_file=str(tower_file),
+                heliostat_names=heliostats,
+                device=device,
+                use_deflectometry=use_def,
+            )
 
 
 if __name__ == "__main__":
