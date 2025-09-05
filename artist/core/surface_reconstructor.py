@@ -130,11 +130,7 @@ class SurfaceReconstructor:
         if rank == 0:
             log.info("Start the surface reconstruction.")
 
-        final_loss_per_group = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostat_groups,),
-            torch.inf,
-            device=device,
-        )
+        final_loss_per_group: list[torch.Tensor] = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -371,9 +367,9 @@ class SurfaceReconstructor:
                         per_sample_values=per_sample_loss,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
-                    ).sum()
-
-                    loss = flux_loss_per_heliostat
+                    )
+                    
+                    loss = flux_loss_per_heliostat.sum()
 
                     # Include regularization terms.
                     for regularizer in self.optimization_configuration[
@@ -458,8 +454,11 @@ class SurfaceReconstructor:
 
                     epoch += 1
 
-                final_loss_per_group[heliostat_group_index] = loss
+                final_loss_per_group.append(flux_loss_per_heliostat)
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
+            else:
+                # Preserve group alignment with an empty tensor.
+                final_loss_per_group.append(torch.empty(torch.inf, device=device))
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
