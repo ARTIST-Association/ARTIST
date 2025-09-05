@@ -24,7 +24,7 @@ def surface_config(
         The opened scenario HDF5 file containing the information.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -101,7 +101,7 @@ def kinematic_deviations(
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -160,7 +160,7 @@ def rigid_body_deviations(
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -470,7 +470,7 @@ def actuator_parameters(
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -538,7 +538,7 @@ def linear_actuators(
         The heliostat name, only needed for individual heliostats, not prototypes (default is None).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises
@@ -673,7 +673,7 @@ def linear_actuators(
 
     # For all linear actuators:
     # Adapt initial angle of actuator one according to kinematic initial orientation.
-    # ''ARTIST'' always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
+    # ``ARTIST`` always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator one needs to be transformed accordingly.
@@ -702,7 +702,7 @@ def ideal_actuators(
         The number of actuators used for a specific kinematic.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Raises

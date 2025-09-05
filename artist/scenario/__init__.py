@@ -1,4 +1,4 @@
-"""Bundle all classes relevant for the scenario in ''ARTIST''."""
+"""Bundle all classes relevant for the scenario in ``ARTIST``."""
 
 from artist.scenario.configuration_classes import (
     ActuatorConfig,

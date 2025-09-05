@@ -17,7 +17,7 @@ def find_heliostats_with_minimum_calibrations(
     """
     Find heliostats that have at least a minimum number of valid calibration files.
 
-    Scan a ''PAINT'' directory for heliostat subdirectories that match the naming pattern, validate calibration JSONs
+    Scan a ``PAINT`` directory for heliostat subdirectories that match the naming pattern, validate calibration JSONs
     for required focal-spot keys, and collect matching flux image paths for a given suffix. The function returns a
     sorted list of up to `maximum_heliostats` tuples of the form (heliostat_name, calibration_paths, flux_image_paths).
     A calibration JSON is considered valid when its focal-spot section contains both
@@ -27,7 +27,7 @@ def find_heliostats_with_minimum_calibrations(
     Parameters
     ----------
     paint_directory : str or pathlib.Path
-        The path to the base ''PAINT'' directory.
+        The path to the base ``PAINT`` directory.
     minimum_calibration_files : int
         The minimum number of calibration files required.
     maximum_heliostats : int

@@ -28,7 +28,7 @@ def find_latest_deflectometry_file(name: str, paint_dir: str | Path) -> Path:
     name : str
         Heliostat name (e.g., "AA39").
     paint_dir : str | Path
-        Base ''PAINT'' directory.
+        Base ``PAINT`` directory.
 
     Returns
     -------
@@ -58,12 +58,12 @@ def generate_paint_scenario(
     device: torch.device | str = "cpu",
     use_deflectometry: bool = True,
 ) -> None:
-    """Generate an HDF5 scenario from ''PAINT'' inputs.
+    """Generate an HDF5 scenario from ``PAINT`` inputs.
 
     Parameters
     ----------
     paint_dir : str | Path
-        Base ''PAINT'' repository path.
+        Base ``PAINT`` repository path.
     scenario_path : str | Path
         Output scenario path without extension ('.h5' will be added).
     tower_file : str | Path

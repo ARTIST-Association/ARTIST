@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class Scenario:
     """
-    Define a scenario loaded by ''ARTIST''.
+    Define a scenario loaded by ``ARTIST``.
 
     Attributes
     ----------
@@ -122,7 +122,7 @@ class Scenario:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -276,7 +276,7 @@ class Scenario:
             The default target area index (default is 0).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

@@ -53,7 +53,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_heliostats, 9, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__(actuator_parameters=actuator_parameters, device=device)
@@ -114,7 +114,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -157,7 +157,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

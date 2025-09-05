@@ -45,7 +45,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_heliostats, n, 2], where n=9 for linear actuators or n=4 for ideal actuators.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__()
@@ -71,7 +71,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -94,7 +94,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -117,7 +117,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ''ARTIST'' will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

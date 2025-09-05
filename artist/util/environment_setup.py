@@ -29,7 +29,7 @@ def initialize_ddp_environment(
     ----------
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Yields
@@ -153,7 +153,7 @@ def setup_distributed_environment(
     ----------
     device : Optional[torch.device]
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
     heliostat_group_assignments : Optional[dict[str, list[int]]]
         The mapping from rank to heliostat group.
@@ -260,7 +260,7 @@ def get_device(
     ----------
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ''ARTIST'' will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS. MPS (for Mac) is not supported due to
         limitations in torch.
 
@@ -283,16 +283,16 @@ def get_device(
         elif os_name == config_dictionary.mac:
             device = torch.device("cpu")
             log.warning(
-                "Setting device to CPU. ''ARTIST'' only supports CPU for MacOS."
+                "Setting device to CPU. ``ARTIST`` only supports CPU for MacOS."
             )
         else:
             log.warning(
-                f"OS '{os_name}' not recognized. ''ARTIST'' is optimized for GPU computations but will run on CPU."
+                f"OS '{os_name}' not recognized. ``ARTIST`` is optimized for GPU computations but will run on CPU."
             )
             device = torch.device("cpu")
     elif device.type == "mps":
         log.warning(
-            "You are forcing ''ARTIST'' to run with MPS - this is not supported and will fail!."
+            "You are forcing ``ARTIST`` to run with MPS - this is not supported and will fail!."
         )
 
     return device

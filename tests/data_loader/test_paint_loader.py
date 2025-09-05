@@ -811,9 +811,9 @@ def test_extract_canting_and_translation_from_properties(
     device: torch.device,
 ) -> None:
     """
-    Verify extraction of facet translations and canting vectors from ''PAINT'' properties files.
+    Verify extraction of facet translations and canting vectors from ``PAINT`` properties files.
 
-    This test builds a minimal, valid ''PAINT''-style properties JSON with two facets,
+    This test builds a minimal, valid ``PAINT``-style properties JSON with two facets,
     writes it to a temporary file, and then checks that:
 
     Parameters
@@ -921,7 +921,7 @@ def test_extract_canting_and_translation_skips_invalid_files(
 ) -> None:
     """Test that invalid/missing properties files are skipped and a warning is logged.
 
-    This test creates one valid ''PAINT'' properties file and one missing file path,
+    This test creates one valid ``PAINT`` properties file and one missing file path,
     invokes :func:`paint_loader.extract_canting_and_translation_from_properties`
     with both entries, and verifies that only the valid heliostat is returned and
     a warning is emitted for the invalid entry.
