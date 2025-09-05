@@ -32,7 +32,7 @@ def _generate_paint_scenario(
     heliostat_files_list : list[tuple[str, pathlib.Path]]
         List of tuples `(heliostat_name, properties_path)` for all heliostats to include.
     device : str, default="cpu"
-        Device identifier used during scenario generation (e.g., "cpu" or "cuda:0").
+        Device identifier used during scenario generation (e.g., "cpu" or "cuda").
 
     Raises
     ------

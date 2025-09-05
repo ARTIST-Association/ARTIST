@@ -19,9 +19,9 @@ def find_heliostats_with_minimum_calibrations(
 
     Scan a ``PAINT`` directory for heliostat subdirectories that match the naming pattern, validate calibration JSONs
     for required focal-spot keys, and collect matching flux image paths for a given suffix. The function returns a
-    sorted list of up to `maximum_heliostats` tuples of the form (heliostat_name, calibration_paths, flux_image_paths).
+    sorted list of up to a given maximum number of heliostat tuples of the form: heliostat name, path to calibration, path to flux image).
     A calibration JSON is considered valid when its focal-spot section contains both
-    centroid extracted by HeliOS and UTIS; only the first `minimum_files` valid
+    centroid extracted by HeliOS and UTIS; only the first minimum files valid
     calibrations per heliostat are used and missing or unreadable JSON files are skipped with a warning.
 
     Parameters
@@ -158,8 +158,12 @@ if __name__ == "__main__":
 
     paint_plot_base_path = pathlib.Path(config["base_path"])
 
-    output_json_file = join_safe(paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"]))
-    parser = argparse.ArgumentParser(description="Generate heliostat list with calibration info.")
+    output_json_file = join_safe(
+        paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"])
+    )
+    parser = argparse.ArgumentParser(
+        description="Generate heliostat list with calibration info."
+    )
 
     parser.add_argument(
         "--minimum-calibrations",

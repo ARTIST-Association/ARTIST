@@ -14,8 +14,7 @@ from artist.data_loader.paint_loader import (
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
-from examples.paint_plots import helpers
-from examples.paint_plots.helpers import join_safe, load_config
+from examples.paint_plots.helpers import join_safe, load_config, perform_inverse_canting_and_translation
 
 MEASUREMENT_IDS = {"AA39": 149576, "AY26": 247613, "BC34": 82084}
 
@@ -258,7 +257,7 @@ def generate_flux_images(
 
             # Apply inverse canting and translation using properties-derived transforms.
             facet_translations, facet_canting_vectors = facet_transforms_by_name[name]
-            facet_points_decanted = helpers.perform_inverse_canting_and_translation(
+            facet_points_decanted = perform_inverse_canting_and_translation(
                 canted_points=facet_points_canted,
                 translation=facet_translations,
                 canting=facet_canting_vectors,
