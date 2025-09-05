@@ -43,8 +43,8 @@ def plot_mrad_error_distributions(
     utis_losses: list[float] = []
 
     for data in results_dict.values():
-        helios_losses.extend(np.asarray(data[config_dictionary.paint_helios]) * 1000.0)
-        utis_losses.extend(np.asarray(data[config_dictionary.paint_utis]) * 1000.0)
+        helios_losses.extend(np.asarray(data[config_dictionary.paint_helios][0].detach().cpu().numpy()) * 1000.0)
+        utis_losses.extend(np.asarray(data[config_dictionary.paint_utis][0].detach().cpu().numpy()) * 1000.0)
 
     # Handle empty inputs.
     if len(helios_losses) == 0 or len(utis_losses) == 0:
@@ -182,11 +182,11 @@ def plot_mrad_vs_distance(
         distance = np.linalg.norm(pos[:2])
 
         helios_mean = (
-            np.mean(data[config_dictionary.paint_helios]) * 1000
-        )  # results are calculated in rad but plotted in mrad.
+            np.mean(data[config_dictionary.paint_helios][0].detach().cpu().numpy()) * 1000
+        )  # use index 0 since only one group was created. multiply by 1000 since results are calculated in rad but plotted in mrad.
         utis_mean = (
-            np.mean(data[config_dictionary.paint_utis]) * 1000
-        )  # results are calculated in rad but plotted in mrad.
+            np.mean(data[config_dictionary.paint_utis][0].detach().cpu().numpy()) * 1000
+        )  # use index 0 since only one group was created. multiply by 1000 since results are calculated in rad but plotted in mrad
 
         distances.append(distance)
         helios_means.append(helios_mean)
