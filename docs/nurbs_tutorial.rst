@@ -68,7 +68,7 @@ Control Points
 The shape of the NURBS is directly determined by the control points. The most important aspects to remember about
 control points are:
 
-- The higher the number of control points, the better the approximation of a given curve.
+- A higher number of control points, usually allows for a more accurate approximation of a given curve.
 - The control points are represented as a list of points, importantly the **length of this list must be at least**
   :math:`\text{degree}+1`.
 - The shape formed by connecting the control points with straight lines is the *control polygon*.
@@ -189,7 +189,7 @@ We already discussed the knot span, however, there are a few important terms we 
 Control Weights
 """""""""""""""
 
-The last aspect of NURBS we want to consider is the control weights. The control weights are responsible for the
+The last aspect of NURBS we want to consider are the control weights. The control weights are responsible for the
 *rational* property of NURBS:
 
 - If all control weights are always 1, the NURBS are non-rational which is a special subset of rational NURBS.
@@ -199,6 +199,17 @@ The last aspect of NURBS we want to consider is the control weights. The control
 - Rational curves imply that some or all control weights differ from 1.
 
 Note that in ``ARTIST`` all control weights are always 1.
+
+The parametric UV space of 3D NURBS surfaces
+--------------------------------------------
+
+Contrary to the rest of ``ARTIST``, the NURBS are defined using variable names ending in :math:`u` and :math:`v` instead of the
+cartesian coordinate naming east, north and up. This is due to the mathematical concept behind the NURBS. NURBS are always defined
+in a parametric space, usually called the UV space, where the parameters :math:`u` and :math:`v` typically range from 0 to 1. Within
+this space, the surface is mathematically described through the concepts explained above (basis functions, ...). The physical surface
+itself does not exist in the 3D cartesian space until it is sampled. During the sampling the east, north, up (or :math:`x`, :math:`y`, :math:`z`)
+coordinates are first mapped back into the UV domain so that the parametric basis functions can be evaluated, producing the actual
+cartesian surface coordiantes. The UV space enables the NURBS to represent smooth, continous surfaces in a flexible way.
 
 NURBS in ``ARTIST``
 -------------------
