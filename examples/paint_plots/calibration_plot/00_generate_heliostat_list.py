@@ -160,8 +160,12 @@ if __name__ == "__main__":
 
     paint_plot_base_path = pathlib.Path(config["base_path"])
 
-    output_json_file = join_safe(paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"]))
-    parser = argparse.ArgumentParser(description="Generate heliostat list with calibration info.")
+    output_json_file = join_safe(
+        paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"])
+    )
+    parser = argparse.ArgumentParser(
+        description="Generate heliostat list with calibration info."
+    )
 
     parser.add_argument(
         "--minimum-calibrations",
