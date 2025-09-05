@@ -1,27 +1,22 @@
 import copy
-import json
-import os
 import pathlib
 from typing import Optional
 
 import h5py
-import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
 from artist.core.kinematic_calibrator import KinematicCalibrator
-from artist.core.loss_functions import AngleLoss, FocalSpotLoss
+from artist.core.loss_functions import AngleLoss
 from artist.data_loader import paint_loader
-from artist.scenario.configuration_classes import (
-    LightSourceConfig,
-    LightSourceListConfig,
-)
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from examples.paint_plots.helpers import filter_valid_heliostat_data, join_safe, load_config, load_heliostat_data
-import argparse
+from examples.paint_plots.helpers import (
+    filter_valid_heliostat_data,
+    join_safe,
+    load_config,
+    load_heliostat_data,
+)
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -36,7 +31,6 @@ set_logger_config()
 # ---------------
 # helper functions
 # ---------------
-
 
 
 def run_calibration(
@@ -96,9 +90,9 @@ def run_calibration(
     results_dict: dict = {}
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-    config_dictionary.data_source: config_dictionary.paint,
-    config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
-}
+        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    }
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -110,10 +104,12 @@ def run_calibration(
     ) as ddp_setup:
         device_used = ddp_setup[config_dictionary.device]
 
-            # Set calibration method and loss function.
-        kinematic_calibration_method = config_dictionary.kinematic_calibration_motor_positions
+        # Set calibration method and loss function.
+        kinematic_calibration_method = (
+            config_dictionary.kinematic_calibration_motor_positions
+        )
         # Uncomment for calibration with raytracing:
-       
+
         # Uncomment for calibration with motor positions.
         # loss_definition = VectorLoss()
 
@@ -197,7 +193,7 @@ def run_calibration(
                     if name not in results_dict:
                         results_dict[name] = {}
                     results_dict[name][centroid] = per_heliostat_losses
-    
+
     for group in scenario.heliostat_field.heliostat_groups:
         for name, position in zip(group.names, group.positions):
             results_dict.setdefault(name, {})["position"] = (
@@ -206,9 +202,8 @@ def run_calibration(
 
     return results_dict
 
+
 if __name__ == "__main__":
-
-
     config = load_config()
 
     device = torch.device(config["device"])
@@ -216,9 +211,15 @@ if __name__ == "__main__":
     paint_repository_base_path = config["paint_repository_base_path"]
 
     paint_plots_base_path = pathlib.Path(config["base_path"])
-    scenario_path = join_safe(paint_plots_base_path, config["calibration_scenario_path"])
-    heliostat_list_file = join_safe(paint_plots_base_path, config["heliostat_list_path"])
-    results_path = join_safe(paint_plots_base_path, config["results_calibration_dict_path"])
+    scenario_path = join_safe(
+        paint_plots_base_path, config["calibration_scenario_path"]
+    )
+    heliostat_list_file = join_safe(
+        paint_plots_base_path, config["heliostat_list_path"]
+    )
+    results_path = join_safe(
+        paint_plots_base_path, config["results_calibration_dict_path"]
+    )
 
     heliostat_data_mapping, heliostat_properties_list = load_heliostat_data(
         paint_repository_base_path, heliostat_list_file

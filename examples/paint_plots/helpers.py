@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+
 import torch
 
 from artist.util.environment_setup import get_device
@@ -66,6 +67,7 @@ def load_heliostat_data(
 
     return heliostat_data_mapping, heliostat_properties_list
 
+
 def load_config():
     """Load local example configuration from config.local.json (same pattern as 01/02)."""
     script_dir = os.path.dirname(__file__)
@@ -78,12 +80,14 @@ def load_config():
                 return json.load(f)
     raise FileNotFoundError(
         "No config.local.json found. Copy config.example.json to config.local.json and customize it."
-    ) 
+    )
+
 
 def join_safe(base: pathlib.Path, maybe_rel: str | pathlib.Path) -> pathlib.Path:
     """Join base with possibly relative path, stripping leading separators."""
     s = str(maybe_rel)
     return base / s.lstrip("/\\")
+
 
 def filter_valid_heliostat_data(
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
@@ -116,6 +120,7 @@ def filter_valid_heliostat_data(
             f"- {name}: {len(calibs)} valid calibrations, {len(fluxes)} matching flux images"
         )
     return valid
+
 
 @staticmethod
 def perform_inverse_canting_and_translation(
@@ -184,7 +189,6 @@ def perform_inverse_canting_and_translation(
     # Apply inverse transform.
     restored_points = torch.bmm(canted_points, inverse_transform.transpose(1, 2))
     return restored_points[..., :3]
-
 
 
 # Plot Settings.

@@ -1,13 +1,13 @@
-
-import json
 import pathlib
 from typing import Optional
 
-import h5py
 import torch
 
 from artist.data_loader import paint_loader
-from artist.scenario.configuration_classes import LightSourceConfig, LightSourceListConfig
+from artist.scenario.configuration_classes import (
+    LightSourceConfig,
+    LightSourceListConfig,
+)
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
@@ -120,27 +120,26 @@ def create_scenario(
 
 
 if __name__ == "__main__":
-  config = load_config()
-  device = torch.device(config["device"])
+    config = load_config()
+    device = torch.device(config["device"])
 
-  device = get_device(device=device)
+    device = get_device(device=device)
 
-  paint_directory = pathlib.Path(config["paint_repository_base_path"])
-  tower_file = join_safe(paint_directory, config["paint_tower_file"])
+    paint_directory = pathlib.Path(config["paint_repository_base_path"])
+    tower_file = join_safe(paint_directory, config["paint_tower_file"])
 
-  paint_plot_base_path = pathlib.Path(config["base_path"])
-  scenario_path = join_safe(paint_plot_base_path, config["calibration_scenario_path"])
+    paint_plot_base_path = pathlib.Path(config["base_path"])
+    scenario_path = join_safe(paint_plot_base_path, config["calibration_scenario_path"])
 
-  heliostat_list_file = join_safe(paint_plot_base_path, config["heliostat_list_path"])
+    heliostat_list_file = join_safe(paint_plot_base_path, config["heliostat_list_path"])
 
-
-  heliostat_data_mapping, heliostat_properties_list = load_heliostat_data(
+    heliostat_data_mapping, heliostat_properties_list = load_heliostat_data(
         paint_directory, heliostat_list_file
     )
 
 create_scenario(
-          scenario_path=scenario_path,
-          tower_file=tower_file,
-          heliostat_properties_list=heliostat_properties_list,
-          device=device,
-      )
+    scenario_path=scenario_path,
+    tower_file=tower_file,
+    heliostat_properties_list=heliostat_properties_list,
+    device=device,
+)
