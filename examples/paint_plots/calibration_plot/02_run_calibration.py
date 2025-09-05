@@ -27,8 +27,7 @@ LEGEND_FONTSIZE = 8
 
 # Set up logger.
 set_logger_config()
-#torch.autograd.set_detect_anomaly(True)
-
+# torch.autograd.set_detect_anomaly(True)
 
 
 # ---------------

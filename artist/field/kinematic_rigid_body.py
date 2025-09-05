@@ -326,9 +326,13 @@ class RigidBody(Kinematic):
             last_iteration_loss = loss
 
             # Analytical solution for joint angles.
-            joint_angles_1 = -torch.arcsin(torch.clamp(
-                -desired_concentrator_normals[:, 0]
-                / torch.cos(self.active_deviation_parameters[:, 7]),min=-1, max=1)
+            joint_angles_1 = -torch.arcsin(
+                torch.clamp(
+                    -desired_concentrator_normals[:, 0]
+                    / torch.cos(self.active_deviation_parameters[:, 7]),
+                    min=-1,
+                    max=1,
+                )
             )
 
             a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(

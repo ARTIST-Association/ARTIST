@@ -368,7 +368,7 @@ class SurfaceReconstructor:
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
                     )
-                    
+
                     loss = flux_loss_per_heliostat.sum()
 
                     # Include regularization terms.
