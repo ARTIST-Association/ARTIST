@@ -160,18 +160,18 @@ if __name__ == "__main__":
 
     paint_plot_base_path = pathlib.Path(config["base_path"])
 
-    output_json_file = join_safe(paint_plot_base_path, config["results_dict_path"])
+    output_json_file = join_safe(paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"]))
     parser = argparse.ArgumentParser(description="Generate heliostat list with calibration info.")
     parser.add_argument(
         "--minimum-calibrations",
         type=int,
-        default=10,
+        default=25,
         help="Minimum valid calibration files per heliostat.",
     )
     parser.add_argument(
         "--maximum-heliostats",
         type=int,
-        default=10,
+        default=100,
         help="Maximum number of heliostats to include.",
     )
     parser.add_argument(

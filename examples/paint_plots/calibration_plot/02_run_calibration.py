@@ -123,7 +123,7 @@ def run_calibration(
             config_dictionary.exponential
         )  # exponential, cyclic or reduce_on_plateau
         scheduler_parameters = {
-            config_dictionary.gamma: 0.999,
+            config_dictionary.gamma: 0.9999,
             config_dictionary.min: 1e-6,
             config_dictionary.max: 1e-2,
             config_dictionary.step_size_up: 500,
@@ -135,12 +135,12 @@ def run_calibration(
 
         # Set optimization parameters.
         optimization_configuration = {
-            config_dictionary.initial_learning_rate: 0.05,
-            config_dictionary.tolerance: 0.000005,
+            config_dictionary.initial_learning_rate: 0.04,
+            config_dictionary.tolerance: 0,
             config_dictionary.max_epoch: 10000,
             config_dictionary.num_log: 100,
             config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 100,
+            config_dictionary.early_stopping_patience: 4000,
             config_dictionary.scheduler: scheduler,
             config_dictionary.scheduler_parameters: scheduler_parameters,
         }
@@ -191,12 +191,9 @@ def run_calibration(
                 losses = raw_losses
 
                 for index, name in enumerate(heliostat_group.names):
-                    start = heliostats_mask_calibration[:index].sum()
-                    end = heliostats_mask_calibration[: index + 1].sum()
-                    per_heliostat_losses = losses[start:end].detach().cpu().numpy()
                     if name not in results_dict:
                         results_dict[name] = {}
-                    results_dict[name][centroid] = per_heliostat_losses
+                    results_dict[name][centroid] = losses
     
     for group in scenario.heliostat_field.heliostat_groups:
         for name, position in zip(group.names, group.positions):
@@ -227,7 +224,7 @@ if __name__ == "__main__":
     with h5py.File(scenario_path) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
-            number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
+            number_of_surface_points_per_facet=torch.tensor([5, 5], device=device),
             device=device,
         )
     scenario_utis = copy.deepcopy(scenario)
