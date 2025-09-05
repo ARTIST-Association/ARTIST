@@ -14,7 +14,11 @@ from artist.data_loader.paint_loader import (
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
-from examples.paint_plots.helpers import join_safe, load_config, perform_inverse_canting_and_translation
+from examples.paint_plots.helpers import (
+    join_safe,
+    load_config,
+    perform_inverse_canting_and_translation,
+)
 
 MEASUREMENT_IDS = {"AA39": 149576, "AY26": 247613, "BC34": 82084}
 
