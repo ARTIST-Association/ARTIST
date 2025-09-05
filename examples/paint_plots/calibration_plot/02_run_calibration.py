@@ -27,6 +27,9 @@ LEGEND_FONTSIZE = 8
 
 # Set up logger.
 set_logger_config()
+#torch.autograd.set_detect_anomaly(True)
+
+
 
 # ---------------
 # helper functions
@@ -119,7 +122,7 @@ def run_calibration(
             config_dictionary.exponential
         )  # exponential, cyclic or reduce_on_plateau
         scheduler_parameters = {
-            config_dictionary.gamma: 0.9999,
+            config_dictionary.gamma: 0.999,
             config_dictionary.min: 1e-6,
             config_dictionary.max: 1e-2,
             config_dictionary.step_size_up: 500,
@@ -190,7 +193,7 @@ def run_calibration(
                     if name not in results_dict:
                         results_dict[name] = {}
 
-                    results_dict[name][centroid] = per_heliostat_losses
+                    results_dict[name][centroid] = losses
     for group in scenario.heliostat_field.heliostat_groups:
         for name, position in zip(group.names, group.positions):
             results_dict.setdefault(name, {})["position"] = (

@@ -226,7 +226,7 @@ class KinematicCalibrator:
                         config_dictionary.initial_learning_rate
                     ],
                 )
-
+                #heliostat_group.kinematic.actuators.actuator_parameters[:, 0, :] = 1
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
                     learning_rate_schedulers,
@@ -425,7 +425,7 @@ class KinematicCalibrator:
                         config_dictionary.initial_learning_rate
                     ],
                 )
-
+                heliostat_group.kinematic.actuators.actuator_parameters[:, 0, :] = 1
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
                     learning_rate_schedulers,

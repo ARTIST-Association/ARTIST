@@ -137,9 +137,9 @@ if __name__ == "__main__":
         paint_directory, heliostat_list_file
     )
 
-create_scenario(
-    scenario_path=scenario_path,
-    tower_file=tower_file,
-    heliostat_properties_list=heliostat_properties_list,
-    device=device,
-)
+    create_scenario(
+        scenario_path=scenario_path,
+        tower_file=tower_file,
+        heliostat_properties_list=heliostat_properties_list,
+        device=device,
+    )

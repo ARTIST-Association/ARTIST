@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import pathlib
 import re
 
@@ -20,7 +21,7 @@ def find_heliostats_with_minimum_calibrations(
     for required focal-spot keys, and collect matching flux image paths for a given suffix. The function returns a
     sorted list of up to `maximum_heliostats` tuples of the form (heliostat_name, calibration_paths, flux_image_paths).
     A calibration JSON is considered valid when its focal-spot section contains both
-    `config_dictionary.paint_helios` and `config_dictionary.paint_utis`; only the first `minimum_files` valid
+    centroid extracted by HeliOS and UTIS; only the first `minimum_files` valid
     calibrations per heliostat are used and missing or unreadable JSON files are skipped with a warning.
 
     Parameters
@@ -99,9 +100,6 @@ def find_heliostats_with_minimum_calibrations(
         )
 
         for calibration_file_path in valid_calibration_file_paths:
-            # file_stem = calibration_file_path.stem.replace(
-            #     config_dictionary.paint_calibration_properties_file_name_ending, ""
-            # )
             file_stem = calibration_file_path.stem.removesuffix(ending)
             flux_image_filename = f"{file_stem}-{flux_file_suffix}.png"
             flux_image_path = calibration_directory / flux_image_filename
