@@ -254,9 +254,6 @@ class KinematicCalibrator:
                     and epoch
                     <= self.optimization_configuration[config_dictionary.max_epoch]
                 ):
-                    print(loss > self.optimization_configuration[config_dictionary.tolerance]
-                    and epoch
-                    <= self.optimization_configuration[config_dictionary.max_epoch])
                     optimizer.zero_grad()
 
                     # Activate heliostats.
