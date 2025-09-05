@@ -293,16 +293,12 @@ paint_second_axis = "axis_2_motor_position"
 """Key to access the second motor position in a ``PAINT`` calibration.json file."""
 paint_calibration_folder_name = "Calibration"
 """Folder name for calibration data in ``PAINT``."""
+paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
 paint_properties_folder_name = "Properties"
 """Folder name for properties data in ``PAINT``."""
-paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
 """Ending for calibration properties files in ``PAINT``."""
 paint_properties_file_name_ending = "-heliostat-properties.json"
 """Ending for properties files in ``PAINT``."""
-paint_calibration_folder_name = "Calibration"
-"""Folder name for calibration data in ``PAINT``."""
-paint_calibration_properties_file_name_ending = "*-calibration-properties.json"
-"""Ending for calibration properties files in ``PAINT``."""
 
 linux = "Linux"
 """Key to access the Linux OS name."""
@@ -411,3 +407,15 @@ heliostat_group_world_size = "heliostat_group_world_size"
 """Key to access the world size within a process subgroups."""
 ranks_to_groups_mapping = "ranks_to_groups_mapping"
 """Key to access the mapping from ranks to heliostat groups."""
+helmholtz_colors = {
+    "hgfblue": "#005AA0",
+    "hgfdarkblue": "#0A2D6E",
+    "hgfgreen": "#8CB423",
+    "hgfgray": "#5A696E",
+    "hgfaerospace": "#50C8AA",
+    "hgfearthandenvironment": "#326469",
+    "hgfenergy": "#FFD228",
+    "hgfhealth": "#D23264",
+    "hgfkeytechnologies": "#A0235A",
+    "hgfmatter": "#F0781E",
+}
