@@ -91,3 +91,17 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
      - The physical offset from the actuator axis to the pivot. (2) in the image above.
    * - pivot_radius
      - The radius from the pivot center to the actuator anchor. (1) in the image above.
+
+The linear actuator is physics-informed to prevent invalid values and NaNs during forward and backward passes within this module.
+The parameters increment, initial_stroke_length, offset and pivot_radius are defined strictly positive using the softplus function,
+ensuring physically meaningful values throughout the optimizations, where these parameters may be learned.
+Additionally, the law of cosines, is used in both methods of the linear actuator to compute angles or motor steps. This involves
+the stroke length, offset, and pivot radius of each linear actuator. Together they make up a triangle, defining how far the
+actuator’s is from the actual rotational center of the joint.
+To make the law of cosines applicable, the sides (offset and pivot radius) of the triangle must satisfy the triangle inequality:
+
+.. math::
+
+    |offset - pivot\_radius| \leq stroke\_length \leq offset + pivot\_radius
+
+This ensures that a valid triangle can always be formed.
