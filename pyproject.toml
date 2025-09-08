@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "artist"
+name = "artist-csp"
 version = "1.0.0"
 authors = [
   { name="ARTIST Consortium", email="artist@lists.kit.edu" },
