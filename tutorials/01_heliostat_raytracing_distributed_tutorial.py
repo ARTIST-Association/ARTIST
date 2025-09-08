@@ -41,7 +41,7 @@ with setup_distributed_environment(
         # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
         # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
         # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
-        # from a sun positiond directly in the south and they will all be raytraced on the first target found in your scenario.
+        # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
         heliostat_target_light_source_mapping = None
         # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
         # heliostat_target_light_source_mapping = [
@@ -62,7 +62,7 @@ with setup_distributed_environment(
     )
 
     # Since each individual heliostat group has individual kinematic and actuator types, they must be
-    # processed seperatly. If a distributed environment exists, they can be processed in parallel,
+    # processed separately. If a distributed environment exists, they can be processed in parallel,
     # otherwise each heliostat group results will be computed sequentially.
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]

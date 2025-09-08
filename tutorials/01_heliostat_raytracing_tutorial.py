@@ -51,7 +51,7 @@ active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 # We select the first target area as the designated target for this heliostat.
 target_area_mask = torch.tensor([0], device=device)
 
-# Since we only have one helisotat we need to define a single incident ray direction.
+# Since we only have one heliostat we need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
 # Incident ray directions need to be normed.
 incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)

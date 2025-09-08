@@ -86,7 +86,7 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
    * - min_motor_pos
      - The smallest motor position the actuator accepts.
    * - max_motor_pos
-     - The largest motor position thea actuator accepts.
+     - The largest motor position the actuator accepts.
    * - increment
      - The total number of increments per full stroke.
    * - initial_stroke_length

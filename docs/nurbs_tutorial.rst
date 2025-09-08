@@ -209,7 +209,7 @@ in a parametric space, usually called the UV space, where the parameters :math:`
 this space, the surface is mathematically described through the concepts explained above (basis functions, ...). The physical surface
 itself does not exist in the 3D cartesian space until it is sampled. During the sampling the east, north, up (or :math:`x`, :math:`y`, :math:`z`)
 coordinates are first mapped back into the UV domain so that the parametric basis functions can be evaluated, producing the actual
-cartesian surface coordiantes. The UV space enables the NURBS to represent smooth, continous surfaces in a flexible way.
+cartesian surface coordinates. The UV space enables the NURBS to represent smooth, continuous surfaces in a flexible way.
 
 NURBS in ``ARTIST``
 -------------------
