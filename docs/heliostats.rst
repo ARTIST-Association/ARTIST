@@ -48,6 +48,10 @@ These vectors point in the east, north, and up directions, as shown in the image
    :width: 55%
    :align: center
 
+In ``ARTIST`` these translations, as well as possible tilts at each joint, are included in the ``kinematic_deviations``
+tensor (see :py:class:`artist.field.kinematic_rigid_body.RigidBody`), allowing multiple rigid body kinematics with
+slightly different translations and tilts to be effectively modeled.
+
 Actuators
 ^^^^^^^^^
 Heliostat actuators are the motors responsible for adjusting the heliostat's surface orientation to direct sunlight onto
@@ -75,33 +79,36 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
 
    * - Parameter Name
      - Description
+   * - type
+     - The type of actuator.
    * - clockwise_axis_movement
      - A boolean indicating if the movement direction is clockwise.
    * - min_motor_pos
      - The smallest motor position the actuator accepts.
-   * - max_increment
-     - The maximum actuator increment range.
+   * - max_motor_pos
+     - The largest motor position thea actuator accepts.
    * - increment
      - The total number of increments per full stroke.
-   * - initial_angle
-     - The starting angular position of the actuator.
    * - initial_stroke_length
      - The initial extension length of the actuator. (3) in the image above.
    * - offset
      - The physical offset from the actuator axis to the pivot. (2) in the image above.
    * - pivot_radius
      - The radius from the pivot center to the actuator anchor. (1) in the image above.
+   * - initial_angle
+     - The starting angular position of the actuator.
 
-The linear actuator is physics-informed to prevent invalid values and NaNs during forward and backward passes within this module.
-The parameters increment, initial_stroke_length, offset and pivot_radius are defined strictly positive using the softplus function,
-ensuring physically meaningful values throughout the optimizations, where these parameters may be learned.
-Additionally, the law of cosines, is used in both methods of the linear actuator to compute angles or motor steps. This involves
-the stroke length, offset, and pivot radius of each linear actuator. Together they make up a triangle, defining how far the
-actuator’s is from the actual rotational center of the joint.
-To make the law of cosines applicable, the sides (offset and pivot radius) of the triangle must satisfy the triangle inequality:
+In ``ARTIST`` the linear actuator is physics-informed to prevent invalid values and NaNs during forward and backward
+passes. The parameters increment, initial_stroke_length, offset and pivot_radius are defined strictly positive using
+the ``softplus`` function, ensuring physically meaningful values throughout the optimizations. Additionally, the law of
+cosines, is used in both methods of the linear actuator to compute angles or motor steps. This involves the stroke
+length, offset, and pivot radius of each linear actuator. Together they make up a triangle, defining how far the actuator
+is from the actual rotational center of the joint. To make the law of cosines applicable, the sides (offset and pivot
+radius) of the triangle must satisfy the triangle inequality:
 
 .. math::
 
     |offset - pivot\_radius| \leq stroke\_length \leq offset + pivot\_radius
 
-This ensures that a valid triangle can always be formed.
+This ensures that a valid triangle can always be formed. With this physics-informed backbone, the linear actuator can
+accurately model real actuator behavior in an efficient manner.
