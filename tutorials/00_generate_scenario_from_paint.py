@@ -104,17 +104,19 @@ nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     threshold_mode="abs",
 )
 
-heliostat_list_config, prototype_config = paint_loader.extract_paint_heliostats(
-    paths=heliostat_files_list,
-    power_plant_position=power_plant_config.power_plant_position,
-    number_of_nurbs_control_points=number_of_nurbs_control_points,
-    deflectometry_step_size=nurbs_deflectometry_step_size,
-    nurbs_fit_method=nurbs_fit_method,
-    nurbs_fit_tolerance=nurbs_fit_tolerance,
-    nurbs_fit_max_epoch=nurbs_fit_max_epoch,
-    nurbs_fit_optimizer=nurbs_fit_optimizer,
-    nurbs_fit_scheduler=nurbs_fit_scheduler,
-    device=device,
+heliostat_list_config, prototype_config = (
+    paint_loader.extract_paint_heliostats_fitted_surface(
+        paths=heliostat_files_list,
+        power_plant_position=power_plant_config.power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        deflectometry_step_size=nurbs_deflectometry_step_size,
+        nurbs_fit_method=nurbs_fit_method,
+        nurbs_fit_tolerance=nurbs_fit_tolerance,
+        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+        nurbs_fit_optimizer=nurbs_fit_optimizer,
+        nurbs_fit_scheduler=nurbs_fit_scheduler,
+        device=device,
+    )
 )
 
 if __name__ == "__main__":
