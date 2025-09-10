@@ -166,9 +166,7 @@ def generate_flux_images(
     results_path = pathlib.Path(result_file)
     if results_path.exists():
         loaded = torch.load(results_path, weights_only=False)
-        results_dict = cast(
-            Dict[str, Dict[str, np.ndarray| torch.Tensor]], loaded
-        )
+        results_dict = cast(Dict[str, Dict[str, np.ndarray | torch.Tensor]], loaded)
 
     scenario_h5_path = pathlib.Path(scenario_path).with_suffix(".h5")
 
