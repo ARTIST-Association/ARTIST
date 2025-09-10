@@ -45,7 +45,9 @@ def distribution(device) -> torch.Tensor:
         / "desired_distribution.pt"
     )
 
-    ground_truth = torch.load(distribution_path_group_1, map_location=device, weights_only=True)
+    ground_truth = torch.load(
+        distribution_path_group_1, map_location=device, weights_only=True
+    )
 
     return ground_truth
 

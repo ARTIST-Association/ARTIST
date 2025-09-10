@@ -219,7 +219,7 @@ if __name__ == "__main__":
         log_rank=True,
         colors=True,
     )
-    
+
     log = logging.getLogger(__name__)
     rank = comm.Get_rank()
     log.info(rank)
