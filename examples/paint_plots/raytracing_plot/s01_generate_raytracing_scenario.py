@@ -85,6 +85,12 @@ def generate_paint_scenario(
             "Please create the folder or adjust the file path before running again!"
         )
 
+    # fix for mypy issue with torch.device | str.
+    device_obj: torch.device | None
+    if isinstance(device, str):
+        device_obj = torch.device(device)
+    else:
+        device_obj = device
     # Prepare heliostat files.
     # The function is a hacky workaround to catch a MyPy error.
 
@@ -122,7 +128,7 @@ def generate_paint_scenario(
     power_plant_config, target_area_list_config = (
         paint_loader.extract_paint_tower_measurements(
             tower_measurements_path=tower_file_path,  # pass Path
-            device=device,
+            device=device_obj,
         )
     )
 
@@ -144,7 +150,7 @@ def generate_paint_scenario(
         light_source_list=light_source_list
     )
 
-    number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
+    number_of_nurbs_control_points = torch.tensor([20, 20], device=device_obj)
     nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
     nurbs_deflectometry_step_size = 100
     nurbs_fit_tolerance = 1e-10
@@ -173,7 +179,7 @@ def generate_paint_scenario(
         nurbs_fit_max_epoch=nurbs_fit_max_epoch,
         nurbs_fit_optimizer=nurbs_fit_optimizer,
         nurbs_fit_scheduler=nurbs_fit_scheduler,
-        device=device,
+        device=device_obj,
     )
 
     # Generate the scenario given the defined parameters.
@@ -189,6 +195,36 @@ def generate_paint_scenario(
 
 
 def main() -> None:
+    """
+    Generate two raytracing scenarios: deflectometry and ideal (no deflectometry).
+
+    This entry point loads configuration, maps configured
+    base paths to absolute locations, and prepares a small set of heliostats. It then
+    creates two scenario variants under a common base path
+    with or without deflectometry.
+
+    The scenarios are written next to the computed scenario base path, using the suffixes
+    `_deflectometry` and `_ideal`, respectively.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    KeyError
+        If required configuration keys are missing.
+    FileNotFoundError
+        If configured input files or directories (e.g., the tower file or PAINT repository path) are not found.
+    OSError
+        If the scenario files cannot be created due to filesystem or permission errors.
+    RuntimeError
+        If the selected compute device is unavailable or cannot be initialized.
+    """
     config = load_config()
 
     device = torch.device(config["device"])

@@ -9,7 +9,6 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 from examples.paint_plots.helpers import join_safe, load_config, load_heliostat_data
@@ -84,7 +83,7 @@ def create_scenario(
     tower_file: str | pathlib.Path,
     heliostat_properties_list: list[tuple[str, pathlib.Path]],
     device: Optional[torch.device],
-) -> tuple[Scenario, pathlib.Path]:
+) -> None:
     """Ensure scenario exists, create if missing, and return loaded Scenario and its HDF5 path.
 
     Parameters

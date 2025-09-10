@@ -132,7 +132,12 @@ def save_heliostat_list(
     output_file_path : str or pathlib.Path
         The file path to save the list to.
     """
-    output_file_path = join_safe(output_file_path, "heliostat_files.json")
+    base_path: pathlib.Path = (
+        output_file_path
+        if isinstance(output_file_path, pathlib.Path)
+        else pathlib.Path(output_file_path)
+    )
+    output_file_path = join_safe(base_path, "heliostat_files.json")
     output_file_path = pathlib.Path(output_file_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -156,7 +161,7 @@ if __name__ == "__main__":
     config = load_config()
     paint_directory = pathlib.Path(config["paint_repository_base_path"])
 
-    paint_plot_base_path = pathlib.Path(config["base_path"])
+    paint_plot_base_path: pathlib.Path = pathlib.Path(config["base_path"])
 
     output_json_file = join_safe(
         paint_plot_base_path, os.path.dirname(config["results_calibration_dict_path"])
@@ -195,7 +200,7 @@ if __name__ == "__main__":
     minimum_calibrations = args.minimum_calibrations
     maximum_heliostats = args.maximum_heliostats
 
-    excluded_heliostats = set()
+    excluded_heliostats: set[str] = set()
     for group in args.excluded_heliostats:
         excluded_heliostats.update(name for name in re.split(r"[,\s;]+", group) if name)
 

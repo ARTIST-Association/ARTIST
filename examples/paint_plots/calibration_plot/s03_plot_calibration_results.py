@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from scipy.stats import gaussian_kde
 
 from artist.util import config_dictionary, set_logger_config
 from examples.paint_plots.helpers import join_safe, load_config
@@ -37,18 +38,16 @@ def plot_mrad_error_distributions(
     matplotlib.figure.Figure
         The generated figure.
     """
-    from scipy.stats import gaussian_kde
-
     helios_losses: list[float] = []
     utis_losses: list[float] = []
 
     for data in results_dict.values():
         helios_losses.extend(
-            np.asarray(data[config_dictionary.paint_helios][0].detach().cpu().numpy())
+            np.asarray(data[config_dictionary.paint_helios].detach().cpu().numpy())
             * 1000.0
         )
         utis_losses.extend(
-            np.asarray(data[config_dictionary.paint_utis][0].detach().cpu().numpy())
+            np.asarray(data[config_dictionary.paint_utis].detach().cpu().numpy())
             * 1000.0
         )
 
@@ -177,23 +176,31 @@ def plot_mrad_vs_distance(
     matplotlib.figure.Figure
         The generated figure.
     """
-    distances = []
-    helios_means = []
-    utis_means = []
+    distances: list[float] = []
+    helios_means: list[float] = []
+    utis_means: list[float] = []
 
     fig, ax = plt.subplots(figsize=FIGSIZE)
 
     for idx, (name, data) in enumerate(results_dict.items()):
-        pos = np.array(data["position"])
-        distance = np.linalg.norm(pos[:2])
-
+        pos = np.asarray(data["position"], dtype=float)
+        distance = float(np.linalg.norm(pos[:2]))
         helios_mean = (
-            np.mean(data[config_dictionary.paint_helios][0].detach().cpu().numpy())
+            float(
+                np.mean(
+                    data[config_dictionary.paint_helios].detach().cpu().numpy()
+                )  # multiply by 1000 since results are calculated in rad but plotted in mrad.
+            )
             * 1000
-        )  # use index 0 since only one group was created. multiply by 1000 since results are calculated in rad but plotted in mrad.
+        )
         utis_mean = (
-            np.mean(data[config_dictionary.paint_utis][0].detach().cpu().numpy()) * 1000
-        )  # use index 0 since only one group was created. multiply by 1000 since results are calculated in rad but plotted in mrad
+            float(
+                np.mean(
+                    data[config_dictionary.paint_utis].detach().cpu().numpy()
+                )  # multiply by 1000 since results are calculated in rad but plotted in mrad.
+            )
+            * 1000
+        )
 
         distances.append(distance)
         helios_means.append(helios_mean)
@@ -216,14 +223,15 @@ def plot_mrad_vs_distance(
             alpha=0.7,
         )
 
-    distances = np.array(distances)
-    helios_means = np.array(helios_means)
-    utis_means = np.array(utis_means)
+    # Convert lists to numpy arrays without reassigning typed list vars
+    distances_arr = np.asarray(distances, dtype=float)
+    helios_means_arr = np.asarray(helios_means, dtype=float)
+    utis_means_arr = np.asarray(utis_means, dtype=float)
 
     # Trendlines
-    helios_fit = np.poly1d(np.polyfit(distances, helios_means, 1))
-    utis_fit = np.poly1d(np.polyfit(distances, utis_means, 1))
-    x_vals = np.linspace(distances.min(), distances.max(), 200)
+    helios_fit = np.poly1d(np.polyfit(distances_arr, helios_means_arr, 1))
+    utis_fit = np.poly1d(np.polyfit(distances_arr, utis_means_arr, 1))
+    x_vals = np.linspace(distances_arr.min(), distances_arr.max(), 200)
 
     ax.plot(
         x_vals,
@@ -263,7 +271,9 @@ results_path = join_safe(paint_plots_base_path, config["results_calibration_dict
 save_plot_path = join_safe(paint_plots_base_path, config["results_plot_path"])
 
 if results_path.exists():
-    results_dict = torch.load(results_path, weights_only=False)
+    results_dict = torch.load(
+        results_path, weights_only=False, map_location=torch.device(config["device"])
+    )
 else:
     print(
         f"Did not found existing results at {results_path}. please run 02_run_calibration first."

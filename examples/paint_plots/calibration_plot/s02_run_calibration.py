@@ -1,4 +1,5 @@
 import copy
+import os  # added for os.fspath
 import pathlib
 from typing import Optional
 
@@ -135,7 +136,7 @@ def run_calibration(
         optimization_configuration = {
             config_dictionary.initial_learning_rate: 0.04,
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 10000,
+            config_dictionary.max_epoch: 3000,
             config_dictionary.num_log: 100,
             config_dictionary.early_stopping_delta: 1e-6,
             config_dictionary.early_stopping_patience: 4000,
@@ -181,18 +182,15 @@ def run_calibration(
                     calibration_method=kinematic_calibration_method,
                 )
 
-                raw_losses = kinematic_calibrator.calibrate(
+                per_heliostat_losses = kinematic_calibrator.calibrate(
                     loss_definition=loss_definition, device=device
                 )
-                if raw_losses is None:
-                    continue
-                losses = raw_losses
 
                 for index, name in enumerate(heliostat_group.names):
                     if name not in results_dict:
                         results_dict[name] = {}
+                    results_dict[name][centroid] = per_heliostat_losses[0][index]
 
-                    results_dict[name][centroid] = losses
     for group in scenario.heliostat_field.heliostat_groups:
         for name, position in zip(group.names, group.positions):
             results_dict.setdefault(name, {})["position"] = (
@@ -224,7 +222,8 @@ if __name__ == "__main__":
         paint_repository_base_path, heliostat_list_file
     )
 
-    with h5py.File(scenario_path) as scenario_file:
+    # ignore mypy due to known issue with h5py and mypy https://github.com/python/mypy/issues/14648 .
+    with h5py.File(os.fspath(scenario_path), "r") as scenario_file:  # type: ignore[call-arg,arg-type]
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=torch.tensor([5, 5], device=device),

@@ -122,7 +122,6 @@ def filter_valid_heliostat_data(
     return valid
 
 
-@staticmethod
 def perform_inverse_canting_and_translation(
     canted_points: torch.Tensor,
     translation: torch.Tensor,

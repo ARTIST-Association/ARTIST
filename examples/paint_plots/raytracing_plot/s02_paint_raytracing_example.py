@@ -1,5 +1,5 @@
 import pathlib
-from typing import Dict
+from typing import Dict, Union, cast
 
 import h5py
 import numpy as np
@@ -71,7 +71,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_mask: torch.Tensor,
-    device: torch.device | str = "cuda",
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """Align heliostats and perform heliostat ray tracing.
 
@@ -88,14 +88,18 @@ def align_and_trace_rays(
         Mask indicating which heliostats are active.
     target_area_mask : torch.Tensor
         Target area indices for each active heliostat.
-    device : torch.device | str, optional
-        Device to use for computations, by default "cuda".
+    device : torch.device | None, optional
+        Device to use for computations, by default None.
 
     Returns
     -------
     torch.Tensor
         Flux density image(s) on the receiver.
     """
+    # Ensure device is torch.device (mypy: avoid str union)
+    if isinstance(device, str):
+        device = torch.device(device)
+
     # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
         active_heliostats_mask=active_heliostats_mask
@@ -130,7 +134,7 @@ def generate_flux_images(
     heliostats: list[str],
     paint_dir: str | pathlib.Path,
     result_file: str | pathlib.Path,
-    device: torch.device | str,
+    device: torch.device | None,
     result_key: str = "flux_deflectometry",
 ) -> None:
     """Generate flux images via alignment and ray tracing and save to a merged result file.
@@ -145,21 +149,30 @@ def generate_flux_images(
         ''PAINT'' repository path.
     result_file : str | Path
         Path to a single merged .pt file to store results for all runs.
-    device : torch.device | str
+    device : torch.device | None
         Device to run computations on.
     result_key : str, optional
         Key under which to store the result (e.g., "flux_deflectometry", "flux_ideal"),
         by default "flux_deflectometry".
     """
-    results_dict: Dict[str, Dict[str, np.ndarray]] = {}
+    if isinstance(device, str):
+        device = torch.device(device)
+
+    results_dict: Dict[str, Dict[str, Union[np.ndarray, torch.Tensor]]] = {}
     results_path = pathlib.Path(result_file)
     if results_path.exists():
-        results_dict = torch.load(results_path, weights_only=False)
+        loaded = torch.load(results_path, weights_only=False)
+        # Keeping Any from torch.load; cast to expected structure
+        results_dict = cast(
+            Dict[str, Dict[str, Union[np.ndarray, torch.Tensor]]], loaded
+        )
 
     scenario_h5_path = pathlib.Path(scenario_path).with_suffix(".h5")
 
     # Load scenario.
-    with h5py.File(scenario_h5_path, "r") as scenario_file:
+
+    # ignore mypy due to known issue with h5py and mypy https://github.com/python/mypy/issues/14648 .
+    with h5py.File(str(scenario_h5_path), mode="r") as scenario_file:  # type: ignore[call-arg,arg-type]
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     scenario.light_sources.light_source_list[0].number_of_rays = 6000
@@ -261,21 +274,25 @@ def generate_flux_images(
 
             # Apply inverse canting and translation using properties-derived transforms.
             facet_translations, facet_canting_vectors = facet_transforms_by_name[name]
-            facet_points_decanted = perform_inverse_canting_and_translation(
+            facet_points_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_points_canted,
                 translation=facet_translations,
                 canting=facet_canting_vectors,
                 device=device,
             )
 
-            # Convert to Z grid for plotting.
-            facet_points_decanted = (
-                facet_points_decanted[:, :, 2].view(4, 50, 50).cpu().detach().numpy()
+            # Convert to Z grid for plotting (new variable to keep types distinct).
+            facet_points_decanted_np = (
+                facet_points_decanted_tensor[:, :, 2]
+                .view(4, 50, 50)
+                .cpu()
+                .detach()
+                .numpy()
             )
             surface_z_grid = np.block(
                 [
-                    [facet_points_decanted[2], facet_points_decanted[0]],
-                    [facet_points_decanted[3], facet_points_decanted[1]],
+                    [facet_points_decanted_np[2], facet_points_decanted_np[0]],
+                    [facet_points_decanted_np[3], facet_points_decanted_np[1]],
                 ]
             )
             results_dict[name]["surface"] = surface_z_grid
@@ -284,6 +301,32 @@ def generate_flux_images(
 
 
 def main():
+    """
+    Run the ray-tracing pipeline and merge results.
+
+    This entry point loads the experiment configuration and scenarios, and generates flux images
+    for both deflectometry and ideal ray-tracing scenarios. The resulting flux
+    images are merged into a single results file with distinct result keys.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    FileNotFoundError
+        If required scenario or configuration paths do not exist.
+    ValueError
+        If the configuration is incomplete or contains invalid values.
+    RuntimeError
+        If device initialization or ray tracing fails.
+    OSError
+        For I/O errors while reading or writing result files.
+    """
     config = load_config()
 
     device = torch.device(config["device"])
