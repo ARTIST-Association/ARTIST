@@ -606,7 +606,7 @@ def _ideal_surface_generator(
     device: torch.device | None,
     **kwargs: Any,
 ) -> SurfaceConfig:
-    """
+    r"""
     Generate a surface configuration for an ideal heliostat.
 
     This is a helper function designed to be passed as a callable to the `_process_heliostats_from_paths` function,
@@ -625,7 +625,7 @@ def _ideal_surface_generator(
         The number of NURBS control points.
     device : torch.device | None
         The device to use.
-    **kwargs : Any
+    \*\*kwargs : Any
         Additional keyword arguments, not used by this function but accepted for API compatibility.
 
     Returns
@@ -652,7 +652,7 @@ def _fitted_surface_generator(
     device: torch.device | None,
     **kwargs: Any,
 ) -> SurfaceConfig:
-    """
+    r"""
     Generate a surface configuration for a fitted heliostat.
 
     This is a helper function designed to be passed as a callable to the `_process_heliostats_from_paths` function,
@@ -670,7 +670,7 @@ def _fitted_surface_generator(
         The number of NURBS control points.
     device : torch.device | None
         The device to use.
-    **kwargs : Any
+    \*\*kwargs : Any
         Additional keyword arguments used for the fitting process, including:
         - `nurbs_fit_optimizer`: The PyTorch optimizer for the NURBS fit.
         - `nurbs_fit_scheduler`: The PyTorch learning rate scheduler for the fit.
@@ -723,7 +723,7 @@ def _process_heliostats_from_paths(
     device: torch.device | None = None,
     **kwargs: Any,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
-    """
+    r"""
     Process heliostat properties from file paths.
 
     Parameters
@@ -740,7 +740,7 @@ def _process_heliostats_from_paths(
         A function that generates the surface configuration, either ideal or fitted.
     device : torch.device | None
         The device to use.
-    **kwargs : Any
+    \*\*kwargs : Any
         Any additional arguments to pass to the surface config generator function.
 
     Returns
