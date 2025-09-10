@@ -162,14 +162,12 @@ def generate_flux_images(
     if isinstance(device, str):
         device = torch.device(device)
 
-    results_dict: Dict[str, Dict[str, np.ndarray| torch.Tensor]] = {}
+    results_dict: Dict[str, Dict[str, np.ndarray | torch.Tensor]] = {}
     results_path = pathlib.Path(result_file)
     if results_path.exists():
         loaded = torch.load(results_path, weights_only=False)
         # Keeping Any from torch.load; cast to expected structure
-        results_dict = cast(
-            Dict[str, Dict[str, np.ndarray| torch.Tensor]], loaded
-        )
+        results_dict = cast(Dict[str, Dict[str, np.ndarray | torch.Tensor]], loaded)
 
     scenario_h5_path = pathlib.Path(scenario_path).with_suffix(".h5")
 
