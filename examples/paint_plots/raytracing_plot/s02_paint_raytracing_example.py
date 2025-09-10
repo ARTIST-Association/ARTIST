@@ -171,8 +171,7 @@ def generate_flux_images(
 
     # Load scenario.
 
-    # ignore mypy due to known issue with h5py and mypy https://github.com/python/mypy/issues/14648 .
-    with h5py.File(str(scenario_h5_path), mode="r") as scenario_file:  # type: ignore[call-arg,arg-type]
+    with h5py.File(str(scenario_h5_path), mode="r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     scenario.light_sources.light_source_list[0].number_of_rays = 6000

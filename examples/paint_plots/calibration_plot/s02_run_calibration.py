@@ -221,9 +221,7 @@ if __name__ == "__main__":
     heliostat_data_mapping, heliostat_properties_list = load_heliostat_data(
         paint_repository_base_path, heliostat_list_file
     )
-
-    # ignore mypy due to known issue with h5py and mypy https://github.com/python/mypy/issues/14648 .
-    with h5py.File(os.fspath(scenario_path), "r") as scenario_file:  # type: ignore[call-arg,arg-type]
+    with h5py.File(os.fspath(scenario_path), "r") as scenario_file:  
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=torch.tensor([5, 5], device=device),
