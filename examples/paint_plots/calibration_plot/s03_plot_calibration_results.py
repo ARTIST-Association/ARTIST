@@ -20,7 +20,7 @@ set_logger_config()
 
 
 def plot_mrad_error_distributions(
-    results_dict: dict, save_path: str | pathlib.Path = None
+    results_dict: dict, save_path: str | pathlib.Path | None = None
 ) -> plt.Figure:
     """Plot histograms and KDEs of mrad losses (0–10 mrad) for HeliOS and UTIS across all heliostats.
 
@@ -151,7 +151,7 @@ def plot_mrad_error_distributions(
 
 
 def plot_mrad_vs_distance(
-    results_dict: dict, save_path: str | pathlib.Path = None
+    results_dict: dict, save_path: str | pathlib.Path | None = None
 ) -> plt.Figure:
     """Plot mean pointing error (mrad) vs. heliostat XY distance with trendlines.
 
