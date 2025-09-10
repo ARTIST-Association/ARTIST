@@ -6,7 +6,7 @@
 .. note::
 
     You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/02_kinematic_optimization_tutorial.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/04_kinematic_optimization_tutorial.py
 
 This tutorial provides a brief introduction to ``ARTIST`` showcasing how the kinematic calibration is performed.
 The tutorial will run through some basic concepts necessary to understanding ``ARTIST`` including:
