@@ -16,4 +16,6 @@ More general information including can be found by reading up on what is happeni
    tutorial_generating_scenario
    tutorial_heliostat_raytracing
    tutorial_distributed_raytracing
+   tutorial_surface_reconstruction
    tutorial_kinematic_calibration
+   tutorial_motor_position_optimization
