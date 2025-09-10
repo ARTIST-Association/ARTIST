@@ -162,7 +162,7 @@ def generate_flux_images(
     if isinstance(device, str):
         device = torch.device(device)
 
-    results_dict: Dict[str, Dict[str, np.ndarray| torch.Tensor]] = {}
+    results_dict: Dict[str, Dict[str, np.ndarray | torch.Tensor]] = {}
     results_path = pathlib.Path(result_file)
     if results_path.exists():
         loaded = torch.load(results_path, weights_only=False)
