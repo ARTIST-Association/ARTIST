@@ -336,7 +336,7 @@ class KinematicCalibrator:
                 log.info("Kinematic parameters optimized.")
             else:
                 # Preserve group alignment with an empty tensor.
-                final_loss_per_group.append(torch.empty(torch.inf, device=device))
+                final_loss_per_group.append(torch.empty(0, device=device))
 
         return final_loss_per_group
 
@@ -572,7 +572,7 @@ class KinematicCalibrator:
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
             else:
                 # Preserve group alignment with an empty tensor.
-                final_loss_per_group.append(torch.empty(torch.inf, device=device))
+                final_loss_per_group.append(torch.empty(0, device=device))
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(

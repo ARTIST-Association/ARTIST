@@ -387,7 +387,7 @@ class SurfaceReconstructor:
 
                         scaled_regularization_term = scale_loss(
                             loss=regularization_term,
-                            reference=flux_loss_per_heliostat,
+                            reference=flux_loss_per_heliostat.sum(),
                             weight=regularizer.weight,
                         )
 
@@ -458,7 +458,7 @@ class SurfaceReconstructor:
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
             else:
                 # Preserve group alignment with an empty tensor.
-                final_loss_per_group.append(torch.empty(torch.inf, device=device))
+                final_loss_per_group.append(torch.empty(0, device=device))
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(

@@ -122,7 +122,7 @@ class SurfaceGenerator:
         ]
         if fit_method not in accepted_conversion_methods:
             raise NotImplementedError(
-                f"The conversion method '{fit_method}' is not yet supported in ``ARTIST``."
+                f"The conversion method '{fit_method}' is not yet supported in ARTIST."
             )
 
         device = get_device(device=device)
