@@ -131,6 +131,10 @@ def save_heliostat_list(
         The list of heliostat data with calibration and flux paths.
     output_file_path : str or pathlib.Path
         The file path to save the list to.
+        
+    Returns
+    -------
+    None
     """
     base_path: pathlib.Path = (
         output_file_path

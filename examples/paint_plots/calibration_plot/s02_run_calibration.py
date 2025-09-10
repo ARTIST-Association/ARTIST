@@ -1,7 +1,6 @@
 import copy
 import os  # added for os.fspath
 import pathlib
-from typing import Optional
 
 import h5py
 import torch
@@ -42,8 +41,8 @@ def run_calibration(
     valid_heliostat_data_mapping: list[
         tuple[str, list[pathlib.Path], list[pathlib.Path]]
     ],
-    device: Optional[torch.device],
-    centroids_extracted_by: Optional[list[str]] = None,
+    device: torch.device | None = None,
+    centroids_extracted_by: list[str] | None = None,
 ) -> dict:
     """Run distributed calibration for all groups and selected centroid sources.
 

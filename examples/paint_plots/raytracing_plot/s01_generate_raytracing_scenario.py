@@ -55,7 +55,7 @@ def generate_paint_scenario(
     scenario_path: str | Path,
     tower_file: str | Path,
     heliostat_names: list[str],
-    device: torch.device | str = "cpu",
+    device: torch.device | None = None,
     use_deflectometry: bool = True,
 ) -> None:
     """Generate an HDF5 scenario from ``PAINT`` inputs.
@@ -70,8 +70,10 @@ def generate_paint_scenario(
         Path to the tower measurements HDF5.
     heliostat_names : list[str]
         Heliostat identifiers to include.
-    device : torch.device | str, optional
-        Torch device for processing, by default "cpu".
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
     use_deflectometry : bool, optional
         If True, include deflectometry data for surface fitting, by default True.
     """
@@ -230,7 +232,6 @@ def main() -> None:
     device = torch.device(config["device"])
     device = get_device(device)
 
-    # Map config -> args using new keys and base paths.
     paint_dir = pathlib.Path(config["paint_repository_base_path"])
     tower_file = join_safe(paint_dir, config["paint_tower_file"])
 

@@ -1,5 +1,4 @@
 import pathlib
-from typing import Optional
 
 import torch
 
@@ -18,7 +17,7 @@ def _generate_paint_scenario(
     scenario_path: str | pathlib.Path,
     tower_file: str | pathlib.Path,
     heliostat_files_list: list[tuple[str, pathlib.Path]],
-    device: Optional[torch.device],
+    device: torch.device | None = None,
 ) -> None:
     """Generate a scenario file based on tower and heliostat data.
 
@@ -30,8 +29,10 @@ def _generate_paint_scenario(
         Path to the tower measurements file (JSON/HDF5 as expected by `paint_loader.extract_paint_tower_measurements`).
     heliostat_files_list : list[tuple[str, pathlib.Path]]
         List of tuples `(heliostat_name, properties_path)` for all heliostats to include.
-    device : str, default="cpu"
-        Device identifier used during scenario generation (e.g., "cpu" or "cuda").
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Raises
     ------
@@ -82,7 +83,7 @@ def create_scenario(
     scenario_path: str | pathlib.Path,
     tower_file: str | pathlib.Path,
     heliostat_properties_list: list[tuple[str, pathlib.Path]],
-    device: Optional[torch.device],
+    device: torch.device | None = None,
 ) -> None:
     """Ensure scenario exists, create if missing, and return loaded Scenario and its HDF5 path.
 
@@ -95,7 +96,9 @@ def create_scenario(
     heliostat_properties_list : list[tuple[str, pathlib.Path]]
         Heliostat names and corresponding properties file paths.
     device : torch.device | None
-        Device for loading the scenario and setting tensor devices.
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------

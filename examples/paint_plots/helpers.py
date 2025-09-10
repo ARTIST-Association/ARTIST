@@ -140,7 +140,9 @@ def perform_inverse_canting_and_translation(
     canting : torch.Tensor
         Batch of canting vectors (east, north), shape (number_of_facets, 2, 4).
     device : torch.device | None
-        Computation device.
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------

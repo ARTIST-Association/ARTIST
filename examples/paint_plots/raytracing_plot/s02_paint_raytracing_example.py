@@ -88,8 +88,10 @@ def align_and_trace_rays(
         Mask indicating which heliostats are active.
     target_area_mask : torch.Tensor
         Target area indices for each active heliostat.
-    device : torch.device | None, optional
-        Device to use for computations, by default None.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -150,7 +152,9 @@ def generate_flux_images(
     result_file : str | Path
         Path to a single merged .pt file to store results for all runs.
     device : torch.device | None
-        Device to run computations on.
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
     result_key : str, optional
         Key under which to store the result (e.g., "flux_deflectometry", "flux_ideal"),
         by default "flux_deflectometry".
