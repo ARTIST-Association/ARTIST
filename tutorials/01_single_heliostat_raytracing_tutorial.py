@@ -12,10 +12,14 @@ from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
 
-# If you have already generated the tutorial scenario yourself, you can use that scenario,
-# create and use any custom scenario, or use one provided in the artist/tutorials/data/scenarios directory.
+# This is an introductory tutorial to look at some of the basic elements of ARTIST. Therefore, it is designed to only
+# work with a scenario containing a single heliostat. Please use the "single_heliostat_scenario" provided in the
+# scenarios folder or create your own scenario that only contains a single heliostat.
+
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "please/insert/the/path/to/the/scenario/here/scenarios/single_heliostat_scenario.h5"
+)
 
 # Set up logger.
 set_logger_config()
@@ -31,25 +35,34 @@ with h5py.File(scenario_path) as scenario_path:
 
 # Inspect the scenario.
 print(scenario)
-print(f"The light source is a {scenario.light_sources.light_source_list[0]}.")
+print(
+    f"The light source is a {scenario.light_sources.light_source_list[0].__class__.__name__}."
+)
 print(f"The first target area is a {scenario.target_areas.names[0]}.")
 print(
-    f"The first heliostat in the first group in the field is heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]}."
+    f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[0].names[0]}."
 )
 print(
-    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is located at: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
-)
-print(
-    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
+    f"The location of {scenario.heliostat_field.heliostat_groups[0].names[0]} is: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
 )
 
 # Let's say we only want to consider one Heliostat for the beginning.
 # We will choose the first Heliostat, with index 0 by activating it.
 active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
+# Activate heliostats, only activated heliostats will be aligned or raytraced.
+scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+    active_heliostats_mask=active_heliostats_mask,
+    device=device,
+)
+
 # Each heliostat has an aim point, it makes sense to choose an aimpoint on one of the target areas.
 # We select the first target area as the designated target for this heliostat.
 target_area_mask = torch.tensor([0], device=device)
+
+# We can use this to define our aim point.
+aim_point = scenario.target_areas.centers[target_area_mask]
+print(f"The initial aim point used for this raytracing is {aim_point.tolist()}.")
 
 # Since we only have one heliostat we need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
@@ -59,16 +72,12 @@ incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 # Save the original surface points of the one active heliostat.
 original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points
 
-# Activate heliostats, only activated heliostats will be aligned or raytraced.
-scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
-    active_heliostats_mask=active_heliostats_mask
-)
 
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
     0
 ].align_surfaces_with_incident_ray_directions(
-    aim_points=scenario.target_areas.centers[target_area_mask],
+    aim_points=aim_point,
     incident_ray_directions=incident_ray_directions,
     active_heliostats_mask=active_heliostats_mask,
     device=device,
@@ -87,10 +96,8 @@ aligned_surface_points = scenario.heliostat_field.heliostat_groups[
 colors = ["r", "g", "b", "y"]
 
 # Create a 3D plot.
-fig = plt.figure(figsize=(14, 6))  # Adjust figure size as needed.
-gs = fig.add_gridspec(
-    1, 2, width_ratios=[1, 1], wspace=0.3
-)  # Adjust width_ratios and wspace as needed.
+fig = plt.figure(figsize=(14, 6))
+gs = fig.add_gridspec(1, 2, width_ratios=[1, 1], wspace=0.3)
 
 # Create subplots.
 ax1 = fig.add_subplot(121, projection="3d")
@@ -137,10 +144,8 @@ ax2.set_zticks([])
 # Create a single legend for both subplots.
 handles, labels = ax1.get_legend_handles_labels()
 fig.legend(handles, labels, loc="upper center", ncols=4)
-
-# Show the plot.
-plt.show()
 plt.savefig("tut_1.png")
+
 
 # Create a ray tracer.
 ray_tracer = HeliostatRayTracer(
@@ -191,7 +196,8 @@ def align_and_trace_rays(
     """
     # Activate heliostats
     scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
-        active_heliostats_mask=active_heliostats_mask
+        active_heliostats_mask=active_heliostats_mask,
+        device=device,
     )
 
     # Align all heliostats.
@@ -257,7 +263,6 @@ def plot_multiple_images(
         axes[j].axis("off")
 
     plt.tight_layout()
-    plt.show()
     plt.savefig("tut_3.png")
 
 
