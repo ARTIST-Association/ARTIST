@@ -1,7 +1,7 @@
 .. _tutorial_distributed_raytracing:
 
 ``ARTIST`` Tutorial: Distributed Ray Tracing
-===========================================
+============================================
 
 .. note::
 

@@ -130,7 +130,7 @@ This code generates the following output:
 Selecting Active Heliostats and Target Areas
 --------------------------------------------
 In ARTIST the information about the helisotats is saved per heliostat property. There is one tensor containing
-all heliostat positions from a specific heliostat group (see :ref:`Artist Under the Hood<artist_under_the_hood>`).
+all heliostat positions from a specific heliostat group (see :ref:`Artist Under the Hood<artist_under_hood>`).
 Similarly there is one tensor containing all aim points and so on. To address a specific heliostat, it is important to
 know its index. To activate one or more heliostats for the alignment process or raytracing, you can mark the entry at
 the heliostat index with a 1 in the ``active_heliostats_mask`` tensor, like this:
@@ -222,7 +222,7 @@ Since both the target area (receiver) and the sun are directly to the south of t
 The heliostat is rotated 90 degrees along the east axis to reflect the sunlight back in the direction it is coming from.
 
 Ray Tracing
-----------
+-----------
 With the heliostats now aligned, it is time to perform some ray tracing to generate flux density images.
 
 In this tutorial, we are considering *heliostat ray tracing*. Heliostat ray tracing (as it's name suggests) traces rays
@@ -254,7 +254,7 @@ only requires a ``Scenario`` object as an argument and the specification of whic
 Internally, a ``HeliostatRayTracer`` uses a ``torch.Dataset`` to generate rays and the distortion of the preferred
 reflection directions, line plane intersections, and calculation of the resulting flux density images. This process
 runs parallel for all heliostats in the scenario. It is further possible to use a data-parallel setup for the ``HeliostatRayTracer``
-to split the computation along multiple devices. See the tutorial on :ref:`distributed raytracing. <tutorial_distributed_raytracing>
+to split the computation along multiple devices. See the tutorial on :ref:`distributed raytracing <tutorial_distributed_raytracing>`.
 
 With everything now set up, we can generate a flux density image by calling the ``trace_rays()`` function with the
 desired incident ray directions, the active heliostat indices and the target area indices (for this tutorial we use the receiver).
