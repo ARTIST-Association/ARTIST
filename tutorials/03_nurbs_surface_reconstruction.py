@@ -82,22 +82,6 @@ with setup_distributed_environment(
     # Another possibility would be the pixel loss:
     # loss_definition = PixelLoss(scenario=scenario)
 
-    # Configure the learning rate scheduler. The example scheduler parameter dict includes
-    # example parameters for all three possible schedulers.
-    scheduler = (
-        config_dictionary.exponential
-    )  # exponential, cyclic or reduce_on_plateau
-    scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.3,
-        config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 10,
-    }
-
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
         weight=0.5, reduction_dimensions=(1, 2, 3, 4)
@@ -122,6 +106,22 @@ with setup_distributed_environment(
         total_variation_regularizer_points,
         total_variation_regularizer_normals,
     ]
+
+    # Configure the learning rate scheduler. The example scheduler parameter dict includes
+    # example parameters for all three possible schedulers.
+    scheduler = (
+        config_dictionary.exponential
+    )  # exponential, cyclic or reduce_on_plateau
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.3,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 10,
+    }
 
     # Set optimizer parameters.
     optimization_configuration = {
