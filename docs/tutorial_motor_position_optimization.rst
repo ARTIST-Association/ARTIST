@@ -18,15 +18,16 @@ The tutorial will walk you through the key concepts needed to perform this optim
 
 Before starting this scenario make sure you already know how to :ref:`load a scenario<tutorial_heliostat_raytracing>`,
 run ``ARTIST`` in a :ref:`distributed environment<tutorial_distributed_raytracing>`, and understand the structure of a
-:ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using the
-"test_scenario_paint_multiple_heliostat_groups_deflectometry.h5" scenario provided in the "scenarios" folder.
+:ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using one of the
+"test_scenario_paint_multiple_heliostat_groups_deflectometry.h5" or "test_scenario_paint_multiple_heliostat_groups_ideal.h5"
+scenarios provided in the "scenarios" folder.
 
 Before getting started, you need to load the scenario and set up the distributed environment, as in previous tutorials.
 
 Motor position optimization aims to optimize the motor positions of multiple heliostats to achieve a desired flux density
 on the solar tower. In this case, we focus on achieving a trapezoid distribution on the receiver, which is equivalent
 to all areas of the receiver receiving the same amount of sunlight. This would lead to and optimal flux distribution and
-improve operation of the power plant. Therefore, we have to define the ground truch with a trapezoid distribution and
+improve operation of the power plant. Therefore, we have to define the ground truth with a trapezoid distribution and
 also set the loss function as the ``KLDivergenceLoss``:
 
 .. code-block::
