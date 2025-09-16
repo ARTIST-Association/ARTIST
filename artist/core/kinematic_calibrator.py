@@ -161,7 +161,7 @@ class KinematicCalibrator:
 
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.total_number_of_heliostats,),
-            torch.inf,
+            0.0,
             device=device,
         )
         final_loss_index_offset = 0
@@ -377,7 +377,7 @@ class KinematicCalibrator:
 
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.total_number_of_heliostats,),
-            torch.inf,
+            0.0,
             device=device,
         )
         final_loss_index_offset = 0
