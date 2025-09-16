@@ -448,7 +448,7 @@ class HeliostatRayTracer:
         """
         Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
 
-        The bitmaps are saved for each active heliostat seperatly.
+        The bitmaps are saved for each active heliostat separately.
 
         Parameters
         ----------
