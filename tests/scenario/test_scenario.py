@@ -388,7 +388,7 @@ def test_set_number_of_rays(
             device=device,
         )
 
-        scenario.set_number_of_rays(200)
+        scenario.set_number_of_rays(number_of_rays=200)
 
         torch.testing.assert_close(
             scenario.light_sources.light_source_list[0].number_of_rays,
