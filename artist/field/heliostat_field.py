@@ -36,6 +36,8 @@ class HeliostatField:
         A list containing all heliostat groups.
     number_of_heliostat_groups : int
         The number of different heliostat groups in the heliostat field.
+    total_number_of_heliostats : int
+        The total number of heliostats in the field (sum of all heliostats in each group).
 
     Methods
     -------
@@ -57,6 +59,9 @@ class HeliostatField:
         """
         self.heliostat_groups = heliostat_groups
         self.number_of_heliostat_groups = len(self.heliostat_groups)
+        self.total_number_of_heliostats = sum(
+            group.number_of_heliostats for group in self.heliostat_groups
+        )
 
     @classmethod
     def from_hdf5(

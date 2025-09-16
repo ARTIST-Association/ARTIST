@@ -38,7 +38,7 @@ with setup_distributed_environment(
             device=device,
         )
 
-    scenario.light_sources.light_source_list[0].number_of_rays = 4
+    scenario.set_number_of_rays(number_of_rays=4)
 
     # Set loss function and define the ground truth.
     # For an optimization using a focal spot as ground truth use this loss definition:

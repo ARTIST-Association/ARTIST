@@ -40,6 +40,8 @@ class Scenario:
         Class method to load the scenario from an HDF5 file.
     index_mapping()
         Create an index mapping from heliostat names, target area names and incident ray directions.
+    set_number_of_rays()
+        Set the number of rays simulated by the light source.
     """
 
     def __init__(
@@ -404,6 +406,17 @@ class Scenario:
             target_area_mask,
             incident_ray_directions,
         )
+
+    def set_number_of_rays(self, number_of_rays: int) -> None:
+        """
+        Set the number of rays simulated by the light source.
+
+        Parameters
+        ----------
+        number_of_rays : int
+            The new number of rays simulated by the light source.
+        """
+        self.light_sources.light_source_list[0].number_of_rays = number_of_rays
 
     def __repr__(self) -> str:
         """Return a string representation of the scenario."""
