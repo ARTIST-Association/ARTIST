@@ -121,7 +121,8 @@ class SurfaceReconstructor:
         Returns
         -------
         torch.Tensor
-            The final loss of the reconstruction for each heliostat group.
+            The final loss of the surface reconstruction for each heliostat in each group.
+            Tensor of shape [scenario.heliostat_field.total_number_of_heliostats].
         """
         device = get_device(device=device)
 
@@ -130,11 +131,12 @@ class SurfaceReconstructor:
         if rank == 0:
             log.info("Start the surface reconstruction.")
 
-        final_loss_per_group = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostat_groups,),
+        final_loss_per_heliostat = torch.full(
+            (self.scenario.heliostat_field.total_number_of_heliostats,),
             torch.inf,
             device=device,
         )
+        final_loss_index_offset = 0
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -182,7 +184,9 @@ class SurfaceReconstructor:
                     f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
                 )
 
-            if active_heliostats_mask.sum() > 0:
+            if active_heliostats_mask.sum() <= 0:
+                final_loss_index_offset += heliostat_group.number_of_heliostats
+            else:
                 # Crop target fluxes.
                 cropped_measured_flux_distributions = (
                     utils.crop_flux_distributions_around_center(
@@ -204,7 +208,7 @@ class SurfaceReconstructor:
                     active_heliostats_mask=active_heliostats_mask, device=device
                 )
 
-                # Get the start indices for the seperate heliostats in the active_-properties-tensors that contain heliostat duplicats for each sample.
+                # Get the start indices for the separate heliostats in the active_-properties-tensors that contain heliostat duplicates for each sample.
                 nonzero_active_heliostats_mask = active_heliostats_mask[
                     active_heliostats_mask > 0
                 ]
@@ -359,7 +363,7 @@ class SurfaceReconstructor:
                     )
 
                     # Loss comparing the predicted flux and the target flux.
-                    per_sample_loss = loss_definition(
+                    flux_loss_per_sample = loss_definition(
                         prediction=cropped_flux_distributions,
                         ground_truth=cropped_measured_flux_distributions,
                         target_area_mask=target_area_mask,
@@ -368,12 +372,12 @@ class SurfaceReconstructor:
                     )
 
                     flux_loss_per_heliostat = per_heliostat_reduction(
-                        per_sample_values=per_sample_loss,
+                        per_sample_values=flux_loss_per_sample,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
-                    ).sum()
+                    )
 
-                    loss = flux_loss_per_heliostat
+                    loss = flux_loss_per_heliostat.sum()
 
                     # Include regularization terms.
                     for regularizer in self.optimization_configuration[
@@ -391,7 +395,7 @@ class SurfaceReconstructor:
 
                         scaled_regularization_term = scale_loss(
                             loss=regularization_term,
-                            reference=flux_loss_per_heliostat,
+                            reference=flux_loss_per_heliostat.sum(),
                             weight=regularizer.weight,
                         )
 
@@ -447,7 +451,7 @@ class SurfaceReconstructor:
                         patience_counter += 1
                     if (
                         patience_counter
-                        > self.optimization_configuration[
+                        >= self.optimization_configuration[
                             config_dictionary.early_stopping_patience
                         ]
                     ):
@@ -458,7 +462,11 @@ class SurfaceReconstructor:
 
                     epoch += 1
 
-                final_loss_per_group[heliostat_group_index] = loss
+                final_loss_per_heliostat[
+                    final_loss_index_offset : final_loss_index_offset
+                    + heliostat_group.number_of_heliostats
+                ] = flux_loss_per_heliostat
+                final_loss_index_offset += heliostat_group.number_of_heliostats
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
@@ -472,9 +480,9 @@ class SurfaceReconstructor:
                     heliostat_group.nurbs_control_points, src=source[0]
                 )
 
-            log.info(f"Rank: {rank}, synchronised after surface reconstruction.")
+            log.info(f"Rank: {rank}, synchronized after surface reconstruction.")
 
-        return final_loss_per_group
+        return final_loss_per_heliostat
 
     @staticmethod
     def lock_control_points_on_outer_edges(
