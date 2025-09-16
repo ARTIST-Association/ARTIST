@@ -136,7 +136,7 @@ with setup_distributed_environment(
         config_dictionary.regularizers: regularizers,
     }
 
-    scenario.set_number_of_rays(20)
+    scenario.set_number_of_rays(number_of_rays=20)
     number_of_surface_points = torch.tensor([100, 100], device=device)
     resolution = torch.tensor([256, 256], device=device)
 

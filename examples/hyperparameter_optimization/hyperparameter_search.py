@@ -92,7 +92,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Set number of rays.
-    scenario.set_number_of_rays(int(params["number_of_rays"]))
+    scenario.set_number_of_rays(number_of_rays=int(params["number_of_rays"]))
 
     # Set nurbs degree.
     for heliostat_group in scenario.heliostat_field.heliostat_groups:
