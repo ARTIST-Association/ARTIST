@@ -192,7 +192,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         device=device,
     )
 
-    return loss[0].item()
+    return loss.sum().item()
 
 
 if __name__ == "__main__":
