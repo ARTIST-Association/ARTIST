@@ -356,3 +356,41 @@ def test_load_scenario_and_change_control_points(
             scenario.heliostat_field.heliostat_groups[0].nurbs_control_points.shape,
             torch.Size([1, 4, 13, 13, 3]),
         )
+
+
+def test_set_number_of_rays(
+    device: torch.device,
+) -> None:
+    """
+    Test the set number of rays method.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    scenario_path = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/scenarios/test_scenario_paint_single_heliostat.h5"
+    )
+
+    with h5py.File(
+        scenario_path,
+        "r",
+    ) as config_h5:
+        scenario = Scenario.load_scenario_from_hdf5(
+            scenario_file=config_h5,
+            device=device,
+        )
+
+        scenario.set_number_of_rays(200)
+
+        torch.testing.assert_close(
+            scenario.light_sources.light_source_list[0].number_of_rays,
+            200,
+        )
