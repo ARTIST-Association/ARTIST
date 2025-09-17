@@ -407,15 +407,3 @@ heliostat_group_world_size = "heliostat_group_world_size"
 """Key to access the world size within a process subgroups."""
 ranks_to_groups_mapping = "ranks_to_groups_mapping"
 """Key to access the mapping from ranks to heliostat groups."""
-helmholtz_colors = {
-    "hgfblue": "#005AA0",
-    "hgfdarkblue": "#0A2D6E",
-    "hgfgreen": "#8CB423",
-    "hgfgray": "#5A696E",
-    "hgfaerospace": "#50C8AA",
-    "hgfearthandenvironment": "#326469",
-    "hgfenergy": "#FFD228",
-    "hgfhealth": "#D23264",
-    "hgfkeytechnologies": "#A0235A",
-    "hgfmatter": "#F0781E",
-}
