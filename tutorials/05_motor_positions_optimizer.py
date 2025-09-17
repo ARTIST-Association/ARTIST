@@ -2,7 +2,9 @@ import pathlib
 
 import h5py
 import torch
+from matplotlib import pyplot as plt
 
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
@@ -12,14 +14,138 @@ from artist.util.environment_setup import get_device, setup_distributed_environm
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-# Set up logger
+#############################################################################################################
+# Define helper functions for the plots.
+# Skip to line 139 for the tutorial code.
+#############################################################################################################
+
+
+def create_flux_plot_before_optimization() -> None:
+    """Create data to plot the heliostat fluxes."""
+    total_flux = torch.zeros(
+        (bitmap_resolution[0], bitmap_resolution[1]), device=device
+    )
+
+    for heliostat_group_index, heliostat_group in enumerate(
+        scenario.heliostat_field.heliostat_groups
+    ):
+        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                single_incident_ray_direction=incident_ray_direction,
+                single_target_area_index=target_area_index,
+                device=device,
+            )
+        )
+
+        # Activate heliostats.
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
+        # Align heliostats.
+        heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=scenario.target_areas.centers[target_area_mask],
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(
+            scenario=scenario,
+            heliostat_group=heliostat_group,
+            batch_size=heliostat_group.number_of_active_heliostats,
+            bitmap_resolution=torch.tensor([256, 256], device=device),
+        )
+
+        # Perform heliostat-based ray tracing.
+        bitmaps_per_heliostat = ray_tracer.trace_rays(
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            target_area_mask=target_area_mask,
+            device=device,
+        )
+
+        flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
+            bitmaps_per_heliostat=bitmaps_per_heliostat,
+            target_area_mask=target_area_mask,
+            device=device,
+        )[target_area_index]
+
+        total_flux += flux_distribution_on_target
+
+    # Create the plot.
+    plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
+    plt.axis("off")
+    plt.title("Flux before aimpoint optimization")
+    plt.savefig("flux_before_aimpoint_optimization.png")
+
+
+def create_flux_plot_after_optimization() -> None:
+    """Create data to plot the heliostat fluxes."""
+    total_flux = torch.zeros(
+        (bitmap_resolution[0], bitmap_resolution[1]), device=device
+    )
+
+    for heliostat_group_index, heliostat_group in enumerate(
+        scenario.heliostat_field.heliostat_groups
+    ):
+        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                single_incident_ray_direction=incident_ray_direction,
+                single_target_area_index=target_area_index,
+                device=device,
+            )
+        )
+
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(
+            scenario=scenario,
+            heliostat_group=heliostat_group,
+            batch_size=heliostat_group.number_of_active_heliostats,
+            bitmap_resolution=torch.tensor([256, 256], device=device),
+        )
+
+        # Perform heliostat-based ray tracing.
+        bitmaps_per_heliostat = ray_tracer.trace_rays(
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            target_area_mask=target_area_mask,
+            device=device,
+        )
+
+        flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
+            bitmaps_per_heliostat=bitmaps_per_heliostat,
+            target_area_mask=target_area_mask,
+            device=device,
+        )[target_area_index]
+
+        total_flux += flux_distribution_on_target
+
+    # Create the plot.
+    plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
+    plt.axis("off")
+    plt.title("Flux after aimpoint optimization")
+    plt.savefig("flux_after_aimpoint_optimization.png")
+
+
+#############################################################################################################
+# Tutorial
+#############################################################################################################
+
+# Set up logger.
 set_logger_config()
 
-# Set the device
+# Set the device.
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
+)
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -60,7 +186,7 @@ with setup_distributed_environment(
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
     scheduler = (
-        config_dictionary.exponential
+        config_dictionary.reduce_on_plateau
     )  # Choose from: exponential, cyclic or reduce_on_plateau
     scheduler_parameters = {
         config_dictionary.gamma: 0.9,
@@ -68,36 +194,47 @@ with setup_distributed_environment(
         config_dictionary.max: 1e-3,
         config_dictionary.step_size_up: 500,
         config_dictionary.reduce_factor: 0.3,
-        config_dictionary.patience: 10,
+        config_dictionary.patience: 100,
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 10,
     }
 
     # Set optimizer parameters.
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-3,
+        config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
-        config_dictionary.num_log: 10,
+        config_dictionary.num_log: 50,
         config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.early_stopping_patience: 100,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
+
+    incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
+    target_area_index = 1
+    bitmap_resolution = torch.tensor([256, 256], device=device)
+
+    create_flux_plot_before_optimization()
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
         ddp_setup=ddp_setup,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
-        incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-        target_area_index=1,
+        incident_ray_direction=incident_ray_direction,
+        target_area_index=target_area_index,
         ground_truth=ground_truth,
-        bitmap_resolution=torch.tensor([256, 256], device=device),
+        bitmap_resolution=bitmap_resolution,
         device=device,
     )
 
     # Optimize the motor positions.
-    _ = motor_positions_optimizer.optimize(
+    final_loss_per_heliostat = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
+
+# Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
+print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
+
+create_flux_plot_after_optimization()

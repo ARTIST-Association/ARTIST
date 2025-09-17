@@ -150,7 +150,7 @@ class MotorPositionsOptimizer:
         Returns
         -------
         torch.Tensor
-            The final loss of the motor postion optimization.
+            The final loss of the motor position optimization.
         """
         device = get_device(device)
 
@@ -413,6 +413,6 @@ class MotorPositionsOptimizer:
                     heliostat_group.kinematic.motor_positions, src=source[0]
                 )
 
-            log.info(f"Rank: {rank}, synchronised after motor positions optimization.")
+            log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
         return loss
