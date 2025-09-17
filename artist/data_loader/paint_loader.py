@@ -728,7 +728,7 @@ def extract_paint_heliostats(
         prototype_surface = surface_config
 
         # Include the kinematic configuration.
-        # Currently in ``PAINT`` all heliostats use a rigid body kinematic.
+        # Currently in PAINT all heliostats use a rigid body kinematic.
         kinematic_config = KinematicConfig(
             type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
