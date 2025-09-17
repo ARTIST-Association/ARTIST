@@ -19,7 +19,10 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 
+#############################################################################################################
 # Define helper functions for the plots.
+# Skip to line 319 for the tutorial code.
+#############################################################################################################
 def plot_surface_points_and_angle_map(
     surface_points: torch.Tensor,
     surface_normals: torch.Tensor,
@@ -313,10 +316,15 @@ def create_flux_plots(name: str) -> None:
         )
 
 
-# Set up logger
+#############################################################################################################
+# Tutorial
+#############################################################################################################
+
+# Set up logger.
 set_logger_config()
 log = logging.getLogger(__name__)
-# Set the device
+
+# Set the device.
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
@@ -465,8 +473,7 @@ with setup_distributed_environment(
         loss_definition=loss_definition, device=device
     )
 
-# Inspect the synchronized loss per heliostat. Heliostats that have not been optimized
-# have an infinite loss.
+# Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
 # Visualize the results (reconstructed surfaces and flux distributions from reconstructed heliostats).
