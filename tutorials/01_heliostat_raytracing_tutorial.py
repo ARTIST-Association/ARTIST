@@ -39,9 +39,6 @@ print(
 print(
     f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is located at: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
 )
-print(
-    f"Heliostat {scenario.heliostat_field.heliostat_groups[0].names[0]} is aiming at: {scenario.heliostat_field.heliostat_groups[0].kinematic.aim_points[0].tolist()}."
-)
 
 # Let's say we only want to consider one Heliostat for the beginning.
 # We will choose the first Heliostat, with index 0 by activating it.

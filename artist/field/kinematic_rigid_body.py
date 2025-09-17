@@ -89,7 +89,7 @@ class RigidBody(Kinematic):
             Tensor of shape [number_of_heliostats, n, 2], where n=7 for linear actuators or n=2 for ideal actuators.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__()
@@ -273,7 +273,7 @@ class RigidBody(Kinematic):
             Convergence criterion (default is 0.0001).#
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -327,8 +327,12 @@ class RigidBody(Kinematic):
 
             # Analytical solution for joint angles.
             joint_angles_1 = -torch.arcsin(
-                -desired_concentrator_normals[:, 0]
-                / torch.cos(self.active_deviation_parameters[:, 7])
+                torch.clamp(
+                    -desired_concentrator_normals[:, 0]
+                    / torch.cos(self.active_deviation_parameters[:, 7]),
+                    min=-1,
+                    max=1,
+                )
             )
 
             a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(
@@ -387,7 +391,7 @@ class RigidBody(Kinematic):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
