@@ -132,11 +132,16 @@ class SurfaceReconstructor:
             log.info("Start the surface reconstruction.")
 
         final_loss_per_heliostat = torch.full(
-            (self.scenario.heliostat_field.total_number_of_heliostats,),
-            0.0,
+            (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
+            torch.inf,
             device=device,
         )
-        final_loss_index_offset = 0
+        final_loss_start_indices = torch.cat(
+            [
+                torch.tensor([0], device=device),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0),
+            ]
+        )
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -184,9 +189,7 @@ class SurfaceReconstructor:
                     f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
                 )
 
-            if active_heliostats_mask.sum() <= 0:
-                final_loss_index_offset += heliostat_group.number_of_heliostats
-            else:
+            if active_heliostats_mask.sum() > 0:
                 # Crop target fluxes.
                 cropped_measured_flux_distributions = (
                     utils.crop_flux_distributions_around_center(
@@ -377,7 +380,10 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
-                    loss = flux_loss_per_heliostat.sum()
+                    flux_loss_per_heliostat_summed = flux_loss_per_heliostat[
+                        torch.isfinite(flux_loss_per_heliostat)
+                    ].sum()
+                    loss = flux_loss_per_heliostat_summed
 
                     # Include regularization terms.
                     for regularizer in self.optimization_configuration[
@@ -395,7 +401,7 @@ class SurfaceReconstructor:
 
                         scaled_regularization_term = scale_loss(
                             loss=regularization_term,
-                            reference=flux_loss_per_heliostat.sum(),
+                            reference=flux_loss_per_heliostat_summed,
                             weight=regularizer.weight,
                         )
 
@@ -463,10 +469,11 @@ class SurfaceReconstructor:
                     epoch += 1
 
                 final_loss_per_heliostat[
-                    final_loss_index_offset : final_loss_index_offset
-                    + heliostat_group.number_of_heliostats
+                    final_loss_start_indices[
+                        heliostat_group_index
+                    ] : final_loss_start_indices[heliostat_group_index + 1]
                 ] = flux_loss_per_heliostat
-                final_loss_index_offset += heliostat_group.number_of_heliostats
+
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
@@ -479,6 +486,9 @@ class SurfaceReconstructor:
                 torch.distributed.broadcast(
                     heliostat_group.nurbs_control_points, src=source[0]
                 )
+            torch.distributed.all_reduce(
+                final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
+            )
 
             log.info(f"Rank: {rank}, synchronized after surface reconstruction.")
 

@@ -25,34 +25,73 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
+)
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "heliostat_name_1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux-centered.png"
+            ),
             # ....
         ],
     ),
     (
-        "heliostat_name_2",
+        "AA31",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux-centered.png"
+            ),
+            # ....
+        ],
+    ),
+    (
+        "AC43",
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux-centered.png"
+            ),
+            pathlib.Path(
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux-centered.png"
+            ),
             # ....
         ],
     ),
@@ -78,7 +117,11 @@ with setup_distributed_environment(
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            device=device,
+            change_number_of_control_points_per_facet=torch.tensor(
+                [17, 17], device=device
+            ),
         )
 
     # Set loss function.
@@ -138,8 +181,8 @@ with setup_distributed_environment(
         config_dictionary.regularizers: regularizers,
     }
 
-    scenario.set_number_of_rays(number_of_rays=160)
-    number_of_surface_points = torch.tensor([96, 96], device=device)
+    scenario.set_number_of_rays(number_of_rays=170)
+    number_of_surface_points = torch.tensor([60, 60], device=device)
     resolution = torch.tensor([256, 256], device=device)
 
     # Create the surface reconstructor.
@@ -154,18 +197,16 @@ with setup_distributed_environment(
     )
 
     # Reconstruct surfaces.
-    _ = surface_reconstructor.reconstruct_surfaces(
+    final_loss_per_heliostat = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition, device=device
     )
 
+# Inspect the synchronized loss per heliostat. Heliostats that have not been optimized
+# have an infinite loss.
+print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
+
 
 # Visualize the results.
-# Create the plots for the heliostat in group 1 and index 1.
-heliostat_group_index = 1
-heliostat_index = 1
-heliostat_group = scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-
-
 # Define helper functions for the plots.
 def plot_surface_points_and_angle_map(
     surface_points: torch.Tensor,
@@ -242,6 +283,7 @@ def plot_surface_points_and_angle_map(
 def plot_multiple_fluxes(
     reconstructed: torch.Tensor,
     references: torch.Tensor,
+    name: str,
 ) -> None:
     """
     Plot and compare multiple flux images against their corresponding references.
@@ -256,6 +298,8 @@ def plot_multiple_fluxes(
     references : torch.Tensor
         The flux density distribution references.
         Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+    name : str
+        The name or index of the heliostat_group.
     """
     fig1, axes1 = plt.subplots(nrows=reconstructed.shape[0], ncols=2, figsize=(24, 72))
     for i in range(reconstructed.shape[0]):
@@ -267,161 +311,176 @@ def plot_multiple_fluxes(
         axes1[i, 1].set_title(f"Reference {i}")
         axes1[i, 1].axis("off")
     plt.tight_layout()
-    plt.savefig("flux_comparison.png")
+    plt.savefig(f"flux_comparison_{name}.png")
     plt.clf()
 
 
 # Plot the surface points and angle map.
-# Create evaluation points.
-evaluation_points = (
-    utils.create_nurbs_evaluation_grid(
-        number_of_evaluation_points=number_of_surface_points,
-        device=device,
-    )
-    .unsqueeze(0)
-    .unsqueeze(0)
-    .expand(
-        1,
-        heliostat_group.number_of_facets_per_heliostat,
-        -1,
-        -1,
-    )
-)
+for heliostat_group_index, heliostat_group in enumerate(
+    scenario.heliostat_field.heliostat_groups
+):
+    for heliostat_index in range(heliostat_group.number_of_heliostats):
+        # Create evaluation points.
+        evaluation_points = (
+            utils.create_nurbs_evaluation_grid(
+                number_of_evaluation_points=number_of_surface_points,
+                device=device,
+            )
+            .unsqueeze(0)
+            .unsqueeze(0)
+            .expand(
+                1,
+                heliostat_group.number_of_facets_per_heliostat,
+                -1,
+                -1,
+            )
+        )
 
-# Create NURBS surface of selected heliostat.
-temporary_nurbs = NURBSSurfaces(
-    degrees=heliostat_group.nurbs_degrees,
-    control_points=heliostat_group.nurbs_control_points[heliostat_index].unsqueeze(0),
-    device=device,
-)
+        # Create NURBS surface of selected heliostat.
+        temporary_nurbs = NURBSSurfaces(
+            degrees=heliostat_group.nurbs_degrees,
+            control_points=heliostat_group.nurbs_control_points[
+                heliostat_index
+            ].unsqueeze(0),
+            device=device,
+        )
 
-# Calculate new surface points and normals for this heliostat.
-temporary_points, temporary_normals = (
-    temporary_nurbs.calculate_surface_points_and_normals(
-        evaluation_points=evaluation_points[0].unsqueeze(0),
-        device=device,
-    )
-)
+        # Calculate new surface points and normals for this heliostat.
+        temporary_points, temporary_normals = (
+            temporary_nurbs.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points[0].unsqueeze(0),
+                device=device,
+            )
+        )
 
-# Create the plot.
-plot_surface_points_and_angle_map(
-    surface_points=temporary_points[0],
-    surface_normals=temporary_normals[0],
-    reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
-    name=f"heliostat_{heliostat_index}",
-)
+        # Create the plot.
+        plot_surface_points_and_angle_map(
+            surface_points=temporary_points[0],
+            surface_normals=temporary_normals[0],
+            reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+            name=f"rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_index}",
+        )
 
 # Plot the generated flux comparisons.
 # Load reference data.
 validation_heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-    base_path="/path/to/PAINT/data",
-    heliostat_names=["AA39"],
-    number_of_measurements=8,
+    base_path="/workVERLEIHNIX/share/PAINT",
+    heliostat_names=["AA31", "AA39", "AC43"],
+    number_of_measurements=2,
     image_variant="flux-centered",
     randomize=True,
 )
 
-validation_heliostat_flux_path_mapping = []
-validation_heliostat_calibration_mapping = []
 
-for heliostat, path_properties, path_pngs in validation_heliostat_data_mapping:
-    if heliostat in heliostat_group.names:
-        validation_heliostat_flux_path_mapping.append((heliostat, path_pngs))
-        validation_heliostat_calibration_mapping.append((heliostat, path_properties))
+for heliostat_group_index, heliostat_group in enumerate(
+    scenario.heliostat_field.heliostat_groups
+):
+    validation_heliostat_flux_path_mapping = []
+    validation_heliostat_calibration_mapping = []
 
-validation_measured_flux_distributions = flux_distribution_loader.load_flux_from_png(
-    heliostat_flux_path_mapping=validation_heliostat_flux_path_mapping,
-    heliostat_names=heliostat_group.names,
-    limit_number_of_measurements=16,
-    device=device,
-)
-(
-    _,
-    validation_incident_ray_directions,
-    _,
-    validation_active_heliostats_mask,
-    validation_target_area_mask,
-) = paint_loader.extract_paint_calibration_properties_data(
-    heliostat_calibration_mapping=validation_heliostat_calibration_mapping,
-    heliostat_names=heliostat_group.names,
-    target_area_names=scenario.target_areas.names,
-    power_plant_position=scenario.power_plant_position,
-    limit_number_of_measurements=16,
-    device=device,
-)
+    for heliostat, path_properties, path_pngs in validation_heliostat_data_mapping:
+        if heliostat in heliostat_group.names:
+            validation_heliostat_flux_path_mapping.append((heliostat, path_pngs))
+            validation_heliostat_calibration_mapping.append(
+                (heliostat, path_properties)
+            )
 
-# Activate heliostats.
-heliostat_group.activate_heliostats(
-    active_heliostats_mask=validation_active_heliostats_mask,
-    device=device,
-)
-
-# Create surfaces for all samples.
-validation_nurbs = NURBSSurfaces(
-    degrees=heliostat_group.nurbs_degrees,
-    control_points=heliostat_group.active_nurbs_control_points,
-    uniform=True,
-    device=device,
-)
-
-# Create evaluation points for all samples.
-validation_evaluation_points = (
-    utils.create_nurbs_evaluation_grid(
-        number_of_evaluation_points=number_of_surface_points,
+    validation_measured_flux_distributions = (
+        flux_distribution_loader.load_flux_from_png(
+            heliostat_flux_path_mapping=validation_heliostat_flux_path_mapping,
+            heliostat_names=heliostat_group.names,
+            limit_number_of_measurements=16,
+            device=device,
+        )
+    )
+    (
+        _,
+        validation_incident_ray_directions,
+        _,
+        validation_active_heliostats_mask,
+        validation_target_area_mask,
+    ) = paint_loader.extract_paint_calibration_properties_data(
+        heliostat_calibration_mapping=validation_heliostat_calibration_mapping,
+        heliostat_names=heliostat_group.names,
+        target_area_names=scenario.target_areas.names,
+        power_plant_position=scenario.power_plant_position,
+        limit_number_of_measurements=16,
         device=device,
     )
-    .unsqueeze(0)
-    .unsqueeze(0)
-    .expand(
-        validation_active_heliostats_mask.sum(),
-        heliostat_group.number_of_facets_per_heliostat,
-        -1,
-        -1,
-    )
-)
 
-# Calculate new surface points and normals for all samples.
-validation_surface_points, validation_surface_normals = (
-    validation_nurbs.calculate_surface_points_and_normals(
-        evaluation_points=validation_evaluation_points,
+    # Activate heliostats.
+    heliostat_group.activate_heliostats(
+        active_heliostats_mask=validation_active_heliostats_mask,
         device=device,
     )
-)
 
-heliostat_group.active_surface_points = validation_surface_points.reshape(
-    validation_active_heliostats_mask.sum(), -1, 4
-)
-heliostat_group.active_surface_normals = validation_surface_normals.reshape(
-    validation_active_heliostats_mask.sum(), -1, 4
-)
+    # Create surfaces for all samples.
+    validation_nurbs = NURBSSurfaces(
+        degrees=heliostat_group.nurbs_degrees,
+        control_points=heliostat_group.active_nurbs_control_points,
+        uniform=True,
+        device=device,
+    )
 
-# Align heliostats.
-heliostat_group.align_surfaces_with_incident_ray_directions(
-    aim_points=scenario.target_areas.centers[validation_target_area_mask],
-    incident_ray_directions=validation_incident_ray_directions,
-    active_heliostats_mask=validation_active_heliostats_mask,
-    device=device,
-)
+    # Create evaluation points for all samples.
+    validation_evaluation_points = (
+        utils.create_nurbs_evaluation_grid(
+            number_of_evaluation_points=number_of_surface_points,
+            device=device,
+        )
+        .unsqueeze(0)
+        .unsqueeze(0)
+        .expand(
+            validation_active_heliostats_mask.sum(),
+            heliostat_group.number_of_facets_per_heliostat,
+            -1,
+            -1,
+        )
+    )
 
-# Create a ray tracer and reduce number of rays in scenario light source.
-scenario.set_number_of_rays(number_of_rays=10)
-validation_ray_tracer = HeliostatRayTracer(
-    scenario=scenario,
-    heliostat_group=heliostat_group,
-    batch_size=heliostat_group.number_of_active_heliostats,
-    bitmap_resolution=torch.tensor([256, 256], device=device),
-)
+    # Calculate new surface points and normals for all samples.
+    validation_surface_points, validation_surface_normals = (
+        validation_nurbs.calculate_surface_points_and_normals(
+            evaluation_points=validation_evaluation_points,
+            device=device,
+        )
+    )
 
-# Perform heliostat-based ray tracing.
-validation_bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
-    incident_ray_directions=validation_incident_ray_directions,
-    active_heliostats_mask=validation_active_heliostats_mask,
-    target_area_mask=validation_target_area_mask,
-    device=device,
-)
+    heliostat_group.active_surface_points = validation_surface_points.reshape(
+        validation_active_heliostats_mask.sum(), -1, 4
+    )
+    heliostat_group.active_surface_normals = validation_surface_normals.reshape(
+        validation_active_heliostats_mask.sum(), -1, 4
+    )
 
-# Create the plots.
-plot_multiple_fluxes(
-    validation_bitmaps_per_heliostat,
-    validation_measured_flux_distributions,
-)
+    # Align heliostats.
+    heliostat_group.align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[validation_target_area_mask],
+        incident_ray_directions=validation_incident_ray_directions,
+        active_heliostats_mask=validation_active_heliostats_mask,
+        device=device,
+    )
+
+    # Create a ray tracer and reduce number of rays in scenario light source.
+    scenario.set_number_of_rays(number_of_rays=10)
+    validation_ray_tracer = HeliostatRayTracer(
+        scenario=scenario,
+        heliostat_group=heliostat_group,
+        batch_size=heliostat_group.number_of_active_heliostats,
+        bitmap_resolution=torch.tensor([256, 256], device=device),
+    )
+
+    # Perform heliostat-based ray tracing.
+    validation_bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
+        incident_ray_directions=validation_incident_ray_directions,
+        active_heliostats_mask=validation_active_heliostats_mask,
+        target_area_mask=validation_target_area_mask,
+        device=device,
+    )
+
+    # Create the plots.
+    plot_multiple_fluxes(
+        validation_bitmaps_per_heliostat,
+        validation_measured_flux_distributions,
+        name=f"rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}",
+    )
