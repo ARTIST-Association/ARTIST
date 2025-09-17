@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import gaussian_kde
 
 from artist.util import config_dictionary, set_logger_config
-from examples.paint_plots.helpers import join_safe, load_config
+from examples.paint_plots.helpers import helmholtz_colors, join_safe, load_config
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -86,23 +86,23 @@ def plot_mrad_error_distributions(
         density=True,
         alpha=0.3,
         label="HeliOS Histogram",
-        color=config_dictionary.helmholtz_colors["hgfblue"],
+        color=helmholtz_colors["hgfblue"],
     )
     ax.plot(
         x_vals,
         kde_vals_helios,
         label="HeliOS KDE",
-        color=config_dictionary.helmholtz_colors["hgfblue"],
+        color=helmholtz_colors["hgfblue"],
     )
     ax.axvline(
         mode_helios,
-        color=config_dictionary.helmholtz_colors["hgfblue"],
+        color=helmholtz_colors["hgfblue"],
         linestyle="--",
         label=f"HeliOS Mode: {mode_helios:.2f} mrad",
     )
     ax.axvline(
         mean_helios,
-        color=config_dictionary.helmholtz_colors["hgfblue"],
+        color=helmholtz_colors["hgfblue"],
         linestyle=":",
         label=f"HeliOS Mean: {mean_helios:.2f} mrad",
     )
@@ -114,23 +114,23 @@ def plot_mrad_error_distributions(
         density=True,
         alpha=0.3,
         label="UTIS Histogram",
-        color=config_dictionary.helmholtz_colors["hgfenergy"],
+        color=helmholtz_colors["hgfenergy"],
     )
     ax.plot(
         x_vals,
         kde_vals_utis,
         label="UTIS KDE",
-        color=config_dictionary.helmholtz_colors["hgfenergy"],
+        color=helmholtz_colors["hgfenergy"],
     )
     ax.axvline(
         mode_utis,
-        color=config_dictionary.helmholtz_colors["hgfenergy"],
+        color=helmholtz_colors["hgfenergy"],
         linestyle="--",
         label=f"UTIS Mode: {mode_utis:.2f} mrad",
     )
     ax.axvline(
         mean_utis,
-        color=config_dictionary.helmholtz_colors["hgfenergy"],
+        color=helmholtz_colors["hgfenergy"],
         linestyle=":",
         label=f"UTIS Mean: {mean_utis:.2f} mrad",
     )
@@ -208,7 +208,7 @@ def plot_mrad_vs_distance(
         ax.scatter(
             distance,
             helios_mean,
-            color=config_dictionary.helmholtz_colors["hgfblue"],
+            color=helmholtz_colors["hgfblue"],
             marker="o",
             label="HeliOS Mean Error per Heliostat" if idx == 0 else None,
             alpha=0.7,
@@ -216,7 +216,7 @@ def plot_mrad_vs_distance(
         ax.scatter(
             distance,
             utis_mean,
-            color=config_dictionary.helmholtz_colors["hgfenergy"],
+            color=helmholtz_colors["hgfenergy"],
             marker="o",
             label="UTIS Mean Error per Heliostat" if idx == 0 else None,
             alpha=0.7,
@@ -235,14 +235,14 @@ def plot_mrad_vs_distance(
     ax.plot(
         x_vals,
         helios_fit(x_vals),
-        color=config_dictionary.helmholtz_colors["hgfblue"],
+        color=helmholtz_colors["hgfblue"],
         linestyle="--",
         label="HeliOS Trend",
     )
     ax.plot(
         x_vals,
         utis_fit(x_vals),
-        color=config_dictionary.helmholtz_colors["hgfenergy"],
+        color=helmholtz_colors["hgfenergy"],
         linestyle="--",
         label="UTIS Trend",
     )
