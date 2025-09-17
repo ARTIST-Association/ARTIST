@@ -1,9 +1,11 @@
 import json
 import os
 import pathlib
+import warnings
 
 import torch
 
+from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 
@@ -190,6 +192,96 @@ def perform_inverse_canting_and_translation(
     # Apply inverse transform.
     restored_points = torch.bmm(canted_points, inverse_transform.transpose(1, 2))
     return restored_points[..., :3]
+
+
+def extract_canting_and_translation_from_properties(
+    heliostat_list: list[
+        tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
+    ],
+    convert_to_4d: bool = False,
+    device: torch.device | None = None,
+) -> list[tuple[str, torch.Tensor, torch.Tensor]]:
+    """
+    Extract facet translation and canting vectors per heliostat from ``PAINT`` properties files.
+
+    Parameters
+    ----------
+    heliostat_list : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
+        A list where each entry is:
+        - (heliostat_name, heliostat_properties_path)
+        - or (heliostat_name, heliostat_properties_path, heliostat_deflectometry_path)
+        Only the properties path is used.
+    convert_to_4d : bool
+        If True, convert the returned 3D vectors to 4D homogeneous format (default False).
+    device : torch.device | None
+        The device on which to create tensors (default None -> auto select).
+
+    Returns
+    -------
+    list[tuple[str, torch.Tensor, torch.Tensor]]
+        For each heliostat: (heliostat_name, facet_translations, facet_canting_vectors)
+        - facet_translations shape: [num_facets, 3] (or [num_facets, 4] if convert_to_4d)
+        - facet_canting_vectors shape: [num_facets, 2, 3] (or [num_facets, 2, 4] if convert_to_4d)
+    """
+    device = get_device(device=device)
+    facet_transforms_per_heliostat: list[tuple[str, torch.Tensor, torch.Tensor]] = []
+
+    for entry in heliostat_list:
+        try:
+            heliostat_name = str(entry[0])
+            properties_path = pathlib.Path(entry[1])
+
+            with open(properties_path, "r") as f:
+                heliostat_dict = json.load(f)
+
+            num_facets = heliostat_dict[config_dictionary.paint_facet_properties][
+                config_dictionary.paint_number_of_facets
+            ]
+
+            # Allocate tensors (ENU 3D by default)
+            facet_translations_enu3 = torch.empty((num_facets, 3), device=device)
+            facet_canting_vectors_enu3 = torch.empty((num_facets, 2, 3), device=device)
+
+            # Fill from JSON
+            for facet_idx in range(num_facets):
+                facet_entry = heliostat_dict[config_dictionary.paint_facet_properties][
+                    config_dictionary.paint_facets
+                ][facet_idx]
+                facet_translations_enu3[facet_idx, :] = torch.tensor(
+                    facet_entry[config_dictionary.paint_translation_vector],
+                    device=device,
+                )
+                facet_canting_vectors_enu3[facet_idx, 0] = torch.tensor(
+                    facet_entry[config_dictionary.paint_canting_e], device=device
+                )
+                facet_canting_vectors_enu3[facet_idx, 1] = torch.tensor(
+                    facet_entry[config_dictionary.paint_canting_n], device=device
+                )
+
+            # Optional conversion to homogeneous 4D
+            if convert_to_4d:
+                facet_translations = utils.convert_3d_directions_to_4d_format(
+                    facet_translations_enu3, device=device
+                )
+                facet_canting_vectors = utils.convert_3d_directions_to_4d_format(
+                    facet_canting_vectors_enu3, device=device
+                )
+            else:
+                facet_translations = facet_translations_enu3
+                facet_canting_vectors = facet_canting_vectors_enu3
+
+            facet_transforms_per_heliostat.append(
+                (heliostat_name, facet_translations, facet_canting_vectors)
+            )
+
+        except Exception as ex:
+            warnings.warn(
+                f"Failed to extract canting/translation for '{entry[0]}' "
+                f"from properties '{entry[1]}': {ex}"
+            )
+            continue
+
+    return facet_transforms_per_heliostat
 
 
 # Plot Settings.
