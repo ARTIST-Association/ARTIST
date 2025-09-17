@@ -12,7 +12,7 @@ from artist.util.environment_setup import get_device, setup_distributed_environm
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-# Set up logger
+# Set up logger.
 set_logger_config()
 
 # Set device type.

@@ -21,8 +21,10 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 319 for the tutorial code.
+# Skip to line 322 for the tutorial code.
 #############################################################################################################
+
+
 def plot_surface_points_and_angle_map(
     surface_points: torch.Tensor,
     surface_normals: torch.Tensor,

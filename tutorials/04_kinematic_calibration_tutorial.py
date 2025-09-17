@@ -19,7 +19,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 103 for the tutorial code.
+# Skip to line 112 for the tutorial code.
 #############################################################################################################
 
 
@@ -75,8 +75,8 @@ def create_flux_plots(name: str) -> None:
             device=device,
         )
 
-        # Create a ray tracer and reduce number of rays in scenario light source.
-        validation_ray_tracer = HeliostatRayTracer(
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
             batch_size=heliostat_group.number_of_active_heliostats,
@@ -84,7 +84,7 @@ def create_flux_plots(name: str) -> None:
         )
 
         # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
+        bitmaps_per_heliostat = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_mask=target_area_mask,
@@ -120,73 +120,34 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "AA39",
+        "heliostat_name_1",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux.png"
-            ),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
     (
-        "AA31",
+        "heliostat_name_2",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux.png"
-            ),
-            # ....
-        ],
-    ),
-    (
-        "AC43",
-        [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux.png"
-            ),
-            pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux.png"
-            ),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
