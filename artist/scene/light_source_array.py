@@ -80,7 +80,7 @@ class LightSourceArray:
             mapping_key = config_file[config_dictionary.light_source_key][ls][
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
-            # Try to load a light source from the given configuration. This will fail, if ``ARTIST``
+            # Try to load a light source from the given configuration. This will fail, if ARTIST
             # does not recognize the light source type defined in the configuration.
             try:
                 ls_object = type_mappings.light_source_type_mapping[mapping_key]

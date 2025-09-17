@@ -43,7 +43,7 @@ class SurfaceGenerator:
         """
         Initialize the surface generator.
 
-        Heliostat data, including information regarding their surfaces and structure, can be generated via ''STRAL'' and
+        Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
         exported to a binary file or downloaded from ``PAINT``. The data formats are different depending on their source.
         To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the
         data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
@@ -114,7 +114,7 @@ class SurfaceGenerator:
         Returns
         -------
         NURBSSurfaces
-            A fitted NURBS surface container.
+            A fitted NURBS surface.
         """
         accepted_conversion_methods = [
             config_dictionary.fit_nurbs_from_points,
@@ -275,7 +275,7 @@ class SurfaceGenerator:
         log.info("Beginning generation of the fitted surface configuration.")
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
-        # dimensions, so that they can be stacked into a single tensor and then can be used by ``ARTIST``.
+        # dimensions, so that they can be stacked into a single tensor and then can be used by ARTIST.
         minimum_number_of_surface_points_all_facets = min(
             single_facet_surface_points.shape[0]
             for single_facet_surface_points in surface_points_with_facets_list
