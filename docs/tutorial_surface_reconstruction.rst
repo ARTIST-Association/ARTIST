@@ -8,7 +8,7 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/03_nurbs_surface_reconstruction.py
 
-This tutorial shows how a heliostat surface can be reconstructed using a Non-Uniform Rational B-Spline (NURBS) in ``ARTIST``.
+This tutorial shows how a heliostat surface can be reconstructed using Non-Uniform Rational B-Splines (NURBS) in ``ARTIST``.
 
 The tutorial will cover several concepts including:
 
@@ -106,7 +106,7 @@ Regularizers are used to prevent overfitting and ensure that the reconstructed s
 surface. In this tutorial we consider two regularizers:
 
 - ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here, is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learnt surface should be similar to the ideal surface, apart from these minute deviations.
-- ``TotalVariationRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighbouring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the surface normals and the surface points.
+- ``TotalVariationRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the surface normals and the surface points.
 
 .. code-block::
 
@@ -186,11 +186,13 @@ Performing Surface Reconstruction
 ---------------------------------
 We are now almost ready to reconstruct the surface. However, since ``ARTIST`` uses raytracing internally to generate the
 flux images required for the loss calculation, we need to define a few parameters for the raytracing. Specifically, the
-``number_of_surface_points`` and the ``resolution`` of the bitmap. These parameters essentially control the resolution
-of the raytraced image - the larger the number, the higher the resolution (but also the longer the process will take):
+``number_of_rays``,  the ``number_of_surface_points`` and the ``resolution`` of the bitmap. These parameters essentially
+control the resolution of the raytraced image - the larger the total number, the higher the resolution (but also the
+longer the process will take):
 
 .. code-block::
 
+    scenario.set_number_of_rays(number_of_rays=120)
     number_of_surface_points = torch.tensor([100, 100], device=device)
     resolution = torch.tensor([256, 256], device=device)
 
@@ -218,3 +220,8 @@ method to start the optimization process:
 Within this process, the NURBS parameters that define the surface are trained and saved within the scenario. The
 ``reconstruct_surfaces()`` method provides the loss per heliostat as an output, which allows you to analyze the quality
 of the surface for each heliostat in the scenario.
+
+
+Example Results
+---------------
+TODO
