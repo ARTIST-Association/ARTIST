@@ -673,7 +673,7 @@ def linear_actuators(
 
     # For all linear actuators:
     # Adapt initial angle of actuator one according to kinematic initial orientation.
-    # ``ARTIST`` always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
+    # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator one needs to be transformed accordingly.
