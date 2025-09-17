@@ -157,6 +157,43 @@ def test_extract_paint_calibration_data(
         torch.testing.assert_close(actual, expected.to(device), atol=5e-4, rtol=5e-4)
 
 
+def test_make_extract_paint_calibration_data_fail(device: torch.device) -> None:
+    """
+    Test that the paint calibration data fails with invalid parameters.
+
+    Parameters
+    ----------
+     device : torch.device
+        The device on which to initialize tensors.
+    """
+    with pytest.raises(ValueError):
+        paint_loader.extract_paint_calibration_properties_data(
+            heliostat_calibration_mapping=[
+                (
+                    "AA39",
+                    [
+                        pathlib.Path(ARTIST_ROOT)
+                        / "tests/data/field_data/AA39-calibration-properties_1.json",
+                        pathlib.Path(ARTIST_ROOT)
+                        / "tests/data/field_data/AA39-calibration-properties_2.json",
+                    ],
+                )
+            ],
+            power_plant_position=torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0]
+            ).to(device=device),
+            heliostat_names=["AA31", "AA39"],
+            target_area_names=[
+                "multi_focus_tower",
+                "receiver",
+                "solar_tower_juelich_upper",
+                "solar_tower_juelich_lower",
+            ],
+            centroid_extraction_method="invalid_method",
+            device=device,
+        )
+
+
 @pytest.mark.parametrize(
     "file_path, expected_types, expected_power_plant_position, expected_receiver_properties",
     [
