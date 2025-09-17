@@ -167,7 +167,7 @@ def run_calibration(
                     heliostat_names=heliostat_group.names,
                     target_area_names=scenario.target_areas.names,
                     power_plant_position=scenario.power_plant_position,
-                    centroid_extrected_by=centroid,
+                    centroid_extraction_method=centroid,
                     device=device_used,
                 )
 

@@ -37,7 +37,7 @@ def extract_paint_calibration_properties_data(
     heliostat_names: list[str],
     target_area_names: list[str],
     limit_number_of_measurements: int | None = None,
-    centroid_extrected_by: str = config_dictionary.paint_utis,
+    centroid_extraction_method: str = config_dictionary.paint_utis,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -56,8 +56,8 @@ def extract_paint_calibration_properties_data(
         All possible target area names.
     limit_number_of_measurements : int | None
         Limits the number of measurements loaded if an int is provided (default is None).
-    centroid_extrected_by : str
-        The method by which the focal spot centroid was extracted (default is config_dictionary.paint_utis).
+    centroid_extraction_method : str
+        The method by which the focal spot centroid was extracted (default is the centroid extracted by ``UTIS``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -87,6 +87,14 @@ def extract_paint_calibration_properties_data(
         "Beginning extraction of calibration properties data from ```PAINT``` file."
     )
 
+    if centroid_extraction_method not in [
+        config_dictionary.paint_utis,
+        config_dictionary.paint_helios,
+    ]:
+        raise ValueError(
+            f"The centroid extraction method {centroid_extraction_method} is not supported. Currently we"
+            f"only support centroid extraction from {config_dictionary.paint_helios} or {config_dictionary.paint_utis}."
+        )
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
     # Gather calibration data
@@ -110,7 +118,7 @@ def extract_paint_calibration_properties_data(
                         ]
                     ],
                     calibration_data_dict[config_dictionary.paint_focal_spot][
-                        centroid_extrected_by
+                        centroid_extraction_method
                     ],
                     calibration_data_dict[config_dictionary.paint_light_source_azimuth],
                     calibration_data_dict[
