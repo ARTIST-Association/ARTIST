@@ -244,7 +244,7 @@ class HeliostatField:
 
             number_of_facets = len(surface_config.facet_list)
             degrees = torch.empty(2, dtype=torch.int32, device=device)
-            # Each facet automatically has the same control points dimensions. This is required in ``ARTIST``.
+            # Each facet automatically has the same control points dimensions. This is required in ARTIST.
             # control_points: Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
             control_points = torch.empty(
                 (
