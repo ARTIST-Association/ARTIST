@@ -5,7 +5,7 @@ import warnings
 
 import torch
 
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 
@@ -198,7 +198,6 @@ def extract_canting_and_translation_from_properties(
     heliostat_list: list[
         tuple[str, pathlib.Path] | tuple[str, pathlib.Path, pathlib.Path]
     ],
-    convert_to_4d: bool = False,
     device: torch.device | None = None,
 ) -> list[tuple[str, torch.Tensor, torch.Tensor]]:
     """
@@ -207,21 +206,16 @@ def extract_canting_and_translation_from_properties(
     Parameters
     ----------
     heliostat_list : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
-        A list where each entry is:
-        - (heliostat_name, heliostat_properties_path)
-        - or (heliostat_name, heliostat_properties_path, heliostat_deflectometry_path)
-        Only the properties path is used.
-    convert_to_4d : bool
-        If True, convert the returned 3D vectors to 4D homogeneous format (default False).
+        A list where each entry is either a tuple containing the heliostat name and the path to the heliostat properties
+        data, or the heliostat name, path to the properties file, and path to the deflectometry data.
     device : torch.device | None
-        The device on which to create tensors (default None -> auto select).
+        The device on which to create tensors (default is None).
 
     Returns
     -------
     list[tuple[str, torch.Tensor, torch.Tensor]]
-        For each heliostat: (heliostat_name, facet_translations, facet_canting_vectors)
-        - facet_translations shape: [num_facets, 3] (or [num_facets, 4] if convert_to_4d)
-        - facet_canting_vectors shape: [num_facets, 2, 3] (or [num_facets, 2, 4] if convert_to_4d)
+        A list containing a tupe for each heliostat including the heliostat name,the facet translations tensor of shape
+        [num_facets, 3] and the facet canting tensor of shape [num_facets, 2, 3].
     """
     device = get_device(device=device)
     facet_transforms_per_heliostat: list[tuple[str, torch.Tensor, torch.Tensor]] = []
@@ -238,11 +232,11 @@ def extract_canting_and_translation_from_properties(
                 config_dictionary.paint_number_of_facets
             ]
 
-            # Allocate tensors (ENU 3D by default)
+            # Allocate tensors.
             facet_translations_enu3 = torch.empty((num_facets, 3), device=device)
             facet_canting_vectors_enu3 = torch.empty((num_facets, 2, 3), device=device)
 
-            # Fill from JSON
+            # Fill from JSON.
             for facet_idx in range(num_facets):
                 facet_entry = heliostat_dict[config_dictionary.paint_facet_properties][
                     config_dictionary.paint_facets
@@ -258,17 +252,8 @@ def extract_canting_and_translation_from_properties(
                     facet_entry[config_dictionary.paint_canting_n], device=device
                 )
 
-            # Optional conversion to homogeneous 4D
-            if convert_to_4d:
-                facet_translations = utils.convert_3d_directions_to_4d_format(
-                    facet_translations_enu3, device=device
-                )
-                facet_canting_vectors = utils.convert_3d_directions_to_4d_format(
-                    facet_canting_vectors_enu3, device=device
-                )
-            else:
-                facet_translations = facet_translations_enu3
-                facet_canting_vectors = facet_canting_vectors_enu3
+            facet_translations = facet_translations_enu3
+            facet_canting_vectors = facet_canting_vectors_enu3
 
             facet_transforms_per_heliostat.append(
                 (heliostat_name, facet_translations, facet_canting_vectors)
