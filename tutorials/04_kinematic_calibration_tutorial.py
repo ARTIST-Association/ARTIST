@@ -75,13 +75,6 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
-    # Set calibration method and loss function.
-    kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
-    # Uncomment for calibration with raytracing:
-    loss_definition = FocalSpotLoss(scenario=scenario)
-    # Uncomment for calibration with motor positions.
-    # loss_definition = VectorLoss()
-
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
     scheduler = (
@@ -110,6 +103,9 @@ with setup_distributed_environment(
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
+    # Set calibration method and loss function.
+    kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
+
     # Create the kinematic optimizer.
     kinematic_calibrator = KinematicCalibrator(
         ddp_setup=ddp_setup,
@@ -118,6 +114,11 @@ with setup_distributed_environment(
         optimization_configuration=optimization_configuration,
         calibration_method=kinematic_calibration_method,
     )
+
+    # Uncomment for calibration with raytracing:
+    loss_definition = FocalSpotLoss(scenario=scenario)
+    # Uncomment for calibration with motor positions.
+    # loss_definition = VectorLoss()
 
     # Calibrate the kinematic.
     _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)
