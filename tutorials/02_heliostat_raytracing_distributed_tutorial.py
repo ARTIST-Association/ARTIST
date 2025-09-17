@@ -2,6 +2,7 @@ import pathlib
 
 import h5py
 import torch
+from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
@@ -18,7 +19,9 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
+)
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -119,6 +122,19 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # Plot the bitmaps of each single heliostat.
+        for heliostat_index in range(heliostat_group.number_of_heliostats):
+            plt.imshow(
+                bitmaps_per_heliostat[heliostat_index].cpu().detach(), cmap="gray"
+            )
+            plt.axis("off")
+            plt.title(
+                f"Heliostat: {heliostat_group.names[heliostat_index]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}"
+            )
+            plt.savefig(
+                f"bitmap_of_heliostat_{heliostat_group.names[heliostat_index]}_in_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}.png"
+            )
+
         # Get the flux distributions per target.
         bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
             bitmaps_per_heliostat=bitmaps_per_heliostat,
@@ -128,6 +144,21 @@ with setup_distributed_environment(
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
+        # Plot the combined bitmaps of heliostats on the same target.
+        for target_area_index in range(scenario.target_areas.number_of_target_areas):
+            plt.imshow(
+                bitmaps_per_target[target_area_index].cpu().detach(), cmap="gray"
+            )
+            plt.axis("off")
+            plt.title(
+                f"Target area: {scenario.target_areas.names[target_area_index]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}"
+            )
+            plt.savefig(
+                f"combined_bitmap_on_{scenario.target_areas.names[target_area_index]}_from_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}.png"
+            )
+
+    # It is possible to skip this nested reduction step. The reduction within the outer process group would take
+    # care of it but to see how the nested process group it is nice to look at the intermediate reduction results.
     if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
@@ -135,7 +166,35 @@ with setup_distributed_environment(
             group=ddp_setup[config_dictionary.process_subgroup],
         )
 
+        # Plot the combined bitmaps of heliostats on the same target reduced within each group.
+        for target_area_index in range(scenario.target_areas.number_of_target_areas):
+            plt.imshow(
+                combined_bitmaps_per_target[target_area_index].cpu().detach(),
+                cmap="gray",
+            )
+            plt.axis("off")
+            plt.title(
+                f"Reduced within group, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+            )
+            plt.savefig(
+                f"reduced_bitmap_on_{scenario.target_areas.names[target_area_index]}_on_rank_{ddp_setup['rank']}.png"
+            )
+
     if ddp_setup[config_dictionary.is_distributed]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
+
+        # Plot the final combined bitmaps of heliostats on the same target fully reduced.
+        for target_area_index in range(scenario.target_areas.number_of_target_areas):
+            plt.imshow(
+                combined_bitmaps_per_target[target_area_index].cpu().detach(),
+                cmap="gray",
+            )
+            plt.axis("off")
+            plt.title(
+                f"Final bitmap, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+            )
+            plt.savefig(
+                f"final_reduced_bitmap_on_{scenario.target_areas.names[target_area_index]}_on_rank_{ddp_setup['rank']}.png"
+            )

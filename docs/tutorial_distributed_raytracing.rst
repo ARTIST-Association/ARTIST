@@ -55,10 +55,10 @@ All of this setup is handled automatically via:
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device = ddp_setup[config_dictionary.device]
 
 **Note:** The rest of the tutorial occurs within this ``with`` block. This ensures that the distributed environment is
-running during execution and will be automatically cleaned up afterwards.
+running during execution and will be automatically cleaned up afterwards. The dictionary ``ddp_setup`` contains all
+distributed environment parameters.
 
 
 Mapping between active heliostats, target areas and incident ray directions
@@ -69,7 +69,7 @@ aim at one target area, while others aim elsewhere and also to have different in
 in the same alignment and raytracing process. Differing incident ray directions for different heliostats may not make much
 sense in the usual operation of the power plant, but this is very useful for calibration tasks.
 
-To map each helisotat with its designated target area and incident ray direction you can use the following mapping structure:
+To map each heliostat with its designated target area and incident ray direction you can use the following mapping structure:
 
 .. code-block::
 
@@ -85,7 +85,7 @@ However, in this tutorial we want to consider all heliostats and therefore set o
 
     heliostat_target_light_source_mapping = None
 
-In this case it is later possible to still specific a default target area index and a default incident ray direction, however
+In this case it is later still possible to set a specific default target area index and a default incident ray direction, however
 if these are not provided then all heliostats are assigned to the first target area found in the scenario with a incident
 ray direction of "north", i.e. the light source position is directly in the south.
 
@@ -93,7 +93,7 @@ ray direction of "north", i.e. the light source position is directly in the sout
 Distributed Raytracing
 ----------------------
 
-Now we are almost ready to star the distributed raytracing, however we need to first set the resolution of the generated
+Now we are almost ready to start the distributed raytracing, however we need to first set the resolution of the generated
 bitmap, and also create a tensor to store the final result:
 
 .. code-block::
@@ -159,7 +159,7 @@ and also align the surfaces for all activated heliostats with the incident ray d
     )
 
 Now we are ready to create a distributed ``HeliostatRayTracer``. In this case it is important to provide the ``world_size``,
-the ``rank``, the ``batch_size`` which is equivalent to the number of active heliostats, and a ``random_seed``:
+the ``rank``, the ``batch_size``, and a ``random_seed``:
 
 .. code-block::
 
@@ -173,6 +173,11 @@ the ``rank``, the ``batch_size`` which is equivalent to the number of active hel
         bitmap_resolution=bitmap_resolution,
     )
 
+In this tutorial the ``batch_size`` is equal to the number of active heliostats. The ``batch_size`` determines how many heliostats
+are parallelized within this group's raytracing process. If the number of active heliostats is high and your GPUs do not have enough
+memory capacity, you can reduce the ``batch_size`` to prevent ``CUDA out of memory`` errors during runtime. However, this also means
+slightly longer runtimes, as the batches within each group are then also computed sequentially.
+
 Now we are ready to perform raytracing! This is still performed on a per-heliostat basis with the function ``trace_rays()``:
 
 .. code-block::
@@ -183,6 +188,48 @@ Now we are ready to perform raytracing! This is still performed on a per-heliost
         target_area_mask=target_area_mask,
         device=device,
     )
+
+Consider an example scenario, with two heliostat groups that have two heliostats each:
+ - ``Group 0``: ``AA28``, ``AC43``
+ - ``Group 1``: ``AA31``, ``AA39``
+
+The ``world_size`` is three, this means there is ``rank 0``, ``rank 1`` and ``rank 2``. The ranks are distributed among the groups in a
+round-robin fashion, therefore ``Group 0`` is computed on ``rank 0`` and ``rank 2`` while ``Group 1`` is computed on ``rank 1``. Since
+``Group 0`` has 2 ranks available, this group can perform nested parallelization. Heliostat 0 of ``Group 0``, named ``AA28`` is handled
+by ``rank 0`` and heliostat 1 of ``Group 0`` named ``AC43`` is handled by ``rank 2``. ``Group 1`` has two heliostats but only one rank
+assigned, meaning there is no nested parallelization possible.
+The ray tracer method ``trace_rays()`` produces bitmaps per heliostat.
+
+.. list-table:: Bitmaps per heliostats
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/bitmap_of_heliostat_AA28_in_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/bitmap_of_heliostat_AA31_in_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/bitmap_of_heliostat_AA28_in_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+
+   * - .. figure:: ./images/bitmap_of_heliostat_AC43_in_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/bitmap_of_heliostat_AA39_in_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/bitmap_of_heliostat_AC43_in_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
 
 However, now there may be multiple heliostats in the scenario all focusing on the same target. In this case, we need to
 determine the resulting flux image for that target, i.e. the combined result of all heliostats focusing on this target.
@@ -196,16 +243,39 @@ This can be achieved with the ``get_bitmaps_per_target()`` function:
         device=device,
     )
 
-Since there may also be multiple heliostat groups, we need to make sure the results from all groups are considered in
+Since there may also be multiple heliostats in one group, we need to make sure the results from all heliostats are considered in
 this bitmap:
 
 .. code-block::
 
     combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-Now we only have one more step. Up until now everything has been running in parallel and therefore to obtain the final
-bitmap per target we need to perform an ``all_reduce``. How this ``all_reduce`` is performed depends on whether the
-computation of the groups was sequential ("nested") or completely distributed:
+All heliostats in this example are aimed at the same target area, called the ``multi_focus_tower``, this is the first target area in this scenario.
+This means all bitmaps in the ``combined_bitmaps_per_target`` tensor are empty, except the ones in index 0 (only those will be plotted from now on).
+
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``)
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+Notice how only the bitmap on ``rank 1`` is actually a combined bitmap of two individual fluxes. This is because both of those fluxes,
+from heliostats ``AA31`` and ``AA39`` were actually computed on the same rank and since the ranks have not been synchronized yet, each
+rank only has the information it computed on its own.
+Neither the ray tracing results within each group, nor the combined results from each group have been synchronized. Therefore, to obtain
+the final bitmap per target we need to perform an ``all_reduce``. One final ``all_reduce`` is sufficient, but for the purpose of this
+tutorial it is interesting to look at intermediate results and the nested ``all_reduce``.
 
 .. code-block::
 
@@ -216,40 +286,49 @@ computation of the groups was sequential ("nested") or completely distributed:
             group=ddp_setup[config_dictionary.process_subgroup],
         )
 
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``) after nested reduce
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+This ``all_reduce`` is performed per process subgroup, meaning it only reduces the results of heliostats within the respective
+group and can be skipped because the global ``all_reduce`` would handle it as well.
+The final bitmap on each target is reduced by:
+
+.. code-block::
+
     if ddp_setup[config_dictionary.is_distributed]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
 
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``) after final reduce
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
 With that we have completed fully distributed raytracing in ``ARTIST``!
-
-
-
-Old - I think we Can remove?
-----------------------------
-We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
-The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
-ranks. Each rank handles a portion of the overall rays. The ``batch_size`` is an important parameter determining the performance of the
-ray tracer. It determines how many heliostats are computed parallel in the large matrix-multiplications. If the ray tracing is not distributed
-and the ``batch_size`` is 1, the ray tracing happens sequentially, if the ``batch_size`` equals the number of heliostats, the ray tracing happens
-simultaneously for all heliostats. As the ``batch_size`` increases from 1 to the number of heliostats, the execution becomes faster but needs more
-memory space. If the ray tracing is distributed and there are multiple ranks, the ``batch_size`` determines how many heliostats are parallelized within
-each rank.
-
-**Example**
-Let's say there are four heliostats in our scenario. The ``world_size`` is four. We will now have four individual ``ranks`` that perform heliostat ray tracing in parallel.
-Since we are using Distributed Data Parallel, each ``rank`` is assigned an exact copy of whole heliostat field in our scenario, meaning each ``rank`` can
-access all four heliostats. The data, in our case the rays belonging to each heliostat, are split up and each ``rank`` handles a portion of them.
-Each ray is assigned to exactly one ``rank``, no ray is duplicated. The rays from the first heliostat go to rank number 0, the rays for the second heliostat go
-to rank number 1 and so on. If we were to plot the results of all four distributed ray tracings of the separate ``ranks``, we get these
-Flux Density Distributions, each flux belongs to one heliostat:
-
-+------------------------+------------------------+------------------------+------------------------+
-| .. image:: ./images/distributed_flux_rank_0.png | .. image:: ./images/distributed_flux_rank_1.png |
-|    :scale: 25%                                  |    :scale: 25%                                  |
-|                                                 |                                                 |
-+------------------------+------------------------+------------------------+------------------------+
-| .. image:: ./images/distributed_flux_rank_2.png | .. image:: ./images/distributed_flux_rank_3.png |
-|    :scale: 25%                                  |    :scale: 25%                                  |
-|                                                 |                                                 |
-+------------------------+------------------------+------------------------+------------------------+
