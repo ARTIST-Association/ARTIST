@@ -25,6 +25,7 @@ dependencies = [
     "pillow",
     "h5py",
     "colorlog",
+    "paint-csp",
 ]
 
 [project.optional-dependencies]
