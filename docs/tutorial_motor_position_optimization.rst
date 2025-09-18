@@ -101,3 +101,34 @@ method to perform the actual optimization.
 
 The ``optimize()`` method returns the final loss of the optimization process, which can be useful for logging or
 analysis. That is all there is to motor position optimization in ``ARTIST``.
+
+The Effect of Motor Position Optimization
+-----------------------------------------
+
+To better understand why motor position optimization is important lets consider a small example. On a receiver, the aim
+is to obtain maximal efficiency by having an even distribution of the flux across the receiver. In this setting, it will
+heat up in a uniform manner rather than having varying temperatures throughout. In the following image, this is clearly
+not the case:
+
+.. figure:: ./images/flux_before_aimpoint_optimization.png
+   :width: 85%
+   :alt: Flux before motor position optimization
+   :align: center
+
+However, after performing the motor position optimization the various heliostats in the scenario can be pointed to slightly
+different targets to better approximate the desired distribution. We see this, in the image below:
+
+.. figure:: ./images/flux_after_aimpoint_optimization.png
+   :width: 85%
+   :alt: Flux after motor position optimization
+   :align: center
+
+Since only a small number of heliostats are present in this scenario, it is impossible to actually achieve the desired
+uniform flux distribution - but we clearly see (despite only a few heliostats being present) that the flux is now more
+broadly distributed than before.
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.
