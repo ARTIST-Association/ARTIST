@@ -174,4 +174,52 @@ Now we can simply perform the calibration with the ``calibrate()`` method:
      _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)
 
 The ``calibrate()`` method returns the loss per heliostat as a flattened tensor, which may be useful for logging or
-analysis. That is all there is to kinematic calibration in ``ARTIST``!
+analysis.
+
+
+What Happens in Calibration?
+----------------------------
+
+To understand calibration, lets look at a small example based on this tutorial. We were to consider a scenario with
+three heliostats: ``AA31``, ``AA39``, and ``AA43``. When we perform raytracing using these three heliostats, we get the
+following flux images on the target:
+
+.. list-table:: Heliostat bitmaps before calibration
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/heliostat_AA31_before_calibration.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AA39_before_calibration.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AC43_before_calibration.png
+          :scale: 32%
+
+If we look closely, we can see that all of these focal spots are off-center, i.e. the centroid or center of mass of each
+focal spot is not in the middle of the target.
+
+However, after calibration, if we again perform raytracing we get the following images:
+
+.. list-table:: Heliostat bitmaps after calibration
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/heliostat_AA31_after_calibration.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AA39_after_calibration.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AC43_after_calibration.png
+          :scale: 32%
+
+Whilst the changes are small - the focal spots are now clearly centered in the target. Therefore, we can now consider our
+heliostats to be calibrated - and that is all there is to kinematic calibration in ``ARTIST``!
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.
