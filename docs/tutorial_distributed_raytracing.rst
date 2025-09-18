@@ -331,4 +331,11 @@ The final bitmap on each target is reduced by:
 
           Rank 2
 
-With that we have completed fully distributed raytracing in ``ARTIST``!
+Now all ranks are synchronized and we have the final image shared across them. With that we have completed fully
+distributed raytracing in ``ARTIST``!
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.
