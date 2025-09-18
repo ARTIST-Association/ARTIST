@@ -315,3 +315,9 @@ If we were to now plot the results of all four considered incident ray direction
 
 We hope this tutorial gave you an idea of how ``ARTIST`` works - check out further tutorials for a more in depth
 demonstration of what you can do with our software!
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.
