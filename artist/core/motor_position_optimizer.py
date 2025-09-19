@@ -389,7 +389,7 @@ class MotorPositionsOptimizer:
                 patience_counter += 1
             if (
                 patience_counter
-                > self.optimization_configuration[
+                >= self.optimization_configuration[
                     config_dictionary.early_stopping_patience
                 ]
             ):
