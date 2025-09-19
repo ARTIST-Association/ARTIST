@@ -183,38 +183,28 @@ What Happens in Calibration?
 To understand calibration, lets look at a small example based on this tutorial. We were to consider a scenario with
 three heliostats: ``AA31``, ``AA39``, and ``AC43``.
 
-.. list-table:: Heliostat fluxes before and after calibration
+.. list-table:: Target fluxes (row 1), heliostat fluxes before calibration (row 2), heliostat fluxes after calibration (row 3)
    :widths: 33 33 33
    :header-rows: 0
 
-    * - .. figure:: ./images/heliostat_AA31_original.png
-          :scale: 32%
-
+   * - .. figure:: ./images/heliostat_AA31_original.png
+         :width: 150px
      - .. figure:: ./images/heliostat_AA39_original.png
-          :scale: 32%
-
+         :width: 150px
      - .. figure:: ./images/heliostat_AC43_original.png
-          :scale: 32%
-
-
+         :width: 150px
    * - .. figure:: ./images/heliostat_AA31_before_calibration.png
-          :scale: 32%
-
+         :width: 200px
      - .. figure:: ./images/heliostat_AA39_before_calibration.png
-          :scale: 32%
-
+         :width: 200px
      - .. figure:: ./images/heliostat_AC43_before_calibration.png
-          :scale: 32%
-
-
+         :width: 200px
    * - .. figure:: ./images/heliostat_AA31_after_calibration.png
-          :scale: 32%
-
+         :width: 200px
      - .. figure:: ./images/heliostat_AA39_after_calibration.png
-          :scale: 32%
-
+         :width: 200px
      - .. figure:: ./images/heliostat_AC43_after_calibration.png
-          :scale: 32%
+         :width: 200px
 
 
 When we perform raytracing without prior calibration and compare the generated fluxes from ``ARTIST`` with the
