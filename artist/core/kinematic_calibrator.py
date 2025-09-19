@@ -102,7 +102,7 @@ class KinematicCalibrator:
         -------
         torch.Tensor
             The final loss of the kinematic calibration for each heliostat in each group.
-            Tensor of shape [scenario.heliostat_field.total_number_of_heliostats].
+            Tensor of shape [total_number_of_heliostats_in_scenario].
         """
         device = get_device(device=device)
 
