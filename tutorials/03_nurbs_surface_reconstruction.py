@@ -186,19 +186,21 @@ def create_surface_plots(name: str) -> None:
             )
 
 
-def create_flux_plots(name: str) -> None:
+def create_flux_plots(heliostat_names: list[str], plot_name: str) -> None:
     """
     Create data to plot the heliostat fluxes.
 
     Parameters
     ----------
-    name : str
+    heliostat_names : list[str]
+        The names of all heliostats to be plotted.
+    plot_name : str
         The name for the plots.
     """
     # Load reference data.
     validation_heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
         base_path="/path/to/data",
-        heliostat_names=["AA31", "AA39", "AC43"],
+        heliostat_names=heliostat_names,
         number_of_measurements=2,
         image_variant="flux-centered",
         randomize=True,
@@ -314,7 +316,7 @@ def create_flux_plots(name: str) -> None:
         plot_multiple_fluxes(
             validation_bitmaps_per_heliostat,
             validation_measured_flux_distributions,
-            name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}",
+            name=f"{plot_name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}",
         )
 
 
@@ -456,8 +458,10 @@ with setup_distributed_environment(
     resolution = torch.tensor([256, 256], device=device)
 
     # Visualize the ideal surfaces and flux distributions from ideal heliostats.
+    # Please adapt the heliostat names according to the ones to be plotted.
+    heliostat_names = ["heliostat_name_1, heliostat_name_2"]
     create_surface_plots(name="ideal")
-    create_flux_plots(name="ideal")
+    create_flux_plots(heliostat_names=heliostat_names, plot_name="ideal")
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -480,4 +484,4 @@ print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_helio
 
 # Visualize the results (reconstructed surfaces and flux distributions from reconstructed heliostats).
 create_surface_plots(name="reconstructed")
-create_flux_plots(name="reconstructed")
+create_flux_plots(heliostat_names=heliostat_names, plot_name="reconstructed")
