@@ -216,7 +216,7 @@ class HeliostatRayTracer:
         heliostat_group: "HeliostatGroup",
         world_size: int = 1,
         rank: int = 0,
-        batch_size: int = 1,
+        batch_size: int = 100,
         random_seed: int = 7,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     ) -> None:
@@ -240,7 +240,7 @@ class HeliostatRayTracer:
         rank : int
             The rank, i.e., individual process ID (default is 0).
         batch_size : int
-            The amount of samples (Heliostats) processed parallel within a single rank (default is 1).
+            The amount of samples (Heliostats) processed parallel within a single rank (default is 100).
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution : torch.Tensor
@@ -448,7 +448,7 @@ class HeliostatRayTracer:
         """
         Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
 
-        The bitmaps are saved for each active heliostat seperatly.
+        The bitmaps are saved for each active heliostat separately.
 
         Parameters
         ----------

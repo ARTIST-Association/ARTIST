@@ -1,12 +1,12 @@
 .. _tutorial_distributed_raytracing:
 
 ``ARTIST`` Tutorial: Distributed Ray Tracing
-===========================================
+============================================
 
 .. note::
 
     You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/01_heliostat_raytracing_distributed_tutorial.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/02_heliostat_raytracing_distributed_tutorial.py
 
 This tutorial provides a brief introduction to ``ARTIST`` showcasing how the distributed environment is set up by performing distributed ray tracing.
 
@@ -16,143 +16,326 @@ It is best if you already know about the following processes in ``ARTIST``
 - Aligning heliostats.
 - Performing heliostat ray tracing to generate a flux density image on a target area.
 
-If you need help with this look into our other tutorials such as the tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
+If you need help with this look into our tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
 
-General Remarks
----------------
-The data structures in ``ARTIST`` are set up to handle all heliostat computations in parallel even when using a single device. For example if there are multiple heliostats
-in the same scenario, all heliostats are aligned in the same step. The same is true for parts of the ray tracing. These calculations are internally implemented
-as large matrix-multiplications, which are highly efficient when using PyTorch on GPUs. The distributed ray tracing takes this parallelization further and
-can be used when its desired to calculate parallel on multiple devices. The Heliostat-Tracing process can be distributed and parallelized using Distributed Data Parallel.
-For the distributed ray tracing using DDP, the heliostat field is duplicated across all devices and the rays are separated into unique groups.
-The distributed devices handle only a portion of the overall rays but they have access to the whole heliostat field. Each ray in the scenario belongs to a certain
-heliostat, for ray tracing with DDP the rays are split along the heliostat dimension. This means each rank handles the rays of specific heliostats.
-Overly simplified, in a scenario with 2000 heliostats and 4 ranks, this can be imagined as the first rank handling all rays of the first 500 heliostats and so on.
+Initial Setup
+-------------
 
+``ARTIST`` is designed for parallel computation. To enable this (even when considering different types of heliostats
+with different kinematic and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
+groups and how ``ARTIST`` is designed can be found in this description of :ref:`what is happening under the hood<artist_under_hood>`
+in ``ARTIST``.
 
-The mapping between active heliostats, target areas and incident ray directions.
---------------------------------------------------------------------------------
-``ARTIST`` offers the flexibility, to activate and deactivate certain helisotats in the scenario, to have some heliostats aim at one target area, while others aim
-elsewhere and also to have different incident ray directions for different heliostats in the same alignment and raytracing process. Differing incident ray
-directions for different heliostats may not make much sense in the usual operation of the power plant, but this is very useful for calibration tasks.
-To map each helisotat with its designated target area and incident ray direction you can use a mapping of this kind:
+Therefore, before we do anything we need to make sure we know how many heliostat groups are present. This can be achieved
+by calling the ``get_number_of_heliostat_groups_from_hdf5()`` function in the ``Scenario`` class:
 
 .. code-block::
 
-    heliostat_target_light_source_mapping_string = [
-        ("heliostat_name_1", "target_name_3", incident_ray_direction_tensor_1),
-        ("heliostat_name_2", "target_name_1", incident_ray_direction_tensor_1),
-        ("heliostat_name_3", "target_name_2", incident_ray_direction_tensor_2),
-        ("heliostat_name_4", "target_name_1", incident_ray_direction_tensor_3),
-    ]
+    number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
+        scenario_path=scenario_path
+    )
 
-If no mapping is provided, a default mapping for all heliostats within this group will be created. The default mapping will map all heliostats to the default
-``single_incident_ray_direction``, which simualtes a light source positioned in the south and the default ``single_target_area_index``, which is 0. To overwrite
-these defaults, please provide a ``single_incident_ray_direction`` or a ``single_target_area_index``.
+In the distributed ray tracing the heliostat-tracing process can be distributed and parallelized using Distributed Data
+Parallel. For the distributed ray tracing using DDP, not only are the heliostat groups computed in parallel, but the
+data samples per group can also be computed in parallel. We will see exactly how this works later in the tutorial.
 
 The Distributed Environment
 ---------------------------
-Based on the available devices, the environment is initialized with the appropriate communication backend.
-For computation on GPUs the ``nccl`` backend optimized for NVIDIA GPUs is chosen. For computation on CPUs ``gloo`` is used as backend.
-If the program is run without the intention of being distributed, the world size will be set to 1, accordingly the only rank is 0.
-All of this is handled by running the following code:
+
+Before we start running raytracing, we need to set up the distributed environment. Based on the available devices, the
+environment is initialized with the appropriate communication backend. For computation on GPUs the ``nccl`` backend
+optimized for NVIDIA GPUs is chosen. For computation on CPUs ``gloo`` is used as backend. If the program is run without
+the intention of being distributed, the world size will be set to 1, accordingly the only rank is 0.
+
+All of this setup is handled automatically via:
 
 .. code-block::
 
-    # The distributed environment is setup and destroyed using a Generator object.
-    environment_generator = setup_global_distributed_environment(device=device)
+    with setup_distributed_environment(
+        number_of_heliostat_groups=number_of_heliostat_groups,
+        device=device,
+    ) as ddp_setup:
 
-    device, is_distributed, rank, world_size = next(environment_generator)
+**Note:** The rest of the tutorial occurs within this ``with`` block. This ensures that the distributed environment is
+running during execution and will be automatically cleaned up afterwards. The dictionary ``ddp_setup`` contains all
+distributed environment parameters.
 
-This completely sets up the distributed environment. To use it during the ray tracing process, we initialize the
-``HeliostatRayTracer`` slightly different than before:
+
+Mapping between active heliostats, target areas and incident ray directions
+---------------------------------------------------------------------------
+
+``ARTIST`` offers the flexibility, to activate and deactivate certain heliostats in the scenario, to have some heliostats
+aim at one target area, while others aim elsewhere and also to have different incident ray directions for different heliostats
+in the same alignment and raytracing process. Differing incident ray directions for different heliostats may not make much
+sense in the usual operation of the power plant, but this is very useful for calibration tasks.
+
+To map each heliostat with its designated target area and incident ray direction you can use the following mapping structure:
 
 .. code-block::
 
-    # Create a ray tracer.
+    # heliostat_target_light_source_mapping = [
+        ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+        ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+        (...)
+    ]
+
+However, in this tutorial we want to consider all heliostats and therefore set our mapping to ``None``:
+
+.. code-block::
+
+    heliostat_target_light_source_mapping = None
+
+In this case it is later still possible to set a specific default target area index and a default incident ray direction, however
+if these are not provided then all heliostats are assigned to the first target area found in the scenario with a incident
+ray direction of "north", i.e. the light source position is directly in the south.
+
+
+Distributed Raytracing
+----------------------
+
+Now we are almost ready to start the distributed raytracing, however we need to first set the resolution of the generated
+bitmap, and also create a tensor to store the final result:
+
+.. code-block::
+
+    bitmap_resolution = torch.tensor([256, 256])
+
+    combined_bitmaps_per_target = torch.zeros(
+        (
+            scenario.target_areas.number_of_target_areas,
+            bitmap_resolution[0],
+            bitmap_resolution[1],
+        ),
+        device=device,
+    )
+
+Now the heliostat groups come in to play. We need to consider each heliostat group separately - in a distributed setting
+these groups can be computed in parallel, otherwise they will be processed sequentially. Therefore, the entire distributed
+raytracing process takes place within a ``for`` loop:
+
+.. code-block::
+
+    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+        ddp_setup[config_dictionary.rank]
+    ]:
+        heliostat_group = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
+
+Within this loop, the first step is to determine which heliostats are being considered ("activated") and which target
+areas are being used -- this is achieved using the ``heliostat_target_light_source_mapping`` that we defined earlier:
+
+.. code-block::
+
+    (
+        active_heliostats_mask,
+        target_area_mask,
+        incident_ray_directions,
+    ) = scenario.index_mapping(
+        heliostat_group=heliostat_group,
+        string_mapping=heliostat_target_light_source_mapping,
+        device=device,
+    )
+
+We can then activate the heliostats as in the :ref:`previous tutorial on single heliostat raytracing<tutorial_heliostat_raytracing>`:
+
+.. code-block::
+
+    # For each index 0 indicates a deactivated heliostat and 1 an activated one.
+    # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
+    heliostat_group.activate_heliostats(
+        active_heliostats_mask=active_heliostats_mask, device=device
+    )
+
+and also align the surfaces for all activated heliostats with the incident ray direction:
+
+.. code-block::
+
+    heliostat_group.align_surfaces_with_incident_ray_directions(
+        aim_points=scenario.target_areas.centers[target_area_mask],
+        incident_ray_directions=incident_ray_directions,
+        active_heliostats_mask=active_heliostats_mask,
+        device=device,
+    )
+
+Now we are ready to create a distributed ``HeliostatRayTracer``. In this case it is important to provide the ``world_size``,
+the ``rank``, the ``batch_size``, and a ``random_seed``:
+
+.. code-block::
+
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
-        world_size=world_size,
-        rank=rank,
-        batch_size=4,
-        random_seed=rank,
-        bitmap_resolution_e=bitmap_resolution_e,
-        bitmap_resolution_u=bitmap_resolution_u,
+        world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+        rank=ddp_setup[config_dictionary.heliostat_group_rank],
+        batch_size=heliostat_group.number_of_active_heliostats,
+        random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+        bitmap_resolution=bitmap_resolution,
     )
 
+In this tutorial the ``batch_size`` is equal to the number of active heliostats. The ``batch_size`` determines how many heliostats
+are parallelized within this group's raytracing process. If the number of active heliostats is high and your GPUs do not have enough
+memory capacity, you can reduce the ``batch_size`` to prevent ``CUDA out of memory`` errors during runtime. However, this also means
+slightly longer runtimes, as the batches within each group are then also computed sequentially.
 
-We can specify the ``world_size`` and the ``rank`` because both were set up earlier.
-The ``HeliostatRayTracer`` handles all the parallelization for you. The ray tracing process is distributed over the defined number
-ranks. Each rank handles a portion of the overall rays. The ``batch_size`` is an important parameter determining the performance of the
-ray tracer. It determines how many heliostats are computed parallel in the large matrix-multiplications. If the ray tracing is not distributed
-and the ``batch_size`` is 1, the ray tracing happens sequentially, if the ``batch_size`` equals the number of heliostats, the ray tracing happens
-simultaneously for all heliostats. As the ``batch_size`` increases from 1 to the number of heliostats, the execution becomes faster but needs more
-memory space. If the ray tracing is distributed and there are multiple ranks, the ``batch_size`` determines how many heliostats are parallelized within
-each rank.
-
-**Example**
-Let's say there are four heliostats in our scenario. The ``world_size`` is four. We will now have four individual ``ranks`` that perform heliostat ray tracing in parallel.
-Since we are using Distributed Data Parallel, each ``rank`` is assigned an exact copy of whole heliostat field in our scenario, meaning each ``rank`` can
-access all four heliostats. The data, in our case the rays belonging to each heliostat, are split up and each ``rank`` handles a portion of them.
-Each ray is assigned to exactly one ``rank``, no ray is duplicated. The rays from the first heliostat go to rank number 0, the rays for the second heliostat go
-to rank number 1 and so on. If we were to plot the results of all four distributed ray tracings of the separate ``ranks``, we get these
-Flux Density Distributions, each flux belongs to one heliostat:
-
-+------------------------+------------------------+------------------------+------------------------+
-| .. image:: ./images/distributed_flux_rank_0.png | .. image:: ./images/distributed_flux_rank_1.png |
-|    :scale: 25%                                  |    :scale: 25%                                  |
-|                                                 |                                                 |
-+------------------------+------------------------+------------------------+------------------------+
-| .. image:: ./images/distributed_flux_rank_2.png | .. image:: ./images/distributed_flux_rank_3.png |
-|    :scale: 25%                                  |    :scale: 25%                                  |
-|                                                 |                                                 |
-+------------------------+------------------------+------------------------+------------------------+
-
-The only step left is to add up all of those bitmaps to receive the total Flux Density Distribution from the considered heliostats:
+Now we are ready to perform raytracing! This is still performed on a per-heliostat basis with the function ``trace_rays()``:
 
 .. code-block::
 
-    if is_distributed:
+    bitmaps_per_heliostat = ray_tracer.trace_rays(
+        incident_ray_directions=incident_ray_directions,
+        active_heliostats_mask=active_heliostats_mask,
+        target_area_mask=target_area_mask,
+        device=device,
+    )
+
+Consider an example scenario, with two heliostat groups that have two heliostats each:
+ - ``Group 0``: ``AA28``, ``AC43``
+ - ``Group 1``: ``AA31``, ``AA39``
+
+The ``world_size`` is three, this means there is ``rank 0``, ``rank 1`` and ``rank 2``. The ranks are distributed among the groups in a
+round-robin fashion, therefore ``Group 0`` is computed on ``rank 0`` and ``rank 2`` while ``Group 1`` is computed on ``rank 1``. Since
+``Group 0`` has 2 ranks available, this group can perform nested parallelization. Heliostat 0 of ``Group 0``, named ``AA28`` is handled
+by ``rank 0`` and heliostat 1 of ``Group 0`` named ``AC43`` is handled by ``rank 2``. ``Group 1`` has two heliostats but only one rank
+assigned, meaning there is no nested parallelization possible.
+The ray tracer method ``trace_rays()`` produces bitmaps per heliostat.
+
+.. list-table:: Bitmaps per heliostats
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/bitmap_of_heliostat_AA28_in_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/bitmap_of_heliostat_AA31_in_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/bitmap_of_heliostat_AA28_in_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+
+   * - .. figure:: ./images/bitmap_of_heliostat_AC43_in_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/bitmap_of_heliostat_AA39_in_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/bitmap_of_heliostat_AC43_in_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+However, now there may be multiple heliostats in the scenario all focusing on the same target. In this case, we need to
+determine the resulting flux image for that target, i.e. the combined result of all heliostats focusing on this target.
+This can be achieved with the ``get_bitmaps_per_target()`` function:
+
+.. code-block::
+
+    bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+        bitmaps_per_heliostat=bitmaps_per_heliostat,
+        target_area_mask=target_area_mask,
+        device=device,
+    )
+
+Since there may also be multiple heliostats in one group, we need to make sure the results from all heliostats are considered in
+this bitmap:
+
+.. code-block::
+
+    combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
+
+All heliostats in this example are aimed at the same target area, called the ``multi_focus_tower``, this is the first target area in this scenario.
+This means all bitmaps in the ``combined_bitmaps_per_target`` tensor are empty, except the ones in index 0 (only those will be plotted from now on).
+
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``)
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_0_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_1_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/combined_bitmap_on_multi_focus_tower_from_group_0_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+Notice how only the bitmap on ``rank 1`` is actually a combined bitmap of two individual fluxes. This is because both of those fluxes,
+from heliostats ``AA31`` and ``AA39`` were actually computed on the same rank and since the ranks have not been synchronized yet, each
+rank only has the information it computed on its own.
+Neither the ray tracing results within each group, nor the combined results from each group have been synchronized. Therefore, to obtain
+the final bitmap per target we need to perform an ``all_reduce``. One final ``all_reduce`` is sufficient, but for the purpose of this
+tutorial it is interesting to look at intermediate results and the nested ``all_reduce``.
+
+.. code-block::
+
+    if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
-            group_bitmaps_per_heliostat, op=torch.distributed.ReduceOp.SUM
+            combined_bitmaps_per_target,
+            op=torch.distributed.ReduceOp.SUM,
+            group=ddp_setup[config_dictionary.process_subgroup],
         )
 
-The total Flux Density Distribution now looks like this:
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``) after nested reduce
+   :widths: 33 33 33
+   :header-rows: 0
 
-.. figure:: ./images/distributed_final_flux.png
-   :width: 80 %
-   :align: center
+   * - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_0.png
+          :scale: 30%
 
-Cleaning up the Distributed Environment
----------------------------------------
-When trying to initialize another distributed task in the same program by creating another process group,
-it is important to make sure that the two groups do not get mixed up. This is why we should explicitly
-destroy the process group used for the ray tracing after we are done using it.
-This is also handled by the ``environment_generator`` we set up in the beginning of this tutorial.
-Simply execute the following code and you are done:
+          Rank 0
+     - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/reduced_bitmap_on_multi_focus_tower_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+This ``all_reduce`` is performed per process subgroup, meaning it only reduces the results of heliostats within the respective
+group and can be skipped because the global ``all_reduce`` would handle it as well.
+The final bitmap on each target is reduced by:
 
 .. code-block::
 
-    # Make sure the code after the yield statement in the environment Generator
-    # is called, to clean up the distributed process group.
-    try:
-        next(environment_generator)
-    except StopIteration:
-        pass
+    if ddp_setup[config_dictionary.is_distributed]:
+        torch.distributed.all_reduce(
+            combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
+        )
 
+.. list-table:: Bitmaps per target area (on the ``multi_focus_tower``) after final reduce
+   :widths: 33 33 33
+   :header-rows: 0
 
-Further Information
--------------------
-The heliostat ray tracing parallelization with DDP parallelizes over the number of heliostats in the scenario.
-During the initialization of the ``HeliostatRayTracer``, a ``DistortionsDataset`` is set up. This dataset is
-later handed to a distributed sampler and a distributed data loader which distribute individual parts of
-the dataset among the distributed ranks. The ``DistortionsDataset`` samples ray distortions according to the
-parameters in the ``lightsource``. In the end the dataset contains a tuple of ray distortions in the east and up direction.
-If we inspect one element of the dataset tuple for example ``distortions_e`` (and everything is the same for ``distortions_u```),
-we see that it is a multi-dimensional tensor of shape ``(number of heliostats, number of rays per point, number of surface points per facet)``.
-This means for each surface point on each heliostat we sample ``number_of_rays`` different ray distortions.
-As defined in the ``DistortionsDataset``, the length of the dataset always equals to ``number_of_heliostats``. The dataset is split
-by the sampler and loader along this dimension. If the ``number_of_heliostats`` is only one, the dataset cannot be split, all rays go
-to ``rank`` zero, even if you parallelize with four ranks. ``rank`` one to n will be idle.
-If the ``number_of_heliostats`` is greater or equal to the ``world_size``, all ranks will receive data.
+   * - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_0.png
+          :scale: 30%
+
+          Rank 0
+     - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_1.png
+          :scale: 30%
+
+          Rank 1
+     - .. figure:: ./images/final_reduced_bitmap_on_multi_focus_tower_on_rank_2.png
+          :scale: 30%
+
+          Rank 2
+
+Now all ranks are synchronized and we have the final image shared across them. With that we have completed fully
+distributed raytracing in ``ARTIST``!
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.

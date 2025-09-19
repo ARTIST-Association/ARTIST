@@ -4,13 +4,19 @@
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
-[![](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11131/badge)](https://www.bestpractices.dev/projects/11131)
+[![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange)](https://fair-software.eu)
+[![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32221&r=133)
+[![](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![codecov](https://codecov.io/gh/ARTIST-Association/ARTIST/graph/badge.svg?token=AEUYvTNXz1)](https://codecov.io/gh/ARTIST-Association/ARTIST)
-[![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ARTIST-Association/ARTIST/main.svg)](https://results.pre-commit.ci/latest/github/ARTIST-Association/ARTIST/main)
 [![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
-[![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange)](https://fair-software.eu)
+[![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
+
+
 ## What ``ARTIST`` can do for you
 
 The ``ARTIST`` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
@@ -33,14 +39,15 @@ smooth parametric descriptions of heliostats.
 - **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation,
   allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
 
-- **Optimized flux density:** Coming soon so stay tuned :rocket:!
+- **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by optimizing
+  the motor positions of all heliostats to distribute the flux optimally over the receiver.
 
 
 ## Installation
 We heavily recommend installing the `ARTIST` package in a dedicated `Python3.10+` virtual environment. You can
 install ``ARTIST`` directly from the GitHub repository via:
 ```bash
-pip install git+https://github.com/ARTIST-Association/ARTIST
+pip install artist
 ```
 Alternatively, you can install ``ARTIST`` locally. To achieve this, there are two steps you need to follow:
 1. Clone the `ARTIST` repository:
