@@ -3,8 +3,8 @@
 The Scenario HDF5 File Format
 =============================
 
-In ``ARTIST``, everything is based of a so-called *scenario* file. In this HDF5 (Hierarchical Data Format) file, the
-complete setup of the thermal solar power plant, such as the type, layout, and orientation of the heliostats in the field
+In ``ARTIST``, everything is based on a so-called *scenario* file. In this HDF5 (Hierarchical Data Format) file, the
+complete setup of the solar tower power plant, such as the type, layout, and orientation of the heliostats in the field
 or the positions of the receiver and calibration targets, are defined. The HDF5 file format is designed to store and
 organize large amounts of data in a hierarchical structure. It supports various data types, including numerical arrays,
 tables, and metadata, and provides efficient compression and chunking techniques, making them suitable for handling large
