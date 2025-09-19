@@ -8,7 +8,7 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/05_motor_positions_optimizer.py
 
-This tutorial introduces the process of optimizing heliostat motor positions using the ``ARTIST`` software. This is crucial for precise alignment and maximizing the flux density on a target area.
+This tutorial introduces the process of optimizing heliostat motor positions using the ``ARTIST`` software. This is crucial for precise alignment and maximizing the efficiency of the power plant.
 
 The tutorial will walk you through the key concepts needed to perform this optimization, including:
 
