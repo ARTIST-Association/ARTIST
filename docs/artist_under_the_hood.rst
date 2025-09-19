@@ -129,14 +129,18 @@ with:
    * - ``A_num``
      - The number of actuators for the selected kinematic type.
    * - ``N_active``
-     - The number of active heliostats, which is a subset of ``N``.
+     - The number of active heliostats.
 
 Note that since a heliostat's surface is modeled by multiple facets (see :ref:`this info on heliostats <heliostats>`),
 the number of surface points is internally divided among these facets. Additionally, for raytracing, we always consider
 each surface point to have a single surface normal, and therefore the number of surface points is always equal to the
 number of surface normals.
 
-What may be confusing is the ``N_active`` parameter, which refers to active heliostats. To better understand this, we
+What may be confusing is the ``N_active`` parameter, which refers to active heliostats. The ``N_active`` parameter exists
+because it is possible to only address certain heliostats during operational tasks. It is also possible, that ``N_active``
+is larger than ``N``. This occurs during calibration or optimization tasks, when a single heliostat may be duplicated
+multiple times, to account for multiple training data samples. ``N_active`` sums all duplicates of all activated
+heliostats. To better understand this, we
 need to consider heliostat groups, which we discuss in the next section.
 
 Heliostat Groups
