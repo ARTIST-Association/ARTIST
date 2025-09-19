@@ -36,7 +36,7 @@ the ``PAINT`` database: https://paint-database.org/. Multiple heliostats can be 
 heliostat can be calibrated with multiple calibration data points at once.
 
 Calibration data consists of calibration properties and a flux image. We load this data with a mapping, analog to the
-appraoch shown in the tutorial on :ref:`surface reconstruction<tutorial_surface_reconstruction>`. Specifically, we
+approach shown in the tutorial on :ref:`surface reconstruction<tutorial_surface_reconstruction>`. Specifically, we
 create a ``heliostat_data_mapping`` list of tuples, where each tuple contains the heliostat's name and the paths to its
 calibration data, which include both a ``.json`` file with calibration properties and a ``.png`` flux image:
 
@@ -181,12 +181,21 @@ What Happens in Calibration?
 ----------------------------
 
 To understand calibration, lets look at a small example based on this tutorial. We were to consider a scenario with
-three heliostats: ``AA31``, ``AA39``, and ``AA43``. When we perform raytracing using these three heliostats, we get the
-following flux images on the target:
+three heliostats: ``AA31``, ``AA39``, and ``AC43``.
 
-.. list-table:: Heliostat bitmaps before calibration
+.. list-table:: Heliostat fluxes before and after calibration
    :widths: 33 33 33
    :header-rows: 0
+
+    * - .. figure:: ./images/heliostat_AA31_original.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AA39_original.png
+          :scale: 32%
+
+     - .. figure:: ./images/heliostat_AC43_original.png
+          :scale: 32%
+
 
    * - .. figure:: ./images/heliostat_AA31_before_calibration.png
           :scale: 32%
@@ -197,14 +206,6 @@ following flux images on the target:
      - .. figure:: ./images/heliostat_AC43_before_calibration.png
           :scale: 32%
 
-If we look closely, we can see that all of these focal spots are off-center, i.e. the centroid or center of mass of each
-focal spot is not in the middle of the target.
-
-However, after calibration, if we again perform raytracing we get the following images:
-
-.. list-table:: Heliostat bitmaps after calibration
-   :widths: 33 33 33
-   :header-rows: 0
 
    * - .. figure:: ./images/heliostat_AA31_after_calibration.png
           :scale: 32%
@@ -215,8 +216,19 @@ However, after calibration, if we again perform raytracing we get the following 
      - .. figure:: ./images/heliostat_AC43_after_calibration.png
           :scale: 32%
 
-Whilst the changes are small - the focal spots are now clearly centered in the target. Therefore, we can now consider our
-heliostats to be calibrated - and that is all there is to kinematic calibration in ``ARTIST``!
+
+When we perform raytracing without prior calibration and compare the generated fluxes from ``ARTIST`` with the
+fluxes measured on the solar tower during a calibration, as in the first two rows of the images above, we notice,
+the following:
+
+- The resolution of the generated flux images is much lower than in the measured flux images - this is okay.
+- The shapes of the generated fluxes and the measured fluxes match.
+- **The generated and measured fluxes do not align perfectly.**
+
+After the kinematic calibration, where the digital twin ``ARTIST`` learns the real world imperfections, the generated
+fluxes in ``ARTIST`` have now moved. Whilst the changes are small, it is noticeable that the focal spots are now better
+aligned with the measured fluxes, compare rows 1 and 3 in the images above. Therefore, we can now consider our heliostat
+kinematics to be calibrated - and that is all there is to kinematic calibration in ``ARTIST``!
 
 .. note::
 
