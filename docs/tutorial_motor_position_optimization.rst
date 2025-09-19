@@ -105,9 +105,10 @@ analysis. That is all there is to motor position optimization in ``ARTIST``.
 The Effect of Motor Position Optimization
 -----------------------------------------
 
-To better understand why motor position optimization is important lets consider a small example. On a receiver, the aim
-is to obtain maximal efficiency by having an even distribution of the flux across the receiver. In this setting, it will
-heat up in a uniform manner rather than having varying temperatures throughout. In the following image, this is clearly
+To better understand why motor position optimization is important lets consider a small example. Each receiver is is
+designed and constructed with a known optimal distribution in mind. This distribution might be a homogenous distribution
+or something similar. The aim is to realize this optimal distribution with all available heliostats. In the current
+tutorial, we aim to achieve a uniform distribution, but as we see in the following image, this is clearly
 not the case:
 
 .. figure:: ./images/flux_before_aimpoint_optimization.png
