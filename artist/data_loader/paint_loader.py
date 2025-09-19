@@ -619,6 +619,7 @@ def _ideal_surface_generator(
         for API compatibility.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
+        Tensor of shape [number_of_facets, 4].
     canting : torch.Tensor
         The canting vectors for each facet.
     number_of_nurbs_control_points : torch.Tensor
