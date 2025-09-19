@@ -186,7 +186,9 @@ def create_surface_plots(name: str) -> None:
             )
 
 
-def create_flux_plots(heliostat_names: list[str], plot_name: str) -> None:
+def create_flux_plots(
+    heliostat_names: list[str], number_of_plots_per_heliostat: int, plot_name: str
+) -> None:
     """
     Create data to plot the heliostat fluxes.
 
@@ -194,6 +196,8 @@ def create_flux_plots(heliostat_names: list[str], plot_name: str) -> None:
     ----------
     heliostat_names : list[str]
         The names of all heliostats to be plotted.
+    number_of_plots_per_heliostat : int
+        The number of flux plots for each heliostat.
     plot_name : str
         The name for the plots.
     """
@@ -201,7 +205,7 @@ def create_flux_plots(heliostat_names: list[str], plot_name: str) -> None:
     validation_heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
         base_path="/path/to/data",
         heliostat_names=heliostat_names,
-        number_of_measurements=2,
+        number_of_measurements=number_of_plots_per_heliostat,
         image_variant="flux-centered",
         randomize=True,
     )
@@ -460,8 +464,13 @@ with setup_distributed_environment(
     # Visualize the ideal surfaces and flux distributions from ideal heliostats.
     # Please adapt the heliostat names according to the ones to be plotted.
     heliostat_names = ["heliostat_name_1, heliostat_name_2"]
+    number_of_plots_per_heliostat = 2
     create_surface_plots(name="ideal")
-    create_flux_plots(heliostat_names=heliostat_names, plot_name="ideal")
+    create_flux_plots(
+        heliostat_names=heliostat_names,
+        number_of_plots_per_heliostat=number_of_plots_per_heliostat,
+        plot_name="ideal",
+    )
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -484,4 +493,8 @@ print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_helio
 
 # Visualize the results (reconstructed surfaces and flux distributions from reconstructed heliostats).
 create_surface_plots(name="reconstructed")
-create_flux_plots(heliostat_names=heliostat_names, plot_name="reconstructed")
+create_flux_plots(
+    heliostat_names=heliostat_names,
+    number_of_plots_per_heliostat=number_of_plots_per_heliostat,
+    plot_name="reconstructed",
+)
