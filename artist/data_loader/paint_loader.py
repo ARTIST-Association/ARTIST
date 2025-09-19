@@ -622,8 +622,10 @@ def _ideal_surface_generator(
         Tensor of shape [number_of_facets, 4].
     canting : torch.Tensor
         The canting vectors for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points.
+        Tensor of shape [2].
     device : torch.device | None
         The device to use.
     \*\*kwargs : Any
@@ -634,6 +636,8 @@ def _ideal_surface_generator(
     SurfaceConfig
         The generated ideal surface configuration object.
     """
+    device = get_device(device=device)
+    
     surface_generator = SurfaceGenerator(
         number_of_control_points=number_of_nurbs_control_points.to(device),
         device=device,
@@ -665,10 +669,13 @@ def _fitted_surface_generator(
         A tuple containing the heliostat name, path to the properties file, and path to deflecometry data file.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
+        Tensor of shape [number_of_facets, 4].
     canting : torch.Tensor
         The canting vectors for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points.
+        Tensor of shape [2].
     device : torch.device | None
         The device to use.
     \*\*kwargs : Any
@@ -685,6 +692,8 @@ def _fitted_surface_generator(
     SurfaceConfig
         The generated fitted surface configuration object.
     """
+    device = get_device(device=device)
+    
     surface_generator = SurfaceGenerator(
         number_of_control_points=number_of_nurbs_control_points.to(device),
         device=device,
@@ -759,7 +768,7 @@ def _process_heliostats_from_paths(
     heliostat_config_list = []
 
     for heliostat_index, file_tuple in enumerate(paths):
-        # Extract common heliostat properties
+        # Extract common heliostat properties.
         (
             heliostat_position,
             facet_translation_vectors,
@@ -871,6 +880,8 @@ def extract_paint_heliostats_ideal_surface(
     PrototypeConfig
         The configuration for a heliostat prototype.
     """
+    device = get_device(device=device)
+    
     return _process_heliostats_from_paths(
         paths=paths,
         power_plant_position=power_plant_position,
@@ -929,6 +940,8 @@ def extract_paint_heliostats_fitted_surface(
     PrototypeConfig
         The configuration for a heliostat prototype.
     """
+    device = get_device(device=device)
+    
     return _process_heliostats_from_paths(
         paths=paths,
         power_plant_position=power_plant_position,
