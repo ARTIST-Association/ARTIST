@@ -39,10 +39,10 @@ Before we start defining the scenario, we need to determine where it will be sav
 
 After this step, the process differs depending on which data source you are using. Data from different data sources
 may have to be handled differently to create scenarios in ``ARTIST``. Depending on the structure of the input data,
-different functions will need to be called. This tutorial shows how to convert ``STRAL`` and``PAINT`` data to create
+different functions will need to be called. This tutorial shows how to convert ``STRAL`` and ``PAINT`` data to create
 usable scenarios for ``ARTIST``.
 
-We will first first look at using ``PAINT`` data to generate a scenario. If you are only interested in ``STRAL`` please
+We will first look at using ``PAINT`` data to generate a scenario. If you are only interested in ``STRAL`` please
 jump to :ref:`stral`.
 
 .. _paint:
@@ -95,7 +95,7 @@ Now we will get into building the scenario.
 
 Power Plant and Target Areas
 ----------------------------
-To location of the power plant as well as information on the target areas (i.e. the receiver or calibration targets) is
+The location of the power plant as well as information on the target areas (i.e. the receiver or calibration targets) is
 loaded simultaneously in paint form the ``tower-measurement.json`` file.
 
 We can load this information using functions from the ``paint_loader``. In this case, the function below will return
@@ -190,7 +190,7 @@ as shown below:
     ]
 
 Now, before we load the heliostats we need to do some configuration. ``ARTIST`` internally models all surfaces with
-:ref:`NURBS <nurbs>`, which are learnt when loading the data. Therefore we have to set certain parameters, such as the
+:ref:`NURBS <nurbs>`, which are learnt when loading the data. Therefore, we have to set certain parameters, such as the
 number of control points, the fit tolerance, the number of epochs to train for, etc. We also need to configure an optimizer
 for the training process and a learning rate scheduler. This is shown below:
 
