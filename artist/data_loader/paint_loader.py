@@ -637,7 +637,7 @@ def _ideal_surface_generator(
         The generated ideal surface configuration object.
     """
     device = get_device(device=device)
-    
+
     surface_generator = SurfaceGenerator(
         number_of_control_points=number_of_nurbs_control_points.to(device),
         device=device,
@@ -693,7 +693,7 @@ def _fitted_surface_generator(
         The generated fitted surface configuration object.
     """
     device = get_device(device=device)
-    
+
     surface_generator = SurfaceGenerator(
         number_of_control_points=number_of_nurbs_control_points.to(device),
         device=device,
@@ -881,7 +881,7 @@ def extract_paint_heliostats_ideal_surface(
         The configuration for a heliostat prototype.
     """
     device = get_device(device=device)
-    
+
     return _process_heliostats_from_paths(
         paths=paths,
         power_plant_position=power_plant_position,
@@ -941,7 +941,7 @@ def extract_paint_heliostats_fitted_surface(
         The configuration for a heliostat prototype.
     """
     device = get_device(device=device)
-    
+
     return _process_heliostats_from_paths(
         paths=paths,
         power_plant_position=power_plant_position,
