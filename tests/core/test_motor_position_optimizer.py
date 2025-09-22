@@ -9,7 +9,7 @@ from artist import ARTIST_ROOT
 from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary
 
 
 @pytest.fixture
@@ -19,12 +19,9 @@ def focal_spot() -> torch.Tensor:
 
     Returns
     -------
-    optimization_goal : torch.Tensor
+    torch.Tensor
         The desired focal spot.
-        Tensor of shape [4] or.
-    loss_function : Callable[..., torch.Tensor],
-        A callable function that computes the loss. It accepts predictions and targets
-        and optionally other keyword arguments and return a tensor with loss values.
+        Tensor of shape [4].
     """
     ground_truth = torch.tensor([1.1493, -0.5030, 57.0474, 1.0000])
 
@@ -32,26 +29,25 @@ def focal_spot() -> torch.Tensor:
 
 
 @pytest.fixture
-def distribution() -> torch.Tensor:
+def distribution(device) -> torch.Tensor:
     """
     Use a distribution as target in the loss function.
 
     Returns
     -------
-    optimization_goal : torch.Tensor
+    torch.Tensor
         The desired distribution.
         Tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
-    loss_function : Callable[..., torch.Tensor],
-        A callable function that computes the loss. It accepts predictions and targets
-        and optionally other keyword arguments and return a tensor with loss values.
     """
-    e_trapezoid = utils.trapezoid_distribution(
-        total_width=256, slope_width=30, plateau_width=180
+    distribution_path_group_1 = (
+        pathlib.Path(ARTIST_ROOT)
+        / "tests/data/expected_optimized_motor_positions"
+        / "distribution.pt"
     )
-    u_trapezoid = utils.trapezoid_distribution(
-        total_width=256, slope_width=30, plateau_width=180
+
+    ground_truth = torch.load(
+        distribution_path_group_1, map_location=device, weights_only=True
     )
-    ground_truth = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
     return ground_truth
 
@@ -79,7 +75,7 @@ def test_motor_positions_optimizer(
     loss_class : Loss
         The loss class.
     ground_truth_fixture_name : str
-        A fixture to retrive the ground truth.
+        A fixture to retrieve the ground truth.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
     request : pytest.FixtureRequest
@@ -104,12 +100,12 @@ def test_motor_positions_optimizer(
     }
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-3,
+        config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 15,
+        config_dictionary.max_epoch: 5,
         config_dictionary.num_log: 1,
         config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 13,
+        config_dictionary.early_stopping_patience: 4,
         config_dictionary.scheduler: config_dictionary.cyclic,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }

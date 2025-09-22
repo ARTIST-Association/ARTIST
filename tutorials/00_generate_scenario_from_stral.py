@@ -5,11 +5,9 @@ import torch
 from artist.data_loader import stral_loader
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
-    ActuatorListConfig,
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicConfig,
     KinematicPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -132,7 +130,7 @@ surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.face
 # Include the kinematic prototype configuration.
 kinematic_prototype_config = KinematicPrototypeConfig(
     type=config_dictionary.rigid_body_key,
-    initial_orientation=[0.0, 0.0, 1.0, 0.0],
+    initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
 # The minimum and maximum motor positions provided here are approximations of the actuators in the heliostat field in Juelich.
@@ -170,37 +168,12 @@ prototype_config = PrototypeConfig(
     actuators_prototype=actuator_prototype_config,
 )
 
-# Include kinematic configuration for the heliostat.
-heliostat1_kinematic_config = KinematicConfig(
-    type=config_dictionary.rigid_body_key,
-    initial_orientation=[0.0, 0.0, 1.0, 0.0],
-)
-
-# Include actuators for the heliostat.
-actuator1_heliostat1 = ActuatorConfig(
-    key="actuator_1",
-    type=config_dictionary.ideal_actuator_key,
-    clockwise_axis_movement=False,
-    min_max_motor_positions=min_max_motor_positions_actuator_1,
-)
-actuator2_heliostat1 = ActuatorConfig(
-    key="actuator_2",
-    type=config_dictionary.ideal_actuator_key,
-    clockwise_axis_movement=True,
-    min_max_motor_positions=min_max_motor_positions_actuator_2,
-)
-
-actuator_heliostat1_list = [actuator1_heliostat1, actuator2_heliostat1]
-heliostat1_actuator_config = ActuatorListConfig(actuator_list=actuator_heliostat1_list)
 
 # Include the configuration for a heliostat.
 heliostat1 = HeliostatConfig(
     name="heliostat_1",
     id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
-    surface=surface_config,
-    kinematic=heliostat1_kinematic_config,
-    actuators=heliostat1_actuator_config,
 )
 
 # Create a list of all the heliostats - in this case, only one.

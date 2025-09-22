@@ -3,6 +3,7 @@ import logging
 import pathlib
 import random
 from collections import Counter, defaultdict
+from typing import Any, Callable
 
 import h5py
 import torch
@@ -19,6 +20,7 @@ from artist.scenario.configuration_classes import (
     KinematicPrototypeConfig,
     PowerPlantConfig,
     PrototypeConfig,
+    SurfaceConfig,
     SurfacePrototypeConfig,
     TargetAreaConfig,
     TargetAreaListConfig,
@@ -212,6 +214,7 @@ def extract_paint_tower_measurements(
         The configuration of the tower target areas.
     """
     device = get_device(device=device)
+
     log.info("Beginning extraction of tower data from ```PAINT``` file.")
 
     with open(tower_measurements_path, "r") as file:
@@ -606,51 +609,160 @@ def extract_paint_deflectometry_data(
     return surface_points_with_facets_list, surface_normals_with_facets_list
 
 
-def extract_paint_heliostats(
+def _ideal_surface_generator(
+    file_tuple: tuple[str, pathlib.Path],
+    facet_translation_vectors: torch.Tensor,
+    canting: torch.Tensor,
+    number_of_nurbs_control_points: torch.Tensor,
+    device: torch.device | None,
+    **kwargs: Any,
+) -> SurfaceConfig:
+    r"""
+    Generate a surface configuration for an ideal heliostat.
+
+    This is a helper function designed to be passed as a callable to the `_process_heliostats_from_paths` function,
+    handling the specific logic for generating an ideal surface.
+
+    Parameters
+    ----------
+    file_tuple : tuple[str, pathlib.Path]
+        A tuple containing the heliostat name and path to the properties file, not used in this function but required
+        for API compatibility.
+    facet_translation_vectors : torch.Tensor
+        The translation vectors for each facet.
+        Tensor of shape [number_of_facets, 4].
+    canting : torch.Tensor
+        The canting vectors for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points.
+        Tensor of shape [2].
+    device : torch.device | None
+        The device to use.
+    \*\*kwargs : Any
+        Additional keyword arguments, not used by this function but accepted for API compatibility.
+
+    Returns
+    -------
+    SurfaceConfig
+        The generated ideal surface configuration object.
+    """
+    device = get_device(device=device)
+
+    surface_generator = SurfaceGenerator(
+        number_of_control_points=number_of_nurbs_control_points.to(device),
+        device=device,
+    )
+    return surface_generator.generate_ideal_surface_config(
+        facet_translation_vectors=facet_translation_vectors,
+        canting=canting,
+        device=device,
+    )
+
+
+def _fitted_surface_generator(
+    file_tuple: tuple[str, pathlib.Path, pathlib.Path],
+    facet_translation_vectors: torch.Tensor,
+    canting: torch.Tensor,
+    number_of_nurbs_control_points: torch.Tensor,
+    device: torch.device | None,
+    **kwargs: Any,
+) -> SurfaceConfig:
+    r"""
+    Generate a surface configuration for a fitted heliostat.
+
+    This is a helper function designed to be passed as a callable to the `_process_heliostats_from_paths` function,
+    handling the specific logic for generating a fitted surface based on deflectometry data.
+
+    Parameters
+    ----------
+    file_tuple : tuple[str, pathlib.Path, pathlib.Path]
+        A tuple containing the heliostat name, path to the properties file, and path to deflecometry data file.
+    facet_translation_vectors : torch.Tensor
+        The translation vectors for each facet.
+        Tensor of shape [number_of_facets, 4].
+    canting : torch.Tensor
+        The canting vectors for each facet.
+        Tensor of shape [number_of_facets, 2, 4].
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points.
+        Tensor of shape [2].
+    device : torch.device | None
+        The device to use.
+    \*\*kwargs : Any
+        Additional keyword arguments used for the fitting process, including:
+        - `nurbs_fit_optimizer`: The PyTorch optimizer for the NURBS fit.
+        - `nurbs_fit_scheduler`: The PyTorch learning rate scheduler for the fit.
+        - `deflectometry_step_size`: Step size to reduce data points for efficiency.
+        - `nurbs_fit_method`: The fitting method to use.
+        - `nurbs_fit_tolerance`: The tolerance for the fitting convergence.
+        - `nurbs_fit_max_epoch`: The maximum number of epochs for the fit.
+
+    Returns
+    -------
+    SurfaceConfig
+        The generated fitted surface configuration object.
+    """
+    device = get_device(device=device)
+
+    surface_generator = SurfaceGenerator(
+        number_of_control_points=number_of_nurbs_control_points.to(device),
+        device=device,
+    )
+    (surface_points_with_facets_list, surface_normals_with_facets_list) = (
+        extract_paint_deflectometry_data(
+            heliostat_deflectometry_path=pathlib.Path(file_tuple[2]),
+            number_of_facets=facet_translation_vectors.shape[0],
+            device=device,
+        )
+    )
+    return surface_generator.generate_fitted_surface_config(
+        heliostat_name=str(file_tuple[0]),
+        facet_translation_vectors=facet_translation_vectors,
+        canting=canting,
+        surface_points_with_facets_list=surface_points_with_facets_list,
+        surface_normals_with_facets_list=surface_normals_with_facets_list,
+        optimizer=kwargs.get("nurbs_fit_optimizer"),
+        scheduler=kwargs.get("nurbs_fit_scheduler"),
+        deflectometry_step_size=kwargs.get("deflectometry_step_size", 100),
+        fit_method=kwargs.get(
+            "nurbs_fit_method", config_dictionary.fit_nurbs_from_normals
+        ),
+        tolerance=kwargs.get("nurbs_fit_tolerance", 1e-10),
+        max_epoch=kwargs.get("nurbs_fit_max_epoch", 400),
+        device=device,
+    )
+
+
+def _process_heliostats_from_paths(
     paths: (
         list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
     ),
     power_plant_position: torch.Tensor,
-    number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
-    deflectometry_step_size: int = 100,
-    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
-    nurbs_fit_tolerance: float = 1e-10,
-    nurbs_fit_max_epoch: int = 400,
-    nurbs_fit_optimizer: torch.optim.Optimizer | None = None,
-    nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    number_of_nurbs_control_points: torch.Tensor,
+    surface_config_generator: Callable,
     device: torch.device | None = None,
+    **kwargs: Any,
 ) -> tuple[HeliostatListConfig, PrototypeConfig]:
-    """
-    Extract heliostat data from ``PAINT`` heliostat properties and deflectometry files.
-
-    Note: Currently in ``PAINT`` all heliostats use a rigid body kinematic. This is why this type is hard coded in the kinematic config.
+    r"""
+    Process heliostat properties from file paths.
 
     Parameters
     ----------
     paths : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
-        Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
+        The list of heliostat paths, where each element's structure depends on whether the surface is ideal or fitted,
+        i.e. for ideal surfaces only the heliostat name and path to the properties file is required, whilst for the
+        fitted surface the path to the deflectometry file is also required.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-        Tensor of shape [3].
     number_of_nurbs_control_points : torch.Tensor
-        The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
-        Tensor of shape [2].
-    deflectometry_step_size : int
-        The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
-    nurbs_fit_method : str
-        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
-    nurbs_fit_tolerance : float
-        The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-    nurbs_fit_max_epoch : int
-        The maximum number of epochs for the NURBS fit (default is 400).
-    nurbs_fit_optimizer : torch.optim.Optimizer | None
-        The NURBS fit optimizer (default is None).
-    nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler | None
-        The NURBS fit learning rate scheduler (default is None).
+        The number of NURBS control points.
+    surface_config_generator : Callable
+        A function that generates the surface configuration, either ideal or fitted.
     device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
+        The device to use.
+    \*\*kwargs : Any
+        Any additional arguments to pass to the surface config generator function.
 
     Returns
     -------
@@ -664,15 +776,10 @@ def extract_paint_heliostats(
     prototype_surface = None
     prototype_kinematic = None
     prototype_actuator_list = None
-
     heliostat_config_list = []
-    for heliostat_index, file_tuple in enumerate(paths):
-        # Generate surface configuration from data.
-        surface_generator = SurfaceGenerator(
-            number_of_control_points=number_of_nurbs_control_points.to(device),
-            device=device,
-        )
 
+    for heliostat_index, file_tuple in enumerate(paths):
+        # Extract common heliostat properties.
         (
             heliostat_position,
             facet_translation_vectors,
@@ -686,49 +793,17 @@ def extract_paint_heliostats(
             device=device,
         )
 
-        # If there is a deflectometry file, generate a deflectometry surface. Else, load an ideal surface.
-        if len(file_tuple) == 3:
-            (surface_points_with_facets_list, surface_normals_with_facets_list) = (
-                extract_paint_deflectometry_data(
-                    heliostat_deflectometry_path=pathlib.Path(file_tuple[2]),
-                    number_of_facets=facet_translation_vectors.shape[0],
-                    device=device,
-                )
-            )
-
-            if nurbs_fit_optimizer is None:
-                raise ValueError(
-                    "When providing deflectometry data to generate surfaces with a NURBS fit, an optimizer needs to be provided!"
-                )
-
-            # Include the surface configuration.
-            surface_config = surface_generator.generate_fitted_surface_config(
-                heliostat_name=str(file_tuple[0]),
-                facet_translation_vectors=facet_translation_vectors,
-                canting=canting,
-                surface_points_with_facets_list=surface_points_with_facets_list,
-                surface_normals_with_facets_list=surface_normals_with_facets_list,
-                optimizer=nurbs_fit_optimizer,
-                scheduler=nurbs_fit_scheduler,
-                deflectometry_step_size=deflectometry_step_size,
-                fit_method=nurbs_fit_method,
-                tolerance=nurbs_fit_tolerance,
-                max_epoch=nurbs_fit_max_epoch,
-                device=device,
-            )
-
-        else:
-            # Include the surface configuration.
-            surface_config = surface_generator.generate_ideal_surface_config(
-                facet_translation_vectors=facet_translation_vectors,
-                canting=canting,
-                device=device,
-            )
-
+        # Generate the surface configuration using the callable generator function.
+        surface_config = surface_config_generator(
+            file_tuple=file_tuple,
+            facet_translation_vectors=facet_translation_vectors,
+            canting=canting,
+            number_of_nurbs_control_points=number_of_nurbs_control_points,
+            device=device,
+            **kwargs,
+        )
         prototype_surface = surface_config
 
-        # Include the kinematic configuration.
-        # Currently in PAINT all heliostats use a rigid body kinematic.
         kinematic_config = KinematicConfig(
             type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
@@ -736,7 +811,6 @@ def extract_paint_heliostats(
         )
         prototype_kinematic = kinematic_config
 
-        # Include the actuator configuration.
         actuator_list = []
         for actuator_index, actuator_parameters_tuple in enumerate(
             actuator_parameters_list
@@ -749,12 +823,10 @@ def extract_paint_heliostats(
                 parameters=actuator_parameters_tuple[3],
             )
             actuator_list.append(actuator)
-
         actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)
-
         prototype_actuator_list = actuator_list
 
-        # Include the heliostat configuration.
+        # Create the heliostat configuration with the generated surface config.
         heliostat_config = HeliostatConfig(
             name=str(file_tuple[0]),
             id=heliostat_index,
@@ -763,10 +835,9 @@ def extract_paint_heliostats(
             kinematic=kinematic_config,
             actuators=actuators_list_config,
         )
-
         heliostat_config_list.append(heliostat_config)
 
-        # Include the configuration for a prototype.
+        # Create the prototype configuration.
         surface_prototype_config = SurfacePrototypeConfig(
             facet_list=prototype_surface.facet_list
         )
@@ -784,11 +855,117 @@ def extract_paint_heliostats(
         kinematic_prototype=kinematic_prototype_config,
         actuators_prototype=actuator_prototype_config,
     )
-
-    # Create the configuration for all heliostats.
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_config_list)
 
     return heliostats_list_config, prototype_config
+
+
+def extract_paint_heliostats_ideal_surface(
+    paths: list[tuple[str, pathlib.Path]],
+    power_plant_position: torch.Tensor,
+    number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
+    device: torch.device | None = None,
+) -> tuple[HeliostatListConfig, PrototypeConfig]:
+    """
+    Extract heliostat data with ideal surfaces from ``PAINT`` heliostat properties files.
+
+    Parameters
+    ----------
+    paths : list[tuple[str, pathlib.Path]]
+        Name of the heliostat and path to the heliostat properties file
+    power_plant_position : torch.Tensor
+        The position of the power plant in latitude, longitude and elevation.
+        Tensor of shape [3].
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
+        Tensor of shape [2].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    HeliostatListConfig
+        The configuration of all heliostats in the scenario.
+    PrototypeConfig
+        The configuration for a heliostat prototype.
+    """
+    device = get_device(device=device)
+
+    return _process_heliostats_from_paths(
+        paths=paths,
+        power_plant_position=power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        surface_config_generator=_ideal_surface_generator,
+        device=device,
+    )
+
+
+def extract_paint_heliostats_fitted_surface(
+    paths: list[tuple[str, pathlib.Path, pathlib.Path]],
+    power_plant_position: torch.Tensor,
+    nurbs_fit_optimizer: torch.optim.Optimizer,
+    nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler,
+    number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
+    deflectometry_step_size: int = 100,
+    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
+    nurbs_fit_tolerance: float = 1e-10,
+    nurbs_fit_max_epoch: int = 400,
+    device: torch.device | None = None,
+) -> tuple[HeliostatListConfig, PrototypeConfig]:
+    """
+    Extract heliostat data with fitted surfaces from ``PAINT`` heliostat properties and deflectometry files.
+
+    Parameters
+    ----------
+    paths : list[tuple[str, pathlib.Path, pathlib.Path]]
+        Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
+    power_plant_position : torch.Tensor
+        The position of the power plant in latitude, longitude and elevation.
+        Tensor of shape [3].
+    nurbs_fit_optimizer : torch.optim.Optimizer
+        The NURBS fit optimizer.
+    nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler
+        The NURBS fit learning rate scheduler.
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
+        Tensor of shape [2].
+    deflectometry_step_size : int
+        The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
+    nurbs_fit_method : str
+        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+    nurbs_fit_tolerance : float
+        The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
+    nurbs_fit_max_epoch : int
+        The maximum number of epochs for the NURBS fit (default is 400).
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ARTIST will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    HeliostatListConfig
+        The configuration of all heliostats in the scenario.
+    PrototypeConfig
+        The configuration for a heliostat prototype.
+    """
+    device = get_device(device=device)
+
+    return _process_heliostats_from_paths(
+        paths=paths,
+        power_plant_position=power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        surface_config_generator=_fitted_surface_generator,
+        device=device,
+        nurbs_fit_optimizer=nurbs_fit_optimizer,
+        nurbs_fit_scheduler=nurbs_fit_scheduler,
+        deflectometry_step_size=deflectometry_step_size,
+        nurbs_fit_method=nurbs_fit_method,
+        nurbs_fit_tolerance=nurbs_fit_tolerance,
+        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+    )
 
 
 def azimuth_elevation_to_enu(

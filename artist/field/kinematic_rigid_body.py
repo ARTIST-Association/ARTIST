@@ -71,6 +71,21 @@ class RigidBody(Kinematic):
         kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
         Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
 
+        The kinematic deviations for the rigid body kinematic comprise 18 parameters. The first six parameters refer to
+        the first joint, the second six parameters to the second joint, and the final 6 to the concentrator. Within each
+        group of six parameters, the first three parameters are the translations in the east, north, and up direction
+        respectively, whilst the second three parameters are the tilts in the east, north, and up direction. For example,
+        the first six parameters are:
+
+        - ``first_joint_translation_e``
+        - ``first_joint_translation_n``
+        - ``first_joint_translation_u``
+        - ``first_joint_tilt_e``
+        - ``first_joint_tilt_n``
+        - ``first_joint_tilt_u``
+
+        and this is then repeated for the second joint and the concentrator.
+
         Parameters
         ----------
         number_of_heliostats : int

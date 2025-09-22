@@ -1,7 +1,7 @@
 .. _nurbs:
 
-An Introduction to NURBS
-========================
+NURBS in ``ARTIST``
+===================
 
 ``ARTIST`` uses Non-Uniform Rational B-Splines (NURBS) to model the surface of heliostats for multiple reasons:
 
@@ -11,18 +11,18 @@ An Introduction to NURBS
   from point clouds or deflectometry data.
 - NURBS are **precise and performant**.
 
-This tutorial is divided into two parts. First, we consider some **NURBS Theory** before investigating **NURBS in
+Here we first consider some **NURBS Theory** before investigating **NURBS in
 ARTIST**.
 
 NURBS Theory
 ------------
 
-In this section of the tutorial, we consider the NURBS theory.
+In this section, we consider the NURBS theory.
 
-Simplifications for the Scope of this Tutorial
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Simplifications
+^^^^^^^^^^^^^^^
 
-For the scope of this tutorial and for the sake of simplicity, we only considers NURBS curves and not surfaces.
+For the sake of simplicity, we only considers NURBS curves and not surfaces.
 
 - The behavior of NURBS curves in two dimensions can easily be transferred to NURBS surfaces in three dimensions.
 - Two NURBS curves can span a NURBS surface.
@@ -68,7 +68,7 @@ Control Points
 The shape of the NURBS is directly determined by the control points. The most important aspects to remember about
 control points are:
 
-- The higher the number of control points, the better the approximation of a given curve.
+- A higher number of control points, usually allows for a more accurate approximation of a given curve.
 - The control points are represented as a list of points, importantly the **length of this list must be at least**
   :math:`\text{degree}+1`.
 - The shape formed by connecting the control points with straight lines is the *control polygon*.
@@ -129,7 +129,7 @@ further important observations include:
   strength, thus they are uniform (and have uniform knot vectors).
 - If this is not desired, then non-uniform NURBS with non-uniform knots must be considered.
 
-In ``ARTIST``, we only apply uniform NURBS. However, to complete the tutorial, we should also understand
+In ``ARTIST``, we only apply uniform NURBS. However, for completeness, we should also understand
 how to create non-uniform NURBS.
 
 Knots
@@ -189,7 +189,7 @@ We already discussed the knot span, however, there are a few important terms we 
 Control Weights
 """""""""""""""
 
-The last aspect of NURBS we want to consider is the control weights. The control weights are responsible for the
+The last aspect of NURBS we want to consider are the control weights. The control weights are responsible for the
 *rational* property of NURBS:
 
 - If all control weights are always 1, the NURBS are non-rational which is a special subset of rational NURBS.
@@ -199,6 +199,17 @@ The last aspect of NURBS we want to consider is the control weights. The control
 - Rational curves imply that some or all control weights differ from 1.
 
 Note that in ``ARTIST`` all control weights are always 1.
+
+The parametric UV space of 3D NURBS surfaces
+--------------------------------------------
+
+Contrary to the rest of ``ARTIST``, the NURBS are defined using variable names ending in :math:`u` and :math:`v` instead of the
+cartesian coordinate naming east, north and up. This is due to the mathematical concept behind the NURBS. NURBS are always defined
+in a parametric space, usually called the UV space, where the parameters :math:`u` and :math:`v` typically range from 0 to 1. Within
+this space, the surface is mathematically described through the concepts explained above (basis functions, ...). The physical surface
+itself does not exist in the 3D cartesian space until it is sampled. During the sampling the east, north, up (or :math:`x`, :math:`y`, :math:`z`)
+coordinates are first mapped back into the UV domain so that the parametric basis functions can be evaluated, producing the actual
+cartesian surface coordinates. The UV space enables the NURBS to represent smooth, continuous surfaces in a flexible way.
 
 NURBS in ``ARTIST``
 -------------------
@@ -222,16 +233,15 @@ Usage
 
 Using NURBS in ``ARTIST`` is simple:
 
-- A NURBS surface can be initialized by only providing the desired ``degree_e`` and ``degree_n``, the
-  ``evaluation_points_e`` and ``evaluation_points_n``, and the ``control points``, where ``e`` and ``n`` stand for the
-  east and north directions. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
-  Internally, the uniform knot vectors ``knots_e`` and ``knots_n`` are calculated from the input.
+- A NURBS surface can be initialized by only providing the desired ``degrees`` in the ``u`` and ``v`` direction, and the
+  associated ``control points``. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
+  Internally, the uniform knot vectors are calculated from the input.
 - The user can then simply call ``calculate_surface_points_and_normals()`` on the ``NURBSSurface`` and the surface
   points and surface normals are calculated and returned.
 
 For this calculation of the surface points and surface normals, three internal steps are executed:
 
-1. ``find_span()`` is called for both directions (east and north) to determine which evaluation point corresponds to
+1. ``find_span()`` is called for both directions to determine which evaluation point corresponds to
    which knot in the knot vector.
 2. Next, the basis functions and their derivatives are calculated, again for both directions using
    ``basis_function_and_derivatives()``.

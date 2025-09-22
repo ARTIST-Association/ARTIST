@@ -19,7 +19,6 @@ from artist.util import config_dictionary
         (KLDivergenceLoss, "paint", 1e-4),
         (PixelLoss, "paint", 1e-4),
         (PixelLoss, "invalid", 1e-4),
-        (PixelLoss, "paint", 1.0),
     ],
 )
 def test_surface_reconstructor(

@@ -92,9 +92,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Set number of rays.
-    scenario.light_sources.light_source_list[0].number_of_rays = int(
-        params["number_of_rays"]
-    )
+    scenario.set_number_of_rays(number_of_rays=int(params["number_of_rays"]))
 
     # Set nurbs degree.
     for heliostat_group in scenario.heliostat_field.heliostat_groups:
@@ -194,7 +192,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         device=device,
     ).sum()  # sum to reduce per_heliostat_loss to single scalar
 
-    return loss[0].item()
+    return loss.sum().item()
 
 
 if __name__ == "__main__":
