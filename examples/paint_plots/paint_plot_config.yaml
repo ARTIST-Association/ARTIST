@@ -2,3 +2,7 @@ metadata_dir: "./"
 metadata_file_name: "calibration_metadata_all_heliostats.csv"
 data_dir: "./paint_data"
 minimum_number_of_measurements: 80
+device: "cpu"
+tower_file_name: "WRI1030197-tower-measurements.json"
+heliostats_for_raytracing: ["AA39", "AY26", "BC34"]
+scenarios_dir: "./scenarios"
