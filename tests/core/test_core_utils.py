@@ -15,7 +15,7 @@ from artist.core.core_utils import per_heliostat_reduction, scale_loss
         (
             torch.tensor([1.0, 3.0, 5.0, 10.0]),
             torch.tensor([2, 0, 2]),
-            torch.tensor([2.0, 0.0, 7.5]),
+            torch.tensor([2.0, torch.inf, 7.5]),
         ),
         (
             torch.tensor([2.0, 4.0]),
@@ -23,7 +23,7 @@ from artist.core.core_utils import per_heliostat_reduction, scale_loss
             torch.tensor(
                 [
                     3.0,
-                    0.0,
+                    torch.inf,
                 ]
             ),
         ),

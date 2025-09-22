@@ -42,7 +42,7 @@ def distribution(device) -> torch.Tensor:
     distribution_path_group_1 = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_optimized_motor_positions"
-        / "desired_distribution.pt"
+        / "distribution.pt"
     )
 
     ground_truth = torch.load(
@@ -75,7 +75,7 @@ def test_motor_positions_optimizer(
     loss_class : Loss
         The loss class.
     ground_truth_fixture_name : str
-        A fixture to retrive the ground truth.
+        A fixture to retrieve the ground truth.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
     request : pytest.FixtureRequest

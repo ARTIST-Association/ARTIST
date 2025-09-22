@@ -6,22 +6,19 @@
 .. note::
 
     You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/02_kinematic_optimization_tutorial.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/04_kinematic_calibration_tutorial.py
 
-This tutorial provides a brief introduction to ``ARTIST`` showcasing how the kinematic calibration is performed.
-The tutorial will run through some basic concepts necessary to understanding ``ARTIST`` including:
+This tutorial explains how kinematic calibration is performed in ``ARTIST``, specifically we will look at:
 
-- Why do we need to calibrate the kinematic.
+- Why do we need to calibrate the kinematic?
 - How to load calibration data.
-- How to set up the ``KinematicOptimizer`` responsible for the kinematic calibration.
+- How to set up the ``KinematicCalibrator`` responsible for the kinematic calibration.
 
-It is best if you already know about the following processes in ``ARTIST``
-
-- How to load a scenario.
-- Aligning heliostats before ray tracing.
-- Performing heliostat ray tracing to generate a flux density image on the receiver.
-
-If you need help with this look into our other tutorials such as the tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
+Before starting this scenario make sure you already know how to :ref:`load a scenario<tutorial_heliostat_raytracing>`,
+run ``ARTIST`` in a :ref:`distributed environment for raytracing<tutorial_distributed_raytracing>`, and understand the
+structure of a :ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using one of the
+"test_scenario_paint_multiple_heliostat_groups_ideal.h5" or "test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
+scenarios provided in the "scenarios" folder.
 
 Kinematic Calibration Basics
 ----------------------------
@@ -31,123 +28,108 @@ In ``ARTIST`` we create a digital twin of a solar tower power plant. In the comp
 point exactly where we tell it to. To keep the predictions made with ``ARTIST`` as accurate as possible we need to
 consider the mechanical errors and offsets of the real-world kinematic. In the kinematic calibration process the kinematic module
 learns all offset or deviation parameters of the real-world kinematic, to mimic its behavior.
-Calibrating the kinematic in ``ARTIST`` requires calibration data. The flux density distributions used as input to the calibration
-can be gained by pointing single heliostats at calibration targets.
 
 Loading the Calibration Data
 ----------------------------
-Calibration data can be accessed from the ``PAINT`` database: https://paint-database.org/.
-Multiple heliostats can be calibrated at once and each heliostat can be calibrated with multiple calibration data points at once.
-To load the calibration data into the ``ARTIST`` environment we use a heliostat to calibration file mapping and the ``paint_loader``.
+Calibrating the kinematic in ``ARTIST`` requires calibration data. In this tutorial we consider calibration data from
+the ``PAINT`` database: https://paint-database.org/. Multiple heliostats can be calibrated simultaneously and each
+heliostat can be calibrated with multiple calibration data points at once.
 
-The mapping from heliostat to calibration files should follow this pattern:
+Calibration data consists of calibration properties and a flux image. We load this data with a mapping, analog to the
+approach shown in the tutorial on :ref:`surface reconstruction<tutorial_surface_reconstruction>`. Specifically, we
+create a ``heliostat_data_mapping`` list of tuples, where each tuple contains the heliostat's name and the paths to its
+calibration data, which include both a ``.json`` file with calibration properties and a ``.png`` flux image:
 
-.. code-block::
-
-    # Please follow the following style: list[tuple[str, list[pathlib.Path]]]
-    heliostat_calibration_mapping = [
-        (
-            "name1",
-            [
-                pathlib.Path(
-                    "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-                ),
-                # pathlib.Path(
-                #     "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-                # ),
-                # ....
-            ],
-        ),
-        (
-            "name2",
-            [
-                pathlib.Path(
-                    "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-                ),
-            ],
-        ),
-        # ...
-    ]
-
-In this mapping the first heliostat would have two calibration files and the second heliostat would have one.
-You can specify as many as you want for each helisotat. The data is loaded with the ``paint_loader`` like this:
 
 .. code-block::
 
-    # Load the calibration data.
+    # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+    heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]] = [
     (
-        focal_spots_calibration,
-        incident_ray_directions_calibration,
-        motor_positions_calibration,
-        heliostats_mask_calibration,
-        target_area_mask_calibration,
-    ) = paint_loader.extract_paint_calibration_data(
-        heliostat_calibration_mapping=[
-            (heliostat_name, paths)
-            for heliostat_name, paths in heliostat_calibration_mapping
-            if heliostat_name in heliostat_group.names
+        "heliostat_name_1",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
         ],
-        heliostat_names=heliostat_group.names,
-        target_area_names=scenario.target_areas.names,
-        power_plant_position=scenario.power_plant_position,
-        device=device,
-    )
-
-Now we have all the calibration data we need to calibrate the kinematic of the provided scenario.
-
-For this kinematic type there are altogether 28 optimizable parameters.
-18 parameters are kinematic deviation parameters, and then there are 5 actuator parameters for each actuator.
-You can select all of them with the following code:
-
-.. code-block::
-
-    # Select the kinematic parameters to be optimized and calibrated.
-    optimizable_parameters = [
-        heliostat_group.kinematic_deviation_parameters.requires_grad_(),
-        heliostat_group.actuator_parameters.requires_grad_(),
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    # ...
     ]
 
-Setting up the ``KinematicOptimizer``
--------------------------------------
-The kinematic optimizer object is responsible for the kinematic calibration. We define the kinematic optimizer by
-creating an ``KinematicOptimizer`` object as shown below:
+This data is then saved into a data dictionary which will be later used in the optimization:
 
 .. code-block::
 
-    # Create the kinematic optimizer.
-    kinematic_optimizer = KinematicOptimizer(
-        scenario=scenario,
-        calibration_group=calibration_group,
-        optimizer=optimizer,
-    )
+    # Create dict for the data source name and the heliostat_data_mapping.
+    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
+        config_dictionary.data_source: config_dictionary.paint,
+        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    }
 
-This object defines the following kinematic optimizer properties:
+If you are not using your own data, you can use the sample data provided in the "data", for example for the heliostats
+AA31, AA39, and AC43.
 
-- The ``scenario`` provides all of the environment variables.
-- The ``calibration_group`` contains all (replicated) heliostats.
-- The ``optimizer`` is a ``torch.optim.Optimizer`` like ``torch.optim.Adam`` that contains the optimizable parameters.
+Next, you can load the scenario and set up the distributed environment as in previous tutorials.
 
-Optimizing the parameters
--------------------------
-The set up is now complete and the kinematic calibration can begin. The kinematic calibration is an optimization process.
-We start the optimization process by calling:
+Configuring Scheduler and Optimizer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As in the :ref:`surface reconstruction<tutorial_surface_reconstruction>` tutorial, the kinematic optimizer also uses the
+``torch.optim.Adam`` optimizer. Therefore we again need to define the parameters used for the learning rate scheduler
+and the optimization configuration:
 
 .. code-block::
 
-    # Calibrate the kinematic.
-    kinematic_optimizer.optimize(
-        focal_spots_calibration=focal_spots_calibration,
-        incident_ray_directions=incident_ray_directions_calibration,
-        active_heliostats_mask=heliostats_mask_calibration,
-        target_area_mask_calibration=target_area_mask_calibration,
-        motor_positions_calibration=motor_positions_calibration,
-        tolerance=tolerance,
-        max_epoch=max_epoch,
-        num_log=max_epoch,
-        device=device,
-    )
+    scheduler = (
+        config_dictionary.exponential
+    )  # exponential, cyclic or reduce_on_plateau
+    scheduler_parameters = {
+        config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.3,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 10,
+    }
 
+    # Set optimization parameters.
+    optimization_configuration = {
+        config_dictionary.initial_learning_rate: 0.0005,
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 1000,
+        config_dictionary.num_log: 100,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 10,
+        config_dictionary.scheduler: scheduler,
+        config_dictionary.scheduler_parameters: scheduler_parameters,
+    }
 
+Now we are ready to set up the kinematic calibration.
+
+Setting up the ``KinematicCalibrator``
+--------------------------------------
+
+Before we can create a ``KinematicCalibrator`` object we need to decide which method we want to use to perform calibration.
 Currently there are two methods to calibrate the kinematic. Either we use geometric considerations and the
 motor positions from the calibration data or we optimize using flux density distributions and the differentiable
 ray tracer. Choosing the optimization method depends on the available calibration data.
@@ -156,27 +138,90 @@ Both methods need information about:
 - The centers of the measured flux density distributions,
 - The incident ray directions during the measurements,
 
-The calibration via the ``motor_positions`` additionally needs information about the motor positions
-that were measured during the calibration data acquisition. The ``motor_positions`` is an optional
-parameter in the ``optimize()`` function above. Since we included them here, the calibration happens via the motor positions.
+In this tutorial we use the raytracing method, since our experiments show this is slightly more robust:
 
-Optimization methods
---------------------
-Here is the workflow of the kinematic calibration with motor positions:
+.. code-block::
 
-- We start with default values for all optimizable parameters.
-- We calculate the preferred reflection direction of our heliostat through knowledge about the
-  center of the calibration flux density distribution.
-- In the optimization loop we calculate the current orientation of the heliostat from the motor positions,
-  then we calculate the actual reflection direction of the heliostat. The loss is defined by the
-  difference between the actual reflection direction and the preferred reflection direction from the calibration data.
-- The optimizer updates the optimizable parameters until it is accurate enough or the maximum number of epochs is reached.
+     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
 
-Here is the workflow of the kinematic calibration with the differentiable ray tracer.
+Now we can create a ``KinematicCalibrator`` object responsible for the kinematic calibration:
 
-- We start with default values for all optimizable parameters.
-- In the optimization loop we align the heliostat by providing the incident ray direction of the calibration data.
-  Then we create the heliostat ray tracer by specifying the used calibration target instead of the receiver. We trace the rays
-  and create a bitmap of the flux density distribution. From this distribution we calculate the center. The loss is defined as the
-  difference between the actual center from the ray traced distribution and the center of the calibration data.
-- The optimizer updates the optimizable parameters until it is accurate enough or the maximum number of epochs is reached.
+.. code-block::
+
+    kinematic_calibrator = KinematicCalibrator(
+        ddp_setup=ddp_setup,
+        scenario=scenario,
+        data=data,
+        optimization_configuration=optimization_configuration,
+        calibration_method=kinematic_calibration_method,
+    )
+
+
+Performing Calibration
+----------------------
+The set up is now complete and the kinematic calibration can begin. The kinematic calibration is an optimization process.
+Before starting the calibration we need to define the loss, in this tutorial we use the ``FocalSpotLoss`` since we are
+working with raytracing, however for the motor positions variant a ``VectorLoss`` would be required:
+
+.. code-block::
+
+    loss_definition = FocalSpotLoss(scenario=scenario)
+
+Now we can simply perform the calibration with the ``calibrate()`` method:
+
+.. code-block::
+
+     _ = kinematic_calibrator.calibrate(loss_definition=loss_definition, device=device)
+
+The ``calibrate()`` method returns the loss per heliostat as a flattened tensor, which may be useful for logging or
+analysis.
+
+
+What Happens in Calibration?
+----------------------------
+
+To understand calibration, lets look at a small example based on this tutorial. We were to consider a scenario with
+three heliostats: ``AA31``, ``AA39``, and ``AC43``.
+
+.. list-table:: Target fluxes (row 1), heliostat fluxes before calibration (row 2), heliostat fluxes after calibration (row 3)
+   :widths: 33 33 33
+   :header-rows: 0
+
+   * - .. figure:: ./images/heliostat_AA31_original.png
+         :width: 150px
+     - .. figure:: ./images/heliostat_AA39_original.png
+         :width: 150px
+     - .. figure:: ./images/heliostat_AC43_original.png
+         :width: 150px
+   * - .. figure:: ./images/heliostat_AA31_before_calibration.png
+         :width: 200px
+     - .. figure:: ./images/heliostat_AA39_before_calibration.png
+         :width: 200px
+     - .. figure:: ./images/heliostat_AC43_before_calibration.png
+         :width: 200px
+   * - .. figure:: ./images/heliostat_AA31_after_calibration.png
+         :width: 200px
+     - .. figure:: ./images/heliostat_AA39_after_calibration.png
+         :width: 200px
+     - .. figure:: ./images/heliostat_AC43_after_calibration.png
+         :width: 200px
+
+
+When we perform raytracing without prior calibration and compare the generated fluxes from ``ARTIST`` with the
+fluxes measured on the solar tower during a calibration, as in the first two rows of the images above, we notice,
+the following:
+
+- The resolution of the generated flux images is much lower than in the measured flux images - this is okay.
+- The shapes of the generated fluxes and the measured fluxes match.
+- **The generated and measured fluxes do not align perfectly.**
+
+After the kinematic calibration, where the digital twin ``ARTIST`` learns the real world imperfections, the generated
+fluxes in ``ARTIST`` have now moved. Whilst the changes are small, it is noticeable that the focal spots are now better
+aligned with the measured fluxes, compare rows 1 and 3 in the images above. Therefore, we can now consider our heliostat
+kinematics to be calibrated - and that is all there is to kinematic calibration in ``ARTIST``!
+
+.. note::
+
+    The images generated in this tutorial are for illustrative purposes, often with reduced resolution and without
+    hyperparameter optimization. Therefore, they should not be taken as a measure of the quality of ``ARTIST``. Please
+    see our publications for further information.
