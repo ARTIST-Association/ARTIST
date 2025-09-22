@@ -59,8 +59,8 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.ranks_to_groups_mapping: {0: [0]},
     }
 
-    # For parameter combinations with too many rays (over 3000000) directly return a default loss,
-    # to avoid running this combination and to avoid causing "out of memory" errors.
+    # For parameter combinations with too many rays directly return a default loss,
+    # to avoid running such combination as they cause "out of memory" errors.
     total_number_of_rays = (
         params["number_of_surface_points"]
         * 2
@@ -68,7 +68,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         * params["number_of_rays"]
         * params["number_of_training_samples"]
     )
-    if total_number_of_rays >= 2000000:
+    if total_number_of_rays >= 1500000:
         loss = 987987
         return loss
 
@@ -162,10 +162,10 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     optimization_configuration = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
-        config_dictionary.max_epoch: 3000,
+        config_dictionary.max_epoch: 2500,
         config_dictionary.num_log: 1,
         config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 20,
+        config_dictionary.early_stopping_patience: 2500,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
         config_dictionary.regularizers: regularizers,
@@ -223,10 +223,10 @@ if __name__ == "__main__":
     log.info(rank)
 
     search_space = {
-        "number_of_surface_points": (30, 100),
+        "number_of_surface_points": (30, 110),
         "number_of_control_points": (4, 100),
         "number_of_rays": (10, 200),
-        "number_of_training_samples": (2, 8),
+        "number_of_training_samples": (2, 6),
         "nurbs_degree": (2, 3),
         "scheduler": ("exponential", "cyclic", "reduce_on_plateau"),
         "lr_gamma": (0.85, 0.999),
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     # Set up evolutionary operator.
-    num_generations = 1000
+    num_generations = 500
     pop_size = 2 * comm.size  # Breeding population size
     propagator = get_default_propagator(
         pop_size=pop_size,
