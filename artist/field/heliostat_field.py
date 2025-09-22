@@ -36,6 +36,9 @@ class HeliostatField:
         A list containing all heliostat groups.
     number_of_heliostat_groups : int
         The number of different heliostat groups in the heliostat field.
+    number_of_heliostats_per_group : torch.Tensor
+        The number of heliostats per group.
+        Tensor of shape [number_of_heliostat_groups].
 
     Methods
     -------
@@ -46,6 +49,7 @@ class HeliostatField:
     def __init__(
         self,
         heliostat_groups: Sequence[HeliostatGroup],
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the heliostat field with heliostat groups.
@@ -54,9 +58,20 @@ class HeliostatField:
         ----------
         heliostat_groups : Sequence[HeliostatGroup]
             A list containing all heliostat groups.
+        device : device: torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
         self.heliostat_groups = heliostat_groups
         self.number_of_heliostat_groups = len(self.heliostat_groups)
+        self.number_of_heliostats_per_group = torch.tensor(
+            [
+                heliostat_group.number_of_heliostats
+                for heliostat_group in self.heliostat_groups
+            ],
+            device=device,
+        )
 
     @classmethod
     def from_hdf5(
@@ -377,6 +392,4 @@ class HeliostatField:
                     f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
                 )
 
-        return cls(
-            heliostat_groups=heliostat_groups,
-        )
+        return cls(heliostat_groups=heliostat_groups, device=device)

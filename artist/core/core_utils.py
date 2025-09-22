@@ -58,8 +58,8 @@ def per_heliostat_reduction(
 
     counts_clamped = number_of_samples_per_heliostat.clamp_min(1.0)
     mean_loss_per_heliostat = loss_sum_per_heliostat / counts_clamped
-    mean_loss_per_heliostat = mean_loss_per_heliostat * (
-        number_of_samples_per_heliostat > 0
+    mean_loss_per_heliostat = torch.where(
+        number_of_samples_per_heliostat > 0, mean_loss_per_heliostat, torch.inf
     )
 
     return mean_loss_per_heliostat

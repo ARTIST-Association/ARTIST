@@ -41,7 +41,7 @@ class Regularizer:
         device: torch.device | None = None,
         **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the regularization.
 
         Parameters
@@ -62,7 +62,7 @@ class Regularizer:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
 
         Raises
@@ -140,12 +140,12 @@ class TotalVariationRegularizer(Regularizer):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the regularization.
 
-        This regularization supresses the noise in the surface. It measures the noise in the surface by
+        This regularization suppresses the noise in the surface. It measures the noise in the surface by
         taking absolute differences in the z values of the provided points. This loss implementation
         focuses on local smoothness by applying a Gaussian distance weight and thereby letting
         closer points contribute more.
@@ -168,7 +168,7 @@ class TotalVariationRegularizer(Regularizer):
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        **kwargs : Any
+        \*\*kwargs : Any
             Keyword arguments.
 
         Returns
@@ -296,9 +296,9 @@ class IdealSurfaceRegularizer(Regularizer):
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
-        **_: Any,
+        **kwargs: Any,
     ) -> torch.Tensor:
-        """
+        r"""
         Compute the regularization.
 
         This regularization supresses large changes in the control points positions. The real
@@ -322,7 +322,7 @@ class IdealSurfaceRegularizer(Regularizer):
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        **_ : Any
+        \*\*kwargs : Any
             Keyword arguments.
 
         Returns

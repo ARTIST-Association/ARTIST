@@ -39,7 +39,7 @@ light_source_covariance = "covariance"
 
 facets_key = "facets"
 """Key to access the facets."""
-facet_control_points = "control_points_e"
+facet_control_points = "control_points"
 """Key to access the facet control points."""
 facet_degrees = "degrees"
 """Key to access the facet degrees in the east and north direction."""
