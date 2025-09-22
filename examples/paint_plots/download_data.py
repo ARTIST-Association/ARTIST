@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import argparse
 import pathlib
+import warnings
 
 import paint.util.paint_mappings as mappings
 import pandas as pd
+import yaml
 from paint.data.stac_client import StacClient
 from paint.util import set_logger_config
 
@@ -11,67 +13,77 @@ set_logger_config()
 
 if __name__ == "__main__":
     """
-    This script should be run second to download the required calibration data.
+    This script should be run second to download the required calibration, deflectometry, and tower data.
 
     The data will be downloaded based on the minimum number of calibration measurements required. If a certain heliostat
     does not contain the required number of measurements, its data will not be downloaded.
     """
-    # Read in arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_dir",
+        "--config",
+        type=str,
+        help="Path to the YAML configuration file.",
+        default="./paint_plot_config.yaml",
+    )
+
+    # Parse the config argument first to load the configuration.
+    args, unknown = parser.parse_known_args()
+    config_path = pathlib.Path(args.config)
+    config = {}
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+        except yaml.YAMLError as exc:
+            warnings.warn(f"Error parsing YAML file: {exc}")
+    else:
+        warnings.warn(
+            f"Warning: Configuration file not found at {config_path}. Using defaults."
+        )
+
+    # Add remaining arguments to the parser with defaults loaded from the config.
+    data_dir_default = config.get("data_dir", "./paint_data")
+    metadata_dir_default = config.get("metadata_dir", "./metadata")
+    metadata_file_name_default = config.get(
+        "metadata_file_name", "calibration_metadata_all_heliostats.csv"
+    )
+    minimum_number_of_measurements_default = config.get(
+        "minimum_number_of_measurements", 80
+    )
+
+    parser.add_argument(
+        "--data_dir",
         type=str,
         help="Path to save the downloaded data.",
-        default="./paint_data",
+        default=data_dir_default,
     )
     parser.add_argument(
         "--metadata_dir",
         type=str,
         help="Path to the downloaded metadata.",
-        default="./metadata",
+        default=metadata_dir_default,
     )
     parser.add_argument(
         "--metadata_file_name",
         type=str,
         help="Name of the metadata file.",
-        default="calibration_metadata_all_heliostats.csv",
+        default=metadata_file_name_default,
     )
     parser.add_argument(
         "--minimum_number_of_measurements",
         type=int,
         help="The minimum number of calibration measurements per heliostat required",
-        default=80,
+        default=minimum_number_of_measurements_default,
     )
-    parser.add_argument(
-        "--collections",
-        type=str,
-        help="List of collections to be downloaded.",
-        nargs="+",
-        choices=[
-            mappings.SAVE_DEFLECTOMETRY.lower(),
-            mappings.SAVE_CALIBRATION.lower(),
-            mappings.SAVE_PROPERTIES.lower(),
-        ],
-        default=["properties", "calibration"],
-    )
-    parser.add_argument(
-        "--filtered_calibration",
-        type=str,
-        help="List of calibration items to download.",
-        nargs="+",
-        choices=[
-            mappings.CALIBRATION_RAW_IMAGE_KEY,
-            mappings.CALIBRATION_FLUX_IMAGE_KEY,
-            mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
-            mappings.CALIBRATION_PROPERTIES_KEY,
-            mappings.CALIBRATION_CROPPED_IMAGE_KEY,
-        ],
-        default=["cropped_image", "calibration_properties"],
-    )
-    args = parser.parse_args()
+
+    # Re-parse the full set of arguments.
+    args = parser.parse_args(args=unknown)
 
     # Create STAC client.
-    client = StacClient(output_dir=args.output_dir)
+    client = StacClient(output_dir=args.data_dir)
+
+    # Download tower measurements
+    client.get_tower_measurements()
 
     # Determine viable heliostats, i.e. only those with enough calibration measurements.
     calibration_file = pathlib.Path(args.metadata_dir) / args.metadata_file_name
@@ -88,8 +100,11 @@ if __name__ == "__main__":
     )
     # Download heliostat data.
     client.get_heliostat_data(
-        heliostats=viable_heliostats,
-        collections=[mappings.SAVE_CALIBRATION.lower()],
+        heliostats=["AA39", "AY26", "BC34"],
+        collections=[
+            mappings.SAVE_CALIBRATION.lower(),
+            mappings.SAVE_DEFLECTOMETRY.lower(),
+        ],
         filtered_calibration_keys=[
             mappings.CALIBRATION_FLUX_IMAGE_KEY,
             mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
