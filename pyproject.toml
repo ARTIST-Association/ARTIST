@@ -36,7 +36,7 @@ dev = [
     "sphinxcontrib-napoleon",
     "sphinxemoji",
 ]
-mpi = ["mpi4py",]
+examples = ["mpi4py","pandas"]
 tutorials = ["matplotlib"]
 
 [project.urls]
