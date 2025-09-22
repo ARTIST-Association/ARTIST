@@ -11,7 +11,7 @@ from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from examples.paint_plots.helpers import (
+from examples.paint_plots.paint_plot_utils import (
     filter_valid_heliostat_data,
     join_safe,
     load_config,

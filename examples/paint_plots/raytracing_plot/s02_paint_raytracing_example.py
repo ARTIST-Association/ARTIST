@@ -11,7 +11,7 @@ from artist.data_loader import paint_loader
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
-from examples.paint_plots.helpers import (
+from examples.paint_plots.paint_plot_utils import (
     extract_canting_and_translation_from_properties,
     join_safe,
     load_config,

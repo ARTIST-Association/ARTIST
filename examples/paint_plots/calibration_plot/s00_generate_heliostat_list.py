@@ -5,7 +5,7 @@ import pathlib
 import re
 
 from artist.util import config_dictionary
-from examples.paint_plots.helpers import join_safe, load_config
+from examples.paint_plots.paint_plot_utils import join_safe, load_config
 
 
 def find_heliostats_with_minimum_calibrations(

@@ -10,7 +10,11 @@ from artist.scenario.configuration_classes import (
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
-from examples.paint_plots.helpers import join_safe, load_config, load_heliostat_data
+from examples.paint_plots.paint_plot_utils import (
+    join_safe,
+    load_config,
+    load_heliostat_data,
+)
 
 
 def _generate_paint_scenario(

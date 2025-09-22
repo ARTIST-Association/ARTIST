@@ -6,7 +6,11 @@ from matplotlib import pyplot as plt
 from scipy.stats import gaussian_kde
 
 from artist.util import config_dictionary, set_logger_config
-from examples.paint_plots.helpers import helmholtz_colors, join_safe, load_config
+from examples.paint_plots.paint_plot_utils import (
+    helmholtz_colors,
+    join_safe,
+    load_config,
+)
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
