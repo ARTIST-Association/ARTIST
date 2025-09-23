@@ -17,6 +17,19 @@ if __name__ == "__main__":
 
     The data will be downloaded based on the minimum number of calibration measurements required. If a certain heliostat
     does not contain the required number of measurements, its data will not be downloaded.
+
+    Parameters
+    ----------
+    config : str
+        Path to the configuration file.
+    data_dir : str
+        Path to the directory used for storing the data.
+    metadata_dir : str
+        Path to the downloaded metadata directory.
+    metadata_file_name : str
+        Name of the metadata file.
+    minimum_number_of_measurements : int
+        Minimum number of calibration measurements per heliostat required.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(

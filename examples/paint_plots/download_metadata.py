@@ -13,6 +13,13 @@ set_logger_config()
 if __name__ == "__main__":
     """
     This script should be run first to download the required metadata.
+
+    Parameters
+    ----------
+    config : str
+        Path to the configuration file.
+    metadata_dir : str
+        Path to the directory used for storing the metadata.
     """
     parser = argparse.ArgumentParser()
 
