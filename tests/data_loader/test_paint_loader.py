@@ -1,6 +1,7 @@
 import pathlib
 from typing import Any
 
+import paint.util.paint_mappings as paint_mappings
 import pytest
 import torch
 from _pytest.monkeypatch import MonkeyPatch
@@ -13,7 +14,6 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     TargetAreaListConfig,
 )
-from artist.util import config_dictionary
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -35,7 +35,7 @@ torch.cuda.manual_seed(7)
                 )
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
-            config_dictionary.paint_utis,
+            paint_mappings.UTIS_KEY,
             [
                 torch.tensor(
                     [
@@ -87,7 +87,7 @@ torch.cuda.manual_seed(7)
                 )
             ],
             torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
-            config_dictionary.paint_helios,
+            paint_mappings.HELIOS_KEY,
             [
                 torch.tensor(
                     [
@@ -699,16 +699,16 @@ def _make_fake_calibration_data(
     str
         The name of the folder containing the calibration data.
     """
-    paint_calibration_folder_name = config_dictionary.paint_calibration_folder_name
+    paint_calibration_folder_name = paint_mappings.SAVE_CALIBRATION
     for heliostat_name in heliostat_name_list:
         calibration_directory_path = (
-            base_directory_path / heliostat_name / paint_calibration_folder_name
+            base_directory_path / heliostat_name / paint_mappings.SAVE_CALIBRATION
         )
         calibration_directory_path.mkdir(parents=True, exist_ok=True)
         for index in range(count_per_heliostat):
             (
                 calibration_directory_path
-                / f"{index}{config_dictionary.paint_calibration_properties_file_name_ending.split('*')[-1]}"
+                / f"{index}{paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER}"
             ).write_text("{}")
             # Write a tiny, obviously-fake PNG header so opening as binary won't crash.
             (
@@ -772,19 +772,13 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     """
     heliostat_name_list = ["heliostat_1", "heliostat_2"]
     # Create 5 samples per heliostat.
-    paint_calibration_folder_name = _make_fake_calibration_data(
+    _ = _make_fake_calibration_data(
         tmp_path,
         heliostat_name_list,
         image_variant_name,
         count_per_heliostat=5,
     )
 
-    monkeypatch.setattr(
-        config_dictionary,
-        "paint_calibration_folder_name",
-        paint_calibration_folder_name,
-        raising=True,
-    )
     result_mapping_list = paint_loader.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
@@ -859,18 +853,11 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     number_of_measurements = 4
 
     # Create 10 samples per heliostat so a different subset/order is very likely.
-    paint_calibration_folder_name = _make_fake_calibration_data(
+    _ = _make_fake_calibration_data(
         tmp_path,
         heliostat_name_list,
         image_variant_name,
         count_per_heliostat=10,
-    )
-
-    monkeypatch.setattr(
-        config_dictionary,
-        "paint_calibration_folder_name",
-        paint_calibration_folder_name,
-        raising=True,
     )
 
     result_sorted_list = paint_loader.build_heliostat_data_mapping(
