@@ -4,6 +4,7 @@ data_dir: "./paint_data"
 tower_file_name: "WRI1030197-tower-measurements.json"
 scenarios_dir: "./scenarios"
 results_dir: "./results"
+plots_dir: "./plots"
 minimum_number_of_measurements: 80
 heliostats_for_raytracing:
   AA39: 149576
