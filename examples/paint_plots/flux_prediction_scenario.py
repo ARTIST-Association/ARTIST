@@ -206,8 +206,8 @@ if __name__ == "__main__":
         Path to the data directory.
     tower_file_name : str
         Name of the file containing the tower measurements.
-    heliostats : list[str]
-        The heliostats to include in the scenario.
+    heliostats : dict[str, int]
+        The heliostats and associated calibration measurement required in the scenario.
     scenarios_dir : str
         Path to the directory for saving the generated scenarios.
     """
@@ -248,7 +248,7 @@ if __name__ == "__main__":
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
     heliostats_default = config.get(
-        "heliostats_for_raytracing", ["AA39", "AY26", "BC34"]
+        "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
     scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
 
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--heliostats",
         type=str,
-        help="List of heliostats to be used in the scenario.",
+        help="Heliostats and calibration measurement required in the scenario.",
         nargs="+",
         default=heliostats_default,
     )
@@ -314,7 +314,7 @@ if __name__ == "__main__":
                 data_directory=data_dir,
                 scenario_path=scenario_path,
                 tower_file_path=tower_file,
-                heliostat_names=args.heliostats,
+                heliostat_names=list(args.heliostats.keys()),
                 device=device,
                 use_deflectometry=use_deflectometry,
             )
