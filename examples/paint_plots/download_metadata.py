@@ -18,8 +18,8 @@ if __name__ == "__main__":
     ----------
     config : str
         Path to the configuration file.
-    metadata_dir : str
-        Path to the directory used for storing the metadata.
+    metadata_root : str
+        Path to the root directory where the metadata folder is created.
     """
     parser = argparse.ArgumentParser()
 
@@ -46,20 +46,20 @@ if __name__ == "__main__":
             f"Warning: Configuration file not found at {config_path}. Using defaults."
         )
 
-    metadata_dir_default = config.get("metadata_dir", "./")
+    metadata_root_default = config.get("metadata_root", "./")
 
     # Read in arguments.
     parser.add_argument(
-        "--metadata_dir",
+        "--metadata_root",
         type=str,
-        help="Path to the downloaded metadata.",
-        default=metadata_dir_default,
+        help="Path to the root in which a metadata folder is created.",
+        default=metadata_root_default,
     )
 
     args = parser.parse_args()
 
     # Create STAC client.
-    client = StacClient(output_dir=args.metadata_dir)
+    client = StacClient(output_dir=args.metadata_root)
 
     # Download metadata for all heliostats.
     # WARNING: This will take a very long time, but will resume at the same position of the download breaks.

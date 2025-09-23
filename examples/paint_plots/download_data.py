@@ -24,8 +24,8 @@ if __name__ == "__main__":
         Path to the configuration file.
     data_dir : str
         Path to the directory used for storing the data.
-    metadata_dir : str
-        Path to the downloaded metadata directory.
+    metadata_root : str
+        Path to the root directory where the metadata folder is stored.
     metadata_file_name : str
         Name of the metadata file.
     minimum_number_of_measurements : int
@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
-    metadata_dir_default = config.get("metadata_dir", "./")
+    metadata_root_default = config.get("metadata_root", "./")
     metadata_file_name_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"
     )
@@ -71,10 +71,10 @@ if __name__ == "__main__":
         default=data_dir_default,
     )
     parser.add_argument(
-        "--metadata_dir",
+        "--metadata_root",
         type=str,
-        help="Path to the downloaded metadata.",
-        default=metadata_dir_default,
+        help="Path to the root containing the metadata folder.",
+        default=metadata_root_default,
     )
     parser.add_argument(
         "--metadata_file_name",
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     # Determine viable heliostats, i.e. only those with enough calibration measurements.
     calibration_file = (
-        pathlib.Path(args.metadata_dir) / "metadata" / args.metadata_file_name
+        pathlib.Path(args.metadata_root) / "metadata" / args.metadata_file_name
     )
     calibration_metadata = pd.read_csv(calibration_file)
     number_of_images_per_heliostat = calibration_metadata.groupby("HeliostatId")[
