@@ -207,7 +207,7 @@ class H5ScenarioGenerator:
         log.info(f"Generating a scenario saved to: {self.file_path}.")
         if self.file_path.suffix == ".h5":
             save_name = self.file_path
-        if self.file_path.suffix == "":
+        elif self.file_path.suffix == "":
             save_name = self.file_path.with_suffix(".h5")
         else:
             log.error(
