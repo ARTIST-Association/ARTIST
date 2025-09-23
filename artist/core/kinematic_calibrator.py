@@ -304,7 +304,7 @@ class KinematicCalibrator:
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        scheduler.step(loss)
+                        scheduler.step(loss.detach())
                     else:
                         scheduler.step()
 
@@ -549,7 +549,7 @@ class KinematicCalibrator:
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        scheduler.step(loss)
+                        scheduler.step(loss.detach())
                     else:
                         scheduler.step()
 

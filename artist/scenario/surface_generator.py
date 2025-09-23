@@ -205,7 +205,7 @@ class SurfaceGenerator:
 
             optimizer.step()
             if scheduler:
-                scheduler.step(loss.abs().mean())
+                scheduler.step(loss.abs().mean().detach())
             if epoch % 100 == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}."
