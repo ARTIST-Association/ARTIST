@@ -1,6 +1,8 @@
 import json
 import pathlib
 
+import matplotlib as mpl
+
 
 def load_heliostat_data(
     paint_repo: str | pathlib.Path, input_path: str | pathlib.Path
@@ -94,6 +96,25 @@ def filter_valid_heliostat_data(
             f"- {name}: {len(calibs)} valid calibrations, {len(fluxes)} matching flux images"
         )
     return valid
+
+
+def set_plot_style() -> None:
+    """Set global plot style for all plots."""
+    mpl.rcParams["font.family"] = "sans-serif"
+    mpl.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+    mpl.rcParams["font.size"] = 12
+    mpl.rcParams["axes.titlesize"] = 14
+    mpl.rcParams["axes.labelsize"] = 12
+    mpl.rcParams["axes.labelweight"] = "bold"
+    mpl.rcParams["xtick.labelsize"] = 10
+    mpl.rcParams["ytick.labelsize"] = 10
+    mpl.rcParams["legend.fontsize"] = 10
+
+    # Now, enable LaTeX and tell it to use a sans-serif font.
+    mpl.rcParams["text.usetex"] = True
+    mpl.rcParams["text.latex.preamble"] = (
+        "\\usepackage{helvet}\\usepackage{sansmath}\\sansmath"
+    )
 
 
 # Plot Settings.
