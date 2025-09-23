@@ -3,7 +3,7 @@ import argparse
 import pathlib
 import warnings
 
-import paint.util.paint_mappings as mappings
+import paint.util.paint_mappings as paint_mappings
 import pandas as pd
 import yaml
 from paint.data.stac_client import StacClient
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
-    metadata_dir_default = config.get("metadata_dir", "./metadata")
+    metadata_dir_default = config.get("metadata_dir", "./")
     metadata_file_name_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"
     )
@@ -86,7 +86,9 @@ if __name__ == "__main__":
     client.get_tower_measurements()
 
     # Determine viable heliostats, i.e. only those with enough calibration measurements.
-    calibration_file = pathlib.Path(args.metadata_dir) / args.metadata_file_name
+    calibration_file = (
+        pathlib.Path(args.metadata_dir) / "metadata" / args.metadata_file_name
+    )
     calibration_metadata = pd.read_csv(calibration_file)
     number_of_images_per_heliostat = calibration_metadata.groupby("HeliostatId")[
         "Id"
@@ -100,14 +102,15 @@ if __name__ == "__main__":
     )
     # Download heliostat data.
     client.get_heliostat_data(
-        heliostats=["AA39", "AY26", "BC34"],
+        heliostats=viable_heliostats,
         collections=[
-            mappings.SAVE_CALIBRATION.lower(),
-            mappings.SAVE_DEFLECTOMETRY.lower(),
+            paint_mappings.SAVE_CALIBRATION.lower(),
+            paint_mappings.SAVE_DEFLECTOMETRY.lower(),
+            paint_mappings.SAVE_PROPERTIES.lower(),
         ],
         filtered_calibration_keys=[
-            mappings.CALIBRATION_FLUX_IMAGE_KEY,
-            mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
-            mappings.CALIBRATION_PROPERTIES_KEY,
+            paint_mappings.CALIBRATION_FLUX_IMAGE_KEY,
+            paint_mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
+            paint_mappings.CALIBRATION_PROPERTIES_KEY,
         ],
     )
