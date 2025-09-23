@@ -53,10 +53,10 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.rank: 0,
         config_dictionary.world_size: 1,
         config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [0]},
+        config_dictionary.groups_to_ranks_mapping: {0: [0, 1]},
         config_dictionary.heliostat_group_rank: 0,
         config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0]},
+        config_dictionary.ranks_to_groups_mapping: {0: [0], 1:[0]},
     }
 
     # For parameter combinations with too many rays directly return a default loss,
@@ -86,7 +86,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     # The scenario .h5 file should contain a setup with at least one heliostat (with the same name(s)
     # as the heliostat(s) for which reconstruction data is provided). The heliostat(s) in this scenario
     # should be initialized with an ideal surface, do not provide deflectometry data!
-    with h5py.File(pathlib.Path("path/to/scenario/scenario.h5"), "r") as scenario_file:
+    with h5py.File(pathlib.Path("/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/scenario.h5"), "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=number_of_surface_points_per_facet,
@@ -105,7 +105,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Create a heliostat data mapping for the specified number of training samples.
     heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path="/path/to/data/paint",
+        base_path="/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/paint_sorted",
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
@@ -162,7 +162,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     optimization_configuration = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
-        config_dictionary.max_epoch: 2500,
+        config_dictionary.max_epoch: 1000,
         config_dictionary.num_log: 1,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 2500,
@@ -196,7 +196,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         device=device,
     )
 
-    return loss.sum().item()
+    return loss[torch.isfinite(loss)].sum().item()
 
 
 if __name__ == "__main__":
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
-    log_path = "/path/to/logs"
+    log_path = "/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/logs"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
