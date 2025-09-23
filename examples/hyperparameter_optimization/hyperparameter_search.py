@@ -86,7 +86,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     # The scenario .h5 file should contain a setup with at least one heliostat (with the same name(s)
     # as the heliostat(s) for which reconstruction data is provided). The heliostat(s) in this scenario
     # should be initialized with an ideal surface, do not provide deflectometry data!
-    with h5py.File(pathlib.Path("/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/scenario.h5"), "r") as scenario_file:
+    with h5py.File(pathlib.Path("path/to/scenario/scenario.h5"), "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             number_of_surface_points_per_facet=number_of_surface_points_per_facet,
@@ -105,7 +105,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
 
     # Create a heliostat data mapping for the specified number of training samples.
     heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path="/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/paint_sorted",
+        base_path="/path/to/data/paint",
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
-    log_path = "/workVERLEIHNIX/mb/ARTIST/examples/hyperparameter_optimization/to_be_removed/logs"
+    log_path = "/path/to/logs"
 
     # Set up separate logger for Propulate optimization.
     set_logger_config(
