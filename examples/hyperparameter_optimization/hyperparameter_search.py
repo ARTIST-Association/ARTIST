@@ -203,7 +203,6 @@ if __name__ == "__main__":
     comm = MPI.COMM_WORLD
 
     rank = comm.Get_rank()
-    print(rank)
 
     # Parse command-line arguments.
     config, _ = parse_arguments(comm)
