@@ -8,8 +8,6 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 
-from examples.paint_plots.paint_plot_utils import set_plot_style
-
 
 def normalize(image: np.ndarray) -> np.ndarray:
     """
@@ -41,7 +39,8 @@ def plot_flux_prediction(results_file: pathlib.Path, plots_path: pathlib.Path) -
         Path to save the plot to.
     """
     # Set Plot style.
-    set_plot_style()
+    plt.rcParams["text.usetex"] = True
+    plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
     # Load results.
     results_dict: Dict[str, Dict[str, np.ndarray]] = torch.load(
@@ -90,13 +89,15 @@ def plot_flux_prediction(results_file: pathlib.Path, plots_path: pathlib.Path) -
             ax[i][j].set_yticks([])
 
         # Label rows
-        ax[i][0].set_ylabel(heliostat_name, rotation=90, labelpad=10, va="center")
+        ax[i][0].set_ylabel(
+            f"\\textbf{{{heliostat_name}}}", rotation=90, labelpad=10, va="center"
+        )
 
     # Column titles with a smaller second line
-    ax[0][0].set_title("Flux Image\n{\\small (extracted with UTIS)}")
-    ax[0][1].set_title("Generated Flux\n{\\small (using ideal surface)}")
-    ax[0][2].set_title("Generated Flux\n{\\small (using deflectometry)}")
-    ax[0][3].set_title("Surface\n{\\small (measured by deflectometry)}")
+    ax[0][0].set_title("\\textbf{Flux Image}\n{\\small (extracted with UTIS)}")
+    ax[0][1].set_title("\\textbf{Generated Flux}\n{\\small (using ideal surface)}")
+    ax[0][2].set_title("\\textbf{Generated Flux}\n{\\small (using deflectometry)}")
+    ax[0][3].set_title("\\textbf{Surface}\n{\\small (measured by deflectometry)}")
 
     plt.savefig(plots_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
