@@ -322,7 +322,7 @@ class KLDivergenceLoss(Loss):
     def __init__(self) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
         super().__init__(
-            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
+            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=False)
         )
 
     def __call__(
@@ -342,7 +342,7 @@ class KLDivergenceLoss(Loss):
             D_{\mathrm{KL}}(P \parallel Q) = \sum_{x} P(x) \log \frac{P(x)}{Q(x)},
 
         where :math:`P` is the ground truth distribution and :math:`Q` is the approximation or prediction
-        of :math:`Q`. The kl-divergence is an asymetric function. Switching :math:`P` and :math:`Q`
+        of :math:`Q`. The kl-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
         has the following effect:
         :math:`P \parallel Q` Penalizes extra mass in the prediction where the ground truth has none.
         :math:`Q \parallel P` Penalizes missing mass in the prediction where the ground truth has mass.
@@ -377,22 +377,22 @@ class KLDivergenceLoss(Loss):
                     f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
 
+        # Scale to make distributions non-negative.
         if ground_truth.min() < 0:
             ground_truth = ground_truth - ground_truth.min()
-        ground_truth_distributions = (
-            ground_truth / (ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12)
-        ) + 1e-12
         if prediction.min() < 0:
             prediction = prediction - prediction.min()
-        predicted_distributions = (
-            prediction / (prediction.sum(dim=(1, 2), keepdim=True) + 1e-12)
-        ) + 1e-12
 
-        log_input = torch.log(predicted_distributions)
-        log_target = torch.log(ground_truth_distributions)
+        # Normalize.
+        eps = 1e-12
+        ground_truth_distributions = torch.nn.functional.normalize(ground_truth, p=1, dim=(1, 2), eps=eps)
+        predicted_distributions = torch.nn.functional.normalize(prediction, p=1, dim=(1, 2), eps=eps)
 
-        loss = self.loss_function(log_target, log_input)
-
+        loss = self.loss_function(
+            torch.log(predicted_distributions + eps),
+            ground_truth_distributions,
+        )
+        
         return loss.sum(dim=kwargs["reduction_dimensions"])
 
 
