@@ -252,9 +252,10 @@ class KinematicCalibrator:
                 best_loss = torch.inf
                 patience_counter = 0
                 epoch = 0
-                log_step = (
+                log_step = max(
+                    1,
                     self.optimization_configuration[config_dictionary.max_epoch]
-                    // self.optimization_configuration[config_dictionary.num_log]
+                    // self.optimization_configuration[config_dictionary.num_log],
                 )
                 while (
                     loss > self.optimization_configuration[config_dictionary.tolerance]
@@ -459,9 +460,10 @@ class KinematicCalibrator:
                 best_loss = torch.inf
                 patience_counter = 0
                 epoch = 0
-                log_step = (
+                log_step = max(
+                    1,
                     self.optimization_configuration[config_dictionary.max_epoch]
-                    // self.optimization_configuration[config_dictionary.num_log]
+                    // self.optimization_configuration[config_dictionary.num_log],
                 )
                 while (
                     loss > self.optimization_configuration[config_dictionary.tolerance]
