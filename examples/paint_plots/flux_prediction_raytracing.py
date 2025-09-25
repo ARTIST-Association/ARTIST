@@ -10,7 +10,6 @@ import torch
 import yaml
 from PIL import Image
 
-import artist.util.config_dictionary as config_dictionary
 from artist.core import HeliostatRayTracer
 from artist.data_loader import paint_loader
 from artist.data_loader.paint_loader import extract_paint_heliostat_properties
@@ -187,7 +186,7 @@ def load_image_as_tensor(
     """
     # Build the path.
     image_path = pathlib.Path(
-        f"{data_directory}/{name}/{config_dictionary.paint_calibration_folder_name}/{measurement_id}-{image_key}.png"
+        f"{data_directory}/{name}/{paint_mappings.SAVE_CALIBRATION}/{measurement_id}-{image_key}.png"
     )
     if not image_path.exists():
         raise FileNotFoundError(
