@@ -2,6 +2,7 @@ import logging
 import pathlib
 from typing import Any, cast
 
+import paint.util.paint_mappings as paint_mappings
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -40,6 +41,8 @@ class KinematicCalibrator:
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
     calibration_method : str
         The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
+    centroid_extraction_method : str
+            The method used to extract the centroid. Either use UTIS or HELIOS (default is UTIS).
 
     Methods
     -------
@@ -54,6 +57,7 @@ class KinematicCalibrator:
         data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
         optimization_configuration: dict[str, Any],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
+        centroid_extraction_method: str = paint_mappings.UTIS_KEY,
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -70,6 +74,8 @@ class KinematicCalibrator:
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         calibration_method : str
             The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
+        centroid_extraction_method : str
+            The method used to extract the centroid. Either use UTIS or HELIOS (default is UTIS).
         """
         rank = ddp_setup[config_dictionary.rank]
         if rank == 0:
@@ -80,6 +86,14 @@ class KinematicCalibrator:
         self.data = data
         self.optimization_configuration = optimization_configuration
         self.calibration_method = calibration_method
+        if centroid_extraction_method not in [
+            paint_mappings.UTIS_KEY,
+            paint_mappings.HELIOS_KEY,
+        ]:
+            raise ValueError(
+                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
+            )
+        self.centroid_extraction_method = centroid_extraction_method
 
     def calibrate(
         self,
@@ -201,6 +215,7 @@ class KinematicCalibrator:
                     heliostat_names=heliostat_group.names,
                     target_area_names=self.scenario.target_areas.names,
                     power_plant_position=self.scenario.power_plant_position,
+                    centroid_extraction_method=self.centroid_extraction_method,
                     device=device,
                 )
             else:

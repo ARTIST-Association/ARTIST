@@ -2,6 +2,7 @@ import pathlib
 from typing import Any
 
 import h5py
+import paint.util.paint_mappings as paint_mappings
 import pytest
 import torch
 
@@ -16,7 +17,7 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta",
+    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta, centroid_extraction_method",
     [
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -24,6 +25,7 @@ set_logger_config()
             VectorLoss,
             "paint",
             1e-4,
+            paint_mappings.UTIS_KEY,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -31,6 +33,7 @@ set_logger_config()
             FocalSpotLoss,
             "paint",
             1e-4,
+            paint_mappings.UTIS_KEY,
         ),
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -38,6 +41,7 @@ set_logger_config()
             VectorLoss,
             "invalid",
             1e-4,
+            paint_mappings.UTIS_KEY,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -45,6 +49,7 @@ set_logger_config()
             FocalSpotLoss,
             "invalid",
             1e-4,
+            paint_mappings.UTIS_KEY,
         ),
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -52,6 +57,7 @@ set_logger_config()
             VectorLoss,
             "paint",
             1.0,
+            paint_mappings.UTIS_KEY,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -59,6 +65,15 @@ set_logger_config()
             FocalSpotLoss,
             "paint",
             1.0,
+            paint_mappings.UTIS_KEY,
+        ),
+        (
+            config_dictionary.kinematic_calibration_raytracing,
+            0.0001,
+            FocalSpotLoss,
+            "paint",
+            1.0,
+            "invalid",
         ),
     ],
 )
@@ -68,6 +83,7 @@ def test_kinematic_calibrator(
     loss_class: Loss,
     data_source: str,
     early_stopping_delta: float,
+    centroid_extraction_method: str,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -86,6 +102,8 @@ def test_kinematic_calibrator(
         The name of the data source.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
+    centroid_extraction_method : str
+        The method used to extract the focal spot centroids.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -162,57 +180,75 @@ def test_kinematic_calibrator(
     ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
     # Create the kinematic optimizer.
-    kinematic_calibrator = KinematicCalibrator(
-        ddp_setup=ddp_setup_for_testing,
-        scenario=scenario,
-        data=data,
-        optimization_configuration=optimization_configuration,
-        calibration_method=calibration_method,
-    )
-
-    loss_definition = (
-        FocalSpotLoss(scenario=scenario)
-        if loss_class is FocalSpotLoss
-        else VectorLoss()
-    )
-
-    # Calibrate the kinematic.
-    if data_source == "invalid":
+    if centroid_extraction_method == "invalid":
         with pytest.raises(ValueError) as exc_info:
+            _ = KinematicCalibrator(
+                ddp_setup=ddp_setup_for_testing,
+                scenario=scenario,
+                data=data,
+                optimization_configuration=optimization_configuration,
+                calibration_method=calibration_method,
+                centroid_extraction_method=centroid_extraction_method,
+            )
+
+            assert (
+                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
+                in str(exc_info.value)
+            )
+    else:
+        kinematic_calibrator = KinematicCalibrator(
+            ddp_setup=ddp_setup_for_testing,
+            scenario=scenario,
+            data=data,
+            optimization_configuration=optimization_configuration,
+            calibration_method=calibration_method,
+            centroid_extraction_method=centroid_extraction_method,
+        )
+
+        loss_definition = (
+            FocalSpotLoss(scenario=scenario)
+            if loss_class is FocalSpotLoss
+            else VectorLoss()
+        )
+
+        # Calibrate the kinematic.
+        if data_source == "invalid":
+            with pytest.raises(ValueError) as exc_info:
+                _ = kinematic_calibrator.calibrate(
+                    loss_definition=loss_definition, device=device
+                )
+
+                assert (
+                    f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
+                    in str(exc_info.value)
+                )
+        else:
             _ = kinematic_calibrator.calibrate(
                 loss_definition=loss_definition, device=device
             )
 
-            assert (
-                f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
-                in str(exc_info.value)
-            )
+            for index, heliostat_group in enumerate(
+                scenario.heliostat_field.heliostat_groups
+            ):
+                expected_path = (
+                    pathlib.Path(ARTIST_ROOT)
+                    / "tests/data/expected_optimized_kinematic_parameters"
+                    / f"{calibration_method}_group_{index}_{device.type}.pt"
+                )
 
-    else:
-        _ = kinematic_calibrator.calibrate(
-            loss_definition=loss_definition, device=device
-        )
+                expected = torch.load(
+                    expected_path, map_location=device, weights_only=True
+                )
 
-        for index, heliostat_group in enumerate(
-            scenario.heliostat_field.heliostat_groups
-        ):
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/expected_optimized_kinematic_parameters"
-                / f"{calibration_method}_group_{index}_{device.type}.pt"
-            )
-
-            expected = torch.load(expected_path, map_location=device, weights_only=True)
-
-            torch.testing.assert_close(
-                heliostat_group.kinematic.deviation_parameters,
-                expected["kinematic_deviations"],
-                atol=5e-2,
-                rtol=5e-2,
-            )
-            torch.testing.assert_close(
-                heliostat_group.kinematic.actuators.actuator_parameters,
-                expected["actuator_parameters"],
-                atol=5e-2,
-                rtol=5e-2,
-            )
+                torch.testing.assert_close(
+                    heliostat_group.kinematic.deviation_parameters,
+                    expected["kinematic_deviations"],
+                    atol=5e-2,
+                    rtol=5e-2,
+                )
+                torch.testing.assert_close(
+                    heliostat_group.kinematic.actuators.actuator_parameters,
+                    expected["actuator_parameters"],
+                    atol=5e-2,
+                    rtol=5e-2,
+                )
