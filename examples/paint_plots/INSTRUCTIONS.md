@@ -19,7 +19,9 @@ Here is an overview of the configuration parameters and what they mean:
 - `scenarios_dir`: The name of the directory to save the ``ARTIST`` scenarios required for generating results.
 - `results_dir`: The name of the directory to save the results from the calibration or flux prediction scenarios before plotting.
 - `plots_dir`: The name of the directory to save the plots.
-- `minimum_number_of_measurements`: The minimum number of calibration measurements required for a individual heliostats. Heliostats with less than this number will not be considered.
+- `minimum_number_of_measurements`: The minimum number of calibration measurements required for an individual heliostats. Heliostats with less than this number will not be considered.
+- `maximum_number_of_heliostats_for_calibration`: The maximum number of heliostats to be considered for the calibration plot.
+- `calibration_image_type`: The calibration image type to be used for a reference. If you do not change anything the ``flux`` type fill be used.
 - `heliostats_for_raytracing`: A dictionary containing a mapping from a "heliostat ID" to a "calibration measurement ID". This is required for the flux prediction plot, where only certain heliostats are considered for ray tracing and a reference image is required for the plot.
 - `device`: The device used for the computation.
 
@@ -39,8 +41,10 @@ Regardless of which plot you wish to generate, you must first run the code to do
 
 To replicate the calibration plots, please run the following scripts in the correct order:
 
-1. TODO
-2. TODO
+1. ``calibration_generate_viable_heliostats_list.py``: This script will iterate through the downloaded data and populate a list with file names that contain the measurements required to run the calibration in ``ARTIST``.
+2. ``calibration_scenario.py``: This script will generate the ``ARTIST`` scenario required for the calibration result calculation.
+3. ``calibration_generate_results.py``: This script will perform calibration in ``ARTIST`` and save the results ready for plotting.
+4. ``calibration_plot.py``: This script will generate the calibration error distribution plots and save them.
 
 ### Flux Prediction Plot
 
