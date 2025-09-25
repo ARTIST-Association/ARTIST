@@ -236,13 +236,6 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
-    metadata_dir_default = config.get("metadata_dir", "./metadata")
-    metadata_file_name_default = config.get(
-        "metadata_file_name", "calibration_metadata_all_heliostats.csv"
-    )
-    minimum_number_of_measurements_default = config.get(
-        "minimum_number_of_measurements", 80
-    )
     device_default = config.get("device", "cuda")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
