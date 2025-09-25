@@ -22,7 +22,7 @@ def find_viable_heliostats(
     Find heliostats that have at least a minimum number of valid calibration files.
 
     This function iterates through a data directory to find all heliostat calibration files that contain a valid focal
-    spot key. In this case the paths are collected and a sorted list of up to the maximum number of heliostats is
+    spot key. In this case the paths are collected, and a sorted list of up to the maximum number of heliostats is
     returned containing tuples including the heliostat name, path to the calibration file, and path to the flux image.
     A calibration JSON is considered valid when its focal-spot section contains both centroid extracted by HeliOS and
     UTIS.
