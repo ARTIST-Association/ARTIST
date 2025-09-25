@@ -8,6 +8,8 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 
+from artist.util.environment_setup import get_device
+
 
 def normalize(image: np.ndarray) -> np.ndarray:
     """
@@ -27,7 +29,9 @@ def normalize(image: np.ndarray) -> np.ndarray:
     return image / maximum_value if maximum_value > 0 else image
 
 
-def plot_flux_prediction(results_file: pathlib.Path, plots_path: pathlib.Path) -> None:
+def plot_flux_prediction(
+    results_file: pathlib.Path, plots_path: pathlib.Path, device: torch.device
+) -> None:
     """
     Plot the flux prediction results.
 
@@ -37,6 +41,8 @@ def plot_flux_prediction(results_file: pathlib.Path, plots_path: pathlib.Path) -
         Path to the results file.
     plots_path : pathlib.Path
         Path to save the plot to.
+    device : torch.device
+        Device to use.
     """
     # Set Plot style.
     plt.rcParams["text.usetex"] = True
@@ -44,7 +50,9 @@ def plot_flux_prediction(results_file: pathlib.Path, plots_path: pathlib.Path) -
 
     # Load results.
     results_dict: Dict[str, Dict[str, np.ndarray]] = torch.load(
-        results_file, weights_only=False
+        results_file,
+        weights_only=False,
+        map_location=device,
     )
     number_of_heliostats = len(results_dict)
 
@@ -118,6 +126,8 @@ if __name__ == "__main__":
     ----------
     config : str
         Path to the configuration file.
+    device : str
+        Device to use for the computation.
     results_dir : str
         Path to directory where the results are saved.
     plots_dir : str
@@ -147,9 +157,16 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
+    device_default = config.get("device", "cuda")
     results_dir_default = config.get("results_dir", "./results")
     plots_dir_default = config.get("plots_dir", "./plots")
 
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Device to use.",
+        default=device_default,
+    )
     parser.add_argument(
         "--results_dir",
         type=str,
@@ -166,6 +183,8 @@ if __name__ == "__main__":
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
 
+    device = get_device(torch.device(args.device))
+
     results_path = pathlib.Path(args.results_dir) / "flux_prediction_results.pt"
     if not results_path.exists():
         raise FileNotFoundError(
@@ -178,4 +197,6 @@ if __name__ == "__main__":
         plots_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Generate and save plots.
-    plot_flux_prediction(results_file=results_path, plots_path=plots_path)
+    plot_flux_prediction(
+        results_file=results_path, plots_path=plots_path, device=device
+    )
