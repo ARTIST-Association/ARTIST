@@ -12,7 +12,6 @@ import yaml
 
 from artist.core import KinematicCalibrator
 from artist.core.loss_functions import AngleLoss
-from artist.data_loader import paint_loader
 from artist.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -71,8 +70,6 @@ def generate_calibration_results(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device_used = ddp_setup[config_dictionary.device]
-
         # Select calibration via motor positions.
         kinematic_calibration_method = (
             config_dictionary.kinematic_calibration_motor_positions
@@ -108,39 +105,20 @@ def generate_calibration_results(
             current_scenario = deepcopy(scenario)
             loss_definition = AngleLoss()
 
-            for heliostat_group in current_scenario.heliostat_field.heliostat_groups:
-                (
-                    _,
-                    _,
-                    _,
-                    heliostats_mask_calibration,
-                    _,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=[
-                        (heliostat_name, calibration_properties_paths)
-                        for heliostat_name, calibration_properties_paths, _ in heliostat_data_mapping
-                        if heliostat_name in heliostat_group.names
-                    ],
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=current_scenario.target_areas.names,
-                    power_plant_position=current_scenario.power_plant_position,
-                    centroid_extraction_method=centroid,
-                    device=device_used,
-                )
+            kinematic_calibrator = KinematicCalibrator(
+                ddp_setup=ddp_setup,
+                scenario=current_scenario,
+                data=data,
+                optimization_configuration=optimization_configuration,
+                calibration_method=kinematic_calibration_method,
+                centroid_extraction_method=centroid,
+            )
 
-                kinematic_calibrator = KinematicCalibrator(
-                    ddp_setup=ddp_setup,
-                    scenario=current_scenario,
-                    data=data,
-                    optimization_configuration=optimization_configuration,
-                    calibration_method=kinematic_calibration_method,
-                )
+            per_heliostat_losses = kinematic_calibrator.calibrate(
+                loss_definition=loss_definition, device=device
+            )
 
-                per_heliostat_losses = kinematic_calibrator.calibrate(
-                    loss_definition=loss_definition, device=device
-                )
-
-                # Save results in dictionary.
+            for heliostat_group in scenario.heliostat_field.heliostat_groups:
                 for index, name in enumerate(heliostat_group.names):
                     results_dict.setdefault(name, {})
 
