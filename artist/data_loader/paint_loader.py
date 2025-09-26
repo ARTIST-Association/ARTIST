@@ -672,7 +672,7 @@ def _fitted_surface_generator(
     Parameters
     ----------
     file_tuple : tuple[str, pathlib.Path, pathlib.Path]
-        A tuple containing the heliostat name, path to the properties file, and path to deflecometry data file.
+        A tuple containing the heliostat name, path to the properties file, and path to deflectometry data file.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
         Tensor of shape [number_of_facets, 4].
