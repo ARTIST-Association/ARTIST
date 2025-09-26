@@ -254,10 +254,10 @@ class MotorPositionsOptimizer:
         best_loss = torch.inf
         patience_counter = 0
         epoch = 0
-        log_step = max(
-            1,
+        log_step = (
             self.optimization_configuration[config_dictionary.max_epoch]
-            // self.optimization_configuration[config_dictionary.num_log],
+            if self.optimization_configuration[config_dictionary.log_step] == 0
+            else self.optimization_configuration[config_dictionary.log_step]
         )
         while (
             loss > self.optimization_configuration[config_dictionary.tolerance]

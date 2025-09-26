@@ -103,7 +103,7 @@ def test_motor_positions_optimizer(
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 5,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 4,
         config_dictionary.scheduler: config_dictionary.cyclic,

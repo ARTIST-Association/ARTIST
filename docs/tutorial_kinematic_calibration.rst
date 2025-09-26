@@ -117,7 +117,7 @@ and the optimization configuration:
         config_dictionary.initial_learning_rate: 0.0005,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 1000,
-        config_dictionary.num_log: 100,
+        config_dictionary.log_step: 100,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 10,
         config_dictionary.scheduler: scheduler,

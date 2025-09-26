@@ -197,7 +197,7 @@ with setup_distributed_environment(
         config_dictionary.initial_learning_rate: 0.0005,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 70,
-        config_dictionary.num_log: 70,
+        config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 200,
         config_dictionary.scheduler: scheduler,

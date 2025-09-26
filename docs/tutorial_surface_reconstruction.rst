@@ -171,7 +171,7 @@ Given the scheduler we can now define the optimization parameters in the ``optim
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.00005,
         config_dictionary.max_epoch: 500,
-        config_dictionary.num_log: 50,
+        config_dictionary.log_step: 10,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 10,
         config_dictionary.scheduler: scheduler,

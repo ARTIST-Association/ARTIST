@@ -93,7 +93,7 @@ def generate_calibration_results(
             config_dictionary.initial_learning_rate: 0.04,
             config_dictionary.tolerance: 0,
             config_dictionary.max_epoch: 3000,
-            config_dictionary.num_log: 100,
+            config_dictionary.log_step: 100,
             config_dictionary.early_stopping_delta: 1e-6,
             config_dictionary.early_stopping_patience: 4000,
             config_dictionary.scheduler: scheduler,

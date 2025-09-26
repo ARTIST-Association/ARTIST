@@ -143,7 +143,9 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path(
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5"
+)
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -202,7 +204,7 @@ with setup_distributed_environment(
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
-        config_dictionary.num_log: 50,
+        config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 100,
         config_dictionary.scheduler: scheduler,

@@ -159,7 +159,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
         config_dictionary.max_epoch: 3000,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 20,
         config_dictionary.scheduler: scheduler,

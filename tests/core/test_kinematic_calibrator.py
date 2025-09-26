@@ -125,7 +125,7 @@ def test_kinematic_calibrator(
         config_dictionary.initial_learning_rate: initial_learning_rate,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 15,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 13,
         config_dictionary.scheduler: config_dictionary.exponential,
