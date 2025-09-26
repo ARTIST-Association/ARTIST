@@ -65,7 +65,7 @@ def find_viable_heliostats(
     for heliostat_dir in sorted(all_heliostats):
         heliostat_name = heliostat_dir.name
 
-        # Add the exclusion check here
+        # Skip heliostats that are in the exclusion list.
         if heliostat_name in excluded_heliostats:
             print(f"Skipping excluded heliostat: {heliostat_name}")
             continue
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--minimum_number_of_measurements",
         type=int,
-        help="The minimum number of calibration measurements per heliostat required",
+        help="The minimum number of calibration measurements per heliostat required.",
         default=minimum_number_of_measurements_default,
     )
     parser.add_argument(
@@ -235,7 +235,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--calibration_image_type",
         type=str,
-        help="Type of calibration image to use, i.e. flux or flux-centered",
+        help="Type of calibration image to use, i.e. flux or flux-centered.",
         choices=["flux", "flux-centered"],
         default=calibration_image_type_default,
     )

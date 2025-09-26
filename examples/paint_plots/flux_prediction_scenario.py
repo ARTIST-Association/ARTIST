@@ -77,10 +77,10 @@ def generate_flux_prediction_scenario(
         Names of the heliostats to include in the scenario.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
     use_deflectometry : bool, optional
-        Whether to use deflectometry data for surface fitting (default is ``True``).
+        Whether to use deflectometry data for surface fitting (default is True).
     """
     device = get_device(device=device)
 
@@ -177,7 +177,7 @@ def generate_flux_prediction_scenario(
 
     # Generate the scenario given the defined parameters.
     scenario_generator = H5ScenarioGenerator(
-        file_path=scenario_path,  # pass Path
+        file_path=scenario_path,
         power_plant_config=power_plant_config,
         target_area_list_config=target_area_list_config,
         light_source_list_config=light_source_list_config,
@@ -189,7 +189,7 @@ def generate_flux_prediction_scenario(
 
 if __name__ == "__main__":
     """
-    Generate two scenario for the flux prediction plots.
+    Generate two scenarios for the flux prediction plots.
 
     One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
     If a configuration file is provided the values will be loaded from this file. It is also possible to override
@@ -216,7 +216,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.

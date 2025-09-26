@@ -36,7 +36,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     # Create STAC client.
     client = StacClient(output_dir=args.data_dir)
 
-    # Download tower measurements
+    # Download tower measurements.
     client.get_tower_measurements()
 
     # Determine viable heliostats, i.e. only those with enough calibration measurements.

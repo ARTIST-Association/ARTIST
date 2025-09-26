@@ -44,7 +44,9 @@ def plot_flux_prediction(
     device : torch.device
         Device to use.
     """
-    # Set Plot style.
+    device = get_device(device)
+
+    # Set plot style.
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
@@ -68,7 +70,7 @@ def plot_flux_prediction(
         },
     )
 
-    # Ensure 'ax' is always an array of arrays for consistency
+    # Ensure 'ax' is always an array of arrays for consistency.
     if number_of_heliostats == 1:
         ax = [ax]
 
@@ -76,7 +78,7 @@ def plot_flux_prediction(
     colormaps: list[str] = ["gray", "hot", "hot", "plasma"]
 
     for i, (heliostat_name, data) in enumerate(results_dict.items()):
-        # Extract images
+        # Extract images.
         utis = normalize(data["utis"])
         ideal = normalize(data["ideal"])
         deflectometry = normalize(data["deflectometry"])
@@ -92,16 +94,16 @@ def plot_flux_prediction(
                 ax[i][j].imshow(
                     img, cmap=colormaps[j], origin="lower", vmin=-0.003, vmax=0.003
                 )
-            # Turn off axis ticks and labels for all subplots
+            # Turn off axis ticks and labels for all subplots.
             ax[i][j].set_xticks([])
             ax[i][j].set_yticks([])
 
-        # Label rows
+        # Label rows.
         ax[i][0].set_ylabel(
             f"\\textbf{{{heliostat_name}}}", rotation=90, labelpad=10, va="center"
         )
 
-    # Column titles with a smaller second line
+    # Column titles with a smaller second line.
     ax[0][0].set_title("\\textbf{Flux Image}\n{\\small (extracted with UTIS)}")
     ax[0][1].set_title("\\textbf{Generated Flux}\n{\\small (using ideal surface)}")
     ax[0][2].set_title("\\textbf{Generated Flux}\n{\\small (using deflectometry)}")
@@ -109,7 +111,7 @@ def plot_flux_prediction(
 
     plt.savefig(plots_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved overexposed flux comparison to {plots_path}")
+    print(f"Saved overexposed flux comparison to {plots_path}.")
 
     plt.close(fig)
 
@@ -138,7 +140,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.

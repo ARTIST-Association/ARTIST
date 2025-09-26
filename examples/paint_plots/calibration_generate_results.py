@@ -45,9 +45,11 @@ def generate_calibration_results(
 
     Returns
     -------
-    dict
+    dict[str, dict[str, Any]]
         Mapping from heliostat name to per-centroid loss arrays and, later, positions.
     """
+    device = get_device(device=device)
+
     results_dict: dict = {}
 
     data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
@@ -159,7 +161,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.

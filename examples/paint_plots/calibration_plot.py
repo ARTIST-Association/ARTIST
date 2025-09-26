@@ -132,7 +132,7 @@ def plot_error_distribution(
 
     filename = save_dir / "error_distribution.pdf"
     fig.savefig(filename, dpi=300, bbox_inches="tight")
-    print(f"Saved calibration error distribution plot at: {filename}")
+    print(f"Saved calibration error distribution plot at: {filename}.")
 
 
 def plot_error_against_distance(
@@ -141,7 +141,7 @@ def plot_error_against_distance(
     """
     Plot the calibration error against the distance.
 
-    This function plots the calibration error, in mrad, agains the distance of that heliostat from the tower.
+    This function plots the calibration error, in mrad, against the distance of that heliostat from the tower.
 
     Parameters
     ----------
@@ -150,7 +150,7 @@ def plot_error_against_distance(
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
-    # Set Plot style.
+    # Set plot style.
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
@@ -191,7 +191,7 @@ def plot_error_against_distance(
         alpha=0.7,
     )
 
-    # Trendlines
+    # Trendlines.
     helios_fit = np.poly1d(np.polyfit(distances, helios_losses, 1))
     utis_fit = np.poly1d(np.polyfit(distances, utis_losses, 1))
     x_vals = np.linspace(distances.min(), distances.max(), 200)
@@ -218,7 +218,9 @@ def plot_error_against_distance(
 
     save_path = save_dir / "calibration_error_distance.pdf"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
-    print(f"Saved plot comparing the calibration error to the distance at: {save_path}")
+    print(
+        f"Saved plot comparing the calibration error to the distance at: {save_path}."
+    )
 
 
 if __name__ == "__main__":
@@ -244,7 +246,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.
@@ -256,7 +258,7 @@ if __name__ == "__main__":
             with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
         except yaml.YAMLError as exc:
-            warnings.warn(f"Error parsing YAML file: {exc}")
+            warnings.warn(f"Error parsing YAML file: {exc}.")
     else:
         warnings.warn(
             f"Warning: Configuration file not found at {config_path}. Using defaults."

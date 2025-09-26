@@ -27,7 +27,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.
@@ -62,5 +62,5 @@ if __name__ == "__main__":
     client = StacClient(output_dir=args.metadata_root)
 
     # Download metadata for all heliostats.
-    # WARNING: This will take a very long time, but will resume at the same position of the download breaks.
+    # WARNING: This will take a very long time, but will resume at the same position if the download breaks.
     client.get_heliostat_metadata(collections=[paint_mappings.SAVE_CALIBRATION.lower()])

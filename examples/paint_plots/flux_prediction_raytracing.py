@@ -32,25 +32,29 @@ def perform_inverse_canting_and_translation(
     Parameters
     ----------
     canted_points : torch.Tensor
-        Homogeneous points after the forward transform, shape (number_of_facets, number_of_points, 4).
+        Homogeneous points after the forward transform.
+        Tensor of shape [number_of_facets, number_of_points, 4].
     translation : torch.Tensor
-        Batch of facet translations, shape (number_of_facets, 4).
+        Batch of facet translations.
+        Tensor of shape [number_of_facets, 4].
     canting : torch.Tensor
-        Batch of canting vectors (east, north), shape (number_of_facets, 2, 4).
+        Batch of canting vectors (east, north).
+        Tensor of shape [number_of_facets, 2, 4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
-        Original 3D points, shape (number_of_facets, number_of_points, 3).
+        Original 3D points.
+        Tensor of shape [number_of_facets, number_of_points, 3].
     """
     device = get_device(device=device)
     number_of_facets, number_of_points, _ = canted_points.shape
 
-    # Build forward transform per facet (use only ENU 3D for rotation).
+    # Build forward transform per facet (use only ENU 3D coordinates for rotation).
     forward_transform = torch.zeros((number_of_facets, 4, 4), device=device)
 
     east_unit_vector = torch.nn.functional.normalize(
@@ -103,16 +107,16 @@ def extract_canting_and_translation_from_properties(
     heliostat_list : list[tuple[str, pathlib.Path]]
         A list where each entry is a tuple containing the heliostat name and the path to the heliostat properties data.
     convert_to_4d : bool
-        Indicating whether tensors should be converted to 4D format (default is `False`).
+        Indicating whether tensors should be converted to 4D format (default is False).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
     list[tuple[str, torch.Tensor, torch.Tensor]]
-        A list containing a tuple for each heliostat including the heliostat name,the facet translations tensor of shape
+        A list containing a tuple for each heliostat including the heliostat name, the facet translations tensor of shape
         [number_of_facets, dimension] and the facet canting tensor of shape [number of facets, 2, dimension], where
         dimension is three or four depending which conversion is applied via the convert_to_4d parameter.
     """
@@ -147,7 +151,7 @@ def extract_canting_and_translation_from_properties(
         except Exception as ex:
             warnings.warn(
                 f"Failed to extract canting/translation for '{heliostat_name}' "
-                f"from properties '{properties_path}': {ex}"
+                f"from properties '{properties_path}': {ex}."
             )
             continue
 
@@ -226,7 +230,7 @@ def align_and_trace_rays(
         Target area indices for each active heliostat.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -295,7 +299,7 @@ def generate_flux_images(
         Key under which to store the result.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
     """
     device = get_device(device)
@@ -314,6 +318,7 @@ def generate_flux_images(
     with h5py.File(str(scenario_path), mode="r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
+    # Hint: Lower the number of rays when running on cuda, to avoid raising "cuda out of memory errors".
     scenario.set_number_of_rays(number_of_rays=6000)
 
     heliostat_properties_tuples: list[tuple[str, pathlib.Path]] = [
@@ -469,7 +474,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.

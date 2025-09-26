@@ -40,6 +40,8 @@ def generate_calibration_scenario(
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
     """
+    device = get_device(device=device)
+
     # Generate power plant configuration and target area list.
     power_plant_config, target_area_list_config = (
         paint_loader.extract_paint_tower_measurements(
@@ -108,7 +110,7 @@ if __name__ == "__main__":
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="./paint_plot_config.yaml",
+        default="examples/paint_plots/paint_plot_config.yaml",
     )
 
     # Parse the config argument first to load the configuration.
