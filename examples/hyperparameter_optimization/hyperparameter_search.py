@@ -190,7 +190,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     loss = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition,
         device=device,
-    ).sum()  # sum to reduce per_heliostat_loss to single scalar
+    )
 
     return loss.sum().item()
 
