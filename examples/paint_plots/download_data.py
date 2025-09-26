@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # Download tower measurements.
     client.get_tower_measurements()
 
-    # Determine viable heliostats, i.e. only those with enough calibration measurements.
+    # Determine viable heliostats i.e., only those with enough calibration measurements.
     calibration_file = (
         pathlib.Path(args.metadata_root) / "metadata" / args.metadata_file_name
     )

@@ -95,7 +95,7 @@ Now we will get into building the scenario.
 
 Power Plant and Target Areas
 ----------------------------
-The location of the power plant as well as information on the target areas (i.e. the receiver or calibration targets) is
+The location of the power plant as well as information on the target areas (i.e., the receiver or calibration targets) is
 loaded simultaneously in paint form the ``tower-measurement.json`` file.
 
 We can load this information using functions from the ``paint_loader``. In this case, the function below will return

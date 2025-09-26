@@ -619,7 +619,7 @@ class HeliostatRayTracer:
         # For the distributions, we regarded even those neighboring pixels that are
         # _not_ part of the image but within a little boundary outside of the image as well.
         # That is why here, we set up a mask to choose only those indices that are actually
-        # in the bitmap (i.e. we prevent out-of-bounds access).
+        # in the bitmap (i.e., we prevent out-of-bounds access).
         intersection_indices_2 = (
             (0 <= x_indices)
             & (x_indices < self.bitmap_resolution[0])

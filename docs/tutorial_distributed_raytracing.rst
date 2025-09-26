@@ -87,7 +87,7 @@ However, in this tutorial we want to consider all heliostats and therefore set o
 
 In this case it is later still possible to set a specific default target area index and a default incident ray direction, however
 if these are not provided then all heliostats are assigned to the first target area found in the scenario with a incident
-ray direction of "north", i.e. the light source position is directly in the south.
+ray direction of "north", i.e., the light source position is directly in the south.
 
 
 Distributed Raytracing
@@ -232,7 +232,7 @@ The ray tracer method ``trace_rays()`` produces bitmaps per heliostat.
           Rank 2
 
 However, now there may be multiple heliostats in the scenario all focusing on the same target. In this case, we need to
-determine the resulting flux image for that target, i.e. the combined result of all heliostats focusing on this target.
+determine the resulting flux image for that target, i.e., the combined result of all heliostats focusing on this target.
 This can be achieved with the ``get_bitmaps_per_target()`` function:
 
 .. code-block::

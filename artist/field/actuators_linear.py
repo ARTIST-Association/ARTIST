@@ -37,7 +37,7 @@ class LinearActuators(Actuators):
         Initialize linear actuators.
 
         A linear actuator describes movement within a 2D plane. One linear actuator has nine parameters.
-        Ordered by index, the first parameter describes the type of the actuator, i.e. linear, the second parameter
+        Ordered by index, the first parameter describes the type of the actuator, i.e., linear, the second parameter
         describes the turning direction of the actuator. The third and fourth parameters are the minimum and
         maximum motor positions. The next five parameters are the increment, which stores
         the information about the stroke length change per motor step, the initial stroke length, and an offset

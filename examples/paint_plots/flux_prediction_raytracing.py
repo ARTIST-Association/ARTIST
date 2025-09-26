@@ -282,7 +282,7 @@ def generate_flux_images(
     """
     Perform ray tracing in ``ARTIST`` and save the bitmaps to a results file.
 
-    This function generates flux bitmaps through ray tracing in ``ARTIST`` and saves the results, i.e. the bitmaps to a
+    This function generates flux bitmaps through ray tracing in ``ARTIST`` and saves the results, i.e., the bitmaps to a
     unified results file for later plot generation.
 
     Parameters

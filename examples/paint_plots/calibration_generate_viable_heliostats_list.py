@@ -38,7 +38,7 @@ def find_viable_heliostats(
     excluded_heliostats : set[str]
         The set of heliostats to exclude.
     calibration_image_type : str
-        The type of calibration image to use, i.e. ''flux'', or ''flux-centered''.
+        The type of calibration image to use, i.e., ''flux'', or ''flux-centered''.
 
     Returns
     -------
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     """
     Generate list of viable heliostats for calibration.
 
-    This script identifies a list of viable heliostats, i.e. containing a minimum number of valid measurements, for
+    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
     the calibration process.
 
     Parameters
@@ -235,7 +235,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--calibration_image_type",
         type=str,
-        help="Type of calibration image to use, i.e. flux or flux-centered.",
+        help="Type of calibration image to use, i.e., flux or flux-centered.",
         choices=["flux", "flux-centered"],
         default=calibration_image_type_default,
     )

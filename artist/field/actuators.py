@@ -23,7 +23,7 @@ class Actuators(torch.nn.Module):
     angles_to_motor_positions()
         Calculate the motor positions for given joint angles.
     forward()
-        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
+        Specify the forward operation of the actuator, i.e., calculate the angles for given the motor positions.
     """
 
     def __init__(
@@ -108,7 +108,7 @@ class Actuators(torch.nn.Module):
         self, motor_positions: torch.Tensor, device: torch.device | None = None
     ) -> torch.Tensor:
         """
-        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
+        Specify the forward operation of the actuator, i.e., calculate the angles for given the motor positions.
 
         Parameters
         ----------

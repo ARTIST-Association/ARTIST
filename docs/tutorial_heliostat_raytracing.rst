@@ -12,7 +12,7 @@ This tutorial provides a brief introduction to ``ARTIST`` showcasing how Heliost
 heliostat. The tutorial will run through some basic concepts necessary to understanding ``ARTIST`` including:
 
 - How to load a scenario.
-- How to select specific helisotats for alignment and raytracing.
+- How to select specific heliostats for alignment and raytracing.
 - Activating the kinematic in the heliostats to align the heliostats for ray tracing.
 - Performing heliostat ray tracing to generate flux density images on the target areas on the tower.
 
@@ -129,7 +129,7 @@ This code generates the following output:
 
 Selecting Active Heliostats and Target Areas
 --------------------------------------------
-In ARTIST the information about the helisotats is saved per heliostat property. There is one tensor containing
+In ARTIST the information about the heliostats is saved per heliostat property. There is one tensor containing
 all heliostat positions from a specific heliostat group (see :ref:`Artist Under the Hood<artist_under_hood>`).
 Similarly there is one tensor containing all aim points and so on. To address a specific heliostat, it is important to
 know its index. To activate one or more heliostats for the alignment process or raytracing, you can mark the entry at
@@ -187,9 +187,9 @@ to align the heliostats in an optimal position for reflection. To perform this o
 direction, i.e., a direction vector, originating in the light source position and pointing towards the heliostat field.
 ``ARTIST`` can accommodate heliostats with various kinematic and actuator types. Since each kinematic type and
 actuator type computes the orientations of aligned heliostats slightly different, we need to separate the heliostats into
-``HeliostatGroup`` groups. ``ARTIST`` handels this automatically.
+``HeliostatGroup`` groups. ``ARTIST`` handles this automatically.
 
-We first consider a scenario where the sun is also directly in the south, i.e. the incident ray direction is to the north.
+We first consider a scenario where the sun is also directly in the south, i.e., the incident ray direction is to the north.
 When defining this, we have to make sure the direction is normed:
 
 .. code-block::
@@ -241,7 +241,7 @@ efficient. Concretely, the heliostat ray tracing involves three main steps:
 
 Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class! Therefore, ray tracing
 with ``ARTIST`` involves two simple lines of code. First, we define the ``HeliostatRayTracer``. A ``HeliostatRayTracer``
-only requires a ``Scenario`` object as an argument and the specification of which ``HelisotatGroup`` is currently regarded.
+only requires a ``Scenario`` object as an argument and the specification of which ``HeliostatGroup`` is currently regarded.
 
 .. code-block::
 

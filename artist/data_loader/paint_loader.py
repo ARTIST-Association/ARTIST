@@ -744,7 +744,7 @@ def _process_heliostats_from_paths(
     ----------
     paths : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
         The list of heliostat paths, where each element's structure depends on whether the surface is ideal or fitted,
-        i.e. for ideal surfaces only the heliostat name and path to the properties file is required, whilst for the
+        i.e., for ideal surfaces only the heliostat name and path to the properties file is required, whilst for the
         fitted surface the path to the deflectometry file is also required.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.

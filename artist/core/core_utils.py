@@ -11,7 +11,7 @@ def per_heliostat_reduction(
     """
     Compute mean losses for each heliostat with multiple samples.
 
-    If the active heliostats of one group have different amounts of samples to train on, i.e.
+    If the active heliostats of one group have different amounts of samples to train on, i.e.,
     one heliostat is trained with more samples than another, this function makes sure that
     each heliostat still contributes equally to the overall loss of the group. This function
     computes the mean loss for each heliostat.
