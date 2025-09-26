@@ -1,6 +1,6 @@
 metadata_root: "./"
 metadata_file_name: "calibration_metadata_all_heliostats.csv"
-data_dir: "/workVERLEIHNIX/share/PAINT"
+data_dir: "./paint_data"
 tower_file_name: "WRI1030197-tower-measurements.json"
 scenarios_dir: "./scenarios"
 results_dir: "./results"
@@ -13,4 +13,4 @@ heliostats_for_raytracing:
   AA39: 149576
   AY26: 247613
   BC34: 82084
-device: "cuda"
+device: "cpu"
