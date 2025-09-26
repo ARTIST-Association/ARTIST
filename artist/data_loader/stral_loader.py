@@ -16,7 +16,7 @@ def extract_stral_deflectometry_data(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, list[torch.Tensor], list[torch.Tensor]]:
     """
-    Extract deflectometry data from a ```STRAL`` file.
+    Extract deflectometry data from a ``STRAL`` file.
 
     Parameters
     ----------
@@ -42,13 +42,13 @@ def extract_stral_deflectometry_data(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of data from ```STRAL``` file.")
+    log.info("Beginning extraction of data from STRAL file.")
 
-    # Create structures for reading ``STRAL`` file.
+    # Create structures for reading STRAL file.
     surface_header_struct = struct.Struct("=5f2I2f")
     facet_header_struct = struct.Struct("=i9fI")
     points_on_facet_struct = struct.Struct("=7f")
-    log.info(f"Reading STRAL file located at: {stral_file_path}")
+    log.info(f"Reading STRAL file located at: {stral_file_path}.")
     with open(f"{stral_file_path}", "rb") as file:
         surface_header_data = surface_header_struct.unpack_from(
             file.read(surface_header_struct.size)
@@ -103,7 +103,7 @@ def extract_stral_deflectometry_data(
         )
         canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
-    log.info("Loading ``STRAL`` data complete.")
+    log.info("Loading STRAL data complete.")
 
     return (
         facet_translation_vectors,

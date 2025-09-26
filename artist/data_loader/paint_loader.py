@@ -86,9 +86,7 @@ def extract_paint_calibration_properties_data(
     """
     device = get_device(device=device)
 
-    log.info(
-        "Beginning extraction of calibration properties data from ```PAINT``` file."
-    )
+    log.info("Beginning extraction of calibration properties data from PAINT file.")
 
     if centroid_extraction_method not in [
         paint_mappings.UTIS_KEY,
@@ -100,7 +98,7 @@ def extract_paint_calibration_properties_data(
         )
     target_indices = {name: index for index, name in enumerate(target_area_names)}
 
-    # Gather calibration data
+    # Gather calibration data.
     replication_counter: Counter[str] = Counter()
     calibration_data_per_heliostat = defaultdict(list)
 
@@ -212,7 +210,7 @@ def extract_paint_tower_measurements(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of tower data from ```PAINT``` file.")
+    log.info("Beginning extraction of tower data from PAINT file.")
 
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
@@ -354,7 +352,7 @@ def extract_paint_heliostat_properties(
     with open(heliostat_properties_path, "r") as file:
         heliostat_dict = json.load(file)
 
-    log.info("Beginning extraction of heliostat properties data from ```PAINT``` file.")
+    log.info("Beginning extraction of heliostat properties data from PAINT file.")
 
     heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
         torch.tensor(
@@ -561,7 +559,7 @@ def extract_paint_deflectometry_data(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of deflectometry data from ```PAINT``` file.")
+    log.info("Beginning extraction of deflectometry data from PAINT file.")
 
     with h5py.File(heliostat_deflectometry_path, "r") as file:
         surface_points_with_facets_list = []
@@ -876,7 +874,7 @@ def extract_paint_heliostats_ideal_surface(
         Tensor of shape [2].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -936,7 +934,7 @@ def extract_paint_heliostats_fitted_surface(
         The maximum number of epochs for the NURBS fit (default is 400).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -971,7 +969,7 @@ def azimuth_elevation_to_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from azimuth and elevation to east, north, up.
+    Transform coordinates from azimuth and elevation to east, north and up.
 
     This method assumes a south-oriented azimuth-elevation coordinate system, where 0° points toward the south.
 
@@ -979,8 +977,10 @@ def azimuth_elevation_to_enu(
     ----------
     azimuth : torch.Tensor
         Azimuth, 0° points toward the south (degrees).
+        Tensor of shape [number_of_samples].
     elevation : torch.Tensor
         Elevation angle above horizon, neglecting aberrations (degrees).
+        Tensor of shape [number_of_samples].
     slant_range : float
         Slant range in meters (default is 1.0).
     degree : bool
@@ -993,7 +993,8 @@ def azimuth_elevation_to_enu(
     Returns
     -------
     torch.Tensor
-        The east, north, up (ENU) coordinates.
+        The east, north and up (ENU) coordinates.
+        Tensor of shape [number_of_samples, 3].
     """
     device = get_device(device=device)
 
@@ -1020,7 +1021,7 @@ def convert_wgs84_coordinates_to_local_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
+    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north and up (ENU).
 
     This function calculates the north and east offsets in meters of a coordinate from the reference point.
     It converts the latitude and longitude to radians, calculates the radius of curvature values,
@@ -1052,9 +1053,9 @@ def convert_wgs84_coordinates_to_local_enu(
         coordinates_to_transform, dtype=torch.float32, device=device
     )
 
-    wgs84_a = 6378137.0  # Major axis in meters
-    wgs84_b = 6356752.314245  # Minor axis in meters
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
+    wgs84_a = 6378137.0  # Major axis in meters.
+    wgs84_b = 6356752.314245  # Minor axis in meters.
+    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared.
 
     # Convert latitude and longitude to radians.
     latitudes = torch.deg2rad(coordinates_to_transform[:, 0])

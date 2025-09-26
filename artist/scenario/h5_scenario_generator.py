@@ -211,14 +211,14 @@ class H5ScenarioGenerator:
             save_name = self.file_path.with_suffix(".h5")
         else:
             log.error(
-                f"```ARTIST``` only supports HDF5 files in the scenario generator, your extension {self.file_path.suffix} is unsupported!"
+                f"ARTIST only supports HDF5 files in the scenario generator, your extension {self.file_path.suffix} is unsupported!"
             )
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
             log.info(f"Using scenario generator version {self.version}.")
             f.attrs["version"] = self.version
 
-            # Include number of heliostat groups in the top level
+            # Include number of heliostat groups in the top level.
             f[config_dictionary.number_of_heliostat_groups] = (
                 self._get_number_of_heliostat_groups()
             )

@@ -60,7 +60,7 @@ class Regularizer:
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.
@@ -86,13 +86,13 @@ class TotalVariationRegularizer(Regularizer):
     surface : str
         Specifies which part of a surface is regularized (either the surface points or the surface normals).
     number_of_neighbors : int
-        The number of nearest neighbors to consider (default is 20).
+        The number of nearest neighbors to consider.
     sigma : float | None
-        Determines how quickly the weight falls off as the distance increases (default is None).
+        Determines how quickly the weight falls off as the distance increases.
     batch_size : int
-        Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
+        Used to process smaller batches of points instead of creating full distance matrices for all points.
     epsilon : float
-        A small vlaue used to prevent divisions by zero (defualt is 1e-8).
+        A small value used to prevent divisions by zero.
     """
 
     def __init__(
@@ -123,7 +123,7 @@ class TotalVariationRegularizer(Regularizer):
         batch_size : int
             Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
         epsilon : float
-            A small vlaue used to prevent divisions by zero (defualt is 1e-8).
+            A small value used to prevent divisions by zero (default is 1e-8).
         """
         self.weight = weight
         self.reduction_dimensions = reduction_dimensions
@@ -146,7 +146,7 @@ class TotalVariationRegularizer(Regularizer):
         Compute the regularization.
 
         This regularization suppresses the noise in the surface. It measures the noise in the surface by
-        taking absolute differences in the z values of the provided points. This loss implementation
+        taking absolute differences in the z-values of the provided points. This loss implementation
         focuses on local smoothness by applying a Gaussian distance weight and thereby letting
         closer points contribute more.
 
@@ -166,7 +166,7 @@ class TotalVariationRegularizer(Regularizer):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.
@@ -225,7 +225,7 @@ class TotalVariationRegularizer(Regularizer):
                 self_mask, torch.full_like(distances, 1e9), distances
             )
 
-            # Select the k nearest neighbors (or fewer if the coordinate is near an edge).
+            # Select the k-nearest neighbors (or fewer if the coordinate is near an edge).
             number_of_neighbors_to_select = min(
                 self.number_of_neighbors, number_of_surface_points_per_facet - 1
             )
@@ -283,7 +283,7 @@ class IdealSurfaceRegularizer(Regularizer):
         ----------
         weight : float
             The weight of the regularization term.
-        reduction_dimensions : tuple[int]
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the regularization term.
         """
         self.weight = weight
@@ -301,7 +301,7 @@ class IdealSurfaceRegularizer(Regularizer):
         r"""
         Compute the regularization.
 
-        This regularization supresses large changes in the control points positions. The real
+        This regularization suppresses large changes in the control points positions. The real
         surface is expected to be close to the ideal surface, therefore large changes are penalized.
 
         Parameters
@@ -320,7 +320,7 @@ class IdealSurfaceRegularizer(Regularizer):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.

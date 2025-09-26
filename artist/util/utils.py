@@ -646,7 +646,7 @@ def create_ideal_canted_nurbs_control_points(
         Tensor of shape [number_of_facets, 4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -792,7 +792,7 @@ def trapezoid_distribution(
         The width of the plateau.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -832,17 +832,17 @@ def crop_flux_distributions_around_center(
     ----------
     flux_distributions : torch.Tensor
         Grayscale intensity images.
-        Tensor of shape [number_of_fluxmaps, bitmap_height, bitmap_width].
+        Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
     crop_width : float
         Desired width of the cropped region in meters.
     crop_height : float
         Desired height of the cropped region in meters.
     target_plane_widths : torch.Tensor
         Physical widths in meters of each image in the batch.
-        Tensor of shape [number_of_fluxmaps].
+        Tensor of shape [number_of_bitmaps].
     target_plane_heights : torch.Tensor
         Physical heights in meters of each image in the batch.
-        Tensor of shape [number_of_fluxmaps].
+        Tensor of shape [number_of_bitmaps].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -852,7 +852,7 @@ def crop_flux_distributions_around_center(
     -------
     torch.Tensor
         The cropped image regions.
-        Tensor of shape [number_of_fluxmaps, bitmap_height, bitmap_width].
+        Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
     """
     device = get_device(device=device)
 

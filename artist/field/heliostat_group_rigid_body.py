@@ -225,7 +225,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises

@@ -24,7 +24,7 @@ class TowerTargetAreas:
     names : list[str]
         The names of each target area.
     geometries : list[str]
-        THe type of geometry of each target area.
+        The type of geometry of each target area.
     centers : torch.Tensor
         The center point coordinate of each target area.
         Tensor of shape [number_of_target_areas, 4].

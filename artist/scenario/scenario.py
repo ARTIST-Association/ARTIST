@@ -62,7 +62,7 @@ class Scenario:
         Parameters
         ----------
         power_plant_position : torch.Tensor,
-            The position of the power plant as latitude, longitude, altitude.
+            The position of the power plant as latitude, longitude and altitude.
             Tensor of shape [3].
         target_areas : TargetAreaArray
             A list of tower target areas included in the scenario.
@@ -141,7 +141,7 @@ class Scenario:
         )
         if rank == 0:
             log.info(
-                f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+                f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
             )
 
         power_plant_position = torch.tensor(

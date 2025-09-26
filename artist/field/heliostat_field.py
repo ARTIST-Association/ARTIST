@@ -60,7 +60,7 @@ class HeliostatField:
             A list containing all heliostat groups.
         device : device: torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         self.heliostat_groups = heliostat_groups

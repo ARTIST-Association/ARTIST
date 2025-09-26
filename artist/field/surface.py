@@ -16,6 +16,7 @@ class Surface:
         A list of one nurbs surface for each facet.
     facet_translation_vectors : torch.Tensor
         The facet translation vectors for all facets.
+        Tensor of shape [number_of_facets, 4].
 
     Methods
     -------

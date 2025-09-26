@@ -671,12 +671,12 @@ def linear_actuators(
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
 
-    # For all linear actuators:
-    # Adapt initial angle of actuator one according to kinematic initial orientation.
+    # For all linear actuators in the rigid body kinematic:
+    # Adapt initial angle of actuator number one according to kinematic initial orientation.
     # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
-    # of actuator one needs to be transformed accordingly.
+    # of actuator number one needs to be transformed accordingly.
     actuator_parameters[8, 0] = utils.transform_initial_angle(
         initial_angle=actuator_parameters[6, 0].unsqueeze(0),
         initial_orientation=initial_orientation,

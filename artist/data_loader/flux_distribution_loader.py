@@ -22,8 +22,8 @@ def load_flux_from_png(
     """
     Load flux density distributions as tensors from png images.
 
-    Note that the order of width and height are reversed in PIL and torch.
-    PIL takes (width, height), while torch tensors are [height, width].
+    Note that the order of width and height are reversed in ``PIL`` and ``torch``.
+    ``PIL`` takes (width, height), while ``torch`` tensors are [height, width].
 
     Parameters
     ----------

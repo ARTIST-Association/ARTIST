@@ -62,7 +62,7 @@ def line_plane_intersections(
         If none are provided, the first target area of the scenario will be linked to all heliostats.
         Tensor of shape [number_of_active_heliostats].
     epsilon : float
-        A small value corresponding to the upper limit (default: 1e-6).
+        A small value corresponding to the upper limit (default is 1e-6).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate

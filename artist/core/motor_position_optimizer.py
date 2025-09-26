@@ -81,7 +81,7 @@ class MotorPositionsOptimizer:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -144,7 +144,7 @@ class MotorPositionsOptimizer:
             The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -189,9 +189,8 @@ class MotorPositionsOptimizer:
                 self.incident_ray_direction.repeat(group.number_of_heliostats, 1)
             )
 
-            # Align all heliostats once, to the given incident ray direction and target, to set initial motor
-            # positions. The motor positions are set automatically within the ``align_surfaces_with_incident_ray_directions()``
-            # method.
+            # Align all heliostats once, to the given incident ray direction and target, to set initial motor positions.
+            # The motor positions are set automatically within the align_surfaces_with_incident_ray_directions() method.
             # Activate heliostats.
             group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
