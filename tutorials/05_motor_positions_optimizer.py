@@ -101,6 +101,19 @@ def create_flux_plot_after_optimization() -> None:
             )
         )
 
+        # Activate heliostats.
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
+        # Align heliostats.
+        heliostat_group.align_surfaces_with_motor_positions(
+            motor_positions=heliostat_group.kinematic.active_motor_positions,
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
         # Create a ray tracer.
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,

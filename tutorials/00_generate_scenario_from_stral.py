@@ -22,7 +22,7 @@ from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
-# Set up logger
+# Set up logger.
 set_logger_config()
 
 torch.manual_seed(7)
@@ -51,7 +51,7 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single tower area (receiver)
+# Include a single tower area (receiver).
 receiver_config = TargetAreaConfig(
     target_area_key="receiver",
     geometry=config_dictionary.target_area_type_planar,

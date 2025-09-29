@@ -209,7 +209,7 @@ class KinematicCalibrator:
                     incident_ray_directions,
                     motor_positions,
                     active_heliostats_mask,
-                    _,
+                    target_area_mask,
                 ) = paint_loader.extract_paint_calibration_properties_data(
                     heliostat_calibration_mapping=heliostat_calibration_mapping,
                     heliostat_names=heliostat_group.names,
@@ -301,7 +301,7 @@ class KinematicCalibrator:
                     loss_per_sample = loss_definition(
                         prediction=preferred_reflection_directions,
                         ground_truth=preferred_reflection_directions_measured,
-                        target_area_mask=_,
+                        target_area_mask=target_area_mask,
                         reduction_dimensions=(1,),
                         device=device,
                     )

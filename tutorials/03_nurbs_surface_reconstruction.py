@@ -187,7 +187,10 @@ def create_surface_plots(name: str) -> None:
 
 
 def create_flux_plots(
-    heliostat_names: list[str], number_of_plots_per_heliostat: int, plot_name: str
+    heliostat_names: list[str],
+    number_of_plots_per_heliostat: int,
+    base_path_data: str,
+    plot_name: str,
 ) -> None:
     """
     Create data to plot the heliostat fluxes.
@@ -198,12 +201,14 @@ def create_flux_plots(
         The names of all heliostats to be plotted.
     number_of_plots_per_heliostat : int
         The number of flux plots for each heliostat.
+    base_path_data : str
+        The path to the data directory from which to load heliostat field calibration data.
     plot_name : str
         The name for the plots.
     """
     # Load reference data.
     validation_heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path="/path/to/data",
+        base_path=base_path_data,
         heliostat_names=heliostat_names,
         number_of_measurements=number_of_plots_per_heliostat,
         image_variant="flux-centered",
@@ -465,10 +470,12 @@ with setup_distributed_environment(
     # Please adapt the heliostat names according to the ones to be plotted.
     heliostat_names = ["heliostat_name_1, heliostat_name_2"]
     number_of_plots_per_heliostat = 2
+    base_path_data = "/path/to/data"
     create_surface_plots(name="ideal")
     create_flux_plots(
         heliostat_names=heliostat_names,
         number_of_plots_per_heliostat=number_of_plots_per_heliostat,
+        base_path_data=base_path_data,
         plot_name="ideal",
     )
 
@@ -496,5 +503,6 @@ create_surface_plots(name="reconstructed")
 create_flux_plots(
     heliostat_names=heliostat_names,
     number_of_plots_per_heliostat=number_of_plots_per_heliostat,
+    base_path_data=base_path_data,
     plot_name="reconstructed",
 )

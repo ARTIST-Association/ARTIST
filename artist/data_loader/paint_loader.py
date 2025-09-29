@@ -296,7 +296,7 @@ def extract_paint_tower_measurements(
     # Create the tower area configurations.
     target_area_list_config = TargetAreaListConfig(target_area_config_list)
 
-    log.info("Loading tower data` data complete.")
+    log.info("Loading tower data complete.")
 
     return power_plant_config, target_area_list_config
 
