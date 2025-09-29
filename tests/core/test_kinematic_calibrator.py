@@ -17,7 +17,7 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta, centroid_extraction_method",
+    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta, centroid_extraction_method, scheduler",
     [
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -26,6 +26,7 @@ set_logger_config()
             "paint",
             1e-4,
             paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -34,6 +35,7 @@ set_logger_config()
             "paint",
             1e-4,
             paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
         ),
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -42,6 +44,7 @@ set_logger_config()
             "invalid",
             1e-4,
             paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -50,6 +53,7 @@ set_logger_config()
             "invalid",
             1e-4,
             paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
         ),
         (
             config_dictionary.kinematic_calibration_motor_positions,
@@ -58,6 +62,7 @@ set_logger_config()
             "paint",
             1.0,
             paint_mappings.UTIS_KEY,
+            config_dictionary.reduce_on_plateau,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -66,6 +71,7 @@ set_logger_config()
             "paint",
             1.0,
             paint_mappings.UTIS_KEY,
+            config_dictionary.reduce_on_plateau,
         ),
         (
             config_dictionary.kinematic_calibration_raytracing,
@@ -74,6 +80,7 @@ set_logger_config()
             "paint",
             1.0,
             "invalid",
+            config_dictionary.reduce_on_plateau,
         ),
     ],
 )
@@ -84,6 +91,7 @@ def test_kinematic_calibrator(
     data_source: str,
     early_stopping_delta: float,
     centroid_extraction_method: str,
+    scheduler: str,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -104,6 +112,8 @@ def test_kinematic_calibrator(
         The minimum required improvement to prevent early stopping.
     centroid_extraction_method : str
         The method used to extract the focal spot centroids.
+    scheduler : str
+        The scheduler to be used.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -119,6 +129,11 @@ def test_kinematic_calibrator(
 
     scheduler_parameters = {
         config_dictionary.gamma: 0.9,
+        config_dictionary.min: 1e-4,
+        config_dictionary.reduce_factor: 0.9,
+        config_dictionary.patience: 100,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 20,
     }
 
     optimization_configuration = {
@@ -128,7 +143,7 @@ def test_kinematic_calibrator(
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 13,
-        config_dictionary.scheduler: config_dictionary.exponential,
+        config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
