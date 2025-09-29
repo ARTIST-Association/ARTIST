@@ -210,9 +210,10 @@ class H5ScenarioGenerator:
         elif self.file_path.suffix == "":
             save_name = self.file_path.with_suffix(".h5")
         else:
-            log.error(
-                f"ARTIST only supports HDF5 files in the scenario generator, your extension {self.file_path.suffix} is unsupported!"
+            log.warning(
+                f"ARTIST only supports HDF5 files in the scenario generator, your extension {self.file_path.suffix} is unsupported! A .h5 file will be produced instead."
             )
+            save_name = self.file_path.with_suffix(".h5")
         with h5py.File(save_name, "w") as f:
             # Set scenario version as attribute.
             log.info(f"Using scenario generator version {self.version}.")
