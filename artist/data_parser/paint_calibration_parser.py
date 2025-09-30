@@ -210,14 +210,6 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
         log.info("Beginning extraction of calibration properties data from PAINT file.")
 
-        if self.centroid_extraction_method not in [
-            paint_mappings.UTIS_KEY,
-            paint_mappings.HELIOS_KEY,
-        ]:
-            raise ValueError(
-                f"The centroid extraction method {self.centroid_extraction_method} is not supported. Currently we"
-                f"only support centroid extraction from {paint_mappings.HELIOS_KEY} or {paint_mappings.UTIS_KEY}."
-            )
         target_indices = {name: index for index, name in enumerate(target_area_names)}
 
         # Gather calibration data.
