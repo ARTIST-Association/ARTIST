@@ -11,8 +11,8 @@ import yaml
 from PIL import Image
 
 from artist.core import HeliostatRayTracer
-from artist.data_loader import paint_loader
-from artist.data_loader.paint_loader import extract_paint_heliostat_properties
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
+from artist.data_parser.paint_scenario_parser import extract_paint_heliostat_properties
 from artist.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device
@@ -357,13 +357,14 @@ def generate_flux_images(
         )
 
     # Load the calibration data.
+    calibration_data_parser = PaintCalibrationDataParser()
     (
         focal_spots_calibration,
         incident_ray_directions_calibration,
-        motor_positions_calibration,
+        _,
         heliostats_mask_calibration,
         target_area_mask_calibration,
-    ) = paint_loader.extract_paint_calibration_properties_data(
+    ) = calibration_data_parser._parse_calibration_data(
         heliostat_calibration_mapping=[
             (heliostat_name, calibration_properties_paths)
             for heliostat_name, calibration_properties_paths in heliostat_data_mapping

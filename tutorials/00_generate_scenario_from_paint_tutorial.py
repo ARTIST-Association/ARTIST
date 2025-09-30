@@ -2,7 +2,7 @@ import pathlib
 
 import torch
 
-from artist.data_loader import paint_loader
+from artist.data_parser import paint_scenario_parser
 from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,
@@ -58,7 +58,7 @@ if not pathlib.Path(scenario_path).parent.is_dir():
 
 # Include the power plant configuration.
 power_plant_config, target_area_list_config = (
-    paint_loader.extract_paint_tower_measurements(
+    paint_scenario_parser.extract_paint_tower_measurements(
         tower_measurements_path=tower_file, device=device
     )
 )
@@ -103,7 +103,7 @@ nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 )
 
 heliostat_list_config, prototype_config = (
-    paint_loader.extract_paint_heliostats_fitted_surface(
+    paint_scenario_parser.extract_paint_heliostats_fitted_surface(
         paths=heliostat_files_list,
         power_plant_position=power_plant_config.power_plant_position,
         number_of_nurbs_control_points=number_of_nurbs_control_points,

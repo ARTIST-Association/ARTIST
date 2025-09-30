@@ -130,6 +130,8 @@ def plot_error_distribution(
     ax.legend(fontsize=8)
     ax.grid(True)
 
+    if not save_dir.is_dir():
+        save_dir.mkdir(parents=True, exist_ok=True)
     filename = save_dir / "error_distribution.pdf"
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     print(f"Saved calibration error distribution plot at: {filename}.")

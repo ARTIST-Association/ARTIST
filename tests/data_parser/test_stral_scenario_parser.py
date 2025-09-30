@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_loader import stral_loader
+from artist.data_parser import stral_scenario_parser
 
 
 @pytest.mark.parametrize(
@@ -66,7 +66,7 @@ def test_extract_paint_heliostats(
         If test does not complete as expected.
     """
     extracted_list = list(
-        stral_loader.extract_stral_deflectometry_data(
+        stral_scenario_parser.extract_stral_deflectometry_data(
             stral_file_path=stral_file_path,
             device=device,
         )

@@ -3,7 +3,7 @@ import pathlib
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_loader import flux_distribution_loader
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
 
 
 def test_load_flux_from_png(device: torch.device) -> None:
@@ -40,7 +40,9 @@ def test_load_flux_from_png(device: torch.device) -> None:
     ]
     heliostat_names = ["AA31", "AA35", "AA39", "AB38"]
 
-    extracted_bitmaps = flux_distribution_loader.load_flux_from_png(
+    data_parser = CalibrationDataParser(sample_limit=1)
+
+    extracted_bitmaps = data_parser.load_flux_from_png(
         heliostat_flux_path_mapping=heliostat_flux_path_mapping,
         heliostat_names=heliostat_names,
         device=device,

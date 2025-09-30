@@ -12,6 +12,8 @@ import yaml
 
 from artist.core import KinematicCalibrator
 from artist.core.loss_functions import AngleLoss
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -51,11 +53,6 @@ def generate_calibration_results(
     device = get_device(device=device)
 
     results_dict: dict = {}
-
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
-    }
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -107,13 +104,23 @@ def generate_calibration_results(
             current_scenario = deepcopy(scenario)
             loss_definition = AngleLoss()
 
+            data: dict[
+                str,
+                CalibrationDataParser
+                | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+            ] = {
+                config_dictionary.data_parser: PaintCalibrationDataParser(
+                    centroid_extraction_method=centroid
+                ),
+                config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+            }
+
             kinematic_calibrator = KinematicCalibrator(
                 ddp_setup=ddp_setup,
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
                 calibration_method=kinematic_calibration_method,
-                centroid_extraction_method=centroid,
             )
 
             per_heliostat_losses = kinematic_calibrator.calibrate(

@@ -9,6 +9,8 @@ import torch
 from artist import ARTIST_ROOT
 from artist.core.kinematic_calibrator import KinematicCalibrator
 from artist.core.loss_functions import FocalSpotLoss, Loss, VectorLoss
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 
@@ -17,13 +19,13 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_learning_rate, loss_class, data_source, early_stopping_delta, centroid_extraction_method, scheduler",
+    "calibration_method, initial_learning_rate, loss_class, data_parser, early_stopping_delta, centroid_extraction_method, scheduler",
     [
         (
             config_dictionary.kinematic_calibration_motor_positions,
             0.001,
             VectorLoss,
-            "paint",
+            PaintCalibrationDataParser(),
             1e-4,
             paint_mappings.UTIS_KEY,
             config_dictionary.exponential,
@@ -32,25 +34,7 @@ set_logger_config()
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
             FocalSpotLoss,
-            "paint",
-            1e-4,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.exponential,
-        ),
-        (
-            config_dictionary.kinematic_calibration_motor_positions,
-            0.0001,
-            VectorLoss,
-            "invalid",
-            1e-4,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.exponential,
-        ),
-        (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0001,
-            FocalSpotLoss,
-            "invalid",
+            PaintCalibrationDataParser(),
             1e-4,
             paint_mappings.UTIS_KEY,
             config_dictionary.exponential,
@@ -59,7 +43,25 @@ set_logger_config()
             config_dictionary.kinematic_calibration_motor_positions,
             0.0001,
             VectorLoss,
-            "paint",
+            CalibrationDataParser(),
+            1e-4,
+            paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
+        ),
+        (
+            config_dictionary.kinematic_calibration_raytracing,
+            0.0001,
+            FocalSpotLoss,
+            CalibrationDataParser(),
+            1e-4,
+            paint_mappings.UTIS_KEY,
+            config_dictionary.exponential,
+        ),
+        (
+            config_dictionary.kinematic_calibration_motor_positions,
+            0.0001,
+            VectorLoss,
+            PaintCalibrationDataParser(),
             1.0,
             paint_mappings.UTIS_KEY,
             config_dictionary.reduce_on_plateau,
@@ -68,7 +70,7 @@ set_logger_config()
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
             FocalSpotLoss,
-            "paint",
+            PaintCalibrationDataParser(),
             1.0,
             paint_mappings.UTIS_KEY,
             config_dictionary.reduce_on_plateau,
@@ -77,7 +79,7 @@ set_logger_config()
             config_dictionary.kinematic_calibration_raytracing,
             0.0001,
             FocalSpotLoss,
-            "paint",
+            PaintCalibrationDataParser(),
             1.0,
             "invalid",
             config_dictionary.reduce_on_plateau,
@@ -88,7 +90,7 @@ def test_kinematic_calibrator(
     calibration_method: str,
     initial_learning_rate: float,
     loss_class: Loss,
-    data_source: str,
+    data_parser: CalibrationDataParser,
     early_stopping_delta: float,
     centroid_extraction_method: str,
     scheduler: str,
@@ -106,8 +108,8 @@ def test_kinematic_calibrator(
         The initial learning rate.
     loss_class : Loss
         The loss class.
-    data_source : str
-        The name of the data source.
+    data_parser : CalibrationDataParser
+        The data parser used to load calibration data from files.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
     centroid_extraction_method : str
@@ -163,7 +165,7 @@ def test_kinematic_calibrator(
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-flux_centered_1.png",
+                / "tests/data/field_data/AA39-flux-centered_1.png",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_2.png",
             ],
@@ -181,43 +183,43 @@ def test_kinematic_calibrator(
         ),
     ]
 
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: data_source,
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
-    }
-
-    with h5py.File(scenario_path, "r") as scenario_file:
-        scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
-        )
-
-    ddp_setup_for_testing[config_dictionary.device] = device
-    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
-
-    # Create the kinematic optimizer.
     if centroid_extraction_method == "invalid":
         with pytest.raises(ValueError) as exc_info:
-            _ = KinematicCalibrator(
-                ddp_setup=ddp_setup_for_testing,
-                scenario=scenario,
-                data=data,
-                optimization_configuration=optimization_configuration,
-                calibration_method=calibration_method,
-                centroid_extraction_method=centroid_extraction_method,
+            data_parser = (
+                PaintCalibrationDataParser(
+                    centroid_extraction_method=centroid_extraction_method
+                )
+                if isinstance(data_parser, PaintCalibrationDataParser)
+                else CalibrationDataParser()
             )
-
             assert (
                 f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
                 in str(exc_info.value)
             )
     else:
+        data: dict[
+            str,
+            CalibrationDataParser
+            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        ] = {
+            config_dictionary.data_parser: data_parser,
+            config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+        }
+
+        with h5py.File(scenario_path, "r") as scenario_file:
+            scenario = Scenario.load_scenario_from_hdf5(
+                scenario_file=scenario_file, device=device
+            )
+
+        ddp_setup_for_testing[config_dictionary.device] = device
+        ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+
         kinematic_calibrator = KinematicCalibrator(
             ddp_setup=ddp_setup_for_testing,
             scenario=scenario,
             data=data,
             optimization_configuration=optimization_configuration,
             calibration_method=calibration_method,
-            centroid_extraction_method=centroid_extraction_method,
         )
 
         loss_definition = (
@@ -227,16 +229,13 @@ def test_kinematic_calibrator(
         )
 
         # Calibrate the kinematic.
-        if data_source == "invalid":
-            with pytest.raises(ValueError) as exc_info:
+        if not isinstance(data_parser, PaintCalibrationDataParser):
+            with pytest.raises(NotImplementedError) as exc_info:
                 _ = kinematic_calibrator.calibrate(
                     loss_definition=loss_definition, device=device
                 )
 
-                assert (
-                    f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
-                    in str(exc_info.value)
-                )
+                assert "Must be overridden!" in str(exc_info.value)
         else:
             _ = kinematic_calibrator.calibrate(
                 loss_definition=loss_definition, device=device

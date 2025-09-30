@@ -9,7 +9,9 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_loader import flux_distribution_loader, paint_loader
+from artist.data_parser import paint_scenario_parser
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -190,6 +192,7 @@ def create_flux_plots(
     heliostat_names: list[str],
     number_of_plots_per_heliostat: int,
     base_path_data: str,
+    data_parser: CalibrationDataParser,
     plot_name: str,
 ) -> None:
     """
@@ -203,51 +206,37 @@ def create_flux_plots(
         The number of flux plots for each heliostat.
     base_path_data : str
         The path to the data directory from which to load heliostat field calibration data.
+    data_parser : CalibrationDataParser
+        The data parser used to load calibration data from files.
     plot_name : str
         The name for the plots.
     """
     # Load reference data.
-    validation_heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
-        base_path=base_path_data,
-        heliostat_names=heliostat_names,
-        number_of_measurements=number_of_plots_per_heliostat,
-        image_variant="flux-centered",
-        randomize=True,
+    validation_heliostat_data_mapping = (
+        paint_scenario_parser.build_heliostat_data_mapping(
+            base_path=base_path_data,
+            heliostat_names=heliostat_names,
+            number_of_measurements=number_of_plots_per_heliostat,
+            image_variant="flux-centered",
+            randomize=True,
+        )
     )
 
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
-        validation_heliostat_flux_path_mapping = []
-        validation_heliostat_calibration_mapping = []
-
-        for heliostat, path_properties, path_pngs in validation_heliostat_data_mapping:
-            if heliostat in heliostat_group.names:
-                validation_heliostat_flux_path_mapping.append((heliostat, path_pngs))
-                validation_heliostat_calibration_mapping.append(
-                    (heliostat, path_properties)
-                )
-
-        validation_measured_flux_distributions = (
-            flux_distribution_loader.load_flux_from_png(
-                heliostat_flux_path_mapping=validation_heliostat_flux_path_mapping,
-                heliostat_names=heliostat_group.names,
-                limit_number_of_measurements=16,
-                device=device,
-            )
-        )
         (
+            validation_measured_flux_distributions,
             _,
             validation_incident_ray_directions,
             _,
             validation_active_heliostats_mask,
             validation_target_area_mask,
-        ) = paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=validation_heliostat_calibration_mapping,
-            heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
-            power_plant_position=scenario.power_plant_position,
-            limit_number_of_measurements=16,
+        ) = data_parser.parse_data_for_reconstruction(
+            heliostat_data_mapping=validation_heliostat_data_mapping,
+            heliostat_group=heliostat_group,
+            scenario=scenario,
+            bitmap_resolution=torch.tensor([256, 256]),
             device=device,
         )
 
@@ -380,8 +369,11 @@ heliostat_data_mapping = [
 ]
 
 # Create dict for the data source name and the heliostat_data_mapping.
-data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-    config_dictionary.data_source: config_dictionary.paint,
+data: dict[
+    str,
+    CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+] = {
+    config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
 
@@ -476,6 +468,7 @@ with setup_distributed_environment(
         heliostat_names=heliostat_names,
         number_of_plots_per_heliostat=number_of_plots_per_heliostat,
         base_path_data=base_path_data,
+        data_parser=PaintCalibrationDataParser(sample_limit=2),
         plot_name="ideal",
     )
 
@@ -504,5 +497,6 @@ create_flux_plots(
     heliostat_names=heliostat_names,
     number_of_plots_per_heliostat=number_of_plots_per_heliostat,
     base_path_data=base_path_data,
+    data_parser=PaintCalibrationDataParser(sample_limit=2),
     plot_name="reconstructed",
 )

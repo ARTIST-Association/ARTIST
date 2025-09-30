@@ -1,15 +1,16 @@
 import logging
 import pathlib
-from typing import cast
 
 import h5py
+import paint.util.paint_mappings as paint_mappings
 import torch
 from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_calibrator import KinematicCalibrator
 from artist.core.loss_functions import FocalSpotLoss
-from artist.data_loader import paint_loader
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -23,41 +24,32 @@ torch.cuda.manual_seed(7)
 #############################################################################################################
 
 
-def create_flux_plots(name: str) -> None:
+def create_flux_plots(data_parser: CalibrationDataParser, name: str) -> None:
     """
     Create data to plot the heliostat fluxes.
 
     Parameters
     ----------
+    data_parser : CalibrationDataParser
+            The data parser used to load calibration data from files.
     name : str
         The name for the plots.
     """
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
-        # Load the calibration data.
-        heliostat_calibration_mapping = []
-
-        heliostat_data_mapping = cast(
-            list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            data[config_dictionary.heliostat_data_mapping],
-        )
-        for heliostat, path_properties, _ in heliostat_data_mapping:
-            if heliostat in heliostat_group.names:
-                heliostat_calibration_mapping.append((heliostat, path_properties))
-
         (
-            focal_spots_measured,
+            _,
+            _,
             incident_ray_directions,
-            motor_positions,
+            _,
             active_heliostats_mask,
             target_area_mask,
-        ) = paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=heliostat_calibration_mapping,
-            heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
-            power_plant_position=scenario.power_plant_position,
-            limit_number_of_measurements=1,
+        ) = data_parser.parse_data_for_reconstruction(
+            heliostat_data_mapping=heliostat_data_mapping,
+            heliostat_group=heliostat_group,
+            scenario=scenario,
+            bitmap_resolution=torch.tensor([256, 256]),
             device=device,
         )
 
@@ -154,9 +146,16 @@ heliostat_data_mapping = [
     # ...
 ]
 
+data_parser = PaintCalibrationDataParser(
+    sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
+)
+
 # Create dict for the data source name and the heliostat_data_mapping.
-data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-    config_dictionary.data_source: config_dictionary.paint,
+data: dict[
+    str,
+    CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+] = {
+    config_dictionary.data_parser: data_parser,
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
 
@@ -204,7 +203,7 @@ with setup_distributed_environment(
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
-    create_flux_plots(name="before")
+    create_flux_plots(data_parser=data_parser, name="before")
 
     # Set calibration method.
     kinematic_calibration_method = config_dictionary.kinematic_calibration_raytracing
@@ -231,4 +230,4 @@ with setup_distributed_environment(
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
-create_flux_plots(name="after")
+create_flux_plots(data_parser=data_parser, name="after")

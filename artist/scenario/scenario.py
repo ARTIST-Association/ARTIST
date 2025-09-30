@@ -6,7 +6,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.data_loader import h5_loader
+from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_areas import TowerTargetAreas
@@ -156,7 +156,7 @@ class Scenario:
             config_file=scenario_file, device=device
         )
 
-        prototype_surface = h5_loader.surface_config(
+        prototype_surface = h5_scenario_parser.surface_config(
             prototype=True, scenario_file=scenario_file, device=device
         )
 
@@ -173,7 +173,7 @@ class Scenario:
         ][config_dictionary.kinematic_type][()].decode("utf-8")
 
         prototype_kinematic_deviations, number_of_actuators = (
-            h5_loader.kinematic_deviations(
+            h5_scenario_parser.kinematic_deviations(
                 prototype=True,
                 kinematic_type=prototype_kinematic_type,
                 scenario_file=scenario_file,
@@ -212,7 +212,7 @@ class Scenario:
             else:
                 prototype_actuator_type = prototype_actuator_type_list[0]
 
-        prototype_actuator_parameters = h5_loader.actuator_parameters(
+        prototype_actuator_parameters = h5_scenario_parser.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,

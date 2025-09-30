@@ -2,7 +2,6 @@ import logging
 import pathlib
 from typing import Any, cast
 
-import paint.util.paint_mappings as paint_mappings
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -10,7 +9,7 @@ from artist.core import learning_rate_schedulers
 from artist.core.core_utils import per_heliostat_reduction
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
-from artist.data_loader import paint_loader
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, raytracing_utils
@@ -35,14 +34,12 @@ class KinematicCalibrator:
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-        The data source name and the mapping of heliostat name and calibration data.
+    data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+        The data parser and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
     calibration_method : str
         The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
-    centroid_extraction_method : str
-            The method used to extract the centroid. Either use UTIS or HELIOS (default is UTIS).
 
     Methods
     -------
@@ -54,10 +51,13 @@ class KinematicCalibrator:
         self,
         ddp_setup: dict[str, Any],
         scenario: Scenario,
-        data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
+        data: dict[
+            str,
+            CalibrationDataParser
+            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        ],
         optimization_configuration: dict[str, Any],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
-        centroid_extraction_method: str = paint_mappings.UTIS_KEY,
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -68,8 +68,8 @@ class KinematicCalibrator:
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-            The data source name and the mapping of heliostat name and calibration data.
+        data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+            The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         calibration_method : str
@@ -86,14 +86,6 @@ class KinematicCalibrator:
         self.data = data
         self.optimization_configuration = optimization_configuration
         self.calibration_method = calibration_method
-        if centroid_extraction_method not in [
-            paint_mappings.UTIS_KEY,
-            paint_mappings.HELIOS_KEY,
-        ]:
-            raise ValueError(
-                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
-            )
-        self.centroid_extraction_method = centroid_extraction_method
 
     def calibrate(
         self,
@@ -192,36 +184,26 @@ class KinematicCalibrator:
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
 
-            # Load the calibration data.
-            heliostat_calibration_mapping = []
-
-            heliostat_data_mapping = cast(
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[config_dictionary.heliostat_data_mapping],
             )
-            for heliostat, path_properties, _ in heliostat_data_mapping:
-                if heliostat in heliostat_group.names:
-                    heliostat_calibration_mapping.append((heliostat, path_properties))
-
-            if self.data[config_dictionary.data_source] == config_dictionary.paint:
-                (
-                    focal_spots_measured,
-                    incident_ray_directions,
-                    motor_positions,
-                    active_heliostats_mask,
-                    target_area_mask,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=heliostat_calibration_mapping,
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=self.scenario.target_areas.names,
-                    power_plant_position=self.scenario.power_plant_position,
-                    centroid_extraction_method=self.centroid_extraction_method,
-                    device=device,
-                )
-            else:
-                raise ValueError(
-                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
-                )
+            (
+                _,
+                focal_spots_measured,
+                incident_ray_directions,
+                motor_positions,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                device=device,
+            )
 
             if active_heliostats_mask.sum() > 0:
                 # Calculate the reflection directions of the measured calibration data.
@@ -415,36 +397,26 @@ class KinematicCalibrator:
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
-
-            # Load the calibration data.
-            heliostat_calibration_mapping = []
-
-            heliostat_data_mapping = cast(
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[config_dictionary.heliostat_data_mapping],
             )
-            for heliostat, path_properties, _ in heliostat_data_mapping:
-                if heliostat in heliostat_group.names:
-                    heliostat_calibration_mapping.append((heliostat, path_properties))
-
-            if self.data[config_dictionary.data_source] == config_dictionary.paint:
-                (
-                    focal_spots_measured,
-                    incident_ray_directions,
-                    _,
-                    active_heliostats_mask,
-                    target_area_mask,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=heliostat_calibration_mapping,
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=self.scenario.target_areas.names,
-                    power_plant_position=self.scenario.power_plant_position,
-                    device=device,
-                )
-            else:
-                raise ValueError(
-                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
-                )
+            (
+                _,
+                focal_spots_measured,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                device=device,
+            )
 
             if active_heliostats_mask.sum() > 0:
                 # Create the optimizer.

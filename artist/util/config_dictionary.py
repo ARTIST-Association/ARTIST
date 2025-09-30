@@ -230,8 +230,8 @@ utis_crop_width = 6
 utis_crop_height = 6
 """Key to access the crop height used in utis."""
 
-data_source = "data_source"
-"""Key to access a data source name."""
+data_parser = "data_parser"
+"""Key to access a data parser."""
 paint = "paint"
 """Key to access the name ``paint``."""
 heliostat_data_mapping = "heliostat_data_mapping"

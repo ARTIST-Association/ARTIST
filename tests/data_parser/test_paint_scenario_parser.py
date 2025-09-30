@@ -7,7 +7,7 @@ import torch
 from _pytest.monkeypatch import MonkeyPatch
 
 from artist import ARTIST_ROOT
-from artist.data_loader import paint_loader
+from artist.data_parser import paint_scenario_parser
 from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,
@@ -17,180 +17,6 @@ from artist.scenario.configuration_classes import (
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
-
-
-@pytest.mark.parametrize(
-    "heliostat_calibration_mapping, power_plant_position, centroid_extraction_method, expected_list",
-    [
-        (
-            [
-                (
-                    "AA39",
-                    [
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_1.json",
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
-                    ],
-                )
-            ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
-            paint_mappings.UTIS_KEY,
-            [
-                torch.tensor(
-                    [
-                        [
-                            0.180133327842,
-                            -3.419259548187,
-                            35.798927307129,
-                            1.000000000000,
-                        ],
-                        [
-                            -17.412885665894,
-                            -3.039341926575,
-                            51.611984252930,
-                            1.000000000000,
-                        ],
-                    ]
-                ),
-                torch.tensor(
-                    [
-                        [
-                            -0.094675041735,
-                            0.492933481932,
-                            -0.864900708199,
-                            0.000000000000,
-                        ],
-                        [
-                            -0.274074256420,
-                            0.439921498299,
-                            -0.855191409588,
-                            0.000000000000,
-                        ],
-                    ]
-                ),
-                torch.tensor([[28061.0, 47874.0], [22585.0, 48224.0]]),
-                torch.tensor([0, 2]),
-                torch.tensor([3, 0]),
-            ],
-        ),
-        (
-            [
-                (
-                    "AA39",
-                    [
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_1.json",
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
-                    ],
-                )
-            ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
-            paint_mappings.HELIOS_KEY,
-            [
-                torch.tensor(
-                    [
-                        [0.0901, -3.4193, 35.8465, 1.0000],
-                        [-17.4429, -3.0393, 51.5746, 1.0000],
-                    ]
-                ),
-                torch.tensor(
-                    [
-                        [-0.0947, 0.4929, -0.8649, 0.0000],
-                        [-0.2741, 0.4399, -0.8552, 0.0000],
-                    ]
-                ),
-                torch.tensor([[28061.0, 47874.0], [22585.0, 48224.0]]),
-                torch.tensor([0, 2]),
-                torch.tensor([3, 0]),
-            ],
-        ),
-    ],
-)
-def test_extract_paint_calibration_data(
-    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
-    power_plant_position: torch.Tensor,
-    centroid_extraction_method: str,
-    expected_list: list[torch.Tensor],
-    device: torch.device,
-) -> None:
-    """
-    Test the function to extract calibration data from ``PAINT`` calibration data.
-
-    Parameters
-    ----------
-    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
-        The mapping of heliostats and their calibration data files.
-    power_plant_position : torch.Tensor
-        The power plant position.
-    centroid_extraction_method : str
-        The centroid extraction method to use.
-    expected_list : list[torch.Tensor]
-        The expected extracted data.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    extracted_list = list(
-        paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=heliostat_calibration_mapping,
-            power_plant_position=power_plant_position.to(device),
-            heliostat_names=["AA31", "AA39"],
-            target_area_names=[
-                "multi_focus_tower",
-                "receiver",
-                "solar_tower_juelich_upper",
-                "solar_tower_juelich_lower",
-            ],
-            centroid_extraction_method=centroid_extraction_method,
-            device=device,
-        )
-    )
-
-    for actual, expected in zip(extracted_list, expected_list):
-        torch.testing.assert_close(actual, expected.to(device), atol=5e-4, rtol=5e-4)
-
-
-def test_make_extract_paint_calibration_data_fail(device: torch.device) -> None:
-    """
-    Test that the paint calibration data fails with invalid parameters.
-
-    Parameters
-    ----------
-     device : torch.device
-        The device on which to initialize tensors.
-    """
-    with pytest.raises(ValueError):
-        paint_loader.extract_paint_calibration_properties_data(
-            heliostat_calibration_mapping=[
-                (
-                    "AA39",
-                    [
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_1.json",
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
-                    ],
-                )
-            ],
-            power_plant_position=torch.tensor(
-                [50.91342112259258, 6.387824755874856, 87.0]
-            ).to(device=device),
-            heliostat_names=["AA31", "AA39"],
-            target_area_names=[
-                "multi_focus_tower",
-                "receiver",
-                "solar_tower_juelich_upper",
-                "solar_tower_juelich_lower",
-            ],
-            centroid_extraction_method="invalid_method",
-            device=device,
-        )
 
 
 @pytest.mark.parametrize(
@@ -251,7 +77,7 @@ def test_extract_paint_tower_measurements(
         If test does not complete as expected.
     """
     extracted_list = list(
-        paint_loader.extract_paint_tower_measurements(
+        paint_scenario_parser.extract_paint_tower_measurements(
             tower_measurements_path=file_path, device=device
         )
     )
@@ -362,7 +188,7 @@ def test_extract_paint_heliostats_ideal_surface(
     torch.cuda.manual_seed(7)
 
     extracted_list = list(
-        paint_loader.extract_paint_heliostats_ideal_surface(
+        paint_scenario_parser.extract_paint_heliostats_ideal_surface(
             paths=heliostat_paths,
             power_plant_position=power_plant_position.to(device),
             number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
@@ -496,7 +322,7 @@ def test_extract_paint_heliostats_fitted_surface(
     )
 
     extracted_list = list(
-        paint_loader.extract_paint_heliostats_fitted_surface(
+        paint_scenario_parser.extract_paint_heliostats_fitted_surface(
             paths=heliostat_and_deflectometry_paths,
             power_plant_position=power_plant_position.to(device),
             number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
@@ -543,134 +369,6 @@ def test_extract_paint_heliostats_fitted_surface(
     torch.testing.assert_close(
         extracted_list[0].heliostat_list[0].surface.facet_list[0].control_points[0, 3],
         expected_heliostat[6].to(device),
-    )
-
-
-@pytest.mark.parametrize(
-    "wgs84_coordinates, reference_point, expected_enu_coordinates",
-    [
-        # Coordinates of Juelich power plant and multi-focus tower.
-        (
-            (
-                torch.tensor(
-                    [[50.91339645088695, 6.387574436728054, 138.97975]],
-                    dtype=torch.float64,
-                ),
-                torch.tensor(
-                    [50.913421630859, 6.387824755874856, 87.000000000000],
-                    dtype=torch.float64,
-                ),
-                torch.tensor([[-17.6045, -2.8012, 51.9798]]),
-            )
-        ),
-    ],
-)
-def test_wgs84_to_enu_converter(
-    wgs84_coordinates: torch.Tensor,
-    reference_point: torch.Tensor,
-    expected_enu_coordinates: torch.Tensor,
-    device: torch.device,
-) -> None:
-    """
-    Test the WGS84 to ENU conversion.
-
-    Parameters
-    ----------
-    wgs84_coordinates : torch.Tensor
-        The coordinates in latitude, longitude, altitude that are to be transformed.
-    reference_point : torch.Tensor
-        The center of origin of the ENU coordinate system in WGS84 coordinates.
-    expected_enu_coordinates : torch.Tensor
-        The expected enu coordinates.
-    device : torch.device| str
-        The device on which to initialize tensors (default is cuda).
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    calculated_enu_coordinates = paint_loader.convert_wgs84_coordinates_to_local_enu(
-        wgs84_coordinates.to(device), reference_point.to(device), device
-    )
-
-    torch.testing.assert_close(
-        calculated_enu_coordinates, expected_enu_coordinates.to(device)
-    )
-
-
-@pytest.mark.parametrize(
-    "azimuth, elevation, degree, expected",
-    [
-        (
-            torch.tensor([-45.0, -45.0, 45.0, 135.0, 225.0, 315.0]),
-            torch.tensor([0.0, 45.0, 45.0, 45.0, 45.0, 45.0]),
-            True,
-            torch.tensor(
-                [
-                    [
-                        -1 / torch.sqrt(torch.tensor([2.0])),
-                        -1 / torch.sqrt(torch.tensor([2.0])),
-                        0.0,
-                    ],
-                    [
-                        -0.5,
-                        -0.5,
-                        1 / torch.sqrt(torch.tensor([2.0])),
-                    ],
-                    [0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [0.5, 0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [-0.5, 0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [-0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                ]
-            ),
-        ),
-        (
-            torch.tensor([-torch.pi / 4, torch.pi / 4]),
-            torch.tensor([torch.pi / 4, torch.pi / 4]),
-            False,
-            torch.tensor(
-                [
-                    [-0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                ]
-            ),
-        ),
-    ],
-)
-def test_azimuth_elevation_to_enu(
-    azimuth: torch.Tensor,
-    elevation: torch.Tensor,
-    degree: bool,
-    expected: torch.Tensor,
-    device: torch.device,
-) -> None:
-    """
-    Test the azimuth, elevation to east, north, up converter.
-
-    Parameters
-    ----------
-    azimuth : torch.Tensor
-        The azimuth angle.
-    elevation : torch.Tensor
-        The elevation angle.
-    degree : bool
-        Angles in degree.
-    expected : torch.Tensor
-        The expected coordinates in the ENU (east, north, up) coordinate system.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    enu_coordinates = paint_loader.azimuth_elevation_to_enu(
-        azimuth=azimuth, elevation=elevation, degree=degree, device=device
-    )
-    torch.testing.assert_close(
-        enu_coordinates, expected.to(device), rtol=1e-4, atol=1e-4
     )
 
 
@@ -779,7 +477,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
         count_per_heliostat=5,
     )
 
-    result_mapping_list = paint_loader.build_heliostat_data_mapping(
+    result_mapping_list = paint_scenario_parser.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
         number_of_measurements=number_of_measurements,
@@ -860,7 +558,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         count_per_heliostat=10,
     )
 
-    result_sorted_list = paint_loader.build_heliostat_data_mapping(
+    result_sorted_list = paint_scenario_parser.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
         number_of_measurements=number_of_measurements,
@@ -868,7 +566,7 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
         randomize=False,
         seed=random_seed_value,
     )
-    result_randomized_list = paint_loader.build_heliostat_data_mapping(
+    result_randomized_list = paint_scenario_parser.build_heliostat_data_mapping(
         base_path=str(tmp_path),
         heliostat_names=heliostat_name_list,
         number_of_measurements=number_of_measurements,

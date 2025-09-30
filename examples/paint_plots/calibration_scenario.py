@@ -6,7 +6,7 @@ import warnings
 import torch
 import yaml
 
-from artist.data_loader import paint_loader
+from artist.data_parser import paint_scenario_parser
 from artist.scenario import (
     H5ScenarioGenerator,
     LightSourceConfig,
@@ -44,7 +44,7 @@ def generate_calibration_scenario(
 
     # Generate power plant configuration and target area list.
     power_plant_config, target_area_list_config = (
-        paint_loader.extract_paint_tower_measurements(
+        paint_scenario_parser.extract_paint_tower_measurements(
             tower_measurements_path=tower_file, device=device
         )
     )
@@ -65,7 +65,7 @@ def generate_calibration_scenario(
 
     # Generate heliostat list configuration.
     heliostat_list_config, prototype_config = (
-        paint_loader.extract_paint_heliostats_ideal_surface(
+        paint_scenario_parser.extract_paint_heliostats_ideal_surface(
             paths=heliostat_files_list,
             power_plant_position=power_plant_config.power_plant_position,
             device=device,
