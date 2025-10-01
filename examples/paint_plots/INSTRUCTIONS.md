@@ -10,7 +10,12 @@ file. It is also possible to provide all these arguments as command line argumen
 Additionally, if no arguments and no configuration file is provided, default values will be used -- which will probably
 lead to the scripts failing.
 
-Here is an overview of the configuration parameters and what they mean:
+To make sure the configuration is successfully loaded, please provide the path to the configuration file via the ``--config``
+command line argument when executing the script. If no argument is provided the script will look for the ``paint_plot_config.yaml``
+located in the ``paint_plots`` working directory, however this option is not failsafe, and we always suggest providing the command
+line argument.
+
+Here is an overview of the configuration parameters contained within the configuration file and what they mean:
 
 - `metadata_root`: The root directory in which the metadata will be saved, i.e., a folder with the name "metadata" will be saved within this directory.
 - `metadata_file_name`: The file name for the metadata downloaded, if you do not change anything the STAC client from ``PAINT`` wil automatically download the metadata and save it to "calibration_metadata_all_heliostats.csv" in the "metadata" folder.
