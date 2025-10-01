@@ -809,6 +809,108 @@ def extract_paint_heliostats_fitted_surface(
     )
 
 
+def extract_paint_heliostats_mixed_surface(
+    paths: (
+        list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
+    ),
+    power_plant_position: torch.Tensor,
+    nurbs_fit_optimizer: torch.optim.Optimizer,
+    nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler,
+    number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
+    deflectometry_step_size: int = 100,
+    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
+    nurbs_fit_tolerance: float = 1e-10,
+    nurbs_fit_max_epoch: int = 400,
+    device: torch.device | None = None,
+) -> tuple[HeliostatListConfig, PrototypeConfig]:
+    """
+    Extract heliostat data with a mix of ideal and fitted surfaces from PAINT files.
+
+    This function processes a list of heliostat file paths. If a deflectometry path is provided for a heliostat, a
+    fitted surface is generated. Otherwise, an ideal surface is used.
+
+    Parameters
+    ----------
+    paths : list[tuple[str, pathlib.Path, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path, pathlib.Path]]
+        A list where each tuple contains the heliostat name, path to the properties file, and an optional path to the
+        deflectometry file.
+    power_plant_position : torch.Tensor
+        The position of the power plant in latitude, longitude, and elevation.
+        Tensor of shape [3].
+    nurbs_fit_optimizer : torch.optim.Optimizer
+        The NURBS fit optimizer.
+    nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler
+        The NURBS fit learning rate scheduler.
+    number_of_nurbs_control_points : torch.Tensor
+        The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
+        Tensor of shape [2].
+    deflectometry_step_size : int
+        The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
+    nurbs_fit_method : str
+        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+    nurbs_fit_tolerance : float
+        The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
+    nurbs_fit_max_epoch : int
+        The maximum number of epochs for the NURBS fit (default is 400).
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    HeliostatListConfig
+        The configuration of all heliostats in the scenario.
+    PrototypeConfig
+        The configuration for a heliostat prototype. This is always based on an ideal surface.
+    """
+    device = get_device(device=device)
+
+    fitted_paths = []
+    ideal_paths = []
+
+    for path_tuple in paths:
+        # Check if the third element (deflectometry path) is a valid path.
+        if len(path_tuple) == 3 and path_tuple[2] is not None:
+            fitted_paths.append(path_tuple)
+        else:
+            ideal_paths.append(path_tuple)
+
+    # Process ideal heliostats.
+    ideal_heliostats_config, prototype_config = _process_heliostats_from_paths(
+        paths=ideal_paths,
+        power_plant_position=power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        surface_config_generator=_ideal_surface_generator,
+        device=device,
+    )
+
+    # Process fitted heliostats.
+    fitted_heliostats_config, _ = _process_heliostats_from_paths(
+        paths=fitted_paths,
+        power_plant_position=power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        surface_config_generator=_fitted_surface_generator,
+        device=device,
+        nurbs_fit_optimizer=nurbs_fit_optimizer,
+        nurbs_fit_scheduler=nurbs_fit_scheduler,
+        deflectometry_step_size=deflectometry_step_size,
+        nurbs_fit_method=nurbs_fit_method,
+        nurbs_fit_tolerance=nurbs_fit_tolerance,
+        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+    )
+
+    # Combine the lists.
+    combined_heliostat_list = (
+        ideal_heliostats_config.heliostat_list + fitted_heliostats_config.heliostat_list
+    )
+    combined_heliostat_list_config = HeliostatListConfig(
+        heliostat_list=combined_heliostat_list
+    )
+
+    return combined_heliostat_list_config, prototype_config
+
+
 def corner_points_to_plane(
     upper_left: torch.Tensor,
     upper_right: torch.Tensor,
