@@ -135,7 +135,11 @@ def extract_canting_and_translation_from_properties(
             ) = extract_paint_heliostat_properties(
                 heliostat_properties_path=properties_path,
                 power_plant_position=torch.tensor(
-                    [50.913421122593, 6.387824755875, 87.000000000000]
+                    [
+                        paint_mappings.POWER_PLANT_LAT,
+                        paint_mappings.POWER_PLANT_LON,
+                        paint_mappings.POWER_PLANT_ALT,
+                    ]
                 ),
                 device=device,
             )
@@ -470,12 +474,16 @@ if __name__ == "__main__":
     scenarios_dir : str
         Path to the directory containing the scenarios.
     """
+    # Set default location for configuration file.
+    script_dir = pathlib.Path(__file__).resolve().parent
+    default_config_path = script_dir / "paint_plot_config.yaml"
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="examples/paint_plots/paint_plot_config.yaml",
+        default=default_config_path,
     )
 
     # Parse the config argument first to load the configuration.

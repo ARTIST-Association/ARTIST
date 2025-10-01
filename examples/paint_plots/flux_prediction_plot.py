@@ -135,12 +135,16 @@ if __name__ == "__main__":
     plots_dir : str
         Path to the directory where the plots are saved.
     """
+    # Set default location for configuration file.
+    script_dir = pathlib.Path(__file__).resolve().parent
+    default_config_path = script_dir / "paint_plot_config.yaml"
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="examples/paint_plots/paint_plot_config.yaml",
+        default=default_config_path,
     )
 
     # Parse the config argument first to load the configuration.
