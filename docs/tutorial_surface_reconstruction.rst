@@ -71,9 +71,12 @@ This data is then saved into a data dictionary which will be later used in the o
 
 .. code-block::
 
-    # Create dict for the data source name and the heliostat_data_mapping.
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+    # Create dict for the data parser and the heliostat_data_mapping.
+    data: dict[
+        str,
+        CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 

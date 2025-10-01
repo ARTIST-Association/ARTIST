@@ -368,7 +368,7 @@ heliostat_data_mapping = [
     # ...
 ]
 
-# Create dict for the data source name and the heliostat_data_mapping.
+# Create dict for the data parser and the heliostat_data_mapping.
 data: dict[
     str,
     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
