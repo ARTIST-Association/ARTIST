@@ -74,8 +74,6 @@ class KinematicCalibrator:
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         calibration_method : str
             The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
-        centroid_extraction_method : str
-            The method used to extract the centroid. Either use UTIS or HELIOS (default is UTIS).
         """
         rank = ddp_setup[config_dictionary.rank]
         if rank == 0:
