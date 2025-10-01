@@ -29,7 +29,7 @@ def initialize_ddp_environment(
     ----------
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Yields
@@ -153,7 +153,7 @@ def setup_distributed_environment(
     ----------
     device : Optional[torch.device]
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
     heliostat_group_assignments : Optional[dict[str, list[int]]]
         The mapping from rank to heliostat group.
@@ -260,7 +260,7 @@ def get_device(
     ----------
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS. MPS (for Mac) is not supported due to
         limitations in torch.
 

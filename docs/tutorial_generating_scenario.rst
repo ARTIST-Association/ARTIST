@@ -95,10 +95,10 @@ Now we will get into building the scenario.
 
 Power Plant and Target Areas
 ----------------------------
-The location of the power plant as well as information on the target areas (i.e. the receiver or calibration targets) is
+The location of the power plant as well as information on the target areas (i.e., the receiver or calibration targets) is
 loaded simultaneously in paint form the ``tower-measurement.json`` file.
 
-We can load this information using functions from the ``paint_loader``. In this case, the function below will return
+We can load this information using functions from the ``paint_scenario_parser``. In this case, the function below will return
 an instance of the the ``PowerPlantConfig`` class as well as an instance of the ``TowerAreaListConfig`` containing a
 list of viable target areas.
 
@@ -106,7 +106,7 @@ list of viable target areas.
 
     # Include the power plant and target area configuration.
     power_plant_config, target_area_list_config = (
-        paint_loader.extract_paint_tower_measurements(
+        paint_scenario_parser.extract_paint_tower_measurements(
             tower_measurements_path=tower_file, device=device
         )
     )
@@ -177,7 +177,7 @@ Prototypes and Heliostats
 -------------------------
 ``ARTIST`` always requires prototypes and heliostats - see :ref:`our tutorial here <scenario>` for more information.
 
-The prototypes and list of heliostats can be easily extracted using the ``paint_loader``. Here it important to define one
+The prototypes and list of heliostats can be easily extracted using the ``paint_scenario_parser``. Here it important to define one
 target area from the list of possible target areas as the default aim point. In this case we use the receiver for this,
 as shown below:
 
@@ -219,7 +219,7 @@ prototype configuration.
 .. code-block::
 
     heliostat_list_config, prototype_config = (
-        paint_loader.extract_paint_heliostats_fitted_surface(
+        paint_scenario_parser.extract_paint_heliostats_fitted_surface(
             paths=heliostat_files_list,
             power_plant_position=power_plant_config.power_plant_position,
             number_of_nurbs_control_points=number_of_nurbs_control_points,
@@ -257,7 +257,7 @@ is available an ideal surface can also be applied. To generate heliostats with i
 .. code-block::
 
     heliostat_list_config, prototype_config = (
-            paint_loader.extract_paint_heliostats_ideal_surface(
+            paint_scenario_parser.extract_paint_heliostats_ideal_surface(
                 paths=heliostat_files_list,
                 power_plant_position=power_plant_config.power_plant_position,
                 device=device,
@@ -374,7 +374,7 @@ canting, and the surface points and normals from ``STRAL`` with the following co
         canting,
         surface_points_with_facets_list,
         surface_normals_with_facets_list,
-    ) = stral_loader.extract_stral_deflectometry_data(
+    ) = stral_scenario_parser.extract_stral_deflectometry_data(
         stral_file_path=stral_file_path, device=device
     )
 

@@ -89,7 +89,7 @@ class VectorLoss(Loss):
             Tensor of shape [number_of_samples, ...].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
+            The ``reduction_dimensions`` is an expected keyword argument for the vector loss.
 
         Raises
         ------
@@ -385,14 +385,18 @@ class KLDivergenceLoss(Loss):
 
         # Normalize.
         eps = 1e-12
-        ground_truth_distributions = torch.nn.functional.normalize(ground_truth, p=1, dim=(1, 2), eps=eps)
-        predicted_distributions = torch.nn.functional.normalize(prediction, p=1, dim=(1, 2), eps=eps)
+        ground_truth_distributions = torch.nn.functional.normalize(
+            ground_truth, p=1, dim=(1, 2), eps=eps
+        )
+        predicted_distributions = torch.nn.functional.normalize(
+            prediction, p=1, dim=(1, 2), eps=eps
+        )
 
         loss = self.loss_function(
             torch.log(predicted_distributions + eps),
             ground_truth_distributions,
         )
-        
+
         return loss.sum(dim=kwargs["reduction_dimensions"])
 
 

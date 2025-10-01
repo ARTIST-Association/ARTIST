@@ -16,6 +16,7 @@ class Surface:
         A list of one nurbs surface for each facet.
     facet_translation_vectors : torch.Tensor
         The facet translation vectors for all facets.
+        Tensor of shape [number_of_facets, 4].
 
     Methods
     -------
@@ -40,7 +41,7 @@ class Surface:
             The surface configuration parameters used to construct the surface.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -73,7 +74,7 @@ class Surface:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

@@ -14,7 +14,9 @@ from propulate.utils.benchmark_functions import (
 from artist.core import loss_functions
 from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_loader import paint_loader
+from artist.data_parser import paint_scenario_parser
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -56,7 +58,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.groups_to_ranks_mapping: {0: [0, 1]},
         config_dictionary.heliostat_group_rank: 0,
         config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0], 1:[0]},
+        config_dictionary.ranks_to_groups_mapping: {0: [0], 1: [0]},
     }
 
     # For parameter combinations with too many rays directly return a default loss,
@@ -104,29 +106,30 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Create a heliostat data mapping for the specified number of training samples.
-    heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
+    heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
         base_path="/path/to/data/paint",
         heliostat_names=["AA39"],
-        number_of_measurements=int(params["number_of_training_samples"]),
+        number_of_measurements=4,
         image_variant="flux-centered",
         randomize=False,
     )
 
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+    data: dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=4),
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
-    scheduler = params["scheduler"]
+    scheduler = config_dictionary.reduce_on_plateau
     scheduler_parameters = {
-        config_dictionary.gamma: params["lr_gamma"],
-        config_dictionary.min: params["lr_min"],
-        config_dictionary.max: params["lr_max"],
-        config_dictionary.step_size_up: params["lr_step_size_up"],
-        config_dictionary.reduce_factor: params["lr_reduce_factor"],
-        config_dictionary.patience: params["lr_patience"],
-        config_dictionary.threshold: params["lr_threshold"],
-        config_dictionary.cooldown: params["lr_cooldown"],
+        config_dictionary.min: 1e-7,
+        config_dictionary.reduce_factor: 0.5,
+        config_dictionary.patience: 20,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 2,
     }
 
     # Configure regularizers and their weights.
@@ -163,7 +166,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
         config_dictionary.max_epoch: 1000,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 2500,
         config_dictionary.scheduler: scheduler,
@@ -183,7 +186,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
     )
 
     # Define loss.
-    loss_class = getattr(loss_functions, str(params["loss_class"]))
+    loss_class = getattr(loss_functions, "KLDivergenceLoss")
     loss_definition = (
         loss_functions.PixelLoss(scenario=scenario)
         if loss_class is loss_functions.PixelLoss
@@ -225,17 +228,7 @@ if __name__ == "__main__":
         "number_of_surface_points": (30, 110),
         "number_of_control_points": (4, 100),
         "number_of_rays": (10, 200),
-        "number_of_training_samples": (2, 6),
         "nurbs_degree": (2, 3),
-        "scheduler": ("exponential", "cyclic", "reduce_on_plateau"),
-        "lr_gamma": (0.85, 0.999),
-        "lr_min": (1e-6, 1e-3),
-        "lr_max": (1e-3, 1e-1),
-        "lr_step_size_up": (100, 2000),
-        "lr_reduce_factor": (0.1, 0.7),
-        "lr_patience": (5, 50),
-        "lr_threshold": (1e-5, 1e-2),
-        "lr_cooldown": (0, 20),
         "ideal_surface_loss_weight": (0.00, 1.00),
         "total_variation_loss_points_weight": (0.00, 1.00),
         "total_variation_loss_normals_weight": (0.00, 1.00),
@@ -243,15 +236,14 @@ if __name__ == "__main__":
         "total_variation_loss_sigma_points": (0, 1),
         "total_variation_loss_number_of_neighbors_normals": (0, 5000),
         "total_variation_loss_sigma_normals": (0, 1),
-        "initial_learning_rate": (1e-7, 0.9),
-        "loss_class": ("KLDivergenceLoss", "PixelLoss"),
+        "initial_learning_rate": (1e-7, 1e-3),
     }
 
     seed = 7
     rng = random.Random(seed + comm.rank)
 
     # Set up evolutionary operator.
-    num_generations = 500
+    num_generations = 300
     pop_size = 2 * comm.size  # Breeding population size
     propagator = get_default_propagator(
         pop_size=pop_size,

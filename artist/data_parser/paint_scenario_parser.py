@@ -2,10 +2,10 @@ import json
 import logging
 import pathlib
 import random
-from collections import Counter, defaultdict
 from typing import Any, Callable
 
 import h5py
+import paint.util.paint_mappings as paint_mappings
 import torch
 
 from artist.scenario.configuration_classes import (
@@ -33,152 +33,6 @@ log = logging.getLogger(__name__)
 """A logger for the paint data loader."""
 
 
-def extract_paint_calibration_properties_data(
-    heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
-    power_plant_position: torch.Tensor,
-    heliostat_names: list[str],
-    target_area_names: list[str],
-    limit_number_of_measurements: int | None = None,
-    device: torch.device | None = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Extract calibration data from ``PAINT`` calibration files.
-
-    Parameters
-    ----------
-    heliostat_calibration_mapping : list[tuple[str, list[pathlib.Path]]]
-        The mapping of heliostats and their calibration data files.
-    power_plant_position : torch.Tensor
-        The power plant position.
-        Tensor of shape [3].
-    heliostat_names : list[str]
-        All possible heliostat names.
-    target_area_names : list[str]
-        All possible target area names.
-    limit_number_of_measurements : int | None
-        Limits the number of measurements loaded if an int is provided (default is None).
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        The calibration focal spots.
-        Tensor of shape [number_of_calibration_data_points, 4].
-    torch.Tensor
-        The incident ray directions.
-        Tensor of shape [number_of_calibration_data_points, 4].
-    torch.Tensor
-        The motor positions.
-        Tensor of shape [number_of_calibration_data_points, 2].
-    torch.Tensor
-        A mask with active heliostats and their replications.
-        Tensor of shape [number_of_heliostats].
-    torch.Tensor
-        The target area mapping for the heliostats.
-        Tensor of shape [number_of_active_heliostats].
-    """
-    device = get_device(device=device)
-
-    log.info(
-        "Beginning extraction of calibration properties data from ```PAINT``` file."
-    )
-
-    target_indices = {name: index for index, name in enumerate(target_area_names)}
-
-    # Gather calibration data
-    replication_counter: Counter[str] = Counter()
-    calibration_data_per_heliostat = defaultdict(list)
-
-    for heliostat_name, paths in heliostat_calibration_mapping:
-        number_of_measurements = min(
-            len(paths), limit_number_of_measurements or len(paths)
-        )
-        for path in paths[:number_of_measurements]:
-            with open(path, "r") as f:
-                calibration_data_dict = json.load(f)
-            replication_counter[heliostat_name] += 1
-
-            calibration_data_per_heliostat[heliostat_name].append(
-                [
-                    target_indices[
-                        calibration_data_dict[
-                            config_dictionary.paint_calibration_target
-                        ]
-                    ],
-                    calibration_data_dict[config_dictionary.paint_focal_spot][
-                        config_dictionary.paint_utis
-                    ],
-                    calibration_data_dict[config_dictionary.paint_light_source_azimuth],
-                    calibration_data_dict[
-                        config_dictionary.paint_light_source_elevation
-                    ],
-                    [
-                        calibration_data_dict[config_dictionary.paint_motor_positions][
-                            config_dictionary.paint_first_axis
-                        ],
-                        calibration_data_dict[config_dictionary.paint_motor_positions][
-                            config_dictionary.paint_second_axis
-                        ],
-                    ],
-                ]
-            )
-
-    total_samples = sum(replication_counter[name] for name in heliostat_names)
-    calibration_replications = torch.tensor(
-        [replication_counter[name] for name in heliostat_names], device=device
-    )
-
-    target_area_mapping = torch.empty(total_samples, device=device, dtype=torch.long)
-    focal_spots_global = torch.empty((total_samples, 3), device=device)
-    azimuths = torch.empty(total_samples, device=device)
-    elevations = torch.empty(total_samples, device=device)
-    motor_positions = torch.empty((total_samples, 2), device=device)
-
-    index = 0
-    for name in heliostat_names:
-        for (
-            target_index,
-            focal_spot,
-            azimuth,
-            elevation,
-            motor_pos,
-        ) in calibration_data_per_heliostat.get(name, []):
-            target_area_mapping[index] = target_index
-            focal_spots_global[index] = torch.tensor(focal_spot, device=device)
-            azimuths[index] = azimuth
-            elevations[index] = elevation
-            motor_positions[index] = torch.tensor(motor_pos, device=device)
-            index += 1
-
-    focal_spots_enu = convert_wgs84_coordinates_to_local_enu(
-        focal_spots_global, power_plant_position, device=device
-    )
-    focal_spots = utils.convert_3d_points_to_4d_format(focal_spots_enu, device=device)
-
-    light_source_positions_enu = azimuth_elevation_to_enu(
-        azimuths, elevations, degree=True, device=device
-    )
-    light_source_positions = utils.convert_3d_points_to_4d_format(
-        light_source_positions_enu, device=device
-    )
-    incident_ray_directions = (
-        torch.tensor([0.0, 0.0, 0.0, 1.0], device=device) - light_source_positions
-    )
-
-    log.info("Loading calibration properties data complete.")
-
-    return (
-        focal_spots,
-        incident_ray_directions,
-        motor_positions,
-        calibration_replications,
-        target_area_mapping,
-    )
-
-
 def extract_paint_tower_measurements(
     tower_measurements_path: pathlib.Path,
     device: torch.device | None = None,
@@ -192,7 +46,7 @@ def extract_paint_tower_measurements(
         The path to the tower measurement file.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -204,14 +58,14 @@ def extract_paint_tower_measurements(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of tower data from ```PAINT``` file.")
+    log.info("Beginning extraction of tower data from PAINT file.")
 
     with open(tower_measurements_path, "r") as file:
         tower_dict = json.load(file)
 
     power_plant_position = torch.tensor(
-        tower_dict[config_dictionary.paint_power_plant_properties][
-            config_dictionary.paint_coordinates
+        tower_dict[paint_mappings.POWER_PLANT_KEY][
+            paint_mappings.TOWER_COORDINATES_KEY
         ],
         dtype=torch.float64,
         device=device,
@@ -227,22 +81,22 @@ def extract_paint_tower_measurements(
         )
 
         target_area_corners = [
-            f"{prefix}{config_dictionary.paint_upper_left}",
-            f"{prefix}{config_dictionary.paint_lower_left}",
-            f"{prefix}{config_dictionary.paint_upper_right}",
-            f"{prefix}{config_dictionary.paint_lower_right}",
+            f"{prefix}{paint_mappings.UPPER_LEFT}",
+            f"{prefix}{paint_mappings.LOWER_LEFT}",
+            f"{prefix}{paint_mappings.UPPER_RIGHT}",
+            f"{prefix}{paint_mappings.LOWER_RIGHT}",
         ]
 
         target_area_corner_points_wgs84 = torch.tensor(
             [
-                tower_dict[target_area][config_dictionary.paint_coordinates][corner]
+                tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][corner]
                 for corner in target_area_corners
             ],
             dtype=torch.float64,
             device=device,
         )
 
-        corner_points_enu = convert_wgs84_coordinates_to_local_enu(
+        corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
             target_area_corner_points_wgs84, power_plant_position, device=device
         )
 
@@ -253,21 +107,21 @@ def extract_paint_tower_measurements(
 
         center_lat_lon = torch.tensor(
             [
-                tower_dict[target_area][config_dictionary.paint_coordinates][
-                    config_dictionary.paint_center
+                tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                    paint_mappings.CENTER
                 ]
             ],
             dtype=torch.float64,
             device=device,
         )
-        center_enu = convert_wgs84_coordinates_to_local_enu(
+        center_enu = utils.convert_wgs84_coordinates_to_local_enu(
             center_lat_lon, power_plant_position, device=device
         )
         center = utils.convert_3d_points_to_4d_format(center_enu[0], device=device)
 
         normal_vector = utils.convert_3d_directions_to_4d_format(
             torch.tensor(
-                [tower_dict[target_area][config_dictionary.paint_normal_vector]],
+                [tower_dict[target_area][paint_mappings.TOWER_NORMAL_VECTOR_KEY]],
                 device=device,
             ),
             device=device,
@@ -275,9 +129,7 @@ def extract_paint_tower_measurements(
 
         tower_area_config = TargetAreaConfig(
             target_area_key=target_area,
-            geometry=tower_dict[target_area][
-                config_dictionary.paint_target_area_geometry
-            ],
+            geometry=tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY],
             center=center,
             normal_vector=normal_vector,
             plane_e=plane_e,
@@ -292,7 +144,7 @@ def extract_paint_tower_measurements(
     # Create the tower area configurations.
     target_area_list_config = TargetAreaListConfig(target_area_config_list)
 
-    log.info("Loading tower data` data complete.")
+    log.info("Loading tower data complete.")
 
     return power_plant_config, target_area_list_config
 
@@ -321,7 +173,7 @@ def extract_paint_heliostat_properties(
         The power plant position.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -348,11 +200,11 @@ def extract_paint_heliostat_properties(
     with open(heliostat_properties_path, "r") as file:
         heliostat_dict = json.load(file)
 
-    log.info("Beginning extraction of heliostat properties data from ```PAINT``` file.")
+    log.info("Beginning extraction of heliostat properties data from PAINT file.")
 
-    heliostat_position_3d = convert_wgs84_coordinates_to_local_enu(
+    heliostat_position_3d = utils.convert_wgs84_coordinates_to_local_enu(
         torch.tensor(
-            [heliostat_dict[config_dictionary.paint_heliostat_position]],
+            [heliostat_dict[paint_mappings.HELIOSTAT_POSITION_KEY]],
             dtype=torch.float64,
             device=device,
         ),
@@ -363,8 +215,8 @@ def extract_paint_heliostat_properties(
         heliostat_position_3d[0], device=device
     )
 
-    number_of_facets = heliostat_dict[config_dictionary.paint_facet_properties][
-        config_dictionary.paint_number_of_facets
+    number_of_facets = heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
+        paint_mappings.NUM_FACETS
     ]
 
     facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
@@ -372,21 +224,21 @@ def extract_paint_heliostat_properties(
 
     for facet in range(number_of_facets):
         facet_translation_vectors[facet, :] = torch.tensor(
-            heliostat_dict[config_dictionary.paint_facet_properties][
-                config_dictionary.paint_facets
-            ][facet][config_dictionary.paint_translation_vector],
+            heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
+                paint_mappings.FACETS_LIST
+            ][facet][paint_mappings.TRANSLATION_VECTOR],
             device=device,
         )
         canting[facet, 0] = torch.tensor(
-            heliostat_dict[config_dictionary.paint_facet_properties][
-                config_dictionary.paint_facets
-            ][facet][config_dictionary.paint_canting_e],
+            heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
+                paint_mappings.FACETS_LIST
+            ][facet][paint_mappings.CANTING_E],
             device=device,
         )
         canting[facet, 1] = torch.tensor(
-            heliostat_dict[config_dictionary.paint_facet_properties][
-                config_dictionary.paint_facets
-            ][facet][config_dictionary.paint_canting_n],
+            heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
+                paint_mappings.FACETS_LIST
+            ][facet][paint_mappings.CANTING_N],
             device=device,
         )
 
@@ -398,20 +250,20 @@ def extract_paint_heliostat_properties(
 
     kinematic_deviations = KinematicDeviations(
         first_joint_translation_e=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_first_joint_translation_e
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.FIRST_JOINT_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         first_joint_translation_n=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_first_joint_translation_n
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.FIRST_JOINT_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         first_joint_translation_u=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_first_joint_translation_u
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.FIRST_JOINT_TRANSLATION_U_KEY
             ],
             device=device,
         ),
@@ -419,20 +271,20 @@ def extract_paint_heliostat_properties(
         first_joint_tilt_n=torch.tensor(0.0, device=device),
         first_joint_tilt_u=torch.tensor(0.0, device=device),
         second_joint_translation_e=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_second_joint_translation_e
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.SECOND_JOINT_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         second_joint_translation_n=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_second_joint_translation_n
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.SECOND_JOINT_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         second_joint_translation_u=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_second_joint_translation_u
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.SECOND_JOINT_TRANSLATION_U_KEY
             ],
             device=device,
         ),
@@ -440,20 +292,20 @@ def extract_paint_heliostat_properties(
         second_joint_tilt_n=torch.tensor(0.0, device=device),
         second_joint_tilt_u=torch.tensor(0.0, device=device),
         concentrator_translation_e=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_concentrator_translation_e
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.CONCENTRATOR_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         concentrator_translation_n=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_concentrator_translation_n
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.CONCENTRATOR_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         concentrator_translation_u=torch.tensor(
-            heliostat_dict[config_dictionary.paint_kinematic][
-                config_dictionary.paint_concentrator_translation_u
+            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+                paint_mappings.CONCENTRATOR_TRANSLATION_U_KEY
             ],
             device=device,
         ),
@@ -465,15 +317,15 @@ def extract_paint_heliostat_properties(
     # Include the initial orientation for the kinematic.
     initial_orientation = utils.convert_3d_directions_to_4d_format(
         torch.tensor(
-            heliostat_dict[config_dictionary.paint_initial_orientation],
+            heliostat_dict[paint_mappings.INITIAL_ORIENTATION_KEY],
             device=device,
         ),
         device=device,
     )
 
     paint_actuators = list(
-        heliostat_dict[config_dictionary.paint_kinematic][
-            config_dictionary.paint_actuators
+        heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            paint_mappings.ACTUATOR_KEY
         ]
     )
     actuator_parameters_list = []
@@ -543,7 +395,7 @@ def extract_paint_deflectometry_data(
         The number of facets.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -555,15 +407,15 @@ def extract_paint_deflectometry_data(
     """
     device = get_device(device=device)
 
-    log.info("Beginning extraction of deflectometry data from ```PAINT``` file.")
+    log.info("Beginning extraction of deflectometry data from PAINT file.")
 
     with h5py.File(heliostat_deflectometry_path, "r") as file:
         surface_points_with_facets_list = []
         surface_normals_with_facets_list = []
         for f in range(number_of_facets):
             number_of_points = len(
-                file[f"{config_dictionary.paint_facet}{f + 1}"][
-                    config_dictionary.paint_surface_points
+                file[f"{paint_mappings.FACET_KEY}{f + 1}"][
+                    paint_mappings.SURFACE_POINT_KEY
                 ]
             )
             single_facet_surface_points = torch.empty(
@@ -574,14 +426,14 @@ def extract_paint_deflectometry_data(
             )
 
             points_data = torch.tensor(
-                file[f"{config_dictionary.paint_facet}{f + 1}"][
-                    config_dictionary.paint_surface_points
+                file[f"{paint_mappings.FACET_KEY}{f + 1}"][
+                    paint_mappings.SURFACE_POINT_KEY
                 ][()],
                 device=device,
             )
             normals_data = torch.tensor(
-                file[f"{config_dictionary.paint_facet}{f + 1}"][
-                    config_dictionary.paint_surface_normals
+                file[f"{paint_mappings.FACET_KEY}{f + 1}"][
+                    paint_mappings.SURFACE_NORMAL_KEY
                 ][()],
                 device=device,
             )
@@ -666,7 +518,7 @@ def _fitted_surface_generator(
     Parameters
     ----------
     file_tuple : tuple[str, pathlib.Path, pathlib.Path]
-        A tuple containing the heliostat name, path to the properties file, and path to deflecometry data file.
+        A tuple containing the heliostat name, path to the properties file, and path to deflectometry data file.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
         Tensor of shape [number_of_facets, 4].
@@ -740,7 +592,7 @@ def _process_heliostats_from_paths(
     ----------
     paths : list[tuple[str, pathlib.Path]] | list[tuple[str, pathlib.Path, pathlib.Path]]
         The list of heliostat paths, where each element's structure depends on whether the surface is ideal or fitted,
-        i.e. for ideal surfaces only the heliostat name and path to the properties file is required, whilst for the
+        i.e., for ideal surfaces only the heliostat name and path to the properties file is required, whilst for the
         fitted surface the path to the deflectometry file is also required.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
@@ -870,7 +722,7 @@ def extract_paint_heliostats_ideal_surface(
         Tensor of shape [2].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -930,7 +782,7 @@ def extract_paint_heliostats_fitted_surface(
         The maximum number of epochs for the NURBS fit (default is 400).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -955,124 +807,6 @@ def extract_paint_heliostats_fitted_surface(
         nurbs_fit_tolerance=nurbs_fit_tolerance,
         nurbs_fit_max_epoch=nurbs_fit_max_epoch,
     )
-
-
-def azimuth_elevation_to_enu(
-    azimuth: torch.Tensor,
-    elevation: torch.Tensor,
-    slant_range: float = 1.0,
-    degree: bool = True,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Transform coordinates from azimuth and elevation to east, north, up.
-
-    This method assumes a south-oriented azimuth-elevation coordinate system, where 0° points toward the south.
-
-    Parameters
-    ----------
-    azimuth : torch.Tensor
-        Azimuth, 0° points toward the south (degrees).
-    elevation : torch.Tensor
-        Elevation angle above horizon, neglecting aberrations (degrees).
-    slant_range : float
-        Slant range in meters (default is 1.0).
-    degree : bool
-        Whether input is given in degrees (default is True).
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        The east, north, up (ENU) coordinates.
-    """
-    device = get_device(device=device)
-
-    if degree:
-        elevation = torch.deg2rad(elevation)
-        azimuth = torch.deg2rad(azimuth)
-
-    azimuth[azimuth < 0] += 2 * torch.pi
-
-    r = slant_range * torch.cos(elevation)
-
-    enu = torch.zeros((azimuth.shape[0], 3), device=device)
-
-    enu[:, 0] = r * torch.sin(azimuth)
-    enu[:, 1] = -r * torch.cos(azimuth)
-    enu[:, 2] = slant_range * torch.sin(elevation)
-
-    return enu
-
-
-def convert_wgs84_coordinates_to_local_enu(
-    coordinates_to_transform: torch.Tensor,
-    reference_point: torch.Tensor,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north, up (ENU).
-
-    This function calculates the north and east offsets in meters of a coordinate from the reference point.
-    It converts the latitude and longitude to radians, calculates the radius of curvature values,
-    and then computes the offsets based on the differences between the coordinate and the reference point.
-    Finally, it returns a tensor containing these offsets along with the altitude difference.
-
-    Parameters
-    ----------
-    coordinates_to_transform : torch.Tensor
-        The coordinates in latitude, longitude, altitude that are to be transformed.
-        Tensor of shape [number_of_coordinates, 3].
-    reference_point : torch.Tensor
-        The center of origin of the ENU coordinate system in WGS84 coordinates.
-        Tensor of shape [3].
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
-        Tensor of shape [number_of_coordinates, 3].
-    """
-    device = get_device(device=device)
-
-    transformed_coordinates = torch.zeros_like(
-        coordinates_to_transform, dtype=torch.float32, device=device
-    )
-
-    wgs84_a = 6378137.0  # Major axis in meters
-    wgs84_b = 6356752.314245  # Minor axis in meters
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared
-
-    # Convert latitude and longitude to radians.
-    latitudes = torch.deg2rad(coordinates_to_transform[:, 0])
-    longitudes = torch.deg2rad(coordinates_to_transform[:, 1])
-    latitude_reference_point = torch.deg2rad(reference_point[0])
-    longitude_reference_point = torch.deg2rad(reference_point[1])
-
-    # Calculate meridional radius of curvature for the first latitude.
-    sin_lat1 = torch.sin(latitudes)
-    rn1 = wgs84_a / torch.sqrt(1 - wgs84_e2 * sin_lat1**2)
-
-    # Calculate transverse radius of curvature for the first latitude.
-    rm1 = (wgs84_a * (1 - wgs84_e2)) / ((1 - wgs84_e2 * sin_lat1**2) ** 1.5)
-
-    # Calculate delta latitude and delta longitude in radians.
-    dlat_rad = latitude_reference_point - latitudes
-    dlon_rad = longitude_reference_point - longitudes
-
-    # Calculate north and east offsets in meters.
-    transformed_coordinates[:, 0] = -(dlon_rad * rn1 * torch.cos(latitudes))
-    transformed_coordinates[:, 1] = -(dlat_rad * rm1)
-    transformed_coordinates[:, 2] = coordinates_to_transform[:, 2] - reference_point[2]
-
-    return transformed_coordinates
 
 
 def corner_points_to_plane(
@@ -1128,7 +862,7 @@ def build_heliostat_data_mapping(
     """
     Build a mapping of heliostat names to their calibration property and image files loaded from ``PAINT``.
 
-    It assuemes that the data directory has the same structure  and file names the ``PAINT`` data base.
+    It assumes that the data directory has the same structure and file names the ``PAINT`` database.
     This method loads property and image files from the specified variant, and returns a structured mapping.
     If fewer measurements are available than requested, a warning is logged and the available
     subset is used. Optionally, the selection can be randomized using a fixed seed.
@@ -1160,15 +894,13 @@ def build_heliostat_data_mapping(
     heliostat_map = []
 
     for name in heliostat_names:
-        calibration_dir = base / name / config_dictionary.paint_calibration_folder_name
+        calibration_dir = base / name / paint_mappings.SAVE_CALIBRATION
         if not calibration_dir.exists():
             log.warning(f"Calibration directory for {name} not found.")
             continue
 
         property_files = list(
-            calibration_dir.glob(
-                config_dictionary.paint_calibration_properties_file_name_ending
-            )
+            calibration_dir.glob(f"*{paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER}")
         )
 
         if randomize:

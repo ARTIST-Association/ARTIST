@@ -9,7 +9,7 @@ from artist.core import learning_rate_schedulers
 from artist.core.core_utils import per_heliostat_reduction, scale_loss
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
-from artist.data_loader import flux_distribution_loader, paint_loader
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
@@ -34,8 +34,8 @@ class SurfaceReconstructor:
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-        The data source name and the mapping of heliostat name and calibration data.
+    data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+        The data parser and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
     number_of_surface_points : torch.Tensor
@@ -57,7 +57,11 @@ class SurfaceReconstructor:
         self,
         ddp_setup: dict[str, Any],
         scenario: Scenario,
-        data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
+        data: dict[
+            str,
+            CalibrationDataParser
+            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        ],
         optimization_configuration: dict[str, Any],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
@@ -72,8 +76,8 @@ class SurfaceReconstructor:
            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-            The data source name and the mapping of heliostat name and calibration data.
+        data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+            The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler and early stopping.
         number_of_surface_points : torch.Tensor
@@ -84,7 +88,7 @@ class SurfaceReconstructor:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -115,7 +119,7 @@ class SurfaceReconstructor:
             The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -150,44 +154,27 @@ class SurfaceReconstructor:
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
 
-            # Extract measured fluxes and their respective calibration properties data.
-            heliostat_flux_path_mapping = []
-            heliostat_calibration_mapping = []
-
-            heliostat_data_mapping = cast(
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[config_dictionary.heliostat_data_mapping],
             )
-            for heliostat, path_properties, path_pngs in heliostat_data_mapping:
-                if heliostat in heliostat_group.names:
-                    heliostat_flux_path_mapping.append((heliostat, path_pngs))
-                    heliostat_calibration_mapping.append((heliostat, path_properties))
-
-            measured_flux_distributions = flux_distribution_loader.load_flux_from_png(
-                heliostat_flux_path_mapping=heliostat_flux_path_mapping,
-                heliostat_names=heliostat_group.names,
-                resolution=self.bitmap_resolution,
+            (
+                measured_flux_distributions,
+                _,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                bitmap_resolution=self.bitmap_resolution,
                 device=device,
             )
-
-            if self.data[config_dictionary.data_source] == config_dictionary.paint:
-                (
-                    _,
-                    incident_ray_directions,
-                    _,
-                    active_heliostats_mask,
-                    target_area_mask,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=heliostat_calibration_mapping,
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=self.scenario.target_areas.names,
-                    power_plant_position=self.scenario.power_plant_position,
-                    device=device,
-                )
-            else:
-                raise ValueError(
-                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
-                )
 
             if active_heliostats_mask.sum() > 0:
                 # Crop target fluxes.
@@ -272,7 +259,8 @@ class SurfaceReconstructor:
                 epoch = 0
                 log_step = (
                     self.optimization_configuration[config_dictionary.max_epoch]
-                    // self.optimization_configuration[config_dictionary.num_log]
+                    if self.optimization_configuration[config_dictionary.log_step] == 0
+                    else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
                     loss > self.optimization_configuration[config_dictionary.tolerance]
@@ -434,7 +422,7 @@ class SurfaceReconstructor:
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        scheduler.step(loss)
+                        scheduler.step(loss.detach())
                     else:
                         scheduler.step()
 
@@ -515,7 +503,7 @@ class SurfaceReconstructor:
             Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

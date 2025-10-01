@@ -39,7 +39,7 @@ class DistortionsDataset(Dataset):
         Initialize the dataset.
 
         This class implements a custom dataset according to the ``torch`` interface. The content of this
-        dataset is the distortions. The distortions are used in our version of "heliostat"-tracing to
+        dataset are the distortions. The distortions are used in our version of "heliostat"-tracing to
         indicate how each incoming ray must be multiplied and scattered on the heliostat. According to
         ``torch``, this dataset must implement a function to return the length of the dataset and one function
         to retrieve an element through an index.
@@ -98,7 +98,7 @@ class RestrictedDistributedSampler(Sampler):
     """
     Initializes a custom distributed sampler.
 
-    The ``DistributedSampler`` from PyTorch replicates samples if the size of the dataset
+    The ``DistributedSampler`` from ``torch`` replicates samples if the size of the dataset
     is smaller than the world size, to assign data to each rank. This custom sampler
     can leave some ranks idle if the dataset is not large enough to distribute data to
     each rank. Replicated samples would mean replicated rays that physically do not exist.
@@ -206,7 +206,7 @@ class HeliostatRayTracer:
         Scatter the reflected rays around the preferred ray directions for each heliostat.
     sample_bitmaps()
         Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
-    get_bitmaps_per_target.
+    get_bitmaps_per_target()
         Transform bitmaps per heliostat to bitmaps per target area.
     """
 
@@ -223,7 +223,7 @@ class HeliostatRayTracer:
         """
         Initialize the heliostat ray tracer.
 
-        "Heliostat"-tracing is one kind of ray tracing applied in ARTIST. For this kind of ray tracing,
+        "Heliostat"-tracing is one kind of ray tracing applied in ``ARTIST``. For this kind of ray tracing,
         the rays are initialized on the heliostats. The rays originate in the discrete surface points.
         There they are multiplied, distorted, and scattered, and then they are sent to the aim points.
         Letting the rays originate on the heliostats, drastically reduces the number of rays that need
@@ -240,7 +240,7 @@ class HeliostatRayTracer:
         rank : int
             The rank, i.e., individual process ID (default is 0).
         batch_size : int
-            The amount of samples (Heliostats) processed parallel within a single rank (default is 100).
+            The amount of samples (heliostats) processed in parallel within a single rank (default is 100).
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution : torch.Tensor
@@ -310,7 +310,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -414,7 +414,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -466,7 +466,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -576,13 +576,13 @@ class HeliostatRayTracer:
         # "influence" of the value to each neighbor. Here, we calculate this
         # influence for each neighbor.
 
-        # x-value influence in 1 and 4
+        # x-value influence in 1 and 4.
         x_low_influences = x_indices_high - x_intersections
-        # y-value influence in 3 and 4
+        # y-value influence in 3 and 4.
         y_low_influences = y_indices_high - y_intersections
-        # x-value influence in 2 and 3
+        # x-value influence in 2 and 3.
         x_high_influences = x_intersections - x_indices_low
-        # y-value influence in 1 and 2
+        # y-value influence in 1 and 2.
         y_high_influences = y_intersections - y_indices_low
 
         # We now calculate the distributed intensities for each neighboring
@@ -619,7 +619,7 @@ class HeliostatRayTracer:
         # For the distributions, we regarded even those neighboring pixels that are
         # _not_ part of the image but within a little boundary outside of the image as well.
         # That is why here, we set up a mask to choose only those indices that are actually
-        # in the bitmap (i.e. we prevent out-of-bounds access).
+        # in the bitmap (i.e., we prevent out-of-bounds access).
         intersection_indices_2 = (
             (0 <= x_indices)
             & (x_indices < self.bitmap_resolution[0])
@@ -683,7 +683,7 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
