@@ -24,7 +24,7 @@ class TowerTargetAreas:
     names : list[str]
         The names of each target area.
     geometries : list[str]
-        THe type of geometry of each target area.
+        The type of geometry of each target area.
     centers : torch.Tensor
         The center point coordinate of each target area.
         Tensor of shape [number_of_target_areas, 4].
@@ -103,7 +103,7 @@ class TowerTargetAreas:
             The HDF5 file containing the configuration to be loaded.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

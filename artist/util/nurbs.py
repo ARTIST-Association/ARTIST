@@ -43,7 +43,7 @@ class NURBSSurfaces(torch.nn.Module):
     calculate_surface_points_and_normals()
         Calculate the surface points and normals of the NURBS surfaces.
     forward()
-        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e., calculate the surface points and normals.
     """
 
     def __init__(
@@ -73,7 +73,7 @@ class NURBSSurfaces(torch.nn.Module):
             Indicates wether the NURBS are uniform or not (default is True (uniform)).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__()
@@ -112,7 +112,7 @@ class NURBSSurfaces(torch.nn.Module):
             The NURBS surface direction u or v.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -169,7 +169,7 @@ class NURBSSurfaces(torch.nn.Module):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_one_direction + degree_one_direction + 1].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -251,7 +251,7 @@ class NURBSSurfaces(torch.nn.Module):
             Specifies how many derivatives are calculated (default is 1).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -415,7 +415,7 @@ class NURBSSurfaces(torch.nn.Module):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -463,7 +463,7 @@ class NURBSSurfaces(torch.nn.Module):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -599,7 +599,7 @@ class NURBSSurfaces(torch.nn.Module):
         self, evaluation_points: torch.Tensor, device: torch.device | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Specify the forward operation of the NURBS, i.e. calculate the surface points and normals.
+        Specify the forward operation of the NURBS, i.e., calculate the surface points and normals.
 
         Parameters
         ----------
@@ -608,7 +608,7 @@ class NURBSSurfaces(torch.nn.Module):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

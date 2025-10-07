@@ -9,7 +9,7 @@ from artist.core import learning_rate_schedulers
 from artist.core.core_utils import per_heliostat_reduction
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
-from artist.data_loader import paint_loader
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, raytracing_utils
@@ -34,8 +34,8 @@ class KinematicCalibrator:
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-        The data source name and the mapping of heliostat name and calibration data.
+    data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+        The data parser and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
     calibration_method : str
@@ -51,7 +51,11 @@ class KinematicCalibrator:
         self,
         ddp_setup: dict[str, Any],
         scenario: Scenario,
-        data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]],
+        data: dict[
+            str,
+            CalibrationDataParser
+            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        ],
         optimization_configuration: dict[str, Any],
         calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
     ) -> None:
@@ -64,8 +68,8 @@ class KinematicCalibrator:
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
-        data : dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-            The data source name and the mapping of heliostat name and calibration data.
+        data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
+            The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         calibration_method : str
@@ -178,35 +182,26 @@ class KinematicCalibrator:
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
 
-            # Load the calibration data.
-            heliostat_calibration_mapping = []
-
-            heliostat_data_mapping = cast(
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[config_dictionary.heliostat_data_mapping],
             )
-            for heliostat, path_properties, _ in heliostat_data_mapping:
-                if heliostat in heliostat_group.names:
-                    heliostat_calibration_mapping.append((heliostat, path_properties))
-
-            if self.data[config_dictionary.data_source] == config_dictionary.paint:
-                (
-                    focal_spots_measured,
-                    incident_ray_directions,
-                    motor_positions,
-                    active_heliostats_mask,
-                    _,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=heliostat_calibration_mapping,
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=self.scenario.target_areas.names,
-                    power_plant_position=self.scenario.power_plant_position,
-                    device=device,
-                )
-            else:
-                raise ValueError(
-                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
-                )
+            (
+                _,
+                focal_spots_measured,
+                incident_ray_directions,
+                motor_positions,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                device=device,
+            )
 
             if active_heliostats_mask.sum() > 0:
                 # Calculate the reflection directions of the measured calibration data.
@@ -254,7 +249,8 @@ class KinematicCalibrator:
                 epoch = 0
                 log_step = (
                     self.optimization_configuration[config_dictionary.max_epoch]
-                    // self.optimization_configuration[config_dictionary.num_log]
+                    if self.optimization_configuration[config_dictionary.log_step] == 0
+                    else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
                     loss > self.optimization_configuration[config_dictionary.tolerance]
@@ -285,7 +281,7 @@ class KinematicCalibrator:
                     loss_per_sample = loss_definition(
                         prediction=preferred_reflection_directions,
                         ground_truth=preferred_reflection_directions_measured,
-                        target_area_mask=_,
+                        target_area_mask=target_area_mask,
                         reduction_dimensions=(1,),
                         device=device,
                     )
@@ -304,7 +300,7 @@ class KinematicCalibrator:
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        scheduler.step(loss)
+                        scheduler.step(loss.detach())
                     else:
                         scheduler.step()
 
@@ -399,36 +395,26 @@ class KinematicCalibrator:
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
-
-            # Load the calibration data.
-            heliostat_calibration_mapping = []
-
-            heliostat_data_mapping = cast(
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[config_dictionary.heliostat_data_mapping],
             )
-            for heliostat, path_properties, _ in heliostat_data_mapping:
-                if heliostat in heliostat_group.names:
-                    heliostat_calibration_mapping.append((heliostat, path_properties))
-
-            if self.data[config_dictionary.data_source] == config_dictionary.paint:
-                (
-                    focal_spots_measured,
-                    incident_ray_directions,
-                    _,
-                    active_heliostats_mask,
-                    target_area_mask,
-                ) = paint_loader.extract_paint_calibration_properties_data(
-                    heliostat_calibration_mapping=heliostat_calibration_mapping,
-                    heliostat_names=heliostat_group.names,
-                    target_area_names=self.scenario.target_areas.names,
-                    power_plant_position=self.scenario.power_plant_position,
-                    device=device,
-                )
-            else:
-                raise ValueError(
-                    f"There is no data loader for the data source: {self.data[config_dictionary.data_source]}. Please use PAINT data instead."
-                )
+            (
+                _,
+                focal_spots_measured,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                device=device,
+            )
 
             if active_heliostats_mask.sum() > 0:
                 # Create the optimizer.
@@ -461,7 +447,8 @@ class KinematicCalibrator:
                 epoch = 0
                 log_step = (
                     self.optimization_configuration[config_dictionary.max_epoch]
-                    // self.optimization_configuration[config_dictionary.num_log]
+                    if self.optimization_configuration[config_dictionary.log_step] == 0
+                    else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
                     loss > self.optimization_configuration[config_dictionary.tolerance]
@@ -549,7 +536,7 @@ class KinematicCalibrator:
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        scheduler.step(loss)
+                        scheduler.step(loss.detach())
                     else:
                         scheduler.step()
 

@@ -26,8 +26,8 @@ class SurfaceGenerator:
 
     Methods
     -------
-    fit_nurbs_surface()
-        Fit the NURBS surface given the conversion method.
+    fit_nurbs()
+        Fit a NURBS surface.
     generate_fitted_surface_config()
         Generate a fitted surface configuration.
     generate_ideal_surface_config()
@@ -44,10 +44,10 @@ class SurfaceGenerator:
         Initialize the surface generator.
 
         Heliostat data, including information regarding their surfaces and structure, can be generated via ``STRAL`` and
-        exported to a binary file or downloaded from ```PAINT``. The data formats are different depending on their source.
+        exported to a binary file or downloaded from ``PAINT``. The data formats are different depending on their source.
         To convert this data into a surface configuration format suitable for ``ARTIST``, this converter first loads the
-        data and then learns NURBS surfaces based on the data. Finally, the converter returns a list of facets that can
-        be used directly in an ``ARTIST`` scenario.
+        data and then learns or creates NURBS surfaces based on the data. Finally, the converter returns a list of facets
+        that can be used directly in an ``ARTIST`` scenario.
 
         Parameters
         ----------
@@ -59,8 +59,7 @@ class SurfaceGenerator:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ``ARTIST`` will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
 
@@ -79,13 +78,12 @@ class SurfaceGenerator:
         device: torch.device | None = None,
     ) -> NURBSSurfaces:
         """
-        Fit the NURBS surface given the conversion method.
+        Fit a NURBS surface.
 
         The surface points are first normalized and shifted to the range (0,1) to be compatible with the knot vector of
         the NURBS surface. The NURBS surface is then initialized with the correct number of control points, degrees, and
-        knots, and the origin of the control points is set based on the width and height of the point cloud. The control
-        points are then fitted to the surface points or surface normals using an Adam optimizer.
-        The optimization stops when the loss is less than the tolerance or the maximum number of epochs is reached.
+        knots. The origin of the control points is set based on the width and height of the point cloud. The control
+        points are then fitted to the surface points or surface normals using the provided optimizer.
 
         Parameters
         ----------
@@ -94,23 +92,20 @@ class SurfaceGenerator:
             Tensor of shape [number_of_surface_points, 4].
         surface_normals : torch.Tensor
             The surface normals.
-            Tensor of shape [number_of_surface_normals, 4].
+            Tensor of shape [number_of_surface_points, 4].
         optimizer : torch.optim.Optimizer
-            The NURBS fit optimizer.
+            The optimizer.
         scheduler : torch.optim.lr_scheduler.LRScheduler | None
-            The NURBS fit learning rate scheduler (default is None).
+            The learning rate scheduler (default is None).
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-        initial_learning_rate : float
-            The initial learning rate for the NURBS fit (default is 1e-3).
+            The tolerance value used for fitting NURBS surfaces (default is 1e-10).
         max_epoch : int
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ``ARTIST`` will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Raises
         ------
@@ -119,8 +114,8 @@ class SurfaceGenerator:
 
         Returns
         -------
-        NURBSSurface
-            A NURBS surface.
+        NURBSSurfaces
+            A fitted NURBS surface.
         """
         accepted_conversion_methods = [
             config_dictionary.fit_nurbs_from_points,
@@ -200,7 +195,6 @@ class SurfaceGenerator:
             )
 
             optimizer.zero_grad()
-
             loss_function = torch.nn.MSELoss()
 
             if fit_method == config_dictionary.fit_nurbs_from_points:
@@ -212,10 +206,10 @@ class SurfaceGenerator:
 
             optimizer.step()
             if scheduler:
-                scheduler.step(loss.abs().mean())
+                scheduler.step(loss.abs().mean().detach())
             if epoch % 100 == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}.",
+                    f"Epoch: {epoch}, Loss: {loss.abs().mean().item()}, LR: {optimizer.param_groups[0]['lr']}."
                 )
             epoch += 1
 
@@ -241,7 +235,7 @@ class SurfaceGenerator:
 
         The fitted surface configuration is composed of separate facets. Each facet is defined by fitted control points,
         meaning the control points are fitted to measured point cloud or surface normals data. Initializing a surface
-        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting on real-world
+        from this configuration results in an imperfect heliostat surface with dents or bulges, reflecting real-world
         conditions. The surface can be fitted to deflectometry data or any other provided point cloud data.
 
         Parameters
@@ -249,33 +243,32 @@ class SurfaceGenerator:
         heliostat_name : str
             The heliostat name, used for logging.
         facet_translation_vectors : torch.Tensor
-            Translation vector for each facet from heliostat origin to relative position.
+            Translation vectors for each facet from heliostat origin to relative position.
             Tensor of shape [number_of_facets, 4].
         canting : torch.Tensor
-            The canting vector per facet in east and north direction.
+            The canting vectors per facet in east and north directions
             Tensor of shape [number_of_facets, 2, 4].
         surface_points_with_facets_list : list[torch.Tensor]
             A list of facetted surface points. Points per facet may vary.
+            Tensors in list of shape [number_of_points, 3].
         surface_normals_with_facets_list : list[torch.Tensor]
-            A list of facetted surface normals. Normals per facet may vary.
+            A list of facetted surface normals. Points per facet may vary.
+            Tensors in list of shape [number_of_points, 3].
         optimizer : torch.optim.Optimizer
-            The NURBS fit optimizer.
+            The optimizer.
         scheduler : torch.optim.lr_scheduler.LRScheduler | None
-            The NURBS fit learning rate scheduler (default is None).
+            The learning rate scheduler (default is None).
         deflectometry_step_size : int
             The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
         fit_method : str
             The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
         tolerance : float
-            The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
-        initial_learning_rate : float
-            The initial learning rate for the NURBS fit (default is 1e-3).
+            The tolerance value used for fitting NURBS surfaces (default is 1e-10).
         max_epoch : int
             The maximum number of epochs for the NURBS fit (default is 400).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+            If None, ``ARTIST`` will automatically select the most appropriate device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
@@ -287,7 +280,7 @@ class SurfaceGenerator:
         log.info("Beginning generation of the fitted surface configuration.")
 
         # All single_facet_surface_points and single_facet_surface_normals must have the same
-        # dimensions, so that they can be stacked into a single tensor and then can be used by artist.
+        # dimensions, so that they can be stacked into a single tensor to be used by ARTIST.
         minimum_number_of_surface_points_all_facets = min(
             single_facet_surface_points.shape[0]
             for single_facet_surface_points in surface_points_with_facets_list
@@ -308,7 +301,7 @@ class SurfaceGenerator:
         ]
         surface_normals_with_facets = torch.stack(reduced_single_facet_surface_normals)
 
-        # Select only selected number of points to reduce compute.
+        # Select only a subset of points to reduce compute.
         surface_points_with_facets = surface_points_with_facets[
             :, ::deflectometry_step_size
         ]
@@ -316,7 +309,7 @@ class SurfaceGenerator:
             :, ::deflectometry_step_size
         ]
 
-        # If we are using a point cloud to learn the points, we do not need to translate the facets.
+        # If a point cloud is used to learn the points, the facets translation is automatically learned.
         if fit_method == config_dictionary.fit_nurbs_from_points:
             facet_translation_vectors = torch.zeros(
                 facet_translation_vectors.shape, device=device
@@ -331,7 +324,7 @@ class SurfaceGenerator:
         )
 
         # Generate NURBS surface from multiple facets.
-        # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+        # Each facet automatically has the same control point dimensions. This is required in ``ARTIST``.
         log.info(f"Generating NURBS surface for heliostat: {heliostat_name}.")
         facet_config_list = []
         for i in range(surface_points_with_facets.shape[0]):
@@ -395,7 +388,7 @@ class SurfaceGenerator:
             Tensor of shape [number_of_facets, 2, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

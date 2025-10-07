@@ -89,7 +89,7 @@ class VectorLoss(Loss):
             Tensor of shape [number_of_samples, ...].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
+            The ``reduction_dimensions`` is an expected keyword argument for the vector loss.
 
         Raises
         ------
@@ -342,7 +342,7 @@ class KLDivergenceLoss(Loss):
             D_{\mathrm{KL}}(P \parallel Q) = \sum_{x} P(x) \log \frac{P(x)}{Q(x)},
 
         where :math:`P` is the ground truth distribution and :math:`Q` is the approximation or prediction
-        of :math:`Q`. The kl-divergence is an asymetric function. Switching :math:`P` and :math:`Q`
+        of :math:`Q`. The kl-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
         has the following effect:
         :math:`P \parallel Q` Penalizes extra mass in the prediction where the ground truth has none.
         :math:`Q \parallel P` Penalizes missing mass in the prediction where the ground truth has mass.

@@ -14,7 +14,9 @@ from propulate.utils.benchmark_functions import (
 from artist.core import loss_functions
 from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_loader import paint_loader
+from artist.data_parser import paint_scenario_parser
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -101,15 +103,21 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         )
 
     # Create a heliostat data mapping for the specified number of training samples.
-    heliostat_data_mapping = paint_loader.build_heliostat_data_mapping(
+    heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
         base_path="path/to/paint/data/dir",
         heliostat_names=["AA39"],
         number_of_measurements=int(params["number_of_training_samples"]),
         image_variant="flux-centered",
     )
 
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+    data: dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: PaintCalibrationDataParser(
+            sample_limit=int(params["number_of_training_samples"])
+        ),
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
@@ -159,7 +167,7 @@ def surface_reconstructor_for_hpo(params: dict[str, float]) -> float:
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
         config_dictionary.max_epoch: 3000,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 20,
         config_dictionary.scheduler: scheduler,

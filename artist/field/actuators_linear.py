@@ -37,7 +37,7 @@ class LinearActuators(Actuators):
         Initialize linear actuators.
 
         A linear actuator describes movement within a 2D plane. One linear actuator has nine parameters.
-        Ordered by index, the first parameter describes the type of the actuator, i.e. linear, the second parameter
+        Ordered by index, the first parameter describes the type of the actuator, i.e., linear, the second parameter
         describes the turning direction of the actuator. The third and fourth parameters are the minimum and
         maximum motor positions. The next five parameters are the increment, which stores
         the information about the stroke length change per motor step, the initial stroke length, and an offset
@@ -53,7 +53,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_heliostats, 9, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__(actuator_parameters=actuator_parameters, device=device)
@@ -73,7 +73,7 @@ class LinearActuators(Actuators):
         ----------
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -123,7 +123,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -175,7 +175,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -219,7 +219,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

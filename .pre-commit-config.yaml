@@ -4,6 +4,8 @@ repos:
     rev: v1.18.2 # Use the sha / tag you want to point at
     hooks:
       - id: mypy
+        additional_dependencies:
+          - types-PyYAML
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

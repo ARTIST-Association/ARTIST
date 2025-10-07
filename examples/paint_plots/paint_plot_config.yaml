@@ -1,0 +1,16 @@
+metadata_root: "./"
+metadata_file_name: "calibration_metadata_all_heliostats.csv"
+data_dir: "./paint_data"
+tower_file_name: "WRI1030197-tower-measurements.json"
+scenarios_dir: "./scenarios"
+results_dir: "./results"
+plots_dir: "./plots"
+minimum_number_of_measurements: 80
+maximum_number_of_heliostats_for_calibration: 100
+excluded_heliostats_for_calibration: ["AA39"]
+calibration_image_type: "flux"
+heliostats_for_raytracing:
+  AA39: 149576
+  AY26: 247613
+  BC34: 82084
+device: "cpu"

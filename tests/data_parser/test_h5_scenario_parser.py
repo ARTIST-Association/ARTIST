@@ -5,7 +5,7 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.data_loader import h5_loader
+from artist.data_parser import h5_scenario_parser
 from artist.util import config_dictionary
 
 
@@ -15,7 +15,7 @@ from artist.util import config_dictionary
 )
 def test_load_kinematic_deviations(
     mocker: MockerFixture, kinematic_type: str, device: torch.device
-):
+) -> None:
     """
     Test errors raised when loading kinematic deviations from an hdf5 file.
 
@@ -44,7 +44,7 @@ def test_load_kinematic_deviations(
     log = mocker.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
-        h5_loader.kinematic_deviations(
+        h5_scenario_parser.kinematic_deviations(
             prototype=False,
             kinematic_type=kinematic_type,
             scenario_file=scenario_file,
@@ -76,7 +76,7 @@ def test_load_kinematic_deviations(
 )
 def test_load_actuator_parameters(
     mocker: MockerFixture, actuator_type: str, error_message: str, device: torch.device
-):
+) -> None:
     """
     Test errors raised when loading actuator parameters from an hdf5 file.
 
@@ -107,7 +107,7 @@ def test_load_actuator_parameters(
     log = mocker.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
-        h5_loader.actuator_parameters(
+        h5_scenario_parser.actuator_parameters(
             prototype=False,
             actuator_type=actuator_type,
             scenario_file=scenario_file,

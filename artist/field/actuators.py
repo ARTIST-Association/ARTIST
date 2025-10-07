@@ -23,7 +23,7 @@ class Actuators(torch.nn.Module):
     angles_to_motor_positions()
         Calculate the motor positions for given joint angles.
     forward()
-        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
+        Specify the forward operation of the actuator, i.e., calculate the angles for given the motor positions.
     """
 
     def __init__(
@@ -45,7 +45,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_heliostats, n, 2], where n=9 for linear actuators or n=4 for ideal actuators.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__()
@@ -71,7 +71,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -94,7 +94,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -108,7 +108,7 @@ class Actuators(torch.nn.Module):
         self, motor_positions: torch.Tensor, device: torch.device | None = None
     ) -> torch.Tensor:
         """
-        Specify the forward operation of the actuator, i.e. calculate the angles for given the motor positions.
+        Specify the forward operation of the actuator, i.e., calculate the angles for given the motor positions.
 
         Parameters
         ----------
@@ -117,7 +117,7 @@ class Actuators(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

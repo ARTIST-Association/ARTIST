@@ -2,7 +2,7 @@ import pathlib
 
 import torch
 
-from artist.data_loader import stral_loader
+from artist.data_parser import stral_scenario_parser
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorPrototypeConfig,
@@ -22,7 +22,7 @@ from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
-# Set up logger
+# Set up logger.
 set_logger_config()
 
 torch.manual_seed(7)
@@ -51,7 +51,7 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single tower area (receiver)
+# Include a single tower area (receiver).
 receiver_config = TargetAreaConfig(
     target_area_key="receiver",
     geometry=config_dictionary.target_area_type_planar,
@@ -88,7 +88,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
     canting,
     surface_points_with_facets_list,
     surface_normals_with_facets_list,
-) = stral_loader.extract_stral_deflectometry_data(
+) = stral_scenario_parser.extract_stral_deflectometry_data(
     stral_file_path=stral_file_path, device=device
 )
 
